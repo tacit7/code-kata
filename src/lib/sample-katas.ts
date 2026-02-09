@@ -2069,50 +2069,6 @@ function test_four_elements_count() {
     usage: `Subset generation, also known as power set construction, appears wherever a system must evaluate every possible combination of elements. In compiler design and automata theory, the subset construction algorithm (also called powerset construction) converts nondeterministic finite automata into deterministic ones, a step that underpins regex engines in languages like Python, Java, and Go. Machine learning feature selection relies on evaluating subsets of input features to find the combination that yields the best model performance; scikit-learn's exhaustive feature selection does exactly this. Database query planners similarly consider subsets of indexes and columns when optimizing execution plans. The pattern also drives combinatorial optimization problems like the 0/1 knapsack. In coding interviews, subsets is a high-frequency problem at companies like Amazon and Microsoft because it tests the candidate's understanding of recursion, bit manipulation (the bitmask approach maps each integer from 0 to 2^n-1 to a unique subset), and backtracking.`,
   },
 
-  // 25 - Two Sum
-  {
-    id: "two-sum-kata",
-    name: "Two Sum",
-    category: "arrays-and-hashing",
-    language: "javascript",
-    difficulty: "easy",
-    description:
-      "Given an array of integers and a target sum, return the indices of the two numbers that add up to the target. Use a hash map to achieve O(n) time complexity. Each input has exactly one solution, and you may not use the same element twice.\n\nExample 1:\n  Input: nums = [2, 7, 11, 15], target = 9\n  Output: [0, 1]\n\nExample 2:\n  Input: nums = [3, 2, 4], target = 6\n  Output: [1, 2]\n\nExample 3:\n  Input: nums = [3, 3], target = 6\n  Output: [0, 1]\n\nRef: LeetCode #1 Two Sum",
-    code: `function twoSum(nums, target) {
-  // your code here
-}`,
-    testCode: `function test_basic_two_sum() {
-  const result = twoSum([2, 7, 11, 15], 9);
-  assertEqual(result.slice().sort(), [0, 1], "indices for target 9 in [2,7,11,15]");
-}
-
-function test_middle_elements() {
-  const result = twoSum([3, 2, 4], 6);
-  assertEqual(result.slice().sort(), [1, 2], "indices for target 6 in [3,2,4]");
-}
-
-function test_duplicate_values() {
-  const result = twoSum([3, 3], 6);
-  assertEqual(result.slice().sort(), [0, 1], "indices for target 6 in [3,3]");
-}
-
-function test_negative_numbers() {
-  const result = twoSum([-1, -2, -3, -4, -5], -8);
-  assertEqual(result.slice().sort(), [2, 4], "indices for target -8 in negatives");
-}`,
-    solution: `function twoSum(nums, target) {
-  const seen = {};
-  for (let i = 0; i < nums.length; i++) {
-    const complement = target - nums[i];
-    if (complement in seen) {
-      return [seen[complement], i];
-    }
-    seen[nums[i]] = i;
-  }
-}`,
-    usage: `Two Sum is the prototypical hash map pattern: scan an array once, storing each element's complement in a hash table for O(1) lookup, reducing a naive O(n^2) search to O(n). This single-pass hash map technique is not just an interview trick; it generalizes to any system that needs to find complementary pairs efficiently. Financial reconciliation systems at banks use this pattern to match debits against credits. Fraud detection pipelines flag pairs of transactions whose combined value hits a suspicious threshold. E-commerce recommendation engines find product pairs that together satisfy a budget constraint. Two Sum is LeetCode problem number one for a reason: virtually every major tech company, from Google to Stripe, uses it as a screening question because it cleanly separates candidates who understand hash-based constant-time lookups from those who reach for nested loops.`,
-  },
-
   // 26 - Kadane's Algorithm
   {
     id: "kadanes-algorithm",

@@ -12,37 +12,17 @@ Function: bfs(root)
 
 Given the root of a binary tree, return a list of values
 in breadth-first (level-order) traversal order.\\n\\nRef: LeetCode #102 Binary Tree Level Order Traversal`,
-    code: `class Node:
+    code: `from collections import deque
+
+class Node:
     def __init__(self, val):
         self.val = val
         self.left = None
         self.right = None
-from collections import deque
 
 def bfs(root):
-    q = deque([root])
-    list = []
-
-    while q :
-        curr = q.popleft()
-
-        list.append(curr.val)
-
-        if curr.left:
-            q.append(curr.left)
-
-        if curr.right:
-            q.append(curr.right)
-
-    return list`,
-    testCode: `from importlib import import_module
-
-mod = import_module("kata.01_binary_tree_bfs.01_binary_tree_bfs_problem")
-bfs = mod.bfs
-Node = mod.Node
-
-
-def test_bfs_single_node():
+    raise NotImplementedError`,
+    testCode: `def test_bfs_single_node():
     a = Node(1)
     assert bfs(a) == [1]
 
@@ -74,9 +54,7 @@ def test_bfs_empty():
     solution: `"""Reference solution for Binary Tree BFS."""
 
 from collections import deque
-from importlib import import_module
 
-Node = import_module("kata.01_binary_tree_bfs.01_binary_tree_bfs_problem").Node
 
 
 def bfs(root):
@@ -113,37 +91,8 @@ positions visited in breadth-first order. Only traverse cells with value 0
     code: `from collections import deque
 
 def matrix_bfs(grid, start):
-    rows, cols = len(grid), len(grid[0])
-    visited={start}
-    list = [start]
-    q = deque([start])
-
-    def in_range(r, c):
-        return 0 <= r < rows and 0 <= c < cols
-
-    def is_path(r ,c):
-        return grid[r][c] == 0
-
-    dirs = [ (1, 0), (-1, 0), (0, 1), (0, -1) ]
-
-    while q:
-        r, c = q.popleft()
-
-        for rd, cd in dirs:
-            rc, cc = rd + r, c + cd
-
-            if in_range(rc, cc) and  (rc, cc) not in visited and is_path(rc, cc):
-                q.append((rc,cc))
-                visited.add((rc,cc))
-                list.append((rc,cc))
-
-    return list`,
-    testCode: `from importlib import import_module
-
-matrix_bfs = import_module("kata.02_matrix_bfs.02_matrix_bfs_problem").matrix_bfs
-
-
-def test_matrix_bfs_simple():
+    raise NotImplementedError`,
+    testCode: `def test_matrix_bfs_simple():
     grid = [
         [0, 0, 0],
         [0, 1, 0],
@@ -207,25 +156,9 @@ in order.\\n\\nRef: LeetCode #234 Palindrome Linked List (closest match)`,
         self.val = val
         self.next = None
 
-
-
 def traverse(head):
-    list = []
-    curr = head
-    while curr:
-        list.append(curr.val)
-        curr = curr.next
-
-
-    return list`,
-    testCode: `from importlib import import_module
-
-mod = import_module("kata.03_linked_list_traversal.03_linked_list_traversal_problem")
-traverse = mod.traverse
-Node = mod.Node
-
-
-def test_traverse_multiple():
+    raise NotImplementedError`,
+    testCode: `def test_traverse_multiple():
     a = Node(1)
     b = Node(2)
     c = Node(3)
@@ -243,9 +176,7 @@ def test_traverse_empty():
     assert traverse(None) == []`,
     solution: `"""Reference solution for Linked List Traversal."""
 
-from importlib import import_module
 
-Node = import_module("kata.03_linked_list_traversal.03_linked_list_traversal_problem").Node
 
 
 def traverse(head):
@@ -271,25 +202,8 @@ Function: binary_search(nums, target)
 Given a sorted list of integers and a target value, return the index
 of the target. Return -1 if not found.\\n\\nRef: LeetCode #704 Binary Search`,
     code: `def binary_search(nums, target):
-    tail, head = 0, len(nums)-1
-
-    while tail >= head:
-        guess = (tail + head) // 2
-
-        if nums[guess] == target:
-            return guess
-        elif nums[guess] < target:
-            tail = guess + 1
-        else:
-            head = guess -1
-
-    return -1`,
-    testCode: `from importlib import import_module
-
-binary_search = import_module("kata.04_binary_search.04_binary_search_problem").binary_search
-
-
-def test_found_middle():
+    raise NotImplementedError`,
+    testCode: `def test_found_middle():
     assert binary_search([1, 3, 5, 7, 9], 5) == 2
 
 
@@ -335,76 +249,25 @@ def binary_search(nums, target):
     usage: null,
   },
   {
-    id: "py-05_binary_tree_dfs",
-    name: "Binary Tree DFS",
+    id: "py-05a_binary_tree_preorder",
+    name: "Binary Tree Preorder",
     category: "trees",
     language: "python",
     difficulty: "medium",
-    description: `Kata: Binary Tree DFS
-Functions: preorder(root), inorder(root), postorder(root)
+    description: `Kata: Binary Tree Preorder Traversal
+Function: preorder(root)
 
 Given the root of a binary tree, return a list of values in
-preorder, inorder, or postorder traversal. Implement both
-iterative and recursive versions.\\n\\nRef: LeetCode #144 Binary Tree Preorder Traversal`,
+preorder traversal order (root, left, right).\\n\\nRef: LeetCode #144 Binary Tree Preorder Traversal`,
     code: `class Node:
     def __init__(self, val):
         self.val = val
         self.left = None
         self.right = None
 
-
 def preorder(root):
-    if root is None:
-        return []
-    stack = [root]
-    result = []
-    while stack:
-        node = stack.pop()
-        result.append(node.val)
-        if node.right:
-            stack.append(node.right)
-        if node.left:
-            stack.append(node.left)
-    return result
-
-
-def inorder(root):
-    result = []
-    stack = []
-    curr = root
-    while curr or stack:
-        while curr:
-            stack.append(curr)
-            curr = curr.left
-        curr = stack.pop()
-        result.append(curr.val)
-        curr = curr.right
-    return result
-
-
-def postorder(root):
-    if root is None:
-        return []
-    stack = [root]
-    result = []
-    while stack:
-        node = stack.pop()
-        result.append(node.val)
-        if node.left:
-            stack.append(node.left)
-        if node.right:
-            stack.append(node.right)
-    return result[::-1]`,
-    testCode: `from importlib import import_module
-
-mod = import_module("kata.05_binary_tree_dfs.05_binary_tree_dfs_problem")
-preorder = mod.preorder
-inorder = mod.inorder
-postorder = mod.postorder
-Node = mod.Node
-
-
-def _build_tree():
+    raise NotImplementedError`,
+    testCode: `def _build_tree():
     #       1
     #      / \\
     #     2   3
@@ -430,12 +293,104 @@ def test_preorder_empty():
     assert preorder(None) == []
 
 
+def test_preorder_single():
+    n = Node(42)
+    assert preorder(n) == [42]`,
+    solution: `def preorder(root):
+    if root is None:
+        return []
+    return [root.val] + preorder(root.left) + preorder(root.right)`,
+    usage: null,
+  },
+  {
+    id: "py-05b_binary_tree_inorder",
+    name: "Binary Tree Inorder",
+    category: "trees",
+    language: "python",
+    difficulty: "medium",
+    description: `Kata: Binary Tree Inorder Traversal
+Function: inorder(root)
+
+Given the root of a binary tree, return a list of values in
+inorder traversal order (left, root, right).\\n\\nRef: LeetCode #94 Binary Tree Inorder Traversal`,
+    code: `class Node:
+    def __init__(self, val):
+        self.val = val
+        self.left = None
+        self.right = None
+
+def inorder(root):
+    raise NotImplementedError`,
+    testCode: `def _build_tree():
+    #       1
+    #      / \\
+    #     2   3
+    #    / \\
+    #   4   5
+    a = Node(1)
+    b = Node(2)
+    c = Node(3)
+    d = Node(4)
+    e = Node(5)
+    a.left = b
+    a.right = c
+    b.left = d
+    b.right = e
+    return a
+
+
 def test_inorder():
     assert inorder(_build_tree()) == [4, 2, 5, 1, 3]
 
 
 def test_inorder_empty():
     assert inorder(None) == []
+
+
+def test_inorder_single():
+    n = Node(42)
+    assert inorder(n) == [42]`,
+    solution: `def inorder(root):
+    if root is None:
+        return []
+    return inorder(root.left) + [root.val] + inorder(root.right)`,
+    usage: null,
+  },
+  {
+    id: "py-05c_binary_tree_postorder",
+    name: "Binary Tree Postorder",
+    category: "trees",
+    language: "python",
+    difficulty: "medium",
+    description: `Kata: Binary Tree Postorder Traversal
+Function: postorder(root)
+
+Given the root of a binary tree, return a list of values in
+postorder traversal order (left, right, root).\\n\\nRef: LeetCode #145 Binary Tree Postorder Traversal`,
+    code: `class Node:
+    def __init__(self, val):
+        self.val = val
+        self.left = None
+        self.right = None
+
+def postorder(root):
+    raise NotImplementedError`,
+    testCode: `def _build_tree():
+    #       1
+    #      / \\
+    #     2   3
+    #    / \\
+    #   4   5
+    a = Node(1)
+    b = Node(2)
+    c = Node(3)
+    d = Node(4)
+    e = Node(5)
+    a.left = b
+    a.right = c
+    b.left = d
+    b.right = e
+    return a
 
 
 def test_postorder():
@@ -446,31 +401,10 @@ def test_postorder_empty():
     assert postorder(None) == []
 
 
-def test_single_node():
+def test_postorder_single():
     n = Node(42)
-    assert preorder(n) == [42]
-    assert inorder(n) == [42]
     assert postorder(n) == [42]`,
-    solution: `"""Reference solution for Binary Tree DFS."""
-
-from importlib import import_module
-
-Node = import_module("kata.05_binary_tree_dfs.05_binary_tree_dfs_problem").Node
-
-
-def preorder(root):
-    if root is None:
-        return []
-    return [root.val] + preorder(root.left) + preorder(root.right)
-
-
-def inorder(root):
-    if root is None:
-        return []
-    return inorder(root.left) + [root.val] + inorder(root.right)
-
-
-def postorder(root):
+    solution: `def postorder(root):
     if root is None:
         return []
     return postorder(root.left) + postorder(root.right) + [root.val]`,
@@ -489,12 +423,7 @@ Given an adjacency list (dict) and a start node, return a list of
 all reachable nodes visited in depth-first order.\\n\\nRef: LeetCode #323 Number of Connected Components (closest match)`,
     code: `def graph_dfs(graph, start):
     raise NotImplementedError`,
-    testCode: `from importlib import import_module
-
-graph_dfs = import_module("kata.06_graph_dfs.06_graph_dfs_problem").graph_dfs
-
-
-def test_simple_graph():
+    testCode: `def test_simple_graph():
     graph = {
         "a": ["b", "c"],
         "b": ["d"],
@@ -555,12 +484,7 @@ Given a list of edges (tuples of two nodes), return an adjacency list
 as a dict. If directed is False, add edges in both directions.\\n\\nRef: LeetCode #133 Clone Graph (closest match)`,
     code: `def build_adjacency_list(edges, directed=False):
     raise NotImplementedError`,
-    testCode: `from importlib import import_module
-
-build_adjacency_list = import_module("kata.07_build_adjacency_list.07_build_adjacency_list_problem").build_adjacency_list
-
-
-def test_undirected():
+    testCode: `def test_undirected():
     edges = [("a", "b"), ("b", "c")]
     result = build_adjacency_list(edges)
     assert "b" in result["a"]
@@ -611,12 +535,7 @@ positions visited in depth-first order. Only traverse cells with value 0
 (passable). Cells with value 1 are walls.\\n\\nRef: LeetCode #200 Number of Islands`,
     code: `def matrix_dfs(grid, start):
     raise NotImplementedError`,
-    testCode: `from importlib import import_module
-
-matrix_dfs = import_module("kata.08_matrix_dfs.08_matrix_dfs_problem").matrix_dfs
-
-
-def test_simple():
+    testCode: `def test_simple():
     grid = [
         [0, 0, 0],
         [0, 1, 0],
@@ -688,12 +607,7 @@ to list of dependencies it points to), return a valid topological
 ordering as a list.\\n\\nRef: LeetCode #210 Course Schedule II`,
     code: `def topological_sort(graph):
     raise NotImplementedError`,
-    testCode: `from importlib import import_module
-
-topological_sort = import_module("kata.09_topological_sort.09_topological_sort_problem").topological_sort
-
-
-def test_simple_dag():
+    testCode: `def test_simple_dag():
     graph = {
         "a": ["b", "c"],
         "b": ["d"],
@@ -741,37 +655,24 @@ def topological_sort(graph):
     usage: null,
   },
   {
-    id: "py-10_reverse_linked_list",
-    name: "Reverse Linked List",
+    id: "py-10a_reverse_linked_list_iterative",
+    name: "Reverse Linked List (Iterative)",
     category: "linked-list",
     language: "python",
     difficulty: "medium",
-    description: `Kata: Reverse Linked List
-Functions: reverse_iterative(head), reverse_recursive(head)
+    description: `Kata: Reverse Linked List (Iterative)
+Function: reverse_iterative(head)
 
 Given the head of a singly linked list, reverse it and return the
-new head. Implement both iterative and recursive versions.\\n\\nRef: LeetCode #206 Reverse Linked List`,
+new head using an iterative approach.\\n\\nRef: LeetCode #206 Reverse Linked List`,
     code: `class Node:
     def __init__(self, val):
         self.val = val
         self.next = None
 
-
 def reverse_iterative(head):
-    raise NotImplementedError
-
-
-def reverse_recursive(head):
     raise NotImplementedError`,
-    testCode: `from importlib import import_module
-
-mod = import_module("kata.10_reverse_linked_list.10_reverse_linked_list_problem")
-reverse_iterative = mod.reverse_iterative
-reverse_recursive = mod.reverse_recursive
-Node = mod.Node
-
-
-def _build(values):
+    testCode: `def _build(values):
     head = None
     for v in reversed(values):
         n = Node(v)
@@ -801,7 +702,51 @@ def test_reverse_iterative_single():
 
 
 def test_reverse_iterative_empty():
-    assert reverse_iterative(None) is None
+    assert reverse_iterative(None) is None`,
+    solution: `def reverse_iterative(head):
+    prev = None
+    current = head
+    while current is not None:
+        nxt = current.next
+        current.next = prev
+        prev = current
+        current = nxt
+    return prev`,
+    usage: null,
+  },
+  {
+    id: "py-10b_reverse_linked_list_recursive",
+    name: "Reverse Linked List (Recursive)",
+    category: "linked-list",
+    language: "python",
+    difficulty: "medium",
+    description: `Kata: Reverse Linked List (Recursive)
+Function: reverse_recursive(head)
+
+Given the head of a singly linked list, reverse it and return the
+new head using a recursive approach.\\n\\nRef: LeetCode #206 Reverse Linked List`,
+    code: `class Node:
+    def __init__(self, val):
+        self.val = val
+        self.next = None
+
+def reverse_recursive(head):
+    raise NotImplementedError`,
+    testCode: `def _build(values):
+    head = None
+    for v in reversed(values):
+        n = Node(v)
+        n.next = head
+        head = n
+    return head
+
+
+def _to_list(head):
+    result = []
+    while head:
+        result.append(head.val)
+        head = head.next
+    return result
 
 
 def test_reverse_recursive():
@@ -818,30 +763,9 @@ def test_reverse_recursive_single():
 
 def test_reverse_recursive_empty():
     assert reverse_recursive(None) is None`,
-    solution: `"""Reference solution for Reverse Linked List."""
-
-from importlib import import_module
-
-Node = import_module("kata.10_reverse_linked_list.10_reverse_linked_list_problem").Node
-
-
-def reverse_iterative(head):
-    prev = None
-    current = head
-
-    while current is not None:
-        nxt = current.next
-        current.next = prev
-        prev = current
-        current = nxt
-
-    return prev
-
-
-def reverse_recursive(head):
+    solution: `def reverse_recursive(head):
     if head is None or head.next is None:
         return head
-
     new_head = reverse_recursive(head.next)
     head.next.next = head
     head.next = None
@@ -867,14 +791,7 @@ cycle, False otherwise. Use Floyd's tortoise and hare algorithm.\\n\\nRef: LeetC
 
 def has_cycle(head):
     raise NotImplementedError`,
-    testCode: `from importlib import import_module
-
-mod = import_module("kata.11_linked_list_cycle.11_linked_list_cycle_problem")
-has_cycle = mod.has_cycle
-Node = mod.Node
-
-
-def test_no_cycle():
+    testCode: `def test_no_cycle():
     a = Node(1)
     b = Node(2)
     c = Node(3)
@@ -936,12 +853,7 @@ the number of unique elements. The first k elements of the list should
 contain the unique values.\\n\\nRef: LeetCode #26 Remove Duplicates from Sorted Array`,
     code: `def remove_duplicates(nums):
     raise NotImplementedError`,
-    testCode: `from importlib import import_module
-
-remove_duplicates = import_module("kata.12_two_pointer_remove_dupes.12_two_pointer_remove_dupes_problem").remove_duplicates
-
-
-def test_basic():
+    testCode: `def test_basic():
     nums = [1, 1, 2, 3, 3]
     k = remove_duplicates(nums)
     assert k == 3
@@ -1003,12 +915,7 @@ Given a list of integers and a window size k, return the maximum sum
 of any contiguous subarray of length k.\\n\\nRef: LeetCode #2461 Maximum Sum of Distinct Subarrays With Length K`,
     code: `def max_subarray_sum(nums, k):
     raise NotImplementedError`,
-    testCode: `from importlib import import_module
-
-max_subarray_sum = import_module("kata.13_sliding_window_max_sum.13_sliding_window_max_sum_problem").max_subarray_sum
-
-
-def test_basic():
+    testCode: `def test_basic():
     assert max_subarray_sum([1, 4, 2, 10, 2, 3, 1, 0, 20], 4) == 24
 
 
@@ -1041,30 +948,18 @@ def max_subarray_sum(nums, k):
     usage: null,
   },
   {
-    id: "py-14_frequency_count",
+    id: "py-14a_frequency_count",
     name: "Frequency Count",
     category: "arrays-and-hashing",
     language: "python",
     difficulty: "medium",
     description: `Kata: Frequency Count
-Functions: frequency_count(items), most_frequent(items)
+Function: frequency_count(items)
 
-Given a list of items, return a dict mapping each item to its count.
-Also implement most_frequent which returns the item with the highest count.\\n\\nRef: LeetCode #1207 Unique Number of Occurrences (closest match)`,
+Given a list of items, return a dict mapping each item to its count.\\n\\nRef: LeetCode #1207 Unique Number of Occurrences (closest match)`,
     code: `def frequency_count(items):
-    raise NotImplementedError
-
-
-def most_frequent(items):
     raise NotImplementedError`,
-    testCode: `from importlib import import_module
-
-mod = import_module("kata.14_frequency_count.14_frequency_count_problem")
-frequency_count = mod.frequency_count
-most_frequent = mod.most_frequent
-
-
-def test_frequency_count():
+    testCode: `def test_frequency_count():
     assert frequency_count(["a", "b", "a", "c", "a", "b"]) == {"a": 3, "b": 2, "c": 1}
 
 
@@ -1076,24 +971,41 @@ def test_frequency_count_numbers():
     assert frequency_count([1, 2, 2, 3, 3, 3]) == {1: 1, 2: 2, 3: 3}
 
 
-def test_most_frequent():
+def test_frequency_count_empty():
+    assert frequency_count([]) == {}`,
+    solution: `def frequency_count(items):
+    counts = {}
+    for item in items:
+        counts[item] = counts.get(item, 0) + 1
+    return counts`,
+    usage: null,
+  },
+  {
+    id: "py-14b_most_frequent",
+    name: "Most Frequent Element",
+    category: "arrays-and-hashing",
+    language: "python",
+    difficulty: "medium",
+    description: `Kata: Most Frequent Element
+Function: most_frequent(items)
+
+Given a list of items, return the item that appears most frequently.\\n\\nRef: LeetCode #169 Majority Element (closest match)`,
+    code: `def most_frequent(items):
+    raise NotImplementedError`,
+    testCode: `def test_most_frequent_strings():
     assert most_frequent(["a", "b", "a", "c", "a", "b"]) == "a"
 
 
 def test_most_frequent_numbers():
-    assert most_frequent([1, 2, 2, 3, 3, 3]) == 3`,
-    solution: `"""Reference solution for Frequency Count."""
+    assert most_frequent([1, 2, 2, 3, 3, 3]) == 3
 
 
-def frequency_count(items):
+def test_most_frequent_single():
+    assert most_frequent([42]) == 42`,
+    solution: `def most_frequent(items):
     counts = {}
     for item in items:
         counts[item] = counts.get(item, 0) + 1
-    return counts
-
-
-def most_frequent(items):
-    counts = frequency_count(items)
     return max(counts, key=counts.get)`,
     usage: null,
   },
@@ -1110,12 +1022,7 @@ Given two sorted lists of integers, return a single sorted list
 containing all elements from both. Do not use built-in sort.\\n\\nRef: LeetCode #88 Merge Sorted Array`,
     code: `def merge_sorted(a, b):
     raise NotImplementedError`,
-    testCode: `from importlib import import_module
-
-merge_sorted = import_module("kata.15_merge_sorted_arrays.15_merge_sorted_arrays_problem").merge_sorted
-
-
-def test_basic():
+    testCode: `def test_basic():
     assert merge_sorted([1, 3, 5], [2, 4, 6]) == [1, 2, 3, 4, 5, 6]
 
 
@@ -1186,14 +1093,7 @@ Implement a min heap from scratch. Do not use heapq.
 
     def __len__(self):
         return len(self.data)`,
-    testCode: `from importlib import import_module
-
-import pytest
-
-MinHeap = import_module("kata.16_min_heap.16_min_heap_problem").MinHeap
-
-
-def test_insert_and_peek():
+    testCode: `def test_insert_and_peek():
     h = MinHeap()
     h.insert(5)
     h.insert(3)
@@ -1215,14 +1115,20 @@ def test_extract_min():
 
 def test_extract_from_empty():
     h = MinHeap()
-    with pytest.raises(IndexError):
+    try:
         h.extract_min()
+        assert False, "Expected IndexError"
+    except IndexError:
+        pass
 
 
 def test_peek_empty():
     h = MinHeap()
-    with pytest.raises(IndexError):
+    try:
         h.peek()
+        assert False, "Expected IndexError"
+    except IndexError:
+        pass
 
 
 def test_len():
@@ -1316,12 +1222,7 @@ Given a string containing only '(', ')', '{', '}', '[', ']',
 return True if the brackets are balanced, False otherwise.\\n\\nRef: LeetCode #20 Valid Parentheses`,
     code: `def is_balanced(s):
     raise NotImplementedError`,
-    testCode: `from importlib import import_module
-
-is_balanced = import_module("kata.17_balanced_parentheses.17_balanced_parentheses_problem").is_balanced
-
-
-def test_balanced_simple():
+    testCode: `def test_balanced_simple():
     assert is_balanced("()") is True
 
 
@@ -1390,12 +1291,7 @@ Methods: enqueue(val), dequeue(), peek(), is_empty().\\n\\nRef: LeetCode #232 Im
 
     def is_empty(self):
         raise NotImplementedError`,
-    testCode: `from importlib import import_module
-
-Queue = import_module("kata.18_queue_from_stacks.18_queue_from_stacks_problem").Queue
-
-
-def test_enqueue_dequeue():
+    testCode: `def test_enqueue_dequeue():
     q = Queue()
     q.enqueue(1)
     q.enqueue(2)
@@ -1488,12 +1384,7 @@ word starts with the prefix.\\n\\nRef: LeetCode #208 Implement Trie (Prefix Tree
 
     def starts_with(self, prefix):
         raise NotImplementedError`,
-    testCode: `from importlib import import_module
-
-Trie = import_module("kata.19_trie.19_trie_problem").Trie
-
-
-def test_insert_search():
+    testCode: `def test_insert_search():
     t = Trie()
     t.insert("apple")
     assert t.search("apple") is True
@@ -1581,12 +1472,7 @@ Initialize with n elements (0 to n-1).\\n\\nRef: LeetCode #684 Redundant Connect
 
     def connected(self, x, y):
         raise NotImplementedError`,
-    testCode: `from importlib import import_module
-
-UnionFind = import_module("kata.20_union_find.20_union_find_problem").UnionFind
-
-
-def test_initially_disconnected():
+    testCode: `def test_initially_disconnected():
     uf = UnionFind(5)
     assert uf.connected(0, 1) is False
 
@@ -1658,12 +1544,7 @@ Function: merge_sort(arr)
 Sort an array using merge sort. Return a new sorted list.\\n\\nRef: LeetCode #912 Sort an Array`,
     code: `def merge_sort(arr):
     raise NotImplementedError`,
-    testCode: `from importlib import import_module
-
-merge_sort = import_module("kata.21_merge_sort.21_merge_sort_problem").merge_sort
-
-
-def test_basic():
+    testCode: `def test_basic():
     assert merge_sort([3, 1, 2]) == [1, 2, 3]
 
 
@@ -1714,31 +1595,20 @@ def _merge(left, right):
     usage: null,
   },
   {
-    id: "py-22_quick_sort_partition",
-    name: "Quick Sort Partition",
+    id: "py-22a_lomuto_partition",
+    name: "Lomuto Partition",
     category: "arrays-and-hashing",
     language: "python",
     difficulty: "medium",
-    description: `Kata: Quick Sort Partition
-Functions: partition(arr, lo, hi), quick_sort(arr)
+    description: `Kata: Lomuto Partition
+Function: partition(arr, lo, hi)
 
-Implement Lomuto partition and quicksort. Sort in-place.
-partition returns the final pivot index.
-quick_sort sorts the array in-place and returns it.\\n\\nRef: LeetCode #912 Sort an Array`,
+Implement the Lomuto partition scheme. Pick arr[hi] as pivot,
+rearrange so elements <= pivot are on the left, elements > pivot
+are on the right. Return the final pivot index.\\n\\nRef: LeetCode #912 Sort an Array`,
     code: `def partition(arr, lo, hi):
-    raise NotImplementedError
-
-
-def quick_sort(arr):
     raise NotImplementedError`,
-    testCode: `from importlib import import_module
-
-mod = import_module("kata.22_quick_sort_partition.22_quick_sort_partition_problem")
-partition = mod.partition
-quick_sort = mod.quick_sort
-
-
-def test_partition():
+    testCode: `def test_partition_basic():
     arr = [3, 6, 8, 10, 1, 2, 1]
     p = partition(arr, 0, len(arr) - 1)
     pivot_val = arr[p]
@@ -1746,7 +1616,43 @@ def test_partition():
     assert all(arr[i] >= pivot_val for i in range(p, len(arr)))
 
 
-def test_quick_sort_basic():
+def test_partition_sorted():
+    arr = [1, 2, 3, 4, 5]
+    p = partition(arr, 0, 4)
+    assert arr[p] == 5
+    assert p == 4
+
+
+def test_partition_two():
+    arr = [2, 1]
+    p = partition(arr, 0, 1)
+    assert arr == [1, 2]
+    assert p == 0`,
+    solution: `def partition(arr, lo, hi):
+    pivot = arr[hi]
+    i = lo
+    for j in range(lo, hi):
+        if arr[j] <= pivot:
+            arr[i], arr[j] = arr[j], arr[i]
+            i += 1
+    arr[i], arr[hi] = arr[hi], arr[i]
+    return i`,
+    usage: null,
+  },
+  {
+    id: "py-22b_quick_sort",
+    name: "Quick Sort",
+    category: "arrays-and-hashing",
+    language: "python",
+    difficulty: "medium",
+    description: `Kata: Quick Sort
+Function: quick_sort(arr)
+
+Sort an array in-place using quicksort with Lomuto partition.
+Return the sorted array.\\n\\nRef: LeetCode #912 Sort an Array`,
+    code: `def quick_sort(arr):
+    raise NotImplementedError`,
+    testCode: `def test_quick_sort_basic():
     assert quick_sort([3, 1, 2]) == [1, 2, 3]
 
 
@@ -1764,7 +1670,11 @@ def test_quick_sort_single():
 
 def test_quick_sort_empty():
     assert quick_sort([]) == []`,
-    solution: `def partition(arr, lo, hi):
+    solution: `def quick_sort(arr):
+    _qs(arr, 0, len(arr) - 1)
+    return arr
+
+def _partition(arr, lo, hi):
     pivot = arr[hi]
     i = lo
     for j in range(lo, hi):
@@ -1774,15 +1684,9 @@ def test_quick_sort_empty():
     arr[i], arr[hi] = arr[hi], arr[i]
     return i
 
-
-def quick_sort(arr):
-    _qs(arr, 0, len(arr) - 1)
-    return arr
-
-
 def _qs(arr, lo, hi):
     if lo < hi:
-        p = partition(arr, lo, hi)
+        p = _partition(arr, lo, hi)
         _qs(arr, lo, p - 1)
         _qs(arr, p + 1, hi)`,
     usage: null,
@@ -1799,12 +1703,7 @@ Function: permutations(nums)
 Given a list of distinct integers, return all possible permutations.\\n\\nRef: LeetCode #46 Permutations`,
     code: `def permutations(nums):
     raise NotImplementedError`,
-    testCode: `from importlib import import_module
-
-permutations = import_module("kata.23_permutations.23_permutations_problem").permutations
-
-
-def test_three_elements():
+    testCode: `def test_three_elements():
     result = permutations([1, 2, 3])
     assert sorted(result) == sorted([
         [1, 2, 3], [1, 3, 2], [2, 1, 3],
@@ -1856,12 +1755,7 @@ Function: subsets(nums)
 Given a list of distinct integers, return all possible subsets (power set).\\n\\nRef: LeetCode #78 Subsets`,
     code: `def subsets(nums):
     raise NotImplementedError`,
-    testCode: `from importlib import import_module
-
-subsets = import_module("kata.24_subsets.24_subsets_problem").subsets
-
-
-def test_three_elements():
+    testCode: `def test_three_elements():
     result = subsets([1, 2, 3])
     assert sorted(result) == sorted([
         [], [1], [2], [3], [1, 2], [1, 3], [2, 3], [1, 2, 3],
@@ -1912,12 +1806,7 @@ Given a list of integers and a target, return the indices of the two
 numbers that add up to target. Assume exactly one solution exists.\\n\\nRef: LeetCode #1 Two Sum`,
     code: `def two_sum(nums, target):
     raise NotImplementedError`,
-    testCode: `from importlib import import_module
-
-two_sum = import_module("kata.25_two_sum.25_two_sum_problem").two_sum
-
-
-def test_basic():
+    testCode: `def test_basic():
     assert two_sum([2, 7, 11, 15], 9) == [0, 1]
 
 
@@ -1955,12 +1844,7 @@ Given an integer array, find the contiguous subarray with the largest sum
 and return that sum. Array has at least one element.\\n\\nRef: LeetCode #53 Maximum Subarray`,
     code: `def max_subarray_sum(nums):
     raise NotImplementedError`,
-    testCode: `from importlib import import_module
-
-max_subarray_sum = import_module("kata.26_kadanes_algorithm.26_kadanes_algorithm_problem").max_subarray_sum
-
-
-def test_mixed():
+    testCode: `def test_mixed():
     assert max_subarray_sum([-2, 1, -3, 4, -1, 2, 1, -5, 4]) == 6
 
 
@@ -1992,31 +1876,19 @@ def test_zero_crossing():
     usage: null,
   },
   {
-    id: "py-27_prefix_sum",
-    name: "Prefix Sum",
+    id: "py-27a_build_prefix_sum",
+    name: "Build Prefix Sum",
     category: "arrays-and-hashing",
     language: "python",
     difficulty: "medium",
-    description: `Kata: Prefix Sum
-Functions: build_prefix(nums), range_sum(prefix, left, right)
+    description: `Kata: Build Prefix Sum
+Function: build_prefix(nums)
 
-build_prefix returns a prefix sum array where prefix[i] = sum of nums[0..i-1].
-prefix[0] = 0, so prefix has length len(nums) + 1.
-range_sum returns sum of nums[left..right] inclusive using the prefix array.\\n\\nRef: LeetCode #1480 Running Sum of 1d Array`,
+Build a prefix sum array where prefix[i] = sum of nums[0..i-1].
+prefix[0] = 0, so prefix has length len(nums) + 1.\\n\\nRef: LeetCode #1480 Running Sum of 1d Array`,
     code: `def build_prefix(nums):
-    raise NotImplementedError
-
-
-def range_sum(prefix, left, right):
     raise NotImplementedError`,
-    testCode: `from importlib import import_module
-
-mod = import_module("kata.27_prefix_sum.27_prefix_sum_problem")
-build_prefix = mod.build_prefix
-range_sum = mod.range_sum
-
-
-def test_build_prefix():
+    testCode: `def test_build_prefix():
     assert build_prefix([1, 2, 3, 4]) == [0, 1, 3, 6, 10]
 
 
@@ -2024,32 +1896,52 @@ def test_build_prefix_empty():
     assert build_prefix([]) == [0]
 
 
-def test_range_sum_full():
-    prefix = build_prefix([1, 2, 3, 4])
-    assert range_sum(prefix, 0, 3) == 10
+def test_build_prefix_single():
+    assert build_prefix([5]) == [0, 5]
 
 
-def test_range_sum_middle():
-    prefix = build_prefix([1, 2, 3, 4])
-    assert range_sum(prefix, 1, 2) == 5
-
-
-def test_range_sum_single():
-    prefix = build_prefix([1, 2, 3, 4])
-    assert range_sum(prefix, 2, 2) == 3
-
-
-def test_range_sum_first():
-    prefix = build_prefix([5, 3, 7])
-    assert range_sum(prefix, 0, 0) == 5`,
+def test_build_prefix_negatives():
+    assert build_prefix([1, -1, 2]) == [0, 1, 0, 2]`,
     solution: `def build_prefix(nums):
     prefix = [0] * (len(nums) + 1)
     for i in range(len(nums)):
         prefix[i + 1] = prefix[i] + nums[i]
-    return prefix
+    return prefix`,
+    usage: null,
+  },
+  {
+    id: "py-27b_range_sum_query",
+    name: "Range Sum Query",
+    category: "arrays-and-hashing",
+    language: "python",
+    difficulty: "medium",
+    description: `Kata: Range Sum Query
+Function: range_sum(prefix, left, right)
+
+Given a prefix sum array, return the sum of the original array
+from index left to right (inclusive). The prefix array has
+prefix[i] = sum of original[0..i-1], with prefix[0] = 0.\\n\\nRef: LeetCode #303 Range Sum Query - Immutable`,
+    code: `def range_sum(prefix, left, right):
+    raise NotImplementedError`,
+    testCode: `def test_range_sum_full():
+    prefix = [0, 1, 3, 6, 10]
+    assert range_sum(prefix, 0, 3) == 10
 
 
-def range_sum(prefix, left, right):
+def test_range_sum_middle():
+    prefix = [0, 1, 3, 6, 10]
+    assert range_sum(prefix, 1, 2) == 5
+
+
+def test_range_sum_single():
+    prefix = [0, 1, 3, 6, 10]
+    assert range_sum(prefix, 2, 2) == 3
+
+
+def test_range_sum_first():
+    prefix = [0, 5, 8, 15]
+    assert range_sum(prefix, 0, 0) == 5`,
+    solution: `def range_sum(prefix, left, right):
     return prefix[right + 1] - prefix[left]`,
     usage: null,
   },
@@ -2066,12 +1958,7 @@ Given a list of intervals [start, end], merge all overlapping intervals
 and return the result sorted by start.\\n\\nRef: LeetCode #56 Merge Intervals`,
     code: `def merge(intervals):
     raise NotImplementedError`,
-    testCode: `from importlib import import_module
-
-merge = import_module("kata.28_merge_intervals.28_merge_intervals_problem").merge
-
-
-def test_overlapping():
+    testCode: `def test_overlapping():
     assert merge([[1, 3], [2, 6], [8, 10], [15, 18]]) == [[1, 6], [8, 10], [15, 18]]
 
 
@@ -2124,12 +2011,7 @@ greater element to the right. If none exists, use -1.
 Example: [2, 1, 2, 4, 3] -> [4, 2, 4, -1, -1]\\n\\nRef: LeetCode #496 Next Greater Element I`,
     code: `def next_greater_element(nums):
     raise NotImplementedError`,
-    testCode: `from importlib import import_module
-
-next_greater_element = import_module("kata.29_monotonic_stack.29_monotonic_stack_problem").next_greater_element
-
-
-def test_basic():
+    testCode: `def test_basic():
     assert next_greater_element([2, 1, 2, 4, 3]) == [4, 2, 4, -1, -1]
 
 
@@ -2158,60 +2040,40 @@ def test_duplicates():
     usage: null,
   },
   {
-    id: "py-30_binary_search_first_last",
-    name: "Binary Search First/Last",
+    id: "py-30a_binary_search_find_first",
+    name: "Binary Search Find First",
     category: "binary-search",
     language: "python",
     difficulty: "medium",
-    description: `Kata: Binary Search First/Last
-Functions: find_first(nums, target), find_last(nums, target)
+    description: `Kata: Binary Search Find First
+Function: find_first(nums, target)
 
-Given a sorted array and a target, find the first and last index of target.
-Return -1 if not found.\\n\\nRef: LeetCode #34 Find First and Last Position of Element in Sorted Array`,
+Given a sorted array and a target, find the first (leftmost) index
+of the target. Return -1 if not found.\\n\\nRef: LeetCode #34 Find First and Last Position of Element in Sorted Array`,
     code: `def find_first(nums, target):
-    raise NotImplementedError
-
-
-def find_last(nums, target):
     raise NotImplementedError`,
-    testCode: `from importlib import import_module
-
-mod = import_module("kata.30_binary_search_first_last.30_binary_search_first_last_problem")
-find_first = mod.find_first
-find_last = mod.find_last
-
-
-def test_find_first():
+    testCode: `def test_find_first_dupes():
     assert find_first([1, 2, 2, 2, 3], 2) == 1
 
 
-def test_find_last():
-    assert find_last([1, 2, 2, 2, 3], 2) == 3
-
-
-def test_not_found():
+def test_find_first_not_found():
     assert find_first([1, 3, 5], 2) == -1
-    assert find_last([1, 3, 5], 2) == -1
 
 
-def test_single_match():
+def test_find_first_single_match():
     assert find_first([1, 2, 3], 2) == 1
-    assert find_last([1, 2, 3], 2) == 1
 
 
-def test_all_same():
+def test_find_first_all_same():
     assert find_first([2, 2, 2], 2) == 0
-    assert find_last([2, 2, 2], 2) == 2
 
 
-def test_empty():
+def test_find_first_empty():
     assert find_first([], 1) == -1
-    assert find_last([], 1) == -1
 
 
-def test_edges():
-    assert find_first([1, 2, 3], 1) == 0
-    assert find_last([1, 2, 3], 3) == 2`,
+def test_find_first_at_start():
+    assert find_first([1, 2, 3], 1) == 0`,
     solution: `def find_first(nums, target):
     lo, hi = 0, len(nums) - 1
     result = -1
@@ -2224,10 +2086,45 @@ def test_edges():
             lo = mid + 1
         else:
             hi = mid - 1
-    return result
+    return result`,
+    usage: null,
+  },
+  {
+    id: "py-30b_binary_search_find_last",
+    name: "Binary Search Find Last",
+    category: "binary-search",
+    language: "python",
+    difficulty: "medium",
+    description: `Kata: Binary Search Find Last
+Function: find_last(nums, target)
+
+Given a sorted array and a target, find the last (rightmost) index
+of the target. Return -1 if not found.\\n\\nRef: LeetCode #34 Find First and Last Position of Element in Sorted Array`,
+    code: `def find_last(nums, target):
+    raise NotImplementedError`,
+    testCode: `def test_find_last_dupes():
+    assert find_last([1, 2, 2, 2, 3], 2) == 3
 
 
-def find_last(nums, target):
+def test_find_last_not_found():
+    assert find_last([1, 3, 5], 2) == -1
+
+
+def test_find_last_single_match():
+    assert find_last([1, 2, 3], 2) == 1
+
+
+def test_find_last_all_same():
+    assert find_last([2, 2, 2], 2) == 2
+
+
+def test_find_last_empty():
+    assert find_last([], 1) == -1
+
+
+def test_find_last_at_end():
+    assert find_last([1, 2, 3], 3) == 2`,
+    solution: `def find_last(nums, target):
     lo, hi = 0, len(nums) - 1
     result = -1
     while lo <= hi:
@@ -2255,12 +2152,7 @@ Given a list where every element appears twice except one, find that single one.
 Must be O(n) time, O(1) space.\\n\\nRef: LeetCode #136 Single Number`,
     code: `def single_number(nums):
     raise NotImplementedError`,
-    testCode: `from importlib import import_module
-
-single_number = import_module("kata.31_single_number_xor.31_single_number_xor_problem").single_number
-
-
-def test_basic():
+    testCode: `def test_basic():
     assert single_number([2, 2, 1]) == 1
 
 
@@ -2294,12 +2186,7 @@ Given a non-negative integer, return the number of 1 bits in its
 binary representation (Hamming weight).\\n\\nRef: LeetCode #191 Number of 1 Bits`,
     code: `def count_bits(n):
     raise NotImplementedError`,
-    testCode: `from importlib import import_module
-
-count_bits = import_module("kata.32_count_set_bits.32_count_set_bits_problem").count_bits
-
-
-def test_zero():
+    testCode: `def test_zero():
     assert count_bits(0) == 0
 
 
@@ -2346,12 +2233,7 @@ You can climb 1 or 2 steps at a time. Given n steps,
 return the number of distinct ways to reach the top.\\n\\nRef: LeetCode #70 Climbing Stairs`,
     code: `def climb_stairs(n):
     raise NotImplementedError`,
-    testCode: `from importlib import import_module
-
-climb_stairs = import_module("kata.33_climbing_stairs.33_climbing_stairs_problem").climb_stairs
-
-
-def test_one():
+    testCode: `def test_one():
     assert climb_stairs(1) == 1
 
 
@@ -2394,12 +2276,7 @@ Function: lcs(text1, text2)
 Given two strings, return the length of their longest common subsequence.\\n\\nRef: LeetCode #1143 Longest Common Subsequence`,
     code: `def lcs(text1, text2):
     raise NotImplementedError`,
-    testCode: `from importlib import import_module
-
-lcs = import_module("kata.34_longest_common_subsequence.34_longest_common_subsequence_problem").lcs
-
-
-def test_basic():
+    testCode: `def test_basic():
     assert lcs("abcde", "ace") == 3
 
 

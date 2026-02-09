@@ -74,10 +74,14 @@ async function createSchema(db: Database) {
 }
 
 async function seedKatas(db: Database) {
-  // Use INSERT OR IGNORE so seeding is idempotent
+  // Collect all valid IDs to remove orphans after seeding
+  const validIds = new Set<string>();
+
+  // INSERT OR REPLACE: new katas get added, existing katas get updated
   for (const kata of sampleKatas) {
+    validIds.add(kata.id);
     await db.execute(
-      `INSERT OR IGNORE INTO katas (id, name, category, language, difficulty, description, code, test_code, solution, usage)
+      `INSERT OR REPLACE INTO katas (id, name, category, language, difficulty, description, code, test_code, solution, usage)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
       [
         kata.id,
@@ -94,25 +98,32 @@ async function seedKatas(db: Database) {
     );
   }
 
-  // Seed Python katas that have code + testCode
+  // Seed Python katas
   for (const kata of sampleKatasPython) {
-    if (!kata.code || !kata.testCode) continue;
-    const category = kata.section.replace(/^\d+_/, "").replace(/_/g, " ");
+    validIds.add(kata.id);
     await db.execute(
-      `INSERT OR IGNORE INTO katas (id, name, category, language, difficulty, description, code, test_code, solution, usage)
+      `INSERT OR REPLACE INTO katas (id, name, category, language, difficulty, description, code, test_code, solution, usage)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
       [
         kata.id,
         kata.name,
-        category,
-        "python",
-        kata.difficulty || "easy",
-        kata.description || null,
+        kata.category,
+        kata.language,
+        kata.difficulty,
+        kata.description,
         kata.code,
         kata.testCode,
-        kata.solution || null,
+        kata.solution,
         kata.usage,
       ]
     );
+  }
+
+  // Remove orphaned katas no longer in seed data
+  const rows = await db.select<{ id: string }[]>("SELECT id FROM katas");
+  for (const row of rows) {
+    if (!validIds.has(row.id)) {
+      await db.execute("DELETE FROM katas WHERE id = $1", [row.id]);
+    }
   }
 }
