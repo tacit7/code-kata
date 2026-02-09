@@ -1,4 +1,5 @@
 import type { TestResult } from "../types/editor";
+import { runPythonTests } from "./python-runner";
 
 const ASSERT_HELPERS = `
 function assert(condition, message) {
@@ -10,7 +11,7 @@ function assertEqual(actual, expected, message) {
 }
 `;
 
-export function runTests(userCode: string, testCode: string): TestResult[] {
+function runJsTests(userCode: string, testCode: string): TestResult[] {
   const testNames = [...testCode.matchAll(/function\s+(test_\w+)\s*\(/g)].map(
     (m) => m[1],
   );
@@ -36,4 +37,15 @@ export function runTests(userCode: string, testCode: string): TestResult[] {
   }
 
   return results;
+}
+
+export async function runTests(
+  userCode: string,
+  testCode: string,
+  language: string,
+): Promise<TestResult[]> {
+  if (language === "python") {
+    return runPythonTests(userCode, testCode);
+  }
+  return runJsTests(userCode, testCode);
 }

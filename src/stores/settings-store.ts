@@ -19,12 +19,15 @@ export const DEFAULT_SHORTCUTS: Record<ShortcutAction, string> = {
   closePanel: "Escape",
 };
 
+export type KataLanguage = "javascript" | "python";
+
 const DEFAULTS = {
   theme: "dark" as AppTheme,
   vimMode: false,
   fontSize: 14,
   fontFamily: "JetBrains Mono, monospace",
   tabSize: 2,
+  language: "javascript" as KataLanguage,
   defaultSessionSize: 5,
   targetTimeMs: 300000,
   autoRunTests: false,
@@ -39,6 +42,7 @@ interface SettingsState {
   fontSize: number;
   fontFamily: string;
   tabSize: number;
+  language: KataLanguage;
   // Practice
   defaultSessionSize: number;
   targetTimeMs: number;
@@ -108,6 +112,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       fontSize: (patch.fontSize as number) ?? DEFAULTS.fontSize,
       fontFamily: (patch.fontFamily as string) ?? DEFAULTS.fontFamily,
       tabSize: (patch.tabSize as number) ?? DEFAULTS.tabSize,
+      language: (patch.language as KataLanguage) ?? DEFAULTS.language,
       defaultSessionSize:
         (patch.defaultSessionSize as number) ?? DEFAULTS.defaultSessionSize,
       targetTimeMs: (patch.targetTimeMs as number) ?? DEFAULTS.targetTimeMs,

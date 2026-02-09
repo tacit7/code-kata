@@ -54,10 +54,40 @@ function EditorTab() {
   const fontSize = useSettingsStore((s) => s.fontSize);
   const fontFamily = useSettingsStore((s) => s.fontFamily);
   const tabSize = useSettingsStore((s) => s.tabSize);
+  const language = useSettingsStore((s) => s.language);
   const setSetting = useSettingsStore((s) => s.setSetting);
 
   return (
     <div className="flex flex-col gap-6">
+      {/* Language */}
+      <div>
+        <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400 mb-2">
+          Language
+        </label>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setSetting("language", "javascript")}
+            className={`px-4 py-1.5 text-sm font-medium rounded transition-colors ${
+              language === "javascript"
+                ? "bg-blue-600 text-white"
+                : "bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-300 dark:hover:bg-zinc-600"
+            }`}
+          >
+            JavaScript
+          </button>
+          <button
+            onClick={() => setSetting("language", "python")}
+            className={`px-4 py-1.5 text-sm font-medium rounded transition-colors ${
+              language === "python"
+                ? "bg-blue-600 text-white"
+                : "bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-300 dark:hover:bg-zinc-600"
+            }`}
+          >
+            Python
+          </button>
+        </div>
+      </div>
+
       {/* Theme */}
       <div>
         <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400 mb-2">

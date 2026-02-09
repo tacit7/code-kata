@@ -1,5 +1,6 @@
 import Database from "@tauri-apps/plugin-sql";
 import { sampleKatas } from "./sample-katas";
+import { sampleKatasPython } from "./sample-katas-python";
 
 let db: Database | null = null;
 
@@ -73,11 +74,7 @@ async function createSchema(db: Database) {
 }
 
 async function seedKatas(db: Database) {
-  const rows = await db.select<{ count: number }[]>(
-    "SELECT COUNT(*) as count FROM katas"
-  );
-  if (rows[0].count > 0) return;
-
+  // Use INSERT OR IGNORE so seeding is idempotent
   for (const kata of sampleKatas) {
     await db.execute(
       `INSERT OR IGNORE INTO katas (id, name, category, language, difficulty, description, code, test_code, solution, usage)
@@ -92,6 +89,28 @@ async function seedKatas(db: Database) {
         kata.code,
         kata.testCode,
         kata.solution,
+        kata.usage,
+      ]
+    );
+  }
+
+  // Seed Python katas that have code + testCode
+  for (const kata of sampleKatasPython) {
+    if (!kata.code || !kata.testCode) continue;
+    const category = kata.section.replace(/^\d+_/, "").replace(/_/g, " ");
+    await db.execute(
+      `INSERT OR IGNORE INTO katas (id, name, category, language, difficulty, description, code, test_code, solution, usage)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+      [
+        kata.id,
+        kata.name,
+        category,
+        "python",
+        kata.difficulty || "easy",
+        kata.description || null,
+        kata.code,
+        kata.testCode,
+        kata.solution || null,
         kata.usage,
       ]
     );

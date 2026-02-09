@@ -21,6 +21,7 @@ export function KataEditor({ kata, onTestComplete }: KataEditorProps) {
   const vimModeRef = useRef<VimAdapterInstance | null>(null);
   const statusBarRef = useRef<HTMLDivElement | null>(null);
   const [results, setResults] = useState<TestResult[] | null>(null);
+  const [running, setRunning] = useState(false);
   const [showSolution, setShowSolution] = useState(false);
   const [showPanel, setShowPanel] = useState<"description" | "usage" | null>(null);
 
@@ -33,20 +34,28 @@ export function KataEditor({ kata, onTestComplete }: KataEditorProps) {
   const { kataStatus, startKataTimer, completeKataTimer } =
     useTimerStore();
 
-  const handleRun = useCallback(() => {
-    if (!editorRef.current) return;
+  const handleRun = useCallback(async () => {
+    if (!editorRef.current || running) return;
     if (kataStatus === "idle") startKataTimer();
-    const code = editorRef.current.getValue();
-    const testResults = runTests(code, kata.testCode);
-    setResults(testResults);
-    const allPassed = testResults.length > 0 && testResults.every((r) => r.passed);
-    if (allPassed) {
-      completeKataTimer();
+    setRunning(true);
+    try {
+      const code = editorRef.current.getValue();
+      const testResults = await runTests(code, kata.testCode, kata.language);
+      setResults(testResults);
+      const allPassed = testResults.length > 0 && testResults.every((r) => r.passed);
+      if (allPassed) {
+        completeKataTimer();
+      }
+      if (onTestComplete) {
+        onTestComplete(allPassed, code);
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setResults([{ name: "Runner error", passed: false, error: msg }]);
+    } finally {
+      setRunning(false);
     }
-    if (onTestComplete) {
-      onTestComplete(allPassed, code);
-    }
-  }, [kata.testCode, kataStatus, startKataTimer, completeKataTimer, onTestComplete]);
+  }, [kata.testCode, kata.language, kataStatus, running, startKataTimer, completeKataTimer, onTestComplete]);
 
   const handleToggleSolution = useCallback(() => {
     setShowSolution((v) => !v);
@@ -165,9 +174,10 @@ export function KataEditor({ kata, onTestComplete }: KataEditorProps) {
       <div className="flex items-center gap-2 px-3 py-1.5 border-t border-zinc-200 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800 shrink-0">
         <button
           onClick={handleRun}
-          className="px-3 py-1 text-xs font-medium rounded bg-green-600 hover:bg-green-500 text-white transition-colors"
+          disabled={running}
+          className="px-3 py-1 text-xs font-medium rounded bg-green-600 hover:bg-green-500 text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          Run
+          {running ? "Running..." : "Run"}
         </button>
         {kata.description && (
           <button

@@ -38,7 +38,6 @@ export function LibraryPage() {
             <tr className="text-left text-xs text-zinc-500 dark:text-zinc-400 border-b border-zinc-200 dark:border-zinc-800">
               <th className="pb-2 font-medium">Name</th>
               <th className="pb-2 font-medium">Category</th>
-              <th className="pb-2 font-medium">Language</th>
               <th className="pb-2 font-medium">Difficulty</th>
             </tr>
           </thead>
@@ -51,7 +50,6 @@ export function LibraryPage() {
               >
                 <td className="py-2 font-medium">{kata.name}</td>
                 <td className="py-2 text-zinc-600 dark:text-zinc-400">{kata.category}</td>
-                <td className="py-2 text-zinc-600 dark:text-zinc-400">{kata.language}</td>
                 <td className="py-2">
                   <span className="px-1.5 py-0.5 text-xs rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400">
                     {kata.difficulty ?? "—"}
@@ -61,7 +59,7 @@ export function LibraryPage() {
             ))}
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={4} className="py-8 text-center text-zinc-400">
+                <td colSpan={3} className="py-8 text-center text-zinc-400">
                   No katas found
                 </td>
               </tr>

@@ -14,6 +14,7 @@ import { SettingsPage } from "./routes/settings";
 
 function App() {
   const theme = useSettingsStore((s) => s.theme);
+  const language = useSettingsStore((s) => s.language);
   const loadSettings = useSettingsStore((s) => s.loadSettings);
   const settingsLoaded = useSettingsStore((s) => s.loaded);
   const { loading, error, loadKatas } = useKataStore();
@@ -26,8 +27,14 @@ function App() {
 
   useEffect(() => {
     loadSettings();
-    loadKatas();
-  }, [loadSettings, loadKatas]);
+  }, [loadSettings]);
+
+  // Load katas when settings are ready or language changes
+  useEffect(() => {
+    if (settingsLoaded) {
+      loadKatas(language);
+    }
+  }, [settingsLoaded, language, loadKatas]);
 
   if (loading || !settingsLoaded) {
     return (

@@ -19,7 +19,7 @@ interface KataState {
   katas: Kata[];
   loading: boolean;
   error: string | null;
-  loadKatas: () => Promise<void>;
+  loadKatas: (language?: string) => Promise<void>;
 }
 
 export const useKataStore = create<KataState>((set) => ({
@@ -27,11 +27,14 @@ export const useKataStore = create<KataState>((set) => ({
   loading: true,
   error: null,
 
-  loadKatas: async () => {
+  loadKatas: async (language = "javascript") => {
     try {
       set({ loading: true, error: null });
       const db = await getDb();
-      const rows = await db.select<KataRow[]>("SELECT * FROM katas");
+      const rows = await db.select<KataRow[]>(
+        "SELECT * FROM katas WHERE language = $1",
+        [language],
+      );
       const katas: Kata[] = rows.map((row) => ({
         id: row.id,
         name: row.name,
