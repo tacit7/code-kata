@@ -5,11 +5,11 @@ export const sampleKatas: Kata[] = [
   {
     id: "two-sum",
     name: "Two Sum",
-    category: "arrays",
+    category: "arrays-and-hashing",
     language: "javascript",
     difficulty: "easy",
     description:
-      "Given an array of integers and a target value, return the indices of the two numbers that add up to the target. Each input has exactly one solution, and you may not use the same element twice.\n\nExample 1:\n  Input: nums = [2, 7, 11, 15], target = 9\n  Output: [0, 1]\n  Explanation: nums[0] + nums[1] = 2 + 7 = 9\n\nExample 2:\n  Input: nums = [3, 2, 4], target = 6\n  Output: [1, 2]\n  Explanation: nums[1] + nums[2] = 2 + 4 = 6\n\nExample 3:\n  Input: nums = [3, 3], target = 6\n  Output: [0, 1]",
+      "Given an array of integers and a target value, return the indices of the two numbers that add up to the target. Each input has exactly one solution, and you may not use the same element twice.\n\nExample 1:\n  Input: nums = [2, 7, 11, 15], target = 9\n  Output: [0, 1]\n  Explanation: nums[0] + nums[1] = 2 + 7 = 9\n\nExample 2:\n  Input: nums = [3, 2, 4], target = 6\n  Output: [1, 2]\n  Explanation: nums[1] + nums[2] = 2 + 4 = 6\n\nExample 3:\n  Input: nums = [3, 3], target = 6\n  Output: [0, 1]\n\nRef: LeetCode #1 Two Sum",
     code: `// Given an array of integers and a target,
 // return indices of the two numbers that add up to target.
 // Each input has exactly one solution; don't reuse the same element.
@@ -53,11 +53,11 @@ function test_first_and_last() {
   {
     id: "fizzbuzz",
     name: "FizzBuzz",
-    category: "strings",
+    category: "arrays-and-hashing",
     language: "javascript",
     difficulty: "easy",
     description:
-      "Given an integer n, return an array of strings from 1 to n where: multiples of 3 are replaced with \"Fizz\", multiples of 5 with \"Buzz\", multiples of both 3 and 5 with \"FizzBuzz\", and all other numbers are converted to their string representation.\n\nExample 1:\n  Input: n = 5\n  Output: [\"1\", \"2\", \"Fizz\", \"4\", \"Buzz\"]\n\nExample 2:\n  Input: n = 15\n  Output: [\"1\", \"2\", \"Fizz\", \"4\", \"Buzz\", \"Fizz\", \"7\", \"8\", \"Fizz\", \"Buzz\", \"11\", \"Fizz\", \"13\", \"14\", \"FizzBuzz\"]\n\nExample 3:\n  Input: n = 3\n  Output: [\"1\", \"2\", \"Fizz\"]",
+      "Given an integer n, return an array of strings from 1 to n where: multiples of 3 are replaced with \"Fizz\", multiples of 5 with \"Buzz\", multiples of both 3 and 5 with \"FizzBuzz\", and all other numbers are converted to their string representation.\n\nExample 1:\n  Input: n = 5\n  Output: [\"1\", \"2\", \"Fizz\", \"4\", \"Buzz\"]\n\nExample 2:\n  Input: n = 15\n  Output: [\"1\", \"2\", \"Fizz\", \"4\", \"Buzz\", \"Fizz\", \"7\", \"8\", \"Fizz\", \"Buzz\", \"11\", \"Fizz\", \"13\", \"14\", \"FizzBuzz\"]\n\nExample 3:\n  Input: n = 3\n  Output: [\"1\", \"2\", \"Fizz\"]\n\nRef: LeetCode #412 Fizz Buzz",
     code: `// Return an array of strings from 1 to n:
 // - "Fizz" for multiples of 3
 // - "Buzz" for multiples of 5
@@ -119,7 +119,7 @@ function test_full_sequence() {
     language: "javascript",
     difficulty: "medium",
     description:
-      "Given the root of a binary tree (where each Node has val, left, and right properties), return an array of all node values in level-order (breadth-first) traversal. Visit nodes level by level, left to right.\n\nExample 1:\n  Input: tree =\n        3\n       / \\\n      9   20\n         / \\\n        15   7\n  Output: [3, 9, 20, 15, 7]\n\nExample 2:\n  Input: tree =\n      1\n       \\\n        2\n  Output: [1, 2]\n\nExample 3:\n  Input: tree = (empty, root is null)\n  Output: []",
+      "Given the root of a binary tree (where each Node has val, left, and right properties), return an array of all node values in level-order (breadth-first) traversal. Visit nodes level by level, left to right.\n\nExample 1:\n  Input: tree =\n        3\n       / \\\n      9   20\n         / \\\n        15   7\n  Output: [3, 9, 20, 15, 7]\n\nExample 2:\n  Input: tree =\n      1\n       \\\n        2\n  Output: [1, 2]\n\nExample 3:\n  Input: tree = (empty, root is null)\n  Output: []\n\nRef: LeetCode #102 Binary Tree Level Order Traversal",
     code: `class Node {
   constructor(val, left = null, right = null) {
     this.val = val;
@@ -196,7 +196,7 @@ function bfs(root) {
     language: "javascript",
     difficulty: "medium",
     description:
-      "Given a 2D grid of 0s and 1s and a starting [row, col] position, return an array of [row, col] positions visited in BFS order. 0 means passable, 1 means wall. Only move in the four cardinal directions (up, down, left, right). Do not revisit cells or pass through walls.\n\nExample 1:\n  Input: grid = [\n    [0, 0, 0],\n    [0, 1, 0],\n    [0, 0, 0]\n  ], start = [0, 0]\n  Output: [[0,0], [0,1], [1,0], [0,2], [2,0], [1,2], [2,1], [2,2]]\n\nExample 2:\n  Input: grid = [\n    [0, 1],\n    [0, 0]\n  ], start = [0, 0]\n  Output: [[0,0], [1,0], [1,1]]\n\nExample 3:\n  Input: grid = [[0]], start = [0, 0]\n  Output: [[0,0]]",
+      "Given a 2D grid of 0s and 1s and a starting [row, col] position, return an array of [row, col] positions visited in BFS order. 0 means passable, 1 means wall. Only move in the four cardinal directions (up, down, left, right). Do not revisit cells or pass through walls.\n\nExample 1:\n  Input: grid = [\n    [0, 0, 0],\n    [0, 1, 0],\n    [0, 0, 0]\n  ], start = [0, 0]\n  Output: [[0,0], [0,1], [1,0], [0,2], [2,0], [1,2], [2,1], [2,2]]\n\nExample 2:\n  Input: grid = [\n    [0, 1],\n    [0, 0]\n  ], start = [0, 0]\n  Output: [[0,0], [1,0], [1,1]]\n\nExample 3:\n  Input: grid = [[0]], start = [0, 0]\n  Output: [[0,0]]\n\nRef: LeetCode #1091 Shortest Path in Binary Matrix",
     code: `function matrixBfs(grid, start) {
   // your code here
 }`,
@@ -269,11 +269,11 @@ function test_all_open_2x2() {
   {
     id: "linked-list-traversal",
     name: "Linked List Traversal",
-    category: "linked-lists",
+    category: "linked-list",
     language: "javascript",
     difficulty: "easy",
     description:
-      "Given the head of a singly linked list (where each Node has val and next properties), return an array containing all the values in the list from head to tail.\n\nExample 1:\n  Input: list = 1 -> 2 -> 3 -> 4 -> null\n  Output: [1, 2, 3, 4]\n\nExample 2:\n  Input: list = 10 -> null\n  Output: [10]\n\nExample 3:\n  Input: list = null (empty list)\n  Output: []",
+      "Given the head of a singly linked list (where each Node has val and next properties), return an array containing all the values in the list from head to tail.\n\nExample 1:\n  Input: list = 1 -> 2 -> 3 -> 4 -> null\n  Output: [1, 2, 3, 4]\n\nExample 2:\n  Input: list = 10 -> null\n  Output: [10]\n\nExample 3:\n  Input: list = null (empty list)\n  Output: []\n\nRef: LeetCode #234 Palindrome Linked List (closest match)",
     code: `class Node {
   constructor(val, next = null) {
     this.val = val;
@@ -324,11 +324,11 @@ function traverse(head) {
   {
     id: "binary-search",
     name: "Binary Search",
-    category: "search",
+    category: "binary-search",
     language: "javascript",
     difficulty: "easy",
     description:
-      "Given a sorted array of integers and a target value, return the index of the target if found, or -1 if not present. Use classic binary search by maintaining low and high pointers and checking the midpoint each iteration.\n\nExample 1:\n  Input: nums = [-1, 0, 3, 5, 9, 12], target = 9\n  Output: 4\n\nExample 2:\n  Input: nums = [-1, 0, 3, 5, 9, 12], target = 2\n  Output: -1\n\nExample 3:\n  Input: nums = [5], target = 5\n  Output: 0",
+      "Given a sorted array of integers and a target value, return the index of the target if found, or -1 if not present. Use classic binary search by maintaining low and high pointers and checking the midpoint each iteration.\n\nExample 1:\n  Input: nums = [-1, 0, 3, 5, 9, 12], target = 9\n  Output: 4\n\nExample 2:\n  Input: nums = [-1, 0, 3, 5, 9, 12], target = 2\n  Output: -1\n\nExample 3:\n  Input: nums = [5], target = 5\n  Output: 0\n\nRef: LeetCode #704 Binary Search",
     code: `function binarySearch(nums, target) {
   // your code here
 }`,
@@ -387,7 +387,7 @@ function test_single_not_found() {
     language: "javascript",
     difficulty: "medium",
     description:
-      "Given the root of a binary tree, return an array of node values in preorder traversal order: visit the root first, then recursively traverse the left subtree, then the right subtree.\n\nExample 1:\n  Input: tree =\n        1\n       / \\\n      2   3\n     / \\\n    4   5\n  Output: [1, 2, 4, 5, 3]\n\nExample 2:\n  Input: tree =\n      1\n       \\\n        2\n         \\\n          3\n  Output: [1, 2, 3]\n\nExample 3:\n  Input: tree = (empty, root is null)\n  Output: []",
+      "Given the root of a binary tree, return an array of node values in preorder traversal order: visit the root first, then recursively traverse the left subtree, then the right subtree.\n\nExample 1:\n  Input: tree =\n        1\n       / \\\n      2   3\n     / \\\n    4   5\n  Output: [1, 2, 4, 5, 3]\n\nExample 2:\n  Input: tree =\n      1\n       \\\n        2\n         \\\n          3\n  Output: [1, 2, 3]\n\nExample 3:\n  Input: tree = (empty, root is null)\n  Output: []\n\nRef: LeetCode #144 Binary Tree Preorder Traversal",
     code: `class Node {
   constructor(val, left = null, right = null) {
     this.val = val;
@@ -449,7 +449,7 @@ function preorder(root) {
     language: "javascript",
     difficulty: "medium",
     description:
-      "Given the root of a binary tree, return an array of node values in inorder traversal order: recursively traverse the left subtree, visit the root, then recursively traverse the right subtree. For a binary search tree, this produces values in sorted ascending order.\n\nExample 1:\n  Input: tree =\n        4\n       / \\\n      2   6\n     / \\ / \\\n    1  3 5  7\n  Output: [1, 2, 3, 4, 5, 6, 7]\n\nExample 2:\n  Input: tree =\n        1\n       / \\\n      2   3\n     / \\\n    4   5\n  Output: [4, 2, 5, 1, 3]\n\nExample 3:\n  Input: tree = (empty, root is null)\n  Output: []",
+      "Given the root of a binary tree, return an array of node values in inorder traversal order: recursively traverse the left subtree, visit the root, then recursively traverse the right subtree. For a binary search tree, this produces values in sorted ascending order.\n\nExample 1:\n  Input: tree =\n        4\n       / \\\n      2   6\n     / \\ / \\\n    1  3 5  7\n  Output: [1, 2, 3, 4, 5, 6, 7]\n\nExample 2:\n  Input: tree =\n        1\n       / \\\n      2   3\n     / \\\n    4   5\n  Output: [4, 2, 5, 1, 3]\n\nExample 3:\n  Input: tree = (empty, root is null)\n  Output: []\n\nRef: LeetCode #94 Binary Tree Inorder Traversal",
     code: `class Node {
   constructor(val, left = null, right = null) {
     this.val = val;
@@ -511,7 +511,7 @@ function inorder(root) {
     language: "javascript",
     difficulty: "medium",
     description:
-      "Given the root of a binary tree, return an array of node values in postorder traversal order: recursively traverse the left subtree, then the right subtree, then visit the root. Leaf nodes appear before their parents.\n\nExample 1:\n  Input: tree =\n        1\n       / \\\n      2   3\n     / \\\n    4   5\n  Output: [4, 5, 2, 3, 1]\n\nExample 2:\n  Input: tree =\n      1\n       \\\n        2\n         \\\n          3\n  Output: [3, 2, 1]\n\nExample 3:\n  Input: tree = (empty, root is null)\n  Output: []",
+      "Given the root of a binary tree, return an array of node values in postorder traversal order: recursively traverse the left subtree, then the right subtree, then visit the root. Leaf nodes appear before their parents.\n\nExample 1:\n  Input: tree =\n        1\n       / \\\n      2   3\n     / \\\n    4   5\n  Output: [4, 5, 2, 3, 1]\n\nExample 2:\n  Input: tree =\n      1\n       \\\n        2\n         \\\n          3\n  Output: [3, 2, 1]\n\nExample 3:\n  Input: tree = (empty, root is null)\n  Output: []\n\nRef: LeetCode #145 Binary Tree Postorder Traversal",
     code: `class Node {
   constructor(val, left = null, right = null) {
     this.val = val;
@@ -575,7 +575,7 @@ function postorder(root) {
     language: "javascript",
     difficulty: "medium",
     description:
-      "Given an adjacency list (an object mapping each node to an array of its neighbors) and a start node, return an array of all reachable nodes visited in depth-first search order. Use a stack or recursion. Track visited nodes to avoid cycles.\n\nExample 1:\n  Input: graph = { \"a\": [\"b\", \"c\"], \"b\": [\"d\"], \"c\": [\"e\"], \"d\": [], \"e\": [] }, start = \"a\"\n  Output: [\"a\", \"b\", \"d\", \"c\", \"e\"]\n\nExample 2:\n  Input: graph = { \"a\": [\"b\"], \"b\": [\"a\"] }, start = \"a\"\n  Output: [\"a\", \"b\"]\n\nExample 3:\n  Input: graph = { \"x\": [] }, start = \"x\"\n  Output: [\"x\"]",
+      "Given an adjacency list (an object mapping each node to an array of its neighbors) and a start node, return an array of all reachable nodes visited in depth-first search order. Use a stack or recursion. Track visited nodes to avoid cycles.\n\nExample 1:\n  Input: graph = { \"a\": [\"b\", \"c\"], \"b\": [\"d\"], \"c\": [\"e\"], \"d\": [], \"e\": [] }, start = \"a\"\n  Output: [\"a\", \"b\", \"d\", \"c\", \"e\"]\n\nExample 2:\n  Input: graph = { \"a\": [\"b\"], \"b\": [\"a\"] }, start = \"a\"\n  Output: [\"a\", \"b\"]\n\nExample 3:\n  Input: graph = { \"x\": [] }, start = \"x\"\n  Output: [\"x\"]\n\nRef: LeetCode #323 Number of Connected Components in an Undirected Graph (closest match)",
     code: `function graphDfs(graph, start) {
   // your code here
 }`,
@@ -633,7 +633,7 @@ function test_disconnected() {
     language: "javascript",
     difficulty: "easy",
     description:
-      "Given an array of edges (each edge is a pair [a, b]) and a boolean directed flag, build and return an adjacency list as an object mapping each node to an array of its neighbors. If directed is false, add edges in both directions (a->b and b->a). If directed is true, add only a->b.\n\nExample 1:\n  Input: edges = [[\"a\", \"b\"], [\"b\", \"c\"], [\"a\", \"c\"]], directed = false\n  Output: { \"a\": [\"b\", \"c\"], \"b\": [\"a\", \"c\"], \"c\": [\"b\", \"a\"] }\n\nExample 2:\n  Input: edges = [[\"a\", \"b\"], [\"b\", \"c\"]], directed = true\n  Output: { \"a\": [\"b\"], \"b\": [\"c\"], \"c\": [] }\n\nExample 3:\n  Input: edges = [], directed = false\n  Output: {}",
+      "Given an array of edges (each edge is a pair [a, b]) and a boolean directed flag, build and return an adjacency list as an object mapping each node to an array of its neighbors. If directed is false, add edges in both directions (a->b and b->a). If directed is true, add only a->b.\n\nExample 1:\n  Input: edges = [[\"a\", \"b\"], [\"b\", \"c\"], [\"a\", \"c\"]], directed = false\n  Output: { \"a\": [\"b\", \"c\"], \"b\": [\"a\", \"c\"], \"c\": [\"b\", \"a\"] }\n\nExample 2:\n  Input: edges = [[\"a\", \"b\"], [\"b\", \"c\"]], directed = true\n  Output: { \"a\": [\"b\"], \"b\": [\"c\"], \"c\": [] }\n\nExample 3:\n  Input: edges = [], directed = false\n  Output: {}\n\nRef: LeetCode #133 Clone Graph (closest match)",
     code: `function buildAdjacencyList(edges, directed = false) {
   // your code here
 }`,
@@ -689,7 +689,7 @@ function test_multiple_neighbors() {
     language: "javascript",
     difficulty: "medium",
     description:
-      "Given a 2D grid of 0s and 1s and a starting [row, col] position, return an array of [row, col] positions visited in DFS order. 0 means passable, 1 means wall. Only move in the four cardinal directions (up, down, left, right). Do not revisit cells or pass through walls.\n\nExample 1:\n  Input: grid = [\n    [0, 0, 0],\n    [0, 1, 0],\n    [0, 0, 0]\n  ], start = [0, 0]\n  Output: [[0,0], [0,1], [0,2], [1,2], [2,2], [2,1], [2,0], [1,0]]\n\nExample 2:\n  Input: grid = [\n    [0, 1],\n    [0, 0]\n  ], start = [0, 0]\n  Output: [[0,0], [1,0], [1,1]]\n\nExample 3:\n  Input: grid = [[0]], start = [0, 0]\n  Output: [[0,0]]",
+      "Given a 2D grid of 0s and 1s and a starting [row, col] position, return an array of [row, col] positions visited in DFS order. 0 means passable, 1 means wall. Only move in the four cardinal directions (up, down, left, right). Do not revisit cells or pass through walls.\n\nExample 1:\n  Input: grid = [\n    [0, 0, 0],\n    [0, 1, 0],\n    [0, 0, 0]\n  ], start = [0, 0]\n  Output: [[0,0], [0,1], [0,2], [1,2], [2,2], [2,1], [2,0], [1,0]]\n\nExample 2:\n  Input: grid = [\n    [0, 1],\n    [0, 0]\n  ], start = [0, 0]\n  Output: [[0,0], [1,0], [1,1]]\n\nExample 3:\n  Input: grid = [[0]], start = [0, 0]\n  Output: [[0,0]]\n\nRef: LeetCode #200 Number of Islands",
     code: `function matrixDfs(grid, start) {
   // your code here
 }`,
@@ -755,11 +755,11 @@ function test_all_open_2x2() {
   {
     id: "topological-sort",
     name: "Topological Sort",
-    category: "graphs",
+    category: "advanced-graphs",
     language: "javascript",
     difficulty: "hard",
     description:
-      "Given a directed acyclic graph (DAG) as an adjacency list (object mapping each node to an array of nodes it points to), return a valid topological ordering of all nodes using Kahn's algorithm. Start by computing in-degrees for all nodes, enqueue nodes with in-degree 0, and process the queue by removing edges and enqueueing newly zero-in-degree nodes.\n\nExample 1:\n  Input: graph = { \"a\": [\"b\", \"c\"], \"b\": [\"d\"], \"c\": [\"d\"], \"d\": [] }\n  Output: [\"a\", \"b\", \"c\", \"d\"] (or [\"a\", \"c\", \"b\", \"d\"])\n\nExample 2:\n  Input: graph = { \"math\": [\"physics\"], \"physics\": [\"quantum\"], \"quantum\": [], \"art\": [] }\n  Output: [\"math\", \"art\", \"physics\", \"quantum\"] (any valid ordering where prerequisites come first)\n\nExample 3:\n  Input: graph = { \"a\": [] }\n  Output: [\"a\"]",
+      "Given a directed acyclic graph (DAG) as an adjacency list (object mapping each node to an array of nodes it points to), return a valid topological ordering of all nodes using Kahn's algorithm. Start by computing in-degrees for all nodes, enqueue nodes with in-degree 0, and process the queue by removing edges and enqueueing newly zero-in-degree nodes.\n\nExample 1:\n  Input: graph = { \"a\": [\"b\", \"c\"], \"b\": [\"d\"], \"c\": [\"d\"], \"d\": [] }\n  Output: [\"a\", \"b\", \"c\", \"d\"] (or [\"a\", \"c\", \"b\", \"d\"])\n\nExample 2:\n  Input: graph = { \"math\": [\"physics\"], \"physics\": [\"quantum\"], \"quantum\": [], \"art\": [] }\n  Output: [\"math\", \"art\", \"physics\", \"quantum\"] (any valid ordering where prerequisites come first)\n\nExample 3:\n  Input: graph = { \"a\": [] }\n  Output: [\"a\"]\n\nRef: LeetCode #210 Course Schedule II",
     code: `function topologicalSort(graph) {
   // your code here
 }`,
@@ -817,11 +817,11 @@ function test_no_edges() {
   {
     id: "reverse-linked-list-iterative",
     name: "Reverse Linked List (Iterative)",
-    category: "linked-lists",
+    category: "linked-list",
     language: "javascript",
     difficulty: "medium",
     description:
-      "Reverse a singly linked list iteratively and return the new head. Use three pointers: prev (starts null), current (starts at head), and next (temp reference). At each step, save current.next, point current.next to prev, advance prev to current, and advance current to next.\n\nExample 1:\n  Input: list = 1 -> 2 -> 3 -> 4 -> 5 -> null\n  Output: 5 -> 4 -> 3 -> 2 -> 1 -> null (return node with val 5)\n\nExample 2:\n  Input: list = 1 -> 2 -> null\n  Output: 2 -> 1 -> null (return node with val 2)\n\nExample 3:\n  Input: list = null (empty list)\n  Output: null",
+      "Reverse a singly linked list iteratively and return the new head. Use three pointers: prev (starts null), current (starts at head), and next (temp reference). At each step, save current.next, point current.next to prev, advance prev to current, and advance current to next.\n\nExample 1:\n  Input: list = 1 -> 2 -> 3 -> 4 -> 5 -> null\n  Output: 5 -> 4 -> 3 -> 2 -> 1 -> null (return node with val 5)\n\nExample 2:\n  Input: list = 1 -> 2 -> null\n  Output: 2 -> 1 -> null (return node with val 2)\n\nExample 3:\n  Input: list = null (empty list)\n  Output: null\n\nRef: LeetCode #206 Reverse Linked List",
     code: `class Node {
   constructor(val, next = null) {
     this.val = val;
@@ -893,11 +893,11 @@ function reverseIterative(head) {
   {
     id: "reverse-linked-list-recursive",
     name: "Reverse Linked List (Recursive)",
-    category: "linked-lists",
+    category: "linked-list",
     language: "javascript",
     difficulty: "medium",
     description:
-      "Reverse a singly linked list recursively and return the new head. The base case is when head is null or head.next is null. Recurse on head.next to get the new head, then set head.next.next to head and head.next to null to reverse the link.\n\nExample 1:\n  Input: list = 1 -> 2 -> 3 -> 4 -> 5 -> null\n  Output: 5 -> 4 -> 3 -> 2 -> 1 -> null (return node with val 5)\n\nExample 2:\n  Input: list = 10 -> 20 -> null\n  Output: 20 -> 10 -> null (return node with val 20)\n\nExample 3:\n  Input: list = 42 -> null\n  Output: 42 -> null (single node, already reversed)",
+      "Reverse a singly linked list recursively and return the new head. The base case is when head is null or head.next is null. Recurse on head.next to get the new head, then set head.next.next to head and head.next to null to reverse the link.\n\nExample 1:\n  Input: list = 1 -> 2 -> 3 -> 4 -> 5 -> null\n  Output: 5 -> 4 -> 3 -> 2 -> 1 -> null (return node with val 5)\n\nExample 2:\n  Input: list = 10 -> 20 -> null\n  Output: 20 -> 10 -> null (return node with val 20)\n\nExample 3:\n  Input: list = 42 -> null\n  Output: 42 -> null (single node, already reversed)\n\nRef: LeetCode #206 Reverse Linked List",
     code: `class Node {
   constructor(val, next = null) {
     this.val = val;
@@ -966,11 +966,11 @@ function reverseRecursive(head) {
   {
     id: "linked-list-cycle",
     name: "Linked List Cycle",
-    category: "linked-lists",
+    category: "linked-list",
     language: "javascript",
     difficulty: "medium",
     description:
-      "Given the head of a linked list, determine whether the list contains a cycle using Floyd's tortoise and hare algorithm. A cycle exists when a node's next pointer points back to a previous node, creating an infinite loop. Return true if a cycle is detected, false otherwise.\n\nExample 1:\n  Input: 1 -> 2 -> 3 -> 4 -> 2 (node 4 points back to node 2)\n  Output: true\n\nExample 2:\n  Input: 1 -> 2 -> 3 -> null\n  Output: false\n\nExample 3:\n  Input: 1 -> 1 (node points to itself)\n  Output: true",
+      "Given the head of a linked list, determine whether the list contains a cycle using Floyd's tortoise and hare algorithm. A cycle exists when a node's next pointer points back to a previous node, creating an infinite loop. Return true if a cycle is detected, false otherwise.\n\nExample 1:\n  Input: 1 -> 2 -> 3 -> 4 -> 2 (node 4 points back to node 2)\n  Output: true\n\nExample 2:\n  Input: 1 -> 2 -> 3 -> null\n  Output: false\n\nExample 3:\n  Input: 1 -> 1 (node points to itself)\n  Output: true\n\nRef: LeetCode #141 Linked List Cycle",
     code: `class Node {
   constructor(val, next = null) {
     this.val = val;
@@ -1038,11 +1038,11 @@ function hasCycle(head) {
   {
     id: "two-pointer-remove-dupes",
     name: "Two Pointer Remove Dupes",
-    category: "arrays",
+    category: "two-pointers",
     language: "javascript",
     difficulty: "easy",
     description:
-      "Given a sorted array of integers, remove duplicates in-place so that each unique element appears only once. Return the count k of unique elements. The first k elements of the modified array must contain the unique values in their original order.\n\nExample 1:\n  Input: [1, 1, 2]\n  Output: 2  (array becomes [1, 2, ...])\n\nExample 2:\n  Input: [0, 0, 1, 1, 1, 2, 2, 3, 3, 4]\n  Output: 5  (array becomes [0, 1, 2, 3, 4, ...])\n\nExample 3:\n  Input: [1, 2, 3]\n  Output: 3  (array unchanged)",
+      "Given a sorted array of integers, remove duplicates in-place so that each unique element appears only once. Return the count k of unique elements. The first k elements of the modified array must contain the unique values in their original order.\n\nExample 1:\n  Input: [1, 1, 2]\n  Output: 2  (array becomes [1, 2, ...])\n\nExample 2:\n  Input: [0, 0, 1, 1, 1, 2, 2, 3, 3, 4]\n  Output: 5  (array becomes [0, 1, 2, 3, 4, ...])\n\nExample 3:\n  Input: [1, 2, 3]\n  Output: 3  (array unchanged)\n\nRef: LeetCode #26 Remove Duplicates from Sorted Array",
     code: `function removeDuplicates(nums) {
   // your code here
 }`,
@@ -1097,11 +1097,11 @@ function test_single() {
 {
     id: "sliding-window-max-sum",
     name: "Sliding Window Max Sum",
-    category: "arrays",
+    category: "sliding-window",
     language: "javascript",
     difficulty: "easy",
     description:
-      "Given an array of numbers and a window size k, find the maximum sum of any contiguous subarray of exactly size k. Slide a window across the array, adding the new element and removing the trailing element at each step.\n\nExample 1:\n  Input: nums = [2, 1, 5, 1, 3, 2], k = 3\n  Output: 9  (subarray [5, 1, 3])\n\nExample 2:\n  Input: nums = [2, 3, 4, 1, 5], k = 2\n  Output: 7  (subarray [3, 4])\n\nExample 3:\n  Input: nums = [1, 1, 1, 1, 1], k = 3\n  Output: 3",
+      "Given an array of numbers and a window size k, find the maximum sum of any contiguous subarray of exactly size k. Slide a window across the array, adding the new element and removing the trailing element at each step.\n\nExample 1:\n  Input: nums = [2, 1, 5, 1, 3, 2], k = 3\n  Output: 9  (subarray [5, 1, 3])\n\nExample 2:\n  Input: nums = [2, 3, 4, 1, 5], k = 2\n  Output: 7  (subarray [3, 4])\n\nExample 3:\n  Input: nums = [1, 1, 1, 1, 1], k = 3\n  Output: 3\n\nRef: LeetCode #2461 Maximum Sum of Distinct Subarrays With Length K",
     code: `function maxSum(nums, k) {
   // your code here
 }`,
@@ -1143,11 +1143,11 @@ function test_mixed() {
   {
     id: "frequency-count",
     name: "Frequency Count",
-    category: "arrays",
+    category: "arrays-and-hashing",
     language: "javascript",
     difficulty: "easy",
     description:
-      "Given an array of items, return an object (map) where each key is a unique item from the array and each value is the number of times that item appears. Note that in JavaScript, object keys are coerced to strings.\n\nExample 1:\n  Input: [\"a\", \"b\", \"a\", \"c\", \"b\", \"a\"]\n  Output: { \"a\": 3, \"b\": 2, \"c\": 1 }\n\nExample 2:\n  Input: [1, 2, 2, 3, 3, 3]\n  Output: { \"1\": 1, \"2\": 2, \"3\": 3 }\n\nExample 3:\n  Input: [\"x\"]\n  Output: { \"x\": 1 }",
+      "Given an array of items, return an object (map) where each key is a unique item from the array and each value is the number of times that item appears. Note that in JavaScript, object keys are coerced to strings.\n\nExample 1:\n  Input: [\"a\", \"b\", \"a\", \"c\", \"b\", \"a\"]\n  Output: { \"a\": 3, \"b\": 2, \"c\": 1 }\n\nExample 2:\n  Input: [1, 2, 2, 3, 3, 3]\n  Output: { \"1\": 1, \"2\": 2, \"3\": 3 }\n\nExample 3:\n  Input: [\"x\"]\n  Output: { \"x\": 1 }\n\nRef: LeetCode #1207 Unique Number of Occurrences (closest match)",
     code: `function frequencyCount(items) {
   // your code here
 }`,
@@ -1178,11 +1178,11 @@ function test_empty() {
   {
     id: "most-frequent",
     name: "Most Frequent Element",
-    category: "arrays",
+    category: "arrays-and-hashing",
     language: "javascript",
     difficulty: "easy",
     description:
-      "Given an array of items, return the item that appears most frequently. If there is a tie, return the item that reaches the highest count first during iteration.\n\nExample 1:\n  Input: [\"a\", \"b\", \"a\", \"c\", \"b\", \"a\"]\n  Output: \"a\"\n\nExample 2:\n  Input: [3, 1, 3, 2, 1, 3]\n  Output: 3\n\nExample 3:\n  Input: [\"cat\", \"dog\", \"cat\"]\n  Output: \"cat\"",
+      "Given an array of items, return the item that appears most frequently. If there is a tie, return the item that reaches the highest count first during iteration.\n\nExample 1:\n  Input: [\"a\", \"b\", \"a\", \"c\", \"b\", \"a\"]\n  Output: \"a\"\n\nExample 2:\n  Input: [3, 1, 3, 2, 1, 3]\n  Output: 3\n\nExample 3:\n  Input: [\"cat\", \"dog\", \"cat\"]\n  Output: \"cat\"\n\nRef: LeetCode #347 Top K Frequent Elements (closest match)",
     code: `function mostFrequent(items) {
   // your code here
 }`,
@@ -1222,11 +1222,11 @@ function test_numbers() {
   {
     id: "merge-sorted-arrays",
     name: "Merge Sorted Arrays",
-    category: "arrays",
+    category: "two-pointers",
     language: "javascript",
     difficulty: "easy",
     description:
-      "Given two sorted arrays of numbers, merge them into a single sorted array using the two-pointer technique. Compare elements at both pointers, take the smaller one, and advance that pointer. Append any remaining elements from the non-exhausted array.\n\nExample 1:\n  Input: [1, 3, 5], [2, 4, 6]\n  Output: [1, 2, 3, 4, 5, 6]\n\nExample 2:\n  Input: [1, 2, 3], [4, 5]\n  Output: [1, 2, 3, 4, 5]\n\nExample 3:\n  Input: [], [1, 2, 3]\n  Output: [1, 2, 3]",
+      "Given two sorted arrays of numbers, merge them into a single sorted array using the two-pointer technique. Compare elements at both pointers, take the smaller one, and advance that pointer. Append any remaining elements from the non-exhausted array.\n\nExample 1:\n  Input: [1, 3, 5], [2, 4, 6]\n  Output: [1, 2, 3, 4, 5, 6]\n\nExample 2:\n  Input: [1, 2, 3], [4, 5]\n  Output: [1, 2, 3, 4, 5]\n\nExample 3:\n  Input: [], [1, 2, 3]\n  Output: [1, 2, 3]\n\nRef: LeetCode #88 Merge Sorted Array",
     code: `function mergeSorted(a, b) {
   // your code here
 }`,
@@ -1278,11 +1278,11 @@ function test_negatives() {
   {
     id: "min-heap",
     name: "Min Heap",
-    category: "data-structures",
+    category: "heap",
     language: "javascript",
     difficulty: "medium",
     description:
-      "Implement a MinHeap class backed by an array. The smallest element is always at the root. For a node at index i, its left child is at 2i+1 and right child is at 2i+2, and its parent is at floor((i-1)/2). Support insert, extractMin, peek, and size operations.\n\nExample 1:\n  Operations: insert(5), insert(3), insert(8), peek()\n  Result: peek() returns 3\n\nExample 2:\n  Operations: insert(10), insert(4), insert(15), extractMin(), extractMin()\n  Result: first extractMin() returns 4, second returns 10\n\nExample 3:\n  Operations: insert(1), insert(2), size(), extractMin(), size()\n  Result: first size() returns 2, extractMin() returns 1, second size() returns 1",
+      "Implement a MinHeap class backed by an array. The smallest element is always at the root. For a node at index i, its left child is at 2i+1 and right child is at 2i+2, and its parent is at floor((i-1)/2). Support insert, extractMin, peek, and size operations.\n\nExample 1:\n  Operations: insert(5), insert(3), insert(8), peek()\n  Result: peek() returns 3\n\nExample 2:\n  Operations: insert(10), insert(4), insert(15), extractMin(), extractMin()\n  Result: first extractMin() returns 4, second returns 10\n\nExample 3:\n  Operations: insert(1), insert(2), size(), extractMin(), size()\n  Result: first size() returns 2, extractMin() returns 1, second size() returns 1\n\nRef: LeetCode #703 Kth Largest Element in a Stream (closest match)",
     code: `class MinHeap {
   constructor() {
     this.data = [];
@@ -1415,11 +1415,11 @@ function test_duplicates() {
   {
     id: "balanced-parentheses",
     name: "Balanced Parentheses",
-    category: "strings",
+    category: "stack",
     language: "javascript",
     difficulty: "easy",
     description:
-      "Given a string containing the characters ()[]{}  determine whether every opening bracket has a corresponding closing bracket in the correct nesting order. An empty string is considered balanced. Characters other than brackets should not appear in the input.\n\nExample 1:\n  Input: \"({[]})\"\n  Output: true\n\nExample 2:\n  Input: \"([)]\"\n  Output: false\n\nExample 3:\n  Input: \"{[]}\"\n  Output: true",
+      "Given a string containing the characters ()[]{}  determine whether every opening bracket has a corresponding closing bracket in the correct nesting order. An empty string is considered balanced. Characters other than brackets should not appear in the input.\n\nExample 1:\n  Input: \"({[]})\"\n  Output: true\n\nExample 2:\n  Input: \"([)]\"\n  Output: false\n\nExample 3:\n  Input: \"{[]}\"\n  Output: true\n\nRef: LeetCode #20 Valid Parentheses",
     code: `function isBalanced(s) {
   // your code here
 }`,
@@ -1469,11 +1469,11 @@ function test_empty() {
   {
     id: "queue-from-stacks",
     name: "Queue from Stacks",
-    category: "data-structures",
+    category: "stack",
     language: "javascript",
     difficulty: "medium",
     description:
-      "Implement a FIFO queue using two stacks (arrays with push/pop only). Use a lazy transfer strategy: push new elements onto the input stack, and only move elements to the output stack when the output stack is empty and a dequeue or peek is requested. Support enqueue, dequeue, peek, and isEmpty.\n\nExample 1:\n  Operations: enqueue(1), enqueue(2), dequeue()\n  Result: dequeue() returns 1\n\nExample 2:\n  Operations: enqueue(\"a\"), enqueue(\"b\"), enqueue(\"c\"), dequeue(), peek()\n  Result: dequeue() returns \"a\", peek() returns \"b\"\n\nExample 3:\n  Operations: isEmpty(), enqueue(5), isEmpty(), dequeue(), isEmpty()\n  Result: true, false, 5 from dequeue, true",
+      "Implement a FIFO queue using two stacks (arrays with push/pop only). Use a lazy transfer strategy: push new elements onto the input stack, and only move elements to the output stack when the output stack is empty and a dequeue or peek is requested. Support enqueue, dequeue, peek, and isEmpty.\n\nExample 1:\n  Operations: enqueue(1), enqueue(2), dequeue()\n  Result: dequeue() returns 1\n\nExample 2:\n  Operations: enqueue(\"a\"), enqueue(\"b\"), enqueue(\"c\"), dequeue(), peek()\n  Result: dequeue() returns \"a\", peek() returns \"b\"\n\nExample 3:\n  Operations: isEmpty(), enqueue(5), isEmpty(), dequeue(), isEmpty()\n  Result: true, false, 5 from dequeue, true\n\nRef: LeetCode #232 Implement Queue using Stacks",
     code: `class Queue {
   constructor() {
     this.inStack = [];
@@ -1577,11 +1577,11 @@ function test_interleaved() {
   {
     id: "trie",
     name: "Trie",
-    category: "data-structures",
+    category: "tries",
     language: "javascript",
     difficulty: "medium",
     description:
-      "Implement a Trie (prefix tree) that supports three operations: insert(word) adds a word to the trie, search(word) returns true only if the exact word exists, and startsWith(prefix) returns true if any inserted word begins with the given prefix. Each node stores children and a flag marking end-of-word.\n\nExample 1:\n  Operations: insert(\"apple\"), search(\"apple\"), search(\"app\")\n  Result: search(\"apple\") returns true, search(\"app\") returns false\n\nExample 2:\n  Operations: insert(\"apple\"), startsWith(\"app\"), startsWith(\"ban\")\n  Result: startsWith(\"app\") returns true, startsWith(\"ban\") returns false\n\nExample 3:\n  Operations: insert(\"car\"), insert(\"card\"), search(\"car\"), search(\"card\")\n  Result: both return true",
+      "Implement a Trie (prefix tree) that supports three operations: insert(word) adds a word to the trie, search(word) returns true only if the exact word exists, and startsWith(prefix) returns true if any inserted word begins with the given prefix. Each node stores children and a flag marking end-of-word.\n\nExample 1:\n  Operations: insert(\"apple\"), search(\"apple\"), search(\"app\")\n  Result: search(\"apple\") returns true, search(\"app\") returns false\n\nExample 2:\n  Operations: insert(\"apple\"), startsWith(\"app\"), startsWith(\"ban\")\n  Result: startsWith(\"app\") returns true, startsWith(\"ban\") returns false\n\nExample 3:\n  Operations: insert(\"car\"), insert(\"card\"), search(\"car\"), search(\"card\")\n  Result: both return true\n\nRef: LeetCode #208 Implement Trie (Prefix Tree)",
     code: `class Trie {
   constructor() {
     this.children = {};
@@ -1675,11 +1675,11 @@ function test_empty_trie() {
   {
     id: "union-find",
     name: "Union Find",
-    category: "data-structures",
+    category: "advanced-graphs",
     language: "javascript",
     difficulty: "medium",
     description:
-      "Implement a Union-Find (disjoint set) data structure with path compression and union by rank. Support find(x) to locate the root representative, union(x, y) to merge two sets, and connected(x, y) to check if two elements share the same root.\n\nExample 1:\n  Operations: union(0, 1), union(2, 3), connected(0, 1), connected(0, 2)\n  Result: connected(0,1) returns true, connected(0,2) returns false\n\nExample 2:\n  Operations: union(0, 1), union(1, 2), connected(0, 2)\n  Result: connected(0,2) returns true (transitive)\n\nExample 3:\n  Operations: find(5)\n  Result: returns 5 (element is its own root initially)",
+      "Implement a Union-Find (disjoint set) data structure with path compression and union by rank. Support find(x) to locate the root representative, union(x, y) to merge two sets, and connected(x, y) to check if two elements share the same root.\n\nExample 1:\n  Operations: union(0, 1), union(2, 3), connected(0, 1), connected(0, 2)\n  Result: connected(0,1) returns true, connected(0,2) returns false\n\nExample 2:\n  Operations: union(0, 1), union(1, 2), connected(0, 2)\n  Result: connected(0,2) returns true (transitive)\n\nExample 3:\n  Operations: find(5)\n  Result: returns 5 (element is its own root initially)\n\nRef: LeetCode #684 Redundant Connection (closest match)",
     code: `class UnionFind {
   constructor(n) {
     // your code here
@@ -1766,11 +1766,11 @@ function test_self_connected() {
   {
     id: "merge-sort",
     name: "Merge Sort",
-    category: "sorting",
+    category: "arrays-and-hashing",
     language: "javascript",
     difficulty: "medium",
     description:
-      "Implement merge sort. Recursively split the array into two halves until each subarray has one or zero elements, then merge the sorted halves back together by comparing elements from each half in order. Return a new sorted array without mutating the original.\n\nExample 1:\n  Input: [38, 27, 43, 3, 9, 82, 10]\n  Output: [3, 9, 10, 27, 38, 43, 82]\n\nExample 2:\n  Input: [5, 1, 4, 2, 3]\n  Output: [1, 2, 3, 4, 5]\n\nExample 3:\n  Input: [1]\n  Output: [1]",
+      "Implement merge sort. Recursively split the array into two halves until each subarray has one or zero elements, then merge the sorted halves back together by comparing elements from each half in order. Return a new sorted array without mutating the original.\n\nExample 1:\n  Input: [38, 27, 43, 3, 9, 82, 10]\n  Output: [3, 9, 10, 27, 38, 43, 82]\n\nExample 2:\n  Input: [5, 1, 4, 2, 3]\n  Output: [1, 2, 3, 4, 5]\n\nExample 3:\n  Input: [1]\n  Output: [1]\n\nRef: LeetCode #912 Sort an Array",
     code: `function mergeSort(arr) {
   // your code here
 }`,
@@ -1829,11 +1829,11 @@ function merge(left, right) {
   {
     id: "lomuto-partition",
     name: "Lomuto Partition",
-    category: "sorting",
+    category: "arrays-and-hashing",
     language: "javascript",
     difficulty: "medium",
     description:
-      "Implement the Lomuto partition scheme. Choose the last element as the pivot. Walk through the array maintaining a boundary index i; whenever an element is less than or equal to the pivot, swap it to the boundary and advance i. Finally place the pivot at the boundary. Return the pivot's final index. The array is modified in-place.\n\nExample 1:\n  Input: [3, 8, 2, 5, 1, 4], lo = 0, hi = 5\n  Output: 3  (pivot 4 lands at index 3, array becomes [3, 2, 1, 4, 8, 5] or similar valid partition)\n\nExample 2:\n  Input: [10, 7, 8, 9, 1, 5], lo = 0, hi = 5\n  Output: 1  (pivot 5 lands at index 1)\n\nExample 3:\n  Input: [1, 2, 3], lo = 0, hi = 2\n  Output: 2  (pivot 3 is already in correct position)",
+      "Implement the Lomuto partition scheme. Choose the last element as the pivot. Walk through the array maintaining a boundary index i; whenever an element is less than or equal to the pivot, swap it to the boundary and advance i. Finally place the pivot at the boundary. Return the pivot's final index. The array is modified in-place.\n\nExample 1:\n  Input: [3, 8, 2, 5, 1, 4], lo = 0, hi = 5\n  Output: 3  (pivot 4 lands at index 3, array becomes [3, 2, 1, 4, 8, 5] or similar valid partition)\n\nExample 2:\n  Input: [10, 7, 8, 9, 1, 5], lo = 0, hi = 5\n  Output: 1  (pivot 5 lands at index 1)\n\nExample 3:\n  Input: [1, 2, 3], lo = 0, hi = 2\n  Output: 2  (pivot 3 is already in correct position)\n\nRef: LeetCode #912 Sort an Array (closest match)",
     code: `function partition(arr, lo, hi) {
   // your code here
 }`,
@@ -1885,11 +1885,11 @@ function test_all_same() {
   {
     id: "quick-sort",
     name: "Quick Sort",
-    category: "sorting",
+    category: "arrays-and-hashing",
     language: "javascript",
     difficulty: "medium",
     description:
-      "Implement quick sort using the Lomuto partition scheme. Partition the array around the last element as pivot, then recursively sort the subarrays to the left and right of the pivot. Sort in-place and return the array. A partition helper function is provided.\n\nExample 1:\n  Input: [10, 7, 8, 9, 1, 5]\n  Output: [1, 5, 7, 8, 9, 10]\n\nExample 2:\n  Input: [3, 0, 2, 5, -1, 4, 1]\n  Output: [-1, 0, 1, 2, 3, 4, 5]\n\nExample 3:\n  Input: [1]\n  Output: [1]",
+      "Implement quick sort using the Lomuto partition scheme. Partition the array around the last element as pivot, then recursively sort the subarrays to the left and right of the pivot. Sort in-place and return the array. A partition helper function is provided.\n\nExample 1:\n  Input: [10, 7, 8, 9, 1, 5]\n  Output: [1, 5, 7, 8, 9, 10]\n\nExample 2:\n  Input: [3, 0, 2, 5, -1, 4, 1]\n  Output: [-1, 0, 1, 2, 3, 4, 5]\n\nExample 3:\n  Input: [1]\n  Output: [1]\n\nRef: LeetCode #912 Sort an Array",
     code: `function partition(arr, lo, hi) {
   const pivot = arr[hi];
   let i = lo;
@@ -1954,11 +1954,11 @@ function quickSort(arr) {
   {
     id: "permutations",
     name: "Permutations",
-    category: "recursion",
+    category: "backtracking",
     language: "javascript",
     difficulty: "medium",
     description:
-      "Given an array of distinct integers, return all possible permutations in any order. Use backtracking to swap elements into each position and recurse on the remaining.\n\nExample 1:\n  Input: nums = [1, 2, 3]\n  Output: [[1,2,3],[1,3,2],[2,1,3],[2,3,1],[3,1,2],[3,2,1]]\n\nExample 2:\n  Input: nums = [0, 1]\n  Output: [[0,1],[1,0]]\n\nExample 3:\n  Input: nums = [1]\n  Output: [[1]]",
+      "Given an array of distinct integers, return all possible permutations in any order. Use backtracking to swap elements into each position and recurse on the remaining.\n\nExample 1:\n  Input: nums = [1, 2, 3]\n  Output: [[1,2,3],[1,3,2],[2,1,3],[2,3,1],[3,1,2],[3,2,1]]\n\nExample 2:\n  Input: nums = [0, 1]\n  Output: [[0,1],[1,0]]\n\nExample 3:\n  Input: nums = [1]\n  Output: [[1]]\n\nRef: LeetCode #46 Permutations",
     code: `function permutations(nums) {
   // your code here
 }`,
@@ -2014,11 +2014,11 @@ function test_four_elements_count() {
 {
     id: "subsets",
     name: "Subsets",
-    category: "recursion",
+    category: "backtracking",
     language: "javascript",
     difficulty: "medium",
     description:
-      "Given an array of distinct integers, return all possible subsets (the power set). The solution must include the empty set and the full array. Do not include duplicate subsets.\n\nExample 1:\n  Input: nums = [1, 2, 3]\n  Output: [[], [1], [2], [3], [1,2], [1,3], [2,3], [1,2,3]]\n\nExample 2:\n  Input: nums = [0]\n  Output: [[], [0]]\n\nExample 3:\n  Input: nums = []\n  Output: [[]]",
+      "Given an array of distinct integers, return all possible subsets (the power set). The solution must include the empty set and the full array. Do not include duplicate subsets.\n\nExample 1:\n  Input: nums = [1, 2, 3]\n  Output: [[], [1], [2], [3], [1,2], [1,3], [2,3], [1,2,3]]\n\nExample 2:\n  Input: nums = [0]\n  Output: [[], [0]]\n\nExample 3:\n  Input: nums = []\n  Output: [[]]\n\nRef: LeetCode #78 Subsets",
     code: `function subsets(nums) {
   // your code here
 }`,
@@ -2073,11 +2073,11 @@ function test_four_elements_count() {
   {
     id: "two-sum-kata",
     name: "Two Sum",
-    category: "arrays",
+    category: "arrays-and-hashing",
     language: "javascript",
     difficulty: "easy",
     description:
-      "Given an array of integers and a target sum, return the indices of the two numbers that add up to the target. Use a hash map to achieve O(n) time complexity. Each input has exactly one solution, and you may not use the same element twice.\n\nExample 1:\n  Input: nums = [2, 7, 11, 15], target = 9\n  Output: [0, 1]\n\nExample 2:\n  Input: nums = [3, 2, 4], target = 6\n  Output: [1, 2]\n\nExample 3:\n  Input: nums = [3, 3], target = 6\n  Output: [0, 1]",
+      "Given an array of integers and a target sum, return the indices of the two numbers that add up to the target. Use a hash map to achieve O(n) time complexity. Each input has exactly one solution, and you may not use the same element twice.\n\nExample 1:\n  Input: nums = [2, 7, 11, 15], target = 9\n  Output: [0, 1]\n\nExample 2:\n  Input: nums = [3, 2, 4], target = 6\n  Output: [1, 2]\n\nExample 3:\n  Input: nums = [3, 3], target = 6\n  Output: [0, 1]\n\nRef: LeetCode #1 Two Sum",
     code: `function twoSum(nums, target) {
   // your code here
 }`,
@@ -2117,11 +2117,11 @@ function test_negative_numbers() {
   {
     id: "kadanes-algorithm",
     name: "Kadane's Algorithm",
-    category: "arrays",
+    category: "1-d-dp",
     language: "javascript",
     difficulty: "medium",
     description:
-      "Find the contiguous subarray within an array of integers which has the largest sum. Track a running current sum and a global max. If current sum drops below zero, reset it to zero and start fresh from the next element.\n\nExample 1:\n  Input: nums = [-2, 1, -3, 4, -1, 2, 1, -5, 4]\n  Output: 6  (subarray [4, -1, 2, 1])\n\nExample 2:\n  Input: nums = [1]\n  Output: 1\n\nExample 3:\n  Input: nums = [5, 4, -1, 7, 8]\n  Output: 23  (subarray [5, 4, -1, 7, 8])",
+      "Find the contiguous subarray within an array of integers which has the largest sum. Track a running current sum and a global max. If current sum drops below zero, reset it to zero and start fresh from the next element.\n\nExample 1:\n  Input: nums = [-2, 1, -3, 4, -1, 2, 1, -5, 4]\n  Output: 6  (subarray [4, -1, 2, 1])\n\nExample 2:\n  Input: nums = [1]\n  Output: 1\n\nExample 3:\n  Input: nums = [5, 4, -1, 7, 8]\n  Output: 23  (subarray [5, 4, -1, 7, 8])\n\nRef: LeetCode #53 Maximum Subarray",
     code: `function maxSubarraySum(nums) {
   // your code here
 }`,
@@ -2166,11 +2166,11 @@ function test_mixed_with_positive_end() {
   {
     id: "build-prefix-sum",
     name: "Build Prefix Sum",
-    category: "arrays",
+    category: "arrays-and-hashing",
     language: "javascript",
     difficulty: "easy",
     description:
-      "Build a prefix sum array from an input array of numbers. The prefix array has length n+1 where prefix[0] = 0 and prefix[i+1] = prefix[i] + nums[i]. This enables O(1) range sum queries.\n\nExample 1:\n  Input: nums = [1, 2, 3, 4]\n  Output: [0, 1, 3, 6, 10]\n\nExample 2:\n  Input: nums = [5, -1, 3]\n  Output: [0, 5, 4, 7]\n\nExample 3:\n  Input: nums = []\n  Output: [0]",
+      "Build a prefix sum array from an input array of numbers. The prefix array has length n+1 where prefix[0] = 0 and prefix[i+1] = prefix[i] + nums[i]. This enables O(1) range sum queries.\n\nExample 1:\n  Input: nums = [1, 2, 3, 4]\n  Output: [0, 1, 3, 6, 10]\n\nExample 2:\n  Input: nums = [5, -1, 3]\n  Output: [0, 5, 4, 7]\n\nExample 3:\n  Input: nums = []\n  Output: [0]\n\nRef: LeetCode #1480 Running Sum of 1d Array",
     code: `function buildPrefixSum(nums) {
   // your code here
 }`,
@@ -2201,11 +2201,11 @@ function test_negatives() {
   {
     id: "range-sum-query",
     name: "Range Sum Query",
-    category: "arrays",
+    category: "arrays-and-hashing",
     language: "javascript",
     difficulty: "easy",
     description:
-      "Given a prefix sum array (built by buildPrefixSum), compute the sum of elements from index l to index r inclusive in O(1) time. The formula is prefix[r+1] - prefix[l]. A buildPrefixSum helper is provided.\n\nExample 1:\n  Input: nums = [1, 2, 3, 4, 5], l = 1, r = 3\n  Output: 9  (2 + 3 + 4)\n\nExample 2:\n  Input: nums = [10, 20, 30], l = 0, r = 2\n  Output: 60  (10 + 20 + 30)\n\nExample 3:\n  Input: nums = [3, 7, 2, 5], l = 2, r = 2\n  Output: 2  (single element at index 2)",
+      "Given a prefix sum array (built by buildPrefixSum), compute the sum of elements from index l to index r inclusive in O(1) time. The formula is prefix[r+1] - prefix[l]. A buildPrefixSum helper is provided.\n\nExample 1:\n  Input: nums = [1, 2, 3, 4, 5], l = 1, r = 3\n  Output: 9  (2 + 3 + 4)\n\nExample 2:\n  Input: nums = [10, 20, 30], l = 0, r = 2\n  Output: 60  (10 + 20 + 30)\n\nExample 3:\n  Input: nums = [3, 7, 2, 5], l = 2, r = 2\n  Output: 2  (single element at index 2)\n\nRef: LeetCode #303 Range Sum Query - Immutable",
     code: `function buildPrefixSum(nums) {
   const prefix = new Array(nums.length + 1).fill(0);
   for (let i = 0; i < nums.length; i++) {
@@ -2254,11 +2254,11 @@ function rangeSum(prefix, l, r) {
   {
     id: "merge-intervals",
     name: "Merge Intervals",
-    category: "arrays",
+    category: "intervals",
     language: "javascript",
     difficulty: "medium",
     description:
-      "Given an array of intervals where each interval is [start, end], merge all overlapping intervals and return an array of non-overlapping intervals that cover all the ranges in the input. Sort by start time first, then merge greedily.\n\nExample 1:\n  Input: intervals = [[1,3],[2,6],[8,10],[15,18]]\n  Output: [[1,6],[8,10],[15,18]]\n\nExample 2:\n  Input: intervals = [[1,4],[4,5]]\n  Output: [[1,5]]\n\nExample 3:\n  Input: intervals = [[1,4],[0,4]]\n  Output: [[0,4]]",
+      "Given an array of intervals where each interval is [start, end], merge all overlapping intervals and return an array of non-overlapping intervals that cover all the ranges in the input. Sort by start time first, then merge greedily.\n\nExample 1:\n  Input: intervals = [[1,3],[2,6],[8,10],[15,18]]\n  Output: [[1,6],[8,10],[15,18]]\n\nExample 2:\n  Input: intervals = [[1,4],[4,5]]\n  Output: [[1,5]]\n\nExample 3:\n  Input: intervals = [[1,4],[0,4]]\n  Output: [[0,4]]\n\nRef: LeetCode #56 Merge Intervals",
     code: `function mergeIntervals(intervals) {
   // your code here
 }`,
@@ -2334,11 +2334,11 @@ function test_unsorted_input() {
   {
     id: "monotonic-stack",
     name: "Monotonic Stack",
-    category: "arrays",
+    category: "stack",
     language: "javascript",
     difficulty: "medium",
     description:
-      "For each element in an array, find the next element that is strictly greater. Return an array where result[i] is the next greater element for nums[i], or -1 if no greater element exists to the right. Use a stack of indices to solve in O(n).\n\nExample 1:\n  Input: nums = [2, 1, 2, 4, 3]\n  Output: [4, 2, 4, -1, -1]\n\nExample 2:\n  Input: nums = [1, 3, 2, 4]\n  Output: [3, 4, 4, -1]\n\nExample 3:\n  Input: nums = [5, 4, 3, 2, 1]\n  Output: [-1, -1, -1, -1, -1]",
+      "For each element in an array, find the next element that is strictly greater. Return an array where result[i] is the next greater element for nums[i], or -1 if no greater element exists to the right. Use a stack of indices to solve in O(n).\n\nExample 1:\n  Input: nums = [2, 1, 2, 4, 3]\n  Output: [4, 2, 4, -1, -1]\n\nExample 2:\n  Input: nums = [1, 3, 2, 4]\n  Output: [3, 4, 4, -1]\n\nExample 3:\n  Input: nums = [5, 4, 3, 2, 1]\n  Output: [-1, -1, -1, -1, -1]\n\nRef: LeetCode #496 Next Greater Element I",
     code: `function nextGreaterElement(nums) {
   // your code here
 }`,
@@ -2397,11 +2397,11 @@ function test_duplicates() {
   {
     id: "binary-search-find-first",
     name: "Binary Search Find First",
-    category: "search",
+    category: "binary-search",
     language: "javascript",
     difficulty: "medium",
     description:
-      "Given a sorted array that may contain duplicates, find the index of the first occurrence of the target value. Use binary search; when the target is found, record the index and continue searching left to find an earlier occurrence. Return -1 if the target is not in the array.\n\nExample 1:\n  Input: nums = [1, 2, 2, 2, 3, 4], target = 2\n  Output: 1\n\nExample 2:\n  Input: nums = [1, 1, 1, 1], target = 1\n  Output: 0\n\nExample 3:\n  Input: nums = [1, 3, 5, 7], target = 4\n  Output: -1",
+      "Given a sorted array that may contain duplicates, find the index of the first occurrence of the target value. Use binary search; when the target is found, record the index and continue searching left to find an earlier occurrence. Return -1 if the target is not in the array.\n\nExample 1:\n  Input: nums = [1, 2, 2, 2, 3, 4], target = 2\n  Output: 1\n\nExample 2:\n  Input: nums = [1, 1, 1, 1], target = 1\n  Output: 0\n\nExample 3:\n  Input: nums = [1, 3, 5, 7], target = 4\n  Output: -1\n\nRef: LeetCode #34 Find First and Last Position of Element in Sorted Array",
     code: `function findFirst(nums, target) {
   // your code here
 }`,
@@ -2452,11 +2452,11 @@ function test_at_start() {
   {
     id: "binary-search-find-last",
     name: "Binary Search Find Last",
-    category: "search",
+    category: "binary-search",
     language: "javascript",
     difficulty: "medium",
     description:
-      "Given a sorted array that may contain duplicates, find the index of the last occurrence of the target value. Use binary search; when the target is found, record the index and continue searching right to find a later occurrence. Return -1 if the target is not in the array.\n\nExample 1:\n  Input: nums = [1, 2, 2, 2, 3, 4], target = 2\n  Output: 3\n\nExample 2:\n  Input: nums = [1, 1, 1, 1], target = 1\n  Output: 3\n\nExample 3:\n  Input: nums = [1, 3, 5, 7], target = 6\n  Output: -1",
+      "Given a sorted array that may contain duplicates, find the index of the last occurrence of the target value. Use binary search; when the target is found, record the index and continue searching right to find a later occurrence. Return -1 if the target is not in the array.\n\nExample 1:\n  Input: nums = [1, 2, 2, 2, 3, 4], target = 2\n  Output: 3\n\nExample 2:\n  Input: nums = [1, 1, 1, 1], target = 1\n  Output: 3\n\nExample 3:\n  Input: nums = [1, 3, 5, 7], target = 6\n  Output: -1\n\nRef: LeetCode #34 Find First and Last Position of Element in Sorted Array",
     code: `function findLast(nums, target) {
   // your code here
 }`,
@@ -2513,7 +2513,7 @@ function test_at_end() {
     language: "javascript",
     difficulty: "easy",
     description:
-      "Every element in the array appears exactly twice except for one element which appears once. Find that unique element using XOR. The key insight is that a ^ a = 0 and a ^ 0 = a, so XORing all elements cancels out the duplicates.\n\nExample 1:\n  Input: nums = [2, 2, 1]\n  Output: 1\n\nExample 2:\n  Input: nums = [4, 1, 2, 1, 2]\n  Output: 4\n\nExample 3:\n  Input: nums = [1]\n  Output: 1",
+      "Every element in the array appears exactly twice except for one element which appears once. Find that unique element using XOR. The key insight is that a ^ a = 0 and a ^ 0 = a, so XORing all elements cancels out the duplicates.\n\nExample 1:\n  Input: nums = [2, 2, 1]\n  Output: 1\n\nExample 2:\n  Input: nums = [4, 1, 2, 1, 2]\n  Output: 4\n\nExample 3:\n  Input: nums = [1]\n  Output: 1\n\nRef: LeetCode #136 Single Number",
     code: `function singleNumber(nums) {
   // your code here
 }`,
@@ -2550,7 +2550,7 @@ function test_larger_values() {
     language: "javascript",
     difficulty: "easy",
     description:
-      "Count the number of 1-bits (set bits) in the binary representation of a non-negative integer. Use bitwise AND with 1 to check the last bit, then right-shift the number. Repeat until the number becomes zero.\n\nExample 1:\n  Input: n = 11  (binary: 1011)\n  Output: 3\n\nExample 2:\n  Input: n = 128  (binary: 10000000)\n  Output: 1\n\nExample 3:\n  Input: n = 255  (binary: 11111111)\n  Output: 8",
+      "Count the number of 1-bits (set bits) in the binary representation of a non-negative integer. Use bitwise AND with 1 to check the last bit, then right-shift the number. Repeat until the number becomes zero.\n\nExample 1:\n  Input: n = 11  (binary: 1011)\n  Output: 3\n\nExample 2:\n  Input: n = 128  (binary: 10000000)\n  Output: 1\n\nExample 3:\n  Input: n = 255  (binary: 11111111)\n  Output: 8\n\nRef: LeetCode #191 Number of 1 Bits",
     code: `function countBits(n) {
   // your code here
 }`,
@@ -2596,11 +2596,11 @@ function test_ten_bits() {
   {
     id: "climbing-stairs",
     name: "Climbing Stairs",
-    category: "dynamic-programming",
+    category: "1-d-dp",
     language: "javascript",
     difficulty: "easy",
     description:
-      "You are climbing a staircase with n steps. Each time you can climb either 1 or 2 steps. Count how many distinct ways you can reach the top. This follows the Fibonacci pattern: ways(n) = ways(n-1) + ways(n-2), with base cases ways(1) = 1 and ways(2) = 2.\n\nExample 1:\n  Input: n = 2\n  Output: 2  (1+1 or 2)\n\nExample 2:\n  Input: n = 3\n  Output: 3  (1+1+1, 1+2, 2+1)\n\nExample 3:\n  Input: n = 5\n  Output: 8",
+      "You are climbing a staircase with n steps. Each time you can climb either 1 or 2 steps. Count how many distinct ways you can reach the top. This follows the Fibonacci pattern: ways(n) = ways(n-1) + ways(n-2), with base cases ways(1) = 1 and ways(2) = 2.\n\nExample 1:\n  Input: n = 2\n  Output: 2  (1+1 or 2)\n\nExample 2:\n  Input: n = 3\n  Output: 3  (1+1+1, 1+2, 2+1)\n\nExample 3:\n  Input: n = 5\n  Output: 8\n\nRef: LeetCode #70 Climbing Stairs",
     code: `function climbStairs(n) {
   // your code here
 }`,
@@ -2643,11 +2643,11 @@ function test_ten_steps() {
   {
     id: "longest-common-subsequence",
     name: "Longest Common Subsequence",
-    category: "dynamic-programming",
+    category: "2-d-dp",
     language: "javascript",
     difficulty: "medium",
     description:
-      "Given two strings, return the length of their longest common subsequence. A subsequence is derived by deleting zero or more characters without changing the relative order. Use a 2D DP table where dp[i][j] represents the LCS length for the first i characters of text1 and first j characters of text2.\n\nExample 1:\n  Input: text1 = \"abcde\", text2 = \"ace\"\n  Output: 3  (LCS is \"ace\")\n\nExample 2:\n  Input: text1 = \"abc\", text2 = \"abc\"\n  Output: 3\n\nExample 3:\n  Input: text1 = \"abc\", text2 = \"def\"\n  Output: 0",
+      "Given two strings, return the length of their longest common subsequence. A subsequence is derived by deleting zero or more characters without changing the relative order. Use a 2D DP table where dp[i][j] represents the LCS length for the first i characters of text1 and first j characters of text2.\n\nExample 1:\n  Input: text1 = \"abcde\", text2 = \"ace\"\n  Output: 3  (LCS is \"ace\")\n\nExample 2:\n  Input: text1 = \"abc\", text2 = \"abc\"\n  Output: 3\n\nExample 3:\n  Input: text1 = \"abc\", text2 = \"def\"\n  Output: 0\n\nRef: LeetCode #1143 Longest Common Subsequence",
     code: `function lcs(text1, text2) {
   // your code here
 }`,
@@ -2692,5 +2692,117 @@ function test_longer_strings() {
   return dp[m][n];
 }`,
     usage: `Longest Common Subsequence is the 2D dynamic programming problem that powers the diff tools developers use every day. Git's diff engine is built on the Myers diff algorithm, which is fundamentally an optimization of the LCS problem: finding the longest common subsequence between two file versions is equivalent to finding the minimal edit script (the fewest insertions and deletions) to transform one into the other. GNU diff, Google's diff-match-patch library, and every code review tool from GitHub's pull request view to VS Code's inline diff all rely on LCS variants. Beyond version control, LCS is used in bioinformatics to align DNA and protein sequences, measuring genetic similarity between organisms; tools like BLAST and FASTA use heuristic versions of sequence alignment rooted in LCS. Plagiarism detection systems compare document subsequences to identify copied passages. In interviews at companies like Google, Microsoft, and Palantir, LCS is a standard 2D DP problem that tests whether candidates can define the recurrence relation, build the DP table, and optionally reconstruct the actual subsequence via backtracking through the table.`,
+  },
+  {
+    id: "best-time-to-buy-sell-stock",
+    name: "Best Time to Buy and Sell Stock",
+    category: "greedy",
+    language: "javascript",
+    difficulty: "easy",
+    description:
+      "Given an array of prices where prices[i] is the price of a stock on day i, find the maximum profit from one buy and one sell. You must buy before you sell. If no profit is possible, return 0.\n\nExample 1:\n  Input: prices = [7, 1, 5, 3, 6, 4]\n  Output: 5\n  Explanation: Buy on day 2 (price = 1), sell on day 5 (price = 6). Profit = 6 - 1 = 5.\n\nExample 2:\n  Input: prices = [7, 6, 4, 3, 1]\n  Output: 0\n  Explanation: Prices only decrease, so no profitable transaction exists.\n\nRef: LeetCode #121 Best Time to Buy and Sell Stock",
+    code: `// Given an array of stock prices, find the maximum profit
+// from a single buy-sell transaction.
+// You must buy before you sell. Return 0 if no profit is possible.
+
+function maxProfit(prices) {
+  // your code here
+}
+`,
+    testCode: `function test_basic_profit() {
+  assertEqual(maxProfit([7, 1, 5, 3, 6, 4]), 5, "Buy at 1, sell at 6 = profit 5");
+}
+
+function test_no_profit() {
+  assertEqual(maxProfit([7, 6, 4, 3, 1]), 0, "Decreasing prices = no profit");
+}
+
+function test_single_day() {
+  assertEqual(maxProfit([5]), 0, "Single price = no transaction possible");
+}
+
+function test_profit_at_end() {
+  assertEqual(maxProfit([2, 4, 1, 7]), 6, "Buy at 1, sell at 7 = profit 6");
+}
+
+function test_same_prices() {
+  assertEqual(maxProfit([3, 3, 3, 3]), 0, "All same prices = no profit");
+}
+
+function test_two_days() {
+  assertEqual(maxProfit([1, 5]), 4, "Buy day 1, sell day 2 = profit 4");
+}
+`,
+    solution: `function maxProfit(prices) {
+  let minPrice = Infinity;
+  let maxProfit = 0;
+
+  for (const price of prices) {
+    if (price < minPrice) {
+      minPrice = price;
+    } else {
+      maxProfit = Math.max(maxProfit, price - minPrice);
+    }
+  }
+
+  return maxProfit;
+}`,
+    usage: `Best Time to Buy and Sell Stock is the quintessential greedy algorithm problem: track the minimum price seen so far and compute the maximum profit at each step, making the locally optimal choice without revisiting past decisions. This greedy single-pass approach runs in O(n) time and O(1) space, making it practical for real-time financial systems. Quantitative trading firms like Jane Street, Citadel, and Two Sigma use this exact pattern to compute maximum drawdown and optimal entry/exit points on streaming price data. Robinhood and other retail trading platforms display "best possible trade" metrics using the same logic. The pattern generalizes to any problem where you need to find the maximum difference between two elements where the smaller one comes first, which appears in temperature analysis, inventory pricing, and time-series anomaly detection. In interviews, this is LeetCode problem #121 and one of the most frequently asked questions at Amazon, Google, Meta, and Goldman Sachs; it tests whether candidates can recognize a greedy approach instead of reaching for O(n^2) brute force.`,
+  },
+  {
+    id: "rotate-image",
+    name: "Rotate Image",
+    category: "math-and-geometry",
+    language: "javascript",
+    difficulty: "medium",
+    description:
+      "Given an n x n 2D matrix representing an image, rotate the image 90 degrees clockwise in-place. Do not allocate another 2D matrix.\n\nExample 1:\n  Input: matrix = [[1,2,3],[4,5,6],[7,8,9]]\n  Output: [[7,4,1],[8,5,2],[9,6,3]]\n\nExample 2:\n  Input: matrix = [[5,1,9,11],[2,4,8,10],[13,3,6,7],[15,14,12,16]]\n  Output: [[15,13,2,5],[14,3,4,1],[12,6,8,9],[16,7,10,11]]\n\nExample 3:\n  Input: matrix = [[1]]\n  Output: [[1]]\n\nRef: LeetCode #48 Rotate Image",
+    code: `// Rotate an n x n matrix 90 degrees clockwise in-place.
+// Do not allocate another 2D matrix.
+
+function rotate(matrix) {
+  // your code here
+}
+`,
+    testCode: `function test_3x3() {
+  const m = [[1,2,3],[4,5,6],[7,8,9]];
+  rotate(m);
+  assertEqual(m, [[7,4,1],[8,5,2],[9,6,3]], "3x3 rotation");
+}
+
+function test_4x4() {
+  const m = [[5,1,9,11],[2,4,8,10],[13,3,6,7],[15,14,12,16]];
+  rotate(m);
+  assertEqual(m, [[15,13,2,5],[14,3,4,1],[12,6,8,9],[16,7,10,11]], "4x4 rotation");
+}
+
+function test_1x1() {
+  const m = [[1]];
+  rotate(m);
+  assertEqual(m, [[1]], "1x1 stays the same");
+}
+
+function test_2x2() {
+  const m = [[1,2],[3,4]];
+  rotate(m);
+  assertEqual(m, [[3,1],[4,2]], "2x2 rotation");
+}
+`,
+    solution: `function rotate(matrix) {
+  const n = matrix.length;
+
+  // Step 1: Transpose (swap rows and columns)
+  for (let i = 0; i < n; i++) {
+    for (let j = i + 1; j < n; j++) {
+      [matrix[i][j], matrix[j][i]] = [matrix[j][i], matrix[i][j]];
+    }
+  }
+
+  // Step 2: Reverse each row
+  for (let i = 0; i < n; i++) {
+    matrix[i].reverse();
+  }
+}`,
+    usage: `Rotate Image is the classic math and geometry problem that tests in-place matrix manipulation using the transpose-then-reverse technique. Image processing libraries like OpenCV, Pillow, and browser Canvas APIs implement rotation as a composition of transpose and flip operations on pixel matrices, which is exactly this algorithm. Game engines like Unity and Unreal perform 2D sprite rotation and tile map transformations using matrix operations that decompose into transposition and reflection. Mobile operating systems rotate screen content when the device orientation changes, applying affine transformations that are mathematically equivalent to this 90-degree rotation. Computer vision pipelines in self-driving car systems at Waymo and Tesla apply rotation augmentations to training images to make models orientation-invariant. The transpose-then-reverse approach is optimal at O(n^2) time and O(1) extra space since every element must be moved and no auxiliary matrix is needed. In interviews at companies like Google, Amazon, and Apple, this problem tests whether candidates can decompose a complex transformation into simpler steps and manipulate 2D indices correctly without off-by-one errors.`,
   },
 ];
