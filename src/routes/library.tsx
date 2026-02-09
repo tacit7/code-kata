@@ -17,13 +17,21 @@ export function LibraryPage() {
 
   return (
     <div className="flex flex-col h-full p-4 gap-3">
-      <input
-        type="text"
-        placeholder="Search katas..."
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        className="w-full max-w-md px-3 py-1.5 text-sm rounded border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 outline-none focus:border-blue-500 dark:focus:border-blue-400"
-      />
+      <div className="flex items-center gap-3">
+        <input
+          type="text"
+          placeholder="Search katas..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="flex-1 max-w-md px-3 py-1.5 text-sm rounded border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 outline-none focus:border-blue-500 dark:focus:border-blue-400"
+        />
+        <button
+          onClick={() => navigate("/session/setup")}
+          className="px-4 py-1.5 text-sm font-medium rounded bg-green-600 hover:bg-green-500 text-white transition-colors"
+        >
+          Start Practice
+        </button>
+      </div>
       <div className="flex-1 min-h-0 overflow-y-auto">
         <table className="w-full text-sm">
           <thead>

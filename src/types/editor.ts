@@ -10,6 +10,7 @@ export interface Kata {
   code: string;
   testCode: string;
   solution: string | null;
+  usage: string | null;
 }
 
 export type TimerStatus = "idle" | "running" | "paused" | "completed";
@@ -25,4 +26,35 @@ export interface TestResult {
   name: string;
   passed: boolean;
   error?: string;
+}
+
+export type SessionType = "daily" | "random" | "custom";
+
+export interface Session {
+  id: number;
+  sessionType: SessionType;
+  startedAt: string;
+  finishedAt: string | null;
+  totalTimeMs: number | null;
+  kataCount: number;
+  passCount: number;
+  presetName: string | null;
+}
+
+export interface Attempt {
+  id: number;
+  sessionId: number;
+  kataId: string;
+  kataIndex: number;
+  startedAt: string;
+  finishedAt: string | null;
+  timeMs: number | null;
+  passed: boolean;
+  codeSnapshot: string | null;
+}
+
+export interface Preset {
+  id: number;
+  name: string;
+  kataIds: string[];
 }

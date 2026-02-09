@@ -5,6 +5,9 @@ import { useKataStore } from "./stores/kata-store";
 import { TopBar } from "./components/top-bar";
 import { EditorPage } from "./routes/editor";
 import { LibraryPage } from "./routes/library";
+import { SessionSetupPage } from "./routes/session-setup";
+import { SessionPage } from "./routes/session";
+import { SessionResultsPage } from "./routes/session-results";
 
 function App() {
   const theme = useEditorStore((s) => s.theme);
@@ -43,6 +46,9 @@ function App() {
             <Route path="/" element={<Navigate to="/library" replace />} />
             <Route path="/library" element={<LibraryPage />} />
             <Route path="/editor/:kataId" element={<EditorPage />} />
+            <Route path="/session/setup" element={<SessionSetupPage />} />
+            <Route path="/session/:sessionId" element={<SessionPage />} />
+            <Route path="/session/:sessionId/results" element={<SessionResultsPage />} />
           </Routes>
         </main>
       </div>

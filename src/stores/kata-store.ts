@@ -12,6 +12,7 @@ interface KataRow {
   code: string;
   test_code: string;
   solution: string | null;
+  usage: string | null;
 }
 
 interface KataState {
@@ -41,6 +42,7 @@ export const useKataStore = create<KataState>((set) => ({
         code: row.code,
         testCode: row.test_code,
         solution: row.solution,
+        usage: row.usage,
       }));
       set({ katas, loading: false });
     } catch (err) {

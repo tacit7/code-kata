@@ -6,6 +6,7 @@ export function TopBar() {
   const navigate = useNavigate();
   const location = useLocation();
   const onLibrary = location.pathname === "/library";
+  const onPractice = location.pathname.startsWith("/session");
 
   return (
     <header className="flex items-center justify-between px-4 py-2 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 shrink-0">
@@ -20,6 +21,16 @@ export function TopBar() {
           }`}
         >
           Library
+        </button>
+        <button
+          onClick={() => navigate("/session/setup")}
+          className={`px-2.5 py-1 text-xs font-medium rounded transition-colors ${
+            onPractice
+              ? "bg-blue-600 text-white"
+              : "bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-300 dark:hover:bg-zinc-600"
+          }`}
+        >
+          Practice
         </button>
       </div>
       <div className="flex items-center gap-2">

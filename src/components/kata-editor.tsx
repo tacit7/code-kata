@@ -11,15 +11,17 @@ import type { Kata, TestResult } from "../types/editor";
 
 interface KataEditorProps {
   kata: Kata;
+  onTestComplete?: (passed: boolean, codeSnapshot: string) => void;
 }
 
-export function KataEditor({ kata }: KataEditorProps) {
+export function KataEditor({ kata, onTestComplete }: KataEditorProps) {
   const { theme, vimMode, fontSize } = useEditorStore();
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
   const vimModeRef = useRef<VimAdapterInstance | null>(null);
   const statusBarRef = useRef<HTMLDivElement | null>(null);
   const [results, setResults] = useState<TestResult[] | null>(null);
   const [showSolution, setShowSolution] = useState(false);
+  const [showPanel, setShowPanel] = useState<"description" | "usage" | null>(null);
 
   const monacoTheme = theme === "dark" ? "vs-dark" : "vs";
 
@@ -27,12 +29,8 @@ export function KataEditor({ kata }: KataEditorProps) {
     editorRef.current = editorInstance;
   };
 
-  const { kataStatus, startKataTimer, completeKataTimer, resetKataTimer } =
+  const { kataStatus, startKataTimer, completeKataTimer } =
     useTimerStore();
-
-  useEffect(() => {
-    resetKataTimer();
-  }, [kata.id, resetKataTimer]);
 
   const handleRun = useCallback(() => {
     if (!editorRef.current) return;
@@ -40,10 +38,14 @@ export function KataEditor({ kata }: KataEditorProps) {
     const code = editorRef.current.getValue();
     const testResults = runTests(code, kata.testCode);
     setResults(testResults);
-    if (testResults.length > 0 && testResults.every((r) => r.passed)) {
+    const allPassed = testResults.length > 0 && testResults.every((r) => r.passed);
+    if (allPassed) {
       completeKataTimer();
     }
-  }, [kata.testCode, kataStatus, startKataTimer, completeKataTimer]);
+    if (onTestComplete) {
+      onTestComplete(allPassed, code);
+    }
+  }, [kata.testCode, kataStatus, startKataTimer, completeKataTimer, onTestComplete]);
 
   // Vim mode lifecycle
   useEffect(() => {
@@ -61,6 +63,14 @@ export function KataEditor({ kata }: KataEditorProps) {
 
   return (
     <div className="flex flex-col h-full">
+      {/* Description / Usage panel */}
+      {showPanel && (
+        <div className="shrink-0 max-h-[30%] overflow-y-auto px-4 py-3 border-b border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-sm text-zinc-700 dark:text-zinc-300 whitespace-pre-wrap">
+          {showPanel === "description" && (kata.description || "No description available.")}
+          {showPanel === "usage" && (kata.usage || "No usage notes available.")}
+        </div>
+      )}
+
       {/* Editor + Solution side-by-side */}
       <div className={`flex ${results ? "h-[65%]" : "flex-1"} min-h-0`}>
         <div className={showSolution ? "w-1/2 min-w-0" : "w-full min-w-0"}>
@@ -113,6 +123,30 @@ export function KataEditor({ kata }: KataEditorProps) {
         >
           Run
         </button>
+        {kata.description && (
+          <button
+            onClick={() => setShowPanel((v) => v === "description" ? null : "description")}
+            className={`px-3 py-1 text-xs font-medium rounded transition-colors ${
+              showPanel === "description"
+                ? "bg-blue-600 text-white"
+                : "bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-400"
+            }`}
+          >
+            Problem
+          </button>
+        )}
+        {kata.usage && (
+          <button
+            onClick={() => setShowPanel((v) => v === "usage" ? null : "usage")}
+            className={`px-3 py-1 text-xs font-medium rounded transition-colors ${
+              showPanel === "usage"
+                ? "bg-purple-600 text-white"
+                : "bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-400"
+            }`}
+          >
+            Usage
+          </button>
+        )}
         {kata.solution && (
           <button
             onClick={() => setShowSolution((v) => !v)}
