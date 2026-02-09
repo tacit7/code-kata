@@ -77,55 +77,6 @@ function rowToAttempt(row: AttemptRow): Attempt {
   };
 }
 
-export function selectDailyKatas(allKatas: Kata[], attemptRows: AttemptRow[], count: number): Kata[] {
-  const attemptedIds = new Set(attemptRows.map((a) => a.kata_id));
-  const passedIds = new Set(attemptRows.filter((a) => a.passed === 1).map((a) => a.kata_id));
-
-  // Latest attempt time per kata
-  const latestAttempt = new Map<string, string>();
-  for (const a of attemptRows) {
-    const prev = latestAttempt.get(a.kata_id);
-    if (!prev || a.started_at > prev) {
-      latestAttempt.set(a.kata_id, a.started_at);
-    }
-  }
-
-  // Best time per kata (passed only)
-  const bestTime = new Map<string, number>();
-  for (const a of attemptRows) {
-    if (a.passed === 1 && a.time_ms != null) {
-      const prev = bestTime.get(a.kata_id);
-      if (prev == null || a.time_ms > prev) {
-        bestTime.set(a.kata_id, a.time_ms);
-      }
-    }
-  }
-
-  const sorted = [...allKatas].sort((a, b) => {
-    const aAttempted = attemptedIds.has(a.id);
-    const bAttempted = attemptedIds.has(b.id);
-    if (!aAttempted && bAttempted) return -1;
-    if (aAttempted && !bAttempted) return 1;
-
-    const aPassed = passedIds.has(a.id);
-    const bPassed = passedIds.has(b.id);
-    if (!aPassed && bPassed) return -1;
-    if (aPassed && !bPassed) return 1;
-
-    // Oldest attempted first
-    const aTime = latestAttempt.get(a.id) ?? "";
-    const bTime = latestAttempt.get(b.id) ?? "";
-    if (aTime !== bTime) return aTime < bTime ? -1 : 1;
-
-    // Slowest first
-    const aBest = bestTime.get(a.id) ?? 0;
-    const bBest = bestTime.get(b.id) ?? 0;
-    return bBest - aBest;
-  });
-
-  return sorted.slice(0, count);
-}
-
 export function selectRandomKatas(allKatas: Kata[], count: number): Kata[] {
   const shuffled = [...allKatas];
   for (let i = shuffled.length - 1; i > 0; i--) {

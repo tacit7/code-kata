@@ -32,6 +32,7 @@ const DEFAULTS = {
   targetTimeMs: 300000,
   autoRunTests: false,
   shortcuts: { ...DEFAULT_SHORTCUTS },
+  dailyKataIds: [] as string[],
 };
 
 interface SettingsState {
@@ -49,6 +50,8 @@ interface SettingsState {
   autoRunTests: boolean;
   // Shortcuts
   shortcuts: Record<ShortcutAction, string>;
+  // Daily kata set
+  dailyKataIds: string[];
   // Actions
   loadSettings: () => Promise<void>;
   setSetting: (key: string, value: unknown) => Promise<void>;
@@ -120,6 +123,8 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       shortcuts:
         (patch.shortcuts as Record<ShortcutAction, string>) ??
         DEFAULTS.shortcuts,
+      dailyKataIds:
+        (patch.dailyKataIds as string[]) ?? DEFAULTS.dailyKataIds,
       loaded: true,
     });
   },

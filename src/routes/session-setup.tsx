@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router";
 import { useKataStore } from "../stores/kata-store";
-import { useSessionStore, selectDailyKatas, selectRandomKatas } from "../stores/session-store";
+import { useSessionStore, selectRandomKatas } from "../stores/session-store";
+import { useSettingsStore } from "../stores/settings-store";
 import { useTimerStore } from "../stores/timer-store";
-import { getDb } from "../lib/database";
 import type { SessionType } from "../types/editor";
 
 type Tab = "daily" | "random" | "custom";
@@ -15,6 +15,8 @@ export function SessionSetupPage() {
   const { startSession, loadPresets, presets, savePreset, deletePreset } = useSessionStore();
   const startSessionTimer = useTimerStore((s) => s.startSessionTimer);
   const resetKataTimer = useTimerStore((s) => s.resetKataTimer);
+  const dailyKataIds = useSettingsStore((s) => s.dailyKataIds);
+  const setSetting = useSettingsStore((s) => s.setSetting);
 
   const [tab, setTab] = useState<Tab>("daily");
   const [size, setSize] = useState(5);
@@ -23,12 +25,21 @@ export function SessionSetupPage() {
   const [presetName, setPresetName] = useState("");
   const [starting, setStarting] = useState(false);
 
+  // Daily tab local state
+  const [dailySelectedIds, setDailySelectedIds] = useState<Set<string>>(new Set());
+  const [dailySaved, setDailySaved] = useState(false);
+
   const categories = [...new Set(katas.map((k) => k.category))].sort();
   const [categoryFilter, setCategoryFilter] = useState<string>("");
 
   useEffect(() => {
     loadPresets();
   }, [loadPresets]);
+
+  // Sync daily tab selection from persisted dailyKataIds
+  useEffect(() => {
+    setDailySelectedIds(new Set(dailyKataIds));
+  }, [dailyKataIds]);
 
   const filteredKatas = categoryFilter
     ? katas.filter((k) => k.category === categoryFilter)
@@ -44,6 +55,24 @@ export function SessionSetupPage() {
       setCustomOrder((prev) => [...prev, id]);
     }
     setSelectedIds(next);
+  };
+
+  const toggleDailyKata = (id: string) => {
+    const next = new Set(dailySelectedIds);
+    if (next.has(id)) {
+      next.delete(id);
+    } else {
+      next.add(id);
+    }
+    setDailySelectedIds(next);
+    setDailySaved(false);
+  };
+
+  const handleSaveDailySet = async () => {
+    const ids = [...dailySelectedIds];
+    await setSetting("dailyKataIds", ids);
+    setDailySaved(true);
+    setTimeout(() => setDailySaved(false), 2000);
   };
 
   const moveUp = (id: string) => {
@@ -89,13 +118,9 @@ export function SessionSetupPage() {
 
     if (tab === "daily") {
       sessionType = "daily";
-      const db = await getDb();
-      const attemptRows = await db.select<Array<{
-        id: number; session_id: number; kata_id: string; kata_index: number;
-        started_at: string; finished_at: string | null; time_ms: number | null;
-        passed: number; code_snapshot: string | null;
-      }>>(`SELECT * FROM attempts`);
-      selectedKatas = selectDailyKatas(filteredKatas, attemptRows, size);
+      const kataMap = new Map(katas.map((k) => [k.id, k]));
+      const ids = [...dailySelectedIds];
+      selectedKatas = ids.map((id) => kataMap.get(id)).filter(Boolean) as typeof katas;
     } else if (tab === "random") {
       sessionType = "random";
       selectedKatas = selectRandomKatas(filteredKatas, size);
@@ -115,7 +140,7 @@ export function SessionSetupPage() {
     const sessionId = await startSession(sessionType, selectedKatas);
     navigate(`/session/${sessionId}`);
   }, [
-    starting, tab, size, filteredKatas, customOrder, katas,
+    starting, tab, size, filteredKatas, customOrder, katas, dailySelectedIds,
     startSession, startSessionTimer, resetKataTimer, navigate,
   ]);
 
@@ -138,8 +163,42 @@ export function SessionSetupPage() {
       </div>
 
       <div className="flex-1 min-h-0">
-        {/* Daily / Random shared controls */}
-        {(tab === "daily" || tab === "random") && (
+        {/* Daily tab — user-curated kata picker */}
+        {tab === "daily" && (
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
+                Selected ({dailySelectedIds.size})
+              </p>
+              <button
+                onClick={handleSaveDailySet}
+                disabled={dailySelectedIds.size === 0}
+                className="px-3 py-1 text-xs font-medium rounded bg-blue-600 text-white disabled:opacity-40 hover:bg-blue-500 transition-colors"
+              >
+                {dailySaved ? "Saved!" : "Save as Daily Set"}
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto max-h-96 border border-zinc-200 dark:border-zinc-800 rounded p-2">
+              {katas.map((k) => (
+                <label key={k.id} className="flex items-center gap-2 py-1 text-sm cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-800/50 px-1 rounded">
+                  <input
+                    type="checkbox"
+                    checked={dailySelectedIds.has(k.id)}
+                    onChange={() => toggleDailyKata(k.id)}
+                    className="rounded"
+                  />
+                  <span className="flex-1">{k.name}</span>
+                  <span className="text-xs text-zinc-500 dark:text-zinc-400">{k.category}</span>
+                  <span className="text-xs text-zinc-500 dark:text-zinc-400">{k.difficulty}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Random tab */}
+        {tab === "random" && (
           <div className="flex flex-col gap-4">
             <div>
               <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400 mb-1">
@@ -179,10 +238,7 @@ export function SessionSetupPage() {
             </div>
 
             <p className="text-xs text-zinc-500 dark:text-zinc-400">
-              {tab === "daily"
-                ? "Prioritizes never-attempted katas, then failed, then oldest, then slowest."
-                : "Randomly shuffles and picks from available katas."}
-              {" "}Available: {filteredKatas.length} katas.
+              Randomly shuffles and picks from available katas. Available: {filteredKatas.length} katas.
             </p>
           </div>
         )}
@@ -285,7 +341,7 @@ export function SessionSetupPage() {
       {/* Start button */}
       <button
         onClick={handleStart}
-        disabled={starting || (tab === "custom" && customOrder.length === 0)}
+        disabled={starting || (tab === "daily" && dailySelectedIds.size === 0) || (tab === "custom" && customOrder.length === 0)}
         className="self-start px-6 py-2 text-sm font-medium rounded bg-green-600 hover:bg-green-500 text-white disabled:opacity-40 transition-colors"
       >
         {starting ? "Starting..." : "Start Session"}

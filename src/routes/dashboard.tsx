@@ -1,4 +1,5 @@
-import { Fragment, useEffect, useState } from "react";
+import { Fragment, useEffect, useState, useCallback } from "react";
+import { useNavigate } from "react-router";
 import {
   BarChart,
   Bar,
@@ -12,8 +13,64 @@ import {
 } from "recharts";
 import { useDashboardStore } from "../stores/dashboard-store";
 import type { DrillDownRow } from "../stores/dashboard-store";
+import { useSettingsStore } from "../stores/settings-store";
+import { useKataStore } from "../stores/kata-store";
+import { useSessionStore } from "../stores/session-store";
+import { useTimerStore } from "../stores/timer-store";
 import { formatTime } from "../lib/format";
 import { seedDashboard, clearDashboardSeed } from "../lib/seed-dashboard";
+
+// --- Practice Daily ---
+
+function PracticeDailyButton() {
+  const navigate = useNavigate();
+  const dailyKataIds = useSettingsStore((s) => s.dailyKataIds);
+  const katas = useKataStore((s) => s.katas);
+  const startSession = useSessionStore((s) => s.startSession);
+  const startSessionTimer = useTimerStore((s) => s.startSessionTimer);
+  const resetKataTimer = useTimerStore((s) => s.resetKataTimer);
+  const [launching, setLaunching] = useState(false);
+
+  const hasDaily = dailyKataIds.length > 0;
+
+  const handleClick = useCallback(async () => {
+    if (!hasDaily) {
+      navigate("/session/setup");
+      return;
+    }
+
+    if (launching) return;
+    setLaunching(true);
+
+    const kataMap = new Map(katas.map((k) => [k.id, k]));
+    const resolved = dailyKataIds.map((id) => kataMap.get(id)).filter(Boolean) as typeof katas;
+
+    if (resolved.length === 0) {
+      setLaunching(false);
+      navigate("/session/setup");
+      return;
+    }
+
+    resetKataTimer();
+    startSessionTimer();
+    const sessionId = await startSession("daily", resolved);
+    navigate(`/session/${sessionId}`);
+  }, [hasDaily, launching, dailyKataIds, katas, startSession, startSessionTimer, resetKataTimer, navigate]);
+
+  return (
+    <button
+      onClick={handleClick}
+      disabled={launching}
+      className="w-full px-6 py-3 text-sm font-semibold rounded bg-green-600 hover:bg-green-500 text-white disabled:opacity-50 transition-colors"
+    >
+      {launching
+        ? "Launching..."
+        : hasDaily
+          ? `Practice Daily (${dailyKataIds.length} katas)`
+          : "Set Up Daily Katas"}
+    </button>
+  );
+}
 
 // --- Stat Cards ---
 
@@ -496,6 +553,7 @@ export function DashboardPage() {
   return (
     <div className="flex flex-col h-full p-6 gap-6 overflow-y-auto dark:bg-zinc-950">
       <h1 className="text-xl font-bold">Dashboard</h1>
+      <PracticeDailyButton />
       <DevToolbar onRefresh={loadDashboard} />
       <StatCards />
       <Heatmap />
