@@ -145,7 +145,7 @@ def matrix_bfs(grid, start):
     name: "Linked List Traversal",
     category: "linked-list",
     language: "python",
-    difficulty: "medium",
+    difficulty: "easy",
     description: `Kata: Linked List Traversal
 Function: traverse(head)
 
@@ -195,7 +195,7 @@ def traverse(head):
     name: "Binary Search",
     category: "binary-search",
     language: "python",
-    difficulty: "medium",
+    difficulty: "easy",
     description: `Kata: Binary Search
 Function: binary_search(nums, target)
 
@@ -253,7 +253,7 @@ def binary_search(nums, target):
     name: "Binary Tree Preorder",
     category: "trees",
     language: "python",
-    difficulty: "medium",
+    difficulty: "easy",
     description: `Kata: Binary Tree Preorder Traversal
 Function: preorder(root)
 
@@ -307,7 +307,7 @@ def test_preorder_single():
     name: "Binary Tree Inorder",
     category: "trees",
     language: "python",
-    difficulty: "medium",
+    difficulty: "easy",
     description: `Kata: Binary Tree Inorder Traversal
 Function: inorder(root)
 
@@ -476,7 +476,7 @@ def graph_dfs(graph, start):
     name: "Build Adjacency List",
     category: "graphs",
     language: "python",
-    difficulty: "medium",
+    difficulty: "easy",
     description: `Kata: Build Adjacency List
 Function: build_adjacency_list(edges, directed=False)
 
@@ -598,7 +598,7 @@ def matrix_dfs(grid, start):
     name: "Topological Sort",
     category: "advanced-graphs",
     language: "python",
-    difficulty: "medium",
+    difficulty: "hard",
     description: `Kata: Topological Sort
 Function: topological_sort(graph)
 
@@ -659,7 +659,7 @@ def topological_sort(graph):
     name: "Reverse Linked List (Iterative)",
     category: "linked-list",
     language: "python",
-    difficulty: "medium",
+    difficulty: "easy",
     description: `Kata: Reverse Linked List (Iterative)
 Function: reverse_iterative(head)
 
@@ -777,7 +777,7 @@ def test_reverse_recursive_empty():
     name: "Linked List Cycle Detection",
     category: "linked-list",
     language: "python",
-    difficulty: "medium",
+    difficulty: "easy",
     description: `Kata: Linked List Cycle Detection
 Function: has_cycle(head)
 
@@ -844,7 +844,7 @@ def has_cycle(head):
     name: "Two Pointer Remove Duplicates",
     category: "two-pointers",
     language: "python",
-    difficulty: "medium",
+    difficulty: "easy",
     description: `Kata: Two Pointer Remove Duplicates
 Function: remove_duplicates(nums)
 
@@ -952,7 +952,7 @@ def max_subarray_sum(nums, k):
     name: "Frequency Count",
     category: "arrays-and-hashing",
     language: "python",
-    difficulty: "medium",
+    difficulty: "easy",
     description: `Kata: Frequency Count
 Function: frequency_count(items)
 
@@ -985,7 +985,7 @@ def test_frequency_count_empty():
     name: "Most Frequent Element",
     category: "arrays-and-hashing",
     language: "python",
-    difficulty: "medium",
+    difficulty: "easy",
     description: `Kata: Most Frequent Element
 Function: most_frequent(items)
 
@@ -1014,7 +1014,7 @@ def test_most_frequent_single():
     name: "Merge Two Sorted Arrays",
     category: "two-pointers",
     language: "python",
-    difficulty: "medium",
+    difficulty: "easy",
     description: `Kata: Merge Two Sorted Arrays
 Function: merge_sorted(a, b)
 
@@ -1070,7 +1070,7 @@ def merge_sorted(a, b):
     name: "Min Heap",
     category: "heap",
     language: "python",
-    difficulty: "medium",
+    difficulty: "hard",
     description: `Kata: Min Heap
 Class: MinHeap with insert(val) and extract_min()
 
@@ -1214,7 +1214,7 @@ class MinHeap:
     name: "Balanced Parentheses",
     category: "stack",
     language: "python",
-    difficulty: "medium",
+    difficulty: "easy",
     description: `Kata: Balanced Parentheses
 Function: is_balanced(s)
 
@@ -1365,7 +1365,7 @@ def test_interleaved():
     name: "Trie",
     category: "tries",
     language: "python",
-    difficulty: "medium",
+    difficulty: "hard",
     description: `Kata: Trie
 Class: Trie
 
@@ -1453,7 +1453,7 @@ def test_empty_search():
     name: "Union Find",
     category: "advanced-graphs",
     language: "python",
-    difficulty: "medium",
+    difficulty: "hard",
     description: `Kata: Union Find
 Class: UnionFind
 
@@ -1798,7 +1798,7 @@ def test_count():
     name: "Two Sum",
     category: "arrays-and-hashing",
     language: "python",
-    difficulty: "medium",
+    difficulty: "easy",
     description: `Kata: Two Sum
 Function: two_sum(nums, target)
 
@@ -1880,7 +1880,7 @@ def test_zero_crossing():
     name: "Build Prefix Sum",
     category: "arrays-and-hashing",
     language: "python",
-    difficulty: "medium",
+    difficulty: "easy",
     description: `Kata: Build Prefix Sum
 Function: build_prefix(nums)
 
@@ -1914,7 +1914,7 @@ def test_build_prefix_negatives():
     name: "Range Sum Query",
     category: "arrays-and-hashing",
     language: "python",
-    difficulty: "medium",
+    difficulty: "easy",
     description: `Kata: Range Sum Query
 Function: range_sum(prefix, left, right)
 
@@ -2144,7 +2144,7 @@ def test_find_last_at_end():
     name: "Single Number XOR",
     category: "bit-manipulation",
     language: "python",
-    difficulty: "medium",
+    difficulty: "easy",
     description: `Kata: Single Number (XOR)
 Function: single_number(nums)
 
@@ -2178,7 +2178,7 @@ def test_larger():
     name: "Count Set Bits",
     category: "bit-manipulation",
     language: "python",
-    difficulty: "medium",
+    difficulty: "easy",
     description: `Kata: Count Set Bits
 Function: count_bits(n)
 
@@ -2225,7 +2225,7 @@ def test_large():
     name: "Climbing Stairs",
     category: "1-d-dp",
     language: "python",
-    difficulty: "medium",
+    difficulty: "easy",
     description: `Kata: Climbing Stairs
 Function: climb_stairs(n)
 
