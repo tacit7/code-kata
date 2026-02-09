@@ -58,7 +58,7 @@ def test_negative_numbers():
     assert_equal(two_sum([-1, -2, -3, -4, -5], -8), (2, 4))
 
 def test_first_and_last():
-    assert_equal(two_sum([1, 5, 3, 7], 8), (0, 3))
+    assert_equal(two_sum([1, 4, 3, 7], 8), (0, 3))
 `,
     solution: `def two_sum(nums, target):
     seen = {}
