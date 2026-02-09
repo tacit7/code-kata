@@ -34,8 +34,8 @@ function test_negative_numbers() {
 }
 
 function test_first_and_last() {
-  const result = twoSum([1, 5, 3, 7], 8);
-  assertEqual(result.sort(), [0, 3], "twoSum([1,5,3,7], 8) should return [0,3]");
+  const result = twoSum([1, 4, 3, 7], 8);
+  assertEqual(result.sort(), [0, 3], "twoSum([1,4,3,7], 8) should return [0,3]");
 }
 `,
     solution: `function twoSum(nums, target) {

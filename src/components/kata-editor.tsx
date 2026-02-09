@@ -24,11 +24,13 @@ export function KataEditor({ kata, onTestComplete }: KataEditorProps) {
   const [running, setRunning] = useState(false);
   const [showSolution, setShowSolution] = useState(false);
   const [showPanel, setShowPanel] = useState<"description" | "usage" | null>(null);
+  const [editorReady, setEditorReady] = useState(false);
 
   const monacoTheme = theme === "dark" ? "vs-dark" : "vs";
 
   const handleEditorMount: OnMount = (editorInstance) => {
     editorRef.current = editorInstance;
+    setEditorReady(true);
   };
 
   const { kataStatus, startKataTimer, completeKataTimer } =
@@ -66,9 +68,9 @@ export function KataEditor({ kata, onTestComplete }: KataEditorProps) {
     toggleSolution: handleToggleSolution,
   });
 
-  // Vim mode lifecycle
+  // Vim mode lifecycle — depends on editorReady so it fires after onMount
   useEffect(() => {
-    if (!editorRef.current || !statusBarRef.current) return;
+    if (!editorReady || !editorRef.current || !statusBarRef.current) return;
 
     if (vimMode) {
       vimModeRef.current = initVimMode(editorRef.current, statusBarRef.current);
@@ -78,7 +80,7 @@ export function KataEditor({ kata, onTestComplete }: KataEditorProps) {
       vimModeRef.current?.dispose();
       vimModeRef.current = null;
     };
-  }, [vimMode]);
+  }, [vimMode, editorReady]);
 
   return (
     <div className="flex flex-col h-full">
