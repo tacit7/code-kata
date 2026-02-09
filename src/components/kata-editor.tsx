@@ -3,34 +3,47 @@ import Editor, { type OnMount } from "@monaco-editor/react";
 import type { editor } from "monaco-editor";
 import { initVimMode, type VimAdapterInstance } from "monaco-vim";
 import { useEditorStore } from "../stores/editor-store";
-import { sampleKatas } from "../lib/sample-katas";
+import { useTimerStore } from "../stores/timer-store";
 import { runTests } from "../lib/test-runner";
 import { TestOutput } from "./test-output";
-import type { TestResult } from "../types/editor";
+import { TimerDisplay } from "./timer-display";
+import type { Kata, TestResult } from "../types/editor";
 
 interface KataEditorProps {
-  kataId: string;
+  kata: Kata;
 }
 
-export function KataEditor({ kataId }: KataEditorProps) {
+export function KataEditor({ kata }: KataEditorProps) {
   const { theme, vimMode, fontSize } = useEditorStore();
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
   const vimModeRef = useRef<VimAdapterInstance | null>(null);
   const statusBarRef = useRef<HTMLDivElement | null>(null);
   const [results, setResults] = useState<TestResult[] | null>(null);
+  const [showSolution, setShowSolution] = useState(false);
 
-  const kata = sampleKatas[kataId] ?? sampleKatas["two-sum"];
   const monacoTheme = theme === "dark" ? "vs-dark" : "vs";
 
   const handleEditorMount: OnMount = (editorInstance) => {
     editorRef.current = editorInstance;
   };
 
+  const { kataStatus, startKataTimer, completeKataTimer, resetKataTimer } =
+    useTimerStore();
+
+  useEffect(() => {
+    resetKataTimer();
+  }, [kata.id, resetKataTimer]);
+
   const handleRun = useCallback(() => {
     if (!editorRef.current) return;
+    if (kataStatus === "idle") startKataTimer();
     const code = editorRef.current.getValue();
-    setResults(runTests(code, kata.testCode));
-  }, [kata.testCode]);
+    const testResults = runTests(code, kata.testCode);
+    setResults(testResults);
+    if (testResults.length > 0 && testResults.every((r) => r.passed)) {
+      completeKataTimer();
+    }
+  }, [kata.testCode, kataStatus, startKataTimer, completeKataTimer]);
 
   // Vim mode lifecycle
   useEffect(() => {
@@ -48,20 +61,40 @@ export function KataEditor({ kataId }: KataEditorProps) {
 
   return (
     <div className="flex flex-col h-full">
-      {/* Editor */}
-      <div className={results ? "h-[65%] min-h-0" : "flex-1 min-h-0"}>
-        <Editor
-          defaultValue={kata.code}
-          language={kata.language}
-          theme={monacoTheme}
-          options={{
-            fontSize,
-            minimap: { enabled: false },
-            automaticLayout: true,
-            scrollBeyondLastLine: false,
-          }}
-          onMount={handleEditorMount}
-        />
+      {/* Editor + Solution side-by-side */}
+      <div className={`flex ${results ? "h-[65%]" : "flex-1"} min-h-0`}>
+        <div className={showSolution ? "w-1/2 min-w-0" : "w-full min-w-0"}>
+          <Editor
+            key={kata.id}
+            defaultValue={kata.code}
+            language={kata.language}
+            theme={monacoTheme}
+            options={{
+              fontSize,
+              minimap: { enabled: false },
+              automaticLayout: true,
+              scrollBeyondLastLine: false,
+            }}
+            onMount={handleEditorMount}
+          />
+        </div>
+        {showSolution && kata.solution && (
+          <div className="w-1/2 min-w-0 border-l border-zinc-200 dark:border-zinc-700">
+            <Editor
+              value={kata.solution}
+              language={kata.language}
+              theme={monacoTheme}
+              options={{
+                fontSize,
+                minimap: { enabled: false },
+                automaticLayout: true,
+                scrollBeyondLastLine: false,
+                readOnly: true,
+                lineNumbers: "off",
+              }}
+            />
+          </div>
+        )}
       </div>
 
       {/* Vim status bar */}
@@ -80,14 +113,29 @@ export function KataEditor({ kataId }: KataEditorProps) {
         >
           Run
         </button>
+        {kata.solution && (
+          <button
+            onClick={() => setShowSolution((v) => !v)}
+            className={`px-3 py-1 text-xs font-medium rounded transition-colors ${
+              showSolution
+                ? "bg-amber-600 text-white"
+                : "bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-400"
+            }`}
+          >
+            Solution
+          </button>
+        )}
         <span className="text-xs text-zinc-500 dark:text-zinc-400">
           {kata.name}
         </span>
+        <div className="ml-auto">
+          <TimerDisplay />
+        </div>
       </div>
 
       {/* Test output */}
       {results && (
-        <div className="h-[30%] min-h-0 border-t border-zinc-200 dark:border-zinc-700">
+        <div className="h-[25%] min-h-0 border-t border-zinc-200 dark:border-zinc-700">
           <TestOutput results={results} />
         </div>
       )}
