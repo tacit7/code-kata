@@ -1,27 +1,39 @@
-import { useEffect } from "react";
-import { Routes, Route, Navigate } from "react-router";
-import { useEditorStore } from "./stores/editor-store";
+import { useEffect, useCallback } from "react";
+import { Routes, Route, Navigate, useNavigate } from "react-router";
+import { useSettingsStore } from "./stores/settings-store";
 import { useKataStore } from "./stores/kata-store";
+import { useKeyboardShortcuts } from "./hooks/use-keyboard-shortcuts";
 import { TopBar } from "./components/top-bar";
 import { EditorPage } from "./routes/editor";
 import { LibraryPage } from "./routes/library";
 import { SessionSetupPage } from "./routes/session-setup";
 import { SessionPage } from "./routes/session";
 import { SessionResultsPage } from "./routes/session-results";
+import { DashboardPage } from "./routes/dashboard";
+import { SettingsPage } from "./routes/settings";
 
 function App() {
-  const theme = useEditorStore((s) => s.theme);
+  const theme = useSettingsStore((s) => s.theme);
+  const loadSettings = useSettingsStore((s) => s.loadSettings);
+  const settingsLoaded = useSettingsStore((s) => s.loaded);
   const { loading, error, loadKatas } = useKataStore();
+  const navigate = useNavigate();
+
+  const handleOpenSettings = useCallback(() => navigate("/settings"), [navigate]);
+  useKeyboardShortcuts({
+    openSettings: handleOpenSettings,
+  });
 
   useEffect(() => {
+    loadSettings();
     loadKatas();
-  }, [loadKatas]);
+  }, [loadSettings, loadKatas]);
 
-  if (loading) {
+  if (loading || !settingsLoaded) {
     return (
       <div className={`${theme === "dark" ? "dark" : ""} flex flex-col h-full`}>
         <div className="flex items-center justify-center h-full bg-white dark:bg-zinc-950 text-zinc-500 dark:text-zinc-400 text-sm">
-          Loading katas...
+          Loading...
         </div>
       </div>
     );
@@ -43,12 +55,14 @@ function App() {
         <TopBar />
         <main className="flex-1 min-h-0">
           <Routes>
-            <Route path="/" element={<Navigate to="/library" replace />} />
+            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/library" element={<LibraryPage />} />
             <Route path="/editor/:kataId" element={<EditorPage />} />
             <Route path="/session/setup" element={<SessionSetupPage />} />
             <Route path="/session/:sessionId" element={<SessionPage />} />
             <Route path="/session/:sessionId/results" element={<SessionResultsPage />} />
+            <Route path="/settings" element={<SettingsPage />} />
           </Routes>
         </main>
       </div>

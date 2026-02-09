@@ -3,15 +3,10 @@ import { useParams, useNavigate, Navigate } from "react-router";
 import { useSessionStore } from "../stores/session-store";
 import { useTimerStore } from "../stores/timer-store";
 import { useTimerTick } from "../hooks/use-timer-tick";
+import { useKeyboardShortcuts } from "../hooks/use-keyboard-shortcuts";
 import { useKataStore } from "../stores/kata-store";
 import { KataEditor } from "../components/kata-editor";
-
-function formatTime(ms: number): string {
-  const totalSeconds = Math.floor(ms / 1000);
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-  return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
-}
+import { formatTime } from "../lib/format";
 
 export function SessionPage() {
   const { sessionId } = useParams<{ sessionId: string }>();
@@ -88,6 +83,11 @@ export function SessionPage() {
   const handlePrev = useCallback(() => {
     prevKata();
   }, [prevKata]);
+
+  useKeyboardShortcuts({
+    nextKata: handleNext,
+    prevKata: handlePrev,
+  });
 
   const handleQuit = useCallback(() => {
     const totalMs = stopSessionTimer();

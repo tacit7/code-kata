@@ -1,17 +1,29 @@
 import { useNavigate, useLocation } from "react-router";
-import { useEditorStore } from "../stores/editor-store";
+import { useSettingsStore } from "../stores/settings-store";
 
 export function TopBar() {
-  const { theme, vimMode, toggleTheme, toggleVimMode } = useEditorStore();
+  const { theme, vimMode, toggleTheme, toggleVimMode } = useSettingsStore();
   const navigate = useNavigate();
   const location = useLocation();
   const onLibrary = location.pathname === "/library";
+  const onDashboard = location.pathname === "/dashboard";
   const onPractice = location.pathname.startsWith("/session");
+  const onSettings = location.pathname === "/settings";
 
   return (
     <header className="flex items-center justify-between px-4 py-2 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 shrink-0">
       <div className="flex items-center gap-3">
         <span className="text-sm font-semibold tracking-tight">Kata Desktop</span>
+        <button
+          onClick={() => navigate("/dashboard")}
+          className={`px-2.5 py-1 text-xs font-medium rounded transition-colors ${
+            onDashboard
+              ? "bg-blue-600 text-white"
+              : "bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-300 dark:hover:bg-zinc-600"
+          }`}
+        >
+          Dashboard
+        </button>
         <button
           onClick={() => navigate("/library")}
           className={`px-2.5 py-1 text-xs font-medium rounded transition-colors ${
@@ -34,6 +46,16 @@ export function TopBar() {
         </button>
       </div>
       <div className="flex items-center gap-2">
+        <button
+          onClick={() => navigate("/settings")}
+          className={`px-2.5 py-1 text-xs font-medium rounded transition-colors ${
+            onSettings
+              ? "bg-blue-600 text-white"
+              : "bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-300 dark:hover:bg-zinc-600"
+          }`}
+        >
+          Settings
+        </button>
         <button
           onClick={toggleVimMode}
           className={`px-2.5 py-1 text-xs font-medium rounded transition-colors ${

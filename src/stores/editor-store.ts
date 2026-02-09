@@ -1,14 +1,7 @@
 import { create } from "zustand";
-import type { AppTheme } from "../types/editor";
 
 interface EditorState {
-  theme: AppTheme;
-  vimMode: boolean;
-  fontSize: number;
   currentKataId: string;
-  toggleTheme: () => void;
-  toggleVimMode: () => void;
-  setFontSize: (size: number) => void;
   setCurrentKataId: (id: string) => void;
 }
 
@@ -26,30 +19,7 @@ function saveToStorage(key: string, value: unknown) {
 }
 
 export const useEditorStore = create<EditorState>((set) => ({
-  theme: loadFromStorage<AppTheme>("kata-theme", "dark"),
-  vimMode: loadFromStorage<boolean>("kata-vimMode", false),
-  fontSize: loadFromStorage<number>("kata-fontSize", 14),
   currentKataId: loadFromStorage<string>("kata-currentKataId", "two-sum"),
-
-  toggleTheme: () =>
-    set((state) => {
-      const next = state.theme === "dark" ? "light" : "dark";
-      saveToStorage("kata-theme", next);
-      return { theme: next };
-    }),
-
-  toggleVimMode: () =>
-    set((state) => {
-      const next = !state.vimMode;
-      saveToStorage("kata-vimMode", next);
-      return { vimMode: next };
-    }),
-
-  setFontSize: (size) => {
-    saveToStorage("kata-fontSize", size);
-    set({ fontSize: size });
-  },
-
   setCurrentKataId: (id) => {
     saveToStorage("kata-currentKataId", id);
     set({ currentKataId: id });

@@ -2,8 +2,9 @@ import { useRef, useEffect, useState, useCallback } from "react";
 import Editor, { type OnMount } from "@monaco-editor/react";
 import type { editor } from "monaco-editor";
 import { initVimMode, type VimAdapterInstance } from "monaco-vim";
-import { useEditorStore } from "../stores/editor-store";
+import { useSettingsStore } from "../stores/settings-store";
 import { useTimerStore } from "../stores/timer-store";
+import { useKeyboardShortcuts } from "../hooks/use-keyboard-shortcuts";
 import { runTests } from "../lib/test-runner";
 import { TestOutput } from "./test-output";
 import { TimerDisplay } from "./timer-display";
@@ -15,7 +16,7 @@ interface KataEditorProps {
 }
 
 export function KataEditor({ kata, onTestComplete }: KataEditorProps) {
-  const { theme, vimMode, fontSize } = useEditorStore();
+  const { theme, vimMode, fontSize, fontFamily, tabSize } = useSettingsStore();
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
   const vimModeRef = useRef<VimAdapterInstance | null>(null);
   const statusBarRef = useRef<HTMLDivElement | null>(null);
@@ -47,6 +48,15 @@ export function KataEditor({ kata, onTestComplete }: KataEditorProps) {
     }
   }, [kata.testCode, kataStatus, startKataTimer, completeKataTimer, onTestComplete]);
 
+  const handleToggleSolution = useCallback(() => {
+    setShowSolution((v) => !v);
+  }, []);
+
+  useKeyboardShortcuts({
+    runTests: handleRun,
+    toggleSolution: handleToggleSolution,
+  });
+
   // Vim mode lifecycle
   useEffect(() => {
     if (!editorRef.current || !statusBarRef.current) return;
@@ -63,17 +73,47 @@ export function KataEditor({ kata, onTestComplete }: KataEditorProps) {
 
   return (
     <div className="flex flex-col h-full">
-      {/* Description / Usage panel */}
-      {showPanel && (
-        <div className="shrink-0 max-h-[30%] overflow-y-auto px-4 py-3 border-b border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-sm text-zinc-700 dark:text-zinc-300 whitespace-pre-wrap">
-          {showPanel === "description" && (kata.description || "No description available.")}
-          {showPanel === "usage" && (kata.usage || "No usage notes available.")}
-        </div>
-      )}
-
-      {/* Editor + Solution side-by-side */}
+      {/* Main area: left panel (problem/usage) + editor + solution */}
       <div className={`flex ${results ? "h-[65%]" : "flex-1"} min-h-0`}>
-        <div className={showSolution ? "w-1/2 min-w-0" : "w-full min-w-0"}>
+        {/* Left panel: description or usage */}
+        {showPanel && (
+          <div className="w-[380px] shrink-0 overflow-y-auto border-r border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900">
+            <div className="flex items-center gap-2 px-4 py-2 border-b border-zinc-200 dark:border-zinc-700">
+              <span className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                {showPanel === "description" ? "Problem" : "Usage"}
+              </span>
+              {showPanel === "description" && kata.usage && (
+                <button
+                  onClick={() => setShowPanel("usage")}
+                  className="px-2 py-0.5 text-xs rounded bg-zinc-200 dark:bg-zinc-700 text-zinc-500 dark:text-zinc-400 hover:bg-zinc-300 dark:hover:bg-zinc-600 transition-colors"
+                >
+                  Usage
+                </button>
+              )}
+              {showPanel === "usage" && kata.description && (
+                <button
+                  onClick={() => setShowPanel("description")}
+                  className="px-2 py-0.5 text-xs rounded bg-zinc-200 dark:bg-zinc-700 text-zinc-500 dark:text-zinc-400 hover:bg-zinc-300 dark:hover:bg-zinc-600 transition-colors"
+                >
+                  Problem
+                </button>
+              )}
+              <button
+                onClick={() => setShowPanel(null)}
+                className="ml-auto px-2 py-0.5 text-xs rounded text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 transition-colors"
+              >
+                Close
+              </button>
+            </div>
+            <div className="px-4 py-3 text-sm text-zinc-700 dark:text-zinc-300 whitespace-pre-wrap">
+              {showPanel === "description" && (kata.description || "No description available.")}
+              {showPanel === "usage" && (kata.usage || "No usage notes available.")}
+            </div>
+          </div>
+        )}
+
+        {/* Code editor */}
+        <div className={showSolution ? "w-1/2 min-w-0 flex-1" : "w-full min-w-0 flex-1"}>
           <Editor
             key={kata.id}
             defaultValue={kata.code}
@@ -81,6 +121,8 @@ export function KataEditor({ kata, onTestComplete }: KataEditorProps) {
             theme={monacoTheme}
             options={{
               fontSize,
+              fontFamily,
+              tabSize,
               minimap: { enabled: false },
               automaticLayout: true,
               scrollBeyondLastLine: false,
@@ -88,6 +130,8 @@ export function KataEditor({ kata, onTestComplete }: KataEditorProps) {
             onMount={handleEditorMount}
           />
         </div>
+
+        {/* Solution panel (right split) */}
         {showSolution && kata.solution && (
           <div className="w-1/2 min-w-0 border-l border-zinc-200 dark:border-zinc-700">
             <Editor
@@ -96,6 +140,8 @@ export function KataEditor({ kata, onTestComplete }: KataEditorProps) {
               theme={monacoTheme}
               options={{
                 fontSize,
+                fontFamily,
+                tabSize,
                 minimap: { enabled: false },
                 automaticLayout: true,
                 scrollBeyondLastLine: false,

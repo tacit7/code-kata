@@ -63,6 +63,13 @@ async function createSchema(db: Database) {
       kata_ids TEXT NOT NULL
     )
   `);
+
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS settings (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL
+    )
+  `);
 }
 
 async function seedKatas(db: Database) {

@@ -2,13 +2,7 @@ import { useEffect } from "react";
 import { useParams, useNavigate, Navigate } from "react-router";
 import { useSessionStore } from "../stores/session-store";
 import { useKataStore } from "../stores/kata-store";
-
-function formatTime(ms: number): string {
-  const totalSeconds = Math.floor(ms / 1000);
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-  return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
-}
+import { formatTime } from "../lib/format";
 
 export function SessionResultsPage() {
   const { sessionId } = useParams<{ sessionId: string }>();
