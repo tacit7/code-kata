@@ -33,7 +33,7 @@ const DEFAULTS = {
   autoRunTests: false,
   hideDescriptionInSession: false,
   shortcuts: { ...DEFAULT_SHORTCUTS },
-  dailyKataIds: [] as string[],
+  dailyKataIds: [] as number[],
 };
 
 interface SettingsState {
@@ -53,7 +53,7 @@ interface SettingsState {
   // Shortcuts
   shortcuts: Record<ShortcutAction, string>;
   // Daily kata set
-  dailyKataIds: string[];
+  dailyKataIds: number[];
   // Actions
   loadSettings: () => Promise<void>;
   setSetting: (key: string, value: unknown) => Promise<void>;
@@ -129,7 +129,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
         (patch.shortcuts as Record<ShortcutAction, string>) ??
         DEFAULTS.shortcuts,
       dailyKataIds:
-        (patch.dailyKataIds as string[]) ?? DEFAULTS.dailyKataIds,
+        (patch.dailyKataIds as number[]) ?? DEFAULTS.dailyKataIds,
       loaded: true,
     });
   },

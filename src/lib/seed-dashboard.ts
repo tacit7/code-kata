@@ -9,50 +9,7 @@
 
 import { getDb } from "./database";
 
-const KATA_IDS = [
-  "two-sum",
-  "fizzbuzz",
-  "binary-tree-bfs",
-  "matrix-bfs",
-  "linked-list-traversal",
-  "binary-search",
-  "dfs-preorder",
-  "dfs-inorder",
-  "dfs-postorder",
-  "graph-dfs",
-  "build-adjacency-list",
-  "matrix-dfs",
-  "topological-sort",
-  "reverse-linked-list-iterative",
-  "reverse-linked-list-recursive",
-  "linked-list-cycle",
-  "two-pointer-remove-dupes",
-  "sliding-window-max-sum",
-  "frequency-count",
-  "most-frequent",
-  "merge-sorted-arrays",
-  "min-heap",
-  "balanced-parentheses",
-  "queue-from-stacks",
-  "trie",
-  "union-find",
-  "merge-sort",
-  "lomuto-partition",
-  "quick-sort",
-  "permutations",
-  "subsets",
-  "kadanes-algorithm",
-  "build-prefix-sum",
-  "range-sum-query",
-  "merge-intervals",
-  "monotonic-stack",
-  "binary-search-find-first",
-  "binary-search-find-last",
-  "single-number-xor",
-  "count-set-bits",
-  "climbing-stairs",
-  "longest-common-subsequence",
-];
+let KATA_IDS: number[] = [];
 
 const SESSION_TYPES = ["daily", "random", "custom"] as const;
 
@@ -82,6 +39,13 @@ export async function seedDashboard(): Promise<string> {
   );
   if (existing[0].count > 10) {
     return `Already have ${existing[0].count} sessions. Run clearDashboardSeed() first to reset.`;
+  }
+
+  // Load kata IDs from DB
+  const kataRows = await db.select<{ id: number }[]>("SELECT id FROM katas");
+  KATA_IDS = kataRows.map((r) => r.id);
+  if (KATA_IDS.length === 0) {
+    return "No katas in database. Cannot seed dashboard.";
   }
 
   const now = new Date();
@@ -116,7 +80,7 @@ export async function seedDashboard(): Promise<string> {
       let sessionTimeMs = 0;
 
       const attemptRows: {
-        kataId: string;
+        kataId: number;
         kataIndex: number;
         startedAt: string;
         finishedAt: string;

@@ -1,7 +1,7 @@
 export type AppTheme = "dark" | "light";
 
 export interface Kata {
-  id: string;
+  id: number;
   name: string;
   category: string;
   language: string;
@@ -13,13 +13,15 @@ export interface Kata {
   usage: string | null;
 }
 
+export type SeedKata = Omit<Kata, "id">;
+
 export type TimerStatus = "idle" | "running" | "paused" | "completed";
 
 export interface EditorSettings {
   theme: AppTheme;
   vimMode: boolean;
   fontSize: number;
-  currentKataId: string;
+  currentKataId: number;
 }
 
 export interface TestResult {
@@ -45,7 +47,7 @@ export interface Session {
 export interface Attempt {
   id: number;
   sessionId: number;
-  kataId: string;
+  kataId: number;
   kataIndex: number;
   startedAt: string;
   finishedAt: string | null;
@@ -57,5 +59,5 @@ export interface Attempt {
 export interface Preset {
   id: number;
   name: string;
-  kataIds: string[];
+  kataIds: number[];
 }

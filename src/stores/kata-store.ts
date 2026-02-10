@@ -3,7 +3,7 @@ import type { Kata } from "../types/editor";
 import { getDb } from "../lib/database";
 
 interface KataRow {
-  id: string;
+  id: number;
   name: string;
   category: string;
   language: string;
@@ -29,7 +29,11 @@ export const useKataStore = create<KataState>((set) => ({
 
   loadKatas: async (language = "javascript") => {
     try {
-      set({ loading: true, error: null });
+      const { katas: current } = useKataStore.getState();
+      // Only show loading spinner on initial load, not on language switches
+      if (current.length === 0) {
+        set({ loading: true, error: null });
+      }
       const db = await getDb();
       const rows = await db.select<KataRow[]>(
         "SELECT * FROM katas WHERE language = $1",

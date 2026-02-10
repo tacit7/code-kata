@@ -21,7 +21,7 @@ interface CategoryBreakdown {
 }
 
 interface LeaderboardRow {
-  kataId: string;
+  kataId: number;
   kataName: string;
   category: string;
   difficulty: string;
@@ -48,7 +48,7 @@ interface SessionHistoryRow {
 }
 
 export interface DrillDownRow {
-  kataId: string;
+  kataId: number;
   kataIndex: number;
   timeMs: number | null;
   passed: number;
@@ -160,7 +160,7 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
         // E. Leaderboard (all katas, LEFT JOIN attempts)
         db.select<
           {
-            kata_id: string;
+            kata_id: number;
             kata_name: string;
             category: string;
             difficulty: string;
@@ -258,7 +258,7 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
     const db = await getDb();
     const rows = await db.select<
       {
-        kata_id: string;
+        kata_id: number;
         kata_index: number;
         time_ms: number | null;
         passed: number;

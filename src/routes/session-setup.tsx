@@ -20,13 +20,13 @@ export function SessionSetupPage() {
 
   const [tab, setTab] = useState<Tab>("daily");
   const [size, setSize] = useState(5);
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [customOrder, setCustomOrder] = useState<string[]>([]);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [customOrder, setCustomOrder] = useState<number[]>([]);
   const [presetName, setPresetName] = useState("");
   const [starting, setStarting] = useState(false);
 
   // Daily tab local state
-  const [dailySelectedIds, setDailySelectedIds] = useState<Set<string>>(new Set());
+  const [dailySelectedIds, setDailySelectedIds] = useState<Set<number>>(new Set());
   const [dailySaved, setDailySaved] = useState(false);
 
   const categories = [...new Set(katas.map((k) => k.category))].sort();
@@ -45,7 +45,7 @@ export function SessionSetupPage() {
     ? katas.filter((k) => k.category === categoryFilter)
     : katas;
 
-  const toggleKata = (id: string) => {
+  const toggleKata = (id: number) => {
     const next = new Set(selectedIds);
     if (next.has(id)) {
       next.delete(id);
@@ -57,7 +57,7 @@ export function SessionSetupPage() {
     setSelectedIds(next);
   };
 
-  const toggleDailyKata = (id: string) => {
+  const toggleDailyKata = (id: number) => {
     const next = new Set(dailySelectedIds);
     if (next.has(id)) {
       next.delete(id);
@@ -75,7 +75,7 @@ export function SessionSetupPage() {
     setTimeout(() => setDailySaved(false), 2000);
   };
 
-  const moveUp = (id: string) => {
+  const moveUp = (id: number) => {
     setCustomOrder((prev) => {
       const idx = prev.indexOf(id);
       if (idx <= 0) return prev;
@@ -85,7 +85,7 @@ export function SessionSetupPage() {
     });
   };
 
-  const moveDown = (id: string) => {
+  const moveDown = (id: number) => {
     setCustomOrder((prev) => {
       const idx = prev.indexOf(id);
       if (idx < 0 || idx >= prev.length - 1) return prev;

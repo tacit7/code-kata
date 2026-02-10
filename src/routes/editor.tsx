@@ -9,7 +9,8 @@ export function EditorPage() {
   const katas = useKataStore((s) => s.katas);
   const resetKataTimer = useTimerStore((s) => s.resetKataTimer);
 
-  const kata = katas.find((k) => k.id === kataId);
+  const numericId = Number(kataId);
+  const kata = katas.find((k) => k.id === numericId);
 
   useEffect(() => {
     resetKataTimer();

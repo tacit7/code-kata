@@ -10,12 +10,12 @@ interface SessionState {
   presets: Preset[];
 
   startSession: (type: SessionType, katas: Kata[], presetName?: string) => Promise<number>;
-  recordAttempt: (kataId: string, timeMs: number, passed: boolean, codeSnapshot: string) => Promise<void>;
+  recordAttempt: (kataId: number, timeMs: number, passed: boolean, codeSnapshot: string) => Promise<void>;
   nextKata: () => void;
   prevKata: () => void;
   finishSession: (totalTimeMs: number) => Promise<void>;
   loadPresets: () => Promise<void>;
-  savePreset: (name: string, kataIds: string[]) => Promise<void>;
+  savePreset: (name: string, kataIds: number[]) => Promise<void>;
   deletePreset: (id: number) => Promise<void>;
   loadSession: (sessionId: number, allKatas: Kata[]) => Promise<void>;
   clearSession: () => void;
@@ -35,7 +35,7 @@ interface SessionRow {
 interface AttemptRow {
   id: number;
   session_id: number;
-  kata_id: string;
+  kata_id: number;
   kata_index: number;
   started_at: string;
   finished_at: string | null;
@@ -217,7 +217,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     const presets: Preset[] = rows.map((r) => ({
       id: r.id,
       name: r.name,
-      kataIds: JSON.parse(r.kata_ids) as string[],
+      kataIds: JSON.parse(r.kata_ids) as number[],
     }));
     set({ presets });
   },

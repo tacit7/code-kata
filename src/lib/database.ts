@@ -15,7 +15,7 @@ export async function getDb(): Promise<Database> {
 async function createSchema(db: Database) {
   await db.execute(`
     CREATE TABLE IF NOT EXISTS katas (
-      id TEXT PRIMARY KEY,
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL,
       category TEXT NOT NULL DEFAULT 'arrays',
       language TEXT NOT NULL DEFAULT 'javascript',
@@ -46,7 +46,7 @@ async function createSchema(db: Database) {
     CREATE TABLE IF NOT EXISTS attempts (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       session_id INTEGER REFERENCES sessions(id),
-      kata_id TEXT REFERENCES katas(id) NOT NULL,
+      kata_id INTEGER REFERENCES katas(id) NOT NULL,
       kata_index INTEGER NOT NULL,
       started_at TEXT NOT NULL,
       finished_at TEXT,
@@ -74,14 +74,14 @@ async function createSchema(db: Database) {
 
   await db.execute(`
     CREATE TABLE IF NOT EXISTS user_code (
-      kata_id TEXT PRIMARY KEY REFERENCES katas(id),
+      kata_id INTEGER PRIMARY KEY REFERENCES katas(id),
       code TEXT NOT NULL,
       updated_at TEXT DEFAULT CURRENT_TIMESTAMP
     )
   `);
 }
 
-export async function saveUserCode(kataId: string, code: string): Promise<void> {
+export async function saveUserCode(kataId: number, code: string): Promise<void> {
   const db = await getDb();
   await db.execute(
     "INSERT OR REPLACE INTO user_code (kata_id, code, updated_at) VALUES ($1, $2, datetime('now'))",
@@ -89,12 +89,12 @@ export async function saveUserCode(kataId: string, code: string): Promise<void> 
   );
 }
 
-export async function deleteUserCode(kataId: string): Promise<void> {
+export async function deleteUserCode(kataId: number): Promise<void> {
   const db = await getDb();
   await db.execute("DELETE FROM user_code WHERE kata_id = $1", [kataId]);
 }
 
-export async function loadUserCode(kataId: string): Promise<string | null> {
+export async function loadUserCode(kataId: number): Promise<string | null> {
   const db = await getDb();
   const rows = await db.select<{ code: string }[]>(
     "SELECT code FROM user_code WHERE kata_id = $1",
@@ -104,17 +104,16 @@ export async function loadUserCode(kataId: string): Promise<string | null> {
 }
 
 async function seedKatas(db: Database) {
-  // Collect all valid IDs to remove orphans after seeding
-  const validIds = new Set<string>();
+  // Only seed when katas table is empty (first launch)
+  const countRows = await db.select<{ count: number }[]>("SELECT COUNT(*) as count FROM katas");
+  if (countRows[0].count > 0) return;
 
-  // INSERT OR REPLACE: new katas get added, existing katas get updated
+  // Seed JS katas — insertion order determines auto-increment IDs
   for (const kata of sampleKatas) {
-    validIds.add(kata.id);
     await db.execute(
-      `INSERT OR REPLACE INTO katas (id, name, category, language, difficulty, description, code, test_code, solution, usage)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+      `INSERT INTO katas (name, category, language, difficulty, description, code, test_code, solution, usage)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
       [
-        kata.id,
         kata.name,
         kata.category,
         kata.language,
@@ -130,12 +129,10 @@ async function seedKatas(db: Database) {
 
   // Seed Python katas
   for (const kata of sampleKatasPython) {
-    validIds.add(kata.id);
     await db.execute(
-      `INSERT OR REPLACE INTO katas (id, name, category, language, difficulty, description, code, test_code, solution, usage)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+      `INSERT INTO katas (name, category, language, difficulty, description, code, test_code, solution, usage)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
       [
-        kata.id,
         kata.name,
         kata.category,
         kata.language,
@@ -148,12 +145,35 @@ async function seedKatas(db: Database) {
       ]
     );
   }
+}
 
-  // Remove orphaned katas no longer in seed data
-  const rows = await db.select<{ id: string }[]>("SELECT id FROM katas");
-  for (const row of rows) {
-    if (!validIds.has(row.id)) {
-      await db.execute("DELETE FROM katas WHERE id = $1", [row.id]);
-    }
+/** Drop all katas and reseed from source arrays. Destructive: orphans attempts/user_code/dailyKataIds. */
+export async function reseedKatas(): Promise<string> {
+  const db = await getDb();
+  await db.execute("DELETE FROM user_code");
+  await db.execute("DELETE FROM katas");
+  // Reset autoincrement counter
+  await db.execute("DELETE FROM sqlite_sequence WHERE name = 'katas'");
+  await seedKatasForce(db);
+  return "Reseeded all katas. Previous attempt/user_code references are now orphaned.";
+}
+
+async function seedKatasForce(db: Database) {
+  for (const kata of [...sampleKatas, ...sampleKatasPython]) {
+    await db.execute(
+      `INSERT INTO katas (name, category, language, difficulty, description, code, test_code, solution, usage)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+      [
+        kata.name,
+        kata.category,
+        kata.language,
+        kata.difficulty,
+        kata.description,
+        kata.code,
+        kata.testCode,
+        kata.solution,
+        kata.usage,
+      ]
+    );
   }
 }

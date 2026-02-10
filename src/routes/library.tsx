@@ -14,9 +14,13 @@ export function LibraryPage() {
   const resetKataTimer = useTimerStore((s) => s.resetKataTimer);
   const [search, setSearch] = useState("");
   const [launching, setLaunching] = useState(false);
+  const [diffSort, setDiffSort] = useState<"asc" | "desc" | null>(null);
   const navigate = useNavigate();
 
-  const toggleDaily = (id: string, e: React.MouseEvent) => {
+  const kataIdSet = new Set(katas.map((k) => k.id));
+  const dailyCount = dailyKataIds.filter((id) => kataIdSet.has(id)).length;
+
+  const toggleDaily = (id: number, e: React.MouseEvent) => {
     e.stopPropagation();
     const next = dailyKataIds.includes(id)
       ? dailyKataIds.filter((x) => x !== id)
@@ -25,7 +29,7 @@ export function LibraryPage() {
   };
 
   const handleStartDaily = useCallback(async () => {
-    if (dailyKataIds.length === 0) {
+    if (dailyCount === 0) {
       navigate("/session/setup");
       return;
     }
@@ -42,7 +46,9 @@ export function LibraryPage() {
     startSessionTimer();
     const sessionId = await startSession("daily", resolved);
     navigate(`/session/${sessionId}`);
-  }, [dailyKataIds, launching, katas, resetKataTimer, startSessionTimer, startSession, navigate]);
+  }, [dailyKataIds, dailyCount, launching, katas, resetKataTimer, startSessionTimer, startSession, navigate]);
+
+  const diffRank: Record<string, number> = { easy: 0, medium: 1, hard: 2 };
 
   const q = search.toLowerCase();
   const filtered = katas.filter(
@@ -51,6 +57,14 @@ export function LibraryPage() {
       k.category.toLowerCase().includes(q) ||
       (k.difficulty?.toLowerCase().includes(q) ?? false)
   );
+
+  const sorted = diffSort
+    ? [...filtered].sort((a, b) => {
+        const ra = diffRank[a.difficulty ?? ""] ?? 3;
+        const rb = diffRank[b.difficulty ?? ""] ?? 3;
+        return diffSort === "asc" ? ra - rb : rb - ra;
+      })
+    : filtered;
 
   return (
     <div className="flex flex-col h-full p-4 gap-3">
@@ -69,8 +83,8 @@ export function LibraryPage() {
         >
           {launching
             ? "Launching..."
-            : dailyKataIds.length > 0
-              ? `Practice Daily (${dailyKataIds.length})`
+            : dailyCount > 0
+              ? `Practice Daily (${dailyCount})`
               : "Set Up Daily Katas"}
         </button>
       </div>
@@ -81,11 +95,16 @@ export function LibraryPage() {
               <th className="pb-2 w-8"></th>
               <th className="pb-2 font-medium">Name</th>
               <th className="pb-2 font-medium">Category</th>
-              <th className="pb-2 font-medium">Difficulty</th>
+              <th
+                className="pb-2 font-medium cursor-pointer select-none hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors"
+                onClick={() => setDiffSort((v) => v === null ? "asc" : v === "asc" ? "desc" : null)}
+              >
+                Difficulty {diffSort === "asc" ? "▲" : diffSort === "desc" ? "▼" : ""}
+              </th>
             </tr>
           </thead>
           <tbody>
-            {filtered.map((kata) => (
+            {sorted.map((kata) => (
               <tr
                 key={kata.id}
                 onClick={() => navigate(`/editor/${kata.id}`)}
@@ -115,7 +134,7 @@ export function LibraryPage() {
                 </td>
               </tr>
             ))}
-            {filtered.length === 0 && (
+            {sorted.length === 0 && (
               <tr>
                 <td colSpan={4} className="py-8 text-center text-zinc-400">
                   No katas found

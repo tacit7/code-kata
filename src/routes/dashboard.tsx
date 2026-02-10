@@ -31,7 +31,9 @@ function PracticeDailyButton() {
   const resetKataTimer = useTimerStore((s) => s.resetKataTimer);
   const [launching, setLaunching] = useState(false);
 
-  const hasDaily = dailyKataIds.length > 0;
+  const kataIdSet = new Set(katas.map((k) => k.id));
+  const dailyCount = dailyKataIds.filter((id) => kataIdSet.has(id)).length;
+  const hasDaily = dailyCount > 0;
 
   const handleClick = useCallback(async () => {
     if (!hasDaily) {
@@ -66,7 +68,7 @@ function PracticeDailyButton() {
       {launching
         ? "Launching..."
         : hasDaily
-          ? `Practice Daily (${dailyKataIds.length} katas)`
+          ? `Practice Daily (${dailyCount} katas)`
           : "Set Up Daily Katas"}
     </button>
   );
