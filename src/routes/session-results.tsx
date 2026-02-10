@@ -1,14 +1,16 @@
-import { useEffect } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { useParams, useNavigate, Navigate } from "react-router";
 import { useSessionStore } from "../stores/session-store";
 import { useKataStore } from "../stores/kata-store";
 import { formatTime } from "../lib/format";
+import { CodeDiff } from "../components/code-diff";
 
 export function SessionResultsPage() {
   const { sessionId } = useParams<{ sessionId: string }>();
   const navigate = useNavigate();
   const { activeSession, sessionKatas, attempts, loadSession, clearSession } = useSessionStore();
   const allKatas = useKataStore((s) => s.katas);
+  const [expandedDiffs, setExpandedDiffs] = useState<Set<number>>(new Set());
 
   useEffect(() => {
     if (!activeSession && sessionId) {
@@ -37,6 +39,18 @@ export function SessionResultsPage() {
   const handlePracticeAgain = () => {
     // Re-start with same katas
     navigate("/session/setup");
+  };
+
+  const toggleDiff = (index: number) => {
+    setExpandedDiffs((prev) => {
+      const next = new Set(prev);
+      if (next.has(index)) {
+        next.delete(index);
+      } else {
+        next.add(index);
+      }
+      return next;
+    });
   };
 
   return (
@@ -69,39 +83,63 @@ export function SessionResultsPage() {
             <th className="pb-2 font-medium">Kata</th>
             <th className="pb-2 font-medium">Time</th>
             <th className="pb-2 font-medium">Result</th>
+            <th className="pb-2 font-medium">Diff</th>
           </tr>
         </thead>
         <tbody>
           {sessionKatas.map((kata, i) => {
             const attempt = attempts.find((a) => a.kataIndex === i);
+            const hasDiff = attempt?.codeSnapshot != null;
+            const isExpanded = expandedDiffs.has(i);
             return (
-              <tr
-                key={kata.id}
-                className="border-b border-zinc-100 dark:border-zinc-800/50"
-              >
-                <td className="py-2 text-zinc-400">{i + 1}</td>
-                <td className="py-2 font-medium">{kata.name}</td>
-                <td className="py-2 font-mono text-zinc-500 dark:text-zinc-400">
-                  {attempt?.timeMs != null ? formatTime(attempt.timeMs) : "--:--"}
-                </td>
-                <td className="py-2">
-                  {attempt ? (
-                    attempt.passed ? (
-                      <span className="px-2 py-0.5 text-xs rounded bg-green-600/20 text-green-400 font-medium">
-                        Pass
-                      </span>
+              <Fragment key={kata.id}>
+                <tr
+                  className="border-b border-zinc-100 dark:border-zinc-800/50"
+                >
+                  <td className="py-2 text-zinc-400">{i + 1}</td>
+                  <td className="py-2 font-medium">{kata.name}</td>
+                  <td className="py-2 font-mono text-zinc-500 dark:text-zinc-400">
+                    {attempt?.timeMs != null ? formatTime(attempt.timeMs) : "--:--"}
+                  </td>
+                  <td className="py-2">
+                    {attempt ? (
+                      attempt.passed ? (
+                        <span className="px-2 py-0.5 text-xs rounded bg-green-600/20 text-green-400 font-medium">
+                          Pass
+                        </span>
+                      ) : (
+                        <span className="px-2 py-0.5 text-xs rounded bg-red-600/20 text-red-400 font-medium">
+                          Fail
+                        </span>
+                      )
                     ) : (
-                      <span className="px-2 py-0.5 text-xs rounded bg-red-600/20 text-red-400 font-medium">
-                        Fail
+                      <span className="px-2 py-0.5 text-xs rounded bg-zinc-200 dark:bg-zinc-700 text-zinc-500 dark:text-zinc-400 font-medium">
+                        Skipped
                       </span>
-                    )
-                  ) : (
-                    <span className="px-2 py-0.5 text-xs rounded bg-zinc-200 dark:bg-zinc-700 text-zinc-500 dark:text-zinc-400 font-medium">
-                      Skipped
-                    </span>
-                  )}
-                </td>
-              </tr>
+                    )}
+                  </td>
+                  <td className="py-2">
+                    {hasDiff && (
+                      <button
+                        onClick={() => toggleDiff(i)}
+                        className="px-2 py-0.5 text-xs rounded bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-300 dark:hover:bg-zinc-600 transition-colors font-medium"
+                      >
+                        {isExpanded ? "Hide diff" : "Show diff"}
+                      </button>
+                    )}
+                  </td>
+                </tr>
+                {isExpanded && hasDiff && (
+                  <tr key={`${kata.id}-diff`}>
+                    <td colSpan={5} className="py-2">
+                      <CodeDiff
+                        original={kata.code}
+                        modified={attempt!.codeSnapshot!}
+                      />
+                    </td>
+                  </tr>
+                )}
+              </Fragment>
             );
           })}
         </tbody>

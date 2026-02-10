@@ -20,9 +20,15 @@ interface BestTimeRow {
   best_time: number;
 }
 
+interface AttemptRow {
+  kata_id: number;
+  passed: number;
+}
+
 interface KataState {
   katas: Kata[];
   bestTimes: Record<number, number>;
+  streaks: Record<number, number>;
   loading: boolean;
   error: string | null;
   loadKatas: (language?: string) => Promise<void>;
@@ -31,6 +37,7 @@ interface KataState {
 export const useKataStore = create<KataState>((set) => ({
   katas: [],
   bestTimes: {},
+  streaks: {},
   loading: true,
   error: null,
 
@@ -71,7 +78,32 @@ export const useKataStore = create<KataState>((set) => ({
         bestTimes[row.kata_id] = row.best_time;
       }
 
-      set({ katas, bestTimes, loading: false });
+      const attemptRows = await db.select<AttemptRow[]>(
+        `SELECT kata_id, passed
+         FROM attempts
+         WHERE kata_id IN (SELECT id FROM katas WHERE language = $1)
+         ORDER BY kata_id, id DESC`,
+        [language],
+      );
+      const streaks: Record<number, number> = {};
+      let currentKataId: number | null = null;
+      let counting = true;
+      for (const row of attemptRows) {
+        if (row.kata_id !== currentKataId) {
+          currentKataId = row.kata_id;
+          counting = true;
+          streaks[row.kata_id] = 0;
+        }
+        if (counting) {
+          if (row.passed === 1) {
+            streaks[row.kata_id]++;
+          } else {
+            counting = false;
+          }
+        }
+      }
+
+      set({ katas, bestTimes, streaks, loading: false });
     } catch (err) {
       set({ error: String(err), loading: false });
     }

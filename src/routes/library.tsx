@@ -8,6 +8,7 @@ import { useTimerStore } from "../stores/timer-store";
 export function LibraryPage() {
   const katas = useKataStore((s) => s.katas);
   const bestTimes = useKataStore((s) => s.bestTimes);
+  const streaks = useKataStore((s) => s.streaks);
   const dailyKataIds = useSettingsStore((s) => s.dailyKataIds);
   const setSetting = useSettingsStore((s) => s.setSetting);
   const startSession = useSessionStore((s) => s.startSession);
@@ -103,6 +104,7 @@ export function LibraryPage() {
                 Difficulty {diffSort === "asc" ? "▲" : diffSort === "desc" ? "▼" : ""}
               </th>
               <th className="pb-2 font-medium text-right">Best</th>
+              <th className="pb-2 font-medium text-right">Streak</th>
             </tr>
           </thead>
           <tbody>
@@ -139,11 +141,14 @@ export function LibraryPage() {
                     ? `${(bestTimes[kata.id] / 1000).toFixed(1)}s`
                     : "—"}
                 </td>
+                <td className="py-2 text-right text-zinc-500 dark:text-zinc-400 tabular-nums">
+                  {streaks[kata.id] ? streaks[kata.id] : "—"}
+                </td>
               </tr>
             ))}
             {sorted.length === 0 && (
               <tr>
-                <td colSpan={5} className="py-8 text-center text-zinc-400">
+                <td colSpan={6} className="py-8 text-center text-zinc-400">
                   No katas found
                 </td>
               </tr>
