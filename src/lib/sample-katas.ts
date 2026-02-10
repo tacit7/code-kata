@@ -1,8 +1,7 @@
-import type { Kata } from "../types/editor";
+import type { SeedKata } from "../types/editor";
 
-export const sampleKatas: Kata[] = [
+export const sampleKatas: SeedKata[] = [
   {
-    id: "kadanes-algorithm",
     name: "Kadane's Algorithm",
     category: "1-d-dp",
     language: "javascript",
@@ -49,7 +48,6 @@ function test_mixed_with_positive_end() {
     usage: `Kadane's Algorithm solves the maximum subarray problem in O(n) time by maintaining a running sum and resetting it when it drops below zero. Its most direct real-world application is in quantitative finance: traders use the maximum subarray pattern on daily profit/loss arrays to identify the most profitable contiguous trading window, which is exactly how you determine the optimal buy and sell dates for a stock. Signal processing systems apply the same logic to find the strongest contiguous signal burst in noisy data. Genomic analysis tools use maximum subarray variants to locate regions of a DNA sequence with the highest concentration of a particular nucleotide pattern. In interviews at trading firms like Jane Street, Citadel, and Two Sigma, Kadane's Algorithm frequently appears both in its pure form and as the core idea behind more complex problems involving 2D matrices or circular arrays.`,
   },
   {
-    id: "climbing-stairs",
     name: "Climbing Stairs",
     category: "1-d-dp",
     language: "javascript",
@@ -94,7 +92,6 @@ function test_ten_steps() {
     usage: `Climbing Stairs is the canonical introduction to dynamic programming: the number of ways to reach step n equals the sum of ways to reach steps n-1 and n-2, which is exactly the Fibonacci recurrence. While the staircase framing is abstract, the underlying recurrence relation models real systems. Fibonacci heaps, named for this sequence, provide amortized O(1) insert and decrease-key operations and are used in Dijkstra's shortest path algorithm implementations in network routing protocols like OSPF. Resource allocation systems use Fibonacci-based scaling to progressively distribute load across servers without overloading any single node. The problem is the entry point for understanding memoization and tabulation, the two pillars of dynamic programming, and it generalizes to problems with k step sizes, variable costs, and constraints. Every major tech company, from Google to Amazon to Microsoft, uses Climbing Stairs or a direct variant as an interview warm-up to verify that candidates can recognize overlapping subproblems, avoid the exponential O(2^n) recursive blowup, and optimize down to O(n) time with O(1) space.`,
   },
   {
-    id: "longest-common-subsequence",
     name: "Longest Common Subsequence",
     category: "2-d-dp",
     language: "javascript",
@@ -147,7 +144,6 @@ function test_longer_strings() {
     usage: `Longest Common Subsequence is the 2D dynamic programming problem that powers the diff tools developers use every day. Git's diff engine is built on the Myers diff algorithm, which is fundamentally an optimization of the LCS problem: finding the longest common subsequence between two file versions is equivalent to finding the minimal edit script (the fewest insertions and deletions) to transform one into the other. GNU diff, Google's diff-match-patch library, and every code review tool from GitHub's pull request view to VS Code's inline diff all rely on LCS variants. Beyond version control, LCS is used in bioinformatics to align DNA and protein sequences, measuring genetic similarity between organisms; tools like BLAST and FASTA use heuristic versions of sequence alignment rooted in LCS. Plagiarism detection systems compare document subsequences to identify copied passages. In interviews at companies like Google, Microsoft, and Palantir, LCS is a standard 2D DP problem that tests whether candidates can define the recurrence relation, build the DP table, and optionally reconstruct the actual subsequence via backtracking through the table.`,
   },
   {
-    id: "topological-sort",
     name: "Topological Sort",
     category: "advanced-graphs",
     language: "javascript",
@@ -207,7 +203,6 @@ function test_no_edges() {
     usage: `Topological sort is the algorithm that makes modern software build systems, package managers, and data pipelines possible by resolving dependency order in directed acyclic graphs. Build tools like Make, Bazel, Gradle, and webpack use topological sort to determine compilation order: webpack builds a module dependency graph from import statements and topologically sorts it to ensure every module is bundled after its dependencies. Package managers including npm, pip, apt, and Homebrew topologically sort package dependency graphs to compute a valid installation order, and they use cycle detection (a byproduct of topological sort) to reject circular dependencies that would make installation impossible. Apache Airflow and other workflow orchestrators topologically sort task DAGs to schedule data pipeline stages, ensuring that ETL extraction completes before transformation, and transformation before loading. Spreadsheet engines like Excel and Google Sheets use topological sort on cell dependency graphs to determine recalculation order when a cell value changes, propagating updates only to downstream dependents. University course prerequisite systems, CI/CD pipeline stages, and database migration runners all rely on topological ordering. In interviews, topological sort appears in course-schedule and alien-dictionary problems, tested heavily at Google, Amazon, and Uber, where both Kahn's algorithm (BFS-based) and DFS-based approaches are expected.`,
   },
   {
-    id: "union-find",
     name: "Union Find",
     category: "advanced-graphs",
     language: "javascript",
@@ -298,7 +293,6 @@ function test_self_connected() {
     usage: `Union-Find, also called disjoint set union, is the go-to data structure for dynamic connectivity queries, and it powers algorithms across networking, image processing, and physics simulation. Kruskal's minimum spanning tree algorithm, used by cable and telecom companies to design cost-optimal network topologies, relies on Union-Find to check whether adding an edge would create a cycle. In image processing, connected-component labeling for object detection in OpenCV uses union-find to group adjacent pixels of similar color into regions. Percolation simulation, used in materials science and epidemiology to model how substances or diseases spread through porous media or populations, is classically solved with union-find as taught in Princeton's Algorithms course by Sedgewick. Social network platforms use union-find to compute connected components for friend-of-friend suggestions and community detection. The near-constant amortized time per operation via path compression and union by rank makes it practical for graphs with millions of nodes. Interviewers at Google, Meta, and Uber ask union-find problems to test whether candidates can recognize connectivity patterns and apply the right data structure instead of brute-force BFS/DFS.`,
   },
   {
-    id: "two-sum",
     name: "Two Sum",
     category: "arrays-and-hashing",
     language: "javascript",
@@ -346,7 +340,6 @@ function test_first_and_last() {
     usage: `The two-sum pattern, using a hash map for O(1) complement lookups, is the foundation of virtually every key-value matching problem you will encounter in production systems. Financial platforms use this exact pattern to match buy and sell orders in trading engines, where you need to find two transactions that sum to a target settlement amount. CDNs and API gateways rely on hash map lookups for request deduplication, ensuring the same request is not processed twice. Database engines like PostgreSQL use hash-based indexing internally to accelerate joins and WHERE clause evaluations against indexed columns. The pattern extends to compiler symbol tables, where variable names are stored in hash maps for constant-time resolution during compilation. In interviews, two-sum is the single most frequently asked LeetCode problem and serves as a gateway to three-sum, four-sum, and subarray-sum variants; if you cannot solve it cleanly with a hash map, interviewers will question your ability to handle any lookup-optimization problem.`,
   },
   {
-    id: "fizzbuzz",
     name: "FizzBuzz",
     category: "arrays-and-hashing",
     language: "javascript",
@@ -406,7 +399,6 @@ function test_full_sequence() {
     usage: `FizzBuzz tests modular arithmetic and conditional branching, two operations that appear constantly in scheduling systems, round-robin load balancers, and event-loop tick handlers. The modulo operator drives real systems: Linux's Completely Fair Scheduler uses modular arithmetic to distribute CPU time slices, Kafka partition assignment uses key hashing with modulo to route messages to partitions, and cron job scheduling fundamentally depends on modular time checks. The multithreaded FizzBuzz variant, now asked at companies like Amazon and Google, tests condition-based thread dispatch, a pattern that maps directly to worker-pool architectures, event routing in Node.js clusters, and protocol handler selection in network servers. Despite its reputation as a trivial problem, FizzBuzz remains the most widely used initial screening question in software engineering interviews because an estimated 40-60% of candidates who apply for developer roles cannot write a working solution. Mastering it means you understand control flow, operator precedence, and edge-case ordering, which are the same skills needed for writing correct business-logic predicates in production code.`,
   },
   {
-    id: "frequency-count",
     name: "Frequency Count",
     category: "arrays-and-hashing",
     language: "javascript",
@@ -441,7 +433,6 @@ function test_empty() {
     usage: `Hash-map-based frequency counting is one of the most universally applied patterns in software engineering, forming the computational core of analytics pipelines, NLP systems, and observability tools. Elasticsearch's terms aggregation, which powers dashboards across thousands of companies, is fundamentally a frequency count over field values in document indices. In NLP, term-frequency calculations drive TF-IDF scoring, bag-of-words models, and the tokenization statistics used to train BPE tokenizers for large language models like GPT and Claude. Web analytics platforms such as Google Analytics and Mixpanel use frequency maps to count page views, event occurrences, and unique user actions in real time. MapReduce's canonical word-count example, the "hello world" of distributed computing at Google and Hadoop shops, is a distributed frequency count. The pattern appears in virtually every coding interview because it reduces naive O(n^2) comparison loops to O(n) single-pass solutions, and interviewers at every major tech company expect candidates to reach for it instinctively.`,
   },
   {
-    id: "most-frequent",
     name: "Most Frequent Element",
     category: "arrays-and-hashing",
     language: "javascript",
@@ -485,7 +476,6 @@ function test_numbers() {
     usage: `Finding the most frequent element, the statistical mode, is a core operation in recommendation engines, anomaly detection, and business intelligence. Amazon's "customers also bought" feature and Spotify's genre-classification logic both start with frequency analysis of user interaction events to surface the dominant patterns. In network monitoring, identifying the most frequent source IP in a traffic log is a standard technique for detecting scanning attacks or misconfigured clients. Log aggregation tools like Splunk and Datadog surface the most frequent error messages, status codes, and endpoint paths to help engineers triage incidents quickly. In machine learning, mode imputation fills missing categorical values with the most frequent observed category, a preprocessing step used in scikit-learn's SimpleImputer. This problem tests whether a candidate can combine hash-map counting with a single-pass max-tracking step, and it appears regularly at companies like Meta and Google where analytics-heavy codebases make frequency analysis second nature.`,
   },
   {
-    id: "merge-sort",
     name: "Merge Sort",
     category: "arrays-and-hashing",
     language: "javascript",
@@ -548,7 +538,6 @@ function merge(left, right) {
     usage: `Merge sort is the only comparison-based sort that guarantees O(n log n) worst-case performance with stability, which is why it underpins the default sorting algorithms in multiple major language runtimes. Python's built-in sorted() and list.sort() use Timsort, a hybrid of merge sort and insertion sort designed by Tim Peters specifically to exploit partially-ordered runs common in real-world data. Java's Arrays.sort() for objects also uses a Timsort variant for the same stability and worst-case guarantees. The external merge sort variant is the standard technique for sorting datasets that exceed available memory: database engines like PostgreSQL use it for ORDER BY queries on large tables, reading chunks into memory, sorting them, writing sorted runs to disk, and then performing a k-way merge. Git's diff algorithm, the rendering of sorted results in Elasticsearch, and the merge phase of MapReduce all use merge-sort logic. Interviewers ask merge sort to test divide-and-conquer reasoning, recursion comfort, and understanding of stability, a property that matters whenever you sort records by multiple keys sequentially.`,
   },
   {
-    id: "lomuto-partition",
     name: "Lomuto Partition",
     category: "arrays-and-hashing",
     language: "javascript",
@@ -604,7 +593,6 @@ function test_all_same() {
     usage: `The Lomuto partition scheme is the most widely taught partitioning algorithm for quicksort, popularized by Bentley in Programming Pearls and by Cormen, Leiserson, Rivest, and Stein in Introduction to Algorithms (CLRS). Its value is primarily pedagogical: the single-scan, swap-with-boundary approach is easier to prove correct than Hoare's bidirectional scheme, making it the standard choice for teaching partitioning, Dutch National Flag variants, and quickselect for order-statistics problems. In practice, Lomuto performs roughly three times more swaps than Hoare's scheme on average and degrades to O(n^2) when all elements are equal, which is why production sort implementations like C++'s std::sort and glibc's qsort use Hoare-based or three-way partitioning instead. Understanding Lomuto is still essential because it is the basis for the quickselect algorithm used in numpy's median computation and in database query optimizers that need to find the k-th smallest value for percentile calculations. Interviewers at companies like Google and Facebook use Lomuto-based partition questions to test in-place rearrangement skills and to set up follow-up questions about pivot selection strategies, three-way partitioning for duplicates, and worst-case mitigation via randomization.`,
   },
   {
-    id: "quick-sort",
     name: "Quick Sort",
     category: "arrays-and-hashing",
     language: "javascript",
@@ -673,7 +661,6 @@ function quickSort(arr) {
     usage: `Quicksort is the dominant in-memory sorting algorithm in systems programming, and its partitioning idea has influenced everything from standard library implementations to database query execution. C++'s std::sort uses introsort, a hybrid that starts with quicksort's partitioning, switches to heapsort if recursion depth exceeds 2*log(n) to guarantee O(n log n) worst case, and finishes small subarrays with insertion sort; this design, adopted by GCC's libstdc++ and LLVM's libc++, means quicksort's partition logic runs on virtually every C++ sort call worldwide. The C standard library's qsort(), used throughout the Linux kernel and system utilities, historically implemented quicksort and still does in many libc variants. Beyond sorting, the partition step alone powers quickselect for O(n) average-case selection of the k-th element, used in percentile computation, median-of-medians for database statistics, and reservoir sampling. Quicksort's cache-friendly sequential access pattern gives it a practical speed advantage over merge sort for in-memory data despite sharing the same O(n log n) average complexity. This is the most important sorting algorithm to understand for interviews at any systems-focused company because it tests recursion, partitioning, randomization strategy, and the ability to analyze both average and worst-case behavior.`,
   },
   {
-    id: "build-prefix-sum",
     name: "Build Prefix Sum",
     category: "arrays-and-hashing",
     language: "javascript",
@@ -708,7 +695,6 @@ function test_negatives() {
     usage: `Building a prefix sum array is a preprocessing technique that trades O(n) setup time for O(1) range sum queries, and it is one of the most broadly applied patterns in production systems. Database engines like ClickHouse and Apache Druid use prefix sum structures internally to accelerate aggregate queries over time-series data. Analytics dashboards that display cumulative metrics, such as running revenue totals or cumulative user counts, compute prefix sums over their underlying datasets. In competitive programming and USACO-style contests, prefix sums are considered a fundamental silver-level technique. Game engines use 2D prefix sums for fast region queries in tile-based maps. The pattern also appears in image processing as integral images (summed-area tables), a technique used in OpenCV's Viola-Jones face detection algorithm to rapidly compute Haar-like features over arbitrary rectangular regions.`,
   },
   {
-    id: "range-sum-query",
     name: "Range Sum Query",
     category: "arrays-and-hashing",
     language: "javascript",
@@ -759,7 +745,6 @@ function rangeSum(prefix, l, r) {
     usage: `Range Sum Query is the direct application of the prefix sum array: after O(n) preprocessing, answer any sum(i, j) query in O(1) by computing prefix[j+1] - prefix[i]. This is the backbone of any system that serves repeated aggregation queries over static data. Time-series databases and OLAP engines use this pattern to serve dashboard queries without rescanning raw data. Financial reporting systems that compute quarter-to-date or year-to-date totals over immutable ledger entries rely on the same principle. When the data is mutable, the pattern extends to segment trees and Binary Indexed Trees (Fenwick trees), which maintain O(log n) updates and queries; these power real-time leaderboard systems at companies like Riot Games and competitive programming judges like Codeforces. In interviews, Range Sum Query is a gateway problem that tests whether candidates understand the prefix sum technique before moving to harder variants like 2D range queries or mutable arrays.`,
   },
   {
-    id: "permutations",
     name: "Permutations",
     category: "backtracking",
     language: "javascript",
@@ -817,7 +802,6 @@ function test_four_elements_count() {
     usage: `Permutation generation via backtracking is foundational in systems that must evaluate all possible orderings of a set. The most concrete industrial application is in relational database query optimizers: PostgreSQL's planner exhaustively evaluates all join-order permutations for queries involving up to about 12 tables using dynamic programming, switching to a genetic algorithm only when the combinatorial explosion becomes prohibitive. Beyond databases, permutation enumeration powers the AES cipher's internal substitution-permutation network, scheduling engines that must find optimal task orderings, and evolutionary algorithms for combinatorial optimization problems like the Traveling Salesman Problem. In interviews at companies like Google, Meta, and Amazon, generating permutations is a canonical backtracking problem that tests whether a candidate can manage state correctly during recursive exploration and prune the search space when constraints are added.`,
   },
   {
-    id: "subsets",
     name: "Subsets",
     category: "backtracking",
     language: "javascript",
@@ -874,7 +858,6 @@ function test_four_elements_count() {
     usage: `Subset generation, also known as power set construction, appears wherever a system must evaluate every possible combination of elements. In compiler design and automata theory, the subset construction algorithm (also called powerset construction) converts nondeterministic finite automata into deterministic ones, a step that underpins regex engines in languages like Python, Java, and Go. Machine learning feature selection relies on evaluating subsets of input features to find the combination that yields the best model performance; scikit-learn's exhaustive feature selection does exactly this. Database query planners similarly consider subsets of indexes and columns when optimizing execution plans. The pattern also drives combinatorial optimization problems like the 0/1 knapsack. In coding interviews, subsets is a high-frequency problem at companies like Amazon and Microsoft because it tests the candidate's understanding of recursion, bit manipulation (the bitmask approach maps each integer from 0 to 2^n-1 to a unique subset), and backtracking.`,
   },
   {
-    id: "binary-search",
     name: "Binary Search",
     category: "binary-search",
     language: "javascript",
@@ -931,7 +914,6 @@ function test_single_not_found() {
     usage: `Binary search is one of the most practically important algorithms in all of computing, operating silently inside nearly every sorted data structure and search system you use daily. PostgreSQL and MySQL use B-tree indexes, which are a generalization of binary search, to locate rows among millions of records in O(log n) disk accesses; without this, every database query would require a full table scan. Git's \`bisect\` command uses binary search to identify the exact commit that introduced a bug, cutting a 1000-commit search space down to roughly 10 steps. Python's standard library includes the \`bisect\` module, and Java's \`Arrays.binarySearch\` and C++'s \`std::lower_bound\` are used constantly in production for insertion-point lookups in sorted arrays. Financial systems use binary search to locate price thresholds in sorted order books, and machine learning pipelines use it to find optimal hyperparameter boundaries during grid search. In interviews, binary search is asked at every major tech company, often in disguised forms like search-in-rotated-array, find-peak-element, or median-of-two-sorted-arrays, where the challenge is recognizing that binary search applies despite the problem not explicitly mentioning sorting.`,
   },
   {
-    id: "binary-search-find-first",
     name: "Binary Search Find First",
     category: "binary-search",
     language: "javascript",
@@ -986,7 +968,6 @@ function test_at_start() {
     usage: `Finding the first (leftmost) occurrence of a target in a sorted array using binary search is the boundary-search variant that underpins range lookups in nearly every sorted data structure. Database indexes, B-trees, and sorted file systems all need to locate the first key that matches a predicate; PostgreSQL's btree index scan uses exactly this kind of lower-bound binary search when executing range queries like WHERE timestamp >= '2024-01-01'. The C++ STL exposes this as std::lower_bound, and Java's Collections.binarySearch documents this boundary behavior. Search engines use left-boundary binary search to find the first document in a posting list that matches a term within a given document-ID range. In interviews, the left-boundary variant is more commonly asked than basic binary search because it tests whether candidates can handle the subtle off-by-one logic of continuing the search after finding a match, a skill that directly transfers to production work with sorted indexes and partitioned data.`,
   },
   {
-    id: "binary-search-find-last",
     name: "Binary Search Find Last",
     category: "binary-search",
     language: "javascript",
@@ -1041,7 +1022,6 @@ function test_at_end() {
     usage: `Finding the last (rightmost) occurrence complements the left-boundary search and together they define the complete range of matching elements in sorted data. This is the upper-bound search, exposed as std::upper_bound in C++ and used internally by database engines to determine the end of an index range scan. Combined with find-first, it answers the classic problem of finding the first and last position of an element in O(log n), which is how database query executors determine the exact set of rows matching an equality predicate on an indexed column. Load balancers use right-boundary search to find the last server in a sorted capacity list that can handle a given request size. Version control systems performing bisect operations (like git bisect) use boundary searches to narrow down the last good commit and first bad commit. In coding interviews, this problem is often paired with find-first as a single question, testing whether the candidate can adapt the binary search loop condition and return logic for both boundaries without introducing bugs.`,
   },
   {
-    id: "single-number-xor",
     name: "Single Number XOR",
     category: "bit-manipulation",
     language: "javascript",
@@ -1076,7 +1056,6 @@ function test_larger_values() {
     usage: `XOR-based duplicate detection exploits the property that a XOR a equals zero and a XOR 0 equals a, meaning XORing all elements in an array where every number appears twice except one will isolate the unique number in O(n) time and O(1) space. This bit manipulation technique is not merely an interview curiosity; it has deep practical roots. RAID 5 and RAID 6 storage systems use XOR to compute parity across disk stripes, enabling data reconstruction when a drive fails. Network protocols use XOR-based checksums for error detection in transmitted packets; TCP and UDP both incorporate XOR in their checksum computations. Hamming error-correcting codes use XOR to both detect and pinpoint single-bit errors in memory (ECC RAM). The pattern also appears in simple stream ciphers where plaintext is XORed with a key stream. In interviews at systems-focused companies like Apple, Nvidia, and embedded-systems firms, the single-number XOR problem tests whether candidates understand bitwise operations and can reason about algebraic properties of XOR.`,
   },
   {
-    id: "count-set-bits",
     name: "Count Set Bits",
     category: "bit-manipulation",
     language: "javascript",
@@ -1124,7 +1103,6 @@ function test_ten_bits() {
     usage: `Counting set bits, also called Hamming weight or population count, determines how many 1-bits are in an integer's binary representation. Modern CPUs provide hardware instructions for this: Intel's POPCNT (introduced with Nehalem in 2008), AMD's equivalent in SSE4a, and ARM's VCNT in NEON extensions. The NSA reportedly requested Cray add a population count instruction to early supercomputers specifically for cryptanalysis. In chess engines like Stockfish, bitboards represent the board state as 64-bit integers, and popcount calculates the number of pieces, attacked squares, or mobility from these bitboards, making it a performance-critical operation called millions of times per second. In networking, Hamming weight computes the number of hosts in a subnet from a subnet mask. RSA encryption implementations choose public exponents with low Hamming weight (like 65537, which has only two set bits) to minimize the number of modular multiplications during encryption. Biometric systems compute Hamming distance between IrisCodes by XORing two codes and counting the set bits in the result. In interviews, this problem tests knowledge of Brian Kernighan's bit trick (n & (n-1) clears the lowest set bit) and whether candidates are aware of hardware-level optimizations.`,
   },
   {
-    id: "matrix-bfs",
     name: "Matrix BFS",
     category: "graphs",
     language: "javascript",
@@ -1199,7 +1177,6 @@ function test_all_open_2x2() {
     usage: `Matrix BFS finds the shortest path in unweighted grids and is the backbone of pathfinding in games, robotics, and geographic information systems. Game engines use grid-based BFS for NPC pathfinding in tile-based games; Unity and Unreal provide navigation mesh systems that decompose 3D space into grid-like cells and apply BFS or A* for character movement. Warehouse robotics companies like Amazon Robotics (formerly Kiva Systems) use grid BFS to route thousands of robots through fulfillment center floors, treating each floor tile as a cell and computing collision-free shortest paths. Google Maps and Waze use Dijkstra's algorithm and A*, both of which generalize BFS to weighted graphs; understanding BFS on a grid is the prerequisite for grasping these production-grade algorithms. Emergency evacuation planning software uses grid BFS to compute shortest exits from building floor plans, propagating outward from exit points to determine evacuation routes. In coding interviews, matrix BFS appears as shortest-path-in-maze, rotting-oranges, and walls-and-gates problems, all of which test your ability to manage a queue, track visited cells, and handle four-directional neighbors correctly.`,
   },
   {
-    id: "graph-dfs",
     name: "Graph DFS",
     category: "graphs",
     language: "javascript",
@@ -1255,7 +1232,6 @@ function test_disconnected() {
     usage: `Graph DFS is the workhorse algorithm behind cycle detection, topological ordering, and connectivity analysis in production systems. Deadlock detectors in operating systems and database transaction managers use DFS with back-edge detection to find cycles in resource-allocation graphs; PostgreSQL's lock manager does exactly this when checking for deadlock among concurrent transactions. Web crawlers like Googlebot use DFS-based strategies to explore link structures deeply before moving laterally, which is more memory-efficient than BFS for the scale of the web (trillions of pages). Tarjan's and Kosaraju's algorithms, both DFS-based, find strongly connected components in directed graphs, which is used by compilers to identify mutually recursive function groups, by social network platforms to detect tightly-knit communities, and by search engines to identify link-farm spam clusters. Version control systems use DFS to traverse commit DAGs when computing merge bases and reachability. In coding interviews, graph DFS is tested constantly at Google, Meta, and Amazon in problems like number-of-provinces, course-schedule (cycle detection), and clone-graph, where the key challenge is tracking visited nodes correctly across recursive calls.`,
   },
   {
-    id: "build-adjacency-list",
     name: "Build Adjacency List",
     category: "graphs",
     language: "javascript",
@@ -1309,7 +1285,6 @@ function test_multiple_neighbors() {
     usage: `Building an adjacency list from an edge list is the first step in virtually every graph algorithm, and getting this conversion right is a prerequisite for solving any graph problem in an interview or production system. Social networks like Facebook and LinkedIn store friendship graphs as adjacency lists because real-world social graphs are sparse (the average user has a few hundred connections out of billions of possible edges), making adjacency lists far more space-efficient than adjacency matrices at O(V + E) versus O(V squared). Package managers like npm, pip, and apt internally build adjacency lists from dependency declarations to represent the dependency graph before running topological sort for installation ordering. Network routing protocols like OSPF (Open Shortest Path First) construct adjacency lists from router link-state advertisements to build a map of the network topology, which is then fed into Dijkstra's algorithm for shortest-path routing. Recommendation engines at companies like Netflix and Spotify model user-item interactions as bipartite graphs stored as adjacency lists, enabling collaborative filtering traversals. In interviews, you are almost never given a pre-built adjacency list; you receive an edge list or a matrix and must construct the adjacency list yourself, so this conversion step is a practical skill tested in every graph problem at every major tech company.`,
   },
   {
-    id: "matrix-dfs",
     name: "Matrix DFS",
     category: "graphs",
     language: "javascript",
@@ -1377,7 +1352,6 @@ function test_all_open_2x2() {
     usage: `Matrix DFS, commonly known as flood fill, is the algorithm behind the paint bucket tool in every image editor from Photoshop to GIMP, where clicking a pixel fills all connected same-colored pixels by recursively visiting neighbors. Beyond graphics, geographic information systems (GIS) like QGIS and ArcGIS use flood fill to calculate land parcel areas, delineate watershed boundaries, and measure forest coverage by treating satellite imagery pixels as grid cells and propagating through connected regions of similar classification. The island-counting variant of matrix DFS is used in medical imaging to identify and count distinct tumors or lesions in MRI scans, where each connected region of abnormal tissue intensity represents a separate finding. Game engines use matrix DFS for terrain analysis, such as determining which tiles are reachable from a given position (fog-of-war calculation) or identifying enclosed regions for area-of-effect spells. Minesweeper's cascade-reveal mechanic, where clicking an empty cell reveals all connected empty cells, is a direct implementation of matrix DFS flood fill. In interviews, matrix DFS appears as number-of-islands, surrounded-regions, and flood-fill problems, and is asked frequently at Amazon, Google, and Meta, testing your ability to handle grid boundaries, visited tracking, and four-directional or eight-directional neighbor enumeration.`,
   },
   {
-    id: "best-time-to-buy-sell-stock",
     name: "Best Time to Buy and Sell Stock",
     category: "greedy",
     language: "javascript",
@@ -1433,7 +1407,6 @@ function test_two_days() {
     usage: `Best Time to Buy and Sell Stock is the quintessential greedy algorithm problem: track the minimum price seen so far and compute the maximum profit at each step, making the locally optimal choice without revisiting past decisions. This greedy single-pass approach runs in O(n) time and O(1) space, making it practical for real-time financial systems. Quantitative trading firms like Jane Street, Citadel, and Two Sigma use this exact pattern to compute maximum drawdown and optimal entry/exit points on streaming price data. Robinhood and other retail trading platforms display "best possible trade" metrics using the same logic. The pattern generalizes to any problem where you need to find the maximum difference between two elements where the smaller one comes first, which appears in temperature analysis, inventory pricing, and time-series anomaly detection. In interviews, this is LeetCode problem #121 and one of the most frequently asked questions at Amazon, Google, Meta, and Goldman Sachs; it tests whether candidates can recognize a greedy approach instead of reaching for O(n^2) brute force.`,
   },
   {
-    id: "min-heap",
     name: "Min Heap",
     category: "heap",
     language: "javascript",
@@ -1570,7 +1543,6 @@ function test_duplicates() {
     usage: `The min-heap is the standard implementation behind priority queues, and it is embedded in some of the most performance-critical systems in computing. Dijkstra's shortest-path algorithm, which powers routing in Google Maps, Apple Maps, and OSPF network routing protocols, requires a min-heap to efficiently extract the next closest vertex. Operating system schedulers like Linux's Completely Fair Scheduler use red-black trees (a heap-like priority structure) to pick the next process to run, and timer wheels in the kernel use min-heaps to fire the soonest-expiring timer. In event-driven simulations, discrete-event frameworks like SimPy and DESMO-J use heaps to manage the event calendar. Huffman coding for data compression in gzip and zlib builds its optimal prefix tree using a min-heap to repeatedly extract the two lowest-frequency symbols. Python's heapq module and Java's PriorityQueue are both array-backed min-heaps, and interviewers expect candidates to know the O(log n) insertion and extraction costs, plus how to use them for top-k problems, median-finding, and stream processing.`,
   },
   {
-    id: "merge-intervals",
     name: "Merge Intervals",
     category: "intervals",
     language: "javascript",
@@ -1648,7 +1620,6 @@ function test_unsorted_input() {
     usage: `Merge Intervals is the go-to algorithm for any system that manages overlapping time ranges, and it shows up in production code far more often than most interview problems. Google Calendar, Outlook, and every scheduling application must merge overlapping meeting blocks to compute free/busy times; this is literally the merge intervals algorithm. Operating system CPU schedulers merge overlapping process time slices to optimize resource allocation. Network bandwidth managers merge overlapping allocation windows to prevent oversubscription. In genomics, tools like BEDTools merge overlapping genomic coordinate ranges when analyzing sequencing data. Airport systems merge overlapping gate-usage intervals for conflict detection. The algorithm itself is straightforward: sort intervals by start time, then iterate and merge, yielding O(n log n) overall. It appears constantly in interviews at companies like Google, Uber, and Airbnb because it tests sorting, iteration logic, and edge-case handling with adjacent and nested intervals.`,
   },
   {
-    id: "linked-list-traversal",
     name: "Linked List Traversal",
     category: "linked-list",
     language: "javascript",
@@ -1701,7 +1672,6 @@ function traverse(head) {
     usage: `Linked list traversal is the operation underlying memory management in operating systems, where the kernel maintains a free list of available memory blocks and traverses it on every malloc call to find a suitable chunk. The Linux kernel's slab allocator uses linked lists to manage pools of fixed-size memory objects, and the FAT (File Allocation Table) file system represents file block chains as linked lists that the OS traverses to read a file from disk. Java's garbage collector traverses linked structures during the mark phase to identify reachable objects, and Python's cyclic garbage collector walks reference chains to detect and collect circular references. Browser engines maintain linked lists of DOM nodes for sibling traversal, and undo/redo stacks in editors like VS Code are implemented as doubly-linked lists that are traversed forward and backward. In professional interviews, linked list traversal is the entry point to harder problems; if you cannot walk a list cleanly, handling the null-termination and pointer advancement, you will struggle with cycle detection, merge operations, and in-place reversal problems that companies like Amazon and Microsoft ask regularly.`,
   },
   {
-    id: "reverse-linked-list-iterative",
     name: "Reverse Linked List (Iterative)",
     category: "linked-list",
     language: "javascript",
@@ -1777,7 +1747,6 @@ function reverseIterative(head) {
     usage: `The iterative approach to reversing a linked list is the most space-efficient method at O(1) extra memory, using only three pointers (previous, current, next) to rewire links in a single pass. This matters in production systems where memory is constrained: the Linux kernel's linked list reversal operations in network packet processing, where millions of packets per second flow through linked buffer chains, must be iterative to avoid stack overflow and minimize latency. LRU cache evictions in systems like Redis and Memcached involve pointer manipulation on doubly-linked lists that mirrors the iterative reversal pattern, moving nodes from one position to another by relinking previous and next pointers. Transaction rollback mechanisms in database engines like InnoDB reverse chains of undo log entries iteratively to restore previous row states during ROLLBACK. The iterative approach is the version interviewers at Amazon, Google, and Microsoft expect you to write first, because it demonstrates that you understand pointer manipulation without the crutch of the call stack; being able to walk through the three-pointer swap on a whiteboard is considered a baseline competency for any systems or backend engineering role.`,
   },
   {
-    id: "reverse-linked-list-recursive",
     name: "Reverse Linked List (Recursive)",
     category: "linked-list",
     language: "javascript",
@@ -1848,7 +1817,6 @@ function reverseRecursive(head) {
     usage: `The recursive approach to reversing a linked list demonstrates mastery of recursive thinking and call-stack mechanics, which is why interviewers at companies like Google and Meta ask for both solutions. While the iterative version is more memory-efficient, the recursive approach teaches a mental model that transfers directly to harder recursive problems: reverse-nodes-in-k-group, swap-nodes-in-pairs, and reorder-list all build on the recursive reversal pattern. In functional programming languages like Haskell, Erlang, and Clojure, list reversal is inherently recursive because these languages lack mutable state and iterative loops; understanding recursive reversal is essential for working in any functional codebase. Compilers and interpreters for languages like Lisp process S-expressions (nested linked structures) recursively, and internal transformations on these structures often involve recursive reversal of sublists. The recursive approach also illustrates tail-call optimization: languages that support TCO (like Scheme and Kotlin) can compile recursive reversal into iterative machine code, eliminating the O(n) stack overhead, which is a concept tested in systems design interviews. Understanding the trade-off, O(1) space iterative versus O(n) stack space recursive, and being able to articulate when each is appropriate, signals to interviewers that you think about production constraints, not just algorithmic correctness.`,
   },
   {
-    id: "linked-list-cycle",
     name: "Linked List Cycle",
     category: "linked-list",
     language: "javascript",
@@ -1918,7 +1886,6 @@ function hasCycle(head) {
     usage: `Floyd's tortoise and hare algorithm is the standard O(1)-space technique for detecting cycles in linked structures, and it shows up far beyond textbook exercises. Garbage collectors in managed runtimes like CPython's reference-counting collector use cycle detection to identify and reclaim circular reference chains that simple reference counting cannot free. The same pattern applies to deadlock detection in database transaction managers, where wait-for graphs are checked for cycles to decide which transaction to abort. Pseudorandom number generator testing relies on cycle detection to measure period length and assess generator quality, a concern for cryptographic libraries and Monte Carlo simulations alike. In distributed systems, cycle detection helps identify infinite routing loops in network protocols. This is one of the most frequently asked linked-list problems at companies like Google, Meta, and Amazon, precisely because it tests whether a candidate can move beyond the naive O(n) hash-set approach to the elegant constant-space two-pointer solution.`,
   },
   {
-    id: "rotate-image",
     name: "Rotate Image",
     category: "math-and-geometry",
     language: "javascript",
@@ -1974,7 +1941,6 @@ function test_2x2() {
     usage: `Rotate Image is the classic math and geometry problem that tests in-place matrix manipulation using the transpose-then-reverse technique. Image processing libraries like OpenCV, Pillow, and browser Canvas APIs implement rotation as a composition of transpose and flip operations on pixel matrices, which is exactly this algorithm. Game engines like Unity and Unreal perform 2D sprite rotation and tile map transformations using matrix operations that decompose into transposition and reflection. Mobile operating systems rotate screen content when the device orientation changes, applying affine transformations that are mathematically equivalent to this 90-degree rotation. Computer vision pipelines in self-driving car systems at Waymo and Tesla apply rotation augmentations to training images to make models orientation-invariant. The transpose-then-reverse approach is optimal at O(n^2) time and O(1) extra space since every element must be moved and no auxiliary matrix is needed. In interviews at companies like Google, Amazon, and Apple, this problem tests whether candidates can decompose a complex transformation into simpler steps and manipulate 2D indices correctly without off-by-one errors.`,
   },
   {
-    id: "sliding-window-max-sum",
     name: "Sliding Window Max Sum",
     category: "sliding-window",
     language: "javascript",
@@ -2020,7 +1986,6 @@ function test_mixed() {
     usage: `The sliding window technique is fundamental to any system that processes streaming or sequential data under a fixed-size constraint. TCP's flow control literally uses a sliding window to manage how many unacknowledged bytes a sender can transmit, adjusting the window size based on the receiver's buffer availability. Netflix and Spotify use sliding-window analytics over user activity streams to compute rolling engagement metrics, detect binge-watching sessions, and trigger real-time recommendations. In network intrusion detection systems like Snort, sliding windows over packet streams identify burst patterns indicative of DDoS attacks. Financial trading platforms compute moving averages, VWAP, and Bollinger Bands using sliding windows over price tick streams, where the O(1) incremental update per slide is critical for low-latency execution. Rate limiters in API gateways at companies like Cloudflare and Stripe use sliding-window counters to enforce request quotas without scanning the entire request history on each call.`,
   },
   {
-    id: "balanced-parentheses",
     name: "Balanced Parentheses",
     category: "stack",
     language: "javascript",
@@ -2074,7 +2039,6 @@ function test_empty() {
     usage: `The balanced-parentheses stack pattern is the simplest instance of recursive-descent scope tracking, and it is the core logic inside every parser, compiler, and syntax validator you depend on. Every compiler's lexer and parser, from GCC to the V8 JavaScript engine, uses stack-based matching to validate that braces, brackets, and parentheses are properly nested before attempting to build an AST. JSON validators like JSONLint and XML parsers check that opening and closing delimiters are balanced before accepting a payload, rejecting malformed data that could crash downstream processors. IDEs like VS Code, IntelliJ, and Vim highlight matching brackets in real time using the same stack-based algorithm, and linters flag unbalanced delimiters as errors before code is even compiled. The pattern extends to HTML tag validation, template engine parsing in frameworks like Jinja2 and Handlebars, and math-expression evaluation in calculators. This is among the top-five most frequently asked interview questions across all companies because it cleanly tests stack fluency, edge-case handling for empty inputs and mismatched types, and the ability to generalize from parentheses to arbitrary delimiter pairs.`,
   },
   {
-    id: "queue-from-stacks",
     name: "Queue from Stacks",
     category: "stack",
     language: "javascript",
@@ -2182,7 +2146,6 @@ function test_interleaved() {
     usage: `Implementing a queue from two stacks is a foundational exercise in amortized analysis and data-structure composition that has direct parallels in production systems. The core insight, that lazily transferring elements between an input stack and an output stack yields amortized O(1) enqueue and dequeue, is the same principle behind batched I/O in write-ahead logs and lazy evaluation in functional data structures used in languages like Haskell and Clojure. Okasaki's purely functional queue, used in Erlang's and Scala's standard libraries, is essentially this two-stack construction with persistence guarantees. In message-passing architectures, producer-consumer patterns often buffer incoming messages in one structure and drain from another, mirroring the two-stack flip. The problem is a favorite at companies like Amazon, Microsoft, and Bloomberg because it tests whether a candidate truly understands amortized complexity rather than just memorizing worst-case bounds, and it reveals whether they can reason about state transitions between two cooperating data structures.`,
   },
   {
-    id: "monotonic-stack",
     name: "Monotonic Stack",
     category: "stack",
     language: "javascript",
@@ -2243,7 +2206,6 @@ function test_duplicates() {
     usage: `A monotonic stack maintains elements in strictly increasing or decreasing order and solves a family of problems centered on finding the next greater or next smaller element in O(n) time, down from the naive O(n^2). The stock span problem, used in financial trading platforms like Bloomberg Terminal, calculates how many consecutive previous days had a price less than or equal to today's price; a monotonic stack solves this in a single pass. Weather applications use the same pattern for the Daily Temperatures problem: how many days until a warmer day. The Largest Rectangle in Histogram problem, solvable via monotonic stack, has direct applications in image analysis (computing maximal rectangular regions in binary images) and memory allocators (finding the largest contiguous free block). The trapping rain water problem, another monotonic stack classic, models real drainage calculations. In interviews at companies like Amazon, Google, and Bloomberg, monotonic stack problems are considered medium-to-hard difficulty and test whether candidates can recognize when a stack-based invariant eliminates redundant comparisons.`,
   },
   {
-    id: "binary-tree-bfs",
     name: "Binary Tree BFS",
     category: "trees",
     language: "javascript",
@@ -2318,7 +2280,6 @@ function bfs(root) {
     usage: `Level-order traversal using BFS is how real systems process hierarchical data when depth matters. The DOM in web browsers is traversed level-by-level when computing CSS inheritance and layout reflow; React's reconciliation algorithm (the fiber tree diffing) walks the component tree in a BFS-like manner to batch updates by depth. Database query planners in systems like PostgreSQL and MySQL traverse B-tree indexes level by level to locate records, which is why B-tree lookups are O(log n) with each level representing a disk page access. Social network platforms like LinkedIn use BFS to compute degrees of connection; when LinkedIn shows you are a 2nd-degree connection to someone, that is a BFS bounded at depth 2 over their social graph. File system utilities like the Unix \`find\` command with \`-maxdepth\` use BFS to scan directory trees without descending too deep. In interviews, BFS is tested heavily at Meta, Google, and Amazon, often in variants like zigzag level-order, right-side view, or level averages, all of which require the same queue-based template with minor modifications.`,
   },
   {
-    id: "dfs-preorder",
     name: "DFS Preorder Traversal",
     category: "trees",
     language: "javascript",
@@ -2380,7 +2341,6 @@ function preorder(root) {
     usage: `Preorder traversal, where you process the root before its children, is the natural traversal for serializing and copying tree structures. When you serialize a binary tree to a string or file for network transmission or storage, preorder traversal preserves the structure so the tree can be reconstructed without ambiguity; this is how Protocol Buffers and other serialization frameworks handle nested message types internally. Compilers use preorder traversal to generate prefix notation (Polish notation) from abstract syntax trees, which is the intermediate representation used in some stack-based virtual machines and calculator interpreters. File system backup tools traverse directory trees in preorder, processing the directory entry itself before descending into its contents, which is necessary to create the directory on the destination before copying files into it. React's component rendering follows a preorder pattern: a parent component renders before its children, establishing context and props that flow downward. In interviews, preorder is tested through tree serialization/deserialization problems and construct-tree-from-traversal problems, frequently asked at Google and Amazon.`,
   },
   {
-    id: "dfs-inorder",
     name: "DFS Inorder Traversal",
     category: "trees",
     language: "javascript",
@@ -2442,7 +2402,6 @@ function inorder(root) {
     usage: `Inorder traversal is the canonical way to retrieve sorted data from a binary search tree, which makes it foundational to database internals and search engine indexing. When a database engine needs to return results in sorted order from a BST-based index, it performs an inorder traversal, visiting left subtree, node, then right subtree, yielding keys in ascending sequence without any additional sorting step. The kth-smallest-element problem, commonly asked at companies like Facebook and Microsoft, is solved by running an inorder traversal and stopping at the kth node, which runs in O(h + k) time on a balanced BST. BST validation, another frequent interview problem, uses inorder traversal to verify that values appear in strictly increasing order; any violation means the tree is not a valid BST. Expression tree evaluation in compilers uses inorder traversal to produce infix notation (the human-readable form like \`a + b * c\`), which is how debuggers and code formatters reconstruct source expressions from AST nodes. Understanding inorder traversal is also a prerequisite for working with self-balancing trees like AVL trees and Red-Black trees, which are used in the C++ STL (\`std::map\`, \`std::set\`) and Java's \`TreeMap\`.`,
   },
   {
-    id: "dfs-postorder",
     name: "DFS Postorder Traversal",
     category: "trees",
     language: "javascript",
@@ -2504,7 +2463,6 @@ function postorder(root) {
     usage: `Postorder traversal processes children before the parent, making it the correct traversal for any operation where you need to aggregate or clean up from the bottom of a tree upward. Compilers use postorder traversal to generate postfix notation (Reverse Polish Notation) from expression trees, which maps directly to stack-based machine instructions; when GCC or LLVM emits assembly for an arithmetic expression, the code generation phase walks the AST in postorder so operands are pushed onto the stack before the operator is applied. Memory deallocation in languages without garbage collection (C, C++, Rust's drop semantics) must follow postorder: you free child nodes before the parent to avoid dangling pointers and memory leaks, which is why destructors in tree structures are called in postorder. Build systems like Make and Bazel effectively perform postorder evaluation of dependency trees, compiling leaf dependencies before the targets that depend on them. The \`rm -rf\` command deletes directory contents (children) before the directory itself (parent), which is postorder deletion. In interviews, postorder appears in problems like maximum-path-sum, tree diameter, and lowest-common-ancestor, where you need information from both subtrees before making a decision at the current node.`,
   },
   {
-    id: "trie",
     name: "Trie",
     category: "tries",
     language: "javascript",
@@ -2602,7 +2560,6 @@ function test_empty_trie() {
     usage: `The trie, or prefix tree, is the data structure behind autocomplete, spell-checking, and IP routing, making it one of the most commercially impactful structures in computing. Google Search processes billions of autocomplete queries daily using trie-variant structures augmented with frequency scores and personalization layers to rank prefix-matched suggestions in milliseconds. IDE code-completion engines in VS Code, IntelliJ, and Xcode maintain tries over symbol tables to offer instant suggestions as developers type. Spell-checkers in browsers, word processors, and mobile keyboards use tries to look up dictionary words and suggest corrections by exploring nearby branches for edit-distance matches. In networking, longest-prefix-match lookups in IP routing tables, the operation every router performs on every packet, are implemented with compressed tries (Patricia tries or radix trees). T9 predictive text on old phone keypads was a trie lookup. This problem is asked frequently at Google, Amazon, and Microsoft because it tests tree construction, recursive traversal, and the candidate's ability to design for prefix-based retrieval rather than exact-match hashing.`,
   },
   {
-    id: "two-pointer-remove-dupes",
     name: "Two Pointer Remove Dupes",
     category: "two-pointers",
     language: "javascript",
@@ -2659,7 +2616,6 @@ function test_single() {
     usage: `The two-pointer deduplication pattern is the backbone of in-place data compaction on sorted sequences, and it runs silently inside systems you use every day. Search engines building inverted indexes must deduplicate sorted posting lists of document IDs; doing this in-place with two pointers avoids costly memory allocation during index construction. Database engines performing merge joins on sorted key columns use the same logic to skip duplicate keys and produce distinct result sets efficiently. Financial transaction processing systems rely on deduplication of sorted ledger entries to prevent double-counting in balance calculations and regulatory reports. The pattern is also essential in time-series databases like InfluxDB and TimescaleDB, where ordered timestamps with duplicate entries must be collapsed before aggregation. Interviewers at companies like Bloomberg and Goldman Sachs favor this problem because it tests in-place array manipulation, pointer reasoning, and the discipline to handle edge cases like all-duplicate or single-element inputs cleanly.`,
   },
   {
-    id: "merge-sorted-arrays",
     name: "Merge Sorted Arrays",
     category: "two-pointers",
     language: "javascript",

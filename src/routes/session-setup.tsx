@@ -123,7 +123,7 @@ export function SessionSetupPage() {
       selectedKatas = ids.map((id) => kataMap.get(id)).filter(Boolean) as typeof katas;
     } else if (tab === "random") {
       sessionType = "random";
-      selectedKatas = selectRandomKatas(filteredKatas, size);
+      selectedKatas = await selectRandomKatas(filteredKatas, size);
     } else {
       sessionType = "custom";
       const kataMap = new Map(katas.map((k) => [k.id, k]));

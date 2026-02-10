@@ -2,9 +2,10 @@ import type { TestResult } from "../types/editor";
 
 interface TestOutputProps {
   results: TestResult[];
+  ranAt?: string;
 }
 
-export function TestOutput({ results }: TestOutputProps) {
+export function TestOutput({ results, ranAt }: TestOutputProps) {
   const passed = results.filter((r) => r.passed).length;
   const total = results.length;
 
@@ -14,6 +15,9 @@ export function TestOutput({ results }: TestOutputProps) {
         <span className={passed === total ? "text-green-500" : "text-red-400"}>
           {passed}/{total} passed
         </span>
+        {ranAt && (
+          <span className="ml-2 text-zinc-500 dark:text-zinc-500 text-xs">{ranAt}</span>
+        )}
       </div>
       <ul className="px-3 py-1">
         {results.map((r) => (

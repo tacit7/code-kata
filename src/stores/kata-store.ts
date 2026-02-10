@@ -15,8 +15,14 @@ interface KataRow {
   usage: string | null;
 }
 
+interface BestTimeRow {
+  kata_id: number;
+  best_time: number;
+}
+
 interface KataState {
   katas: Kata[];
+  bestTimes: Record<number, number>;
   loading: boolean;
   error: string | null;
   loadKatas: (language?: string) => Promise<void>;
@@ -24,6 +30,7 @@ interface KataState {
 
 export const useKataStore = create<KataState>((set) => ({
   katas: [],
+  bestTimes: {},
   loading: true,
   error: null,
 
@@ -51,7 +58,20 @@ export const useKataStore = create<KataState>((set) => ({
         solution: row.solution,
         usage: row.usage,
       }));
-      set({ katas, loading: false });
+      const bestRows = await db.select<BestTimeRow[]>(
+        `SELECT kata_id, MIN(time_ms) as best_time
+         FROM attempts
+         WHERE passed = 1 AND time_ms IS NOT NULL
+           AND kata_id IN (SELECT id FROM katas WHERE language = $1)
+         GROUP BY kata_id`,
+        [language],
+      );
+      const bestTimes: Record<number, number> = {};
+      for (const row of bestRows) {
+        bestTimes[row.kata_id] = row.best_time;
+      }
+
+      set({ katas, bestTimes, loading: false });
     } catch (err) {
       set({ error: String(err), loading: false });
     }

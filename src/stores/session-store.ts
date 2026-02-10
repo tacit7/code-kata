@@ -77,13 +77,79 @@ function rowToAttempt(row: AttemptRow): Attempt {
   };
 }
 
-export function selectRandomKatas(allKatas: Kata[], count: number): Kata[] {
-  const shuffled = [...allKatas];
-  for (let i = shuffled.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+interface KataStats {
+  kata_id: number;
+  attempt_count: number;
+  pass_count: number;
+  avg_time_ms: number;
+}
+
+export async function selectRandomKatas(allKatas: Kata[], count: number): Promise<Kata[]> {
+  if (allKatas.length === 0) return [];
+  const actual = Math.min(count, allKatas.length);
+
+  const db = await getDb();
+  const kataIds = allKatas.map((k) => k.id);
+  const placeholders = kataIds.map((_, i) => `$${i + 1}`).join(", ");
+
+  const rows = await db.select<KataStats[]>(
+    `SELECT kata_id,
+            COUNT(*) as attempt_count,
+            SUM(passed) as pass_count,
+            AVG(time_ms) as avg_time_ms
+     FROM attempts
+     WHERE kata_id IN (${placeholders})
+     GROUP BY kata_id`,
+    kataIds,
+  );
+
+  const statsMap = new Map(rows.map((r) => [r.kata_id, r]));
+
+  // Median time among high-pass-rate katas to split slow vs fast
+  const highPassTimes: number[] = [];
+  for (const r of rows) {
+    const passRate = r.pass_count / r.attempt_count;
+    if (passRate > 0.8 && r.avg_time_ms > 0) {
+      highPassTimes.push(r.avg_time_ms);
+    }
   }
-  return shuffled.slice(0, count);
+  highPassTimes.sort((a, b) => a - b);
+  const medianTime =
+    highPassTimes.length > 0
+      ? highPassTimes[Math.floor(highPassTimes.length / 2)]
+      : Infinity;
+
+  // Weight per kata: untried > struggling > moderate > slow-but-passing > mastered
+  const weights = allKatas.map((k) => {
+    const stats = statsMap.get(k.id);
+    if (!stats || stats.attempt_count === 0) return 3;
+    const passRate = stats.pass_count / stats.attempt_count;
+    if (passRate < 0.5) return 2.5;
+    if (passRate <= 0.8) return 1.5;
+    if (stats.avg_time_ms > medianTime) return 1.2;
+    return 0.5;
+  });
+
+  // Weighted random selection without replacement
+  const selected: Kata[] = [];
+  const remaining = allKatas.map((k, i) => ({ kata: k, weight: weights[i] }));
+
+  for (let i = 0; i < actual; i++) {
+    const totalWeight = remaining.reduce((sum, r) => sum + r.weight, 0);
+    let rand = Math.random() * totalWeight;
+    let pick = 0;
+    for (let j = 0; j < remaining.length; j++) {
+      rand -= remaining[j].weight;
+      if (rand <= 0) {
+        pick = j;
+        break;
+      }
+    }
+    selected.push(remaining[pick].kata);
+    remaining.splice(pick, 1);
+  }
+
+  return selected;
 }
 
 export const useSessionStore = create<SessionState>((set, get) => ({
