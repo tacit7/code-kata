@@ -12,9 +12,10 @@ export interface Kata {
   solution: string | null;
   usage: string | null;
   tags: string[];
+  isCustom: boolean;
 }
 
-export type SeedKata = Omit<Kata, "id">;
+export type SeedKata = Omit<Kata, "id" | "isCustom">;
 
 export type TimerStatus = "idle" | "running" | "paused" | "completed";
 

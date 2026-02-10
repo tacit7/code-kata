@@ -1,6 +1,6 @@
 import { create } from "zustand";
-import type { Kata } from "../types/editor";
-import { getDb } from "../lib/database";
+import type { Kata, SeedKata } from "../types/editor";
+import { getDb, insertKata, updateKata as dbUpdateKata, deleteKata as dbDeleteKata } from "../lib/database";
 
 interface KataRow {
   id: number;
@@ -14,6 +14,7 @@ interface KataRow {
   solution: string | null;
   usage: string | null;
   tags: string | null;
+  is_custom: number;
 }
 
 interface BestTimeRow {
@@ -33,6 +34,9 @@ interface KataState {
   loading: boolean;
   error: string | null;
   loadKatas: (language?: string) => Promise<void>;
+  createKata: (kata: SeedKata) => Promise<number>;
+  updateKata: (id: number, kata: Partial<SeedKata>) => Promise<void>;
+  deleteKata: (id: number) => Promise<void>;
 }
 
 export const useKataStore = create<KataState>((set) => ({
@@ -66,6 +70,7 @@ export const useKataStore = create<KataState>((set) => ({
         solution: row.solution,
         usage: row.usage,
         tags: row.tags ? JSON.parse(row.tags) as string[] : [],
+        isCustom: Boolean(row.is_custom),
       }));
       const bestRows = await db.select<BestTimeRow[]>(
         `SELECT kata_id, MIN(time_ms) as best_time
@@ -109,5 +114,21 @@ export const useKataStore = create<KataState>((set) => ({
     } catch (err) {
       set({ error: String(err), loading: false });
     }
+  },
+
+  createKata: async (kata: SeedKata) => {
+    const id = await insertKata(kata);
+    await useKataStore.getState().loadKatas(kata.language);
+    return id;
+  },
+
+  updateKata: async (id: number, kata: Partial<SeedKata>) => {
+    await dbUpdateKata(id, kata);
+    await useKataStore.getState().loadKatas();
+  },
+
+  deleteKata: async (id: number) => {
+    await dbDeleteKata(id);
+    await useKataStore.getState().loadKatas();
   },
 }));

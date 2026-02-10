@@ -11,6 +11,7 @@ import { SessionPage } from "./routes/session";
 import { SessionResultsPage } from "./routes/session-results";
 import { DashboardPage } from "./routes/dashboard";
 import { SettingsPage } from "./routes/settings";
+import { KataFormPage } from "./routes/kata-form";
 
 function App() {
   const theme = useSettingsStore((s) => s.theme);
@@ -65,6 +66,8 @@ function App() {
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/library" element={<LibraryPage />} />
+            <Route path="/kata/new" element={<KataFormPage />} />
+            <Route path="/kata/:kataId/edit" element={<KataFormPage />} />
             <Route path="/editor/:kataId" element={<EditorPage />} />
             <Route path="/session/setup" element={<SessionSetupPage />} />
             <Route path="/session/:sessionId" element={<SessionPage />} />

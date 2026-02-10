@@ -1,4 +1,5 @@
 import Database from "@tauri-apps/plugin-sql";
+import type { SeedKata } from "../types/editor";
 import { sampleKatas } from "./sample-katas";
 import { sampleKatasPython } from "./sample-katas-python";
 
@@ -34,6 +35,13 @@ async function createSchema(db: Database) {
   // Migrate existing DBs: add tags column if missing
   try {
     await db.execute(`ALTER TABLE katas ADD COLUMN tags TEXT DEFAULT '[]'`);
+  } catch {
+    // Column already exists
+  }
+
+  // Migrate existing DBs: add is_custom column if missing
+  try {
+    await db.execute(`ALTER TABLE katas ADD COLUMN is_custom INTEGER DEFAULT 0`);
   } catch {
     // Column already exists
   }
@@ -180,4 +188,58 @@ async function seedKatasForce(db: Database) {
       ]
     );
   }
+}
+
+export async function insertKata(kata: SeedKata): Promise<number> {
+  const db = await getDb();
+  const result = await db.execute(
+    `INSERT INTO katas (name, category, language, difficulty, description, code, test_code, solution, usage, tags, is_custom)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 1)`,
+    [
+      kata.name,
+      kata.category,
+      kata.language,
+      kata.difficulty,
+      kata.description,
+      kata.code,
+      kata.testCode,
+      kata.solution,
+      kata.usage,
+      JSON.stringify(kata.tags),
+    ]
+  );
+  return result.lastInsertId as number;
+}
+
+export async function updateKata(id: number, kata: Partial<SeedKata>): Promise<void> {
+  const db = await getDb();
+  const fields: string[] = [];
+  const values: unknown[] = [];
+  let idx = 1;
+
+  if (kata.name !== undefined) { fields.push(`name = $${idx++}`); values.push(kata.name); }
+  if (kata.category !== undefined) { fields.push(`category = $${idx++}`); values.push(kata.category); }
+  if (kata.language !== undefined) { fields.push(`language = $${idx++}`); values.push(kata.language); }
+  if (kata.difficulty !== undefined) { fields.push(`difficulty = $${idx++}`); values.push(kata.difficulty); }
+  if (kata.description !== undefined) { fields.push(`description = $${idx++}`); values.push(kata.description); }
+  if (kata.code !== undefined) { fields.push(`code = $${idx++}`); values.push(kata.code); }
+  if (kata.testCode !== undefined) { fields.push(`test_code = $${idx++}`); values.push(kata.testCode); }
+  if (kata.solution !== undefined) { fields.push(`solution = $${idx++}`); values.push(kata.solution); }
+  if (kata.usage !== undefined) { fields.push(`usage = $${idx++}`); values.push(kata.usage); }
+  if (kata.tags !== undefined) { fields.push(`tags = $${idx++}`); values.push(JSON.stringify(kata.tags)); }
+
+  if (fields.length === 0) return;
+
+  values.push(id);
+  await db.execute(
+    `UPDATE katas SET ${fields.join(", ")} WHERE id = $${idx} AND is_custom = 1`,
+    values
+  );
+}
+
+export async function deleteKata(id: number): Promise<void> {
+  const db = await getDb();
+  await db.execute("DELETE FROM user_code WHERE kata_id = $1", [id]);
+  await db.execute("DELETE FROM attempts WHERE kata_id = $1", [id]);
+  await db.execute("DELETE FROM katas WHERE id = $1 AND is_custom = 1", [id]);
 }
