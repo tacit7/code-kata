@@ -57,7 +57,8 @@ export function LibraryPage() {
     (k) =>
       k.name.toLowerCase().includes(q) ||
       k.category.toLowerCase().includes(q) ||
-      (k.difficulty?.toLowerCase().includes(q) ?? false)
+      (k.difficulty?.toLowerCase().includes(q) ?? false) ||
+      k.tags.some((t) => t.toLowerCase().includes(q))
   );
 
   const sorted = diffSort
@@ -103,6 +104,7 @@ export function LibraryPage() {
               >
                 Difficulty {diffSort === "asc" ? "▲" : diffSort === "desc" ? "▼" : ""}
               </th>
+              <th className="pb-2 font-medium">Tags</th>
               <th className="pb-2 font-medium text-right">Best</th>
               <th className="pb-2 font-medium text-right">Streak</th>
             </tr>
@@ -136,6 +138,15 @@ export function LibraryPage() {
                     {kata.difficulty ?? "—"}
                   </span>
                 </td>
+                <td className="py-2">
+                  <div className="flex flex-wrap gap-1">
+                    {kata.tags.map((tag) => (
+                      <span key={tag} className="px-1.5 py-0.5 text-[10px] rounded bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400">
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                </td>
                 <td className="py-2 text-right text-zinc-500 dark:text-zinc-400 tabular-nums">
                   {bestTimes[kata.id] != null
                     ? `${(bestTimes[kata.id] / 1000).toFixed(1)}s`
@@ -148,7 +159,7 @@ export function LibraryPage() {
             ))}
             {sorted.length === 0 && (
               <tr>
-                <td colSpan={6} className="py-8 text-center text-zinc-400">
+                <td colSpan={7} className="py-8 text-center text-zinc-400">
                   No katas found
                 </td>
               </tr>

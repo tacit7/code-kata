@@ -11,6 +11,7 @@ export interface Kata {
   testCode: string;
   solution: string | null;
   usage: string | null;
+  tags: string[];
 }
 
 export type SeedKata = Omit<Kata, "id">;

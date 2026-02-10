@@ -43,6 +43,7 @@ def test_zero_crossing():
         max_sum = max(max_sum, current)
     return max_sum`,
     usage: null,
+    tags: ["dynamic-programming", "greedy"],
   },
   {
     name: "Climbing Stairs (Iterative)",
@@ -86,6 +87,7 @@ def test_ten():
         a, b = b, a + b
     return b`,
     usage: null,
+    tags: ["dynamic-programming", "memoization"],
   },
   {
     name: "Climbing Stairs (Recursive)",
@@ -133,6 +135,7 @@ def test_ten():
         return memo[k]
     return helper(n)`,
     usage: null,
+    tags: ["dynamic-programming", "memoization", "recursion"],
   },
   {
     name: "Longest Common Subsequence",
@@ -178,6 +181,7 @@ def test_longer():
                 dp[i][j] = max(dp[i - 1][j], dp[i][j - 1])
     return dp[m][n]`,
     usage: null,
+    tags: ["dynamic-programming", "string"],
   },
   {
     name: "Topological Sort",
@@ -235,6 +239,7 @@ def test_no_edges():
     order.reverse()
     return order`,
     usage: null,
+    tags: ["graph", "topological-sort"],
   },
   {
     name: "Union Find",
@@ -318,6 +323,7 @@ def test_self_connected():
     def connected(self, x, y):
         return self.find(x) == self.find(y)`,
     usage: null,
+    tags: ["graph", "disjoint-set"],
   },
   {
     name: "Frequency Count",
@@ -350,6 +356,7 @@ def test_frequency_count_empty():
         counts[item] = counts.get(item, 0) + 1
     return counts`,
     usage: null,
+    tags: ["hash-map", "counting"],
   },
   {
     name: "Most Frequent Element",
@@ -378,6 +385,7 @@ def test_most_frequent_single():
         counts[item] = counts.get(item, 0) + 1
     return max(counts, key=counts.get)`,
     usage: null,
+    tags: ["hash-map", "counting"],
   },
   {
     name: "Merge Sort",
@@ -439,6 +447,7 @@ def _merge(left, right):
     result.extend(right[j:])
     return result`,
     usage: null,
+    tags: ["divide-and-conquer", "sorting", "recursion"],
   },
   {
     name: "Lomuto Partition",
@@ -483,6 +492,7 @@ def test_partition_two():
     arr[i], arr[hi] = arr[hi], arr[i]
     return i`,
     usage: null,
+    tags: ["sorting", "partitioning"],
   },
   {
     name: "Quick Sort",
@@ -534,6 +544,7 @@ def _qs(arr, lo, hi):
         _qs(arr, lo, p - 1)
         _qs(arr, p + 1, hi)`,
     usage: null,
+    tags: ["divide-and-conquer", "sorting", "recursion"],
   },
   {
     name: "Two Sum",
@@ -571,6 +582,7 @@ def test_negative():
             return [seen[complement], i]
         seen[num] = i`,
     usage: null,
+    tags: ["hash-map"],
   },
   {
     name: "Build Prefix Sum",
@@ -604,6 +616,7 @@ def test_build_prefix_negatives():
         prefix[i + 1] = prefix[i] + nums[i]
     return prefix`,
     usage: null,
+    tags: ["prefix-sum"],
   },
   {
     name: "Range Sum Query",
@@ -639,6 +652,7 @@ def test_range_sum_first():
     solution: `def range_sum(prefix, left, right):
     return prefix[right + 1] - prefix[left]`,
     usage: null,
+    tags: ["prefix-sum"],
   },
   {
     name: "Permutations",
@@ -690,6 +704,7 @@ def test_count():
     backtrack([], nums)
     return result`,
     usage: null,
+    tags: ["backtracking", "recursion"],
   },
   {
     name: "Subsets",
@@ -739,6 +754,7 @@ def test_count():
     backtrack(0, [])
     return result`,
     usage: null,
+    tags: ["backtracking", "recursion"],
   },
   {
     name: "Binary Search (Iterative)",
@@ -793,6 +809,7 @@ def test_single_element_not_found():
 
     return -1`,
     usage: null,
+    tags: ["binary-search", "divide-and-conquer"],
   },
   {
     name: "Binary Search Find First",
@@ -842,6 +859,7 @@ def test_find_first_at_start():
             hi = mid - 1
     return result`,
     usage: null,
+    tags: ["binary-search"],
   },
   {
     name: "Binary Search Find Last",
@@ -891,6 +909,7 @@ def test_find_last_at_end():
             hi = mid - 1
     return result`,
     usage: null,
+    tags: ["binary-search"],
   },
   {
     name: "Binary Search (Recursive)",
@@ -943,6 +962,7 @@ def test_single_element_not_found():
             return helper(lo, mid - 1)
     return helper(0, len(nums) - 1)`,
     usage: null,
+    tags: ["binary-search", "divide-and-conquer", "recursion"],
   },
   {
     name: "Single Number XOR",
@@ -976,6 +996,7 @@ def test_larger():
         result ^= num
     return result`,
     usage: null,
+    tags: ["bit-manipulation", "xor"],
   },
   {
     name: "Count Set Bits",
@@ -1022,6 +1043,7 @@ def test_large():
         n >>= 1
     return count`,
     usage: null,
+    tags: ["bit-manipulation"],
   },
   {
     name: "Matrix BFS",
@@ -1083,6 +1105,7 @@ def matrix_bfs(grid, start):
 
     return result`,
     usage: null,
+    tags: ["bfs", "matrix"],
   },
   {
     name: "Graph DFS (Iterative)",
@@ -1140,6 +1163,7 @@ def test_disconnected():
 
     return result`,
     usage: null,
+    tags: ["dfs", "graph"],
   },
   {
     name: "Build Adjacency List",
@@ -1187,6 +1211,7 @@ def build_adjacency_list(edges, directed=False):
 
     return dict(graph)`,
     usage: null,
+    tags: ["graph"],
   },
   {
     name: "Matrix DFS (Recursive)",
@@ -1255,6 +1280,7 @@ def test_all_open():
     dfs(*start)
     return result`,
     usage: null,
+    tags: ["dfs", "matrix", "recursion"],
   },
   {
     name: "Graph DFS (Recursive)",
@@ -1310,6 +1336,7 @@ def test_disconnected():
     dfs(start)
     return result`,
     usage: null,
+    tags: ["dfs", "graph", "recursion"],
   },
   {
     name: "Matrix DFS (Iterative)",
@@ -1379,6 +1406,7 @@ def test_all_open():
 
     return result`,
     usage: null,
+    tags: ["dfs", "matrix"],
   },
   {
     name: "Matrix Grid BFS",
@@ -1436,6 +1464,7 @@ def grid_bfs(n):
                 queue.append((nr, nc))
     return order`,
     usage: null,
+    tags: ["bfs", "matrix"],
   },
   {
     name: "Min Heap",
@@ -1576,6 +1605,7 @@ def test_insert_duplicates():
     def _swap(self, i, j):
         self.data[i], self.data[j] = self.data[j], self.data[i]`,
     usage: null,
+    tags: ["heap"],
   },
   {
     name: "Merge Intervals",
@@ -1627,6 +1657,7 @@ def test_unsorted():
             merged.append([start, end])
     return merged`,
     usage: null,
+    tags: ["sorting", "intervals"],
   },
   {
     name: "Linked List Traversal (Iterative)",
@@ -1673,6 +1704,7 @@ def traverse(head):
 
     return result`,
     usage: null,
+    tags: ["linked-list", "iteration"],
   },
   {
     name: "Reverse Linked List (Iterative)",
@@ -1732,6 +1764,7 @@ def test_reverse_iterative_empty():
         current = nxt
     return prev`,
     usage: null,
+    tags: ["linked-list", "iteration"],
   },
   {
     name: "Reverse Linked List (Recursive)",
@@ -1789,6 +1822,7 @@ def test_reverse_recursive_empty():
     head.next = None
     return new_head`,
     usage: null,
+    tags: ["linked-list", "recursion"],
   },
   {
     name: "Linked List Cycle Detection",
@@ -1852,6 +1886,7 @@ def test_single_no_cycle():
 
     return False`,
     usage: null,
+    tags: ["linked-list", "fast-slow-pointer"],
   },
   {
     name: "Linked List Traversal (Recursive)",
@@ -1891,6 +1926,7 @@ def test_traverse_empty():
         return []
     return [head.val] + traverse(head.next)`,
     usage: null,
+    tags: ["linked-list", "recursion"],
   },
   {
     name: "Sliding Window Max Sum",
@@ -1932,6 +1968,7 @@ def test_mixed():
 
     return max_sum`,
     usage: null,
+    tags: ["sliding-window"],
   },
   {
     name: "Balanced Parentheses",
@@ -1987,6 +2024,7 @@ def test_complex():
             stack.pop()
     return len(stack) == 0`,
     usage: null,
+    tags: ["stack", "string"],
   },
   {
     name: "Queue from Two Stacks",
@@ -2081,6 +2119,7 @@ def test_interleaved():
     def is_empty(self):
         return not self.in_stack and not self.out_stack`,
     usage: null,
+    tags: ["stack", "queue"],
   },
   {
     name: "Monotonic Stack",
@@ -2122,6 +2161,7 @@ def test_duplicates():
         stack.append(i)
     return result`,
     usage: null,
+    tags: ["stack", "monotonic"],
   },
   {
     name: "Binary Tree BFS",
@@ -2194,6 +2234,7 @@ def bfs(root):
 
     return result`,
     usage: null,
+    tags: ["bfs", "tree"],
   },
   {
     name: "Binary Tree Preorder (Recursive)",
@@ -2247,6 +2288,7 @@ def test_preorder_single():
         return []
     return [root.val] + preorder(root.left) + preorder(root.right)`,
     usage: null,
+    tags: ["dfs", "tree", "recursion"],
   },
   {
     name: "Binary Tree Inorder (Recursive)",
@@ -2300,6 +2342,7 @@ def test_inorder_single():
         return []
     return inorder(root.left) + [root.val] + inorder(root.right)`,
     usage: null,
+    tags: ["dfs", "tree", "recursion"],
   },
   {
     name: "Binary Tree Postorder (Recursive)",
@@ -2353,6 +2396,7 @@ def test_postorder_single():
         return []
     return postorder(root.left) + postorder(root.right) + [root.val]`,
     usage: null,
+    tags: ["dfs", "tree", "recursion"],
   },
   {
     name: "Binary Tree Preorder (Iterative)",
@@ -2416,6 +2460,7 @@ def test_preorder_single():
             stack.append(node.left)
     return result`,
     usage: null,
+    tags: ["dfs", "tree"],
   },
   {
     name: "Binary Tree Inorder (Iterative)",
@@ -2478,6 +2523,7 @@ def test_inorder_single():
         current = current.right
     return result`,
     usage: null,
+    tags: ["dfs", "tree"],
   },
   {
     name: "Binary Tree Postorder (Iterative)",
@@ -2541,6 +2587,7 @@ def test_postorder_single():
             stack.append(node.right)
     return result[::-1]`,
     usage: null,
+    tags: ["dfs", "tree"],
   },
   {
     name: "Trie",
@@ -2628,6 +2675,7 @@ def test_empty_search():
             node = node.children[ch]
         return node`,
     usage: null,
+    tags: ["trie"],
   },
   {
     name: "Two Pointer Remove Duplicates",
@@ -2687,6 +2735,7 @@ def test_single():
 
     return write + 1`,
     usage: null,
+    tags: ["two-pointers", "in-place"],
   },
   {
     name: "Merge Two Sorted Arrays",
@@ -2739,5 +2788,6 @@ def test_negatives():
     result.extend(b[j:])
     return result`,
     usage: null,
+    tags: ["two-pointers", "sorting"],
   },
 ];

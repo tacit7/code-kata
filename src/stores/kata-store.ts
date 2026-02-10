@@ -13,6 +13,7 @@ interface KataRow {
   test_code: string;
   solution: string | null;
   usage: string | null;
+  tags: string | null;
 }
 
 interface BestTimeRow {
@@ -64,6 +65,7 @@ export const useKataStore = create<KataState>((set) => ({
         testCode: row.test_code,
         solution: row.solution,
         usage: row.usage,
+        tags: row.tags ? JSON.parse(row.tags) as string[] : [],
       }));
       const bestRows = await db.select<BestTimeRow[]>(
         `SELECT kata_id, MIN(time_ms) as best_time

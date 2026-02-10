@@ -25,9 +25,17 @@ async function createSchema(db: Database) {
       test_code TEXT NOT NULL,
       solution TEXT,
       usage TEXT,
+      tags TEXT DEFAULT '[]',
       created_at TEXT DEFAULT CURRENT_TIMESTAMP
     )
   `);
+
+  // Migrate existing DBs: add tags column if missing
+  try {
+    await db.execute(`ALTER TABLE katas ADD COLUMN tags TEXT DEFAULT '[]'`);
+  } catch {
+    // Column already exists
+  }
 
   await db.execute(`
     CREATE TABLE IF NOT EXISTS sessions (
@@ -108,11 +116,10 @@ async function seedKatas(db: Database) {
   const countRows = await db.select<{ count: number }[]>("SELECT COUNT(*) as count FROM katas");
   if (countRows[0].count > 0) return;
 
-  // Seed JS katas — insertion order determines auto-increment IDs
-  for (const kata of sampleKatas) {
+  for (const kata of [...sampleKatas, ...sampleKatasPython]) {
     await db.execute(
-      `INSERT INTO katas (name, category, language, difficulty, description, code, test_code, solution, usage)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+      `INSERT INTO katas (name, category, language, difficulty, description, code, test_code, solution, usage, tags)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
       [
         kata.name,
         kata.category,
@@ -123,25 +130,7 @@ async function seedKatas(db: Database) {
         kata.testCode,
         kata.solution,
         kata.usage,
-      ]
-    );
-  }
-
-  // Seed Python katas
-  for (const kata of sampleKatasPython) {
-    await db.execute(
-      `INSERT INTO katas (name, category, language, difficulty, description, code, test_code, solution, usage)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-      [
-        kata.name,
-        kata.category,
-        kata.language,
-        kata.difficulty,
-        kata.description,
-        kata.code,
-        kata.testCode,
-        kata.solution,
-        kata.usage,
+        JSON.stringify(kata.tags),
       ]
     );
   }
@@ -161,8 +150,8 @@ export async function reseedKatas(): Promise<string> {
 async function seedKatasForce(db: Database) {
   for (const kata of [...sampleKatas, ...sampleKatasPython]) {
     await db.execute(
-      `INSERT INTO katas (name, category, language, difficulty, description, code, test_code, solution, usage)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+      `INSERT INTO katas (name, category, language, difficulty, description, code, test_code, solution, usage, tags)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
       [
         kata.name,
         kata.category,
@@ -173,6 +162,7 @@ async function seedKatasForce(db: Database) {
         kata.testCode,
         kata.solution,
         kata.usage,
+        JSON.stringify(kata.tags),
       ]
     );
   }
