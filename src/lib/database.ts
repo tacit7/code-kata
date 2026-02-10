@@ -71,6 +71,36 @@ async function createSchema(db: Database) {
       value TEXT NOT NULL
     )
   `);
+
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS user_code (
+      kata_id TEXT PRIMARY KEY REFERENCES katas(id),
+      code TEXT NOT NULL,
+      updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+}
+
+export async function saveUserCode(kataId: string, code: string): Promise<void> {
+  const db = await getDb();
+  await db.execute(
+    "INSERT OR REPLACE INTO user_code (kata_id, code, updated_at) VALUES ($1, $2, datetime('now'))",
+    [kataId, code]
+  );
+}
+
+export async function deleteUserCode(kataId: string): Promise<void> {
+  const db = await getDb();
+  await db.execute("DELETE FROM user_code WHERE kata_id = $1", [kataId]);
+}
+
+export async function loadUserCode(kataId: string): Promise<string | null> {
+  const db = await getDb();
+  const rows = await db.select<{ code: string }[]>(
+    "SELECT code FROM user_code WHERE kata_id = $1",
+    [kataId]
+  );
+  return rows.length > 0 ? rows[0].code : null;
 }
 
 async function seedKatas(db: Database) {

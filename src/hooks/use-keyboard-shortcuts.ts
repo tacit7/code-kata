@@ -23,9 +23,11 @@ export function useKeyboardShortcuts(
       const combo = parts.join("+");
 
       // Check against all registered shortcuts
+      // Treat Meta and Ctrl as equivalent so shortcuts work on both macOS and Windows
+      const comboAlt = combo.replace("Ctrl+", "Meta+");
       for (const [action, handler] of Object.entries(handlers)) {
         const expected = shortcuts[action as ShortcutAction];
-        if (expected && combo === expected && handler) {
+        if (expected && (combo === expected || comboAlt === expected) && handler) {
           e.preventDefault();
           e.stopPropagation();
           handler();

@@ -6,3 +6,10 @@ html, body, #root {
   margin: 0;
   overflow: hidden;
 }
+
+.scrollbar-hidden {
+  scrollbar-width: none;
+}
+.scrollbar-hidden::-webkit-scrollbar {
+  display: none;
+}

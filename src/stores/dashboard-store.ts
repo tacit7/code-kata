@@ -24,7 +24,8 @@ interface LeaderboardRow {
   kataId: string;
   kataName: string;
   category: string;
-  bestTimeMs: number;
+  difficulty: string;
+  bestTimeMs: number | null;
   attemptCount: number;
   passCount: number;
 }
@@ -156,22 +157,23 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
            FROM attempts a JOIN katas k ON k.id = a.kata_id
            WHERE a.time_ms IS NOT NULL GROUP BY k.category ORDER BY total_time_ms DESC`,
         ),
-        // E. Leaderboard
+        // E. Leaderboard (all katas, LEFT JOIN attempts)
         db.select<
           {
             kata_id: string;
             kata_name: string;
             category: string;
-            best_time_ms: number;
+            difficulty: string;
+            best_time_ms: number | null;
             attempt_count: number;
             pass_count: number;
           }[]
         >(
-          `SELECT a.kata_id, k.name as kata_name, k.category, MIN(a.time_ms) as best_time_ms,
-           COUNT(*) as attempt_count, SUM(a.passed) as pass_count
-           FROM attempts a JOIN katas k ON k.id = a.kata_id
-           WHERE a.passed = 1 AND a.time_ms IS NOT NULL
-           GROUP BY a.kata_id ORDER BY best_time_ms ASC`,
+          `SELECT k.id as kata_id, k.name as kata_name, k.category, k.difficulty,
+           MIN(CASE WHEN a.passed = 1 AND a.time_ms IS NOT NULL THEN a.time_ms END) as best_time_ms,
+           COUNT(a.id) as attempt_count, COALESCE(SUM(a.passed), 0) as pass_count
+           FROM katas k LEFT JOIN attempts a ON k.id = a.kata_id
+           GROUP BY k.id ORDER BY best_time_ms IS NULL, best_time_ms ASC, k.name ASC`,
         ),
         // F. Trend line
         db.select<
@@ -216,6 +218,7 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
         kataId: r.kata_id,
         kataName: r.kata_name,
         category: r.category,
+        difficulty: r.difficulty,
         bestTimeMs: r.best_time_ms,
         attemptCount: r.attempt_count,
         passCount: r.pass_count,

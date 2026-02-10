@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What This Is
 
-Kata Desktop is a Tauri v2 desktop app for timed coding kata practice sessions with progress tracking. It combines algo katas (Python) and React katas (TypeScript) into a single tool with a Monaco editor, test runner, and analytics dashboard. See `PRD_kata_desktop.md` for the full product spec.
+Code Kata is a Tauri v2 desktop app for timed coding kata practice sessions with progress tracking. It combines algo katas (Python) and React katas (TypeScript) into a single tool with a Monaco editor, test runner, and analytics dashboard. See `PRD_kata_desktop.md` for the full product spec.
 
 ## Commands
 

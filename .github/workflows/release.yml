@@ -27,7 +27,7 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               tag_name: context.ref.replace('refs/tags/', ''),
-              name: `Kata Desktop ${context.ref.replace('refs/tags/', '')}`,
+              name: `Code Kata ${context.ref.replace('refs/tags/', '')}`,
               body: 'See the assets below to download for your platform.',
               draft: true,
               prerelease: false

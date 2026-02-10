@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { useNavigate } from "react-router";
 import { useSettingsStore, DEFAULT_SHORTCUTS } from "../stores/settings-store";
 import type { ShortcutAction } from "../stores/settings-store";
 
@@ -214,6 +213,7 @@ function PracticeTab() {
   const defaultSessionSize = useSettingsStore((s) => s.defaultSessionSize);
   const targetTimeMs = useSettingsStore((s) => s.targetTimeMs);
   const autoRunTests = useSettingsStore((s) => s.autoRunTests);
+  const hideDescriptionInSession = useSettingsStore((s) => s.hideDescriptionInSession);
   const setSetting = useSettingsStore((s) => s.setSetting);
 
   const targetMinutes = Math.round(targetTimeMs / 60000);
@@ -274,6 +274,23 @@ function PracticeTab() {
           }`}
         >
           {autoRunTests ? "On" : "Off"}
+        </button>
+      </div>
+
+      {/* Hide Problem in Sessions */}
+      <div>
+        <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400 mb-2">
+          Hide Problem in Sessions
+        </label>
+        <button
+          onClick={() => setSetting("hideDescriptionInSession", !hideDescriptionInSession)}
+          className={`px-4 py-1.5 text-sm font-medium rounded transition-colors ${
+            hideDescriptionInSession
+              ? "bg-green-600 text-white"
+              : "bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-300 dark:hover:bg-zinc-600"
+          }`}
+        >
+          {hideDescriptionInSession ? "On" : "Off"}
         </button>
       </div>
     </div>
@@ -385,7 +402,6 @@ function ShortcutsTab() {
 }
 
 export function SettingsPage() {
-  const navigate = useNavigate();
   const loaded = useSettingsStore((s) => s.loaded);
   const loadSettings = useSettingsStore((s) => s.loadSettings);
 
@@ -396,10 +412,10 @@ export function SettingsPage() {
   }, [loaded, loadSettings]);
 
   const tabClass = (t: Tab) =>
-    `px-4 py-2 text-sm font-medium rounded-t transition-colors ${
+    `px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
       tab === t
-        ? "bg-blue-600 text-white"
-        : "bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-300 dark:hover:bg-zinc-600"
+        ? "border-blue-500 text-blue-600 dark:text-blue-400"
+        : "border-transparent text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300"
     }`;
 
   if (!loaded) {
@@ -412,19 +428,8 @@ export function SettingsPage() {
 
   return (
     <div className="flex flex-col h-full p-6 gap-6 overflow-y-auto dark:bg-zinc-950">
-      {/* Header */}
-      <div className="flex items-center gap-4">
-        <button
-          onClick={() => navigate(-1)}
-          className="px-3 py-1.5 text-sm font-medium rounded bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-300 dark:hover:bg-zinc-600 transition-colors"
-        >
-          Back
-        </button>
-        <h1 className="text-xl font-bold">Settings</h1>
-      </div>
-
       {/* Tabs */}
-      <div className="flex gap-1">
+      <div className="flex border-b border-zinc-200 dark:border-zinc-700">
         <button onClick={() => setTab("editor")} className={tabClass("editor")}>
           Editor
         </button>

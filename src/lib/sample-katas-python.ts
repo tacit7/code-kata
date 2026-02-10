@@ -51,9 +51,7 @@ def test_bfs_left_skewed():
 
 def test_bfs_empty():
     assert bfs(None) == []`,
-    solution: `"""Reference solution for Binary Tree BFS."""
-
-from collections import deque
+    solution: `from collections import deque
 
 
 
@@ -116,9 +114,7 @@ def test_matrix_bfs_single_cell():
     grid = [[0]]
     result = matrix_bfs(grid, (0, 0))
     assert result == [(0, 0)]`,
-    solution: `"""Reference solution for Matrix BFS."""
-
-from collections import deque
+    solution: `from collections import deque
 
 
 def matrix_bfs(grid, start):
@@ -142,11 +138,11 @@ def matrix_bfs(grid, start):
   },
   {
     id: "py-03_linked_list_traversal",
-    name: "Linked List Traversal",
+    name: "Linked List Traversal (Iterative)",
     category: "linked-list",
     language: "python",
     difficulty: "easy",
-    description: `Kata: Linked List Traversal
+    description: `Kata: Linked List Traversal (Iterative)
 Function: traverse(head)
 
 Given the head of a singly linked list, return a list of all node values
@@ -174,10 +170,7 @@ def test_traverse_single():
 
 def test_traverse_empty():
     assert traverse(None) == []`,
-    solution: `"""Reference solution for Linked List Traversal."""
-
-
-
+    solution: `
 
 def traverse(head):
     result = []
@@ -192,11 +185,11 @@ def traverse(head):
   },
   {
     id: "py-04_binary_search",
-    name: "Binary Search",
+    name: "Binary Search (Iterative)",
     category: "binary-search",
     language: "python",
     difficulty: "easy",
-    description: `Kata: Binary Search
+    description: `Kata: Binary Search (Iterative)
 Function: binary_search(nums, target)
 
 Given a sorted list of integers and a target value, return the index
@@ -229,10 +222,7 @@ def test_single_element_found():
 
 def test_single_element_not_found():
     assert binary_search([5], 3) == -1`,
-    solution: `"""Reference solution for Binary Search."""
-
-
-def binary_search(nums, target):
+    solution: `def binary_search(nums, target):
     lo, hi = 0, len(nums) - 1
 
     while lo <= hi:
@@ -250,11 +240,11 @@ def binary_search(nums, target):
   },
   {
     id: "py-05a_binary_tree_preorder",
-    name: "Binary Tree Preorder",
+    name: "Binary Tree Preorder (Recursive)",
     category: "trees",
     language: "python",
     difficulty: "easy",
-    description: `Kata: Binary Tree Preorder Traversal
+    description: `Kata: Binary Tree Preorder Traversal (Recursive)
 Function: preorder(root)
 
 Given the root of a binary tree, return a list of values in
@@ -304,11 +294,11 @@ def test_preorder_single():
   },
   {
     id: "py-05b_binary_tree_inorder",
-    name: "Binary Tree Inorder",
+    name: "Binary Tree Inorder (Recursive)",
     category: "trees",
     language: "python",
     difficulty: "easy",
-    description: `Kata: Binary Tree Inorder Traversal
+    description: `Kata: Binary Tree Inorder Traversal (Recursive)
 Function: inorder(root)
 
 Given the root of a binary tree, return a list of values in
@@ -358,11 +348,11 @@ def test_inorder_single():
   },
   {
     id: "py-05c_binary_tree_postorder",
-    name: "Binary Tree Postorder",
+    name: "Binary Tree Postorder (Recursive)",
     category: "trees",
     language: "python",
     difficulty: "medium",
-    description: `Kata: Binary Tree Postorder Traversal
+    description: `Kata: Binary Tree Postorder Traversal (Recursive)
 Function: postorder(root)
 
 Given the root of a binary tree, return a list of values in
@@ -412,11 +402,11 @@ def test_postorder_single():
   },
   {
     id: "py-06_graph_dfs",
-    name: "Graph DFS",
+    name: "Graph DFS (Iterative)",
     category: "graphs",
     language: "python",
     difficulty: "medium",
-    description: `Kata: Graph DFS
+    description: `Kata: Graph DFS (Iterative)
 Function: graph_dfs(graph, start)
 
 Given an adjacency list (dict) and a start node, return a list of
@@ -449,10 +439,7 @@ def test_disconnected():
     }
     result = graph_dfs(graph, "a")
     assert set(result) == {"a", "b"}`,
-    solution: `"""Reference solution for Graph DFS."""
-
-
-def graph_dfs(graph, start):
+    solution: `def graph_dfs(graph, start):
     visited = set()
     result = []
     stack = [start]
@@ -505,9 +492,7 @@ def test_directed():
 def test_empty():
     result = build_adjacency_list([])
     assert result == {}`,
-    solution: `"""Reference solution for Build Adjacency List."""
-
-from collections import defaultdict
+    solution: `from collections import defaultdict
 
 
 def build_adjacency_list(edges, directed=False):
@@ -523,11 +508,11 @@ def build_adjacency_list(edges, directed=False):
   },
   {
     id: "py-08_matrix_dfs",
-    name: "Matrix DFS",
+    name: "Matrix DFS (Recursive)",
     category: "graphs",
     language: "python",
     difficulty: "medium",
-    description: `Kata: Matrix DFS
+    description: `Kata: Matrix DFS (Recursive)
 Function: matrix_dfs(grid, start)
 
 Given a 2D grid and a starting position (row, col), return a list of
@@ -569,10 +554,7 @@ def test_all_open():
     result = matrix_dfs(grid, (0, 0))
     assert len(result) == 4
     assert result[0] == (0, 0)`,
-    solution: `"""Reference solution for Matrix DFS."""
-
-
-def matrix_dfs(grid, start):
+    solution: `def matrix_dfs(grid, start):
     rows, cols = len(grid), len(grid[0])
     visited = set()
     result = []
@@ -632,10 +614,7 @@ def test_no_edges():
     graph = {"a": [], "b": [], "c": []}
     result = topological_sort(graph)
     assert set(result) == {"a", "b", "c"}`,
-    solution: `"""Reference solution for Topological Sort."""
-
-
-def topological_sort(graph):
+    solution: `def topological_sort(graph):
     visited = set()
     order = []
 
@@ -823,10 +802,7 @@ def test_empty():
 def test_single_no_cycle():
     a = Node(1)
     assert has_cycle(a) is False`,
-    solution: `"""Reference solution for Linked List Cycle Detection."""
-
-
-def has_cycle(head):
+    solution: `def has_cycle(head):
     slow = head
     fast = head
 
@@ -885,10 +861,7 @@ def test_single():
     k = remove_duplicates(nums)
     assert k == 1
     assert nums[:k] == [7]`,
-    solution: `"""Reference solution for Two Pointer Remove Duplicates."""
-
-
-def remove_duplicates(nums):
+    solution: `def remove_duplicates(nums):
     if not nums:
         return 0
 
@@ -933,10 +906,7 @@ def test_negative_values():
 
 def test_mixed():
     assert max_subarray_sum([2, -1, 5, -3, 4], 3) == 6`,
-    solution: `"""Reference solution for Sliding Window Max Sum."""
-
-
-def max_subarray_sum(nums, k):
+    solution: `def max_subarray_sum(nums, k):
     window_sum = sum(nums[:k])
     max_sum = window_sum
 
@@ -1045,10 +1015,7 @@ def test_duplicates():
 
 def test_negatives():
     assert merge_sorted([-5, -1, 3], [-3, 0, 2]) == [-5, -3, -1, 0, 2, 3]`,
-    solution: `"""Reference solution for Merge Two Sorted Arrays."""
-
-
-def merge_sorted(a, b):
+    solution: `def merge_sorted(a, b):
     result = []
     i, j = 0, 0
 
@@ -1149,10 +1116,7 @@ def test_insert_duplicates():
     assert h.extract_min() == 3
     assert h.extract_min() == 3
     assert h.extract_min() == 3`,
-    solution: `"""Reference solution for Min Heap."""
-
-
-class MinHeap:
+    solution: `class MinHeap:
     def __init__(self):
         self.data = []
 
@@ -2222,11 +2186,11 @@ def test_large():
   },
   {
     id: "py-33_climbing_stairs",
-    name: "Climbing Stairs",
+    name: "Climbing Stairs (Iterative)",
     category: "1-d-dp",
     language: "python",
     difficulty: "easy",
-    description: `Kata: Climbing Stairs
+    description: `Kata: Climbing Stairs (Iterative)
 Function: climb_stairs(n)
 
 You can climb 1 or 2 steps at a time. Given n steps,
@@ -2308,6 +2272,522 @@ def test_longer():
             else:
                 dp[i][j] = max(dp[i - 1][j], dp[i][j - 1])
     return dp[m][n]`,
+    usage: null,
+  },
+  {
+    id: "py-03b_linked_list_traversal_recursive",
+    name: "Linked List Traversal (Recursive)",
+    category: "linked-list",
+    language: "python",
+    difficulty: "easy",
+    description: `Kata: Linked List Traversal (Recursive)
+Function: traverse(head)
+
+Given the head of a singly linked list, return a list of all node values
+in order. Use a recursive approach.\\n\\nRef: LeetCode #234 Palindrome Linked List (closest match)`,
+    code: `class Node:
+    def __init__(self, val):
+        self.val = val
+        self.next = None
+
+def traverse(head):
+    raise NotImplementedError`,
+    testCode: `def test_traverse_multiple():
+    a = Node(1)
+    b = Node(2)
+    c = Node(3)
+    a.next = b
+    b.next = c
+    assert traverse(a) == [1, 2, 3]
+
+
+def test_traverse_single():
+    a = Node(42)
+    assert traverse(a) == [42]
+
+
+def test_traverse_empty():
+    assert traverse(None) == []`,
+    solution: `def traverse(head):
+    if head is None:
+        return []
+    return [head.val] + traverse(head.next)`,
+    usage: null,
+  },
+  {
+    id: "py-04b_binary_search_recursive",
+    name: "Binary Search (Recursive)",
+    category: "binary-search",
+    language: "python",
+    difficulty: "easy",
+    description: `Kata: Binary Search (Recursive)
+Function: binary_search(nums, target)
+
+Given a sorted list of integers and a target value, return the index
+of the target. Return -1 if not found. Use a recursive approach.\\n\\nRef: LeetCode #704 Binary Search`,
+    code: `def binary_search(nums, target):
+    raise NotImplementedError`,
+    testCode: `def test_found_middle():
+    assert binary_search([1, 3, 5, 7, 9], 5) == 2
+
+
+def test_found_first():
+    assert binary_search([1, 3, 5, 7, 9], 1) == 0
+
+
+def test_found_last():
+    assert binary_search([1, 3, 5, 7, 9], 9) == 4
+
+
+def test_not_found():
+    assert binary_search([1, 3, 5, 7, 9], 4) == -1
+
+
+def test_empty_list():
+    assert binary_search([], 1) == -1
+
+
+def test_single_element_found():
+    assert binary_search([5], 5) == 0
+
+
+def test_single_element_not_found():
+    assert binary_search([5], 3) == -1`,
+    solution: `def binary_search(nums, target):
+    def helper(lo, hi):
+        if lo > hi:
+            return -1
+        mid = (lo + hi) // 2
+        if nums[mid] == target:
+            return mid
+        elif nums[mid] < target:
+            return helper(mid + 1, hi)
+        else:
+            return helper(lo, mid - 1)
+    return helper(0, len(nums) - 1)`,
+    usage: null,
+  },
+  {
+    id: "py-05a2_binary_tree_preorder_iterative",
+    name: "Binary Tree Preorder (Iterative)",
+    category: "trees",
+    language: "python",
+    difficulty: "medium",
+    description: `Kata: Binary Tree Preorder Traversal (Iterative)
+Function: preorder(root)
+
+Given the root of a binary tree, return a list of values in
+preorder traversal order (root, left, right). Use an iterative
+approach with an explicit stack.\\n\\nRef: LeetCode #144 Binary Tree Preorder Traversal`,
+    code: `class Node:
+    def __init__(self, val):
+        self.val = val
+        self.left = None
+        self.right = None
+
+def preorder(root):
+    raise NotImplementedError`,
+    testCode: `def _build_tree():
+    #       1
+    #      / \\
+    #     2   3
+    #    / \\
+    #   4   5
+    a = Node(1)
+    b = Node(2)
+    c = Node(3)
+    d = Node(4)
+    e = Node(5)
+    a.left = b
+    a.right = c
+    b.left = d
+    b.right = e
+    return a
+
+
+def test_preorder():
+    assert preorder(_build_tree()) == [1, 2, 4, 5, 3]
+
+
+def test_preorder_empty():
+    assert preorder(None) == []
+
+
+def test_preorder_single():
+    n = Node(42)
+    assert preorder(n) == [42]`,
+    solution: `def preorder(root):
+    if root is None:
+        return []
+    stack = [root]
+    result = []
+    while stack:
+        node = stack.pop()
+        result.append(node.val)
+        if node.right:
+            stack.append(node.right)
+        if node.left:
+            stack.append(node.left)
+    return result`,
+    usage: null,
+  },
+  {
+    id: "py-05b2_binary_tree_inorder_iterative",
+    name: "Binary Tree Inorder (Iterative)",
+    category: "trees",
+    language: "python",
+    difficulty: "medium",
+    description: `Kata: Binary Tree Inorder Traversal (Iterative)
+Function: inorder(root)
+
+Given the root of a binary tree, return a list of values in
+inorder traversal order (left, root, right). Use an iterative
+approach with an explicit stack.\\n\\nRef: LeetCode #94 Binary Tree Inorder Traversal`,
+    code: `class Node:
+    def __init__(self, val):
+        self.val = val
+        self.left = None
+        self.right = None
+
+def inorder(root):
+    raise NotImplementedError`,
+    testCode: `def _build_tree():
+    #       1
+    #      / \\
+    #     2   3
+    #    / \\
+    #   4   5
+    a = Node(1)
+    b = Node(2)
+    c = Node(3)
+    d = Node(4)
+    e = Node(5)
+    a.left = b
+    a.right = c
+    b.left = d
+    b.right = e
+    return a
+
+
+def test_inorder():
+    assert inorder(_build_tree()) == [4, 2, 5, 1, 3]
+
+
+def test_inorder_empty():
+    assert inorder(None) == []
+
+
+def test_inorder_single():
+    n = Node(42)
+    assert inorder(n) == [42]`,
+    solution: `def inorder(root):
+    result = []
+    stack = []
+    current = root
+    while current or stack:
+        while current:
+            stack.append(current)
+            current = current.left
+        current = stack.pop()
+        result.append(current.val)
+        current = current.right
+    return result`,
+    usage: null,
+  },
+  {
+    id: "py-05c2_binary_tree_postorder_iterative",
+    name: "Binary Tree Postorder (Iterative)",
+    category: "trees",
+    language: "python",
+    difficulty: "hard",
+    description: `Kata: Binary Tree Postorder Traversal (Iterative)
+Function: postorder(root)
+
+Given the root of a binary tree, return a list of values in
+postorder traversal order (left, right, root). Use an iterative
+approach with an explicit stack.\\n\\nRef: LeetCode #145 Binary Tree Postorder Traversal`,
+    code: `class Node:
+    def __init__(self, val):
+        self.val = val
+        self.left = None
+        self.right = None
+
+def postorder(root):
+    raise NotImplementedError`,
+    testCode: `def _build_tree():
+    #       1
+    #      / \\
+    #     2   3
+    #    / \\
+    #   4   5
+    a = Node(1)
+    b = Node(2)
+    c = Node(3)
+    d = Node(4)
+    e = Node(5)
+    a.left = b
+    a.right = c
+    b.left = d
+    b.right = e
+    return a
+
+
+def test_postorder():
+    assert postorder(_build_tree()) == [4, 5, 2, 3, 1]
+
+
+def test_postorder_empty():
+    assert postorder(None) == []
+
+
+def test_postorder_single():
+    n = Node(42)
+    assert postorder(n) == [42]`,
+    solution: `def postorder(root):
+    if root is None:
+        return []
+    stack = [root]
+    result = []
+    while stack:
+        node = stack.pop()
+        result.append(node.val)
+        if node.left:
+            stack.append(node.left)
+        if node.right:
+            stack.append(node.right)
+    return result[::-1]`,
+    usage: null,
+  },
+  {
+    id: "py-06b_graph_dfs_recursive",
+    name: "Graph DFS (Recursive)",
+    category: "graphs",
+    language: "python",
+    difficulty: "medium",
+    description: `Kata: Graph DFS (Recursive)
+Function: graph_dfs(graph, start)
+
+Given an adjacency list (dict) and a start node, return a list of
+all reachable nodes visited in depth-first order. Use a recursive
+approach.\\n\\nRef: LeetCode #323 Number of Connected Components (closest match)`,
+    code: `def graph_dfs(graph, start):
+    raise NotImplementedError`,
+    testCode: `def test_simple_graph():
+    graph = {
+        "a": ["b", "c"],
+        "b": ["d"],
+        "c": [],
+        "d": [],
+    }
+    result = graph_dfs(graph, "a")
+    assert result[0] == "a"
+    assert set(result) == {"a", "b", "c", "d"}
+
+
+def test_single_node():
+    graph = {"a": []}
+    assert graph_dfs(graph, "a") == ["a"]
+
+
+def test_disconnected():
+    graph = {
+        "a": ["b"],
+        "b": [],
+        "c": ["d"],
+        "d": [],
+    }
+    result = graph_dfs(graph, "a")
+    assert set(result) == {"a", "b"}`,
+    solution: `def graph_dfs(graph, start):
+    visited = set()
+    result = []
+
+    def dfs(node):
+        if node in visited:
+            return
+        visited.add(node)
+        result.append(node)
+        for neighbor in graph[node]:
+            dfs(neighbor)
+
+    dfs(start)
+    return result`,
+    usage: null,
+  },
+  {
+    id: "py-08b_matrix_dfs_iterative",
+    name: "Matrix DFS (Iterative)",
+    category: "graphs",
+    language: "python",
+    difficulty: "medium",
+    description: `Kata: Matrix DFS (Iterative)
+Function: matrix_dfs(grid, start)
+
+Given a 2D grid and a starting position (row, col), return a list of
+positions visited in depth-first order. Only traverse cells with value 0
+(passable). Cells with value 1 are walls. Use an iterative approach
+with an explicit stack.\\n\\nRef: LeetCode #200 Number of Islands`,
+    code: `def matrix_dfs(grid, start):
+    raise NotImplementedError`,
+    testCode: `def test_simple():
+    grid = [
+        [0, 0, 0],
+        [0, 1, 0],
+        [0, 0, 0],
+    ]
+    result = matrix_dfs(grid, (0, 0))
+    assert result[0] == (0, 0)
+    assert len(result) == 8
+
+
+def test_blocked():
+    grid = [
+        [0, 1],
+        [1, 0],
+    ]
+    result = matrix_dfs(grid, (0, 0))
+    assert result == [(0, 0)]
+
+
+def test_single_cell():
+    grid = [[0]]
+    result = matrix_dfs(grid, (0, 0))
+    assert result == [(0, 0)]
+
+
+def test_all_open():
+    grid = [
+        [0, 0],
+        [0, 0],
+    ]
+    result = matrix_dfs(grid, (0, 0))
+    assert len(result) == 4
+    assert result[0] == (0, 0)`,
+    solution: `def matrix_dfs(grid, start):
+    rows, cols = len(grid), len(grid[0])
+    visited = set()
+    result = []
+    stack = [start]
+
+    while stack:
+        r, c = stack.pop()
+        if (r, c) in visited or grid[r][c] == 1:
+            continue
+        visited.add((r, c))
+        result.append((r, c))
+
+        for dr, dc in [(0, 1), (0, -1), (1, 0), (-1, 0)]:
+            nr, nc = r + dr, c + dc
+            if 0 <= nr < rows and 0 <= nc < cols and (nr, nc) not in visited:
+                stack.append((nr, nc))
+
+    return result`,
+    usage: null,
+  },
+  {
+    id: "py-33b_climbing_stairs_recursive",
+    name: "Climbing Stairs (Recursive)",
+    category: "1-d-dp",
+    language: "python",
+    difficulty: "easy",
+    description: `Kata: Climbing Stairs (Recursive)
+Function: climb_stairs(n)
+
+You can climb 1 or 2 steps at a time. Given n steps,
+return the number of distinct ways to reach the top.
+Use a recursive approach with memoization.\\n\\nRef: LeetCode #70 Climbing Stairs`,
+    code: `def climb_stairs(n):
+    raise NotImplementedError`,
+    testCode: `def test_one():
+    assert climb_stairs(1) == 1
+
+
+def test_two():
+    assert climb_stairs(2) == 2
+
+
+def test_three():
+    assert climb_stairs(3) == 3
+
+
+def test_four():
+    assert climb_stairs(4) == 5
+
+
+def test_five():
+    assert climb_stairs(5) == 8
+
+
+def test_ten():
+    assert climb_stairs(10) == 89`,
+    solution: `def climb_stairs(n):
+    memo = {}
+    def helper(k):
+        if k <= 2:
+            return k
+        if k in memo:
+            return memo[k]
+        memo[k] = helper(k - 1) + helper(k - 2)
+        return memo[k]
+    return helper(n)`,
+    usage: null,
+  },
+  {
+    id: "py-35_matrix_grid_bfs",
+    name: "Matrix Grid BFS",
+    category: "graphs",
+    language: "python",
+    difficulty: "easy",
+    description: `Kata: Matrix Grid BFS
+Function: grid_bfs(n)
+
+Given an integer n, perform a BFS starting from cell (0, 0)
+on an NxN grid. Return the list of visited cells as (row, col)
+tuples in the order they were visited. Move in 4 directions:
+up, down, left, right.`,
+    code: `from collections import deque
+
+def grid_bfs(n):
+    raise NotImplementedError`,
+    testCode: `def test_1x1():
+    assert grid_bfs(1) == [(0, 0)]
+
+
+def test_2x2():
+    result = grid_bfs(2)
+    assert result[0] == (0, 0)
+    assert set(result) == {(0, 0), (0, 1), (1, 0), (1, 1)}
+    assert len(result) == 4
+
+
+def test_3x3():
+    result = grid_bfs(3)
+    assert result[0] == (0, 0)
+    assert len(result) == 9
+    assert set(result) == {(r, c) for r in range(3) for c in range(3)}
+
+
+def test_all_cells_visited():
+    n = 4
+    result = grid_bfs(n)
+    assert len(result) == n * n
+    assert len(set(result)) == n * n`,
+    solution: `from collections import deque
+
+def grid_bfs(n):
+    visited = set()
+    order = []
+    queue = deque([(0, 0)])
+    visited.add((0, 0))
+    while queue:
+        r, c = queue.popleft()
+        order.append((r, c))
+        for dr, dc in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+            nr, nc = r + dr, c + dc
+            if 0 <= nr < n and 0 <= nc < n and (nr, nc) not in visited:
+                visited.add((nr, nc))
+                queue.append((nr, nc))
+    return order`,
     usage: null,
   },
 ];

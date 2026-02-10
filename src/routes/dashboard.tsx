@@ -329,36 +329,38 @@ function ChartsRow() {
 
 function Leaderboard() {
   const leaderboard = useDashboardStore((s) => s.leaderboard);
-  const top20 = leaderboard.slice(0, 20);
 
-  if (top20.length === 0) {
-    return null;
+  if (leaderboard.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-48 text-zinc-500 text-sm">
+        No katas loaded yet.
+      </div>
+    );
   }
 
   return (
     <div>
-      <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500 mb-3">
-        Leaderboard
-      </h2>
       <table className="w-full text-sm">
         <thead>
           <tr className="text-left text-xs text-zinc-500 dark:text-zinc-400 border-b border-zinc-200 dark:border-zinc-800">
             <th className="pb-2 font-medium">Kata</th>
             <th className="pb-2 font-medium">Category</th>
+            <th className="pb-2 font-medium">Difficulty</th>
             <th className="pb-2 font-medium">Best Time</th>
             <th className="pb-2 font-medium">Attempts</th>
           </tr>
         </thead>
         <tbody>
-          {top20.map((row) => (
+          {leaderboard.map((row) => (
             <tr
               key={row.kataId}
               className="border-b border-zinc-100 dark:border-zinc-800/50"
             >
               <td className="py-2 font-medium">{row.kataName}</td>
               <td className="py-2 text-zinc-500 dark:text-zinc-400">{row.category}</td>
+              <td className="py-2 text-zinc-500 dark:text-zinc-400">{row.difficulty}</td>
               <td className="py-2 font-mono text-zinc-500 dark:text-zinc-400">
-                {formatTime(row.bestTimeMs)}
+                {row.bestTimeMs != null ? formatTime(row.bestTimeMs) : "--:--"}
               </td>
               <td className="py-2 text-zinc-500 dark:text-zinc-400">{row.attemptCount}</td>
             </tr>
@@ -419,7 +421,11 @@ function SessionHistory() {
   const loadMoreSessions = useDashboardStore((s) => s.loadMoreSessions);
 
   if (sessionHistory.length === 0) {
-    return null;
+    return (
+      <div className="flex items-center justify-center h-48 text-zinc-500 text-sm">
+        No sessions yet. Start a practice session to build your history.
+      </div>
+    );
   }
 
   const handleRowClick = (sessionId: number) => {
@@ -534,13 +540,23 @@ function DevToolbar({ onRefresh }: { onRefresh: () => void }) {
 
 // --- Main Page ---
 
+type DashTab = "dashboard" | "leaderboard" | "history";
+
 export function DashboardPage() {
   const loading = useDashboardStore((s) => s.loading);
   const loadDashboard = useDashboardStore((s) => s.loadDashboard);
+  const [tab, setTab] = useState<DashTab>("dashboard");
 
   useEffect(() => {
     loadDashboard();
   }, [loadDashboard]);
+
+  const tabClass = (t: DashTab) =>
+    `px-3 py-1.5 text-xs font-medium border-b-2 transition-colors ${
+      tab === t
+        ? "border-blue-500 text-blue-600 dark:text-blue-400"
+        : "border-transparent text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300"
+    }`;
 
   if (loading) {
     return (
@@ -554,12 +570,25 @@ export function DashboardPage() {
     <div className="flex flex-col h-full p-6 gap-6 overflow-y-auto dark:bg-zinc-950">
       <h1 className="text-xl font-bold">Dashboard</h1>
       <PracticeDailyButton />
-      <DevToolbar onRefresh={loadDashboard} />
-      <StatCards />
-      <Heatmap />
-      <ChartsRow />
-      <Leaderboard />
-      <SessionHistory />
+
+      {/* Tabs */}
+      <div className="flex border-b border-zinc-200 dark:border-zinc-700">
+        <button onClick={() => setTab("dashboard")} className={tabClass("dashboard")}>Dashboard</button>
+        <button onClick={() => setTab("leaderboard")} className={tabClass("leaderboard")}>Leaderboard</button>
+        <button onClick={() => setTab("history")} className={tabClass("history")}>Session History</button>
+      </div>
+
+      {/* Tab content */}
+      {tab === "dashboard" && (
+        <>
+          <DevToolbar onRefresh={loadDashboard} />
+          <StatCards />
+          <Heatmap />
+          <ChartsRow />
+        </>
+      )}
+      {tab === "leaderboard" && <Leaderboard />}
+      {tab === "history" && <SessionHistory />}
     </div>
   );
 }

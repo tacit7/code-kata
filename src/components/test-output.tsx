@@ -25,6 +25,9 @@ export function TestOutput({ results }: TestOutputProps) {
             {r.error && (
               <span className="ml-2 text-red-400/80 text-xs">{r.error}</span>
             )}
+            {r.output && (
+              <pre className="ml-5 mt-0.5 text-xs text-zinc-400 dark:text-zinc-500 whitespace-pre-wrap">{r.output}</pre>
+            )}
           </li>
         ))}
       </ul>

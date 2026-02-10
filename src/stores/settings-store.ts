@@ -31,6 +31,7 @@ const DEFAULTS = {
   defaultSessionSize: 5,
   targetTimeMs: 300000,
   autoRunTests: false,
+  hideDescriptionInSession: false,
   shortcuts: { ...DEFAULT_SHORTCUTS },
   dailyKataIds: [] as string[],
 };
@@ -48,6 +49,7 @@ interface SettingsState {
   defaultSessionSize: number;
   targetTimeMs: number;
   autoRunTests: boolean;
+  hideDescriptionInSession: boolean;
   // Shortcuts
   shortcuts: Record<ShortcutAction, string>;
   // Daily kata set
@@ -120,6 +122,9 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
         (patch.defaultSessionSize as number) ?? DEFAULTS.defaultSessionSize,
       targetTimeMs: (patch.targetTimeMs as number) ?? DEFAULTS.targetTimeMs,
       autoRunTests: (patch.autoRunTests as boolean) ?? DEFAULTS.autoRunTests,
+      hideDescriptionInSession:
+        (patch.hideDescriptionInSession as boolean) ??
+        DEFAULTS.hideDescriptionInSession,
       shortcuts:
         (patch.shortcuts as Record<ShortcutAction, string>) ??
         DEFAULTS.shortcuts,

@@ -1,11 +1,11 @@
 {
-  "name": "kata-desktop",
+  "name": "code-kata",
   "version": "0.1.0",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "build": "clear && tsc && vite build && echo \"ran at $(date +%H:%M:%S)\"",
     "preview": "vite preview",
     "tauri": "tauri"
   },

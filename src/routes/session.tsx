@@ -179,6 +179,7 @@ export function SessionPage() {
         <KataEditor
           key={`${activeSession.id}-${currentIndex}`}
           kata={currentKata}
+          isSession={true}
           onTestComplete={handleTestComplete}
         />
       </div>

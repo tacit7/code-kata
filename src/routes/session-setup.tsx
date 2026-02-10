@@ -145,10 +145,10 @@ export function SessionSetupPage() {
   ]);
 
   const tabClass = (t: Tab) =>
-    `px-4 py-2 text-sm font-medium rounded-t transition-colors ${
+    `px-3 py-1.5 text-xs font-medium border-b-2 transition-colors ${
       tab === t
-        ? "bg-blue-600 text-white"
-        : "bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-300 dark:hover:bg-zinc-600"
+        ? "border-blue-500 text-blue-600 dark:text-blue-400"
+        : "border-transparent text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300"
     }`;
 
   return (
@@ -156,7 +156,7 @@ export function SessionSetupPage() {
       <h1 className="text-lg font-semibold">Start Practice Session</h1>
 
       {/* Tabs */}
-      <div className="flex gap-1">
+      <div className="flex border-b border-zinc-200 dark:border-zinc-700">
         <button onClick={() => setTab("daily")} className={tabClass("daily")}>Daily</button>
         <button onClick={() => setTab("random")} className={tabClass("random")}>Random</button>
         <button onClick={() => setTab("custom")} className={tabClass("custom")}>Custom</button>
