@@ -9,6 +9,7 @@ export async function getDb(): Promise<Database> {
   db = await Database.load("sqlite:kata.db");
   await createSchema(db);
   await seedKatas(db);
+  await migrateTagsIfEmpty(db);
   return db;
 }
 
@@ -134,6 +135,19 @@ async function seedKatas(db: Database) {
       ]
     );
   }
+}
+
+/** One-time migration: if every kata has tags='[]', reseed to populate tags from source. */
+async function migrateTagsIfEmpty(db: Database) {
+  const rows = await db.select<{ count: number }[]>(
+    "SELECT COUNT(*) as count FROM katas WHERE tags != '[]'"
+  );
+  if (rows[0].count > 0) return; // tags already populated
+  // All tags are empty defaults — reseed to pick up tag data
+  await db.execute("DELETE FROM user_code");
+  await db.execute("DELETE FROM katas");
+  await db.execute("DELETE FROM sqlite_sequence WHERE name = 'katas'");
+  await seedKatasForce(db);
 }
 
 /** Drop all katas and reseed from source arrays. Destructive: orphans attempts/user_code/dailyKataIds. */
