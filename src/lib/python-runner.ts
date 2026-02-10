@@ -54,17 +54,23 @@ export async function runPythonTests(
   const results: TestResult[] = [];
 
   for (const name of testNames) {
+    let captured = "";
+    pyodide.setStdout({
+      batched: (line) => { captured += line + "\n"; },
+    });
     try {
       const script = `${PYTHON_ASSERT_HELPERS}\n${userCode}\n${testCode}\n${name}()`;
       await pyodide.runPythonAsync(script);
-      results.push({ name, passed: true });
+      const output = captured.trim() || undefined;
+      results.push({ name, passed: true, output });
     } catch (err) {
       const msg =
         err instanceof Error ? err.message : String(err);
       // Extract the last line of the Python traceback (the actual error)
       const lines = msg.split("\n").filter((l) => l.trim());
       const errorLine = lines[lines.length - 1] || msg;
-      results.push({ name, passed: false, error: errorLine });
+      const output = captured.trim() || undefined;
+      results.push({ name, passed: false, error: errorLine, output });
     }
   }
 
