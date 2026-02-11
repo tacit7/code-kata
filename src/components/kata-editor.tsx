@@ -34,10 +34,11 @@ export function KataEditor({ kata, isSession, onTestComplete }: KataEditorProps)
   const [showConfig, setShowConfig] = useState(false);
   const [savedCode, setSavedCode] = useState<string | null>(null);
   const [codeLoaded, setCodeLoaded] = useState(false);
+  const autosaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const monacoTheme = theme === "dark" ? "vs-dark" : "vs";
 
-  // Load saved user code on mount
+  // Load saved user code on mount; clean up autosave timer on unmount
   useEffect(() => {
     setCodeLoaded(false);
     loadUserCode(kata.id).then((code) => {
@@ -45,6 +46,9 @@ export function KataEditor({ kata, isSession, onTestComplete }: KataEditorProps)
       setCodeLoaded(true);
       setSaved(true);
     });
+    return () => {
+      if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
+    };
   }, [kata.id]);
 
   const handleEditorMount: OnMount = (editorInstance) => {
@@ -295,7 +299,16 @@ export function KataEditor({ kata, isSession, onTestComplete }: KataEditorProps)
               scrollBeyondLastLine: false,
             }}
             onMount={handleEditorMount}
-            onChange={() => setSaved(false)}
+            onChange={() => {
+              setSaved(false);
+              if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
+              autosaveTimer.current = setTimeout(() => {
+                const code = editorRef.current?.getValue();
+                if (code != null) {
+                  saveUserCode(kata.id, code).then(() => setSaved(true));
+                }
+              }, 1500);
+            }}
           />
         </div>
 

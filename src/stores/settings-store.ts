@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import type { AppTheme } from "../types/editor";
 import { getDb } from "../lib/database";
+import { getHardwareFingerprint, activateLicense as activateLicenseAPI } from "../lib/license";
 
 export type ShortcutAction =
   | "runTests"
@@ -34,6 +35,11 @@ const DEFAULTS = {
   hideDescriptionInSession: false,
   shortcuts: { ...DEFAULT_SHORTCUTS },
   dailyKataIds: [] as number[],
+  // License
+  licenseKey: null as string | null,
+  hwFingerprint: null as string | null,
+  activatedAt: null as string | null,
+  isPremium: false,
 };
 
 interface SettingsState {
@@ -54,12 +60,18 @@ interface SettingsState {
   shortcuts: Record<ShortcutAction, string>;
   // Daily kata set
   dailyKataIds: number[];
+  // License
+  licenseKey: string | null;
+  hwFingerprint: string | null;
+  activatedAt: string | null;
+  isPremium: boolean;
   // Actions
   loadSettings: () => Promise<void>;
   setSetting: (key: string, value: unknown) => Promise<void>;
   resetDefaults: () => Promise<void>;
   toggleTheme: () => void;
   toggleVimMode: () => void;
+  activateLicense: (key: string) => Promise<{ success: boolean; error?: string }>;
 }
 
 const LEGACY_MIGRATIONS: Record<string, string> = {
@@ -130,6 +142,11 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
         DEFAULTS.shortcuts,
       dailyKataIds:
         (patch.dailyKataIds as number[]) ?? DEFAULTS.dailyKataIds,
+      licenseKey: (patch.licenseKey as string | null) ?? DEFAULTS.licenseKey,
+      hwFingerprint:
+        (patch.hwFingerprint as string | null) ?? DEFAULTS.hwFingerprint,
+      activatedAt: (patch.activatedAt as string | null) ?? DEFAULTS.activatedAt,
+      isPremium: (patch.isPremium as boolean) ?? DEFAULTS.isPremium,
       loaded: true,
     });
   },
@@ -157,5 +174,27 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   toggleVimMode: () => {
     const next = !get().vimMode;
     get().setSetting("vimMode", next);
+  },
+
+  activateLicense: async (key: string) => {
+    try {
+      const hwFingerprint = await getHardwareFingerprint();
+      const result = await activateLicenseAPI(key, hwFingerprint);
+
+      if (result.valid && result.premium) {
+        await get().setSetting("licenseKey", key);
+        await get().setSetting("hwFingerprint", hwFingerprint);
+        await get().setSetting("activatedAt", new Date().toISOString());
+        await get().setSetting("isPremium", true);
+        return { success: true };
+      } else {
+        return { success: false, error: result.error || "Invalid license key" };
+      }
+    } catch (err) {
+      return {
+        success: false,
+        error: err instanceof Error ? err.message : "Activation failed",
+      };
+    }
   },
 }));

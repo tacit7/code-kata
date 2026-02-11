@@ -11,6 +11,7 @@ export function LibraryPage() {
   const streaks = useKataStore((s) => s.streaks);
   const deleteKata = useKataStore((s) => s.deleteKata);
   const dailyKataIds = useSettingsStore((s) => s.dailyKataIds);
+  const isPremium = useSettingsStore((s) => s.isPremium);
   const setSetting = useSettingsStore((s) => s.setSetting);
   const startSession = useSessionStore((s) => s.startSession);
   const startSessionTimer = useTimerStore((s) => s.startSessionTimer);
@@ -80,14 +81,14 @@ export function LibraryPage() {
           onChange={(e) => setSearch(e.target.value)}
           className="flex-1 max-w-md px-3 py-1.5 text-sm rounded border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 outline-none focus:border-blue-500 dark:focus:border-blue-400"
         />
-        {/* TODO: premium feature — uncomment when ready
-        <button
-          onClick={() => navigate("/kata/new")}
-          className="px-4 py-1.5 text-sm font-medium rounded bg-blue-600 hover:bg-blue-500 text-white transition-colors"
-        >
-          + New Kata
-        </button>
-        */}
+        {isPremium && (
+          <button
+            onClick={() => navigate("/kata/new")}
+            className="px-4 py-1.5 text-sm font-medium rounded bg-blue-600 hover:bg-blue-500 text-white transition-colors"
+          >
+            + New Kata
+          </button>
+        )}
         <button
           onClick={handleStartDaily}
           disabled={launching}
