@@ -81,12 +81,6 @@ export function LibraryPage() {
           className="flex-1 max-w-md px-3 py-1.5 text-sm rounded border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 outline-none focus:border-blue-500 dark:focus:border-blue-400"
         />
         <button
-          onClick={() => navigate("/kata/new")}
-          className="px-4 py-1.5 text-sm font-medium rounded bg-blue-600 hover:bg-blue-500 text-white transition-colors"
-        >
-          + New Kata
-        </button>
-        <button
           onClick={handleStartDaily}
           disabled={launching}
           className="px-4 py-1.5 text-sm font-medium rounded bg-green-600 hover:bg-green-500 text-white disabled:opacity-50 transition-colors"

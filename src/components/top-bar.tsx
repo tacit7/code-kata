@@ -38,6 +38,12 @@ export function TopBar() {
           Settings
         </button>
       </nav>
+      <button
+        onClick={() => navigate("/kata/new")}
+        className="ml-auto px-3 py-1.5 text-xs font-medium rounded bg-blue-600 hover:bg-blue-500 text-white transition-colors"
+      >
+        + New Kata
+      </button>
     </header>
   );
 }
