@@ -137,6 +137,24 @@ All shortcuts are customizable in Settings.
 - **Session History** — Detailed logs of all attempts
 - **Analytics** — Performance trends and weak areas
 
+## Release & Build Troubleshooting
+
+### Cross-Platform Builds (Windows, Linux, macOS)
+
+The release workflow builds for all three platforms. If you're building locally on macOS and get a "code kata is damaged" error, remove the quarantine attribute:
+
+```bash
+xattr -d com.apple.quarantine /Applications/CodeKata.app
+```
+
+### Build Issues Fixed
+
+**Windows builds required explicit target flag** — Added `-t x86_64-pc-windows-msvc` to the release workflow to resolve Tauri v2 caching issues.
+
+**CI environment compatibility** — Removed `clear` command from build script as it requires `TERM` environment variable in CI runners.
+
+**License system cleanup** — Removed `activateLicense` from SettingsState type after removing monetization code.
+
 ## License
 
 MIT
