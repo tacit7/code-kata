@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useSettingsStore, DEFAULT_SHORTCUTS } from "../stores/settings-store";
 import type { ShortcutAction } from "../stores/settings-store";
 
-type Tab = "editor" | "practice" | "shortcuts" | "license";
+type Tab = "editor" | "practice" | "shortcuts";
 
 const FONT_OPTIONS = [
   "JetBrains Mono, monospace",
@@ -401,119 +401,6 @@ function ShortcutsTab() {
   );
 }
 
-function LicenseTab() {
-  const isPremium = useSettingsStore((s) => s.isPremium);
-  const licenseKey = useSettingsStore((s) => s.licenseKey);
-  const activatedAt = useSettingsStore((s) => s.activatedAt);
-  const activateLicense = useSettingsStore((s) => s.activateLicense);
-  const [key, setKey] = useState("");
-  const [activating, setActivating] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
-
-  const handleActivate = async () => {
-    if (!key.trim()) {
-      setError("Please enter a license key");
-      return;
-    }
-    setActivating(true);
-    setError(null);
-    setSuccess(false);
-    const result = await activateLicense(key.trim());
-    setActivating(false);
-    if (result.success) {
-      setSuccess(true);
-      setKey("");
-    } else {
-      setError(result.error || "Activation failed");
-    }
-  };
-
-  return (
-    <div className="flex flex-col gap-6">
-      {isPremium ? (
-        <div>
-          <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400 mb-2">
-            License Status
-          </label>
-          <div className="px-4 py-3 rounded bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-sm">
-            <div className="flex items-center gap-2">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
-                <path fillRule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm3.857-9.809a.75.75 0 0 0-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 1 0-1.06 1.061l2.5 2.5a.75.75 0 0 0 1.137-.089l4-5.5Z" clipRule="evenodd" />
-              </svg>
-              <span className="font-medium">Premium License Active</span>
-            </div>
-            <div className="mt-2 text-xs opacity-75">
-              Activated: {activatedAt ? new Date(activatedAt).toLocaleDateString() : "Unknown"}
-            </div>
-            {licenseKey && (
-              <div className="mt-1 text-xs opacity-75 font-mono">
-                Key: {licenseKey.slice(0, 4)}...{licenseKey.slice(-4)}
-              </div>
-            )}
-          </div>
-        </div>
-      ) : (
-        <>
-          <div>
-            <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400 mb-2">
-              Enter License Key
-            </label>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={key}
-                onChange={(e) => setKey(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleActivate()}
-                placeholder="XXXX-XXXX-XXXX-XXXX"
-                className="flex-1 px-3 py-1.5 text-sm rounded border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 font-mono"
-              />
-              <button
-                onClick={handleActivate}
-                disabled={activating}
-                className="px-4 py-1.5 text-sm font-medium rounded bg-blue-600 hover:bg-blue-500 text-white disabled:opacity-50 transition-colors"
-              >
-                {activating ? "Activating..." : "Activate"}
-              </button>
-            </div>
-            {error && (
-              <div className="mt-2 text-xs text-red-600 dark:text-red-400">
-                {error}
-              </div>
-            )}
-            {success && (
-              <div className="mt-2 text-xs text-green-600 dark:text-green-400">
-                License activated successfully!
-              </div>
-            )}
-          </div>
-          <div className="text-sm text-zinc-500 dark:text-zinc-400">
-            <p className="mb-2">Premium features include:</p>
-            <ul className="list-disc list-inside space-y-1 text-xs">
-              <li>Create custom katas</li>
-              <li>Import/export kata libraries</li>
-              <li>Progressive hints system</li>
-              <li>Code history browser</li>
-              <li>Advanced analytics</li>
-            </ul>
-            <p className="mt-4 text-xs">
-              Don't have a license?{" "}
-              <a
-                href="https://katadesktop.com/buy"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-blue-500 hover:text-blue-400 underline"
-              >
-                Purchase here
-              </a>
-            </p>
-          </div>
-        </>
-      )}
-    </div>
-  );
-}
-
 export function SettingsPage() {
   const loaded = useSettingsStore((s) => s.loaded);
   const loadSettings = useSettingsStore((s) => s.loadSettings);
@@ -552,9 +439,6 @@ export function SettingsPage() {
         <button onClick={() => setTab("shortcuts")} className={tabClass("shortcuts")}>
           Shortcuts
         </button>
-        <button onClick={() => setTab("license")} className={tabClass("license")}>
-          License
-        </button>
       </div>
 
       {/* Tab content */}
@@ -562,7 +446,6 @@ export function SettingsPage() {
         {tab === "editor" && <EditorTab />}
         {tab === "practice" && <PracticeTab />}
         {tab === "shortcuts" && <ShortcutsTab />}
-        {tab === "license" && <LicenseTab />}
       </div>
     </div>
   );
