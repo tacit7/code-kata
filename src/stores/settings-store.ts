@@ -60,7 +60,6 @@ interface SettingsState {
   resetDefaults: () => Promise<void>;
   toggleTheme: () => void;
   toggleVimMode: () => void;
-  activateLicense: (key: string) => Promise<{ success: boolean; error?: string }>;
 }
 
 const LEGACY_MIGRATIONS: Record<string, string> = {
