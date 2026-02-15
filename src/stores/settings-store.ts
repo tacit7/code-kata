@@ -34,6 +34,7 @@ const DEFAULTS = {
   hideDescriptionInSession: false,
   shortcuts: { ...DEFAULT_SHORTCUTS },
   dailyKataIds: [] as number[],
+  doneKataIds: [] as number[],
 };
 
 interface SettingsState {
@@ -54,6 +55,8 @@ interface SettingsState {
   shortcuts: Record<ShortcutAction, string>;
   // Daily kata set
   dailyKataIds: number[];
+  // Completed katas
+  doneKataIds: number[];
   // Actions
   loadSettings: () => Promise<void>;
   setSetting: (key: string, value: unknown) => Promise<void>;
@@ -130,6 +133,8 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
         DEFAULTS.shortcuts,
       dailyKataIds:
         (patch.dailyKataIds as number[]) ?? DEFAULTS.dailyKataIds,
+      doneKataIds:
+        (patch.doneKataIds as number[]) ?? DEFAULTS.doneKataIds,
       loaded: true,
     });
   },

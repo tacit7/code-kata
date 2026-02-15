@@ -58,9 +58,9 @@ function computeDiff(original: string, modified: string): DiffLine[] {
 }
 
 const lineStyles: Record<DiffLine["type"], string> = {
-  removed: "bg-red-900/30 text-red-400",
-  added: "bg-green-900/30 text-green-400",
-  unchanged: "text-zinc-500",
+  removed: "bg-error/10 text-error/80",
+  added: "bg-success/10 text-success/80",
+  unchanged: "text-base-content/40",
 };
 
 const prefixes: Record<DiffLine["type"], string> = {
@@ -73,7 +73,7 @@ export function CodeDiff({ original, modified }: CodeDiffProps) {
   const lines = computeDiff(original, modified);
 
   return (
-    <pre className="text-xs font-mono bg-zinc-900 rounded p-3 overflow-x-auto leading-5">
+    <pre className="text-xs font-mono bg-base-200 rounded-lg p-3 overflow-x-auto leading-5">
       {lines.map((line, idx) => (
         <div key={idx} className={lineStyles[line.type]}>
           <span className="select-none opacity-60 mr-2">

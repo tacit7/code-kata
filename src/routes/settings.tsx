@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useNavigate } from "react-router";
 import { useSettingsStore, DEFAULT_SHORTCUTS } from "../stores/settings-store";
 import type { ShortcutAction } from "../stores/settings-store";
 
@@ -47,6 +48,14 @@ function formatCombo(combo: string): string {
     .join(" ");
 }
 
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <label className="block text-[11px] font-semibold text-base-content/35 uppercase tracking-wider mb-2">
+      {children}
+    </label>
+  );
+}
+
 function EditorTab() {
   const theme = useSettingsStore((s) => s.theme);
   const vimMode = useSettingsStore((s) => s.vimMode);
@@ -58,148 +67,100 @@ function EditorTab() {
 
   return (
     <div className="flex flex-col gap-6">
-      {/* Language */}
       <div>
-        <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400 mb-2">
-          Language
-        </label>
-        <div className="flex gap-2">
+        <SectionLabel>Language</SectionLabel>
+        <div className="join">
           <button
             onClick={() => setSetting("language", "javascript")}
-            className={`px-4 py-1.5 text-sm font-medium rounded transition-colors ${
-              language === "javascript"
-                ? "bg-blue-600 text-white"
-                : "bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-300 dark:hover:bg-zinc-600"
-            }`}
+            className={`btn btn-sm join-item ${language === "javascript" ? "btn-primary" : "btn-ghost"}`}
           >
             JavaScript
           </button>
           <button
             onClick={() => setSetting("language", "python")}
-            className={`px-4 py-1.5 text-sm font-medium rounded transition-colors ${
-              language === "python"
-                ? "bg-blue-600 text-white"
-                : "bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-300 dark:hover:bg-zinc-600"
-            }`}
+            className={`btn btn-sm join-item ${language === "python" ? "btn-primary" : "btn-ghost"}`}
           >
             Python
           </button>
         </div>
       </div>
 
-      {/* Theme */}
       <div>
-        <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400 mb-2">
-          Theme
-        </label>
-        <div className="flex gap-2">
+        <SectionLabel>Theme</SectionLabel>
+        <div className="join">
           <button
             onClick={() => setSetting("theme", "dark")}
-            className={`px-4 py-1.5 text-sm font-medium rounded transition-colors ${
-              theme === "dark"
-                ? "bg-blue-600 text-white"
-                : "bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-300 dark:hover:bg-zinc-600"
-            }`}
+            className={`btn btn-sm join-item ${theme === "dark" ? "btn-primary" : "btn-ghost"}`}
           >
             Dark
           </button>
           <button
             onClick={() => setSetting("theme", "light")}
-            className={`px-4 py-1.5 text-sm font-medium rounded transition-colors ${
-              theme === "light"
-                ? "bg-blue-600 text-white"
-                : "bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-300 dark:hover:bg-zinc-600"
-            }`}
+            className={`btn btn-sm join-item ${theme === "light" ? "btn-primary" : "btn-ghost"}`}
           >
             Light
           </button>
         </div>
       </div>
 
-      {/* Vim Mode */}
       <div>
-        <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400 mb-2">
-          Vim Mode
-        </label>
+        <SectionLabel>Vim Mode</SectionLabel>
         <button
           onClick={() => setSetting("vimMode", !vimMode)}
-          className={`px-4 py-1.5 text-sm font-medium rounded transition-colors ${
-            vimMode
-              ? "bg-green-600 text-white"
-              : "bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-300 dark:hover:bg-zinc-600"
-          }`}
+          className={`btn btn-sm ${vimMode ? "btn-success" : "btn-ghost"}`}
         >
           {vimMode ? "On" : "Off"}
         </button>
       </div>
 
-      {/* Font Size */}
       <div>
-        <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400 mb-2">
-          Font Size
-        </label>
+        <SectionLabel>Font Size</SectionLabel>
         <div className="flex items-center gap-3">
           <button
             onClick={() => setSetting("fontSize", Math.max(10, fontSize - 1))}
             disabled={fontSize <= 10}
-            className="w-8 h-8 flex items-center justify-center text-sm font-medium rounded bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-300 dark:hover:bg-zinc-600 disabled:opacity-40 transition-colors"
+            className="btn btn-sm btn-square btn-ghost"
           >
             -
           </button>
-          <span className="text-sm font-mono font-medium w-6 text-center">
+          <span className="text-sm font-mono font-semibold w-6 text-center tabular-nums">
             {fontSize}
           </span>
           <button
             onClick={() => setSetting("fontSize", Math.min(24, fontSize + 1))}
             disabled={fontSize >= 24}
-            className="w-8 h-8 flex items-center justify-center text-sm font-medium rounded bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-300 dark:hover:bg-zinc-600 disabled:opacity-40 transition-colors"
+            className="btn btn-sm btn-square btn-ghost"
           >
             +
           </button>
         </div>
       </div>
 
-      {/* Font Family */}
       <div>
-        <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400 mb-2">
-          Font Family
-        </label>
+        <SectionLabel>Font Family</SectionLabel>
         <select
           value={fontFamily}
           onChange={(e) => setSetting("fontFamily", e.target.value)}
-          className="px-3 py-1.5 text-sm rounded border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100"
+          className="select select-bordered select-sm bg-base-100"
         >
           {FONT_OPTIONS.map((f) => (
-            <option key={f} value={f}>
-              {f}
-            </option>
+            <option key={f} value={f}>{f}</option>
           ))}
         </select>
       </div>
 
-      {/* Tab Size */}
       <div>
-        <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400 mb-2">
-          Tab Size
-        </label>
-        <div className="flex gap-2">
+        <SectionLabel>Tab Size</SectionLabel>
+        <div className="join">
           <button
             onClick={() => setSetting("tabSize", 2)}
-            className={`px-4 py-1.5 text-sm font-medium rounded transition-colors ${
-              tabSize === 2
-                ? "bg-blue-600 text-white"
-                : "bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-300 dark:hover:bg-zinc-600"
-            }`}
+            className={`btn btn-sm join-item ${tabSize === 2 ? "btn-primary" : "btn-ghost"}`}
           >
             2
           </button>
           <button
             onClick={() => setSetting("tabSize", 4)}
-            className={`px-4 py-1.5 text-sm font-medium rounded transition-colors ${
-              tabSize === 4
-                ? "bg-blue-600 text-white"
-                : "bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-300 dark:hover:bg-zinc-600"
-            }`}
+            className={`btn btn-sm join-item ${tabSize === 4 ? "btn-primary" : "btn-ghost"}`}
           >
             4
           </button>
@@ -215,26 +176,33 @@ function PracticeTab() {
   const autoRunTests = useSettingsStore((s) => s.autoRunTests);
   const hideDescriptionInSession = useSettingsStore((s) => s.hideDescriptionInSession);
   const setSetting = useSettingsStore((s) => s.setSetting);
+  const navigate = useNavigate();
 
   const targetMinutes = Math.round(targetTimeMs / 60000);
 
   return (
     <div className="flex flex-col gap-6">
-      {/* Default Session Size */}
       <div>
-        <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400 mb-2">
-          Default Session Size
-        </label>
-        <div className="flex gap-2">
+        <SectionLabel>Custom Katas</SectionLabel>
+        <button
+          onClick={() => navigate("/kata/new")}
+          className="btn btn-ghost btn-sm text-xs gap-1"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5">
+            <path d="M8.75 3.75a.75.75 0 0 0-1.5 0v3.5h-3.5a.75.75 0 0 0 0 1.5h3.5v3.5a.75.75 0 0 0 1.5 0v-3.5h3.5a.75.75 0 0 0 0-1.5h-3.5v-3.5Z" />
+          </svg>
+          New Kata
+        </button>
+      </div>
+
+      <div>
+        <SectionLabel>Default Session Size</SectionLabel>
+        <div className="join">
           {SESSION_SIZE_OPTIONS.map((n) => (
             <button
               key={n}
               onClick={() => setSetting("defaultSessionSize", n)}
-              className={`px-3 py-1.5 text-sm font-medium rounded transition-colors ${
-                defaultSessionSize === n
-                  ? "bg-blue-600 text-white"
-                  : "bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-300 dark:hover:bg-zinc-600"
-              }`}
+              className={`btn btn-sm join-item ${defaultSessionSize === n ? "btn-primary" : "btn-ghost"}`}
             >
               {n}
             </button>
@@ -242,12 +210,11 @@ function PracticeTab() {
         </div>
       </div>
 
-      {/* Target Time */}
       <div>
-        <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400 mb-2">
-          Target Time Per Kata (minutes){" "}
-          <span className="text-zinc-500">(0 = disabled)</span>
-        </label>
+        <SectionLabel>
+          Target Time Per Kata (min)
+          <span className="text-base-content/20 ml-1 normal-case">(0 = disabled)</span>
+        </SectionLabel>
         <input
           type="number"
           min={0}
@@ -256,39 +223,25 @@ function PracticeTab() {
             const mins = Math.max(0, parseInt(e.target.value) || 0);
             setSetting("targetTimeMs", mins * 60000);
           }}
-          className="w-24 px-3 py-1.5 text-sm rounded border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100"
+          className="input input-bordered input-sm w-24 bg-base-100"
         />
       </div>
 
-      {/* Auto-run Tests */}
       <div>
-        <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400 mb-2">
-          Auto-run Tests on Save
-        </label>
+        <SectionLabel>Auto-run Tests on Save</SectionLabel>
         <button
           onClick={() => setSetting("autoRunTests", !autoRunTests)}
-          className={`px-4 py-1.5 text-sm font-medium rounded transition-colors ${
-            autoRunTests
-              ? "bg-green-600 text-white"
-              : "bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-300 dark:hover:bg-zinc-600"
-          }`}
+          className={`btn btn-sm ${autoRunTests ? "btn-success" : "btn-ghost"}`}
         >
           {autoRunTests ? "On" : "Off"}
         </button>
       </div>
 
-      {/* Hide Problem in Sessions */}
       <div>
-        <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400 mb-2">
-          Hide Problem in Sessions
-        </label>
+        <SectionLabel>Hide Problem in Sessions</SectionLabel>
         <button
           onClick={() => setSetting("hideDescriptionInSession", !hideDescriptionInSession)}
-          className={`px-4 py-1.5 text-sm font-medium rounded transition-colors ${
-            hideDescriptionInSession
-              ? "bg-green-600 text-white"
-              : "bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-300 dark:hover:bg-zinc-600"
-          }`}
+          className={`btn btn-sm ${hideDescriptionInSession ? "btn-success" : "btn-ghost"}`}
         >
           {hideDescriptionInSession ? "On" : "Off"}
         </button>
@@ -309,17 +262,13 @@ function ShortcutsTab() {
       if (!recording) return;
       e.preventDefault();
       e.stopPropagation();
-
-      // Ignore standalone modifier keys
       if (["Meta", "Control", "Alt", "Shift"].includes(e.key)) return;
-
       const parts: string[] = [];
       if (e.metaKey) parts.push("Meta");
       if (e.ctrlKey) parts.push("Control");
       if (e.altKey) parts.push("Alt");
       if (e.shiftKey) parts.push("Shift");
       parts.push(e.key.length === 1 ? e.key.toUpperCase() : e.key);
-
       const combo = parts.join("+");
       const updated = { ...shortcuts, [recording]: combo };
       setSetting("shortcuts", updated);
@@ -347,55 +296,49 @@ function ShortcutsTab() {
 
   return (
     <div className="flex flex-col gap-4">
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="text-left text-xs text-zinc-500 dark:text-zinc-400 border-b border-zinc-200 dark:border-zinc-800">
-            <th className="pb-2 font-medium">Action</th>
-            <th className="pb-2 font-medium">Shortcut</th>
-            <th className="pb-2 font-medium w-28">Edit</th>
-          </tr>
-        </thead>
-        <tbody>
-          {actions.map((action) => (
-            <tr
-              key={action}
-              ref={recording === action ? rowRef : undefined}
-              className="border-b border-zinc-100 dark:border-zinc-800/50"
-            >
-              <td className="py-2.5 font-medium">
-                {SHORTCUT_LABELS[action]}
-              </td>
-              <td className="py-2.5 font-mono text-zinc-500 dark:text-zinc-400">
-                {formatCombo(shortcuts[action])}
-              </td>
-              <td className="py-2.5">
-                <button
-                  onClick={() =>
-                    setRecording(recording === action ? null : action)
-                  }
-                  className={`px-3 py-1 text-xs font-medium rounded transition-colors ${
-                    recording === action
-                      ? "bg-yellow-600 text-white animate-pulse"
-                      : "bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-300 dark:hover:bg-zinc-600"
-                  }`}
-                >
-                  {recording === action ? "Press keys..." : "Edit"}
-                </button>
-              </td>
+      <div className="bg-base-100 rounded-lg border border-base-300/50 overflow-hidden">
+        <table className="table table-sm">
+          <thead>
+            <tr className="text-left text-[11px] text-base-content/35 uppercase tracking-wider">
+              <th className="font-semibold">Action</th>
+              <th className="font-semibold">Shortcut</th>
+              <th className="font-semibold w-28">Edit</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {actions.map((action) => (
+              <tr
+                key={action}
+                ref={recording === action ? rowRef : undefined}
+                className="border-base-300/30"
+              >
+                <td className="font-medium text-sm">{SHORTCUT_LABELS[action]}</td>
+                <td className="font-mono text-base-content/50 text-sm">
+                  {formatCombo(shortcuts[action])}
+                </td>
+                <td>
+                  <button
+                    onClick={() => setRecording(recording === action ? null : action)}
+                    className={`btn btn-xs ${
+                      recording === action
+                        ? "btn-warning animate-pulse"
+                        : "btn-ghost"
+                    }`}
+                  >
+                    {recording === action ? "Press keys..." : "Edit"}
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
 
       <button
         onClick={handleReset}
-        className={`self-start px-4 py-1.5 text-sm font-medium rounded transition-colors ${
-          confirmReset
-            ? "bg-red-600 text-white hover:bg-red-500"
-            : "bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-300 dark:hover:bg-zinc-600"
-        }`}
+        className={`btn btn-sm self-start ${confirmReset ? "btn-error" : "btn-ghost"}`}
       >
-        {confirmReset ? "Confirm Reset Shortcuts" : "Reset to Defaults"}
+        {confirmReset ? "Confirm Reset" : "Reset to Defaults"}
       </button>
     </div>
   );
@@ -404,44 +347,38 @@ function ShortcutsTab() {
 export function SettingsPage() {
   const loaded = useSettingsStore((s) => s.loaded);
   const loadSettings = useSettingsStore((s) => s.loadSettings);
-
   const [tab, setTab] = useState<Tab>("editor");
 
   useEffect(() => {
     if (!loaded) loadSettings();
   }, [loaded, loadSettings]);
 
-  const tabClass = (t: Tab) =>
-    `px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-      tab === t
-        ? "border-blue-500 text-blue-600 dark:text-blue-400"
-        : "border-transparent text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300"
-    }`;
-
   if (!loaded) {
     return (
-      <div className="flex items-center justify-center h-full text-zinc-500 text-sm">
+      <div className="flex items-center justify-center h-full text-base-content/30 text-sm">
         Loading settings...
       </div>
     );
   }
 
+  const tabClass = (t: Tab) =>
+    `px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${
+      tab === t
+        ? "bg-base-100 text-base-content shadow-sm"
+        : "text-base-content/35 hover:text-base-content/60"
+    }`;
+
   return (
-    <div className="flex flex-col h-full p-6 gap-6 overflow-y-auto dark:bg-zinc-950">
-      {/* Tabs */}
-      <div className="flex border-b border-zinc-200 dark:border-zinc-700">
-        <button onClick={() => setTab("editor")} className={tabClass("editor")}>
-          Editor
-        </button>
-        <button onClick={() => setTab("practice")} className={tabClass("practice")}>
-          Practice
-        </button>
-        <button onClick={() => setTab("shortcuts")} className={tabClass("shortcuts")}>
-          Shortcuts
-        </button>
+    <div className="flex flex-col h-full p-5 gap-5 overflow-y-auto animate-fade-in">
+      <h1 className="text-lg font-bold">Settings</h1>
+
+      {/* Tab switcher */}
+      <div className="flex items-center gap-1 bg-base-300/40 rounded-lg p-1 self-start">
+        <button onClick={() => setTab("editor")} className={tabClass("editor")}>Editor</button>
+        <button onClick={() => setTab("practice")} className={tabClass("practice")}>Practice</button>
+        <button onClick={() => setTab("shortcuts")} className={tabClass("shortcuts")}>Shortcuts</button>
       </div>
 
-      {/* Tab content */}
       <div className="flex-1 min-h-0">
         {tab === "editor" && <EditorTab />}
         {tab === "practice" && <PracticeTab />}

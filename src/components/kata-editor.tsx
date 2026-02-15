@@ -149,8 +149,8 @@ export function KataEditor({ kata, isSession, onTestComplete }: KataEditorProps)
   const tabClass = (tab: typeof showPanel) =>
     `px-3 py-1.5 text-xs font-medium border-b-2 transition-colors ${
       showPanel === tab
-        ? "border-blue-500 text-blue-600 dark:text-blue-400"
-        : "border-transparent text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300"
+        ? "border-primary text-primary"
+        : "border-transparent text-base-content/40 hover:text-base-content/70"
     }`;
 
   if (!codeLoaded) return null;
@@ -162,11 +162,11 @@ export function KataEditor({ kata, isSession, onTestComplete }: KataEditorProps)
       {/* Side panel: tabs + content (full height) */}
       {hasTabs && (
         <div
-          className="shrink-0 flex flex-col border-r border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900"
+          className="shrink-0 flex flex-col border-r border-base-300/60 bg-base-200"
           style={showPanel ? { width: panelWidth } : undefined}
         >
           {/* Tab bar */}
-          <div className="flex border-b border-zinc-200 dark:border-zinc-700 shrink-0">
+          <div className="flex border-b border-base-300/60 shrink-0">
             {kata.description && (
               <button
                 onClick={() => setShowPanel((v) => v === "description" ? null : "description")}
@@ -175,7 +175,7 @@ export function KataEditor({ kata, isSession, onTestComplete }: KataEditorProps)
                 Problem
               </button>
             )}
-{kata.solution && (
+            {kata.solution && (
               <button
                 onClick={() => setShowPanel((v) => v === "solution" ? null : "solution")}
                 className={tabClass("solution")}
@@ -187,7 +187,7 @@ export function KataEditor({ kata, isSession, onTestComplete }: KataEditorProps)
 
           {/* Tab content */}
           {showPanel && showPanel !== "solution" && (
-            <div className="flex-1 overflow-y-auto px-4 py-3 text-sm text-zinc-700 dark:text-zinc-300 whitespace-pre-wrap">
+            <div className="flex-1 overflow-y-auto px-4 py-3 text-sm text-base-content/70 whitespace-pre-wrap">
               {showPanel === "description" && (kata.description || "No description available.")}
             </div>
           )}
@@ -217,66 +217,66 @@ export function KataEditor({ kata, isSession, onTestComplete }: KataEditorProps)
       {hasTabs && showPanel && (
         <div
           onMouseDown={onGutterMouseDown}
-          className="w-1 shrink-0 cursor-col-resize bg-zinc-200 dark:bg-zinc-700 hover:bg-blue-500 dark:hover:bg-blue-500 transition-colors"
+          className="w-1 shrink-0 cursor-col-resize bg-base-300/60 hover:bg-primary transition-colors"
         />
       )}
 
       {/* Editor + results column */}
       <div className="flex flex-col flex-1 min-w-0">
         {/* Editor header */}
-        <div className="flex items-center px-3 py-1.5 border-b border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 shrink-0">
-          <span className="text-xs text-zinc-500 dark:text-zinc-400 truncate flex-1">
+        <div className="flex items-center px-3 py-1.5 border-b border-base-300/60 bg-base-200 shrink-0">
+          <span className="text-xs text-base-content/45 truncate flex-1">
             {kata.name}
           </span>
           <div className="flex items-center gap-1.5 ml-2 relative">
             <button
               onClick={handleReset}
               title="Reset to original"
-              className="px-1.5 py-0.5 text-xs rounded text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors"
+              className="btn btn-ghost btn-xs text-base-content/45 hover:text-base-content"
             >
               ↻
             </button>
             <button
               onClick={() => setShowConfig((v) => !v)}
               title="Editor settings"
-              className={`px-1.5 py-0.5 text-xs rounded transition-colors ${
+              className={`btn btn-xs ${
                 showConfig
-                  ? "bg-blue-600 text-white"
-                  : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-200 dark:hover:bg-zinc-700"
+                  ? "btn-primary"
+                  : "btn-ghost text-base-content/45 hover:text-base-content"
               }`}
             >
               ⚙
             </button>
             {showConfig && (
-              <div className="absolute top-full right-0 mt-1 z-50 w-56 rounded border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 shadow-lg py-2 px-3 flex flex-col gap-2.5">
+              <div className="absolute top-full right-0 mt-1 z-50 w-56 rounded-lg border border-base-300/50 bg-base-100 shadow-lg py-2 px-3 flex flex-col gap-2.5">
                 {/* Font size */}
                 <div className="flex items-center justify-between">
-                  <span className="text-xs text-zinc-500 dark:text-zinc-400">font size</span>
+                  <span className="text-xs text-base-content/45">font size</span>
                   <div className="flex items-center gap-1.5">
-                    <button onClick={() => setSetting("fontSize", Math.max(10, fontSize - 1))} className="w-5 h-5 flex items-center justify-center rounded bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300 text-xs hover:bg-zinc-300 dark:hover:bg-zinc-600">−</button>
-                    <span className="text-xs font-mono w-5 text-center">{fontSize}</span>
-                    <button onClick={() => setSetting("fontSize", Math.min(28, fontSize + 1))} className="w-5 h-5 flex items-center justify-center rounded bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300 text-xs hover:bg-zinc-300 dark:hover:bg-zinc-600">+</button>
+                    <button onClick={() => setSetting("fontSize", Math.max(10, fontSize - 1))} className="btn btn-ghost btn-xs btn-square">−</button>
+                    <span className="text-xs font-mono w-5 text-center tabular-nums">{fontSize}</span>
+                    <button onClick={() => setSetting("fontSize", Math.min(28, fontSize + 1))} className="btn btn-ghost btn-xs btn-square">+</button>
                   </div>
                 </div>
                 {/* Vim mode */}
                 <div className="flex items-center justify-between">
-                  <span className="text-xs text-zinc-500 dark:text-zinc-400">vim mode</span>
-                  <button
-                    onClick={toggleVimMode}
-                    className={`w-9 h-5 rounded-full relative transition-colors ${vimMode ? "bg-green-500" : "bg-zinc-300 dark:bg-zinc-600"}`}
-                  >
-                    <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${vimMode ? "left-[18px]" : "left-0.5"}`} />
-                  </button>
+                  <span className="text-xs text-base-content/45">vim mode</span>
+                  <input
+                    type="checkbox"
+                    className="toggle toggle-sm toggle-success"
+                    checked={vimMode}
+                    onChange={toggleVimMode}
+                  />
                 </div>
                 {/* Dark mode */}
                 <div className="flex items-center justify-between">
-                  <span className="text-xs text-zinc-500 dark:text-zinc-400">dark mode</span>
-                  <button
-                    onClick={toggleTheme}
-                    className={`w-9 h-5 rounded-full relative transition-colors ${theme === "dark" ? "bg-green-500" : "bg-zinc-300 dark:bg-zinc-600"}`}
-                  >
-                    <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${theme === "dark" ? "left-[18px]" : "left-0.5"}`} />
-                  </button>
+                  <span className="text-xs text-base-content/45">dark mode</span>
+                  <input
+                    type="checkbox"
+                    className="toggle toggle-sm toggle-success"
+                    checked={theme === "dark"}
+                    onChange={toggleTheme}
+                  />
                 </div>
               </div>
             )}
@@ -313,23 +313,23 @@ export function KataEditor({ kata, isSession, onTestComplete }: KataEditorProps)
         </div>
 
         {/* Status bar: saved indicator + vim + run buttons */}
-        <div className="flex items-center px-3 h-7 border-t border-zinc-200 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800 shrink-0">
-          <span className={`text-xs ${saved ? "text-green-500" : "text-zinc-500 dark:text-zinc-400"}`}>
+        <div className="flex items-center px-3 h-7 border-t border-base-300/60 bg-base-200 shrink-0">
+          <span className={`text-xs ${saved ? "text-success" : "text-base-content/40"}`}>
             {saved ? "• saved" : "• unsaved"}
           </span>
           <div
             ref={statusBarRef}
-            className={`flex-1 px-4 text-xs font-mono text-zinc-600 dark:text-zinc-400 ${
+            className={`flex-1 px-4 text-xs font-mono text-base-content/40 ${
               vimMode ? "" : "invisible"
             }`}
           />
           <div className="flex items-center gap-1.5">
             <button
               onClick={toggleVimMode}
-              className={`px-2 py-0.5 text-xs font-medium rounded transition-colors ${
+              className={`btn btn-xs ${
                 vimMode
-                  ? "bg-green-600 text-white"
-                  : "bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-400"
+                  ? "btn-success"
+                  : "btn-ghost text-base-content/40"
               }`}
             >
               VIM
@@ -337,7 +337,7 @@ export function KataEditor({ kata, isSession, onTestComplete }: KataEditorProps)
             <button
               onClick={handleRun}
               disabled={running}
-              className="px-3 py-0.5 text-xs font-medium rounded bg-emerald-400 text-zinc-900 hover:bg-emerald-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="btn btn-xs btn-primary"
             >
               {running ? "..." : "▷ run"}
             </button>
@@ -346,22 +346,23 @@ export function KataEditor({ kata, isSession, onTestComplete }: KataEditorProps)
 
         {/* Closable results pane */}
         {(results || running) && (
-          <div className="flex-1 min-h-0 flex flex-col border-t border-zinc-200 dark:border-zinc-700">
+          <div className="flex-1 min-h-0 flex flex-col border-t border-base-300/60">
             {/* Results header */}
-            <div className="flex items-center px-3 py-1 border-b border-zinc-200 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800 shrink-0">
+            <div className="flex items-center px-3 py-1 border-b border-base-300/60 bg-base-200 shrink-0">
               <button
                 onClick={() => { if (!running) setResults(null); }}
-                className="text-xs text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 transition-colors mr-2"
+                className="text-xs text-base-content/30 hover:text-base-content/60 transition-colors mr-2"
               >
                 ✕
               </button>
-              <span className="text-xs text-zinc-500 dark:text-zinc-400">
+              <span className="text-xs text-base-content/45">
                 {running ? "running..." : "results"}
               </span>
             </div>
             <div className="flex-1 min-h-0 overflow-y-auto">
               {running ? (
-                <div className="flex items-center justify-center h-full text-zinc-500 text-sm">
+                <div className="flex items-center justify-center h-full text-base-content/30 text-sm">
+                  <span className="loading loading-spinner loading-sm text-primary mr-2" />
                   Running tests...
                 </div>
               ) : results ? (
