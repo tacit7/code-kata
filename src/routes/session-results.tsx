@@ -19,10 +19,13 @@ export function SessionResultsPage() {
   }, [activeSession, sessionId, allKatas, loadSession]);
 
   if (!activeSession) {
-    if (!sessionId) return <Navigate to="/library" replace />;
+    if (!sessionId) return <Navigate to="/practice" replace />;
     return (
-      <div className="flex items-center justify-center h-full text-zinc-500 text-sm">
-        Loading results...
+      <div className="flex items-center justify-center h-full text-base-content/30 text-sm">
+        <div className="flex items-center gap-2">
+          <span className="loading loading-spinner loading-sm text-primary" />
+          Loading results
+        </div>
       </div>
     );
   }
@@ -31,14 +34,15 @@ export function SessionResultsPage() {
     ? `${activeSession.passCount}/${activeSession.kataCount}`
     : "0/0";
 
+  const allPassed = activeSession.passCount === activeSession.kataCount && activeSession.kataCount > 0;
+
   const handleBackToLibrary = () => {
     clearSession();
-    navigate("/library");
+    navigate("/practice");
   };
 
   const handlePracticeAgain = () => {
-    // Re-start with same katas
-    navigate("/session/setup");
+    navigate("/practice");
   };
 
   const toggleDiff = (index: number) => {
@@ -54,109 +58,97 @@ export function SessionResultsPage() {
   };
 
   return (
-    <div className="flex flex-col h-full p-6 gap-6 overflow-y-auto">
-      <h1 className="text-xl font-bold">Session Results</h1>
+    <div className="flex flex-col h-full p-5 gap-5 overflow-y-auto animate-fade-in">
+      <h1 className="text-lg font-bold">Session Results</h1>
 
       {/* Summary cards */}
-      <div className="flex gap-4">
-        <div className="px-4 py-3 rounded bg-zinc-100 dark:bg-zinc-800">
-          <p className="text-xs text-zinc-500 dark:text-zinc-400">Total Time</p>
-          <p className="text-lg font-mono font-semibold">
+      <div className="flex gap-3 stagger">
+        <div className="bg-base-100 rounded-lg p-4 border border-base-300/50 min-w-[120px]">
+          <div className="text-[11px] font-medium text-base-content/35 uppercase tracking-wider mb-1">Total Time</div>
+          <div className="text-lg font-mono font-bold tabular-nums">
             {activeSession.totalTimeMs != null ? formatTime(activeSession.totalTimeMs) : "--:--"}
-          </p>
+          </div>
         </div>
-        <div className="px-4 py-3 rounded bg-zinc-100 dark:bg-zinc-800">
-          <p className="text-xs text-zinc-500 dark:text-zinc-400">Pass Rate</p>
-          <p className="text-lg font-semibold">{passRate}</p>
+        <div className={`bg-base-100 rounded-lg p-4 border min-w-[120px] ${allPassed ? "border-success/30" : "border-base-300/50"}`}>
+          <div className="text-[11px] font-medium text-base-content/35 uppercase tracking-wider mb-1">Pass Rate</div>
+          <div className={`text-lg font-bold ${allPassed ? "text-success" : ""}`}>{passRate}</div>
         </div>
-        <div className="px-4 py-3 rounded bg-zinc-100 dark:bg-zinc-800">
-          <p className="text-xs text-zinc-500 dark:text-zinc-400">Session Type</p>
-          <p className="text-lg font-semibold capitalize">{activeSession.sessionType}</p>
+        <div className="bg-base-100 rounded-lg p-4 border border-base-300/50 min-w-[120px]">
+          <div className="text-[11px] font-medium text-base-content/35 uppercase tracking-wider mb-1">Type</div>
+          <div className="text-lg font-bold capitalize">{activeSession.sessionType}</div>
         </div>
       </div>
 
       {/* Per-kata table */}
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="text-left text-xs text-zinc-500 dark:text-zinc-400 border-b border-zinc-200 dark:border-zinc-800">
-            <th className="pb-2 font-medium w-8">#</th>
-            <th className="pb-2 font-medium">Kata</th>
-            <th className="pb-2 font-medium">Time</th>
-            <th className="pb-2 font-medium">Result</th>
-            <th className="pb-2 font-medium">Diff</th>
-          </tr>
-        </thead>
-        <tbody>
-          {sessionKatas.map((kata, i) => {
-            const attempt = attempts.find((a) => a.kataIndex === i);
-            const hasDiff = attempt?.codeSnapshot != null;
-            const isExpanded = expandedDiffs.has(i);
-            return (
-              <Fragment key={kata.id}>
-                <tr
-                  className="border-b border-zinc-100 dark:border-zinc-800/50"
-                >
-                  <td className="py-2 text-zinc-400">{i + 1}</td>
-                  <td className="py-2 font-medium">{kata.name}</td>
-                  <td className="py-2 font-mono text-zinc-500 dark:text-zinc-400">
-                    {attempt?.timeMs != null ? formatTime(attempt.timeMs) : "--:--"}
-                  </td>
-                  <td className="py-2">
-                    {attempt ? (
-                      attempt.passed ? (
-                        <span className="px-2 py-0.5 text-xs rounded bg-green-600/20 text-green-400 font-medium">
-                          Pass
-                        </span>
+      <div className="bg-base-100 rounded-lg border border-base-300/50 overflow-hidden">
+        <table className="table table-sm">
+          <thead>
+            <tr className="text-left text-[11px] text-base-content/35 uppercase tracking-wider">
+              <th className="font-semibold w-8">#</th>
+              <th className="font-semibold">Kata</th>
+              <th className="font-semibold">Time</th>
+              <th className="font-semibold">Result</th>
+              <th className="font-semibold">Diff</th>
+            </tr>
+          </thead>
+          <tbody>
+            {sessionKatas.map((kata, i) => {
+              const attempt = attempts.find((a) => a.kataIndex === i);
+              const hasDiff = attempt?.codeSnapshot != null;
+              const isExpanded = expandedDiffs.has(i);
+              return (
+                <Fragment key={kata.id}>
+                  <tr className="border-base-300/30">
+                    <td className="text-base-content/30 text-sm tabular-nums">{i + 1}</td>
+                    <td className="font-medium text-sm">{kata.name}</td>
+                    <td className="font-mono text-base-content/45 text-sm tabular-nums">
+                      {attempt?.timeMs != null ? formatTime(attempt.timeMs) : "--:--"}
+                    </td>
+                    <td>
+                      {attempt ? (
+                        attempt.passed ? (
+                          <span className="badge badge-success badge-xs">Pass</span>
+                        ) : (
+                          <span className="badge badge-error badge-xs">Fail</span>
+                        )
                       ) : (
-                        <span className="px-2 py-0.5 text-xs rounded bg-red-600/20 text-red-400 font-medium">
-                          Fail
-                        </span>
-                      )
-                    ) : (
-                      <span className="px-2 py-0.5 text-xs rounded bg-zinc-200 dark:bg-zinc-700 text-zinc-500 dark:text-zinc-400 font-medium">
-                        Skipped
-                      </span>
-                    )}
-                  </td>
-                  <td className="py-2">
-                    {hasDiff && (
-                      <button
-                        onClick={() => toggleDiff(i)}
-                        className="px-2 py-0.5 text-xs rounded bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-300 dark:hover:bg-zinc-600 transition-colors font-medium"
-                      >
-                        {isExpanded ? "Hide diff" : "Show diff"}
-                      </button>
-                    )}
-                  </td>
-                </tr>
-                {isExpanded && hasDiff && (
-                  <tr key={`${kata.id}-diff`}>
-                    <td colSpan={5} className="py-2">
-                      <CodeDiff
-                        original={kata.code}
-                        modified={attempt!.codeSnapshot!}
-                      />
+                        <span className="badge badge-ghost badge-xs">Skipped</span>
+                      )}
+                    </td>
+                    <td>
+                      {hasDiff && (
+                        <button
+                          onClick={() => toggleDiff(i)}
+                          className="btn btn-ghost btn-xs text-xs"
+                        >
+                          {isExpanded ? "Hide" : "Diff"}
+                        </button>
+                      )}
                     </td>
                   </tr>
-                )}
-              </Fragment>
-            );
-          })}
-        </tbody>
-      </table>
+                  {isExpanded && hasDiff && (
+                    <tr key={`${kata.id}-diff`}>
+                      <td colSpan={5} className="py-2 px-4">
+                        <CodeDiff
+                          original={kata.code}
+                          modified={attempt!.codeSnapshot!}
+                        />
+                      </td>
+                    </tr>
+                  )}
+                </Fragment>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
 
       {/* Actions */}
       <div className="flex gap-3">
-        <button
-          onClick={handleBackToLibrary}
-          className="px-4 py-2 text-sm font-medium rounded bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-300 dark:hover:bg-zinc-600 transition-colors"
-        >
-          Back to Library
+        <button onClick={handleBackToLibrary} className="btn btn-ghost btn-sm">
+          Back to Practice
         </button>
-        <button
-          onClick={handlePracticeAgain}
-          className="px-4 py-2 text-sm font-medium rounded bg-blue-600 hover:bg-blue-500 text-white transition-colors"
-        >
+        <button onClick={handlePracticeAgain} className="btn btn-primary btn-sm">
           Practice Again
         </button>
       </div>

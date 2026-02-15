@@ -30,7 +30,7 @@ export function KataFormPage() {
     if (!isEdit || !kataId) return;
     const kata = katas.find((k) => k.id === Number(kataId));
     if (!kata || !kata.isCustom) {
-      navigate("/library");
+      navigate("/practice");
       return;
     }
     setName(kata.name);
@@ -73,7 +73,7 @@ export function KataFormPage() {
       } else {
         await createKata(kataData);
       }
-      navigate("/library");
+      navigate("/practice");
     } catch (err) {
       setError(String(err));
     } finally {
@@ -85,41 +85,38 @@ export function KataFormPage() {
     if (!kataId) return;
     if (!confirm("Delete this kata? This cannot be undone.")) return;
     await deleteKata(Number(kataId));
-    navigate("/library");
+    navigate("/practice");
   };
 
   const monacoLang = language === "python" ? "python" : "javascript";
   const monacoTheme = theme === "dark" ? "vs-dark" : "vs";
   const editorOptions = { minimap: { enabled: false }, fontSize: 13, lineNumbers: "on" as const, scrollBeyondLastLine: false };
 
-  const inputClass = "w-full px-3 py-1.5 text-sm rounded border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 outline-none focus:border-blue-500";
-  const labelClass = "block text-xs font-medium text-zinc-500 dark:text-zinc-400 mb-1";
-
   return (
-    <div className="flex flex-col h-full p-4 gap-3 overflow-y-auto">
+    <div className="flex flex-col h-full p-5 gap-4 overflow-y-auto animate-fade-in">
       <div className="flex items-center justify-between">
-        <h1 className="text-lg font-semibold">
+        <h1 className="text-lg font-bold">
           {isEdit ? "Edit Kata" : "New Kata"}
         </h1>
         <div className="flex gap-2">
           {isEdit && (
             <button
               onClick={handleDelete}
-              className="px-3 py-1.5 text-sm rounded bg-red-600 hover:bg-red-500 text-white transition-colors"
+              className="btn btn-error btn-sm"
             >
               Delete
             </button>
           )}
           <button
-            onClick={() => navigate("/library")}
-            className="px-3 py-1.5 text-sm rounded border border-zinc-300 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+            onClick={() => navigate("/practice")}
+            className="btn btn-ghost btn-sm"
           >
             Cancel
           </button>
           <button
             onClick={handleSave}
             disabled={saving}
-            className="px-4 py-1.5 text-sm font-medium rounded bg-blue-600 hover:bg-blue-500 text-white disabled:opacity-50 transition-colors"
+            className="btn btn-primary btn-sm"
           >
             {saving ? "Saving..." : "Save"}
           </button>
@@ -127,33 +124,33 @@ export function KataFormPage() {
       </div>
 
       {error && (
-        <div className="px-3 py-2 text-sm rounded bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400">
+        <div className="alert alert-error text-sm">
           {error}
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className={labelClass}>Name *</label>
-          <input type="text" value={name} onChange={(e) => setName(e.target.value)} className={inputClass} placeholder="Two Sum" />
+          <label className="label text-[11px] font-semibold text-base-content/35 uppercase tracking-wider">Name *</label>
+          <input type="text" value={name} onChange={(e) => setName(e.target.value)} className="input input-bordered input-sm w-full bg-base-100" placeholder="Two Sum" />
         </div>
         <div>
-          <label className={labelClass}>Category</label>
-          <input type="text" value={category} onChange={(e) => setCategory(e.target.value)} className={inputClass} list="categories" placeholder="arrays" />
+          <label className="label text-[11px] font-semibold text-base-content/35 uppercase tracking-wider">Category</label>
+          <input type="text" value={category} onChange={(e) => setCategory(e.target.value)} className="input input-bordered input-sm w-full bg-base-100" list="categories" placeholder="arrays" />
           <datalist id="categories">
             {existingCategories.map((c) => <option key={c} value={c} />)}
           </datalist>
         </div>
         <div>
-          <label className={labelClass}>Language</label>
-          <select value={language} onChange={(e) => setLanguage(e.target.value as "javascript" | "python")} className={inputClass}>
+          <label className="label text-[11px] font-semibold text-base-content/35 uppercase tracking-wider">Language</label>
+          <select value={language} onChange={(e) => setLanguage(e.target.value as "javascript" | "python")} className="select select-bordered select-sm w-full bg-base-100">
             <option value="javascript">JavaScript</option>
             <option value="python">Python</option>
           </select>
         </div>
         <div>
-          <label className={labelClass}>Difficulty</label>
-          <select value={difficulty} onChange={(e) => setDifficulty(e.target.value as "easy" | "medium" | "hard")} className={inputClass}>
+          <label className="label text-[11px] font-semibold text-base-content/35 uppercase tracking-wider">Difficulty</label>
+          <select value={difficulty} onChange={(e) => setDifficulty(e.target.value as "easy" | "medium" | "hard")} className="select select-bordered select-sm w-full bg-base-100">
             <option value="easy">Easy</option>
             <option value="medium">Medium</option>
             <option value="hard">Hard</option>
@@ -162,32 +159,32 @@ export function KataFormPage() {
       </div>
 
       <div>
-        <label className={labelClass}>Tags (comma-separated)</label>
-        <input type="text" value={tags} onChange={(e) => setTags(e.target.value)} className={inputClass} placeholder="array, hash-map, two-pointer" />
+        <label className="label text-[11px] font-semibold text-base-content/35 uppercase tracking-wider">Tags (comma-separated)</label>
+        <input type="text" value={tags} onChange={(e) => setTags(e.target.value)} className="input input-bordered input-sm w-full bg-base-100" placeholder="array, hash-map, two-pointer" />
       </div>
 
       <div>
-        <label className={labelClass}>Description</label>
-        <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} className={inputClass + " resize-y"} placeholder="Problem description..." />
+        <label className="label text-[11px] font-semibold text-base-content/35 uppercase tracking-wider">Description</label>
+        <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} className="textarea textarea-bordered w-full bg-base-100 resize-y text-sm" placeholder="Problem description..." />
       </div>
 
       <div>
-        <label className={labelClass}>Starter Code *</label>
-        <div className="border border-zinc-300 dark:border-zinc-700 rounded overflow-hidden h-48">
+        <label className="label text-[11px] font-semibold text-base-content/35 uppercase tracking-wider">Starter Code *</label>
+        <div className="border border-base-300/50 rounded-lg overflow-hidden h-48">
           <Editor language={monacoLang} theme={monacoTheme} value={code} onChange={(v) => setCode(v ?? "")} options={editorOptions} />
         </div>
       </div>
 
       <div>
-        <label className={labelClass}>Test Code *</label>
-        <div className="border border-zinc-300 dark:border-zinc-700 rounded overflow-hidden h-48">
+        <label className="label text-[11px] font-semibold text-base-content/35 uppercase tracking-wider">Test Code *</label>
+        <div className="border border-base-300/50 rounded-lg overflow-hidden h-48">
           <Editor language={monacoLang} theme={monacoTheme} value={testCode} onChange={(v) => setTestCode(v ?? "")} options={editorOptions} />
         </div>
       </div>
 
       <div>
-        <label className={labelClass}>Solution (optional)</label>
-        <div className="border border-zinc-300 dark:border-zinc-700 rounded overflow-hidden h-48">
+        <label className="label text-[11px] font-semibold text-base-content/35 uppercase tracking-wider">Solution (optional)</label>
+        <div className="border border-base-300/50 rounded-lg overflow-hidden h-48">
           <Editor language={monacoLang} theme={monacoTheme} value={solution} onChange={(v) => setSolution(v ?? "")} options={editorOptions} />
         </div>
       </div>

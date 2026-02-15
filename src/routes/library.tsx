@@ -1,28 +1,77 @@
-import { useState, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router";
 import { useKataStore } from "../stores/kata-store";
 import { useSettingsStore } from "../stores/settings-store";
-import { useSessionStore } from "../stores/session-store";
+import { useSessionStore, selectRandomKatas } from "../stores/session-store";
 import { useTimerStore } from "../stores/timer-store";
+import type { SessionType } from "../types/editor";
 
-export function LibraryPage() {
+type Tab = "browse" | "daily" | "random" | "custom";
+const SIZE_OPTIONS = [5, 10, 15, 20];
+
+export function PracticePage() {
   const katas = useKataStore((s) => s.katas);
   const bestTimes = useKataStore((s) => s.bestTimes);
   const streaks = useKataStore((s) => s.streaks);
   const deleteKata = useKataStore((s) => s.deleteKata);
   const dailyKataIds = useSettingsStore((s) => s.dailyKataIds);
+  const doneKataIds = useSettingsStore((s) => s.doneKataIds);
   const setSetting = useSettingsStore((s) => s.setSetting);
-  const startSession = useSessionStore((s) => s.startSession);
+  const { startSession, loadPresets, presets, savePreset, deletePreset } = useSessionStore();
   const startSessionTimer = useTimerStore((s) => s.startSessionTimer);
   const resetKataTimer = useTimerStore((s) => s.resetKataTimer);
-  const [search, setSearch] = useState("");
-  const [launching, setLaunching] = useState(false);
-  const [diffSort, setDiffSort] = useState<"asc" | "desc" | null>(null);
   const navigate = useNavigate();
 
-  const kataIdSet = new Set(katas.map((k) => k.id));
-  const dailyCount = dailyKataIds.filter((id) => kataIdSet.has(id)).length;
+  const [tab, setTab] = useState<Tab>("browse");
+  const [search, setSearch] = useState("");
+  const [diffSort, setDiffSort] = useState<"asc" | "desc" | null>(null);
+  const [starting, setStarting] = useState(false);
 
+  // Daily state
+  const [dailySelectedIds, setDailySelectedIds] = useState<Set<number>>(new Set());
+
+  // Random state
+  const [size, setSize] = useState(5);
+  const [categoryFilter, setCategoryFilter] = useState<string>("");
+  const categories = [...new Set(katas.map((k) => k.category))].sort();
+  const filteredKatas = categoryFilter
+    ? katas.filter((k) => k.category === categoryFilter)
+    : katas;
+
+  // Custom state
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [customOrder, setCustomOrder] = useState<number[]>([]);
+  const [presetName, setPresetName] = useState("");
+  const [activePresetId, setActivePresetId] = useState<number | null>(null);
+
+  const diffRank: Record<string, number> = { easy: 0, medium: 1, hard: 2 };
+
+  const searchedKatas = useMemo(() => {
+    const q = search.toLowerCase();
+    const filtered = katas.filter(
+      (k) =>
+        k.name.toLowerCase().includes(q) ||
+        k.category.toLowerCase().includes(q) ||
+        (k.difficulty?.toLowerCase().includes(q) ?? false) ||
+        k.tags.some((t) => t.toLowerCase().includes(q))
+    );
+    if (!diffSort) return filtered;
+    return [...filtered].sort((a, b) => {
+      const ra = diffRank[a.difficulty ?? ""] ?? 3;
+      const rb = diffRank[b.difficulty ?? ""] ?? 3;
+      return diffSort === "asc" ? ra - rb : rb - ra;
+    });
+  }, [katas, search, diffSort]);
+
+  useEffect(() => {
+    loadPresets();
+  }, [loadPresets]);
+
+  useEffect(() => {
+    setDailySelectedIds(new Set(dailyKataIds));
+  }, [dailyKataIds]);
+
+  // Browse daily toggle (star)
   const toggleDaily = (id: number, e: React.MouseEvent) => {
     e.stopPropagation();
     const next = dailyKataIds.includes(id)
@@ -31,176 +80,441 @@ export function LibraryPage() {
     setSetting("dailyKataIds", next);
   };
 
-  const handleStartDaily = useCallback(async () => {
-    if (dailyCount === 0) {
-      navigate("/session/setup");
+  const toggleDone = (id: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const next = doneKataIds.includes(id)
+      ? doneKataIds.filter((x) => x !== id)
+      : [...doneKataIds, id];
+    setSetting("doneKataIds", next);
+  };
+
+  // Custom handlers
+  const toggleKata = (id: number) => {
+    const next = new Set(selectedIds);
+    if (next.has(id)) {
+      next.delete(id);
+      setCustomOrder((prev) => prev.filter((i) => i !== id));
+    } else {
+      next.add(id);
+      setCustomOrder((prev) => [...prev, id]);
+    }
+    setSelectedIds(next);
+  };
+
+  const moveUp = (id: number) => {
+    setCustomOrder((prev) => {
+      const idx = prev.indexOf(id);
+      if (idx <= 0) return prev;
+      const next = [...prev];
+      [next[idx - 1], next[idx]] = [next[idx], next[idx - 1]];
+      return next;
+    });
+  };
+
+  const moveDown = (id: number) => {
+    setCustomOrder((prev) => {
+      const idx = prev.indexOf(id);
+      if (idx < 0 || idx >= prev.length - 1) return prev;
+      const next = [...prev];
+      [next[idx], next[idx + 1]] = [next[idx + 1], next[idx]];
+      return next;
+    });
+  };
+
+  const loadPreset = (presetId: number) => {
+    const preset = presets.find((p) => p.id === presetId);
+    if (!preset) return;
+    setSelectedIds(new Set(preset.kataIds));
+    setCustomOrder(preset.kataIds);
+    setActivePresetId(presetId);
+  };
+
+  const handleSavePreset = async () => {
+    if (!presetName.trim() || customOrder.length === 0) return;
+    await savePreset(presetName.trim(), customOrder);
+    setPresetName("");
+  };
+
+  // Start session
+  const handleStart = useCallback(async () => {
+    if (starting) return;
+    setStarting(true);
+
+    let sessionType: SessionType;
+    let selectedKatas;
+
+    if (tab === "daily") {
+      sessionType = "daily";
+      const kataMap = new Map(katas.map((k) => [k.id, k]));
+      const ids = [...dailySelectedIds];
+      selectedKatas = ids.map((id) => kataMap.get(id)).filter(Boolean) as typeof katas;
+    } else if (tab === "random") {
+      sessionType = "random";
+      selectedKatas = await selectRandomKatas(filteredKatas, size);
+    } else {
+      sessionType = "custom";
+      const kataMap = new Map(katas.map((k) => [k.id, k]));
+      selectedKatas = customOrder.map((id) => kataMap.get(id)).filter(Boolean) as typeof katas;
+    }
+
+    if (selectedKatas.length === 0) {
+      setStarting(false);
       return;
     }
-    if (launching) return;
-    setLaunching(true);
-    const kataMap = new Map(katas.map((k) => [k.id, k]));
-    const resolved = dailyKataIds.map((id) => kataMap.get(id)).filter(Boolean) as typeof katas;
-    if (resolved.length === 0) {
-      setLaunching(false);
-      navigate("/session/setup");
-      return;
-    }
+
     resetKataTimer();
     startSessionTimer();
-    const sessionId = await startSession("daily", resolved);
+    const sessionId = await startSession(sessionType, selectedKatas);
     navigate(`/session/${sessionId}`);
-  }, [dailyKataIds, dailyCount, launching, katas, resetKataTimer, startSessionTimer, startSession, navigate]);
+  }, [
+    starting, tab, size, filteredKatas, customOrder, katas, dailySelectedIds,
+    startSession, startSessionTimer, resetKataTimer, navigate,
+  ]);
 
-  const diffRank: Record<string, number> = { easy: 0, medium: 1, hard: 2 };
+  const tabClass = (t: Tab) =>
+    `px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${
+      tab === t
+        ? "bg-base-100 text-base-content shadow-sm"
+        : "text-base-content/35 hover:text-base-content/60"
+    }`;
 
-  const q = search.toLowerCase();
-  const filtered = katas.filter(
-    (k) =>
-      k.name.toLowerCase().includes(q) ||
-      k.category.toLowerCase().includes(q) ||
-      (k.difficulty?.toLowerCase().includes(q) ?? false) ||
-      k.tags.some((t) => t.toLowerCase().includes(q))
-  );
+  const diffColor = (d: string | null) => {
+    if (d === "easy") return "badge-success";
+    if (d === "medium") return "badge-warning";
+    if (d === "hard") return "badge-error";
+    return "badge-ghost";
+  };
 
-  const sorted = diffSort
-    ? [...filtered].sort((a, b) => {
-        const ra = diffRank[a.difficulty ?? ""] ?? 3;
-        const rb = diffRank[b.difficulty ?? ""] ?? 3;
-        return diffSort === "asc" ? ra - rb : rb - ra;
-      })
-    : filtered;
+  const isSessionMode = tab !== "browse";
+  const canStart =
+    (tab === "daily" && dailySelectedIds.size > 0) ||
+    tab === "random" ||
+    (tab === "custom" && customOrder.length > 0);
 
   return (
-    <div className="flex flex-col h-full p-4 gap-3">
+    <div className="flex flex-col h-full p-5 gap-4 animate-fade-in">
+      {/* Header */}
       <div className="flex items-center gap-3">
         <input
           type="text"
           placeholder="Search katas..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="flex-1 max-w-md px-3 py-1.5 text-sm rounded border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 outline-none focus:border-blue-500 dark:focus:border-blue-400"
+          className="input input-bordered input-sm flex-1 max-w-sm bg-base-100"
         />
-        <button
-          onClick={handleStartDaily}
-          disabled={launching}
-          className="px-4 py-1.5 text-sm font-medium rounded bg-green-600 hover:bg-green-500 text-white disabled:opacity-50 transition-colors"
-        >
-          {launching
-            ? "Launching..."
-            : dailyCount > 0
-              ? `Practice Daily (${dailyCount})`
-              : "Set Up Daily Katas"}
-        </button>
-      </div>
-      <div className="flex-1 min-h-0 overflow-y-auto scrollbar-hidden">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="text-left text-xs text-zinc-500 dark:text-zinc-400 border-b border-zinc-200 dark:border-zinc-800">
-              <th className="pb-2 w-8"></th>
-              <th className="pb-2 font-medium">Name</th>
-              <th className="pb-2 font-medium">Category</th>
-              <th
-                className="pb-2 font-medium cursor-pointer select-none hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors"
-                onClick={() => setDiffSort((v) => v === null ? "asc" : v === "asc" ? "desc" : null)}
-              >
-                Difficulty {diffSort === "asc" ? "▲" : diffSort === "desc" ? "▼" : ""}
-              </th>
-              <th className="pb-2 font-medium">Tags</th>
-              <th className="pb-2 font-medium text-right">Best</th>
-              <th className="pb-2 font-medium text-right">Streak</th>
-              <th className="pb-2 w-16"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {sorted.map((kata) => (
-              <tr
-                key={kata.id}
-                onClick={() => navigate(`/editor/${kata.id}`)}
-                className="border-b border-zinc-100 dark:border-zinc-800/50 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 cursor-pointer transition-colors"
-              >
-                <td className="py-2 w-8">
-                  <button
-                    onClick={(e) => toggleDaily(kata.id, e)}
-                    className={`p-0.5 rounded transition-colors ${
-                      dailyKataIds.includes(kata.id)
-                        ? "text-amber-500"
-                        : "text-zinc-300 dark:text-zinc-600 hover:text-amber-400"
-                    }`}
-                    title={dailyKataIds.includes(kata.id) ? "Remove from daily" : "Add to daily"}
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill={dailyKataIds.includes(kata.id) ? "currentColor" : "none"} stroke="currentColor" strokeWidth={dailyKataIds.includes(kata.id) ? 0 : 1.5} className={dailyKataIds.includes(kata.id) ? "w-5 h-5" : "w-4 h-4"}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v2.25m6.364.386-1.591 1.591M21 12h-2.25m-.386 6.364-1.591-1.591M12 18.75V21m-4.773-4.227-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0Z" />
-                    </svg>
-                  </button>
-                </td>
-                <td className="py-2 font-medium">
-                  {kata.name}
-                  {kata.isCustom && (
-                    <span className="ml-2 px-1.5 py-0.5 text-[10px] rounded bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400">
-                      Custom
-                    </span>
-                  )}
-                </td>
-                <td className="py-2 text-zinc-600 dark:text-zinc-400">{kata.category}</td>
-                <td className="py-2">
-                  <span className="px-1.5 py-0.5 text-xs rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400">
-                    {kata.difficulty ?? "—"}
-                  </span>
-                </td>
-                <td className="py-2">
-                  <div className="flex flex-wrap gap-1">
-                    {kata.tags.map((tag) => (
-                      <span key={tag} className="px-1.5 py-0.5 text-[10px] rounded bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400">
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                </td>
-                <td className="py-2 text-right text-zinc-500 dark:text-zinc-400 tabular-nums">
-                  {bestTimes[kata.id] != null
-                    ? `${(bestTimes[kata.id] / 1000).toFixed(1)}s`
-                    : "—"}
-                </td>
-                <td className="py-2 text-right text-zinc-500 dark:text-zinc-400 tabular-nums">
-                  {streaks[kata.id] ? streaks[kata.id] : "—"}
-                </td>
-                <td className="py-2 text-right">
-                  {kata.isCustom && (
-                    <div className="flex gap-1 justify-end">
-                      <button
-                        onClick={(e) => { e.stopPropagation(); navigate(`/kata/${kata.id}/edit`); }}
-                        className="p-1 rounded text-zinc-400 hover:text-blue-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
-                        title="Edit kata"
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5">
-                          <path d="m5.433 13.917 1.262-3.155A4 4 0 0 1 7.58 9.42l6.92-6.918a2.121 2.121 0 0 1 3 3l-6.92 6.918c-.383.383-.84.685-1.343.886l-3.154 1.262a.5.5 0 0 1-.65-.65Z" />
-                          <path d="M3.5 5.75c0-.69.56-1.25 1.25-1.25H10A.75.75 0 0 0 10 3H4.75A2.75 2.75 0 0 0 2 5.75v9.5A2.75 2.75 0 0 0 4.75 18h9.5A2.75 2.75 0 0 0 17 15.25V10a.75.75 0 0 0-1.5 0v5.25c0 .69-.56 1.25-1.25 1.25h-9.5c-.69 0-1.25-.56-1.25-1.25v-9.5Z" />
-                        </svg>
-                      </button>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); if (confirm("Delete this kata?")) deleteKata(kata.id); }}
-                        className="p-1 rounded text-zinc-400 hover:text-red-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
-                        title="Delete kata"
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5">
-                          <path fillRule="evenodd" d="M8.75 1A2.75 2.75 0 0 0 6 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 1 0 .23 1.482l.149-.022.841 10.518A2.75 2.75 0 0 0 7.596 19h4.807a2.75 2.75 0 0 0 2.742-2.53l.841-10.52.149.023a.75.75 0 0 0 .23-1.482A41.03 41.03 0 0 0 14 4.193V3.75A2.75 2.75 0 0 0 11.25 1h-2.5ZM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4ZM8.58 7.72a.75.75 0 0 1 .7.798l-.2 4.5a.75.75 0 0 1-1.496-.066l.2-4.5a.75.75 0 0 1 .796-.731ZM11.42 7.72a.75.75 0 0 1 .796.731l.2 4.5a.75.75 0 1 1-1.497.066l-.2-4.5a.75.75 0 0 1 .7-.798Z" clipRule="evenodd" />
-                        </svg>
-                      </button>
-                    </div>
-                  )}
-                </td>
-              </tr>
-            ))}
-            {sorted.length === 0 && (
-              <tr>
-                <td colSpan={8} className="py-8 text-center text-zinc-400">
-                  No katas found
-                </td>
-              </tr>
+        {/* Tab switcher */}
+        <div className="flex items-center gap-1 bg-base-300/40 rounded-lg p-1">
+          <button onClick={() => setTab("browse")} className={tabClass("browse")}>Browse</button>
+          <button onClick={() => setTab("daily")} className={tabClass("daily")}>Daily</button>
+          <button onClick={() => setTab("random")} className={tabClass("random")}>Random</button>
+          <button onClick={() => setTab("custom")} className={tabClass("custom")}>Custom</button>
+        </div>
+
+        {/* Start session button */}
+        {isSessionMode && (
+          <button
+            onClick={handleStart}
+            disabled={starting || !canStart}
+            className="btn btn-primary btn-sm gap-1.5 text-xs"
+          >
+            {starting ? (
+              <span className="loading loading-spinner loading-xs" />
+            ) : (
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5">
+                <path d="M3 3.732a1.5 1.5 0 0 1 2.305-1.265l6.706 4.267a1.5 1.5 0 0 1 0 2.531l-6.706 4.268A1.5 1.5 0 0 1 3 12.267V3.732Z" />
+              </svg>
             )}
-          </tbody>
-        </table>
+            {starting ? "Starting..." : "Start Session"}
+          </button>
+        )}
       </div>
+
+      {/* Mode-specific controls */}
+      {tab === "daily" && dailySelectedIds.size === 0 && (
+        <div className="text-xs text-base-content/35">
+          No daily katas set. Star katas in Browse to add them to your daily set.
+        </div>
+      )}
+
+      {tab === "random" && (
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <span className="text-[11px] font-semibold text-base-content/35 uppercase tracking-wider">Count</span>
+            <div className="join">
+              {SIZE_OPTIONS.map((n) => (
+                <button
+                  key={n}
+                  onClick={() => setSize(n)}
+                  className={`btn btn-sm join-item ${size === n ? "btn-primary" : "btn-ghost"}`}
+                >
+                  {n}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-[11px] font-semibold text-base-content/35 uppercase tracking-wider">Category</span>
+            <select
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value)}
+              className="select select-bordered select-sm bg-base-100"
+            >
+              <option value="">All ({katas.length})</option>
+              {categories.map((c) => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+          </div>
+          <span className="text-xs text-base-content/30">
+            Picks from {filteredKatas.length} katas
+          </span>
+        </div>
+      )}
+
+      {tab === "custom" && (
+        <div className="flex items-center gap-3">
+          {/* Load preset */}
+          {presets.length > 0 && (
+            <div className="flex items-center gap-1">
+              <select
+                value={activePresetId ?? ""}
+                onChange={(e) => {
+                  const val = Number(e.target.value);
+                  if (val) loadPreset(val);
+                }}
+                className="select select-bordered select-xs bg-base-100"
+              >
+                <option value="" disabled>Load preset...</option>
+                {presets.map((p) => (
+                  <option key={p.id} value={p.id}>{p.name} ({p.kataIds.length})</option>
+                ))}
+              </select>
+              {activePresetId && (
+                <button
+                  onClick={() => {
+                    deletePreset(activePresetId);
+                    setActivePresetId(null);
+                    setSelectedIds(new Set());
+                    setCustomOrder([]);
+                  }}
+                  className="btn btn-ghost btn-xs btn-square text-error/50 hover:text-error"
+                  title="Delete preset"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3 h-3">
+                    <path fillRule="evenodd" d="M5 3.25V4H2.75a.75.75 0 0 0 0 1.5h.3l.815 8.15A1.5 1.5 0 0 0 5.357 15h5.285a1.5 1.5 0 0 0 1.493-1.35l.815-8.15h.3a.75.75 0 0 0 0-1.5H11v-.75A2.25 2.25 0 0 0 8.75 1h-1.5A2.25 2.25 0 0 0 5 3.25Zm2.25-.75a.75.75 0 0 0-.75.75V4h3v-.75a.75.75 0 0 0-.75-.75h-1.5Z" clipRule="evenodd" />
+                  </svg>
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Save preset */}
+          {customOrder.length > 0 && (
+            <div className="flex items-center gap-1">
+              <input
+                type="text"
+                placeholder="Save as..."
+                value={presetName}
+                onChange={(e) => setPresetName(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") handleSavePreset(); }}
+                className="input input-bordered input-xs w-32 bg-base-100"
+              />
+              <button
+                onClick={handleSavePreset}
+                disabled={!presetName.trim()}
+                className="btn btn-primary btn-xs"
+              >
+                Save
+              </button>
+            </div>
+          )}
+
+          {customOrder.length > 0 && (
+            <span className="text-xs text-base-content/30">{customOrder.length} selected</span>
+          )}
+        </div>
+      )}
+
+      {/* Kata table (hidden for random mode) */}
+      {tab !== "random" && (
+        <div className="flex-1 min-h-0 overflow-y-auto scrollbar-hidden bg-base-100 rounded-lg border border-base-300/50">
+          <table className="table table-sm">
+            <thead>
+              <tr className="text-left text-[11px] text-base-content/35 uppercase tracking-wider">
+                {tab === "custom" && <th className="w-8"></th>}
+                {tab === "browse" && <th className="w-8"></th>}
+                <th className="font-semibold">Name</th>
+                <th className="font-semibold">Category</th>
+                <th
+                  className="font-semibold cursor-pointer select-none hover:text-base-content/60 transition-colors"
+                  onClick={() => setDiffSort((v) => v === null ? "asc" : v === "asc" ? "desc" : null)}
+                >
+                  Difficulty {diffSort === "asc" ? "▲" : diffSort === "desc" ? "▼" : ""}
+                </th>
+                <th className="font-semibold">Tags</th>
+                <th className="font-semibold text-right">Best</th>
+                <th className="font-semibold text-right">Streak</th>
+                {tab === "browse" && <th className="w-16"></th>}
+              </tr>
+            </thead>
+            <tbody>
+              {(tab === "daily"
+                ? searchedKatas.filter((k) => dailySelectedIds.has(k.id))
+                : searchedKatas
+              ).map((kata) => {
+                const isChecked =
+                  tab === "custom" ? selectedIds.has(kata.id) :
+                  false;
+
+                return (
+                  <tr
+                    key={kata.id}
+                    onClick={() => {
+                      if (tab === "custom") toggleKata(kata.id);
+                      else navigate(`/editor/${kata.id}`);
+                    }}
+                    className={`hover:bg-base-300/20 cursor-pointer transition-colors border-base-300/30 ${isChecked ? "bg-primary/5" : ""}`}
+                  >
+                    {/* Checkbox for custom mode */}
+                    {tab === "custom" && (
+                      <td className="w-8">
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={() => toggleKata(kata.id)}
+                          onClick={(e) => e.stopPropagation()}
+                          className="checkbox checkbox-sm checkbox-primary"
+                        />
+                      </td>
+                    )}
+                    {/* Star for browse mode */}
+                    {tab === "browse" && (
+                      <td className="w-8">
+                        <button
+                          onClick={(e) => toggleDaily(kata.id, e)}
+                          className={`btn btn-ghost btn-xs btn-square ${
+                            dailyKataIds.includes(kata.id)
+                              ? "text-warning"
+                              : "text-base-content/20 hover:text-base-content/40"
+                          }`}
+                          title={dailyKataIds.includes(kata.id) ? "Remove from daily" : "Add to daily"}
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill={dailyKataIds.includes(kata.id) ? "currentColor" : "none"} stroke="currentColor" strokeWidth={1.5} className="w-4 h-4">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M11.48 3.499a.562.562 0 0 1 1.04 0l2.125 5.111a.563.563 0 0 0 .475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 0 0-.182.557l1.285 5.385a.562.562 0 0 1-.84.61l-4.725-2.885a.562.562 0 0 0-.586 0L6.982 20.54a.562.562 0 0 1-.84-.61l1.285-5.386a.562.562 0 0 0-.182-.557l-4.204-3.602a.562.562 0 0 1 .321-.988l5.518-.442a.563.563 0 0 0 .475-.345L11.48 3.5Z" />
+                          </svg>
+                        </button>
+                      </td>
+                    )}
+                    <td className="font-medium text-sm">
+                      <span className="inline-flex items-center gap-1.5">
+                        {kata.name}
+                        {kata.isCustom && (
+                          <span className="badge badge-secondary badge-xs">Custom</span>
+                        )}
+                        <button
+                          onClick={(e) => toggleDone(kata.id, e)}
+                          className={`inline-flex items-center gap-0.5 rounded-full px-1 py-0.5 text-[10px] font-semibold transition-colors ${
+                            doneKataIds.includes(kata.id)
+                              ? "bg-success/15 text-success hover:bg-success/25"
+                              : "text-base-content/15 hover:text-base-content/30 hover:bg-base-300/30"
+                          }`}
+                          title={doneKataIds.includes(kata.id) ? "Mark as not done" : "Mark as done"}
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3 h-3">
+                            <path fillRule="evenodd" d="M12.416 3.376a.75.75 0 0 1 .208 1.04l-5 7.5a.75.75 0 0 1-1.154.114l-3-3a.75.75 0 0 1 1.06-1.06l2.353 2.353 4.493-6.74a.75.75 0 0 1 1.04-.207Z" clipRule="evenodd" />
+                          </svg>
+                        </button>
+                      </span>
+                    </td>
+                    <td className="text-base-content/45 text-sm">{kata.category}</td>
+                    <td>
+                      <span className={`badge badge-sm ${diffColor(kata.difficulty)}`}>
+                        {kata.difficulty ?? "-"}
+                      </span>
+                    </td>
+                    <td>
+                      <div className="flex flex-wrap gap-1">
+                        {kata.tags.map((tag) => (
+                          <span key={tag} className="badge badge-xs bg-primary/10 text-primary border-primary/20">
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                    </td>
+                    <td className="text-right text-base-content/45 tabular-nums text-sm">
+                      {bestTimes[kata.id] != null
+                        ? `${(bestTimes[kata.id] / 1000).toFixed(1)}s`
+                        : "-"}
+                    </td>
+                    <td className="text-right text-base-content/45 tabular-nums text-sm">
+                      {streaks[kata.id] ? streaks[kata.id] : "-"}
+                    </td>
+                    {tab === "browse" && (
+                      <td className="text-right">
+                        {kata.isCustom && (
+                          <div className="flex gap-0.5 justify-end">
+                            <button
+                              onClick={(e) => { e.stopPropagation(); navigate(`/kata/${kata.id}/edit`); }}
+                              className="btn btn-ghost btn-xs btn-square text-base-content/30 hover:text-base-content/60"
+                              title="Edit kata"
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5">
+                                <path d="m5.433 13.917 1.262-3.155A4 4 0 0 1 7.58 9.42l6.92-6.918a2.121 2.121 0 0 1 3 3l-6.92 6.918c-.383.383-.84.685-1.343.886l-3.154 1.262a.5.5 0 0 1-.65-.65Z" />
+                                <path d="M3.5 5.75c0-.69.56-1.25 1.25-1.25H10A.75.75 0 0 0 10 3H4.75A2.75 2.75 0 0 0 2 5.75v9.5A2.75 2.75 0 0 0 4.75 18h9.5A2.75 2.75 0 0 0 17 15.25V10a.75.75 0 0 0-1.5 0v5.25c0 .69-.56 1.25-1.25 1.25h-9.5c-.69 0-1.25-.56-1.25-1.25v-9.5Z" />
+                              </svg>
+                            </button>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); if (confirm("Delete this kata?")) deleteKata(kata.id); }}
+                              className="btn btn-ghost btn-xs btn-square text-error/50 hover:text-error"
+                              title="Delete kata"
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5">
+                                <path fillRule="evenodd" d="M8.75 1A2.75 2.75 0 0 0 6 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 1 0 .23 1.482l.149-.022.841 10.518A2.75 2.75 0 0 0 7.596 19h4.807a2.75 2.75 0 0 0 2.742-2.53l.841-10.52.149.023a.75.75 0 0 0 .23-1.482A41.03 41.03 0 0 0 14 4.193V3.75A2.75 2.75 0 0 0 11.25 1h-2.5ZM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4ZM8.58 7.72a.75.75 0 0 1 .7.798l-.2 4.5a.75.75 0 0 1-1.496-.066l.2-4.5a.75.75 0 0 1 .796-.731ZM11.42 7.72a.75.75 0 0 1 .796.731l.2 4.5a.75.75 0 1 1-1.497.066l-.2-4.5a.75.75 0 0 1 .7-.798Z" clipRule="evenodd" />
+                              </svg>
+                            </button>
+                          </div>
+                        )}
+                      </td>
+                    )}
+                  </tr>
+                );
+              })}
+              {(tab === "daily"
+                ? searchedKatas.filter((k) => dailySelectedIds.has(k.id)).length === 0
+                : searchedKatas.length === 0
+              ) && (
+                <tr>
+                  <td colSpan={tab === "browse" ? 8 : 7} className="py-12 text-center text-base-content/25 text-sm">
+                    No katas found
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Selected order (custom tab) */}
+      {tab === "custom" && customOrder.length > 0 && (
+        <div className="bg-base-100 rounded-lg border border-base-300/50 p-3 max-h-36 overflow-y-auto shrink-0">
+          <p className="text-[11px] font-semibold text-base-content/35 uppercase tracking-wider mb-2">
+            Selected ({customOrder.length})
+          </p>
+          {customOrder.map((id, i) => {
+            const k = katas.find((k) => k.id === id);
+            if (!k) return null;
+            return (
+              <div key={id} className="flex items-center gap-2 py-1 text-sm">
+                <span className="text-base-content/25 w-5 text-right tabular-nums">{i + 1}.</span>
+                <span className="flex-1">{k.name}</span>
+                <button onClick={() => moveUp(id)} className="btn btn-ghost btn-xs" disabled={i === 0}>Up</button>
+                <button onClick={() => moveDown(id)} className="btn btn-ghost btn-xs" disabled={i === customOrder.length - 1}>Dn</button>
+                <button onClick={() => toggleKata(id)} className="btn btn-ghost btn-xs text-error/60">X</button>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

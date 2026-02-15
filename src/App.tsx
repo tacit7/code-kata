@@ -5,8 +5,7 @@ import { useKataStore } from "./stores/kata-store";
 import { useKeyboardShortcuts } from "./hooks/use-keyboard-shortcuts";
 import { TopBar } from "./components/top-bar";
 import { EditorPage } from "./routes/editor";
-import { LibraryPage } from "./routes/library";
-import { SessionSetupPage } from "./routes/session-setup";
+import { PracticePage } from "./routes/library";
 import { SessionPage } from "./routes/session";
 import { SessionResultsPage } from "./routes/session-results";
 import { DashboardPage } from "./routes/dashboard";
@@ -30,7 +29,6 @@ function App() {
     loadSettings();
   }, [loadSettings]);
 
-  // Load katas when settings are ready or language changes
   useEffect(() => {
     if (settingsLoaded) {
       loadKatas(language);
@@ -39,9 +37,14 @@ function App() {
 
   if (loading || !settingsLoaded) {
     return (
-      <div className={`${theme === "dark" ? "dark" : ""} flex flex-col h-full`}>
-        <div className="flex items-center justify-center h-full bg-white dark:bg-zinc-950 text-zinc-500 dark:text-zinc-400 text-sm">
-          Loading...
+      <div className={`${theme === "dark" ? "dark" : ""} flex flex-col h-full`} data-theme={theme}>
+        <div className="flex items-center justify-center h-full bg-base-200">
+          <div className="flex flex-col items-center gap-3 animate-fade-in">
+            <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
+              <div className="w-3 h-3 rounded-sm bg-primary animate-pulse" />
+            </div>
+            <span className="text-sm text-base-content/40 font-medium tracking-wide">Loading</span>
+          </div>
         </div>
       </div>
     );
@@ -49,27 +52,31 @@ function App() {
 
   if (error) {
     return (
-      <div className={`${theme === "dark" ? "dark" : ""} flex flex-col h-full`}>
-        <div className="flex items-center justify-center h-full bg-white dark:bg-zinc-950 text-red-500 text-sm">
-          Failed to load katas: {error}
+      <div className={`${theme === "dark" ? "dark" : ""} flex flex-col h-full`} data-theme={theme}>
+        <div className="flex items-center justify-center h-full bg-base-200">
+          <div className="flex flex-col items-center gap-3 text-error animate-fade-in">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-6 h-6 opacity-60">
+              <path fillRule="evenodd" d="M18 10a8 8 0 1 1-16 0 8 8 0 0 1 16 0Zm-8-5a.75.75 0 0 1 .75.75v4.5a.75.75 0 0 1-1.5 0v-4.5A.75.75 0 0 1 10 5Zm0 10a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z" clipRule="evenodd" />
+            </svg>
+            <span className="text-sm">Failed to load katas: {error}</span>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className={`${theme === "dark" ? "dark" : ""} flex flex-col h-full`}>
-      <div className="flex flex-col h-full p-2 bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100">
+    <div className={`${theme === "dark" ? "dark" : ""} flex flex-col h-full`} data-theme={theme}>
+      <div className="flex flex-col h-full bg-base-200 text-base-content">
         <TopBar />
         <main className="flex-1 min-h-0">
           <Routes>
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="/dashboard" element={<DashboardPage />} />
-            <Route path="/library" element={<LibraryPage />} />
+            <Route path="/practice" element={<PracticePage />} />
             <Route path="/kata/new" element={<KataFormPage />} />
             <Route path="/kata/:kataId/edit" element={<KataFormPage />} />
             <Route path="/editor/:kataId" element={<EditorPage />} />
-            <Route path="/session/setup" element={<SessionSetupPage />} />
             <Route path="/session/:sessionId" element={<SessionPage />} />
             <Route path="/session/:sessionId/results" element={<SessionResultsPage />} />
             <Route path="/settings" element={<SettingsPage />} />

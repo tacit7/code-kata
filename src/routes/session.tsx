@@ -32,14 +32,12 @@ export function SessionPage() {
   const [attemptRecorded, setAttemptRecorded] = useState(false);
   const [lastPassed, setLastPassed] = useState(false);
 
-  // Load session if navigating directly
   useEffect(() => {
     if (!activeSession && sessionId) {
       loadSession(Number(sessionId), allKatas);
     }
   }, [activeSession, sessionId, allKatas, loadSession]);
 
-  // Start kata timer when kata changes (including first load)
   useEffect(() => {
     if (activeSession && sessionKatas.length > 0) {
       resetKataTimer();
@@ -91,44 +89,55 @@ export function SessionPage() {
 
   const handleQuit = useCallback(() => {
     const totalMs = stopSessionTimer();
-    // Record unattempted current kata if not recorded
     finishSession(totalMs).then(() => {
       navigate(`/session/${sessionId}/results`);
     });
   }, [stopSessionTimer, finishSession, navigate, sessionId]);
 
   if (!activeSession || !currentKata) {
-    if (!sessionId) return <Navigate to="/session/setup" replace />;
+    if (!sessionId) return <Navigate to="/practice" replace />;
     return (
-      <div className="flex items-center justify-center h-full text-zinc-500 text-sm">
-        Loading session...
+      <div className="flex items-center justify-center h-full text-base-content/30 text-sm">
+        <div className="flex items-center gap-2">
+          <span className="loading loading-spinner loading-sm text-primary" />
+          Loading session
+        </div>
       </div>
     );
   }
 
-  // Check if current kata already has an attempt in this session
   const hasAttemptForCurrent = attempts.some(
     (a) => a.kataIndex === currentIndex,
   );
 
+  const progress = ((currentIndex + 1) / sessionKatas.length) * 100;
+
   return (
     <div className="flex flex-col h-full">
-      {/* Session top bar */}
-      <div className="flex items-center gap-3 px-4 py-2 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 shrink-0">
-        <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
+      {/* Session bar */}
+      <div className="flex items-center gap-3 px-4 h-10 border-b border-base-300/60 bg-base-100 shrink-0 relative">
+        {/* Progress track */}
+        <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-base-300/30">
+          <div
+            className="h-full bg-primary transition-all duration-300"
+            style={{ width: `${progress}%` }}
+          />
+        </div>
+
+        <span className="text-xs font-semibold text-primary tabular-nums">
           {currentIndex + 1}/{sessionKatas.length}
         </span>
-        <span className="text-sm font-semibold truncate flex-1">
+        <span className="text-sm font-medium truncate flex-1">
           {currentKata.name}
         </span>
 
         {/* Kata timer */}
-        <span className="font-mono text-sm text-green-400">
+        <span className="font-mono text-sm text-success tabular-nums">
           {formatTime(kataElapsed)}
         </span>
 
         {/* Session timer */}
-        <span className="font-mono text-xs text-zinc-500 dark:text-zinc-400">
+        <span className="font-mono text-xs text-base-content/30 tabular-nums">
           {formatTime(sessionElapsed)}
         </span>
 
@@ -136,32 +145,26 @@ export function SessionPage() {
         <button
           onClick={handlePrev}
           disabled={currentIndex === 0}
-          className="px-2 py-1 text-xs font-medium rounded bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-400 disabled:opacity-30 hover:bg-zinc-300 dark:hover:bg-zinc-600 transition-colors"
+          className="btn btn-ghost btn-xs disabled:opacity-20"
         >
           Prev
         </button>
 
         {(attemptRecorded || hasAttemptForCurrent) && (
-          <button
-            onClick={handleNext}
-            className="px-3 py-1 text-xs font-medium rounded bg-blue-600 hover:bg-blue-500 text-white transition-colors"
-          >
+          <button onClick={handleNext} className="btn btn-primary btn-xs">
             {isLast ? "Finish" : "Next"}
           </button>
         )}
 
         {!attemptRecorded && !hasAttemptForCurrent && (
-          <button
-            onClick={handleNext}
-            className="px-3 py-1 text-xs font-medium rounded bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-300 dark:hover:bg-zinc-600 transition-colors"
-          >
+          <button onClick={handleNext} className="btn btn-ghost btn-xs">
             {isLast ? "Finish" : "Skip"}
           </button>
         )}
 
         <button
           onClick={handleQuit}
-          className="px-2 py-1 text-xs font-medium rounded bg-red-600/20 text-red-400 hover:bg-red-600/30 transition-colors"
+          className="btn btn-ghost btn-xs text-error/60 hover:text-error"
         >
           Quit
         </button>
@@ -169,7 +172,7 @@ export function SessionPage() {
 
       {/* Pass indicator */}
       {lastPassed && attemptRecorded && (
-        <div className="px-4 py-1.5 bg-green-600/10 text-green-400 text-xs font-medium border-b border-green-600/20">
+        <div className="px-4 py-1.5 bg-success/10 text-success text-xs font-medium border-b border-success/15">
           All tests passed! {isLast ? "Click Finish to see results." : "Click Next to continue."}
         </div>
       )}

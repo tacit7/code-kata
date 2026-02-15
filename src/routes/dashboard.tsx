@@ -20,9 +20,9 @@ import { useTimerStore } from "../stores/timer-store";
 import { formatTime } from "../lib/format";
 import { seedDashboard, clearDashboardSeed } from "../lib/seed-dashboard";
 
-// --- Practice Daily ---
+// ── Practice Daily ──
 
-function PracticeDailyButton() {
+function PracticeDailyCard() {
   const navigate = useNavigate();
   const dailyKataIds = useSettingsStore((s) => s.dailyKataIds);
   const katas = useKataStore((s) => s.katas);
@@ -37,22 +37,18 @@ function PracticeDailyButton() {
 
   const handleClick = useCallback(async () => {
     if (!hasDaily) {
-      navigate("/session/setup");
+      navigate("/practice");
       return;
     }
-
     if (launching) return;
     setLaunching(true);
-
     const kataMap = new Map(katas.map((k) => [k.id, k]));
     const resolved = dailyKataIds.map((id) => kataMap.get(id)).filter(Boolean) as typeof katas;
-
     if (resolved.length === 0) {
       setLaunching(false);
-      navigate("/session/setup");
+      navigate("/practice");
       return;
     }
-
     resetKataTimer();
     startSessionTimer();
     const sessionId = await startSession("daily", resolved);
@@ -60,62 +56,95 @@ function PracticeDailyButton() {
   }, [hasDaily, launching, dailyKataIds, katas, startSession, startSessionTimer, resetKataTimer, navigate]);
 
   return (
-    <button
-      onClick={handleClick}
-      disabled={launching}
-      className="w-full px-6 py-3 text-sm font-semibold rounded bg-green-600 hover:bg-green-500 text-white disabled:opacity-50 transition-colors"
-    >
-      {launching
-        ? "Launching..."
-        : hasDaily
-          ? `Practice Daily (${dailyCount} katas)`
-          : "Set Up Daily Katas"}
-    </button>
+    <div className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border border-primary/15 rounded-lg p-4 flex items-center justify-between animate-fade-in-up">
+      <div>
+        <h2 className="text-sm font-semibold text-primary">Daily Practice</h2>
+        <p className="text-xs text-base-content/40 mt-0.5">
+          {hasDaily ? `${dailyCount} kata${dailyCount !== 1 ? "s" : ""} queued` : "Set up your daily kata routine"}
+        </p>
+      </div>
+      <button
+        onClick={handleClick}
+        disabled={launching}
+        className="btn btn-primary btn-sm gap-1.5"
+      >
+        {launching ? (
+          <span className="loading loading-spinner loading-xs" />
+        ) : (
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5">
+            <path d="M3 3.732a1.5 1.5 0 0 1 2.305-1.265l6.706 4.267a1.5 1.5 0 0 1 0 2.531l-6.706 4.268A1.5 1.5 0 0 1 3 12.267V3.732Z" />
+          </svg>
+        )}
+        {launching ? "Launching..." : hasDaily ? "Start" : "Set Up"}
+      </button>
+    </div>
   );
 }
 
-// --- Stat Cards ---
+// ── Stat Cards ──
 
 function StatCards() {
   const streak = useDashboardStore((s) => s.streak);
   const today = useDashboardStore((s) => s.today);
 
-  const passRate =
-    today.totalKatas > 0
-      ? `${today.totalPassed}/${today.totalKatas}`
-      : "0/0";
+  const cards = [
+    {
+      label: "Streak",
+      value: streak,
+      suffix: streak !== 1 ? " days" : " day",
+      color: streak > 0 ? "text-primary" : "text-base-content",
+    },
+    {
+      label: "Sessions Today",
+      value: today.sessionCount,
+      suffix: "",
+      color: today.sessionCount > 0 ? "text-accent" : "text-base-content",
+    },
+    {
+      label: "Time Today",
+      value: today.totalTimeMs > 0 ? formatTime(today.totalTimeMs) : "00:00",
+      suffix: "",
+      color: "text-base-content",
+      mono: true,
+    },
+    {
+      label: "Pass Rate",
+      value: today.totalKatas > 0 ? `${today.totalPassed}/${today.totalKatas}` : "0/0",
+      suffix: "",
+      color: today.totalPassed === today.totalKatas && today.totalKatas > 0 ? "text-success" : "text-base-content",
+    },
+  ];
 
   return (
-    <div className="flex gap-4">
-      <div className="flex-1 px-4 py-3 rounded bg-zinc-100 dark:bg-zinc-800">
-        <p className="text-xs text-zinc-500 dark:text-zinc-400">Streak</p>
-        <p className="text-lg font-semibold">{streak} day{streak !== 1 ? "s" : ""}</p>
-      </div>
-      <div className="flex-1 px-4 py-3 rounded bg-zinc-100 dark:bg-zinc-800">
-        <p className="text-xs text-zinc-500 dark:text-zinc-400">Today's Sessions</p>
-        <p className="text-lg font-semibold">{today.sessionCount}</p>
-      </div>
-      <div className="flex-1 px-4 py-3 rounded bg-zinc-100 dark:bg-zinc-800">
-        <p className="text-xs text-zinc-500 dark:text-zinc-400">Today's Time</p>
-        <p className="text-lg font-mono font-semibold">
-          {today.totalTimeMs > 0 ? formatTime(today.totalTimeMs) : "00:00"}
-        </p>
-      </div>
-      <div className="flex-1 px-4 py-3 rounded bg-zinc-100 dark:bg-zinc-800">
-        <p className="text-xs text-zinc-500 dark:text-zinc-400">Today's Pass Rate</p>
-        <p className="text-lg font-semibold">{passRate}</p>
-      </div>
+    <div className="grid grid-cols-4 gap-3 stagger">
+      {cards.map((card) => (
+        <div
+          key={card.label}
+          className="bg-base-100 rounded-lg p-4 border border-base-300/50"
+        >
+          <div className="text-[11px] font-medium text-base-content/35 uppercase tracking-wider mb-2">
+            {card.label}
+          </div>
+          <div className={`text-xl font-bold ${card.color} ${card.mono ? "font-mono" : ""}`}>
+            {card.value}
+            {card.suffix && (
+              <span className="text-sm font-normal text-base-content/30 ml-0.5">{card.suffix}</span>
+            )}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
 
-// --- Heatmap ---
+// ── Heatmap ──
 
-function getHeatmapColor(count: number): string {
-  if (count === 0) return "bg-zinc-800";
-  if (count <= 2) return "bg-green-900";
-  if (count <= 5) return "bg-green-700";
-  return "bg-green-500";
+function getHeatmapClass(count: number): string {
+  if (count === 0) return "hm-0";
+  if (count <= 1) return "hm-1";
+  if (count <= 3) return "hm-2";
+  if (count <= 6) return "hm-3";
+  return "hm-4";
 }
 
 const DAY_LABELS = ["", "Mon", "", "Wed", "", "Fri", ""];
@@ -127,23 +156,18 @@ const MONTH_NAMES = [
 function Heatmap() {
   const heatmap = useDashboardStore((s) => s.heatmap);
 
-  // Build a lookup map: "YYYY-MM-DD" -> kataCount
   const countMap = new Map<string, number>();
   for (const d of heatmap) {
     countMap.set(d.day, d.kataCount);
   }
 
-  // Start 364 days ago (to fill 52 cols x 7 rows = 364 cells)
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const start = new Date(today);
   start.setDate(start.getDate() - 363);
-
-  // Adjust start to the nearest Sunday (start of week)
-  const startDow = start.getDay(); // 0=Sun
+  const startDow = start.getDay();
   start.setDate(start.getDate() - startDow);
 
-  // Build cells: 52 columns x 7 rows (col-major)
   const cells: { date: string; count: number; col: number; row: number }[] = [];
   const monthLabels: { label: string; col: number }[] = [];
   let lastMonth = -1;
@@ -163,37 +187,32 @@ function Heatmap() {
   }
 
   return (
-    <div>
-      <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500 mb-3">
+    <div className="bg-base-100 rounded-lg p-5 border border-base-300/50 animate-fade-in-up" style={{ animationDelay: "200ms" }}>
+      <h2 className="text-[11px] font-semibold uppercase tracking-wider text-base-content/35 mb-4">
         Activity
       </h2>
       <div className="overflow-x-auto">
         {/* Month labels */}
         <div
-          className="grid gap-[3px] ml-8 mb-1"
-          style={{
-            gridTemplateColumns: "repeat(52, 12px)",
-          }}
+          className="grid gap-[3px] ml-8 mb-1.5"
+          style={{ gridTemplateColumns: "repeat(52, 11px)" }}
         >
           {Array.from({ length: 52 }, (_, col) => {
             const ml = monthLabels.find((m) => m.col === col);
             return (
-              <span
-                key={col}
-                className="text-[10px] text-zinc-500 dark:text-zinc-400 leading-none"
-              >
+              <span key={col} className="text-[10px] text-base-content/25 leading-none">
                 {ml ? ml.label : ""}
               </span>
             );
           })}
         </div>
-        {/* Grid body with day labels */}
+        {/* Grid body */}
         <div className="flex">
-          <div className="flex flex-col gap-[3px] mr-1 pt-0">
+          <div className="flex flex-col gap-[3px] mr-1.5 pt-0">
             {DAY_LABELS.map((label, i) => (
               <span
                 key={i}
-                className="text-[10px] text-zinc-500 dark:text-zinc-400 h-[12px] leading-[12px] w-6 text-right"
+                className="text-[10px] text-base-content/25 h-[11px] leading-[11px] w-6 text-right"
               >
                 {label}
               </span>
@@ -202,15 +221,15 @@ function Heatmap() {
           <div
             className="grid gap-[3px]"
             style={{
-              gridTemplateColumns: "repeat(52, 12px)",
-              gridTemplateRows: "repeat(7, 12px)",
+              gridTemplateColumns: "repeat(52, 11px)",
+              gridTemplateRows: "repeat(7, 11px)",
               gridAutoFlow: "column",
             }}
           >
             {cells.map((cell) => (
               <div
                 key={cell.date}
-                className={`w-[12px] h-[12px] rounded-sm ${getHeatmapColor(cell.count)}`}
+                className={`w-[11px] h-[11px] rounded-[2px] ${getHeatmapClass(cell.count)} transition-colors`}
                 title={`${cell.date}: ${cell.count} kata${cell.count !== 1 ? "s" : ""}`}
               />
             ))}
@@ -221,7 +240,16 @@ function Heatmap() {
   );
 }
 
-// --- Charts ---
+// ── Charts ──
+
+const CHART_TOOLTIP_STYLE = {
+  backgroundColor: "oklch(16% 0.02 255)",
+  border: "1px solid oklch(24% 0.022 255)",
+  borderRadius: 8,
+  color: "oklch(85% 0.008 250)",
+  fontSize: 12,
+  fontFamily: "'Outfit', system-ui, sans-serif",
+};
 
 function CategoryChart() {
   const categoryBreakdown = useDashboardStore((s) => s.categoryBreakdown);
@@ -233,37 +261,29 @@ function CategoryChart() {
 
   if (data.length === 0) {
     return (
-      <div className="flex-1 flex items-center justify-center h-[250px] text-zinc-500 text-sm">
+      <div className="flex-1 bg-base-100 rounded-lg border border-base-300/50 flex items-center justify-center h-[280px] text-base-content/30 text-sm">
         No category data yet
       </div>
     );
   }
 
   return (
-    <div className="flex-1">
-      <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500 mb-3">
+    <div className="flex-1 bg-base-100 rounded-lg p-5 border border-base-300/50">
+      <h2 className="text-[11px] font-semibold uppercase tracking-wider text-base-content/35 mb-4">
         Time by Category
       </h2>
-      <ResponsiveContainer width="100%" height={250}>
-        <BarChart data={data} layout="vertical" margin={{ left: 20, right: 20 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#3f3f46" />
-          <XAxis type="number" tick={{ fill: "#a1a1aa", fontSize: 12 }} />
+      <ResponsiveContainer width="100%" height={220}>
+        <BarChart data={data} layout="vertical" margin={{ left: 10, right: 16 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="oklch(22% 0.02 255)" />
+          <XAxis type="number" tick={{ fill: "oklch(50% 0.02 255)", fontSize: 11, fontFamily: "'Outfit', system-ui" }} />
           <YAxis
             type="category"
             dataKey="category"
-            tick={{ fill: "#a1a1aa", fontSize: 12 }}
-            width={80}
+            tick={{ fill: "oklch(50% 0.02 255)", fontSize: 11, fontFamily: "'Outfit', system-ui" }}
+            width={70}
           />
-          <Tooltip
-            contentStyle={{
-              backgroundColor: "#27272a",
-              border: "1px solid #3f3f46",
-              borderRadius: 6,
-              color: "#e4e4e7",
-            }}
-            formatter={(value) => [`${value ?? 0} min`, "Time"]}
-          />
-          <Bar dataKey="minutes" fill="#3b82f6" radius={[0, 4, 4, 0]} />
+          <Tooltip contentStyle={CHART_TOOLTIP_STYLE} formatter={(value) => [`${value ?? 0} min`, "Time"]} />
+          <Bar dataKey="minutes" fill="oklch(78% 0.14 165)" radius={[0, 4, 4, 0]} />
         </BarChart>
       </ResponsiveContainer>
     </div>
@@ -274,43 +294,35 @@ function TrendChart() {
   const trendLine = useDashboardStore((s) => s.trendLine);
 
   const data = trendLine.map((t) => ({
-    day: t.day.slice(5), // "MM-DD"
+    day: t.day.slice(5),
     avgTimeSec: Math.round(t.avgTimeMs / 1000),
   }));
 
   if (data.length === 0) {
     return (
-      <div className="flex-1 flex items-center justify-center h-[250px] text-zinc-500 text-sm">
+      <div className="flex-1 bg-base-100 rounded-lg border border-base-300/50 flex items-center justify-center h-[280px] text-base-content/30 text-sm">
         No trend data yet
       </div>
     );
   }
 
   return (
-    <div className="flex-1">
-      <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500 mb-3">
-        Avg Completion Time (30 days)
+    <div className="flex-1 bg-base-100 rounded-lg p-5 border border-base-300/50">
+      <h2 className="text-[11px] font-semibold uppercase tracking-wider text-base-content/35 mb-4">
+        Avg Completion Time (30d)
       </h2>
-      <ResponsiveContainer width="100%" height={250}>
-        <LineChart data={data} margin={{ left: 10, right: 20 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#3f3f46" />
-          <XAxis dataKey="day" tick={{ fill: "#a1a1aa", fontSize: 12 }} />
-          <YAxis tick={{ fill: "#a1a1aa", fontSize: 12 }} />
-          <Tooltip
-            contentStyle={{
-              backgroundColor: "#27272a",
-              border: "1px solid #3f3f46",
-              borderRadius: 6,
-              color: "#e4e4e7",
-            }}
-            formatter={(value) => [`${value ?? 0}s`, "Avg Time"]}
-          />
+      <ResponsiveContainer width="100%" height={220}>
+        <LineChart data={data} margin={{ left: 0, right: 16 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="oklch(22% 0.02 255)" />
+          <XAxis dataKey="day" tick={{ fill: "oklch(50% 0.02 255)", fontSize: 11, fontFamily: "'Outfit', system-ui" }} />
+          <YAxis tick={{ fill: "oklch(50% 0.02 255)", fontSize: 11, fontFamily: "'Outfit', system-ui" }} />
+          <Tooltip contentStyle={CHART_TOOLTIP_STYLE} formatter={(value) => [`${value ?? 0}s`, "Avg Time"]} />
           <Line
             type="monotone"
             dataKey="avgTimeSec"
-            stroke="#10b981"
+            stroke="oklch(70% 0.13 180)"
             strokeWidth={2}
-            dot={{ r: 3, fill: "#10b981" }}
+            dot={{ r: 2.5, fill: "oklch(70% 0.13 180)" }}
           />
         </LineChart>
       </ResponsiveContainer>
@@ -320,51 +332,48 @@ function TrendChart() {
 
 function ChartsRow() {
   return (
-    <div className="flex gap-6">
+    <div className="flex gap-3 animate-fade-in-up" style={{ animationDelay: "250ms" }}>
       <CategoryChart />
       <TrendChart />
     </div>
   );
 }
 
-// --- Leaderboard ---
+// ── Leaderboard ──
 
 function Leaderboard() {
   const leaderboard = useDashboardStore((s) => s.leaderboard);
 
   if (leaderboard.length === 0) {
     return (
-      <div className="flex items-center justify-center h-48 text-zinc-500 text-sm">
+      <div className="flex items-center justify-center h-48 text-base-content/30 text-sm">
         No katas loaded yet.
       </div>
     );
   }
 
   return (
-    <div>
-      <table className="w-full text-sm">
+    <div className="bg-base-100 rounded-lg border border-base-300/50 overflow-hidden animate-fade-in-up">
+      <table className="table table-sm">
         <thead>
-          <tr className="text-left text-xs text-zinc-500 dark:text-zinc-400 border-b border-zinc-200 dark:border-zinc-800">
-            <th className="pb-2 font-medium">Kata</th>
-            <th className="pb-2 font-medium">Category</th>
-            <th className="pb-2 font-medium">Difficulty</th>
-            <th className="pb-2 font-medium">Best Time</th>
-            <th className="pb-2 font-medium">Attempts</th>
+          <tr className="text-left text-[11px] text-base-content/35 uppercase tracking-wider">
+            <th className="font-semibold">Kata</th>
+            <th className="font-semibold">Category</th>
+            <th className="font-semibold">Difficulty</th>
+            <th className="font-semibold">Best Time</th>
+            <th className="font-semibold">Attempts</th>
           </tr>
         </thead>
         <tbody>
           {leaderboard.map((row) => (
-            <tr
-              key={row.kataId}
-              className="border-b border-zinc-100 dark:border-zinc-800/50"
-            >
-              <td className="py-2 font-medium">{row.kataName}</td>
-              <td className="py-2 text-zinc-500 dark:text-zinc-400">{row.category}</td>
-              <td className="py-2 text-zinc-500 dark:text-zinc-400">{row.difficulty}</td>
-              <td className="py-2 font-mono text-zinc-500 dark:text-zinc-400">
+            <tr key={row.kataId} className="border-base-300/30">
+              <td className="font-medium text-sm">{row.kataName}</td>
+              <td className="text-base-content/45 text-sm">{row.category}</td>
+              <td className="text-base-content/45 text-sm">{row.difficulty}</td>
+              <td className="font-mono text-base-content/45 text-sm">
                 {row.bestTimeMs != null ? formatTime(row.bestTimeMs) : "--:--"}
               </td>
-              <td className="py-2 text-zinc-500 dark:text-zinc-400">{row.attemptCount}</td>
+              <td className="text-base-content/45 text-sm tabular-nums">{row.attemptCount}</td>
             </tr>
           ))}
         </tbody>
@@ -373,34 +382,30 @@ function Leaderboard() {
   );
 }
 
-// --- Session History ---
+// ── Session History ──
 
 function DrillDown({ rows }: { rows: DrillDownRow[] }) {
   return (
     <tr>
       <td colSpan={5} className="p-0">
-        <div className="bg-zinc-100 dark:bg-zinc-900 px-6 py-3">
-          <table className="w-full text-sm">
+        <div className="bg-base-200 px-6 py-3">
+          <table className="table table-sm">
             <tbody>
               {rows.map((row) => (
                 <tr
                   key={`${row.kataId}-${row.kataIndex}`}
-                  className="border-b border-zinc-200 dark:border-zinc-800/50 last:border-0"
+                  className="border-b border-base-300/30 last:border-0"
                 >
-                  <td className="py-1.5 font-medium">{row.kataName}</td>
-                  <td className="py-1.5 text-zinc-500 dark:text-zinc-400">{row.category}</td>
-                  <td className="py-1.5 font-mono text-zinc-500 dark:text-zinc-400">
+                  <td className="font-medium text-sm">{row.kataName}</td>
+                  <td className="text-base-content/45 text-sm">{row.category}</td>
+                  <td className="font-mono text-base-content/45 text-sm">
                     {row.timeMs != null ? formatTime(row.timeMs) : "--:--"}
                   </td>
-                  <td className="py-1.5">
+                  <td>
                     {row.passed ? (
-                      <span className="px-2 py-0.5 text-xs rounded bg-green-600/20 text-green-400 font-medium">
-                        Pass
-                      </span>
+                      <span className="badge badge-success badge-xs">Pass</span>
                     ) : (
-                      <span className="px-2 py-0.5 text-xs rounded bg-red-600/20 text-red-400 font-medium">
-                        Fail
-                      </span>
+                      <span className="badge badge-error badge-xs">Fail</span>
                     )}
                   </td>
                 </tr>
@@ -424,8 +429,8 @@ function SessionHistory() {
 
   if (sessionHistory.length === 0) {
     return (
-      <div className="flex items-center justify-center h-48 text-zinc-500 text-sm">
-        No sessions yet. Start a practice session to build your history.
+      <div className="flex items-center justify-center h-48 text-base-content/30 text-sm">
+        No sessions yet. Start practicing to build your history.
       </div>
     );
   }
@@ -439,36 +444,33 @@ function SessionHistory() {
   };
 
   return (
-    <div>
-      <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500 mb-3">
-        Session History
-      </h2>
-      <table className="w-full text-sm">
+    <div className="bg-base-100 rounded-lg border border-base-300/50 overflow-hidden animate-fade-in-up">
+      <table className="table table-sm">
         <thead>
-          <tr className="text-left text-xs text-zinc-500 dark:text-zinc-400 border-b border-zinc-200 dark:border-zinc-800">
-            <th className="pb-2 font-medium">Date</th>
-            <th className="pb-2 font-medium">Type</th>
-            <th className="pb-2 font-medium">Katas</th>
-            <th className="pb-2 font-medium">Time</th>
-            <th className="pb-2 font-medium">Pass Rate</th>
+          <tr className="text-left text-[11px] text-base-content/35 uppercase tracking-wider">
+            <th className="font-semibold">Date</th>
+            <th className="font-semibold">Type</th>
+            <th className="font-semibold">Katas</th>
+            <th className="font-semibold">Time</th>
+            <th className="font-semibold">Pass Rate</th>
           </tr>
         </thead>
         <tbody>
           {sessionHistory.map((session) => (
             <Fragment key={session.id}>
               <tr
-                className="border-b border-zinc-100 dark:border-zinc-800/50 cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors"
+                className="cursor-pointer hover:bg-base-300/30 transition-colors border-base-300/30"
                 onClick={() => handleRowClick(session.id)}
               >
-                <td className="py-2 text-zinc-500 dark:text-zinc-400">
+                <td className="text-base-content/45 text-sm">
                   {new Date(session.started_at).toLocaleDateString()}
                 </td>
-                <td className="py-2 capitalize">{session.session_type}</td>
-                <td className="py-2 text-zinc-500 dark:text-zinc-400">{session.kata_count}</td>
-                <td className="py-2 font-mono text-zinc-500 dark:text-zinc-400">
+                <td className="capitalize text-sm">{session.session_type}</td>
+                <td className="text-base-content/45 text-sm tabular-nums">{session.kata_count}</td>
+                <td className="font-mono text-base-content/45 text-sm">
                   {session.total_time_ms != null ? formatTime(session.total_time_ms) : "--:--"}
                 </td>
-                <td className="py-2 text-zinc-500 dark:text-zinc-400">
+                <td className="text-base-content/45 text-sm tabular-nums">
                   {session.pass_count}/{session.kata_count}
                 </td>
               </tr>
@@ -480,18 +482,17 @@ function SessionHistory() {
         </tbody>
       </table>
       {sessionHistoryHasMore && (
-        <button
-          onClick={loadMoreSessions}
-          className="mt-3 px-4 py-2 text-sm font-medium rounded bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-300 dark:hover:bg-zinc-600 transition-colors"
-        >
-          Load more
-        </button>
+        <div className="px-4 py-3 border-t border-base-300/30">
+          <button onClick={loadMoreSessions} className="btn btn-ghost btn-sm text-xs">
+            Load more
+          </button>
+        </div>
       )}
     </div>
   );
 }
 
-// --- Dev Toolbar ---
+// ── Dev Toolbar ──
 
 function DevToolbar({ onRefresh }: { onRefresh: () => void }) {
   const [status, setStatus] = useState<string | null>(null);
@@ -518,29 +519,17 @@ function DevToolbar({ onRefresh }: { onRefresh: () => void }) {
   };
 
   return (
-    <div className="flex items-center gap-3 px-4 py-2 border border-dashed border-yellow-600/40 rounded bg-yellow-600/5">
-      <span className="text-xs font-medium text-yellow-500">DEV</span>
-      <button
-        onClick={handleSeed}
-        disabled={busy}
-        className="px-2.5 py-1 text-xs font-medium rounded bg-blue-600 text-white hover:bg-blue-500 disabled:opacity-50 transition-colors"
-      >
-        Seed Data
-      </button>
-      <button
-        onClick={handleClear}
-        disabled={busy}
-        className="px-2.5 py-1 text-xs font-medium rounded bg-red-600/20 text-red-400 hover:bg-red-600/30 disabled:opacity-50 transition-colors"
-      >
-        Clear Data
-      </button>
-      {busy && <span className="text-xs text-zinc-500">Working...</span>}
-      {status && <span className="text-xs text-zinc-400">{status}</span>}
+    <div className="flex items-center gap-3 px-4 py-2 border border-dashed border-warning/30 rounded-lg bg-warning/5">
+      <span className="badge badge-warning badge-xs">DEV</span>
+      <button onClick={handleSeed} disabled={busy} className="btn btn-primary btn-xs">Seed</button>
+      <button onClick={handleClear} disabled={busy} className="btn btn-error btn-outline btn-xs">Clear</button>
+      {busy && <span className="text-xs text-base-content/40">Working...</span>}
+      {status && <span className="text-xs text-base-content/40">{status}</span>}
     </div>
   );
 }
 
-// --- Main Page ---
+// ── Main Page ──
 
 type DashTab = "dashboard" | "leaderboard" | "history";
 
@@ -553,41 +542,44 @@ export function DashboardPage() {
     loadDashboard();
   }, [loadDashboard]);
 
-  const tabClass = (t: DashTab) =>
-    `px-3 py-1.5 text-xs font-medium border-b-2 transition-colors ${
-      tab === t
-        ? "border-blue-500 text-blue-600 dark:text-blue-400"
-        : "border-transparent text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300"
-    }`;
-
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-full text-zinc-500 text-sm">
-        Loading dashboard...
+      <div className="flex items-center justify-center h-full text-base-content/30 text-sm">
+        <div className="flex items-center gap-2">
+          <span className="loading loading-spinner loading-sm text-primary" />
+          Loading dashboard
+        </div>
       </div>
     );
   }
 
-  return (
-    <div className="flex flex-col h-full p-6 gap-6 overflow-y-auto dark:bg-zinc-950">
-      <h1 className="text-xl font-bold">Dashboard</h1>
-      <PracticeDailyButton />
+  const tabClass = (t: DashTab) =>
+    `px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${
+      tab === t
+        ? "bg-base-100 text-base-content shadow-sm"
+        : "text-base-content/35 hover:text-base-content/60"
+    }`;
 
-      {/* Tabs */}
-      <div className="flex border-b border-zinc-200 dark:border-zinc-700">
-        <button onClick={() => setTab("dashboard")} className={tabClass("dashboard")}>Dashboard</button>
+  return (
+    <div className="flex flex-col h-full p-5 gap-4 overflow-y-auto">
+      {/* Daily Practice CTA */}
+      <PracticeDailyCard />
+
+      {/* Tab switcher */}
+      <div className="flex items-center gap-1 bg-base-300/40 rounded-lg p-1 self-start">
+        <button onClick={() => setTab("dashboard")} className={tabClass("dashboard")}>Overview</button>
         <button onClick={() => setTab("leaderboard")} className={tabClass("leaderboard")}>Leaderboard</button>
-        <button onClick={() => setTab("history")} className={tabClass("history")}>Session History</button>
+        <button onClick={() => setTab("history")} className={tabClass("history")}>History</button>
       </div>
 
       {/* Tab content */}
       {tab === "dashboard" && (
-        <>
+        <div className="flex flex-col gap-4">
           <DevToolbar onRefresh={loadDashboard} />
           <StatCards />
           <Heatmap />
           <ChartsRow />
-        </>
+        </div>
       )}
       {tab === "leaderboard" && <Leaderboard />}
       {tab === "history" && <SessionHistory />}
