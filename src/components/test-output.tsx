@@ -21,16 +21,18 @@ export function TestOutput({ results, ranAt }: TestOutputProps) {
       </div>
       <ul className="px-3 py-1">
         {results.map((r) => (
-          <li key={r.name} className="py-0.5">
-            <span className={r.passed ? "text-success" : "text-error"}>
-              {r.passed ? "\u2713" : "\u2717"}
-            </span>{" "}
-            <span className="text-base-content/70">{r.name.replace(/^test_/, "").replaceAll("_", " ")}</span>
+          <li key={r.name} className="py-1">
+            <div className="flex items-baseline gap-1.5">
+              <span className={r.passed ? "text-success" : "text-error"}>
+                {r.passed ? "\u2713" : "\u2717"}
+              </span>
+              <span className="text-base-content/70">{r.name.replace(/^test_/, "").replaceAll("_", " ")}</span>
+            </div>
             {r.error && (
-              <span className="ml-2 text-error/70 text-xs">{r.error}</span>
+              <pre className="ml-4 mt-0.5 text-xs text-error/80 whitespace-pre-wrap leading-relaxed bg-error/5 rounded px-2 py-1">{r.error}</pre>
             )}
             {r.output && (
-              <pre className="ml-5 mt-0.5 text-xs text-base-content/35 whitespace-pre-wrap">{r.output}</pre>
+              <pre className="ml-4 mt-0.5 text-xs text-base-content/40 whitespace-pre-wrap">{r.output}</pre>
             )}
           </li>
         ))}

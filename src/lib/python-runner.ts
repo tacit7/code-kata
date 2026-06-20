@@ -31,6 +31,21 @@ def assert_true(condition, msg=None):
         raise AssertionError(msg or "Assertion failed")
 `;
 
+function extractUsefulTraceback(msg: string): string {
+  const lines = msg.split("\n");
+  // Drop pyodide-internal frames (paths like /lib/python3.x/...) and blank lines
+  const meaningful = lines.filter((l) => {
+    if (!l.trim()) return false;
+    if (l.includes('File "/lib/python')) return false;
+    if (l.includes("_pyodide") || l.includes("pyodide_py")) return false;
+    return true;
+  });
+  // Always include the final error line; include up to 4 lines of context above it
+  const lastIdx = meaningful.length - 1;
+  const start = Math.max(0, lastIdx - 3);
+  return meaningful.slice(start).join("\n");
+}
+
 export async function runPythonTests(
   userCode: string,
   testCode: string,
@@ -64,13 +79,10 @@ export async function runPythonTests(
       const output = captured.trim() || undefined;
       results.push({ name, passed: true, output });
     } catch (err) {
-      const msg =
-        err instanceof Error ? err.message : String(err);
-      // Extract the last line of the Python traceback (the actual error)
-      const lines = msg.split("\n").filter((l) => l.trim());
-      const errorLine = lines[lines.length - 1] || msg;
+      const msg = err instanceof Error ? err.message : String(err);
+      const error = extractUsefulTraceback(msg);
       const output = captured.trim() || undefined;
-      results.push({ name, passed: false, error: errorLine, output });
+      results.push({ name, passed: false, error, output });
     }
   }
 
