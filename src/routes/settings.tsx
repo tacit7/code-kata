@@ -2,6 +2,8 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router";
 import { useSettingsStore, DEFAULT_SHORTCUTS } from "../stores/settings-store";
 import type { ShortcutAction } from "../stores/settings-store";
+import { reseedKatas } from "../lib/database";
+import { useKataStore } from "../stores/kata-store";
 
 type Tab = "editor" | "practice" | "shortcuts";
 
@@ -176,12 +178,45 @@ function PracticeTab() {
   const autoRunTests = useSettingsStore((s) => s.autoRunTests);
   const hideDescriptionInSession = useSettingsStore((s) => s.hideDescriptionInSession);
   const setSetting = useSettingsStore((s) => s.setSetting);
+  const language = useSettingsStore((s) => s.language);
   const navigate = useNavigate();
+  const [reseeding, setReseeding] = useState(false);
+  const [reseedMsg, setReseedMsg] = useState<string | null>(null);
+
+  async function handleReseed() {
+    setReseeding(true);
+    setReseedMsg(null);
+    try {
+      const msg = await reseedKatas();
+      await useKataStore.getState().loadKatas(language);
+      setReseedMsg(msg);
+    } catch (e) {
+      setReseedMsg(String(e));
+    } finally {
+      setReseeding(false);
+    }
+  }
 
   const targetMinutes = Math.round(targetTimeMs / 60000);
 
   return (
     <div className="flex flex-col gap-6">
+      <div>
+        <SectionLabel>Kata Library</SectionLabel>
+        <div className="flex flex-col gap-2">
+          <button
+            onClick={handleReseed}
+            disabled={reseeding}
+            className="btn btn-ghost btn-sm text-xs gap-1 self-start"
+          >
+            {reseeding ? "Reseeding..." : "Reload Problem Statements"}
+          </button>
+          {reseedMsg && (
+            <p className="text-[11px] text-base-content/50">{reseedMsg}</p>
+          )}
+        </div>
+      </div>
+
       <div>
         <SectionLabel>Custom Katas</SectionLabel>
         <button
