@@ -6,11 +6,32 @@ export const sampleKatasPython: SeedKata[] = [
     category: "1-d-dp",
     language: "python",
     difficulty: "medium",
-    description: `Kata: Kadane's Algorithm
-Function: max_subarray_sum(nums)
+    description: `Kadane's Algorithm
 
-Given an integer array, find the contiguous subarray with the largest sum
-and return that sum. Array has at least one element.\\n\\nRef: LeetCode #53 Maximum Subarray`,
+Given an integer array nums, find the subarray with the largest sum, and return its sum.
+
+A subarray is a contiguous non-empty sequence of elements within an array.
+
+Example 1:
+Input: nums = [-2,1,-3,4,-1,2,1,-5,4]
+Output: 6
+Explanation: The subarray [4,-1,2,1] has the largest sum 6.
+
+Example 2:
+Input: nums = [1,2,3]
+Output: 6
+Explanation: The subarray [1,2,3] has the largest sum 6.
+
+Example 3:
+Input: nums = [-5]
+Output: -5
+Explanation: The single element is the only subarray, so the answer is -5.
+
+Constraints:
+- 1 <= nums.length <= 10^5
+- -10^4 <= nums[i] <= 10^4
+
+Ref: LeetCode #53 Maximum Subarray`,
     code: `def max_subarray_sum(nums):
     raise NotImplementedError`,
     testCode: `def test_mixed():
@@ -43,18 +64,37 @@ def test_zero_crossing():
         max_sum = max(max_sum, current)
     return max_sum`,
     usage: null,
-    tags: ["dynamic-programming", "greedy"],
+    tags: ["dynamic-programming", "greedy", "blind75"],
   },
   {
     name: "Climbing Stairs (Iterative)",
     category: "1-d-dp",
     language: "python",
     difficulty: "easy",
-    description: `Kata: Climbing Stairs (Iterative)
-Function: climb_stairs(n)
+    description: `Climbing Stairs (Iterative)
 
-You can climb 1 or 2 steps at a time. Given n steps,
-return the number of distinct ways to reach the top.\\n\\nRef: LeetCode #70 Climbing Stairs`,
+You are climbing a staircase. It takes n steps to reach the top. Each time you can either climb 1 or 2 steps. Return the number of distinct ways you can climb to the top.
+
+Use an iterative (bottom-up) approach.
+
+Example 1:
+Input: n = 2
+Output: 2
+Explanation: There are two ways: 1+1 and 2.
+
+Example 2:
+Input: n = 3
+Output: 3
+Explanation: There are three ways: 1+1+1, 1+2, and 2+1.
+
+Example 3:
+Input: n = 5
+Output: 8
+
+Constraints:
+- 1 <= n <= 45
+
+Ref: LeetCode #70 Climbing Stairs`,
     code: `def climb_stairs(n):
     raise NotImplementedError`,
     testCode: `def test_one():
@@ -87,19 +127,37 @@ def test_ten():
         a, b = b, a + b
     return b`,
     usage: null,
-    tags: ["dynamic-programming", "memoization"],
+    tags: ["dynamic-programming", "memoization", "blind75"],
   },
   {
     name: "Climbing Stairs (Recursive)",
     category: "1-d-dp",
     language: "python",
     difficulty: "easy",
-    description: `Kata: Climbing Stairs (Recursive)
-Function: climb_stairs(n)
+    description: `Climbing Stairs (Recursive)
 
-You can climb 1 or 2 steps at a time. Given n steps,
-return the number of distinct ways to reach the top.
-Use a recursive approach with memoization.\\n\\nRef: LeetCode #70 Climbing Stairs`,
+You are climbing a staircase. It takes n steps to reach the top. Each time you can either climb 1 or 2 steps. Return the number of distinct ways you can climb to the top.
+
+Use a recursive approach with memoization.
+
+Example 1:
+Input: n = 2
+Output: 2
+Explanation: There are two ways: 1+1 and 2.
+
+Example 2:
+Input: n = 3
+Output: 3
+Explanation: There are three ways: 1+1+1, 1+2, and 2+1.
+
+Example 3:
+Input: n = 10
+Output: 89
+
+Constraints:
+- 1 <= n <= 45
+
+Ref: LeetCode #70 Climbing Stairs`,
     code: `def climb_stairs(n):
     raise NotImplementedError`,
     testCode: `def test_one():
@@ -135,17 +193,39 @@ def test_ten():
         return memo[k]
     return helper(n)`,
     usage: null,
-    tags: ["dynamic-programming", "memoization", "recursion"],
+    tags: ["dynamic-programming", "memoization", "recursion", "blind75"],
   },
   {
     name: "Longest Common Subsequence",
     category: "2-d-dp",
     language: "python",
     difficulty: "medium",
-    description: `Kata: Longest Common Subsequence
-Function: lcs(text1, text2)
+    description: `Longest Common Subsequence
 
-Given two strings, return the length of their longest common subsequence.\\n\\nRef: LeetCode #1143 Longest Common Subsequence`,
+Given two strings text1 and text2, return the length of their longest common subsequence. If there is no common subsequence, return 0.
+
+A subsequence of a string is a new string generated from the original string with some characters (can be none) deleted without changing the relative order of the remaining characters.
+
+Example 1:
+Input: text1 = "abcde", text2 = "ace"
+Output: 3
+Explanation: The longest common subsequence is "ace" and its length is 3.
+
+Example 2:
+Input: text1 = "abc", text2 = "abc"
+Output: 3
+Explanation: The longest common subsequence is "abc" and its length is 3.
+
+Example 3:
+Input: text1 = "abc", text2 = "def"
+Output: 0
+Explanation: There is no common subsequence, so the result is 0.
+
+Constraints:
+- 1 <= text1.length, text2.length <= 1000
+- text1 and text2 consist of only lowercase English characters.
+
+Ref: LeetCode #1143 Longest Common Subsequence`,
     code: `def lcs(text1, text2):
     raise NotImplementedError`,
     testCode: `def test_basic():
@@ -181,19 +261,40 @@ def test_longer():
                 dp[i][j] = max(dp[i - 1][j], dp[i][j - 1])
     return dp[m][n]`,
     usage: null,
-    tags: ["dynamic-programming", "string"],
+    tags: ["dynamic-programming", "string", "blind75"],
   },
   {
     name: "Topological Sort",
     category: "advanced-graphs",
     language: "python",
     difficulty: "hard",
-    description: `Kata: Topological Sort
-Function: topological_sort(graph)
+    description: `Topological Sort
 
-Given a directed acyclic graph as an adjacency list (dict mapping node
-to list of dependencies it points to), return a valid topological
-ordering as a list.\\n\\nRef: LeetCode #210 Course Schedule II`,
+Given a directed acyclic graph (DAG) represented as an adjacency list (a dictionary mapping each node to a list of nodes it has edges to), return a valid topological ordering as a list.
+
+A topological ordering is a linear ordering of vertices such that for every directed edge (u, v), vertex u comes before v in the ordering.
+
+Example 1:
+Input: graph = {"a": ["b", "c"], "b": ["d"], "c": ["d"], "d": []}
+Output: ["a", "b", "c", "d"] (or any valid topological order)
+Explanation: "a" must come before "b" and "c"; both "b" and "c" must come before "d".
+
+Example 2:
+Input: graph = {"a": ["b"], "b": ["c"], "c": []}
+Output: ["a", "b", "c"]
+Explanation: A simple linear chain has only one valid ordering.
+
+Example 3:
+Input: graph = {"a": [], "b": [], "c": []}
+Output: ["a", "b", "c"] (any permutation is valid)
+Explanation: With no edges, any ordering is a valid topological sort.
+
+Constraints:
+- The graph is a valid DAG (no cycles).
+- All nodes appear as keys in the adjacency list.
+- 1 <= number of nodes <= 10^4
+
+Ref: LeetCode #210 Course Schedule II`,
     code: `def topological_sort(graph):
     raise NotImplementedError`,
     testCode: `def test_simple_dag():
@@ -246,12 +347,35 @@ def test_no_edges():
     category: "advanced-graphs",
     language: "python",
     difficulty: "hard",
-    description: `Kata: Union Find
-Class: UnionFind
+    description: `Union Find
 
-Implement union-find (disjoint set) with path compression and union by rank.
-Methods: find(x), union(x, y), connected(x, y).
-Initialize with n elements (0 to n-1).\\n\\nRef: LeetCode #684 Redundant Connection (closest match)`,
+Implement a Union-Find (Disjoint Set Union) data structure that supports the following operations efficiently using path compression and union by rank:
+
+- UnionFind(n): Initialize with n elements labeled 0 to n-1, each in its own set.
+- find(x): Return the representative (root) of the set containing x.
+- union(x, y): Merge the sets containing x and y.
+- connected(x, y): Return True if x and y belong to the same set, False otherwise.
+
+Example 1:
+Input: n = 5, union(0, 1), union(1, 2), connected(0, 2)
+Output: True
+Explanation: After merging {0,1} and then {1,2}, elements 0 and 2 are in the same set.
+
+Example 2:
+Input: n = 5, union(0, 1), union(3, 4), connected(0, 4)
+Output: False
+Explanation: Sets {0,1} and {3,4} are separate components.
+
+Example 3:
+Input: n = 3, connected(0, 0)
+Output: True
+Explanation: Every element is always connected to itself.
+
+Constraints:
+- 0 <= x, y < n
+- 1 <= n <= 10^5
+
+Ref: LeetCode #684 Redundant Connection (closest match)`,
     code: `class UnionFind:
     def __init__(self, n):
         raise NotImplementedError
@@ -330,10 +454,27 @@ def test_self_connected():
     category: "arrays-and-hashing",
     language: "python",
     difficulty: "easy",
-    description: `Kata: Frequency Count
-Function: frequency_count(items)
+    description: `Frequency Count
 
-Given a list of items, return a dict mapping each item to its count.\\n\\nRef: LeetCode #1207 Unique Number of Occurrences (closest match)`,
+Given a list of items, return a dictionary mapping each unique item to the number of times it appears in the list.
+
+Example 1:
+Input: items = ["a", "b", "a", "c", "a", "b"]
+Output: {"a": 3, "b": 2, "c": 1}
+
+Example 2:
+Input: items = [1, 2, 2, 3, 3, 3]
+Output: {1: 1, 2: 2, 3: 3}
+
+Example 3:
+Input: items = []
+Output: {}
+
+Constraints:
+- 0 <= len(items) <= 10^5
+- Items can be any hashable type.
+
+Ref: LeetCode #1207 Unique Number of Occurrences (closest match)`,
     code: `def frequency_count(items):
     raise NotImplementedError`,
     testCode: `def test_frequency_count():
@@ -363,10 +504,29 @@ def test_frequency_count_empty():
     category: "arrays-and-hashing",
     language: "python",
     difficulty: "easy",
-    description: `Kata: Most Frequent Element
-Function: most_frequent(items)
+    description: `Most Frequent Element
 
-Given a list of items, return the item that appears most frequently.\\n\\nRef: LeetCode #169 Majority Element (closest match)`,
+Given a non-empty list of items, return the item that appears most frequently. If there are ties, return any one of the most frequent items.
+
+Example 1:
+Input: items = ["a", "b", "a", "c", "a", "b"]
+Output: "a"
+Explanation: "a" appears 3 times, more than any other element.
+
+Example 2:
+Input: items = [1, 2, 2, 3, 3, 3]
+Output: 3
+Explanation: 3 appears 3 times, which is the most frequent.
+
+Example 3:
+Input: items = [42]
+Output: 42
+
+Constraints:
+- 1 <= len(items) <= 10^5
+- Items can be any hashable type.
+
+Ref: LeetCode #169 Majority Element (closest match)`,
     code: `def most_frequent(items):
     raise NotImplementedError`,
     testCode: `def test_most_frequent_strings():
@@ -392,10 +552,29 @@ def test_most_frequent_single():
     category: "arrays-and-hashing",
     language: "python",
     difficulty: "medium",
-    description: `Kata: Merge Sort
-Function: merge_sort(arr)
+    description: `Merge Sort
 
-Sort an array using merge sort. Return a new sorted list.\\n\\nRef: LeetCode #912 Sort an Array`,
+Given an array of integers arr, sort the array in ascending order using the merge sort algorithm and return the sorted array as a new list.
+
+Merge sort is a divide-and-conquer algorithm that splits the array in half, recursively sorts each half, and then merges the two sorted halves.
+
+Example 1:
+Input: arr = [3, 1, 2]
+Output: [1, 2, 3]
+
+Example 2:
+Input: arr = [5, 4, 3, 2, 1]
+Output: [1, 2, 3, 4, 5]
+
+Example 3:
+Input: arr = [-3, 0, 2, -1]
+Output: [-3, -1, 0, 2]
+
+Constraints:
+- 0 <= arr.length <= 5 * 10^4
+- -5 * 10^4 <= arr[i] <= 5 * 10^4
+
+Ref: LeetCode #912 Sort an Array`,
     code: `def merge_sort(arr):
     raise NotImplementedError`,
     testCode: `def test_basic():
@@ -454,12 +633,33 @@ def _merge(left, right):
     category: "arrays-and-hashing",
     language: "python",
     difficulty: "medium",
-    description: `Kata: Lomuto Partition
-Function: partition(arr, lo, hi)
+    description: `Lomuto Partition
 
-Implement the Lomuto partition scheme. Pick arr[hi] as pivot,
-rearrange so elements <= pivot are on the left, elements > pivot
-are on the right. Return the final pivot index.\\n\\nRef: LeetCode #912 Sort an Array`,
+Implement the Lomuto partition scheme. Given an array arr and indices lo and hi, use arr[hi] as the pivot. Rearrange elements in arr[lo..hi] in-place so that all elements less than or equal to the pivot come before it, and all elements greater than the pivot come after it. Return the final index of the pivot.
+
+This is a fundamental building block of quicksort.
+
+Example 1:
+Input: arr = [3, 6, 8, 10, 1, 2, 1], lo = 0, hi = 6
+Output: 1 (pivot value is 1; after partitioning, pivot is at index 1)
+Explanation: Elements <= 1 are moved to the left of index 1, elements > 1 to the right.
+
+Example 2:
+Input: arr = [1, 2, 3, 4, 5], lo = 0, hi = 4
+Output: 4
+Explanation: Pivot is 5, which is already the largest element, so it stays at index 4.
+
+Example 3:
+Input: arr = [2, 1], lo = 0, hi = 1
+Output: 0
+Explanation: Pivot is 1; after partitioning, arr becomes [1, 2] and pivot is at index 0.
+
+Constraints:
+- 0 <= lo <= hi < len(arr)
+- 1 <= len(arr) <= 10^5
+- The function modifies arr in-place and returns the pivot index.
+
+Ref: LeetCode #912 Sort an Array`,
     code: `def partition(arr, lo, hi):
     raise NotImplementedError`,
     testCode: `def test_partition_basic():
@@ -499,11 +699,31 @@ def test_partition_two():
     category: "arrays-and-hashing",
     language: "python",
     difficulty: "medium",
-    description: `Kata: Quick Sort
-Function: quick_sort(arr)
+    description: `Quick Sort
 
-Sort an array in-place using quicksort with Lomuto partition.
-Return the sorted array.\\n\\nRef: LeetCode #912 Sort an Array`,
+Given an array of integers, sort the array in ascending order using the Quick Sort algorithm with Lomuto partition scheme and return the sorted array.
+
+The Lomuto partition scheme picks the last element as the pivot, then partitions the array such that all elements less than or equal to the pivot come before it, and all elements greater come after it. Recursively apply this to the sub-arrays.
+
+Example 1:
+Input: arr = [3, 1, 2]
+Output: [1, 2, 3]
+
+Example 2:
+Input: arr = [5, 4, 3, 2, 1]
+Output: [1, 2, 3, 4, 5]
+
+Example 3:
+Input: arr = [3, 1, 3, 1, 2]
+Output: [1, 1, 2, 3, 3]
+Explanation: Duplicate elements are preserved and sorted correctly.
+
+Constraints:
+- 0 <= arr.length <= 10^4
+- -10^4 <= arr[i] <= 10^4
+- The array may contain duplicate values.
+
+Ref: LeetCode #912 Sort an Array`,
     code: `def quick_sort(arr):
     raise NotImplementedError`,
     testCode: `def test_quick_sort_basic():
@@ -551,11 +771,32 @@ def _qs(arr, lo, hi):
     category: "arrays-and-hashing",
     language: "python",
     difficulty: "easy",
-    description: `Kata: Two Sum
-Function: two_sum(nums, target)
+    description: `Two Sum
 
-Given a list of integers and a target, return the indices of the two
-numbers that add up to target. Assume exactly one solution exists.\\n\\nRef: LeetCode #1 Two Sum`,
+Given an array of integers nums and an integer target, return indices of the two numbers such that they add up to target.
+
+You may assume that each input would have exactly one solution, and you may not use the same element twice. You can return the answer in any order.
+
+Example 1:
+Input: nums = [2, 7, 11, 15], target = 9
+Output: [0, 1]
+Explanation: Because nums[0] + nums[1] == 9, we return [0, 1].
+
+Example 2:
+Input: nums = [3, 2, 4], target = 6
+Output: [1, 2]
+
+Example 3:
+Input: nums = [3, 3], target = 6
+Output: [0, 1]
+
+Constraints:
+- 2 <= nums.length <= 10^4
+- -10^9 <= nums[i] <= 10^9
+- -10^9 <= target <= 10^9
+- Only one valid answer exists.
+
+Ref: LeetCode #1 Two Sum`,
     code: `def two_sum(nums, target):
     raise NotImplementedError`,
     testCode: `def test_basic():
@@ -582,18 +823,38 @@ def test_negative():
             return [seen[complement], i]
         seen[num] = i`,
     usage: null,
-    tags: ["hash-map"],
+    tags: ["hash-map", "blind75"],
   },
   {
     name: "Build Prefix Sum",
     category: "arrays-and-hashing",
     language: "python",
     difficulty: "easy",
-    description: `Kata: Build Prefix Sum
-Function: build_prefix(nums)
+    description: `Build Prefix Sum
 
-Build a prefix sum array where prefix[i] = sum of nums[0..i-1].
-prefix[0] = 0, so prefix has length len(nums) + 1.\\n\\nRef: LeetCode #1480 Running Sum of 1d Array`,
+Given an array of integers nums, build a prefix sum array where prefix[i] equals the sum of nums[0] through nums[i-1]. The prefix array starts with 0, so its length is len(nums) + 1.
+
+This is a fundamental building block for range sum queries and many array problems.
+
+Example 1:
+Input: nums = [1, 2, 3, 4]
+Output: [0, 1, 3, 6, 10]
+Explanation: prefix[0]=0, prefix[1]=1, prefix[2]=1+2=3, prefix[3]=1+2+3=6, prefix[4]=1+2+3+4=10.
+
+Example 2:
+Input: nums = []
+Output: [0]
+
+Example 3:
+Input: nums = [1, -1, 2]
+Output: [0, 1, 0, 2]
+Explanation: prefix[2]=1+(-1)=0, prefix[3]=1+(-1)+2=2.
+
+Constraints:
+- 0 <= nums.length <= 10^4
+- -10^4 <= nums[i] <= 10^4
+
+Ref: LeetCode #1480 Running Sum of 1d Array`,
     code: `def build_prefix(nums):
     raise NotImplementedError`,
     testCode: `def test_build_prefix():
@@ -623,12 +884,32 @@ def test_build_prefix_negatives():
     category: "arrays-and-hashing",
     language: "python",
     difficulty: "easy",
-    description: `Kata: Range Sum Query
-Function: range_sum(prefix, left, right)
+    description: `Range Sum Query
 
-Given a prefix sum array, return the sum of the original array
-from index left to right (inclusive). The prefix array has
-prefix[i] = sum of original[0..i-1], with prefix[0] = 0.\\n\\nRef: LeetCode #303 Range Sum Query - Immutable`,
+Given a prefix sum array and two indices left and right, return the sum of the original array from index left to right (inclusive).
+
+The prefix array satisfies prefix[i] = sum of original[0..i-1], with prefix[0] = 0. Use the identity: sum(left, right) = prefix[right + 1] - prefix[left].
+
+Example 1:
+Input: prefix = [0, 1, 3, 6, 10], left = 0, right = 3
+Output: 10
+Explanation: Sum of original array [1, 2, 3, 4] from index 0 to 3 is 10.
+
+Example 2:
+Input: prefix = [0, 1, 3, 6, 10], left = 1, right = 2
+Output: 5
+Explanation: Sum of elements at indices 1 and 2 (2 + 3) is 5.
+
+Example 3:
+Input: prefix = [0, 1, 3, 6, 10], left = 2, right = 2
+Output: 3
+Explanation: Single element at index 2 is 3.
+
+Constraints:
+- 1 <= prefix.length <= 10^4 + 1
+- 0 <= left <= right < prefix.length - 1
+
+Ref: LeetCode #303 Range Sum Query - Immutable`,
     code: `def range_sum(prefix, left, right):
     raise NotImplementedError`,
     testCode: `def test_range_sum_full():
@@ -659,10 +940,30 @@ def test_range_sum_first():
     category: "backtracking",
     language: "python",
     difficulty: "medium",
-    description: `Kata: Permutations
-Function: permutations(nums)
+    description: `Permutations
 
-Given a list of distinct integers, return all possible permutations.\\n\\nRef: LeetCode #46 Permutations`,
+Given an array nums of distinct integers, return all the possible permutations. You can return the answer in any order.
+
+A permutation is a rearrangement of all the elements of the array. For n distinct elements, there are n! total permutations.
+
+Example 1:
+Input: nums = [1, 2, 3]
+Output: [[1,2,3],[1,3,2],[2,1,3],[2,3,1],[3,1,2],[3,2,1]]
+
+Example 2:
+Input: nums = [0, 1]
+Output: [[0,1],[1,0]]
+
+Example 3:
+Input: nums = [1]
+Output: [[1]]
+
+Constraints:
+- 0 <= nums.length <= 6
+- -10 <= nums[i] <= 10
+- All the integers of nums are unique.
+
+Ref: LeetCode #46 Permutations`,
     code: `def permutations(nums):
     raise NotImplementedError`,
     testCode: `def test_three_elements():
@@ -711,10 +1012,30 @@ def test_count():
     category: "backtracking",
     language: "python",
     difficulty: "medium",
-    description: `Kata: Subsets
-Function: subsets(nums)
+    description: `Subsets
 
-Given a list of distinct integers, return all possible subsets (power set).\\n\\nRef: LeetCode #78 Subsets`,
+Given an integer array nums of unique elements, return all possible subsets (the power set). The solution set must not contain duplicate subsets. Return the subsets in any order.
+
+The power set of a set with n elements contains 2^n subsets, including the empty set and the set itself.
+
+Example 1:
+Input: nums = [1, 2, 3]
+Output: [[], [1], [2], [3], [1,2], [1,3], [2,3], [1,2,3]]
+
+Example 2:
+Input: nums = [0]
+Output: [[], [0]]
+
+Example 3:
+Input: nums = [1, 2]
+Output: [[], [1], [2], [1,2]]
+
+Constraints:
+- 0 <= nums.length <= 10
+- -10 <= nums[i] <= 10
+- All the numbers of nums are unique.
+
+Ref: LeetCode #78 Subsets`,
     code: `def subsets(nums):
     raise NotImplementedError`,
     testCode: `def test_three_elements():
@@ -761,11 +1082,33 @@ def test_count():
     category: "binary-search",
     language: "python",
     difficulty: "easy",
-    description: `Kata: Binary Search (Iterative)
-Function: binary_search(nums, target)
+    description: `Binary Search (Iterative)
 
-Given a sorted list of integers and a target value, return the index
-of the target. Return -1 if not found.\\n\\nRef: LeetCode #704 Binary Search`,
+Given a sorted array of integers nums in ascending order and an integer target, write a function to search target in nums. If target exists, return its index. Otherwise, return -1.
+
+You must write an algorithm with O(log n) runtime complexity using an iterative approach.
+
+Example 1:
+Input: nums = [1, 3, 5, 7, 9], target = 5
+Output: 2
+Explanation: 5 exists in nums and its index is 2.
+
+Example 2:
+Input: nums = [1, 3, 5, 7, 9], target = 4
+Output: -1
+Explanation: 4 does not exist in nums, so we return -1.
+
+Example 3:
+Input: nums = [], target = 1
+Output: -1
+
+Constraints:
+- 0 <= nums.length <= 10^4
+- -10^4 < nums[i], target < 10^4
+- All the integers in nums are unique.
+- nums is sorted in ascending order.
+
+Ref: LeetCode #704 Binary Search`,
     code: `def binary_search(nums, target):
     raise NotImplementedError`,
     testCode: `def test_found_middle():
@@ -816,11 +1159,33 @@ def test_single_element_not_found():
     category: "binary-search",
     language: "python",
     difficulty: "medium",
-    description: `Kata: Binary Search Find First
-Function: find_first(nums, target)
+    description: `Binary Search Find First
 
-Given a sorted array and a target, find the first (leftmost) index
-of the target. Return -1 if not found.\\n\\nRef: LeetCode #34 Find First and Last Position of Element in Sorted Array`,
+Given a sorted array of integers nums and a target value, find the first (leftmost) index where target appears. Return -1 if target is not found.
+
+The array may contain duplicates. Your solution should run in O(log n) time by using a modified binary search that continues searching left after finding a match.
+
+Example 1:
+Input: nums = [1, 2, 2, 2, 3], target = 2
+Output: 1
+Explanation: The first occurrence of 2 is at index 1.
+
+Example 2:
+Input: nums = [2, 2, 2], target = 2
+Output: 0
+Explanation: All elements are 2; the first occurrence is at index 0.
+
+Example 3:
+Input: nums = [1, 3, 5], target = 2
+Output: -1
+Explanation: 2 is not in the array.
+
+Constraints:
+- 0 <= nums.length <= 10^5
+- -10^9 <= nums[i] <= 10^9
+- nums is sorted in non-decreasing order.
+
+Ref: LeetCode #34 Find First and Last Position of Element in Sorted Array`,
     code: `def find_first(nums, target):
     raise NotImplementedError`,
     testCode: `def test_find_first_dupes():
@@ -866,11 +1231,33 @@ def test_find_first_at_start():
     category: "binary-search",
     language: "python",
     difficulty: "medium",
-    description: `Kata: Binary Search Find Last
-Function: find_last(nums, target)
+    description: `Binary Search Find Last
 
-Given a sorted array and a target, find the last (rightmost) index
-of the target. Return -1 if not found.\\n\\nRef: LeetCode #34 Find First and Last Position of Element in Sorted Array`,
+Given a sorted array of integers nums and a target value, find the last (rightmost) index where target appears. Return -1 if target is not found.
+
+The array may contain duplicates. Your solution should run in O(log n) time by using a modified binary search that continues searching right after finding a match.
+
+Example 1:
+Input: nums = [1, 2, 2, 2, 3], target = 2
+Output: 3
+Explanation: The last occurrence of 2 is at index 3.
+
+Example 2:
+Input: nums = [2, 2, 2], target = 2
+Output: 2
+Explanation: All elements are 2; the last occurrence is at index 2.
+
+Example 3:
+Input: nums = [1, 3, 5], target = 2
+Output: -1
+Explanation: 2 is not in the array.
+
+Constraints:
+- 0 <= nums.length <= 10^5
+- -10^9 <= nums[i] <= 10^9
+- nums is sorted in non-decreasing order.
+
+Ref: LeetCode #34 Find First and Last Position of Element in Sorted Array`,
     code: `def find_last(nums, target):
     raise NotImplementedError`,
     testCode: `def test_find_last_dupes():
@@ -916,11 +1303,33 @@ def test_find_last_at_end():
     category: "binary-search",
     language: "python",
     difficulty: "easy",
-    description: `Kata: Binary Search (Recursive)
-Function: binary_search(nums, target)
+    description: `Binary Search (Recursive)
 
-Given a sorted list of integers and a target value, return the index
-of the target. Return -1 if not found. Use a recursive approach.\\n\\nRef: LeetCode #704 Binary Search`,
+Given a sorted array of integers nums in ascending order and an integer target, write a function to search target in nums. If target exists, return its index. Otherwise, return -1.
+
+You must write an algorithm with O(log n) runtime complexity using a recursive approach with a helper function.
+
+Example 1:
+Input: nums = [1, 3, 5, 7, 9], target = 5
+Output: 2
+Explanation: 5 exists in nums and its index is 2.
+
+Example 2:
+Input: nums = [1, 3, 5, 7, 9], target = 4
+Output: -1
+Explanation: 4 does not exist in nums, so we return -1.
+
+Example 3:
+Input: nums = [5], target = 5
+Output: 0
+
+Constraints:
+- 0 <= nums.length <= 10^4
+- -10^4 < nums[i], target < 10^4
+- All the integers in nums are unique.
+- nums is sorted in ascending order.
+
+Ref: LeetCode #704 Binary Search`,
     code: `def binary_search(nums, target):
     raise NotImplementedError`,
     testCode: `def test_found_middle():
@@ -969,11 +1378,31 @@ def test_single_element_not_found():
     category: "bit-manipulation",
     language: "python",
     difficulty: "easy",
-    description: `Kata: Single Number (XOR)
-Function: single_number(nums)
+    description: `Single Number
 
-Given a list where every element appears twice except one, find that single one.
-Must be O(n) time, O(1) space.\\n\\nRef: LeetCode #136 Single Number`,
+Given a non-empty array of integers nums, every element appears exactly twice except for one. Find that single one.
+
+You must implement a solution with O(n) time complexity and O(1) space complexity.
+
+Example 1:
+Input: nums = [2, 2, 1]
+Output: 1
+
+Example 2:
+Input: nums = [4, 1, 2, 1, 2]
+Output: 4
+Explanation: 1 and 2 each appear twice, so 4 is the single number.
+
+Example 3:
+Input: nums = [1]
+Output: 1
+
+Constraints:
+- 1 <= nums.length <= 3 * 10^4
+- -3 * 10^4 <= nums[i] <= 3 * 10^4
+- Each element appears exactly twice except for one element which appears only once.
+
+Ref: LeetCode #136 Single Number`,
     code: `def single_number(nums):
     raise NotImplementedError`,
     testCode: `def test_basic():
@@ -1003,11 +1432,27 @@ def test_larger():
     category: "bit-manipulation",
     language: "python",
     difficulty: "easy",
-    description: `Kata: Count Set Bits
-Function: count_bits(n)
+    description: `Number of 1 Bits
 
-Given a non-negative integer, return the number of 1 bits in its
-binary representation (Hamming weight).\\n\\nRef: LeetCode #191 Number of 1 Bits`,
+Given a non-negative integer n, return the number of 1 bits in its binary representation (also known as the Hamming weight).
+
+Example 1:
+Input: n = 11 (binary: 1011)
+Output: 3
+Explanation: The binary representation of 11 is 1011, which has three 1 bits.
+
+Example 2:
+Input: n = 128 (binary: 10000000)
+Output: 1
+
+Example 3:
+Input: n = 255 (binary: 11111111)
+Output: 8
+
+Constraints:
+- 0 <= n <= 2^31 - 1
+
+Ref: LeetCode #191 Number of 1 Bits`,
     code: `def count_bits(n):
     raise NotImplementedError`,
     testCode: `def test_zero():
@@ -1043,19 +1488,37 @@ def test_large():
         n >>= 1
     return count`,
     usage: null,
-    tags: ["bit-manipulation"],
+    tags: ["bit-manipulation", "blind75"],
   },
   {
     name: "Matrix BFS",
     category: "graphs",
     language: "python",
     difficulty: "medium",
-    description: `Kata: Matrix BFS
-Function: matrix_bfs(grid, start)
+    description: `Matrix BFS
 
-Given a 2D grid and a starting position (row, col), return a list of
-positions visited in breadth-first order. Only traverse cells with value 0
-(passable). Cells with value 1 are walls.\\n\\nRef: LeetCode #1091 Shortest Path in Binary Matrix`,
+Given a 2D grid of integers and a starting position (row, col), perform a breadth-first search and return the list of all positions visited in BFS order. Only traverse cells with value 0 (passable). Cells with value 1 are walls. Move in 4 directions: up, down, left, right.
+
+Example 1:
+Input: grid = [[0,0,0],[0,1,0],[0,0,0]], start = (0, 0)
+Output: [(0,0), (0,1), (1,0), (0,2), (2,0), (1,2), (2,1), (2,2)]
+Explanation: BFS explores all passable cells level by level. The center cell (1,1) is a wall and is skipped.
+
+Example 2:
+Input: grid = [[0,1],[1,0]], start = (0, 0)
+Output: [(0, 0)]
+Explanation: Start is surrounded by walls, so only the start cell is visited.
+
+Example 3:
+Input: grid = [[0]], start = (0, 0)
+Output: [(0, 0)]
+
+Constraints:
+- 1 <= grid.length, grid[0].length <= 100
+- grid[i][j] is 0 or 1
+- start is always a passable cell (value 0)
+
+Ref: LeetCode #1091 Shortest Path in Binary Matrix`,
     code: `from collections import deque
 
 def matrix_bfs(grid, start):
@@ -1112,11 +1575,30 @@ def matrix_bfs(grid, start):
     category: "graphs",
     language: "python",
     difficulty: "medium",
-    description: `Kata: Graph DFS (Iterative)
-Function: graph_dfs(graph, start)
+    description: `Graph DFS (Iterative)
 
-Given an adjacency list (dict) and a start node, return a list of
-all reachable nodes visited in depth-first order.\\n\\nRef: LeetCode #323 Number of Connected Components (closest match)`,
+Given a graph represented as an adjacency list (dictionary mapping each node to a list of its neighbors) and a start node, return a list of all reachable nodes visited in depth-first order. Use an iterative approach with an explicit stack.
+
+Example 1:
+Input: graph = {"a": ["b", "c"], "b": ["d"], "c": [], "d": []}, start = "a"
+Output: ["a", "c", "b", "d"]
+Explanation: DFS visits "a", then pushes "b" and "c" onto the stack. Popping "c" first (stack is LIFO), then "b", then "d".
+
+Example 2:
+Input: graph = {"a": []}, start = "a"
+Output: ["a"]
+
+Example 3:
+Input: graph = {"a": ["b"], "b": [], "c": ["d"], "d": []}, start = "a"
+Output: ["a", "b"]
+Explanation: Nodes "c" and "d" are not reachable from "a".
+
+Constraints:
+- The graph is represented as a dict of node -> list of neighbors.
+- All neighbor nodes referenced in adjacency lists exist as keys in the graph.
+- The start node exists in the graph.
+
+Ref: LeetCode #323 Number of Connected Components (closest match)`,
     code: `def graph_dfs(graph, start):
     raise NotImplementedError`,
     testCode: `def test_simple_graph():
@@ -1170,11 +1652,30 @@ def test_disconnected():
     category: "graphs",
     language: "python",
     difficulty: "easy",
-    description: `Kata: Build Adjacency List
-Function: build_adjacency_list(edges, directed=False)
+    description: `Build Adjacency List
 
-Given a list of edges (tuples of two nodes), return an adjacency list
-as a dict. If directed is False, add edges in both directions.\\n\\nRef: LeetCode #133 Clone Graph (closest match)`,
+Given a list of edges where each edge is a tuple of two nodes, build and return an adjacency list represented as a dictionary. If directed is False (the default), add edges in both directions. If directed is True, only add edges in the given direction.
+
+Example 1:
+Input: edges = [("a", "b"), ("b", "c")], directed = False
+Output: {"a": ["b"], "b": ["a", "c"], "c": ["b"]}
+Explanation: Undirected graph, so each edge creates connections in both directions.
+
+Example 2:
+Input: edges = [("a", "b"), ("b", "c")], directed = True
+Output: {"a": ["b"], "b": ["c"]}
+Explanation: Directed graph, so edges only go one way. Node "c" has no outgoing edges and does not appear as a key.
+
+Example 3:
+Input: edges = []
+Output: {}
+
+Constraints:
+- Each edge is a tuple of exactly two nodes.
+- Nodes can be any hashable type (typically strings or integers).
+- The returned dict maps each node to a list of its neighbors.
+
+Ref: LeetCode #133 Clone Graph (closest match)`,
     code: `def build_adjacency_list(edges, directed=False):
     raise NotImplementedError`,
     testCode: `def test_undirected():
@@ -1218,12 +1719,31 @@ def build_adjacency_list(edges, directed=False):
     category: "graphs",
     language: "python",
     difficulty: "medium",
-    description: `Kata: Matrix DFS (Recursive)
-Function: matrix_dfs(grid, start)
+    description: `Matrix DFS (Recursive)
 
-Given a 2D grid and a starting position (row, col), return a list of
-positions visited in depth-first order. Only traverse cells with value 0
-(passable). Cells with value 1 are walls.\\n\\nRef: LeetCode #200 Number of Islands`,
+Given a 2D grid of integers and a starting position (row, col), perform a depth-first search using recursion and return the list of all positions visited in DFS order. Only traverse cells with value 0 (passable). Cells with value 1 are walls. Move in 4 directions: up, down, left, right.
+
+Example 1:
+Input: grid = [[0,0,0],[0,1,0],[0,0,0]], start = (0, 0)
+Output: [(0,0), (0,1), (0,2), (1,2), (2,2), (2,1), (2,0), (1,0)]
+Explanation: DFS explores as deep as possible along each branch before backtracking. The center cell (1,1) is a wall.
+
+Example 2:
+Input: grid = [[0,1],[1,0]], start = (0, 0)
+Output: [(0, 0)]
+Explanation: The start cell is surrounded by walls, so only it is visited.
+
+Example 3:
+Input: grid = [[0,0],[0,0]], start = (0, 0)
+Output: [(0,0), (0,1), (1,1), (1,0)]
+Explanation: All cells are passable. DFS visits all 4 cells.
+
+Constraints:
+- 1 <= grid.length, grid[0].length <= 100
+- grid[i][j] is 0 or 1
+- start is always a passable cell (value 0)
+
+Ref: LeetCode #200 Number of Islands`,
     code: `def matrix_dfs(grid, start):
     raise NotImplementedError`,
     testCode: `def test_simple():
@@ -1287,12 +1807,30 @@ def test_all_open():
     category: "graphs",
     language: "python",
     difficulty: "medium",
-    description: `Kata: Graph DFS (Recursive)
-Function: graph_dfs(graph, start)
+    description: `Graph DFS (Recursive)
 
-Given an adjacency list (dict) and a start node, return a list of
-all reachable nodes visited in depth-first order. Use a recursive
-approach.\\n\\nRef: LeetCode #323 Number of Connected Components (closest match)`,
+Given a graph represented as an adjacency list (dictionary mapping each node to a list of its neighbors) and a start node, return a list of all reachable nodes visited in depth-first order. Use a recursive approach.
+
+Example 1:
+Input: graph = {"a": ["b", "c"], "b": ["d"], "c": [], "d": []}, start = "a"
+Output: ["a", "b", "d", "c"]
+Explanation: Recursive DFS visits "a", then recurses into "b", then "d" (depth-first), backtracks, then visits "c".
+
+Example 2:
+Input: graph = {"a": []}, start = "a"
+Output: ["a"]
+
+Example 3:
+Input: graph = {"a": ["b"], "b": [], "c": ["d"], "d": []}, start = "a"
+Output: ["a", "b"]
+Explanation: Nodes "c" and "d" are not reachable from "a".
+
+Constraints:
+- The graph is represented as a dict of node -> list of neighbors.
+- All neighbor nodes referenced in adjacency lists exist as keys in the graph.
+- The start node exists in the graph.
+
+Ref: LeetCode #323 Number of Connected Components (closest match)`,
     code: `def graph_dfs(graph, start):
     raise NotImplementedError`,
     testCode: `def test_simple_graph():
@@ -1343,13 +1881,31 @@ def test_disconnected():
     category: "graphs",
     language: "python",
     difficulty: "medium",
-    description: `Kata: Matrix DFS (Iterative)
-Function: matrix_dfs(grid, start)
+    description: `Matrix DFS (Iterative)
 
-Given a 2D grid and a starting position (row, col), return a list of
-positions visited in depth-first order. Only traverse cells with value 0
-(passable). Cells with value 1 are walls. Use an iterative approach
-with an explicit stack.\\n\\nRef: LeetCode #200 Number of Islands`,
+Given a 2D grid of integers and a starting position (row, col), perform a depth-first search using an explicit stack (iterative approach) and return the list of all positions visited in DFS order. Only traverse cells with value 0 (passable). Cells with value 1 are walls. Move in 4 directions: up, down, left, right.
+
+Example 1:
+Input: grid = [[0,0,0],[0,1,0],[0,0,0]], start = (0, 0)
+Output: [(0,0), (1,0), (2,0), (2,1), (2,2), (1,2), (0,2), (0,1)]
+Explanation: Iterative DFS uses a stack, so traversal order may differ from recursive DFS. The center cell (1,1) is a wall and is skipped.
+
+Example 2:
+Input: grid = [[0,1],[1,0]], start = (0, 0)
+Output: [(0, 0)]
+Explanation: Start is surrounded by walls, so only the start cell is visited.
+
+Example 3:
+Input: grid = [[0,0],[0,0]], start = (0, 0)
+Output: [(0,0), (1,0), (1,1), (0,1)]
+Explanation: All cells are passable. Stack-based DFS visits all 4 cells.
+
+Constraints:
+- 1 <= grid.length, grid[0].length <= 100
+- grid[i][j] is 0 or 1
+- start is always a passable cell (value 0)
+
+Ref: LeetCode #200 Number of Islands`,
     code: `def matrix_dfs(grid, start):
     raise NotImplementedError`,
     testCode: `def test_simple():
@@ -1413,13 +1969,28 @@ def test_all_open():
     category: "graphs",
     language: "python",
     difficulty: "easy",
-    description: `Kata: Matrix Grid BFS
-Function: grid_bfs(n)
+    description: `Grid BFS
 
-Given an integer n, perform a BFS starting from cell (0, 0)
-on an NxN grid. Return the list of visited cells as (row, col)
-tuples in the order they were visited. Move in 4 directions:
-up, down, left, right.`,
+Given an integer n, perform a breadth-first search starting from cell (0, 0) on an n x n grid. Return the list of all visited cells as (row, col) tuples in the order they were visited. All cells are passable. Move in 4 directions: up, down, left, right.
+
+Example 1:
+Input: n = 1
+Output: [(0, 0)]
+
+Example 2:
+Input: n = 2
+Output: [(0,0), (0,1), (1,0), (1,1)]
+Explanation: BFS from (0,0) visits adjacent cells level by level.
+
+Example 3:
+Input: n = 3
+Output: [(0,0), (0,1), (1,0), (0,2), (1,1), (2,0), (1,2), (2,1), (2,2)]
+Explanation: All 9 cells are visited in BFS order from the top-left corner.
+
+Constraints:
+- 1 <= n <= 100
+- The grid has no walls; all n * n cells are visited.
+- Output length is always n * n.`,
     code: `from collections import deque
 
 def grid_bfs(n):
@@ -1471,13 +2042,45 @@ def grid_bfs(n):
     category: "heap",
     language: "python",
     difficulty: "hard",
-    description: `Kata: Min Heap
-Class: MinHeap with insert(val) and extract_min()
+    description: `Min Heap
 
-Implement a min heap from scratch. Do not use heapq.
-- insert(val): add a value and bubble up
-- extract_min(): remove and return the smallest value, then bubble down
-- peek(): return the smallest value without removing\\n\\nRef: LeetCode #703 Kth Largest Element in a Stream (closest match)`,
+Implement a min heap data structure from scratch. Do not use Python's heapq module.
+
+Your MinHeap class should support the following operations:
+- insert(val): Add a value to the heap and maintain the heap property by bubbling up.
+- extract_min(): Remove and return the smallest value from the heap, then restore the heap property by bubbling down. Raise IndexError if the heap is empty.
+- peek(): Return the smallest value without removing it. Raise IndexError if the heap is empty.
+- __len__(): Return the number of elements in the heap.
+
+Example 1:
+h = MinHeap()
+h.insert(5)
+h.insert(3)
+h.insert(7)
+h.peek()        # returns 3
+h.extract_min()  # returns 3
+h.extract_min()  # returns 5
+
+Example 2:
+h = MinHeap()
+h.insert(1)
+len(h)           # returns 1
+h.extract_min()  # returns 1
+len(h)           # returns 0
+
+Example 3:
+h = MinHeap()
+h.insert(3)
+h.insert(3)
+h.insert(3)
+h.extract_min()  # returns 3 (duplicates are allowed)
+
+Constraints:
+- Values are comparable integers.
+- extract_min() and peek() on an empty heap must raise IndexError.
+- All operations should maintain the min-heap invariant: parent <= children.
+
+Ref: LeetCode #703 Kth Largest Element in a Stream (closest match)`,
     code: `class MinHeap:
     def __init__(self):
         self.data = []
@@ -1612,11 +2215,31 @@ def test_insert_duplicates():
     category: "intervals",
     language: "python",
     difficulty: "medium",
-    description: `Kata: Merge Intervals
-Function: merge(intervals)
+    description: `Merge Intervals
 
-Given a list of intervals [start, end], merge all overlapping intervals
-and return the result sorted by start.\\n\\nRef: LeetCode #56 Merge Intervals`,
+Given an array of intervals where intervals[i] = [start_i, end_i], merge all overlapping intervals, and return an array of the non-overlapping intervals that cover all the intervals in the input.
+
+Example 1:
+Input: intervals = [[1,3],[2,6],[8,10],[15,18]]
+Output: [[1,6],[8,10],[15,18]]
+Explanation: Since intervals [1,3] and [2,6] overlap, merge them into [1,6].
+
+Example 2:
+Input: intervals = [[1,4],[4,5]]
+Output: [[1,5]]
+Explanation: Intervals [1,4] and [4,5] are considered overlapping.
+
+Example 3:
+Input: intervals = [[1,4],[2,3],[3,6]]
+Output: [[1,6]]
+Explanation: All three intervals overlap and merge into a single interval.
+
+Constraints:
+- 1 <= intervals.length <= 10^4
+- intervals[i].length == 2
+- 0 <= start_i <= end_i <= 10^4
+
+Ref: LeetCode #56 Merge Intervals`,
     code: `def merge(intervals):
     raise NotImplementedError`,
     testCode: `def test_overlapping():
@@ -1657,18 +2280,39 @@ def test_unsorted():
             merged.append([start, end])
     return merged`,
     usage: null,
-    tags: ["sorting", "intervals"],
+    tags: ["sorting", "intervals", "blind75"],
   },
   {
     name: "Linked List Traversal (Iterative)",
     category: "linked-list",
     language: "python",
     difficulty: "easy",
-    description: `Kata: Linked List Traversal (Iterative)
-Function: traverse(head)
+    description: `Linked List Traversal (Iterative)
 
-Given the head of a singly linked list, return a list of all node values
-in order.\\n\\nRef: LeetCode #234 Palindrome Linked List (closest match)`,
+Given the head of a singly linked list, return a list of all node values in order using an iterative approach.
+
+Each node has a val attribute and a next pointer. Traverse from head to the end of the list, collecting each node's value.
+
+Example 1:
+Input: head = [1,2,3]
+Output: [1,2,3]
+Explanation: Traverse 1 -> 2 -> 3, collecting values into a list.
+
+Example 2:
+Input: head = [42]
+Output: [42]
+Explanation: Single node, return its value in a list.
+
+Example 3:
+Input: head = []
+Output: []
+Explanation: Empty list, return an empty list.
+
+Constraints:
+- 0 <= number of nodes <= 5000
+- -10^4 <= Node.val <= 10^4
+
+Ref: LeetCode #234 Palindrome Linked List (closest match)`,
     code: `class Node:
     def __init__(self, val):
         self.val = val
@@ -1692,7 +2336,11 @@ def test_traverse_single():
 
 def test_traverse_empty():
     assert traverse(None) == []`,
-    solution: `
+    solution: `class Node:
+    def __init__(self, val):
+        self.val = val
+        self.next = None
+
 
 def traverse(head):
     result = []
@@ -1704,18 +2352,37 @@ def traverse(head):
 
     return result`,
     usage: null,
-    tags: ["linked-list", "iteration"],
+    tags: ["linked-list", "iteration", "blind75"],
   },
   {
     name: "Reverse Linked List (Iterative)",
     category: "linked-list",
     language: "python",
     difficulty: "easy",
-    description: `Kata: Reverse Linked List (Iterative)
-Function: reverse_iterative(head)
+    description: `Reverse Linked List (Iterative)
 
-Given the head of a singly linked list, reverse it and return the
-new head using an iterative approach.\\n\\nRef: LeetCode #206 Reverse Linked List`,
+Given the head of a singly linked list, reverse the list using an iterative approach, and return the reversed list.
+
+Example 1:
+Input: head = [1,2,3,4]
+Output: [4,3,2,1]
+Explanation: Reverse all pointers so the list runs backwards.
+
+Example 2:
+Input: head = [1]
+Output: [1]
+Explanation: A single-node list is already reversed.
+
+Example 3:
+Input: head = []
+Output: []
+Explanation: An empty list remains empty when reversed.
+
+Constraints:
+- 0 <= number of nodes <= 5000
+- -5000 <= Node.val <= 5000
+
+Ref: LeetCode #206 Reverse Linked List`,
     code: `class Node:
     def __init__(self, val):
         self.val = val
@@ -1754,7 +2421,13 @@ def test_reverse_iterative_single():
 
 def test_reverse_iterative_empty():
     assert reverse_iterative(None) is None`,
-    solution: `def reverse_iterative(head):
+    solution: `class Node:
+    def __init__(self, val):
+        self.val = val
+        self.next = None
+
+
+def reverse_iterative(head):
     prev = None
     current = head
     while current is not None:
@@ -1771,11 +2444,30 @@ def test_reverse_iterative_empty():
     category: "linked-list",
     language: "python",
     difficulty: "medium",
-    description: `Kata: Reverse Linked List (Recursive)
-Function: reverse_recursive(head)
+    description: `Reverse Linked List (Recursive)
 
-Given the head of a singly linked list, reverse it and return the
-new head using a recursive approach.\\n\\nRef: LeetCode #206 Reverse Linked List`,
+Given the head of a singly linked list, reverse the list using a recursive approach, and return the reversed list.
+
+Example 1:
+Input: head = [1,2,3,4]
+Output: [4,3,2,1]
+Explanation: Recursively reverse the rest of the list, then fix the pointers.
+
+Example 2:
+Input: head = [1]
+Output: [1]
+Explanation: Base case; a single-node list is already reversed.
+
+Example 3:
+Input: head = []
+Output: []
+Explanation: An empty list remains empty when reversed.
+
+Constraints:
+- 0 <= number of nodes <= 5000
+- -5000 <= Node.val <= 5000
+
+Ref: LeetCode #206 Reverse Linked List`,
     code: `class Node:
     def __init__(self, val):
         self.val = val
@@ -1814,7 +2506,13 @@ def test_reverse_recursive_single():
 
 def test_reverse_recursive_empty():
     assert reverse_recursive(None) is None`,
-    solution: `def reverse_recursive(head):
+    solution: `class Node:
+    def __init__(self, val):
+        self.val = val
+        self.next = None
+
+
+def reverse_recursive(head):
     if head is None or head.next is None:
         return head
     new_head = reverse_recursive(head.next)
@@ -1822,18 +2520,41 @@ def test_reverse_recursive_empty():
     head.next = None
     return new_head`,
     usage: null,
-    tags: ["linked-list", "recursion"],
+    tags: ["linked-list", "recursion", "blind75"],
   },
   {
     name: "Linked List Cycle Detection",
     category: "linked-list",
     language: "python",
     difficulty: "easy",
-    description: `Kata: Linked List Cycle Detection
-Function: has_cycle(head)
+    description: `Linked List Cycle Detection
 
-Given the head of a singly linked list, return True if there is a
-cycle, False otherwise. Use Floyd's tortoise and hare algorithm.\\n\\nRef: LeetCode #141 Linked List Cycle`,
+Given head, the head of a linked list, determine if the linked list has a cycle in it.
+
+There is a cycle in a linked list if there is some node in the list that can be reached again by continuously following the next pointer. Return True if there is a cycle, False otherwise.
+
+Use Floyd's cycle detection algorithm (tortoise and hare) with O(1) space.
+
+Example 1:
+Input: head = [3,2,0,-4], pos = 1
+Output: True
+Explanation: There is a cycle where the tail connects to the 1st node (0-indexed).
+
+Example 2:
+Input: head = [1], pos = -1
+Output: False
+Explanation: There is no cycle in the list.
+
+Example 3:
+Input: head = [1,2], pos = 0
+Output: True
+Explanation: The tail connects back to the 0th node.
+
+Constraints:
+- 0 <= number of nodes <= 10^4
+- -10^5 <= Node.val <= 10^5
+
+Ref: LeetCode #141 Linked List Cycle`,
     code: `class Node:
     def __init__(self, val):
         self.val = val
@@ -1874,7 +2595,13 @@ def test_empty():
 def test_single_no_cycle():
     a = Node(1)
     assert has_cycle(a) is False`,
-    solution: `def has_cycle(head):
+    solution: `class Node:
+    def __init__(self, val):
+        self.val = val
+        self.next = None
+
+
+def has_cycle(head):
     slow = head
     fast = head
 
@@ -1886,18 +2613,39 @@ def test_single_no_cycle():
 
     return False`,
     usage: null,
-    tags: ["linked-list", "fast-slow-pointer"],
+    tags: ["linked-list", "fast-slow-pointer", "blind75"],
   },
   {
     name: "Linked List Traversal (Recursive)",
     category: "linked-list",
     language: "python",
     difficulty: "easy",
-    description: `Kata: Linked List Traversal (Recursive)
-Function: traverse(head)
+    description: `Linked List Traversal (Recursive)
 
-Given the head of a singly linked list, return a list of all node values
-in order. Use a recursive approach.\\n\\nRef: LeetCode #234 Palindrome Linked List (closest match)`,
+Given the head of a singly linked list, return a list of all node values in order using a recursive approach.
+
+At each recursive call, add the current node's value and recurse on the next node. Base case: return an empty list when head is None.
+
+Example 1:
+Input: head = [1,2,3]
+Output: [1,2,3]
+Explanation: Recursively visit 1, then 2, then 3, building up the result list.
+
+Example 2:
+Input: head = [42]
+Output: [42]
+Explanation: Single node; return [42].
+
+Example 3:
+Input: head = []
+Output: []
+Explanation: Empty list; base case returns [].
+
+Constraints:
+- 0 <= number of nodes <= 5000
+- -10^4 <= Node.val <= 10^4
+
+Ref: LeetCode #234 Palindrome Linked List (closest match)`,
     code: `class Node:
     def __init__(self, val):
         self.val = val
@@ -1921,7 +2669,13 @@ def test_traverse_single():
 
 def test_traverse_empty():
     assert traverse(None) == []`,
-    solution: `def traverse(head):
+    solution: `class Node:
+    def __init__(self, val):
+        self.val = val
+        self.next = None
+
+
+def traverse(head):
     if head is None:
         return []
     return [head.val] + traverse(head.next)`,
@@ -1933,11 +2687,32 @@ def test_traverse_empty():
     category: "sliding-window",
     language: "python",
     difficulty: "medium",
-    description: `Kata: Sliding Window Max Sum
-Function: max_subarray_sum(nums, k)
+    description: `Sliding Window Max Sum
 
-Given a list of integers and a window size k, return the maximum sum
-of any contiguous subarray of length k.\\n\\nRef: LeetCode #2461 Maximum Sum of Distinct Subarrays With Length K`,
+Given an integer array nums and an integer k, find the maximum sum of any contiguous subarray of size k.
+
+Use the sliding window technique: compute the sum of the first window, then slide by adding the next element and removing the leftmost element.
+
+Example 1:
+Input: nums = [1,4,2,10,2,3,1,0,20], k = 4
+Output: 24
+Explanation: The subarray [3,1,0,20] has the maximum sum of 24.
+
+Example 2:
+Input: nums = [1,2,3], k = 3
+Output: 6
+Explanation: Only one window exists, which is the entire array summing to 6.
+
+Example 3:
+Input: nums = [5,1,8,3], k = 1
+Output: 8
+Explanation: With window size 1, return the maximum element.
+
+Constraints:
+- 1 <= k <= nums.length <= 10^5
+- -10^4 <= nums[i] <= 10^4
+
+Ref: LeetCode #2461 Maximum Sum of Distinct Subarrays With Length K`,
     code: `def max_subarray_sum(nums, k):
     raise NotImplementedError`,
     testCode: `def test_basic():
@@ -1975,11 +2750,34 @@ def test_mixed():
     category: "stack",
     language: "python",
     difficulty: "easy",
-    description: `Kata: Balanced Parentheses
-Function: is_balanced(s)
+    description: `Valid Parentheses
 
-Given a string containing only '(', ')', '{', '}', '[', ']',
-return True if the brackets are balanced, False otherwise.\\n\\nRef: LeetCode #20 Valid Parentheses`,
+Given a string s containing just the characters '(', ')', '{', '}', '[' and ']', determine if the input string is valid.
+
+An input string is valid if:
+1. Open brackets must be closed by the same type of brackets.
+2. Open brackets must be closed in the correct order.
+3. Every close bracket has a corresponding open bracket of the same type.
+
+Example 1:
+Input: s = "()"
+Output: True
+
+Example 2:
+Input: s = "({[]})"
+Output: True
+Explanation: Each bracket is closed in the correct nesting order.
+
+Example 3:
+Input: s = "(]"
+Output: False
+Explanation: The open parenthesis is closed by a square bracket, which is invalid.
+
+Constraints:
+- 0 <= s.length <= 10^4
+- s consists of parentheses only: '(){}[]'
+
+Ref: LeetCode #20 Valid Parentheses`,
     code: `def is_balanced(s):
     raise NotImplementedError`,
     testCode: `def test_balanced_simple():
@@ -2024,18 +2822,45 @@ def test_complex():
             stack.pop()
     return len(stack) == 0`,
     usage: null,
-    tags: ["stack", "string"],
+    tags: ["stack", "string", "blind75"],
   },
   {
     name: "Queue from Two Stacks",
     category: "stack",
     language: "python",
     difficulty: "medium",
-    description: `Kata: Queue from Two Stacks
-Class: Queue
+    description: `Queue from Two Stacks
 
-Implement a FIFO queue using two stacks (Python lists).
-Methods: enqueue(val), dequeue(), peek(), is_empty().\\n\\nRef: LeetCode #232 Implement Queue using Stacks`,
+Implement a first-in-first-out (FIFO) queue using only two stacks (Python lists). The implemented queue should support the following operations: enqueue, dequeue, peek, and is_empty.
+
+Implement the Queue class:
+- Queue() initializes the queue object.
+- enqueue(val) pushes element val to the back of the queue.
+- dequeue() removes the element from the front of the queue and returns it.
+- peek() returns the element at the front of the queue without removing it.
+- is_empty() returns True if the queue is empty, False otherwise.
+
+Example 1:
+Input: enqueue(1), enqueue(2), dequeue(), dequeue()
+Output: 1, 2
+Explanation: Elements are dequeued in FIFO order.
+
+Example 2:
+Input: enqueue(5), enqueue(10), peek(), dequeue(), peek()
+Output: 5, 5, 10
+Explanation: peek() returns front without removing; after dequeue(), front becomes 10.
+
+Example 3:
+Input: is_empty(), enqueue(1), is_empty(), dequeue(), is_empty()
+Output: True, False, True
+Explanation: Queue starts empty, becomes non-empty after enqueue, empty again after dequeue.
+
+Constraints:
+- 1 <= val <= 9
+- At most 100 calls to enqueue, dequeue, peek, and is_empty
+- All calls to dequeue and peek are valid (queue is non-empty)
+
+Ref: LeetCode #232 Implement Queue using Stacks`,
     code: `class Queue:
     def __init__(self):
         raise NotImplementedError
@@ -2126,12 +2951,32 @@ def test_interleaved():
     category: "stack",
     language: "python",
     difficulty: "medium",
-    description: `Kata: Monotonic Stack
-Function: next_greater_element(nums)
+    description: `Next Greater Element
 
-Given a list of integers, return a list where each element is the next
-greater element to the right. If none exists, use -1.
-Example: [2, 1, 2, 4, 3] -> [4, 2, 4, -1, -1]\\n\\nRef: LeetCode #496 Next Greater Element I`,
+Given an array of integers nums, for each element find the next greater element to its right. The next greater element of a number x is the first number to the right that is greater than x. If no such element exists, use -1.
+
+Return an array answer where answer[i] is the next greater element for nums[i].
+
+Example 1:
+Input: nums = [2,1,2,4,3]
+Output: [4,2,4,-1,-1]
+Explanation: For 2, next greater is 4. For 1, next greater is 2. For the second 2, next greater is 4. For 4 and 3, no greater element exists to the right.
+
+Example 2:
+Input: nums = [5,4,3,2,1]
+Output: [-1,-1,-1,-1,-1]
+Explanation: Array is strictly decreasing, so no element has a next greater element.
+
+Example 3:
+Input: nums = [1,2,3,4,5]
+Output: [2,3,4,5,-1]
+Explanation: Each element's next greater is the element immediately to its right, except for 5.
+
+Constraints:
+- 1 <= nums.length <= 10^4
+- -10^9 <= nums[i] <= 10^9
+
+Ref: LeetCode #496 Next Greater Element I`,
     code: `def next_greater_element(nums):
     raise NotImplementedError`,
     testCode: `def test_basic():
@@ -2168,11 +3013,34 @@ def test_duplicates():
     category: "trees",
     language: "python",
     difficulty: "medium",
-    description: `Kata: Binary Tree BFS
-Function: bfs(root)
+    description: `Binary Tree BFS
 
-Given the root of a binary tree, return a list of values
-in breadth-first (level-order) traversal order.\\n\\nRef: LeetCode #102 Binary Tree Level Order Traversal`,
+Given the root of a binary tree, return its node values in breadth-first (level-order) traversal order. Visit nodes level by level, from left to right.
+
+If the tree is empty (root is None), return an empty list.
+
+Example 1:
+Input: root = [1, 2, 3, 4, 5]
+        1
+       / \\
+      2   3
+     / \\
+    4   5
+Output: [1, 2, 3, 4, 5]
+
+Example 2:
+Input: root = [1]
+Output: [1]
+
+Example 3:
+Input: root = []
+Output: []
+
+Constraints:
+- The number of nodes in the tree is in the range [0, 1000].
+- -1000 <= Node.val <= 1000
+
+Ref: LeetCode #102 Binary Tree Level Order Traversal`,
     code: `from collections import deque
 
 class Node:
@@ -2215,6 +3083,12 @@ def test_bfs_empty():
     solution: `from collections import deque
 
 
+class Node:
+    def __init__(self, val):
+        self.val = val
+        self.left = None
+        self.right = None
+
 
 def bfs(root):
     if root is None:
@@ -2234,18 +3108,42 @@ def bfs(root):
 
     return result`,
     usage: null,
-    tags: ["bfs", "tree"],
+    tags: ["bfs", "tree", "blind75"],
   },
   {
     name: "Binary Tree Preorder (Recursive)",
     category: "trees",
     language: "python",
     difficulty: "easy",
-    description: `Kata: Binary Tree Preorder Traversal (Recursive)
-Function: preorder(root)
+    description: `Binary Tree Preorder Traversal (Recursive)
 
-Given the root of a binary tree, return a list of values in
-preorder traversal order (root, left, right).\\n\\nRef: LeetCode #144 Binary Tree Preorder Traversal`,
+Given the root of a binary tree, return a list of its node values in preorder traversal order: visit the root first, then recursively traverse the left subtree, then the right subtree.
+
+If the tree is empty (root is None), return an empty list.
+
+Example 1:
+Input: root = [1, 2, 3, 4, 5]
+        1
+       / \\
+      2   3
+     / \\
+    4   5
+Output: [1, 2, 4, 5, 3]
+Explanation: Root(1) -> Left(2) -> Left(4) -> Right(5) -> Right(3)
+
+Example 2:
+Input: root = [42]
+Output: [42]
+
+Example 3:
+Input: root = []
+Output: []
+
+Constraints:
+- The number of nodes in the tree is in the range [0, 100].
+- -100 <= Node.val <= 100
+
+Ref: LeetCode #144 Binary Tree Preorder Traversal`,
     code: `class Node:
     def __init__(self, val):
         self.val = val
@@ -2283,7 +3181,14 @@ def test_preorder_empty():
 def test_preorder_single():
     n = Node(42)
     assert preorder(n) == [42]`,
-    solution: `def preorder(root):
+    solution: `class Node:
+    def __init__(self, val):
+        self.val = val
+        self.left = None
+        self.right = None
+
+
+def preorder(root):
     if root is None:
         return []
     return [root.val] + preorder(root.left) + preorder(root.right)`,
@@ -2295,11 +3200,35 @@ def test_preorder_single():
     category: "trees",
     language: "python",
     difficulty: "easy",
-    description: `Kata: Binary Tree Inorder Traversal (Recursive)
-Function: inorder(root)
+    description: `Binary Tree Inorder Traversal (Recursive)
 
-Given the root of a binary tree, return a list of values in
-inorder traversal order (left, root, right).\\n\\nRef: LeetCode #94 Binary Tree Inorder Traversal`,
+Given the root of a binary tree, return a list of its node values in inorder traversal order: recursively traverse the left subtree, visit the root, then recursively traverse the right subtree.
+
+If the tree is empty (root is None), return an empty list.
+
+Example 1:
+Input: root = [1, 2, 3, 4, 5]
+        1
+       / \\
+      2   3
+     / \\
+    4   5
+Output: [4, 2, 5, 1, 3]
+Explanation: Left(4) -> Root(2) -> Right(5) -> Root(1) -> Right(3)
+
+Example 2:
+Input: root = [42]
+Output: [42]
+
+Example 3:
+Input: root = []
+Output: []
+
+Constraints:
+- The number of nodes in the tree is in the range [0, 100].
+- -100 <= Node.val <= 100
+
+Ref: LeetCode #94 Binary Tree Inorder Traversal`,
     code: `class Node:
     def __init__(self, val):
         self.val = val
@@ -2337,7 +3266,14 @@ def test_inorder_empty():
 def test_inorder_single():
     n = Node(42)
     assert inorder(n) == [42]`,
-    solution: `def inorder(root):
+    solution: `class Node:
+    def __init__(self, val):
+        self.val = val
+        self.left = None
+        self.right = None
+
+
+def inorder(root):
     if root is None:
         return []
     return inorder(root.left) + [root.val] + inorder(root.right)`,
@@ -2349,11 +3285,35 @@ def test_inorder_single():
     category: "trees",
     language: "python",
     difficulty: "medium",
-    description: `Kata: Binary Tree Postorder Traversal (Recursive)
-Function: postorder(root)
+    description: `Binary Tree Postorder Traversal (Recursive)
 
-Given the root of a binary tree, return a list of values in
-postorder traversal order (left, right, root).\\n\\nRef: LeetCode #145 Binary Tree Postorder Traversal`,
+Given the root of a binary tree, return a list of its node values in postorder traversal order: recursively traverse the left subtree, then the right subtree, then visit the root.
+
+If the tree is empty (root is None), return an empty list.
+
+Example 1:
+Input: root = [1, 2, 3, 4, 5]
+        1
+       / \\
+      2   3
+     / \\
+    4   5
+Output: [4, 5, 2, 3, 1]
+Explanation: Left(4) -> Right(5) -> Root(2) -> Right(3) -> Root(1)
+
+Example 2:
+Input: root = [42]
+Output: [42]
+
+Example 3:
+Input: root = []
+Output: []
+
+Constraints:
+- The number of nodes in the tree is in the range [0, 100].
+- -100 <= Node.val <= 100
+
+Ref: LeetCode #145 Binary Tree Postorder Traversal`,
     code: `class Node:
     def __init__(self, val):
         self.val = val
@@ -2391,7 +3351,14 @@ def test_postorder_empty():
 def test_postorder_single():
     n = Node(42)
     assert postorder(n) == [42]`,
-    solution: `def postorder(root):
+    solution: `class Node:
+    def __init__(self, val):
+        self.val = val
+        self.left = None
+        self.right = None
+
+
+def postorder(root):
     if root is None:
         return []
     return postorder(root.left) + postorder(root.right) + [root.val]`,
@@ -2403,12 +3370,35 @@ def test_postorder_single():
     category: "trees",
     language: "python",
     difficulty: "medium",
-    description: `Kata: Binary Tree Preorder Traversal (Iterative)
-Function: preorder(root)
+    description: `Binary Tree Preorder Traversal (Iterative)
 
-Given the root of a binary tree, return a list of values in
-preorder traversal order (root, left, right). Use an iterative
-approach with an explicit stack.\\n\\nRef: LeetCode #144 Binary Tree Preorder Traversal`,
+Given the root of a binary tree, return a list of its node values in preorder traversal order (root, left, right). You must use an iterative approach with an explicit stack instead of recursion.
+
+If the tree is empty (root is None), return an empty list.
+
+Example 1:
+Input: root = [1, 2, 3, 4, 5]
+        1
+       / \\
+      2   3
+     / \\
+    4   5
+Output: [1, 2, 4, 5, 3]
+
+Example 2:
+Input: root = [42]
+Output: [42]
+
+Example 3:
+Input: root = []
+Output: []
+
+Constraints:
+- The number of nodes in the tree is in the range [0, 100].
+- -100 <= Node.val <= 100
+- Must use iterative approach (no recursion).
+
+Ref: LeetCode #144 Binary Tree Preorder Traversal`,
     code: `class Node:
     def __init__(self, val):
         self.val = val
@@ -2446,7 +3436,14 @@ def test_preorder_empty():
 def test_preorder_single():
     n = Node(42)
     assert preorder(n) == [42]`,
-    solution: `def preorder(root):
+    solution: `class Node:
+    def __init__(self, val):
+        self.val = val
+        self.left = None
+        self.right = None
+
+
+def preorder(root):
     if root is None:
         return []
     stack = [root]
@@ -2467,12 +3464,35 @@ def test_preorder_single():
     category: "trees",
     language: "python",
     difficulty: "medium",
-    description: `Kata: Binary Tree Inorder Traversal (Iterative)
-Function: inorder(root)
+    description: `Binary Tree Inorder Traversal (Iterative)
 
-Given the root of a binary tree, return a list of values in
-inorder traversal order (left, root, right). Use an iterative
-approach with an explicit stack.\\n\\nRef: LeetCode #94 Binary Tree Inorder Traversal`,
+Given the root of a binary tree, return a list of its node values in inorder traversal order (left, root, right). You must use an iterative approach with an explicit stack instead of recursion.
+
+If the tree is empty (root is None), return an empty list.
+
+Example 1:
+Input: root = [1, 2, 3, 4, 5]
+        1
+       / \\
+      2   3
+     / \\
+    4   5
+Output: [4, 2, 5, 1, 3]
+
+Example 2:
+Input: root = [42]
+Output: [42]
+
+Example 3:
+Input: root = []
+Output: []
+
+Constraints:
+- The number of nodes in the tree is in the range [0, 100].
+- -100 <= Node.val <= 100
+- Must use iterative approach (no recursion).
+
+Ref: LeetCode #94 Binary Tree Inorder Traversal`,
     code: `class Node:
     def __init__(self, val):
         self.val = val
@@ -2510,7 +3530,14 @@ def test_inorder_empty():
 def test_inorder_single():
     n = Node(42)
     assert inorder(n) == [42]`,
-    solution: `def inorder(root):
+    solution: `class Node:
+    def __init__(self, val):
+        self.val = val
+        self.left = None
+        self.right = None
+
+
+def inorder(root):
     result = []
     stack = []
     current = root
@@ -2530,12 +3557,35 @@ def test_inorder_single():
     category: "trees",
     language: "python",
     difficulty: "hard",
-    description: `Kata: Binary Tree Postorder Traversal (Iterative)
-Function: postorder(root)
+    description: `Binary Tree Postorder Traversal (Iterative)
 
-Given the root of a binary tree, return a list of values in
-postorder traversal order (left, right, root). Use an iterative
-approach with an explicit stack.\\n\\nRef: LeetCode #145 Binary Tree Postorder Traversal`,
+Given the root of a binary tree, return a list of its node values in postorder traversal order (left, right, root). You must use an iterative approach with an explicit stack instead of recursion.
+
+If the tree is empty (root is None), return an empty list.
+
+Example 1:
+Input: root = [1, 2, 3, 4, 5]
+        1
+       / \\
+      2   3
+     / \\
+    4   5
+Output: [4, 5, 2, 3, 1]
+
+Example 2:
+Input: root = [42]
+Output: [42]
+
+Example 3:
+Input: root = []
+Output: []
+
+Constraints:
+- The number of nodes in the tree is in the range [0, 100].
+- -100 <= Node.val <= 100
+- Must use iterative approach (no recursion).
+
+Ref: LeetCode #145 Binary Tree Postorder Traversal`,
     code: `class Node:
     def __init__(self, val):
         self.val = val
@@ -2573,7 +3623,14 @@ def test_postorder_empty():
 def test_postorder_single():
     n = Node(42)
     assert postorder(n) == [42]`,
-    solution: `def postorder(root):
+    solution: `class Node:
+    def __init__(self, val):
+        self.val = val
+        self.left = None
+        self.right = None
+
+
+def postorder(root):
     if root is None:
         return []
     stack = [root]
@@ -2594,12 +3651,37 @@ def test_postorder_single():
     category: "tries",
     language: "python",
     difficulty: "hard",
-    description: `Kata: Trie
-Class: Trie
+    description: `Implement Trie (Prefix Tree)
 
-Implement a trie with insert(word), search(word), and starts_with(prefix).
-search returns True if exact word exists. starts_with returns True if any
-word starts with the prefix.\\n\\nRef: LeetCode #208 Implement Trie (Prefix Tree)`,
+A trie (pronounced "try") or prefix tree is a tree data structure used to efficiently store and retrieve keys in a dataset of strings. Implement the Trie class with the following methods:
+
+- Trie() initializes the trie object.
+- insert(word) inserts the string word into the trie.
+- search(word) returns True if the string word is in the trie (i.e., was inserted before), and False otherwise.
+- starts_with(prefix) returns True if there is a previously inserted string word that has the prefix prefix, and False otherwise.
+
+Example 1:
+Input:
+  t = Trie()
+  t.insert("apple")
+  t.search("apple")   -> True
+  t.search("app")     -> False
+  t.starts_with("app") -> True
+  t.insert("app")
+  t.search("app")     -> True
+
+Example 2:
+Input:
+  t = Trie()
+  t.search("anything") -> False
+  t.starts_with("any") -> False
+
+Constraints:
+- 1 <= len(word), len(prefix) <= 2000
+- word and prefix consist only of lowercase English letters.
+- At most 3 * 10^4 calls in total will be made to insert, search, and starts_with.
+
+Ref: LeetCode #208 Implement Trie (Prefix Tree)`,
     code: `class Trie:
     def __init__(self):
         raise NotImplementedError
@@ -2675,19 +3757,38 @@ def test_empty_search():
             node = node.children[ch]
         return node`,
     usage: null,
-    tags: ["trie"],
+    tags: ["trie", "blind75"],
   },
   {
     name: "Two Pointer Remove Duplicates",
     category: "two-pointers",
     language: "python",
     difficulty: "easy",
-    description: `Kata: Two Pointer Remove Duplicates
-Function: remove_duplicates(nums)
+    description: `Remove Duplicates from Sorted Array
 
-Given a sorted list of integers, remove duplicates in-place and return
-the number of unique elements. The first k elements of the list should
-contain the unique values.\\n\\nRef: LeetCode #26 Remove Duplicates from Sorted Array`,
+Given an integer array nums sorted in non-decreasing order, remove the duplicates in-place such that each unique element appears only once. The relative order of the elements should be kept the same. Return k, the number of unique elements.
+
+After calling your function, the first k elements of nums should hold the unique values in their original order. It does not matter what you leave beyond position k.
+
+Example 1:
+Input: nums = [1, 1, 2, 3, 3]
+Output: 3, nums = [1, 2, 3, ...]
+Explanation: Your function should return k = 3, with the first three elements being 1, 2, and 3.
+
+Example 2:
+Input: nums = [5, 5, 5, 5]
+Output: 1, nums = [5, ...]
+
+Example 3:
+Input: nums = [1, 2, 3]
+Output: 3, nums = [1, 2, 3]
+
+Constraints:
+- 0 <= nums.length <= 3 * 10^4
+- -100 <= nums[i] <= 100
+- nums is sorted in non-decreasing order.
+
+Ref: LeetCode #26 Remove Duplicates from Sorted Array`,
     code: `def remove_duplicates(nums):
     raise NotImplementedError`,
     testCode: `def test_basic():
@@ -2742,11 +3843,29 @@ def test_single():
     category: "two-pointers",
     language: "python",
     difficulty: "easy",
-    description: `Kata: Merge Two Sorted Arrays
-Function: merge_sorted(a, b)
+    description: `Merge Two Sorted Arrays
 
-Given two sorted lists of integers, return a single sorted list
-containing all elements from both. Do not use built-in sort.\\n\\nRef: LeetCode #88 Merge Sorted Array`,
+You are given two integer arrays a and b, both sorted in non-decreasing order. Merge them into a single sorted array and return it. You may not use any built-in sort function.
+
+Example 1:
+Input: a = [1, 3, 5], b = [2, 4, 6]
+Output: [1, 2, 3, 4, 5, 6]
+
+Example 2:
+Input: a = [1, 2], b = [3, 4, 5, 6]
+Output: [1, 2, 3, 4, 5, 6]
+
+Example 3:
+Input: a = [], b = [1, 2, 3]
+Output: [1, 2, 3]
+
+Constraints:
+- 0 <= a.length, b.length <= 1000
+- -10^6 <= a[i], b[j] <= 10^6
+- Both a and b are sorted in non-decreasing order.
+- Do not use built-in sort.
+
+Ref: LeetCode #88 Merge Sorted Array`,
     code: `def merge_sorted(a, b):
     raise NotImplementedError`,
     testCode: `def test_basic():

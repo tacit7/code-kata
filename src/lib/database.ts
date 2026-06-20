@@ -2,6 +2,14 @@ import Database from "@tauri-apps/plugin-sql";
 import type { SeedKata } from "../types/editor";
 import { sampleKatas } from "./sample-katas";
 import { sampleKatasPython } from "./sample-katas-python";
+import { blind75Part1 } from "./blind75-additions-part1";
+import { blind75Part2 } from "./blind75-additions-part2";
+import { blind75Part3 } from "./blind75-additions-part3";
+import { blind75Part4 } from "./blind75-additions-part4";
+import { blind75Part5 } from "./blind75-additions-part5";
+import { blind75Part6 } from "./blind75-additions-part6";
+import { blind75Part7 } from "./blind75-additions-part7";
+import { blind75Part8 } from "./blind75-additions-part8";
 
 let db: Database | null = null;
 
@@ -120,12 +128,17 @@ export async function loadUserCode(kataId: number): Promise<string | null> {
   return rows.length > 0 ? rows[0].code : null;
 }
 
+const blind75Katas = [
+  ...blind75Part1, ...blind75Part2, ...blind75Part3, ...blind75Part4,
+  ...blind75Part5, ...blind75Part6, ...blind75Part7, ...blind75Part8,
+];
+
 async function seedKatas(db: Database) {
   // Only seed when katas table is empty (first launch)
   const countRows = await db.select<{ count: number }[]>("SELECT COUNT(*) as count FROM katas");
   if (countRows[0].count > 0) return;
 
-  for (const kata of [...sampleKatas, ...sampleKatasPython]) {
+  for (const kata of [...sampleKatas, ...sampleKatasPython, ...blind75Katas]) {
     await db.execute(
       `INSERT INTO katas (name, category, language, difficulty, description, code, test_code, solution, usage, tags)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
@@ -170,7 +183,7 @@ export async function reseedKatas(): Promise<string> {
 }
 
 async function seedKatasForce(db: Database) {
-  for (const kata of [...sampleKatas, ...sampleKatasPython]) {
+  for (const kata of [...sampleKatas, ...sampleKatasPython, ...blind75Katas]) {
     await db.execute(
       `INSERT INTO katas (name, category, language, difficulty, description, code, test_code, solution, usage, tags)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
