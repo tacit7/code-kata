@@ -27,7 +27,15 @@ interface AttemptRow {
   passed: number;
 }
 
-interface KataState {
+interface LibraryUIState {
+  librarySearch: string;
+  libraryTab: "browse" | "daily" | "random" | "custom";
+  libraryCategoryFilter: string;
+  libraryDiffSort: "asc" | "desc" | null;
+  setLibraryUI: (patch: Partial<LibraryUIState>) => void;
+}
+
+interface KataState extends LibraryUIState {
   katas: Kata[];
   bestTimes: Record<number, number>;
   streaks: Record<number, number>;
@@ -45,6 +53,11 @@ export const useKataStore = create<KataState>((set) => ({
   streaks: {},
   loading: true,
   error: null,
+  librarySearch: "",
+  libraryTab: "browse",
+  libraryCategoryFilter: "",
+  libraryDiffSort: null,
+  setLibraryUI: (patch) => set(patch),
 
   loadKatas: async (language = "javascript") => {
     try {

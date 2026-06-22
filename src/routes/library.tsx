@@ -22,9 +22,18 @@ export function PracticePage() {
   const resetKataTimer = useTimerStore((s) => s.resetKataTimer);
   const navigate = useNavigate();
 
-  const [tab, setTab] = useState<Tab>("browse");
-  const [search, setSearch] = useState("");
-  const [diffSort, setDiffSort] = useState<"asc" | "desc" | null>(null);
+  const librarySearch = useKataStore((s) => s.librarySearch);
+  const libraryTab = useKataStore((s) => s.libraryTab);
+  const libraryCategoryFilter = useKataStore((s) => s.libraryCategoryFilter);
+  const libraryDiffSort = useKataStore((s) => s.libraryDiffSort);
+  const setLibraryUI = useKataStore((s) => s.setLibraryUI);
+
+  const tab = libraryTab;
+  const setTab = (t: Tab) => setLibraryUI({ libraryTab: t });
+  const search = librarySearch;
+  const setSearch = (v: string) => setLibraryUI({ librarySearch: v });
+  const diffSort = libraryDiffSort;
+  const setDiffSort = (v: "asc" | "desc" | null) => setLibraryUI({ libraryDiffSort: v });
   const [starting, setStarting] = useState(false);
 
   // Daily state
@@ -32,7 +41,8 @@ export function PracticePage() {
 
   // Random state
   const [size, setSize] = useState(5);
-  const [categoryFilter, setCategoryFilter] = useState<string>("");
+  const categoryFilter = libraryCategoryFilter;
+  const setCategoryFilter = (v: string) => setLibraryUI({ libraryCategoryFilter: v });
   const categories = [...new Set(katas.map((k) => k.category))].sort();
   const filteredKatas = categoryFilter
     ? katas.filter((k) => k.category === categoryFilter)
@@ -347,7 +357,7 @@ export function PracticePage() {
                 <th className="font-semibold">Category</th>
                 <th
                   className="font-semibold cursor-pointer select-none hover:text-base-content/60 transition-colors"
-                  onClick={() => setDiffSort((v) => v === null ? "asc" : v === "asc" ? "desc" : null)}
+                  onClick={() => setDiffSort(diffSort === null ? "asc" : diffSort === "asc" ? "desc" : null)}
                 >
                   Difficulty {diffSort === "asc" ? "▲" : diffSort === "desc" ? "▼" : ""}
                 </th>
