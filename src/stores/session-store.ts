@@ -82,55 +82,80 @@ interface KataStats {
   attempt_count: number;
   pass_count: number;
   avg_time_ms: number;
+  last_attempt_at: string | null;
+  last_passed: number | null;
 }
 
-export async function selectRandomKatas(allKatas: Kata[], count: number): Promise<Kata[]> {
-  if (allKatas.length === 0) return [];
-  const actual = Math.min(count, allKatas.length);
+/** Compute a spaced-repetition weight for a single kata.
+ *  Higher = more urgently needs practice.
+ *
+ *  Priority order (PRD F3a):
+ *    1. Never attempted            → 10
+ *    2. Last attempt failed        → 6  + recency bonus
+ *    3. Mastered but slow          → 2  + recency bonus
+ *    4. Mastered and fast          → 0.5 + recency bonus
+ *
+ *  Recency bonus: +1 per 7 days since last attempt (capped at +4 for 28+ days idle).
+ */
+function srWeight(stats: KataStats | undefined, medianTimeMs: number): number {
+  if (!stats || stats.attempt_count === 0) return 10;
 
+  const daysSince = stats.last_attempt_at
+    ? (Date.now() - new Date(stats.last_attempt_at).getTime()) / 86_400_000
+    : 999;
+  const recencyBonus = Math.min(daysSince / 7, 4);
+
+  const lastFailed = stats.last_passed === 0;
+  if (lastFailed) return 6 + recencyBonus;
+
+  const slow = stats.avg_time_ms > medianTimeMs && stats.avg_time_ms > 0;
+  if (slow) return 2 + recencyBonus;
+
+  return 0.5 + recencyBonus;
+}
+
+async function fetchKataStats(kataIds: number[]): Promise<Map<number, KataStats>> {
+  if (kataIds.length === 0) return new Map();
   const db = await getDb();
-  const kataIds = allKatas.map((k) => k.id);
   const placeholders = kataIds.map((_, i) => `$${i + 1}`).join(", ");
-
   const rows = await db.select<KataStats[]>(
-    `SELECT kata_id,
-            COUNT(*) as attempt_count,
-            SUM(passed) as pass_count,
-            AVG(time_ms) as avg_time_ms
+    `SELECT
+       kata_id,
+       COUNT(*) as attempt_count,
+       SUM(passed) as pass_count,
+       AVG(time_ms) as avg_time_ms,
+       MAX(started_at) as last_attempt_at,
+       (SELECT passed FROM attempts a2
+        WHERE a2.kata_id = attempts.kata_id
+        ORDER BY a2.started_at DESC LIMIT 1) as last_passed
      FROM attempts
      WHERE kata_id IN (${placeholders})
      GROUP BY kata_id`,
     kataIds,
   );
+  return new Map(rows.map((r) => [r.kata_id, r]));
+}
 
-  const statsMap = new Map(rows.map((r) => [r.kata_id, r]));
-
-  // Median time among high-pass-rate katas to split slow vs fast
-  const highPassTimes: number[] = [];
-  for (const r of rows) {
-    const passRate = r.pass_count / r.attempt_count;
-    if (passRate > 0.8 && r.avg_time_ms > 0) {
-      highPassTimes.push(r.avg_time_ms);
-    }
+function medianTime(statsMap: Map<number, KataStats>): number {
+  const times: number[] = [];
+  for (const r of statsMap.values()) {
+    if (r.last_passed === 1 && r.avg_time_ms > 0) times.push(r.avg_time_ms);
   }
-  highPassTimes.sort((a, b) => a - b);
-  const medianTime =
-    highPassTimes.length > 0
-      ? highPassTimes[Math.floor(highPassTimes.length / 2)]
-      : Infinity;
+  if (times.length === 0) return Infinity;
+  times.sort((a, b) => a - b);
+  return times[Math.floor(times.length / 2)];
+}
 
-  // Weight per kata: untried > struggling > moderate > slow-but-passing > mastered
-  const weights = allKatas.map((k) => {
-    const stats = statsMap.get(k.id);
-    if (!stats || stats.attempt_count === 0) return 3;
-    const passRate = stats.pass_count / stats.attempt_count;
-    if (passRate < 0.5) return 2.5;
-    if (passRate <= 0.8) return 1.5;
-    if (stats.avg_time_ms > medianTime) return 1.2;
-    return 0.5;
-  });
+/** Weighted random selection (random drill).
+ *  Picks `count` katas using SR weights — higher-priority katas are more likely. */
+export async function selectRandomKatas(allKatas: Kata[], count: number): Promise<Kata[]> {
+  if (allKatas.length === 0) return [];
+  const actual = Math.min(count, allKatas.length);
+  const statsMap = await fetchKataStats(allKatas.map((k) => k.id));
+  const median = medianTime(statsMap);
 
-  // Weighted random selection without replacement
+  const weights = allKatas.map((k) => srWeight(statsMap.get(k.id), median));
+
   const selected: Kata[] = [];
   const remaining = allKatas.map((k, i) => ({ kata: k, weight: weights[i] }));
 
@@ -140,16 +165,24 @@ export async function selectRandomKatas(allKatas: Kata[], count: number): Promis
     let pick = 0;
     for (let j = 0; j < remaining.length; j++) {
       rand -= remaining[j].weight;
-      if (rand <= 0) {
-        pick = j;
-        break;
-      }
+      if (rand <= 0) { pick = j; break; }
     }
     selected.push(remaining[pick].kata);
     remaining.splice(pick, 1);
   }
 
   return selected;
+}
+
+/** Deterministic SR ordering for daily practice.
+ *  Returns the full kata list sorted by priority (highest urgency first). */
+export async function sortBySpacedRepetition(katas: Kata[]): Promise<Kata[]> {
+  if (katas.length === 0) return [];
+  const statsMap = await fetchKataStats(katas.map((k) => k.id));
+  const median = medianTime(statsMap);
+  return [...katas].sort(
+    (a, b) => srWeight(statsMap.get(b.id), median) - srWeight(statsMap.get(a.id), median),
+  );
 }
 
 export const useSessionStore = create<SessionState>((set, get) => ({

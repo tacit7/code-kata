@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router";
 import { useKataStore } from "../stores/kata-store";
 import { useSettingsStore } from "../stores/settings-store";
-import { useSessionStore, selectRandomKatas } from "../stores/session-store";
+import { useSessionStore, selectRandomKatas, sortBySpacedRepetition } from "../stores/session-store";
 import { useTimerStore } from "../stores/timer-store";
 import type { SessionType } from "../types/editor";
 
@@ -157,7 +157,8 @@ export function PracticePage() {
       sessionType = "daily";
       const kataMap = new Map(katas.map((k) => [k.id, k]));
       const ids = [...dailySelectedIds];
-      selectedKatas = ids.map((id) => kataMap.get(id)).filter(Boolean) as typeof katas;
+      const starred = ids.map((id) => kataMap.get(id)).filter(Boolean) as typeof katas;
+      selectedKatas = await sortBySpacedRepetition(starred);
     } else if (tab === "random") {
       sessionType = "random";
       selectedKatas = await selectRandomKatas(filteredKatas, size);
