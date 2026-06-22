@@ -140,12 +140,17 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   },
 
   setSetting: async (key: string, value: unknown) => {
-    const db = await getDb();
-    await db.execute(
-      "INSERT OR REPLACE INTO settings (key, value) VALUES ($1, $2)",
-      [key, JSON.stringify(value)]
-    );
+    // Optimistic update first so UI is always immediate
     set({ [key]: value });
+    try {
+      const db = await getDb();
+      await db.execute(
+        "INSERT OR REPLACE INTO settings (key, value) VALUES ($1, $2)",
+        [key, JSON.stringify(value)]
+      );
+    } catch (err) {
+      console.error(`[settings] Failed to persist "${key}":`, err);
+    }
   },
 
   resetDefaults: async () => {
