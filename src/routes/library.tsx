@@ -446,9 +446,13 @@ export function PracticePage() {
                     <td>
                       <div className="flex flex-wrap gap-1">
                         {kata.tags.map((tag) => (
-                          <span key={tag} className="badge badge-xs bg-primary/10 text-primary border-primary/20">
+                          <button
+                            key={tag}
+                            onClick={(e) => { e.stopPropagation(); setSearch(tag); }}
+                            className="badge badge-xs bg-primary/10 text-primary border-primary/20 cursor-pointer hover:bg-primary/25 transition-colors"
+                          >
                             {tag}
-                          </span>
+                          </button>
                         ))}
                       </div>
                     </td>
