@@ -10,6 +10,7 @@ import { blind75Part5 } from "./blind75-additions-part5";
 import { blind75Part6 } from "./blind75-additions-part6";
 import { blind75Part7 } from "./blind75-additions-part7";
 import { blind75Part8 } from "./blind75-additions-part8";
+import { neetcodeStack } from "./neetcode-stack";
 
 let db: Database | null = null;
 
@@ -156,6 +157,7 @@ export async function loadKataNotes(kataId: number): Promise<string> {
 const blind75Katas = [
   ...blind75Part1, ...blind75Part2, ...blind75Part3, ...blind75Part4,
   ...blind75Part5, ...blind75Part6, ...blind75Part7, ...blind75Part8,
+  ...neetcodeStack,
 ];
 
 async function seedKatas(db: Database) {
