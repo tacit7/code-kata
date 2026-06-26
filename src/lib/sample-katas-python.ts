@@ -1152,7 +1152,7 @@ def test_single_element_not_found():
 
     return -1`,
     usage: null,
-    tags: ["binary-search", "divide-and-conquer"],
+    tags: ["binary-search", "divide-and-conquer", "neetcode"],
   },
   {
     name: "Binary Search Find First",
@@ -1371,7 +1371,7 @@ def test_single_element_not_found():
             return helper(lo, mid - 1)
     return helper(0, len(nums) - 1)`,
     usage: null,
-    tags: ["binary-search", "divide-and-conquer", "recursion"],
+    tags: ["binary-search", "divide-and-conquer", "recursion", "neetcode"],
   },
   {
     name: "Single Number XOR",

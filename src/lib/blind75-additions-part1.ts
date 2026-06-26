@@ -207,7 +207,7 @@ def test_two_elements():
 
     return nums[left]`,
     usage: null,
-    tags: ["array", "binary-search", "blind75"],
+    tags: ["array", "binary-search", "blind75", "neetcode"],
   },
   {
     name: "Search in Rotated Sorted Array",
@@ -258,7 +258,7 @@ def test_single_element_match():
 
     return -1`,
     usage: null,
-    tags: ["array", "binary-search", "blind75"],
+    tags: ["array", "binary-search", "blind75", "neetcode"],
   },
   {
     name: "Two Sum II - Input Array Is Sorted",

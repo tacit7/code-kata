@@ -928,7 +928,7 @@ function test_single_not_found() {
   return -1;
 }`,
     usage: `Binary search is one of the most practically important algorithms in all of computing, operating silently inside nearly every sorted data structure and search system you use daily. PostgreSQL and MySQL use B-tree indexes, which are a generalization of binary search, to locate rows among millions of records in O(log n) disk accesses; without this, every database query would require a full table scan. Git's \`bisect\` command uses binary search to identify the exact commit that introduced a bug, cutting a 1000-commit search space down to roughly 10 steps. Python's standard library includes the \`bisect\` module, and Java's \`Arrays.binarySearch\` and C++'s \`std::lower_bound\` are used constantly in production for insertion-point lookups in sorted arrays. Financial systems use binary search to locate price thresholds in sorted order books, and machine learning pipelines use it to find optimal hyperparameter boundaries during grid search. In interviews, binary search is asked at every major tech company, often in disguised forms like search-in-rotated-array, find-peak-element, or median-of-two-sorted-arrays, where the challenge is recognizing that binary search applies despite the problem not explicitly mentioning sorting.`,
-    tags: ["binary-search","divide-and-conquer"],
+    tags: ["binary-search", "divide-and-conquer", "neetcode"],
   },
   {
     name: "Binary Search Find First",
