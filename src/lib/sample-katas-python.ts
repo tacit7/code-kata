@@ -127,7 +127,7 @@ def test_ten():
         a, b = b, a + b
     return b`,
     usage: null,
-    tags: ["dynamic-programming", "memoization", "blind75"],
+    tags: ["dynamic-programming", "memoization", "blind75", "neetcode", "1d-dp"],
   },
   {
     name: "Climbing Stairs (Recursive)",
@@ -193,7 +193,7 @@ def test_ten():
         return memo[k]
     return helper(n)`,
     usage: null,
-    tags: ["dynamic-programming", "memoization", "recursion", "blind75"],
+    tags: ["dynamic-programming", "memoization", "recursion", "blind75", "neetcode", "1d-dp"],
   },
   {
     name: "Longest Common Subsequence",

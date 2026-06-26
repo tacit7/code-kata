@@ -29,7 +29,7 @@ def test_multiple_coins():
                 dp[i] = min(dp[i], dp[i - c] + 1)
     return dp[amount] if dp[amount] != float("inf") else -1`,
     usage: null,
-    tags: ["dynamic-programming", "blind75"],
+    tags: ["dynamic-programming", "blind75", "neetcode", "1d-dp"],
   },
   {
     name: "Longest Increasing Subsequence",
@@ -62,7 +62,7 @@ def length_of_lis(nums: list[int]) -> int:
             sub[pos] = num
     return len(sub)`,
     usage: null,
-    tags: ["dynamic-programming", "binary-search", "blind75"],
+    tags: ["dynamic-programming", "binary-search", "blind75", "neetcode", "1d-dp"],
   },
   {
     name: "Word Break",
@@ -95,7 +95,7 @@ def test_word_break_single():
                 break
     return dp[n]`,
     usage: null,
-    tags: ["dynamic-programming", "blind75"],
+    tags: ["dynamic-programming", "blind75", "neetcode", "1d-dp"],
   },
   {
     name: "Combination Sum IV",
@@ -153,7 +153,7 @@ def test_rob_two():
         prev2, prev1 = prev1, curr
     return prev1`,
     usage: null,
-    tags: ["dynamic-programming", "blind75"],
+    tags: ["dynamic-programming", "blind75", "neetcode", "1d-dp"],
   },
   {
     name: "House Robber II",
@@ -187,7 +187,7 @@ def test_rob2_single():
 
     return max(rob_linear(nums[:-1]), rob_linear(nums[1:]))`,
     usage: null,
-    tags: ["dynamic-programming", "blind75"],
+    tags: ["dynamic-programming", "blind75", "neetcode", "1d-dp"],
   },
   {
     name: "Decode Ways",
@@ -222,7 +222,7 @@ def test_decode_leading_zero():
             dp[i] += dp[i - 2]
     return dp[n]`,
     usage: null,
-    tags: ["dynamic-programming", "blind75"],
+    tags: ["dynamic-programming", "blind75", "neetcode", "1d-dp"],
   },
   {
     name: "Unique Paths",
@@ -280,6 +280,66 @@ def test_can_jump_two():
     return True`,
     usage: null,
     tags: ["dynamic-programming", "greedy", "blind75"],
+  },
+  {
+    name: "Min Cost Climbing Stairs",
+    category: "1-d-dp",
+    language: "python",
+    difficulty: "easy",
+    description: `You are given an integer array cost where cost[i] is the cost of the i-th step. You can either start from step 0 or step 1. On each step, you can climb 1 or 2 steps. Return the minimum cost to reach the top (beyond the last step).\n\nExample 1:\nInput: cost = [10,15,20]\nOutput: 15\nExplanation: Start at step 1, pay 15, climb 2 steps to the top.\n\nExample 2:\nInput: cost = [1,100,1,1,1,100,1,1,100,1]\nOutput: 6\n\nConstraints:\n- 2 <= cost.length <= 1000\n- 0 <= cost[i] <= 999\n\nRef: LeetCode #746 Min Cost Climbing Stairs`,
+    code: `def min_cost_climbing_stairs(cost: list[int]) -> int:
+    raise NotImplementedError`,
+    testCode: `def test_min_cost_basic():
+    assert min_cost_climbing_stairs([10, 15, 20]) == 15
+
+def test_min_cost_longer():
+    assert min_cost_climbing_stairs([1, 100, 1, 1, 1, 100, 1, 1, 100, 1]) == 6
+
+def test_min_cost_two():
+    assert min_cost_climbing_stairs([0, 0]) == 0
+
+def test_min_cost_equal():
+    assert min_cost_climbing_stairs([1, 1, 1, 1]) == 2`,
+    solution: `def min_cost_climbing_stairs(cost: list[int]) -> int:
+    n = len(cost)
+    for i in range(2, n):
+        cost[i] += min(cost[i - 1], cost[i - 2])
+    return min(cost[-1], cost[-2])`,
+    usage: null,
+    tags: ["dynamic-programming", "neetcode", "1d-dp"],
+  },
+  {
+    name: "Partition Equal Subset Sum",
+    category: "1-d-dp",
+    language: "python",
+    difficulty: "medium",
+    description: `Given an integer array nums, return true if you can partition it into two subsets with equal sum, false otherwise.\n\nExample 1:\nInput: nums = [1,5,11,5]\nOutput: True  (subsets [1,5,5] and [11])\n\nExample 2:\nInput: nums = [1,2,3,5]\nOutput: False\n\nConstraints:\n- 1 <= nums.length <= 200\n- 1 <= nums[i] <= 100\n\nRef: LeetCode #416 Partition Equal Subset Sum`,
+    code: `def can_partition(nums: list[int]) -> bool:
+    raise NotImplementedError`,
+    testCode: `def test_can_partition_true():
+    assert can_partition([1, 5, 11, 5]) == True
+
+def test_can_partition_false():
+    assert can_partition([1, 2, 3, 5]) == False
+
+def test_can_partition_odd_sum():
+    assert can_partition([1, 1, 1]) == False
+
+def test_can_partition_two():
+    assert can_partition([3, 3]) == True`,
+    solution: `def can_partition(nums: list[int]) -> bool:
+    total = sum(nums)
+    if total % 2 != 0:
+        return False
+    target = total // 2
+    dp = {0}
+    for n in nums:
+        dp = {s + n for s in dp} | dp
+        if target in dp:
+            return True
+    return False`,
+    usage: null,
+    tags: ["dynamic-programming", "neetcode", "1d-dp"],
   },
 ];
 

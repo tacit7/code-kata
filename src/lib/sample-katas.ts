@@ -91,7 +91,7 @@ function test_ten_steps() {
   return b;
 }`,
     usage: `Climbing Stairs is the canonical introduction to dynamic programming: the number of ways to reach step n equals the sum of ways to reach steps n-1 and n-2, which is exactly the Fibonacci recurrence. While the staircase framing is abstract, the underlying recurrence relation models real systems. Fibonacci heaps, named for this sequence, provide amortized O(1) insert and decrease-key operations and are used in Dijkstra's shortest path algorithm implementations in network routing protocols like OSPF. Resource allocation systems use Fibonacci-based scaling to progressively distribute load across servers without overloading any single node. The problem is the entry point for understanding memoization and tabulation, the two pillars of dynamic programming, and it generalizes to problems with k step sizes, variable costs, and constraints. Every major tech company, from Google to Amazon to Microsoft, uses Climbing Stairs or a direct variant as an interview warm-up to verify that candidates can recognize overlapping subproblems, avoid the exponential O(2^n) recursive blowup, and optimize down to O(n) time with O(1) space.`,
-    tags: ["dynamic-programming","memoization"],
+    tags: ["dynamic-programming", "memoization", "neetcode", "1d-dp"],
   },
   {
     name: "Longest Common Subsequence",

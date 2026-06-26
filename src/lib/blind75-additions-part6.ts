@@ -321,7 +321,7 @@ def test_racecar():
 
     return result`,
     usage: null,
-    tags: ["string", "two-pointers", "dynamic-programming", "blind75"],
+    tags: ["string", "two-pointers", "dynamic-programming", "blind75", "neetcode", "1d-dp"],
   },
   {
     name: "Palindromic Substrings",
@@ -369,7 +369,7 @@ def test_abbc():
 
     return count`,
     usage: null,
-    tags: ["string", "two-pointers", "blind75"],
+    tags: ["string", "two-pointers", "blind75", "neetcode", "1d-dp"],
   },
   {
     name: "Encode and Decode Strings",
