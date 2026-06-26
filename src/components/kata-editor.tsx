@@ -6,7 +6,7 @@ import { useSettingsStore } from "../stores/settings-store";
 import { useTimerStore } from "../stores/timer-store";
 import { useKeyboardShortcuts } from "../hooks/use-keyboard-shortcuts";
 import { runTests } from "../lib/test-runner";
-import { saveUserCode, loadUserCode, deleteUserCode } from "../lib/database";
+import { saveUserCode, loadUserCode, deleteUserCode, saveKataNotes, loadKataNotes } from "../lib/database";
 import { TestOutput } from "./test-output";
 import type { Kata, TestResult } from "../types/editor";
 
@@ -24,7 +24,7 @@ export function KataEditor({ kata, isSession, onTestComplete }: KataEditorProps)
   const [results, setResults] = useState<TestResult[] | null>(null);
   const [ranAt, setRanAt] = useState<string>("");
   const [running, setRunning] = useState(false);
-  const [showPanel, setShowPanel] = useState<"description" | "solution" | null>(
+  const [showPanel, setShowPanel] = useState<"description" | "solution" | "notes" | null>(
     isSession && hideDescriptionInSession ? null : kata.description ? "description" : null
   );
   const [editorReady, setEditorReady] = useState(false);
@@ -35,10 +35,13 @@ export function KataEditor({ kata, isSession, onTestComplete }: KataEditorProps)
   const [savedCode, setSavedCode] = useState<string | null>(null);
   const [codeLoaded, setCodeLoaded] = useState(false);
   const autosaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [notes, setNotes] = useState("");
+  const [notesSaved, setNotesSaved] = useState(true);
+  const notesAutosaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const monacoTheme = theme === "dark" ? "vs-dark" : "vs";
 
-  // Load saved user code on mount; clean up autosave timer on unmount
+  // Load saved user code and notes on mount; clean up autosave timers on unmount
   useEffect(() => {
     setCodeLoaded(false);
     loadUserCode(kata.id).then((code) => {
@@ -46,8 +49,13 @@ export function KataEditor({ kata, isSession, onTestComplete }: KataEditorProps)
       setCodeLoaded(true);
       setSaved(true);
     });
+    loadKataNotes(kata.id).then((text) => {
+      setNotes(text);
+      setNotesSaved(true);
+    });
     return () => {
       if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
+      if (notesAutosaveTimer.current) clearTimeout(notesAutosaveTimer.current);
     };
   }, [kata.id]);
 
@@ -144,7 +152,7 @@ export function KataEditor({ kata, isSession, onTestComplete }: KataEditorProps)
     document.addEventListener("mouseup", onMouseUp);
   }, [panelWidth]);
 
-  const hasTabs = !!(kata.description || kata.solution);
+  const hasTabs = true;
 
   const tabClass = (tab: typeof showPanel) =>
     `px-3 py-1.5 text-xs font-medium border-b-2 transition-colors ${
@@ -183,12 +191,18 @@ export function KataEditor({ kata, isSession, onTestComplete }: KataEditorProps)
                 Solution
               </button>
             )}
+            <button
+              onClick={() => setShowPanel((v) => v === "notes" ? null : "notes")}
+              className={tabClass("notes")}
+            >
+              Notes{!notesSaved && " •"}
+            </button>
           </div>
 
           {/* Tab content */}
-          {showPanel && showPanel !== "solution" && (
+          {showPanel === "description" && (
             <div className="flex-1 overflow-y-auto px-4 py-3 text-sm text-base-content/70 whitespace-pre-wrap">
-              {showPanel === "description" && (kata.description || "No description available.")}
+              {kata.description || "No description available."}
             </div>
           )}
           {showPanel === "solution" && kata.solution && (
@@ -208,6 +222,27 @@ export function KataEditor({ kata, isSession, onTestComplete }: KataEditorProps)
                   lineNumbers: "off",
                 }}
               />
+            </div>
+          )}
+          {showPanel === "notes" && (
+            <div className="flex-1 flex flex-col min-h-0">
+              <textarea
+                className="flex-1 resize-none bg-transparent px-4 py-3 text-sm text-base-content/80 placeholder:text-base-content/25 outline-none font-mono leading-relaxed"
+                placeholder="Add notes, hints, patterns to remember..."
+                value={notes}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setNotes(val);
+                  setNotesSaved(false);
+                  if (notesAutosaveTimer.current) clearTimeout(notesAutosaveTimer.current);
+                  notesAutosaveTimer.current = setTimeout(() => {
+                    saveKataNotes(kata.id, val).then(() => setNotesSaved(true));
+                  }, 1000);
+                }}
+              />
+              <div className="px-4 pb-2 text-xs text-base-content/25">
+                {notesSaved ? "saved" : "saving..."}
+              </div>
             </div>
           )}
         </div>

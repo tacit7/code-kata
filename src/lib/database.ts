@@ -104,6 +104,14 @@ async function createSchema(db: Database) {
       updated_at TEXT DEFAULT CURRENT_TIMESTAMP
     )
   `);
+
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS kata_notes (
+      kata_id INTEGER PRIMARY KEY,
+      notes TEXT NOT NULL,
+      updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
 }
 
 export async function saveUserCode(kataId: number, code: string): Promise<void> {
@@ -126,6 +134,23 @@ export async function loadUserCode(kataId: number): Promise<string | null> {
     [kataId]
   );
   return rows.length > 0 ? rows[0].code : null;
+}
+
+export async function saveKataNotes(kataId: number, notes: string): Promise<void> {
+  const db = await getDb();
+  await db.execute(
+    "INSERT OR REPLACE INTO kata_notes (kata_id, notes, updated_at) VALUES ($1, $2, datetime('now'))",
+    [kataId, notes]
+  );
+}
+
+export async function loadKataNotes(kataId: number): Promise<string> {
+  const db = await getDb();
+  const rows = await db.select<{ notes: string }[]>(
+    "SELECT notes FROM kata_notes WHERE kata_id = $1",
+    [kataId]
+  );
+  return rows.length > 0 ? rows[0].notes : "";
 }
 
 const blind75Katas = [
