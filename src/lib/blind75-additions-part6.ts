@@ -187,7 +187,7 @@ def test_two_chars():
 def is_anagram(s: str, t: str) -> bool:
     return Counter(s) == Counter(t)`,
     usage: null,
-    tags: ["string", "hash-map", "blind75"],
+    tags: ["string", "hash-map", "blind75", "neetcode", "arrays-hashing"],
   },
   {
     name: "Group Anagrams",
@@ -234,7 +234,7 @@ def group_anagrams(strs: list[str]) -> list[list[str]]:
         groups[key].append(word)
     return list(groups.values())`,
     usage: null,
-    tags: ["string", "hash-map", "blind75"],
+    tags: ["string", "hash-map", "blind75", "neetcode", "arrays-hashing"],
   },
   {
     name: "Valid Palindrome",
@@ -418,7 +418,7 @@ def decode(s: str) -> list[str]:
         i = j + 1 + length
     return result`,
     usage: null,
-    tags: ["string", "blind75"],
+    tags: ["string", "blind75", "neetcode", "arrays-hashing"],
   },
 ];
 

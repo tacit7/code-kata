@@ -823,7 +823,7 @@ def test_negative():
             return [seen[complement], i]
         seen[num] = i`,
     usage: null,
-    tags: ["hash-map", "blind75"],
+    tags: ["hash-map", "blind75", "neetcode", "arrays-hashing"],
   },
   {
     name: "Build Prefix Sum",

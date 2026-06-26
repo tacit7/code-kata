@@ -290,7 +290,7 @@ def test_longest_consecutive_single():
 
     return best`,
     usage: null,
-    tags: ["array", "hash-map", "blind75"],
+    tags: ["array", "hash-map", "blind75", "neetcode", "arrays-hashing"],
   },
   {
     name: "Alien Dictionary",

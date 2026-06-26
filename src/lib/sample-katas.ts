@@ -343,7 +343,7 @@ function test_first_and_last() {
   }
 }`,
     usage: `The two-sum pattern, using a hash map for O(1) complement lookups, is the foundation of virtually every key-value matching problem you will encounter in production systems. Financial platforms use this exact pattern to match buy and sell orders in trading engines, where you need to find two transactions that sum to a target settlement amount. CDNs and API gateways rely on hash map lookups for request deduplication, ensuring the same request is not processed twice. Database engines like PostgreSQL use hash-based indexing internally to accelerate joins and WHERE clause evaluations against indexed columns. The pattern extends to compiler symbol tables, where variable names are stored in hash maps for constant-time resolution during compilation. In interviews, two-sum is the single most frequently asked LeetCode problem and serves as a gateway to three-sum, four-sum, and subarray-sum variants; if you cannot solve it cleanly with a hash map, interviewers will question your ability to handle any lookup-optimization problem.`,
-    tags: ["hash-map"],
+    tags: ["hash-map", "blind75", "neetcode", "arrays-hashing"],
   },
   {
     name: "FizzBuzz",

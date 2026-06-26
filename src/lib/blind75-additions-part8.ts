@@ -33,7 +33,7 @@ def top_k_frequent(nums: list[int], k: int) -> list[int]:
     count = Counter(nums)
     return heapq.nlargest(k, count.keys(), key=lambda x: count[x])`,
     usage: null,
-    tags: ["heap", "hash-map", "blind75"],
+    tags: ["heap", "hash-map", "blind75", "neetcode", "arrays-hashing"],
   },
   {
     name: "Find Median from Data Stream",

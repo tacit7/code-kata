@@ -75,7 +75,7 @@ def test_single_element():
         seen.add(num)
     return False`,
     usage: null,
-    tags: ["array", "hash-map", "blind75"],
+    tags: ["array", "hash-map", "blind75", "neetcode", "arrays-hashing"],
   },
   {
     name: "Product of Array Except Self",
@@ -120,7 +120,7 @@ def test_with_zeros():
 
     return result`,
     usage: null,
-    tags: ["array", "prefix-sum", "blind75"],
+    tags: ["array", "prefix-sum", "blind75", "neetcode", "arrays-hashing"],
   },
   {
     name: "Maximum Product Subarray",
@@ -501,6 +501,62 @@ def test_max_uint32():
     return result`,
     usage: null,
     tags: ["bit-manipulation", "blind75"],
+  },
+  {
+    name: "Valid Sudoku",
+    category: "arrays",
+    language: "python",
+    difficulty: "medium",
+    description: `Determine if a 9x9 Sudoku board is valid. Only filled cells need to be validated:\n- Each row must contain digits 1-9 with no repeats.\n- Each column must contain digits 1-9 with no repeats.\n- Each of the 9 3x3 sub-boxes must contain digits 1-9 with no repeats.\n\nEmpty cells are represented as '.'.\n\nExample:\nInput: board = [\n  ["5","3",".",".","7",".",".",".","."],\n  ["6",".",".","1","9","5",".",".","."],\n  [".","9","8",".",".",".",".","6","."],\n  ["8",".",".",".","6",".",".",".","3"],\n  ["4",".",".","8",".","3",".",".","1"],\n  ["7",".",".",".","2",".",".",".","6"],\n  [".","6",".",".",".",".","2","8","."],\n  [".",".",".","4","1","9",".",".","5"],\n  [".",".",".",".","8",".",".","7","9"]\n]\nOutput: True\n\nConstraints:\n- board.length == 9, board[i].length == 9\n- Each cell is a digit or '.'\n\nRef: LeetCode #36 Valid Sudoku`,
+    code: `def is_valid_sudoku(board: list[list[str]]) -> bool:
+    raise NotImplementedError`,
+    testCode: `def test_valid_sudoku():
+    board = [
+        ["5","3",".",".","7",".",".",".","."],
+        ["6",".",".","1","9","5",".",".","."],
+        [".","9","8",".",".",".",".","6","."],
+        ["8",".",".",".","6",".",".",".","3"],
+        ["4",".",".","8",".","3",".",".","1"],
+        ["7",".",".",".","2",".",".",".","6"],
+        [".","6",".",".",".",".","2","8","."],
+        [".",".",".","4","1","9",".",".","5"],
+        [".",".",".",".","8",".",".","7","9"],
+    ]
+    assert is_valid_sudoku(board) == True
+
+def test_invalid_row():
+    board = [
+        ["8","3",".",".","7",".",".",".","."],
+        ["6",".",".","1","9","5",".",".","."],
+        [".","9","8",".",".",".",".","6","."],
+        ["8",".",".",".","6",".",".",".","3"],
+        ["4",".",".","8",".","3",".",".","1"],
+        ["7",".",".",".","2",".",".",".","6"],
+        [".","6",".",".",".",".","2","8","."],
+        [".",".",".","4","1","9",".",".","5"],
+        [".",".",".",".","8",".",".","7","9"],
+    ]
+    assert is_valid_sudoku(board) == False`,
+    solution: `def is_valid_sudoku(board: list[list[str]]) -> bool:
+    from collections import defaultdict
+    rows = defaultdict(set)
+    cols = defaultdict(set)
+    boxes = defaultdict(set)
+
+    for r in range(9):
+        for c in range(9):
+            val = board[r][c]
+            if val == ".":
+                continue
+            box = (r // 3, c // 3)
+            if val in rows[r] or val in cols[c] or val in boxes[box]:
+                return False
+            rows[r].add(val)
+            cols[c].add(val)
+            boxes[box].add(val)
+    return True`,
+    usage: null,
+    tags: ["array", "hash-map", "neetcode", "arrays-hashing"],
   },
 ];
 
