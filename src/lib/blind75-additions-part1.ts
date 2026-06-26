@@ -261,6 +261,39 @@ def test_single_element_match():
     tags: ["array", "binary-search", "blind75"],
   },
   {
+    name: "Two Sum II - Input Array Is Sorted",
+    category: "arrays",
+    language: "python",
+    difficulty: "medium",
+    description: `Given a 1-indexed sorted array of integers, find two numbers that add up to a target. Return their indices (1-indexed). You may not use the same element twice. There is exactly one solution.\n\nExample 1:\nInput: numbers = [2,7,11,15], target = 9\nOutput: [1,2]\n\nExample 2:\nInput: numbers = [2,3,4], target = 6\nOutput: [1,3]\n\nConstraints:\n- 2 <= numbers.length <= 3 * 10^4\n- -1000 <= numbers[i] <= 1000\n- numbers is sorted in non-decreasing order\n- Only one valid solution exists\n\nRef: LeetCode #167 Two Sum II`,
+    code: `def two_sum_ii(numbers: list[int], target: int) -> list[int]:
+    raise NotImplementedError`,
+    testCode: `def test_two_sum_ii_basic():
+    assert two_sum_ii([2, 7, 11, 15], 9) == [1, 2]
+
+def test_two_sum_ii_middle():
+    assert two_sum_ii([2, 3, 4], 6) == [1, 3]
+
+def test_two_sum_ii_end():
+    assert two_sum_ii([-1, 0], -1) == [1, 2]
+
+def test_two_sum_ii_negatives():
+    assert two_sum_ii([1, 2, 3, 4, 4, 9, 56, 90], 8) == [4, 5]`,
+    solution: `def two_sum_ii(numbers: list[int], target: int) -> list[int]:
+    left, right = 0, len(numbers) - 1
+    while left < right:
+        total = numbers[left] + numbers[right]
+        if total == target:
+            return [left + 1, right + 1]
+        elif total < target:
+            left += 1
+        else:
+            right -= 1
+    return []`,
+    usage: null,
+    tags: ["array", "two-pointers", "binary-search", "neetcode"],
+  },
+  {
     name: "3Sum",
     category: "arrays",
     language: "python",
@@ -313,7 +346,7 @@ def test_no_valid_combination():
 
     return result`,
     usage: null,
-    tags: ["array", "two-pointers", "blind75"],
+    tags: ["array", "two-pointers", "blind75", "neetcode"],
   },
   {
     name: "Container With Most Water",
@@ -357,7 +390,45 @@ def test_descending():
 
     return max_water`,
     usage: null,
-    tags: ["array", "two-pointers", "blind75"],
+    tags: ["array", "two-pointers", "blind75", "neetcode"],
+  },
+  {
+    name: "Trapping Rain Water",
+    category: "arrays",
+    language: "python",
+    difficulty: "hard",
+    description: `Given n non-negative integers representing an elevation map where the width of each bar is 1, compute how much water it can trap after raining.\n\nExample 1:\nInput: height = [0,1,0,2,1,0,1,3,2,1,2,1]\nOutput: 6\n\nExample 2:\nInput: height = [4,2,0,3,2,5]\nOutput: 9\n\nConstraints:\n- n == height.length\n- 1 <= n <= 2 * 10^4\n- 0 <= height[i] <= 10^5\n\nRef: LeetCode #42 Trapping Rain Water`,
+    code: `def trap(height: list[int]) -> int:
+    raise NotImplementedError`,
+    testCode: `def test_trap_basic():
+    assert trap([0, 1, 0, 2, 1, 0, 1, 3, 2, 1, 2, 1]) == 6
+
+def test_trap_simple():
+    assert trap([4, 2, 0, 3, 2, 5]) == 9
+
+def test_trap_flat():
+    assert trap([3, 3, 3]) == 0
+
+def test_trap_single():
+    assert trap([1]) == 0`,
+    solution: `def trap(height: list[int]) -> int:
+    if not height:
+        return 0
+    left, right = 0, len(height) - 1
+    left_max, right_max = height[left], height[right]
+    water = 0
+    while left < right:
+        if left_max <= right_max:
+            left += 1
+            left_max = max(left_max, height[left])
+            water += left_max - height[left]
+        else:
+            right -= 1
+            right_max = max(right_max, height[right])
+            water += right_max - height[right]
+    return water`,
+    usage: null,
+    tags: ["array", "two-pointers", "stack", "neetcode"],
   },
   {
     name: "Sum of Two Integers",
