@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Word Break</title>
+  <link rel="stylesheet" href="../shared/style.css" />
+  <script src="../shared/gsap.min.js"></script>
+  <script src="../shared/viz.js"></script>
+  <style>
+    .viz-area { width: 100%; max-width: 92%; }
+    .main-row {
+      display: grid;
+      grid-template-columns: 1fr 340px;
+      gap: 20px;
+      align-items: start;
+    }
+    @media (max-width: 760px) { .main-row { grid-template-columns: 1fr; } }
+
+    /* ── String + DP track ── */
+    .word-track {
+      padding: 20px 16px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      overflow-x: auto;
+      min-height: 160px;
+    }
+    .track-inner {
+      display: flex;
+      gap: 6px;
+      flex-wrap: nowrap;
+      align-items: flex-end;
+    }
+
+    .track-col {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 5px;
+      flex-shrink: 0;
+    }
+
+    /* String char cells */
+    .str-cell {
+      width: 48px; height: 44px;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      border: 2px solid var(--border);
+      border-radius: 6px;
+      background: #0f0f0f;
+      position: relative;
+      flex-shrink: 0;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .str-cell[data-hi="start"]  { border-color: #b45309; background: #1c0e00; }
+    .str-cell[data-hi="end"]    { border-color: var(--accent); background: var(--surface-dark); }
+    .str-cell[data-hi="span"]   { border-color: #7c3aed; background: #150d28; }
+    .str-cell[data-hi="match"]  { border-color: #15803d; background: #052e16; }
+
+    .str-idx {
+      position: absolute; top: 2px; left: 0; right: 0;
+      text-align: center;
+      font-size: 0.5rem; color: var(--text-ghost); font-family: monospace;
+    }
+    .str-char {
+      font-size: 1.05rem; font-weight: 700;
+      font-family: monospace; color: var(--text-dim);
+      margin-top: 8px;
+    }
+    .str-cell[data-hi="start"]  .str-char { color: #fbbf24; }
+    .str-cell[data-hi="end"]    .str-char { color: var(--accent-pale); }
+    .str-cell[data-hi="span"]   .str-char { color: #c4b5fd; }
+    .str-cell[data-hi="match"]  .str-char { color: #4ade80; }
+
+    .str-spacer {
+      width: 48px; height: 44px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.7rem; color: var(--text-ghost); font-style: italic;
+    }
+
+    /* DP cells */
+    .dp-cell {
+      width: 48px; height: 48px;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      border: 2px solid var(--border-soft);
+      border-radius: 6px;
+      background: #0f0f0f;
+      position: relative;
+      flex-shrink: 0;
+      border-style: dashed;
+      transition: border-color 0.15s, background 0.15s, border-style 0.15s;
+    }
+    .dp-cell[data-state="false"]  { border-style: solid; border-color: #3f1212; }
+    .dp-cell[data-state="true"]   { border-style: solid; border-color: #166534; background: #052e16; }
+    .dp-cell[data-state="current"]{ border-style: solid; border-color: var(--accent); background: var(--surface-dark); }
+    .dp-cell[data-state="start"]  { border-style: solid; border-color: #b45309; background: #1c0e00; }
+    .dp-cell[data-state="answer"] { border-style: solid; border-color: #15803d; background: #052e16; box-shadow: 0 0 0 2px #166534; }
+
+    .dp-idx {
+      position: absolute; top: 3px; left: 0; right: 0;
+      text-align: center;
+      font-size: 0.5rem; color: var(--text-ghost); font-family: monospace;
+    }
+    .dp-val {
+      font-size: 0.7rem; font-weight: 700;
+      font-family: monospace; color: var(--text-ghost);
+      margin-top: 10px;
+    }
+    .dp-cell[data-state="false"]   .dp-val { color: #f87171; }
+    .dp-cell[data-state="true"]    .dp-val { color: #4ade80; }
+    .dp-cell[data-state="current"] .dp-val { color: var(--accent-pale); }
+    .dp-cell[data-state="start"]   .dp-val { color: #fbbf24; }
+    .dp-cell[data-state="answer"]  .dp-val { color: #4ade80; font-size: 0.75rem; }
+
+    /* Dictionary panel */
+    .dict-panel {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 14px 16px;
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .dict-words {
+      display: flex; flex-wrap: wrap; gap: 6px;
+    }
+    .dict-word {
+      padding: 5px 10px;
+      border: 2px solid var(--border);
+      border-radius: 5px;
+      background: var(--bg);
+      font-family: monospace; font-size: 0.82rem;
+      color: var(--text-dim);
+      transition: border-color 0.15s, color 0.15s, background 0.15s;
+    }
+    .dict-word.checking { border-color: #7c3aed; color: #c4b5fd; background: #150d28; }
+    .dict-word.matched  { border-color: #15803d; color: #4ade80; background: #052e16; }
+    .dict-word.no-match { opacity: 0.35; }
+
+    /* Code panel */
+    .code-panel {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); overflow: hidden;
+    }
+    .code-header {
+      padding: 8px 14px; font-size: 0.72rem; font-weight: 600;
+      color: var(--text-dim); border-bottom: 1px solid var(--border);
+      background: var(--bg);
+    }
+    .code-body { padding: 10px 0; font-size: 0.8rem; line-height: 1.8; white-space: pre; }
+    .code-line { display: flex; align-items: center; padding: 0 14px; }
+    .code-line.hl { background: var(--border-soft); border-left: 2px solid var(--accent); }
+    .ln { min-width: 24px; color: var(--text-ghost); user-select: none; font-size: 0.7rem; }
+
+    /* panel-box */
+    .panel-box {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 14px 16px;
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .panel-title {
+      font-size: 0.72rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim);
+    }
+
+    /* Variable boxes */
+    .var-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .var-box {
+      padding: 10px 8px;
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      display: flex; flex-direction: column; align-items: center; gap: 3px;
+    }
+    .var-box.accent-border { border-color: var(--accent); }
+    .var-box.amber-border  { border-color: #b45309; }
+    .var-box.purple-border { border-color: #7c3aed; }
+    .var-box.green-border  { border-color: #166534; }
+    .var-label { font-size: 0.62rem; font-family: monospace; color: var(--text-faint); text-align: center; }
+    .var-val   { font-size: 1.1rem; font-weight: 700; color: var(--text-bright); font-family: monospace; }
+
+    /* Result badge */
+    .result-badge {
+      font-size: 0.88rem; font-weight: 700;
+      padding: 4px 13px; border-radius: 6px;
+      display: none; width: fit-content;
+    }
+    .result-badge.yes { background: var(--green-bg); color: var(--green); border: 1px solid var(--green-border); display: block; }
+    .result-badge.no  { background: #1c0000; color: #f87171; border: 1px solid #7f1d1d; display: block; }
+
+    /* Nav */
+    .btn-play {
+      background: #15803d; border: none;
+      border-radius: var(--radius-sm); color: #fff;
+      cursor: pointer; font-size: 0.88rem; font-weight: 600;
+      padding: 9px 16px; transition: background 0.2s;
+    }
+    .btn-play:hover { background: #166534; }
+    .btn-play.playing { background: #c2410c; }
+    .btn-play.playing:hover { background: #9a3412; }
+    .btn-play:disabled { opacity: 0.4; cursor: not-allowed; }
+    .speed-select {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); color: var(--text);
+      font-size: 0.85rem; padding: 8px 10px; outline: none; width: 80px;
+    }
+    .nav-row { display: flex; gap: 8px; align-items: center; }
+
+    /* Presets */
+    .preset-btn {
+      padding: 5px 12px;
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); color: var(--text-dim);
+      font-size: 0.8rem; cursor: pointer;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .preset-btn:hover { border-color: var(--accent); color: var(--accent-pale); }
+
+    /* Syntax colors */
+    .kw { color: var(--purple); }
+    .fn { color: var(--blue); }
+    .bi { color: var(--orange); }
+    .op { color: var(--text); }
+    .nb { color: var(--green); }
+    .cm { color: var(--text-ghost); }
+  </style>
+</head>
+<body class="page">
+
+<div class="page-header">
+  <a class="back-link" href="../index.html">&larr; All Algorithms</a>
+  <div class="page-title">Word Break</div>
+  <div class="page-sub">LeetCode 139 &middot; 1-D DP: dp[i] = true if s[0..i] segments into dictionary words &middot; O(n&sup2;) time &middot; O(n) space</div>
+</div>
+
+<div class="controls">
+  <div class="field">
+    <label>String s</label>
+    <input id="inp-s" type="text" value="leetcode" style="width:140px" />
+  </div>
+  <div class="field">
+    <label>Word Dictionary (comma-separated)</label>
+    <input id="inp-dict" type="text" value="leet,code" style="width:220px" />
+  </div>
+  <button class="btn-primary" onclick="buildAndRun()">Build &amp; Run</button>
+  <div style="display:flex;gap:6px;align-items:center;margin-left:8px">
+    <span style="font-size:0.75rem;color:var(--text-ghost)">Presets:</span>
+    <button class="preset-btn" onclick="loadPreset(0)">✓ leetcode</button>
+    <button class="preset-btn" onclick="loadPreset(1)">✗ catsandog</button>
+    <button class="preset-btn" onclick="loadPreset(2)">⚡ applepenapple</button>
+  </div>
+</div>
+
+<div class="viz-area">
+  <div class="main-row">
+    <div class="left-col" style="display:flex;flex-direction:column;gap:12px">
+
+      <div class="word-track" id="word-track">
+        <span style="color:var(--text-dim);font-size:0.82rem">Enter a string and dictionary, then click Build &amp; Run.</span>
+      </div>
+
+      <div class="dict-panel" id="dict-panel" style="display:none">
+        <div class="panel-title">Dictionary</div>
+        <div class="dict-words" id="dict-words"></div>
+      </div>
+
+      <div class="code-panel">
+        <div class="code-header">Python</div>
+        <div class="code-body" id="code-body"></div>
+      </div>
+    </div>
+
+    <div class="right-col" style="display:flex;flex-direction:column;gap:12px">
+
+      <div style="display:flex;gap:12px">
+        <div class="panel-box" style="flex:0 0 auto">
+          <div class="nav-row">
+            <button class="btn-step" id="btn-back" disabled>&larr;</button>
+            <button class="btn-step" id="btn-next" disabled>&rarr;</button>
+            <button class="btn-play" id="btn-play" disabled>&#9654; Play</button>
+            <select class="speed-select" id="speed-select">
+              <option value="700">Slow</option>
+              <option value="350" selected>Medium</option>
+              <option value="100">Fast</option>
+            </select>
+          </div>
+        </div>
+        <div class="panel-box" style="flex:1;min-width:0">
+          <div class="panel-title" id="phase-label">&mdash;</div>
+          <div style="font-size:0.82rem;color:var(--text-muted);margin-top:2px" id="step-desc">Enter a string and dictionary, then click Build &amp; Run.</div>
+          <div class="result-badge" id="result-badge"></div>
+        </div>
+      </div>
+
+      <div class="panel-box">
+        <div class="panel-title">Variables</div>
+        <div class="var-grid">
+          <div class="var-box accent-border">
+            <div class="var-label">end index (i)</div>
+            <div class="var-val" id="vv-i">&mdash;</div>
+          </div>
+          <div class="var-box amber-border">
+            <div class="var-label">start index (j)</div>
+            <div class="var-val" id="vv-j">&mdash;</div>
+          </div>
+          <div class="var-box purple-border">
+            <div class="var-label">s[j..i]</div>
+            <div class="var-val" id="vv-word" style="font-size:0.85rem">&mdash;</div>
+          </div>
+          <div class="var-box green-border">
+            <div class="var-label">dp[j] &amp; in dict</div>
+            <div class="var-val" id="vv-match">&mdash;</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel-box">
+        <div class="panel-title">Legend</div>
+        <div style="display:flex;flex-direction:column;gap:6px;font-size:0.78rem;color:var(--text-muted)">
+          <div style="display:flex;align-items:center;gap:8px">
+            <div style="width:16px;height:16px;border-radius:3px;border:2px solid var(--accent);background:var(--surface-dark)"></div>
+            <span>dp[i] — end index being computed</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <div style="width:16px;height:16px;border-radius:3px;border:2px solid #b45309;background:#1c0e00"></div>
+            <span>dp[j] — start of candidate word</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <div style="width:16px;height:16px;border-radius:3px;border:2px solid #7c3aed;background:#150d28"></div>
+            <span>s[j..i] — substring being tested</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <div style="width:16px;height:16px;border-radius:3px;border:2px solid #166534;background:#052e16"></div>
+            <span>dp[i] = true — reachable position</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <div style="width:16px;height:16px;border-radius:3px;border:2px solid #7f1d1d;background:#0f0f0f"></div>
+            <span>dp[i] = false — not reachable</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+var simSteps = [], nav;
+var currentS = '', currentDict = [];
+
+var PRESETS = [
+  { s: 'leetcode',      dict: 'leet,code' },
+  { s: 'catsandog',     dict: 'cats,dog,sand,and,cat' },
+  { s: 'applepenapple', dict: 'apple,pen' },
+];
+
+function loadPreset(idx) {
+  var p = PRESETS[idx];
+  document.getElementById('inp-s').value    = p.s;
+  document.getElementById('inp-dict').value = p.dict;
+  buildAndRun();
+}
+
+var CODE = [
+  [1,  '<span class="kw">def</span> <span class="fn">wordBreak</span><span class="op">(</span>s<span class="op">,</span> wordDict<span class="op">):</span>'],
+  [2,  '    words <span class="op">=</span> <span class="bi">set</span><span class="op">(</span>wordDict<span class="op">)</span>'],
+  [3,  '    n <span class="op">=</span> <span class="bi">len</span><span class="op">(</span>s<span class="op">)</span>'],
+  [4,  '    dp <span class="op">=</span> <span class="op">[</span><span class="kw">False</span><span class="op">]</span> <span class="op">*</span> <span class="op">(</span>n <span class="op">+</span> <span class="nb">1</span><span class="op">)</span>'],
+  [5,  '    dp<span class="op">[</span><span class="nb">0</span><span class="op">]</span> <span class="op">=</span> <span class="kw">True</span>  <span class="cm"># empty prefix always valid</span>'],
+  [6,  '    <span class="kw">for</span> i <span class="kw">in</span> <span class="bi">range</span><span class="op">(</span><span class="nb">1</span><span class="op">,</span> n <span class="op">+</span> <span class="nb">1</span><span class="op">):</span>'],
+  [7,  '        <span class="kw">for</span> j <span class="kw">in</span> <span class="bi">range</span><span class="op">(</span>i<span class="op">):</span>'],
+  [8,  '            <span class="kw">if</span> dp<span class="op">[</span>j<span class="op">]</span> <span class="kw">and</span> s<span class="op">[</span>j<span class="op">:</span>i<span class="op">]</span> <span class="kw">in</span> words<span class="op">:</span>'],
+  [9,  '                dp<span class="op">[</span>i<span class="op">]</span> <span class="op">=</span> <span class="kw">True</span>'],
+  [10, '                <span class="kw">break</span>'],
+  [11, '    <span class="kw">return</span> dp<span class="op">[</span>n<span class="op">]</span>'],
+];
+
+window.addEventListener('DOMContentLoaded', function() {
+  buildCodePanel();
+  nav = VizNav({
+    btnPrev:  document.getElementById('btn-back'),
+    btnNext:  document.getElementById('btn-next'),
+    btnPlay:  document.getElementById('btn-play'),
+    speedSel: document.getElementById('speed-select'),
+    render: function(snap, cur, total) {
+      renderSnap(snap, cur > 0);
+      var phaseEl = document.getElementById('phase-label');
+      var descEl  = document.getElementById('step-desc');
+      if (phaseEl) phaseEl.textContent = 'Step ' + (cur + 1) + ' / ' + total + '  ·  ' + snap.phase;
+      if (descEl) descEl.textContent = snap.desc;
+      var badge = document.getElementById('result-badge');
+      if (badge) {
+        badge.className = 'result-badge';
+        badge.textContent = '';
+        if (snap.phase === 'Done') {
+          var finalVal = snap.dp[snap.n];
+          if (finalVal) {
+            badge.className = 'result-badge yes';
+            badge.textContent = 'True — can be segmented';
+          } else {
+            badge.className = 'result-badge no';
+            badge.textContent = 'False — cannot be segmented';
+          }
+        }
+      }
+    }
+  });
+
+  buildAndRun();
+});
+
+function buildCodePanel() {
+  var body = document.getElementById('code-body');
+  body.innerHTML = CODE.map(function(e) {
+    return '<div class="code-line" id="cl-' + e[0] + '"><span class="ln">' + e[0] + '</span><span>' + e[1] + '</span></div>';
+  }).join('');
+}
+
+function buildAndRun() {
+  var s = document.getElementById('inp-s').value.trim().toLowerCase();
+  if (!s) return;
+  var rawDict = document.getElementById('inp-dict').value;
+  var dict = rawDict.split(',').map(function(w) { return w.trim().toLowerCase(); }).filter(function(w) { return w.length > 0; });
+  if (!dict.length) return;
+
+  currentS    = s;
+  currentDict = dict;
+
+  buildTrack(s);
+  buildDictPanel(dict);
+  simSteps = buildSteps(s, dict);
+  nav.load(simSteps);
+}
+
+function buildTrack(s) {
+  var n = s.length;
+  var track = document.getElementById('word-track');
+  track.innerHTML = '';
+  var inner = document.createElement('div');
+  inner.className = 'track-inner';
+
+  for (var i = 0; i <= n; i++) {
+    var col = document.createElement('div');
+    col.className = 'track-col';
+    col.id = 'tcol-' + i;
+
+    if (i === 0) {
+      var spacer = document.createElement('div');
+      spacer.className = 'str-spacer';
+      spacer.textContent = 'ε';
+      col.appendChild(spacer);
+    } else {
+      var sc = document.createElement('div');
+      sc.className = 'str-cell';
+      sc.id = 'sc-' + (i - 1);
+      sc.dataset.hi = 'none';
+      sc.innerHTML =
+        '<span class="str-idx">[' + (i - 1) + ']</span>' +
+        '<span class="str-char">' + s[i - 1] + '</span>';
+      col.appendChild(sc);
+    }
+
+    var dp = document.createElement('div');
+    dp.className = 'dp-cell';
+    dp.id = 'dpc-' + i;
+    dp.dataset.state = 'empty';
+    dp.innerHTML =
+      '<span class="dp-idx">dp[' + i + ']</span>' +
+      '<span class="dp-val" id="dpv-' + i + '">?</span>';
+    col.appendChild(dp);
+
+    inner.appendChild(col);
+  }
+  track.appendChild(inner);
+
+  // Pre-fill dp[0] = True
+  var dpc0 = document.getElementById('dpc-0');
+  var dpv0 = document.getElementById('dpv-0');
+  if (dpc0) dpc0.dataset.state = 'true';
+  if (dpv0) dpv0.textContent = 'T';
+}
+
+function buildDictPanel(dict) {
+  var panel = document.getElementById('dict-panel');
+  var wordsEl = document.getElementById('dict-words');
+  panel.style.display = '';
+  wordsEl.innerHTML = dict.map(function(w, idx) {
+    return '<div class="dict-word" id="dw-' + idx + '">' + w + '</div>';
+  }).join('');
+}
+
+function buildSteps(s, dict) {
+  var n = s.length;
+  var wordSet = {};
+  dict.forEach(function(w) { wordSet[w] = true; });
+
+  var dp = new Array(n + 1).fill(null);
+  dp[0] = true;
+  var steps = [];
+
+  function snap(opts) {
+    steps.push({
+      s:          s,
+      n:          n,
+      dict:       dict,
+      dp:         dp.slice(),
+      phase:      opts.phase || 'Init',
+      desc:       opts.desc  || '',
+      lines:      opts.lines || [],
+      i:          opts.i !== undefined ? opts.i : -1,
+      j:          opts.j !== undefined ? opts.j : -1,
+      word:       opts.word  || '',
+      inDict:     opts.inDict !== undefined ? opts.inDict : false,
+      dpJTrue:    opts.dpJTrue !== undefined ? opts.dpJTrue : false,
+      matchIdx:   opts.matchIdx !== undefined ? opts.matchIdx : -1,
+    });
+  }
+
+  snap({
+    phase: 'Init',
+    desc:  'Allocate dp[0..' + n + '] = False. Set dp[0] = True (empty prefix is always valid).',
+    lines: [2, 3, 4, 5],
+  });
+
+  for (var i = 1; i <= n; i++) {
+    snap({
+      phase: 'Loop i',
+      desc:  'Computing dp[' + i + ']. Try all start indices j from 0 to ' + (i - 1) + '.',
+      lines: [6],
+      i: i,
+      j: -1,
+    });
+
+    var found = false;
+    for (var j = 0; j < i; j++) {
+      var sub = s.substring(j, i);
+      var dpJ = dp[j];
+      var inD = wordSet[sub] === true;
+      var matchIdx = -1;
+      if (inD) {
+        for (var di = 0; di < dict.length; di++) {
+          if (dict[di] === sub) { matchIdx = di; break; }
+        }
+      }
+
+      snap({
+        phase: 'Check j=' + j,
+        desc:  'j=' + j + ': s[' + j + '..' + i + '] = "' + sub + '". ' +
+               'dp[' + j + ']=' + (dpJ ? 'True' : 'False') + ', in dict=' + (inD ? 'Yes' : 'No') + '.' +
+               (dpJ && inD ? ' Both true → dp[' + i + '] = True!' : ' No match.'),
+        lines: [7, 8],
+        i: i,
+        j: j,
+        word: sub,
+        inDict: inD,
+        dpJTrue: !!dpJ,
+        matchIdx: matchIdx,
+      });
+
+      if (dpJ && inD) {
+        dp[i] = true;
+        found = true;
+        snap({
+          phase: 'Set dp[' + i + ']',
+          desc:  'dp[' + j + ']=True and "' + sub + '" is in dict. Set dp[' + i + '] = True. Break inner loop.',
+          lines: [9, 10],
+          i: i,
+          j: j,
+          word: sub,
+          inDict: true,
+          dpJTrue: true,
+          matchIdx: matchIdx,
+        });
+        break;
+      }
+    }
+
+    if (!found && dp[i] === null) {
+      dp[i] = false;
+      snap({
+        phase: 'dp[' + i + '] = False',
+        desc:  'No valid j found for i=' + i + '. dp[' + i + '] = False.',
+        lines: [6, 7, 8],
+        i: i,
+        j: -1,
+      });
+    }
+  }
+
+  snap({
+    phase: 'Done',
+    desc:  'dp[' + n + '] = ' + (dp[n] ? 'True' : 'False') + '. String "' + s + '" ' +
+           (dp[n] ? 'CAN' : 'CANNOT') + ' be segmented using the dictionary.',
+    lines: [11],
+    i: -1,
+    j: -1,
+  });
+
+  return steps;
+}
+
+function renderSnap(snap, animate) {
+  renderTrack(snap, animate);
+  renderDict(snap, animate);
+  renderVars(snap, animate);
+  setCodeLines(snap.lines);
+}
+
+function renderTrack(snap, animate) {
+  var n = snap.n;
+  var isDone = snap.phase === 'Done';
+
+  // String cells
+  for (var ci = 0; ci < n; ci++) {
+    var sc = document.getElementById('sc-' + ci);
+    if (!sc) continue;
+    var hi = 'none';
+    if (snap.i > 0 && snap.j >= 0) {
+      var charIdx = ci; // 0-based char
+      var spanStart = snap.j;
+      var spanEnd   = snap.i - 1; // inclusive
+      if (charIdx === spanStart && charIdx === spanEnd) {
+        hi = snap.inDict && snap.dpJTrue ? 'match' : 'span';
+      } else if (charIdx === spanStart) {
+        hi = 'start';
+      } else if (charIdx === spanEnd) {
+        hi = snap.inDict && snap.dpJTrue ? 'match' : 'end';
+      } else if (charIdx > spanStart && charIdx < spanEnd) {
+        hi = snap.inDict && snap.dpJTrue ? 'match' : 'span';
+      }
+    }
+    sc.dataset.hi = hi;
+  }
+
+  // DP cells
+  for (var k = 0; k <= n; k++) {
+    var dpc = document.getElementById('dpc-' + k);
+    var dpv = document.getElementById('dpv-' + k);
+    if (!dpc || !dpv) continue;
+
+    var val = snap.dp[k];
+    var state = 'empty';
+
+    if (isDone && k === n) {
+      state = val ? 'answer' : 'false';
+    } else if (k === snap.i) {
+      state = val === true ? 'true' : (val === false ? 'false' : 'current');
+    } else if (k === snap.j && snap.j >= 0) {
+      state = 'start';
+    } else if (val === true) {
+      state = 'true';
+    } else if (val === false) {
+      state = 'false';
+    }
+
+    var prevState = dpc.dataset.state;
+    dpc.dataset.state = state;
+
+    var text = val === null ? '?' : (val ? 'T' : 'F');
+    var prevText = dpv.textContent;
+    dpv.textContent = text;
+
+    if (animate && text !== prevText && text !== '?') {
+      gsap.fromTo(dpc, { scale: 0.6, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.3, ease: 'back.out(2)' });
+    }
+    if (animate && state === 'start') {
+      gsap.fromTo(dpc, { scale: 1 }, { scale: 1.1, duration: 0.2, yoyo: true, repeat: 1 });
+    }
+  }
+}
+
+function renderDict(snap, animate) {
+  currentDict.forEach(function(w, idx) {
+    var el = document.getElementById('dw-' + idx);
+    if (!el) return;
+    el.className = 'dict-word';
+    if (snap.word && snap.inDict && snap.matchIdx === idx) {
+      el.classList.add('matched');
+      if (animate) gsap.fromTo(el, { scale: 1 }, { scale: 1.12, duration: 0.2, yoyo: true, repeat: 1 });
+    } else if (snap.word && !snap.inDict && snap.j >= 0) {
+      el.classList.add('no-match');
+    } else if (snap.word && snap.matchIdx !== idx && snap.j >= 0) {
+      el.classList.add('no-match');
+    }
+  });
+}
+
+function renderVars(snap, animate) {
+  function setVal(id, val) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    var text = (val === null || val === undefined) ? '—' : String(val);
+    if (animate && el.textContent !== text) {
+      gsap.fromTo(el, { scale: 0.75, opacity: 0.3 }, { scale: 1, opacity: 1, duration: 0.2, ease: 'back.out(1.5)' });
+    }
+    el.textContent = text;
+  }
+  setVal('vv-i',    snap.i >= 0 ? snap.i : null);
+  setVal('vv-j',    snap.j >= 0 ? snap.j : null);
+  setVal('vv-word', snap.word || null);
+  var matchVal = (snap.j >= 0 && snap.word)
+    ? (snap.dpJTrue ? 'T' : 'F') + ' & ' + (snap.inDict ? 'yes' : 'no')
+    : null;
+  setVal('vv-match', matchVal);
+}
+
+function setCodeLines(activeLines) {
+  CODE.forEach(function(e) {
+    var ln = e[0];
+    var el = document.getElementById('cl-' + ln);
+    if (!el) return;
+    if (activeLines.indexOf(ln) >= 0) el.classList.add('hl');
+    else el.classList.remove('hl');
+  });
+}
+</script>
+
+<script>
+  if (window.self !== window.top) {
+    var bl = document.querySelector('.back-link');
+    if (bl) bl.style.display = 'none';
+  }
+</script>
+</body>
+</html>
