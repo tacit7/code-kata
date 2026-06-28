@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Course Schedule</title>
+  <link rel="stylesheet" href="../shared/style.css" />
+  <script src="../shared/viz.js"></script>
+  <style>
+    .viz-area { width: 100%; max-width: 95%; }
+    .main-row { display: grid; grid-template-columns: 1fr 380px; gap: 20px; align-items: start; }
+    @media (max-width: 800px) { .main-row { grid-template-columns: 1fr; } }
+
+    .graph-panel {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 16px;
+      display: flex; flex-direction: column; gap: 10px;
+    }
+    .graph-svg-wrap {
+      width: 100%; aspect-ratio: 1.4;
+      background: var(--bg); border-radius: var(--radius-sm);
+      overflow: hidden; position: relative;
+    }
+    #graph-svg { width: 100%; height: 100%; }
+
+    /* Node colors: white=unvisited, gray=in-stack, black=done */
+    .node-circle {
+      stroke-width: 2.5;
+      transition: fill 0.3s, stroke 0.3s;
+    }
+    .node-circle.state-white  { fill: #1a1b2e; stroke: #7aa2f7; }
+    .node-circle.state-gray   { fill: #3d3524; stroke: #e0af68; }
+    .node-circle.state-black  { fill: #1a2a1a; stroke: #9ece6a; }
+    .node-circle.state-cycle  { fill: #3d1515; stroke: #f7768e; }
+
+    .node-label {
+      fill: var(--text-bright); font-size: 13px; font-weight: 700;
+      font-family: monospace; text-anchor: middle; dominant-baseline: central;
+      pointer-events: none;
+    }
+
+    .edge-line {
+      stroke-width: 2; fill: none;
+      stroke: #3b4261; transition: stroke 0.3s;
+    }
+    .edge-line.active  { stroke: #e0af68; }
+    .edge-line.cycle   { stroke: #f7768e; }
+    .edge-line.done    { stroke: #9ece6a; }
+
+    .edge-arrow { fill: #3b4261; transition: fill 0.3s; }
+    .edge-arrow.active { fill: #e0af68; }
+    .edge-arrow.cycle  { fill: #f7768e; }
+    .edge-arrow.done   { fill: #9ece6a; }
+
+    /* right column */
+    .right-col { display: flex; flex-direction: column; gap: 12px; }
+
+    .panel-box {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 14px 16px;
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .panel-title {
+      font-size: 0.72rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim);
+    }
+
+    .nav-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .btn-play {
+      background: #15803d; border: none; border-radius: var(--radius-sm);
+      color: #fff; cursor: pointer; font-size: 0.88rem; font-weight: 600;
+      padding: 9px 16px; transition: background 0.2s;
+    }
+    .btn-play:hover { background: #166534; }
+    .btn-play.playing { background: #c2410c; }
+    .btn-play.playing:hover { background: #9a3412; }
+    .btn-play:disabled { opacity: 0.4; cursor: not-allowed; }
+    .speed-select {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); color: var(--text);
+      font-size: 0.85rem; padding: 8px 10px; outline: none; width: 80px;
+    }
+
+    .result-badge {
+      font-size: 0.88rem; font-weight: 700;
+      padding: 5px 14px; border-radius: 6px;
+      display: none; width: fit-content;
+    }
+    .result-badge.possible   { background: #1a2a1a; color: #9ece6a; border: 1px solid #9ece6a; display: block; }
+    .result-badge.impossible { background: #3d1515; color: #f7768e; border: 1px solid #f7768e; display: block; }
+
+    /* stack display */
+    .stack-list {
+      display: flex; gap: 6px; flex-wrap: wrap; min-height: 28px;
+    }
+    .stack-chip {
+      padding: 3px 10px; border-radius: 4px;
+      font-size: 0.8rem; font-family: monospace; font-weight: 700;
+      background: #3d3524; border: 1px solid #e0af68; color: #e0af68;
+    }
+
+    /* order display */
+    .order-list {
+      display: flex; gap: 6px; flex-wrap: wrap; min-height: 28px;
+    }
+    .order-chip {
+      padding: 3px 10px; border-radius: 4px;
+      font-size: 0.8rem; font-family: monospace; font-weight: 700;
+      background: #1a2a1a; border: 1px solid #9ece6a; color: #9ece6a;
+    }
+
+    /* legend */
+    .legend-row { display: flex; align-items: center; gap: 8px; font-size: 0.78rem; color: var(--text-muted); }
+    .legend-dot {
+      width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; border: 2px solid;
+    }
+
+    /* code panel */
+    .code-panel {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); overflow: hidden;
+    }
+    .code-header {
+      padding: 8px 14px; font-size: 0.72rem; font-weight: 600;
+      color: var(--text-dim); border-bottom: 1px solid var(--border); background: var(--bg);
+    }
+    .code-body { padding: 10px 0; font-size: 0.78rem; line-height: 1.75; white-space: pre; }
+    .code-line { display: flex; align-items: center; padding: 0 14px; }
+    .code-line.hl { background: var(--border-soft); border-left: 2px solid var(--accent); }
+    .ln { min-width: 24px; color: var(--text-ghost); user-select: none; font-size: 0.7rem; }
+    .kw { color: var(--purple); }
+    .fn { color: var(--blue); }
+    .bi { color: var(--orange); }
+    .cm { color: var(--text-ghost); }
+    .nb { color: var(--green); }
+
+    /* preset buttons */
+    .preset-row { display: flex; gap: 8px; flex-wrap: wrap; }
+    .btn-preset {
+      padding: 6px 12px; border-radius: var(--radius-sm);
+      background: var(--bg); border: 1px solid var(--border);
+      color: var(--text-dim); font-size: 0.8rem; cursor: pointer;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .btn-preset:hover, .btn-preset.active { border-color: var(--accent); color: var(--accent-pale); }
+  </style>
+</head>
+<body class="page">
+
+<div class="page-header">
+  <a class="back-link" href="../index.html">&larr; All Algorithms</a>
+  <div class="page-title">Course Schedule</div>
+  <div class="page-sub">LeetCode 207 &middot; DFS cycle detection on directed graph &middot; WHITE / GRAY / BLACK coloring &middot; O(V+E)</div>
+</div>
+
+<div class="controls">
+  <div class="field">
+    <label>Preset</label>
+    <div class="preset-row">
+      <button class="btn-preset active" id="preset-dag" onclick="loadPreset('dag')">DAG (Possible)</button>
+      <button class="btn-preset" id="preset-cycle" onclick="loadPreset('cycle')">Cycle (Impossible)</button>
+      <button class="btn-preset" id="preset-multi" onclick="loadPreset('multi')">Multi-Component</button>
+    </div>
+  </div>
+  <button class="btn-primary" onclick="buildAndRun()">Build &amp; Run</button>
+</div>
+
+<div class="viz-area">
+  <div class="main-row">
+    <!-- Graph -->
+    <div class="graph-panel">
+      <div class="panel-title">Directed Graph (prerequisite edges)</div>
+      <div class="graph-svg-wrap">
+        <svg id="graph-svg" viewBox="0 0 560 400" preserveAspectRatio="xMidYMid meet">
+          <defs>
+            <marker id="arrow-default" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+              <path d="M0,0 L0,6 L8,3 z" class="edge-arrow" id="arr-default"/>
+            </marker>
+            <marker id="arrow-active" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+              <path d="M0,0 L0,6 L8,3 z" fill="#e0af68"/>
+            </marker>
+            <marker id="arrow-cycle" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+              <path d="M0,0 L0,6 L8,3 z" fill="#f7768e"/>
+            </marker>
+            <marker id="arrow-done" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+              <path d="M0,0 L0,6 L8,3 z" fill="#9ece6a"/>
+            </marker>
+          </defs>
+          <g id="edges-g"></g>
+          <g id="nodes-g"></g>
+        </svg>
+      </div>
+    </div>
+
+    <!-- Right panel -->
+    <div class="right-col">
+
+      <div class="panel-box">
+        <div class="nav-row">
+          <button class="btn-step" id="btn-back" disabled>&larr;</button>
+          <button class="btn-step" id="btn-next" disabled>&rarr;</button>
+          <button class="btn-play" id="btn-play" disabled>&#9654; Play</button>
+          <select class="speed-select" id="speed-select">
+            <option value="800">Slow</option>
+            <option value="400" selected>Medium</option>
+            <option value="120">Fast</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="panel-box">
+        <div class="panel-title" id="phase-label">&mdash;</div>
+        <div style="font-size:0.82rem;color:var(--text-muted);margin-top:2px;min-height:36px" id="step-desc">Select a preset and click Build &amp; Run.</div>
+        <div class="result-badge" id="result-badge"></div>
+      </div>
+
+      <div class="panel-box">
+        <div class="panel-title">DFS Stack (GRAY nodes)</div>
+        <div class="stack-list" id="stack-list">
+          <span style="color:var(--text-ghost);font-size:0.78rem">empty</span>
+        </div>
+      </div>
+
+      <div class="panel-box">
+        <div class="panel-title">Finished (BLACK nodes)</div>
+        <div class="order-list" id="order-list">
+          <span style="color:var(--text-ghost);font-size:0.78rem">none yet</span>
+        </div>
+      </div>
+
+      <div class="panel-box">
+        <div class="panel-title">Legend</div>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <div class="legend-row">
+            <div class="legend-dot" style="background:#1a1b2e;border-color:#7aa2f7"></div>
+            <span>WHITE — unvisited</span>
+          </div>
+          <div class="legend-row">
+            <div class="legend-dot" style="background:#3d3524;border-color:#e0af68"></div>
+            <span>GRAY — in current DFS path (on stack)</span>
+          </div>
+          <div class="legend-row">
+            <div class="legend-dot" style="background:#1a2a1a;border-color:#9ece6a"></div>
+            <span>BLACK — fully processed, no cycle found</span>
+          </div>
+          <div class="legend-row">
+            <div class="legend-dot" style="background:#3d1515;border-color:#f7768e"></div>
+            <span>CYCLE — back edge to GRAY node detected</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="code-panel">
+        <div class="code-header">Python</div>
+        <div class="code-body" id="code-body"></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+var CODE = [
+  [1,  '<span class="kw">def</span> <span class="fn">can_finish</span>(n, prereqs):'],
+  [2,  '    adj = <span class="bi">defaultdict</span>(<span class="bi">list</span>)'],
+  [3,  '    <span class="kw">for</span> a, b <span class="kw">in</span> prereqs: adj[b].append(a)'],
+  [4,  '    WHITE, GRAY, BLACK = <span class="nb">0</span>, <span class="nb">1</span>, <span class="nb">2</span>'],
+  [5,  '    color = [WHITE] * n'],
+  [6,  '    <span class="kw">def</span> <span class="fn">dfs</span>(u):'],
+  [7,  '        color[u] = GRAY  <span class="cm"># entering — mark on-stack</span>'],
+  [8,  '        <span class="kw">for</span> v <span class="kw">in</span> adj[u]:'],
+  [9,  '            <span class="kw">if</span> color[v] == GRAY:  <span class="cm"># back edge → cycle!</span>'],
+  [10, '                <span class="kw">return</span> <span class="nb">True</span>'],
+  [11, '            <span class="kw">if</span> color[v] == WHITE <span class="kw">and</span> <span class="fn">dfs</span>(v):'],
+  [12, '                <span class="kw">return</span> <span class="nb">True</span>'],
+  [13, '        color[u] = BLACK  <span class="cm"># done — no cycle from u</span>'],
+  [14, '        <span class="kw">return</span> <span class="nb">False</span>'],
+  [15, '    <span class="kw">return</span> <span class="kw">not</span> <span class="bi">any</span>(<span class="fn">dfs</span>(u) <span class="kw">for</span> u <span class="kw">in</span> <span class="bi">range</span>(n)'],
+  [16, '                  <span class="kw">if</span> color[u] == WHITE)'],
+];
+
+// Presets: nodes with positions, edges as [from, to]
+var PRESETS = {
+  dag: {
+    label: 'DAG — 6 nodes, no cycle',
+    nodes: [
+      {id:0, x:100, y:200, label:'0'},
+      {id:1, x:240, y:100, label:'1'},
+      {id:2, x:240, y:300, label:'2'},
+      {id:3, x:380, y:100, label:'3'},
+      {id:4, x:380, y:300, label:'4'},
+      {id:5, x:500, y:200, label:'5'},
+    ],
+    // edge = [prerequisite → unlocks]
+    edges: [
+      [0,1],[0,2],[1,3],[2,4],[3,5],[4,5]
+    ]
+  },
+  cycle: {
+    label: 'Cycle — 5 nodes, back edge 3→1',
+    nodes: [
+      {id:0, x:100, y:200, label:'0'},
+      {id:1, x:260, y:80,  label:'1'},
+      {id:2, x:420, y:80,  label:'2'},
+      {id:3, x:420, y:300, label:'3'},
+      {id:4, x:260, y:300, label:'4'},
+    ],
+    edges: [
+      [0,1],[1,2],[2,3],[3,1],[0,4]
+    ]
+  },
+  multi: {
+    label: 'Multi-component — 7 nodes, no cycle',
+    nodes: [
+      {id:0, x:80,  y:110, label:'0'},
+      {id:1, x:230, y:60,  label:'1'},
+      {id:2, x:230, y:200, label:'2'},
+      {id:3, x:370, y:130, label:'3'},
+      {id:4, x:160, y:330, label:'4'},
+      {id:5, x:320, y:300, label:'5'},
+      {id:6, x:460, y:300, label:'6'},
+    ],
+    edges: [
+      [0,1],[0,2],[1,3],[2,3],
+      [4,5],[5,6]
+    ]
+  }
+};
+
+var currentPreset = 'dag';
+var simSteps = [];
+var nav;
+
+// Graph state used during render
+var gNodes = [];
+var gEdges = [];
+
+function loadPreset(name) {
+  currentPreset = name;
+  ['dag','cycle','multi'].forEach(function(p) {
+    document.getElementById('preset-' + p).classList.toggle('active', p === name);
+  });
+}
+
+function buildAndRun() {
+  var preset = PRESETS[currentPreset];
+  gNodes = preset.nodes;
+  gEdges = preset.edges;
+  renderGraph(null);
+  simSteps = simulate(gNodes, gEdges);
+  nav.load(simSteps);
+}
+
+// ---- Graph SVG rendering ----
+var NODE_R = 22;
+
+function edgeKey(u, v) { return u + '-' + v; }
+
+function getEdgeEndpoints(u, v) {
+  var nu = gNodes[u], nv = gNodes[v];
+  var dx = nv.x - nu.x, dy = nv.y - nu.y;
+  var dist = Math.sqrt(dx*dx + dy*dy);
+  if (dist === 0) return null;
+  var ux = dx/dist, uy = dy/dist;
+  var x1 = nu.x + ux * NODE_R;
+  var y1 = nu.y + uy * NODE_R;
+  var x2 = nv.x - ux * (NODE_R + 6);
+  var y2 = nv.y - uy * (NODE_R + 6);
+  return {x1:x1,y1:y1,x2:x2,y2:y2};
+}
+
+function renderGraph(snap) {
+  var edgesG = document.getElementById('edges-g');
+  var nodesG = document.getElementById('nodes-g');
+  edgesG.innerHTML = '';
+  nodesG.innerHTML = '';
+
+  var edgeStates = {};
+  if (snap) {
+    (snap.activeEdges || []).forEach(function(e) { edgeStates[edgeKey(e[0],e[1])] = 'active'; });
+    (snap.cycleEdges  || []).forEach(function(e) { edgeStates[edgeKey(e[0],e[1])] = 'cycle'; });
+    (snap.doneEdges   || []).forEach(function(e) { edgeStates[edgeKey(e[0],e[1])] = 'done'; });
+  }
+
+  var nodeStates = {};
+  if (snap) {
+    gNodes.forEach(function(n) { nodeStates[n.id] = snap.colors[n.id] || 'white'; });
+  } else {
+    gNodes.forEach(function(n) { nodeStates[n.id] = 'white'; });
+  }
+
+  // Draw edges
+  gEdges.forEach(function(e) {
+    var u = e[0], v = e[1];
+    var pts = getEdgeEndpoints(u, v);
+    if (!pts) return;
+    var key = edgeKey(u, v);
+    var state = edgeStates[key] || 'default';
+    var marker = 'url(#arrow-' + (state === 'default' ? 'default' : state) + ')';
+    var line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    line.setAttribute('x1', pts.x1); line.setAttribute('y1', pts.y1);
+    line.setAttribute('x2', pts.x2); line.setAttribute('y2', pts.y2);
+    line.setAttribute('class', 'edge-line' + (state !== 'default' ? ' ' + state : ''));
+    line.setAttribute('marker-end', marker);
+    line.setAttribute('id', 'edge-' + key);
+    edgesG.appendChild(line);
+  });
+
+  // Draw nodes
+  gNodes.forEach(function(n) {
+    var g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    var circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    circle.setAttribute('cx', n.x); circle.setAttribute('cy', n.y);
+    circle.setAttribute('r', NODE_R);
+    var st = nodeStates[n.id];
+    circle.setAttribute('class', 'node-circle state-' + st);
+    circle.setAttribute('id', 'node-circle-' + n.id);
+    var text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    text.setAttribute('x', n.x); text.setAttribute('y', n.y);
+    text.setAttribute('class', 'node-label');
+    text.textContent = n.label;
+    g.appendChild(circle);
+    g.appendChild(text);
+    nodesG.appendChild(g);
+  });
+}
+
+// ---- Simulation ----
+function simulate(nodes, edges) {
+  var steps = [];
+  var n = nodes.length;
+  var adj = {};
+  nodes.forEach(function(nd) { adj[nd.id] = []; });
+  edges.forEach(function(e) { adj[e[0]].push(e[1]); });
+
+  var WHITE = 'white', GRAY = 'gray', BLACK = 'black', CYCLE = 'cycle';
+  var colors = {};
+  nodes.forEach(function(nd) { colors[nd.id] = WHITE; });
+
+  var stack = [];      // current DFS path (gray nodes)
+  var finished = [];   // black nodes in order
+  var activeEdges = [];
+  var cycleEdges = [];
+  var doneEdges = [];
+  var foundCycle = false;
+  var cycleNode = -1;
+
+  function snap(phase, desc, lines, extraColors) {
+    var colorSnap = Object.assign({}, colors);
+    if (extraColors) Object.assign(colorSnap, extraColors);
+    steps.push({
+      phase: phase,
+      desc: desc,
+      lines: lines,
+      colors: colorSnap,
+      stack: stack.slice(),
+      finished: finished.slice(),
+      activeEdges: activeEdges.map(function(e){return e.slice();}),
+      cycleEdges: cycleEdges.map(function(e){return e.slice();}),
+      doneEdges: doneEdges.map(function(e){return e.slice();}),
+      foundCycle: foundCycle,
+      cycleNode: cycleNode,
+    });
+  }
+
+  snap('Init', 'All nodes WHITE (unvisited). Will run DFS from each unvisited node.', [4,5]);
+
+  function dfs(u) {
+    if (foundCycle) return;
+    colors[u] = GRAY;
+    stack.push(u);
+    snap('Enter', 'Enter node ' + u + ' → mark GRAY (on DFS stack).', [7], {});
+
+    var neighbors = adj[u];
+    for (var i = 0; i < neighbors.length; i++) {
+      if (foundCycle) break;
+      var v = neighbors[i];
+      activeEdges = [[u, v]];
+
+      if (colors[v] === GRAY) {
+        // Back edge — cycle detected
+        cycleEdges.push([u, v]);
+        foundCycle = true;
+        cycleNode = v;
+        var cycleSnap = Object.assign({}, colors);
+        cycleSnap[v] = CYCLE;
+        cycleSnap[u] = CYCLE;
+        snap('Cycle', 'Edge ' + u + '→' + v + ': node ' + v + ' is GRAY (on stack). Back edge! Cycle detected — courses cannot be finished.', [9,10], cycleSnap);
+        activeEdges = [];
+        return;
+      }
+
+      if (colors[v] === WHITE) {
+        snap('CheckEdge', 'Edge ' + u + '→' + v + ': node ' + v + ' is WHITE — recurse DFS(' + v + ').', [8,11], {});
+        activeEdges = [];
+        dfs(v);
+        if (foundCycle) return;
+        activeEdges = [[u, v]];
+        doneEdges.push([u, v]);
+        activeEdges = [];
+      } else {
+        // BLACK — already done, safe
+        doneEdges.push([u, v]);
+        snap('CheckEdge', 'Edge ' + u + '→' + v + ': node ' + v + ' is BLACK (done) — safe, no cycle here.', [8,11], {});
+        activeEdges = [];
+      }
+    }
+
+    if (!foundCycle) {
+      colors[u] = BLACK;
+      stack.pop();
+      finished.push(u);
+      snap('Exit', 'Exit node ' + u + ' → mark BLACK (fully processed, no cycle found).', [13,14], {});
+    }
+  }
+
+  for (var i = 0; i < nodes.length; i++) {
+    if (foundCycle) break;
+    var u = nodes[i].id;
+    if (colors[u] === WHITE) {
+      snap('StartDFS', 'Node ' + u + ' is WHITE — start DFS from node ' + u + '.', [15,16], {});
+      dfs(u);
+    }
+  }
+
+  if (foundCycle) {
+    snap('Done', 'Cycle found — it is impossible to finish all courses. Return false.', [9,10]);
+  } else {
+    snap('Done', 'No cycle found in any component — all courses can be finished. Return true.', [15,16]);
+  }
+
+  return steps;
+}
+
+// ---- Step render ----
+function applyStep(snap) {
+  renderGraph(snap);
+  updateStack(snap.stack);
+  updateFinished(snap.finished);
+  setCodeLines(snap.lines);
+
+  var badge = document.getElementById('result-badge');
+  badge.className = 'result-badge';
+  badge.textContent = '';
+  if (snap.phase === 'Done') {
+    if (snap.foundCycle) {
+      badge.className = 'result-badge impossible';
+      badge.textContent = 'Impossible — cycle detected';
+    } else {
+      badge.className = 'result-badge possible';
+      badge.textContent = 'Possible — no cycle found';
+    }
+  }
+}
+
+function updateStack(stack) {
+  var el = document.getElementById('stack-list');
+  if (!stack || stack.length === 0) {
+    el.innerHTML = '<span style="color:var(--text-ghost);font-size:0.78rem">empty</span>';
+    return;
+  }
+  el.innerHTML = stack.map(function(n) {
+    return '<div class="stack-chip">' + n + '</div>';
+  }).join('');
+}
+
+function updateFinished(finished) {
+  var el = document.getElementById('order-list');
+  if (!finished || finished.length === 0) {
+    el.innerHTML = '<span style="color:var(--text-ghost);font-size:0.78rem">none yet</span>';
+    return;
+  }
+  el.innerHTML = finished.map(function(n) {
+    return '<div class="order-chip">' + n + '</div>';
+  }).join('');
+}
+
+function setCodeLines(lines) {
+  CODE.forEach(function(e) {
+    var el = document.getElementById('cl-' + e[0]);
+    if (!el) return;
+    if (lines && lines.indexOf(e[0]) >= 0) el.classList.add('hl');
+    else el.classList.remove('hl');
+  });
+}
+
+function buildCodePanel() {
+  var body = document.getElementById('code-body');
+  body.innerHTML = CODE.map(function(e) {
+    return '<div class="code-line" id="cl-' + e[0] + '"><span class="ln">' + e[0] + '</span><span>' + e[1] + '</span></div>';
+  }).join('');
+}
+
+window.addEventListener('DOMContentLoaded', function() {
+  buildCodePanel();
+  loadPreset('dag');
+  nav = VizNav({
+    btnPrev: document.getElementById('btn-back'),
+    btnNext: document.getElementById('btn-next'),
+    btnPlay: document.getElementById('btn-play'),
+    speedSel: document.getElementById('speed-select'),
+    render: function(snap, cur, total) {
+      applyStep(snap);
+      var phaseEl = document.getElementById('phase-label');
+      var descEl  = document.getElementById('step-desc');
+      if (phaseEl) phaseEl.textContent = 'Step ' + (cur + 1) + ' / ' + total + '  ·  ' + snap.phase;
+      if (descEl)  descEl.textContent = snap.desc;
+    }
+  });
+});
+</script>
+
+<script>
+  if (window.self !== window.top) {
+    var bl = document.querySelector('.back-link');
+    if (bl) bl.style.display = 'none';
+  }
+</script>
+</body>
+</html>
