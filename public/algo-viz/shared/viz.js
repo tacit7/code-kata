@@ -13,9 +13,16 @@
 window.VizNav = function(opts) {
   var steps = [], cursor = 0, playTimer = null;
 
+  function updateButtons() {
+    opts.btnPrev.disabled = cursor <= 0;
+    opts.btnNext.disabled = cursor >= steps.length - 1;
+    opts.btnPlay.disabled = steps.length === 0;
+  }
+
   function goTo(idx) {
     cursor = Math.max(0, Math.min(steps.length - 1, idx));
     opts.render(steps[cursor], cursor, steps.length);
+    updateButtons();
   }
 
   function stopPlay() {
