@@ -14,6 +14,16 @@ import type { Kata, TestResult } from "../types/editor";
 // Matches "Ref: LeetCode #123 Problem Name" at the end of a description
 const LC_REF_RE = /Ref:\s*LeetCode\s*#(\d+)\s+(.+)$/m;
 
+// Kata name → algo-viz subfolder served from /algo-viz/<folder>/index.html
+const VIZ_MAP: Record<string, string> = {
+  "Kadane's Algorithm":           "kadanes",
+  "Min Cost Climbing Stairs":       "min-cost-stairs",
+  "House Robber":                   "house-robber",
+  "Median of Two Sorted Arrays":    "median-sorted-arrays",
+  "Merge Two Sorted Lists":         "merge-sorted-lists",
+  "Longest Palindromic Substring":  "manachers",
+};
+
 // Overrides for slugs that can't be reliably derived from the display name
 const LC_SLUG_OVERRIDES: Record<number, string> = {
   50: "powx-n",
@@ -68,7 +78,7 @@ export function KataEditor({ kata, isSession, onTestComplete }: KataEditorProps)
   const [results, setResults] = useState<TestResult[] | null>(null);
   const [ranAt, setRanAt] = useState<string>("");
   const [running, setRunning] = useState(false);
-  const [showPanel, setShowPanel] = useState<"description" | "solution" | "notes" | null>(
+  const [showPanel, setShowPanel] = useState<"description" | "solution" | "notes" | "viz" | null>(
     isSession && hideDescriptionInSession ? null : kata.description ? "description" : null
   );
   const [editorReady, setEditorReady] = useState(false);
@@ -102,6 +112,16 @@ export function KataEditor({ kata, isSession, onTestComplete }: KataEditorProps)
       if (notesAutosaveTimer.current) clearTimeout(notesAutosaveTimer.current);
     };
   }, [kata.id]);
+
+  const vizFolder = VIZ_MAP[kata.name] ?? null;
+
+  // Widen panel when switching to Viz tab; reset if kata has no viz
+  useEffect(() => {
+    if (showPanel === "viz") {
+      if (!vizFolder) { setShowPanel(null); return; }
+      setPanelWidth((w) => Math.max(w, 500));
+    }
+  }, [showPanel, vizFolder]);
 
   const handleEditorMount: OnMount = (editorInstance) => {
     editorRef.current = editorInstance;
@@ -241,6 +261,14 @@ export function KataEditor({ kata, isSession, onTestComplete }: KataEditorProps)
             >
               Notes{!notesSaved && " •"}
             </button>
+            {vizFolder && (
+              <button
+                onClick={() => setShowPanel((v) => v === "viz" ? null : "viz")}
+                className={tabClass("viz")}
+              >
+                Viz ↗
+              </button>
+            )}
           </div>
 
           {/* Tab content */}
@@ -265,6 +293,15 @@ export function KataEditor({ kata, isSession, onTestComplete }: KataEditorProps)
                   readOnly: true,
                   lineNumbers: "off",
                 }}
+              />
+            </div>
+          )}
+          {showPanel === "viz" && vizFolder && (
+            <div className="flex-1 min-h-0">
+              <iframe
+                src={`/algo-viz/${vizFolder}/index.html`}
+                className="w-full h-full border-0"
+                title={`${kata.name} visualization`}
               />
             </div>
           )}
