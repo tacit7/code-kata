@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Invert Binary Tree</title>
+  <link rel="stylesheet" href="../shared/style.css" />
+  <script src="../shared/gsap.min.js"></script>
+  <script src="../shared/viz.js"></script>
+  <style>
+    .viz-area {
+      width: 100%; max-width: 90%;
+      display: flex; flex-direction: column; gap: 12px;
+    }
+
+    .tree-wrap {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+    }
+    #tree-svg { display: block; width: 100%; }
+
+    .bottom-row {
+      display: grid;
+      grid-template-columns: 50% 1fr;
+      gap: 12px;
+      align-items: start;
+    }
+    .right-col { display: flex; flex-direction: column; gap: 12px; }
+    @media (max-width: 680px) { .bottom-row { grid-template-columns: 1fr; } }
+
+    .code-panel {
+      background: #0a0d14;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      display: flex; flex-direction: column;
+    }
+    .code-header {
+      padding: 9px 14px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      font-size: 0.67rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.11em;
+      color: var(--text-dim);
+    }
+    .code-body {
+      padding: 10px 0;
+      flex: 1;
+      font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+      font-size: 0.78rem;
+      line-height: 1.7;
+      overflow-x: auto;
+    }
+    .cl {
+      display: flex; align-items: stretch;
+      border-left: 3px solid transparent;
+      padding: 0 14px 0 0;
+      transition: background-color 0.01s;
+      white-space: pre;
+    }
+    .cl .ln {
+      width: 28px; min-width: 28px;
+      text-align: right; color: #3d4468;
+      user-select: none; padding-right: 14px;
+      font-size: 0.72rem; line-height: 1.7;
+    }
+    .cl .code { color: var(--text-muted); }
+
+    .kw  { color: var(--purple); }
+    .fn  { color: var(--blue); }
+    .bi  { color: var(--orange); }
+    .str { color: var(--green); }
+    .cm  { color: #3d4468; font-style: italic; }
+    .op  { color: var(--text); }
+
+    .panel-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 13px 18px;
+    }
+    .panel-title {
+      font-size: 0.67rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.11em;
+      color: var(--text-dim); margin-bottom: 10px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .panel-sub {
+      font-size: 0.75rem; font-weight: 400;
+      text-transform: none; letter-spacing: 0; color: var(--text-faint);
+    }
+
+    #call-stack {
+      display: flex; flex-direction: column-reverse; gap: 5px;
+      min-height: 40px;
+    }
+    .cs-frame {
+      background: #1e1a3a; color: var(--accent-pale);
+      border: 1px solid var(--accent); border-radius: 6px;
+      padding: 5px 11px; font-size: 0.84rem; font-weight: 600;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .cs-frame.top {
+      background: #4338ca; color: #fff;
+    }
+    .cs-empty { color: var(--text-faint); font-size: 0.82rem; font-style: italic; }
+  </style>
+</head>
+<body class="page">
+
+<div class="page-header">
+  <a class="back-link" href="../index.html">← All Algorithms</a>
+  <h1 class="page-title">Invert Binary Tree</h1>
+</div>
+
+<div class="controls">
+  <div class="field">
+    <label>Level-order (use null for empty)</label>
+    <input id="inp-tree" type="text" value="4,2,7,1,3,6,9" style="width:260px" />
+  </div>
+  <button class="btn-primary" onclick="build()">Build</button>
+</div>
+
+
+<div class="viz-area">
+
+  <div class="tree-wrap">
+    <svg id="tree-svg" viewBox="0 0 800 320"
+         preserveAspectRatio="xMidYMid meet"></svg>
+  </div>
+
+  <div class="status-bar" style="max-width:100%">
+    <span class="phase-label" id="phase-label">—</span>
+    <span class="step-desc"   id="step-desc">Click Build to start.</span>
+  </div>
+
+  <div class="bottom-row">
+
+    <div class="code-panel">
+      <div class="code-header">Python</div>
+      <div class="code-body" id="code-body"></div>
+    </div>
+
+    <div class="right-col">
+      <div class="panel-box">
+        <div class="panel-title">Call Stack <span class="panel-sub">(top = currently executing)</span></div>
+        <div id="call-stack"><span class="cs-empty">empty</span></div>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<div class="legend">
+  <div class="leg-item">
+    <svg width="14" height="14"><circle cx="7" cy="7" r="6" fill="#1e2130" stroke="#2d3148" stroke-width="2"/></svg>
+    Unvisited
+  </div>
+  <div class="leg-item">
+    <svg width="14" height="14"><circle cx="7" cy="7" r="6" fill="#4338ca" stroke="var(--accent)" stroke-width="2"/></svg>
+    Active
+  </div>
+  <div class="leg-item">
+    <svg width="14" height="14"><circle cx="7" cy="7" r="6" fill="#c2410c" stroke="var(--orange)" stroke-width="2"/></svg>
+    Swapping
+  </div>
+  <div class="leg-item">
+    <svg width="14" height="14"><circle cx="7" cy="7" r="6" fill="#052e16" stroke="#16a34a" stroke-width="2"/></svg>
+    Done
+  </div>
+</div>
+
+<div class="step-nav">
+  <button class="btn-step" id="btn-back" disabled>← Back</button>
+  <button class="btn-step" id="btn-next" disabled>Next →</button>
+  <button id="btn-play" style="background:#15803d;color:#fff;border:none;border-radius:4px;padding:6px 14px;font-weight:600;cursor:pointer">&#9654; Play</button>
+  <select id="speed-select" style="background:var(--bg);border:1px solid var(--border);color:var(--text);border-radius:4px;padding:6px 8px;font-size:0.85rem">
+    <option value="700">Slow</option>
+    <option value="350" selected>Medium</option>
+    <option value="120">Fast</option>
+  </select>
+</div>
+
+<script>
+// ─── Code lines ───────────────────────────────────────────────────────────────
+const CODE_LINES = [
+  [1, `<span class="kw">def</span> <span class="fn">invert</span><span class="op">(</span>node<span class="op">):</span>`],
+  [2, `    <span class="kw">if</span> node <span class="kw">is</span> <span class="bi">None</span><span class="op">:</span>`],
+  [3, `        <span class="kw">return</span> <span class="bi">None</span>`],
+  [0, ``],
+  [5, `    node.left<span class="op">,</span> node.right <span class="op">=</span> node.right<span class="op">,</span> node.left`],
+  [0, ``],
+  [7, `    <span class="fn">invert</span><span class="op">(</span>node.left<span class="op">)</span>`],
+  [8, `    <span class="fn">invert</span><span class="op">(</span>node.right<span class="op">)</span>`],
+  [0, ``],
+  [10, `    <span class="kw">return</span> node`],
+];
+
+function buildCodePanel() {
+  const body = document.getElementById('code-body');
+  body.innerHTML = '';
+  CODE_LINES.forEach(([ln, html]) => {
+    const row = document.createElement('div');
+    row.className = 'cl';
+    if (ln > 0) row.id = `cl-${ln}`;
+    row.innerHTML =
+      `<span class="ln">${ln > 0 ? ln : ''}</span>` +
+      `<span class="code">${html}</span>`;
+    body.appendChild(row);
+  });
+}
+
+// ─── Node state colors ────────────────────────────────────────────────────────
+const COLORS = {
+  idle:    { fill: '#1e2130', stroke: '#2d3148', text: 'var(--text-muted)' },
+  active:  { fill: '#4338ca', stroke: 'var(--accent)', text: 'var(--accent-pale)' },
+  swap:    { fill: '#c2410c', stroke: 'var(--orange)', text: '#ffffff' },
+  done:    { fill: '#052e16', stroke: '#16a34a', text: 'var(--green)' },
+};
+const EDGE_DEFAULT = '#2d3148';
+const EDGE_ACTIVE  = 'var(--orange)';
+
+// ─── Global state ─────────────────────────────────────────────────────────────
+let nodeMap = {};
+let steps = [];
+let R = 22;
+let VW = 800, VH = 320;
+
+// ─── Build tree from level-order ──────────────────────────────────────────────
+function parseLevelOrder(s) {
+  return s.split(',').map(t => t.trim()).map(t =>
+    (t === '' || t.toLowerCase() === 'null' || t === 'n') ? null : Number(t)
+  );
+}
+
+let nextId = 0;
+function buildTree(vals) {
+  nodeMap = {};
+  nextId = 0;
+  if (!vals.length || vals[0] === null) return null;
+  const makeNode = (val) => {
+    const n = { id: nextId++, val, left: null, right: null, x: 0, y: 0, depth: 0 };
+    nodeMap[n.id] = n;
+    return n;
+  };
+  const root = makeNode(vals[0]);
+  const queue = [root];
+  let i = 1;
+  while (queue.length && i < vals.length) {
+    const cur = queue.shift();
+    if (i < vals.length) {
+      if (vals[i] !== null) {
+        cur.left = makeNode(vals[i]);
+        cur.left.depth = cur.depth + 1;
+        queue.push(cur.left);
+      }
+      i++;
+    }
+    if (i < vals.length) {
+      if (vals[i] !== null) {
+        cur.right = makeNode(vals[i]);
+        cur.right.depth = cur.depth + 1;
+        queue.push(cur.right);
+      }
+      i++;
+    }
+  }
+  return root;
+}
+
+// ─── Layout: inorder x assignment, depth-based y ──────────────────────────────
+function layout(root) {
+  let idx = 0;
+  let maxDepth = 0;
+  function inorder(node) {
+    if (!node) return;
+    inorder(node.left);
+    node._inIdx = idx++;
+    if (node.depth > maxDepth) maxDepth = node.depth;
+    inorder(node.right);
+  }
+  inorder(root);
+  const count = idx;
+  const xSpace = Math.max(60, Math.min(110, 700 / Math.max(1, count)));
+  const ySpace = 70;
+  const padX = 40, padY = 30;
+  VW = padX * 2 + (count - 1) * xSpace;
+  VH = padY * 2 + maxDepth * ySpace + R * 2;
+  if (VW < 400) VW = 400;
+  for (const id in nodeMap) {
+    const n = nodeMap[id];
+    n.x = padX + n._inIdx * xSpace;
+    n.y = padY + n.depth * ySpace + R;
+  }
+}
+
+// ─── SVG render (static; positions baked in) ──────────────────────────────────
+function svgEl(tag, attrs) {
+  const el = document.createElementNS('http://www.w3.org/2000/svg', tag);
+  Object.entries(attrs).forEach(([k, v]) => el.setAttribute(k, v));
+  return el;
+}
+function svgG(id) {
+  const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  if (id) g.id = id;
+  return g;
+}
+
+function renderSVG(root) {
+  const svg = document.getElementById('tree-svg');
+  svg.innerHTML = '';
+  svg.setAttribute('viewBox', `0 0 ${VW} ${VH}`);
+  R = VW > 700 ? 22 : 18;
+
+  const edgeG = svgG('edges');
+  const nodeG = svgG('nodes');
+  svg.appendChild(edgeG);
+  svg.appendChild(nodeG);
+
+  // initial edges based on root structure
+  drawEdges(root);
+
+  // draw all nodes at their slots
+  for (const id in nodeMap) {
+    const n = nodeMap[id];
+    const g = svgG(`node-g-${n.id}`);
+    g.appendChild(svgEl('circle', {
+      id: `nc-${n.id}`, cx: n.x, cy: n.y, r: R,
+      fill: COLORS.idle.fill, stroke: COLORS.idle.stroke, 'stroke-width': 2.5,
+    }));
+    const t = svgEl('text', {
+      id: `nt-${n.id}`, x: n.x, y: n.y,
+      'text-anchor': 'middle', 'dominant-baseline': 'middle',
+      fill: COLORS.idle.text,
+      'font-size': Math.round(R * 0.75), 'font-weight': 'bold',
+      'font-family': 'Segoe UI, system-ui, sans-serif',
+    });
+    t.textContent = n.val;
+    g.appendChild(t);
+    nodeG.appendChild(g);
+  }
+}
+
+function drawEdges(root) {
+  const edgeG = document.getElementById('edges');
+  if (!edgeG) return;
+  edgeG.innerHTML = '';
+  function walk(n) {
+    if (!n) return;
+    [n.left, n.right].forEach(c => {
+      if (!c) return;
+      edgeG.appendChild(svgEl('line', {
+        id: `edge-${n.id}-${c.id}`,
+        x1: n.x, y1: n.y, x2: c.x, y2: c.y,
+        stroke: EDGE_DEFAULT, 'stroke-width': 2, 'stroke-linecap': 'round',
+      }));
+    });
+    walk(n.left); walk(n.right);
+  }
+  walk(root);
+}
+
+// ─── Simulation: DFS preorder swap ────────────────────────────────────────────
+// Each node has stable id; we swap (x, y) on swap step so the visual mirrors.
+// Snapshot records:
+//   stateMap: { id -> 'idle'|'active'|'swap'|'done' }
+//   positions: { id -> {x, y} }
+//   edges: [{from, to}]
+//   callStack: ["invert(4)", ...]
+//   desc, lines, phase
+function simulate(root) {
+  // work on a clone so original positions stay intact for replay
+  const clone = {};
+  for (const id in nodeMap) {
+    const n = nodeMap[id];
+    clone[id] = { id: n.id, val: n.val, leftId: n.left ? n.left.id : null,
+                  rightId: n.right ? n.right.id : null, x: n.x, y: n.y };
+  }
+  const stateMap = {};
+  for (const id in clone) stateMap[id] = 'idle';
+  const callStack = [];
+  const out = [];
+
+  function curEdges() {
+    const e = [];
+    for (const id in clone) {
+      const n = clone[id];
+      if (n.leftId !== null) e.push({ from: n.id, to: n.leftId });
+      if (n.rightId !== null) e.push({ from: n.id, to: n.rightId });
+    }
+    return e;
+  }
+  function curPositions() {
+    const p = {};
+    for (const id in clone) p[id] = { x: clone[id].x, y: clone[id].y };
+    return p;
+  }
+  function snap(phase, desc, lines) {
+    out.push({
+      phase, desc, lines: lines || [],
+      stateMap: { ...stateMap },
+      positions: curPositions(),
+      edges: curEdges(),
+      callStack: [...callStack],
+    });
+  }
+
+  function invert(id) {
+    if (id === null) {
+      callStack.push(`invert(None)`);
+      snap('Recurse', `node is None → return None.`, [2, 3]);
+      callStack.pop();
+      return;
+    }
+    const n = clone[id];
+    callStack.push(`invert(${n.val})`);
+    stateMap[id] = 'active';
+    snap('Visit', `Enter invert(${n.val}). Not None, continue.`, [1, 2]);
+
+    // swap children
+    const hadAny = n.leftId !== null || n.rightId !== null;
+    if (hadAny) {
+      // mark children as 'swap' for the swap frame
+      const leftId = n.leftId, rightId = n.rightId;
+      if (leftId !== null) stateMap[leftId] = 'swap';
+      if (rightId !== null) stateMap[rightId] = 'swap';
+
+      // swap pointers
+      n.leftId = rightId;
+      n.rightId = leftId;
+      // swap subtree positions: move every node in left subtree to where right was, and vice versa
+      swapSubtreePositions(leftId, rightId);
+
+      snap('Swap', `Swap children of ${n.val}: left↔right.`, [5]);
+
+      // restore children color
+      if (leftId !== null) stateMap[leftId] = 'idle';
+      if (rightId !== null) stateMap[rightId] = 'idle';
+    } else {
+      snap('Swap', `${n.val} is a leaf — nothing to swap.`, [5]);
+    }
+
+    // recurse into new left
+    if (n.leftId !== null) {
+      snap('Recurse', `Recurse into new left of ${n.val}.`, [7]);
+      invert(n.leftId);
+    } else {
+      snap('Recurse', `New left of ${n.val} is None — skip.`, [7]);
+    }
+
+    // recurse into new right
+    if (n.rightId !== null) {
+      snap('Recurse', `Recurse into new right of ${n.val}.`, [8]);
+      invert(n.rightId);
+    } else {
+      snap('Recurse', `New right of ${n.val} is None — skip.`, [8]);
+    }
+
+    stateMap[id] = 'done';
+    snap('Return', `Return ${n.val}.`, [10]);
+    callStack.pop();
+  }
+
+  function swapSubtreePositions(aId, bId) {
+    const collect = (id, acc) => {
+      if (id === null) return;
+      acc.push(clone[id]);
+      collect(clone[id].leftId, acc);
+      collect(clone[id].rightId, acc);
+    };
+    const A = []; collect(aId, A);
+    const B = []; collect(bId, B);
+    // record original anchor positions per node, then mirror them through the parent's x axis
+    // simpler: compute parent x. We swap subtrees by reflecting each node's x around parent.x.
+    // But we don't have parent here; pass from caller? Use the node's swap relative to siblings.
+    // Approach: compute dx = (right anchor x) - (left anchor x). Move A by +dx, B by -dx.
+    if (A.length && B.length) {
+      const dx = B[0].x - A[0].x;
+      A.forEach(n => n.x += dx);
+      B.forEach(n => n.x -= dx);
+    } else if (A.length && !B.length) {
+      // no right subtree; just move left to where right would be — keep in place (mirror around parent)
+      // find parent x by scanning clone for the one whose leftId or rightId was aId/bId pre-swap
+      // simpler: don't move. Visually the only child stays put.
+    } else if (!A.length && B.length) {
+      // ditto
+    }
+  }
+
+  // initial snapshot
+  snap('Start', `Call invert(root = ${root.val}).`, []);
+  invert(root.id);
+  snap('Done', `Tree fully inverted.`, []);
+  return out;
+}
+
+// ─── Build / Run ──────────────────────────────────────────────────────────────
+function build() {
+  const txt = document.getElementById('inp-tree').value.trim();
+  const vals = parseLevelOrder(txt);
+  buildCodePanel();
+  const root = buildTree(vals);
+  if (!root) {
+    document.getElementById('tree-svg').innerHTML = '';
+    document.getElementById('step-desc').textContent = 'Empty tree.';
+    return;
+  }
+  layout(root);
+  renderSVG(root);
+  steps = simulate(root);
+  prevPositions = null;
+  prevLines = [];
+  nav.load(steps);
+}
+
+// ─── Apply step (no animation for replay) ─────────────────────────────────────
+function applyStep(s, animate) {
+  Object.entries(s.stateMap).forEach(([id, st]) => setNodeColor(+id, st, animate));
+  Object.entries(s.positions).forEach(([id, p]) => setNodePos(+id, p.x, p.y, animate));
+  redrawEdgesAt(s.edges, s.positions);
+  renderCallStack(s.callStack, animate);
+  setCodeLines(prevLines, s.lines, animate);
+  prevLines = s.lines || [];
+}
+let prevLines = [];
+
+// ─── Code line highlighting ───────────────────────────────────────────────────
+const HL_BG   = 'rgba(var(--orange-ch),0.13)';
+const HL_NONE = 'rgba(var(--orange-ch),0)';
+const HL_BORD = 'var(--orange)';
+const NO_BORD = 'transparent';
+
+function setCodeLines(oldLines, newLines, animate) {
+  const DUR = 0.22;
+  (oldLines || []).filter(n => !(newLines || []).includes(n)).forEach(n => {
+    const el = document.getElementById(`cl-${n}`);
+    if (!el) return;
+    if (animate) {
+      gsap.to(el, { backgroundColor: HL_NONE, borderLeftColor: NO_BORD, duration: DUR });
+      gsap.to(el.querySelector('.ln'), { color: '#3d4468', duration: DUR });
+    } else {
+      el.style.backgroundColor = ''; el.style.borderLeftColor = '';
+      const ln = el.querySelector('.ln'); if (ln) ln.style.color = '';
+    }
+  });
+  (newLines || []).filter(n => !(oldLines || []).includes(n)).forEach(n => {
+    const el = document.getElementById(`cl-${n}`);
+    if (!el) return;
+    if (animate) {
+      gsap.to(el, { backgroundColor: HL_BG, borderLeftColor: HL_BORD, duration: DUR, delay: 0.08 });
+      gsap.to(el.querySelector('.ln'), { color: 'var(--orange)', duration: DUR, delay: 0.08 });
+    } else {
+      el.style.backgroundColor = HL_BG; el.style.borderLeftColor = HL_BORD;
+      const ln = el.querySelector('.ln'); if (ln) ln.style.color = 'var(--orange)';
+    }
+  });
+  if (newLines && newLines.length) {
+    const el = document.getElementById(`cl-${newLines[0]}`);
+    if (el) el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }
+}
+
+// ─── Node color ──────────────────────────────────────────────────────────────
+function setNodeColor(id, state, animate, dur = 0.3) {
+  const c  = COLORS[state] || COLORS.idle;
+  const nc = document.getElementById(`nc-${id}`);
+  const nt = document.getElementById(`nt-${id}`);
+  if (!nc) return;
+  if (animate) {
+    gsap.to(nc, { duration: dur, ease: 'power2.out', attr: { fill: c.fill, stroke: c.stroke } });
+    gsap.to(nt, { duration: dur, attr: { fill: c.text } });
+  } else {
+    nc.setAttribute('fill', c.fill); nc.setAttribute('stroke', c.stroke);
+    nt.setAttribute('fill', c.text);
+  }
+}
+
+// ─── Node position ────────────────────────────────────────────────────────────
+function setNodePos(id, x, y, animate, dur = 0.5) {
+  const nc = document.getElementById(`nc-${id}`);
+  const nt = document.getElementById(`nt-${id}`);
+  if (!nc) return;
+  if (animate) {
+    gsap.to(nc, { duration: dur, ease: 'power2.inOut', attr: { cx: x, cy: y } });
+    gsap.to(nt, { duration: dur, ease: 'power2.inOut', attr: { x: x, y: y } });
+  } else {
+    nc.setAttribute('cx', x); nc.setAttribute('cy', y);
+    nt.setAttribute('x', x); nt.setAttribute('y', y);
+  }
+}
+
+// ─── Edges ────────────────────────────────────────────────────────────────────
+let prevPositions = null;
+function redrawEdgesAt(edges, positions) {
+  const edgeG = document.getElementById('edges');
+  if (!edgeG) return;
+  edgeG.innerHTML = '';
+  edges.forEach(e => {
+    const a = positions[e.from], b = positions[e.to];
+    if (!a || !b) return;
+    // start at prev positions if available; tween to target
+    const sa = (prevPositions && prevPositions[e.from]) || a;
+    const sb = (prevPositions && prevPositions[e.to]) || b;
+    const line = svgEl('line', {
+      id: `edge-${e.from}-${e.to}`,
+      x1: sa.x, y1: sa.y, x2: sb.x, y2: sb.y,
+      stroke: EDGE_DEFAULT, 'stroke-width': 2, 'stroke-linecap': 'round',
+    });
+    edgeG.appendChild(line);
+    if (sa.x !== a.x || sa.y !== a.y || sb.x !== b.x || sb.y !== b.y) {
+      gsap.to(line, { duration: 0.5, ease: 'power2.inOut',
+        attr: { x1: a.x, y1: a.y, x2: b.x, y2: b.y } });
+    }
+  });
+  prevPositions = positions;
+}
+
+// ─── Call stack ──────────────────────────────────────────────────────────────
+function renderCallStack(stack, animate) {
+  const c = document.getElementById('call-stack');
+  c.innerHTML = '';
+  if (!stack.length) {
+    c.innerHTML = '<span class="cs-empty">empty</span>';
+    return;
+  }
+  stack.forEach((label, i) => {
+    const el = document.createElement('div');
+    el.className = 'cs-frame' + (i === stack.length - 1 ? ' top' : '');
+    el.textContent = label;
+    c.appendChild(el);
+    if (animate && i === stack.length - 1) {
+      gsap.from(el, { opacity: 0, x: -10, duration: 0.2 });
+    }
+  });
+}
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
+var nav = VizNav({
+  btnPrev: document.getElementById('btn-back'),
+  btnNext: document.getElementById('btn-next'),
+  btnPlay: document.getElementById('btn-play'),
+  speedSel: document.getElementById('speed-select'),
+  render: function(snap, cur, total) {
+    applyStep(snap, cur > 0);
+    var el = document.getElementById('phase-label');
+    if (el) el.textContent = 'Step ' + (cur + 1) + ' / ' + total + '  ·  ' + snap.phase;
+    var d = document.getElementById('step-desc');
+    if (d) d.textContent = snap.desc;
+  }
+});
+
+build();
+</script>
+<script>
+  if (window.self !== window.top) {
+    var bl = document.querySelector('.back-link');
+    if (bl) bl.style.display = 'none';
+  }
+</script>
+</body>
+</html>
