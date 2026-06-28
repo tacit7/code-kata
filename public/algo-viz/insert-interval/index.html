@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Insert Interval</title>
+  <link rel="stylesheet" href="../shared/style.css" />
+  <script src="../shared/gsap.min.js"></script>
+  <script src="../shared/viz.js"></script>
+  <style>
+    .viz-area { width: 100%; max-width: 90%; }
+    .main-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
+    .left-col, .right-col { display: flex; flex-direction: column; gap: 12px; }
+    @media (max-width: 700px) { .main-row { grid-template-columns: 1fr; } }
+
+    .timeline-panel {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 16px;
+      display: flex; flex-direction: column; gap: 10px;
+    }
+    .panel-title {
+      font-size: 0.72rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim);
+    }
+    #timeline-svg { width: 100%; display: block; overflow: visible; }
+
+    .panel-box {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 14px 16px;
+      display: flex; flex-direction: column; gap: 8px;
+    }
+
+    .var-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .var-box {
+      padding: 10px 8px; background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      display: flex; flex-direction: column; align-items: center; gap: 3px;
+    }
+    .var-box.accent-border  { border-color: var(--accent); }
+    .var-box.yellow-border  { border-color: var(--yellow); }
+    .var-box.purple-border  { border-color: #bb9af7; }
+    .var-label { font-size: 0.65rem; font-family: monospace; color: var(--text-faint); text-align: center; }
+    .var-val   { font-size: 1.1rem; font-weight: 700; color: var(--text-bright); font-family: monospace; }
+
+    .phase-box {
+      background: var(--bg); border: 1px solid var(--border-soft);
+      border-radius: var(--radius-sm); padding: 10px 12px;
+      display: flex; flex-direction: column; gap: 4px;
+    }
+    .phase-indicator {
+      display: flex; gap: 6px; flex-wrap: wrap;
+    }
+    .phase-pip {
+      padding: 3px 10px; border-radius: 5px; font-size: 0.75rem; font-weight: 700;
+      font-family: monospace; border: 1px solid var(--border); color: var(--text-faint);
+      background: var(--bg); transition: all 0.2s;
+    }
+    .phase-pip.active-before { background: #1a2b14; color: #9ece6a; border-color: #4d7a23; }
+    .phase-pip.active-merge  { background: #1a1535; color: #bb9af7; border-color: #6b4fa0; }
+    .phase-pip.active-after  { background: #0d1a35; color: #7aa2f7; border-color: #3b5ba0; }
+    .phase-pip.done          { opacity: 0.45; }
+
+    .result-badge {
+      font-size: 0.82rem; font-weight: 600; padding: 5px 12px; border-radius: 6px;
+      font-family: monospace; display: none;
+    }
+    .result-badge.show { display: block; background: #1a2b14; color: #9ece6a; border: 1px solid #4d7a23; }
+
+    .code-panel {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); overflow: hidden;
+    }
+    .code-header { padding: 8px 14px; font-size: 0.72rem; font-weight: 600; color: var(--text-dim); border-bottom: 1px solid var(--border); background: var(--bg); }
+    .code-body { padding: 10px 0; font-size: 0.78rem; line-height: 1.75; white-space: pre; }
+    .code-line { display: flex; align-items: center; padding: 0 14px; }
+    .code-line.hl { background: var(--border-soft); border-left: 2px solid var(--accent); }
+    .ln { min-width: 24px; color: var(--text-ghost); user-select: none; font-size: 0.7rem; }
+
+    .btn-play {
+      background: #15803d; border: none; border-radius: var(--radius-sm);
+      color: #fff; cursor: pointer; font-size: 0.88rem; font-weight: 600;
+      padding: 9px 16px; transition: background 0.2s;
+    }
+    .btn-play:hover { background: #166534; }
+    .btn-play.playing { background: #c2410c; }
+    .btn-play.playing:hover { background: #9a3412; }
+    .btn-play:disabled { opacity: 0.4; cursor: not-allowed; }
+    .speed-select {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); color: var(--text);
+      font-size: 0.85rem; padding: 8px 10px; outline: none; width: 80px;
+    }
+    .nav-row { display: flex; gap: 8px; align-items: center; }
+
+    .preset-row { display: flex; gap: 8px; flex-wrap: wrap; }
+    .btn-preset {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); color: var(--text-dim);
+      font-size: 0.78rem; padding: 5px 10px; cursor: pointer;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .btn-preset:hover { border-color: var(--accent); color: var(--accent-pale); }
+    .btn-preset.active { border-color: var(--accent); color: var(--accent-pale); background: var(--surface-dark); }
+
+    .legend-row { display: flex; align-items: center; gap: 8px; font-size: 0.78rem; color: var(--text-muted); }
+    .legend-swatch { width: 28px; height: 14px; border-radius: 3px; flex-shrink: 0; }
+
+    .kw { color: #bb9af7; }
+    .fn { color: #7dcfff; }
+    .bi { color: #ff9e64; }
+    .op { color: #c0caf5; }
+    .nb { color: #9ece6a; }
+    .cm { color: #3b4261; }
+    .st { color: #e0af68; }
+  </style>
+</head>
+<body class="page">
+
+<div class="page-header">
+  <a class="back-link" href="../index.html">&larr; All Algorithms</a>
+  <div class="page-title">Insert Interval</div>
+  <div class="page-sub">LeetCode 57 &middot; Three-phase sweep: copy left, merge overlapping, copy right &middot; O(n) time &middot; O(n) space</div>
+</div>
+
+<div class="controls">
+  <div class="field">
+    <label>Preset</label>
+    <div class="preset-row" id="preset-row">
+      <button class="btn-preset active" onclick="loadPreset(0,this)">Gap left</button>
+      <button class="btn-preset" onclick="loadPreset(1,this)">Full overlap</button>
+      <button class="btn-preset" onclick="loadPreset(2,this)">Append right</button>
+    </div>
+  </div>
+  <div class="field">
+    <label>Existing intervals (flat pairs: s,e,...)</label>
+    <input id="inp-intervals" type="text" value="1,3,6,9,12,15" style="width:200px" />
+  </div>
+  <div class="field">
+    <label>New interval</label>
+    <input id="inp-new" type="text" value="2,7" style="width:80px" />
+  </div>
+  <button class="btn-primary" onclick="buildAndRun()">Build &amp; Run</button>
+</div>
+
+<div class="viz-area">
+  <div class="main-row">
+    <div class="left-col">
+      <div class="timeline-panel">
+        <div class="panel-title">Timeline</div>
+        <svg id="timeline-svg" viewBox="0 0 700 100" preserveAspectRatio="xMidYMid meet">
+          <text x="350" y="55" text-anchor="middle" fill="#3b4261" font-size="13" font-family="monospace">Run simulation to see timeline</text>
+        </svg>
+      </div>
+      <div class="code-panel">
+        <div class="code-header">Python</div>
+        <div class="code-body" id="code-body"></div>
+      </div>
+    </div>
+
+    <div class="right-col">
+      <div style="display:flex;gap:12px">
+        <div class="panel-box" style="flex:0 0 auto">
+          <div class="nav-row">
+            <button class="btn-step" id="btn-prev" disabled>&larr;</button>
+            <button class="btn-step" id="btn-next" disabled>&rarr;</button>
+            <button class="btn-play" id="btn-play" disabled>&#9654; Play</button>
+            <select class="speed-select" id="speed-sel">
+              <option value="900">Slow</option>
+              <option value="450" selected>Medium</option>
+              <option value="150">Fast</option>
+            </select>
+          </div>
+        </div>
+        <div class="panel-box" style="flex:1;min-width:0">
+          <div class="panel-title" id="phase-label">&mdash;</div>
+          <div style="font-size:0.82rem;color:var(--text-muted);margin-top:2px" id="step-desc">Choose a preset and click Build &amp; Run.</div>
+          <div class="result-badge" id="result-badge"></div>
+        </div>
+      </div>
+
+      <div class="panel-box">
+        <div class="panel-title">Phase Tracker</div>
+        <div class="phase-box">
+          <div class="phase-indicator">
+            <span class="phase-pip" id="pip-before">① Before</span>
+            <span class="phase-pip" id="pip-merge">② Merge</span>
+            <span class="phase-pip" id="pip-after">③ After</span>
+          </div>
+        </div>
+        <div class="var-grid">
+          <div class="var-box yellow-border">
+            <div class="var-label">current interval</div>
+            <div class="var-val" id="vv-curr">&mdash;</div>
+          </div>
+          <div class="var-box purple-border">
+            <div class="var-label">new interval (growing)</div>
+            <div class="var-val" id="vv-new">&mdash;</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel-box">
+        <div class="panel-title">Legend</div>
+        <div style="display:flex;flex-direction:column;gap:7px">
+          <div class="legend-row">
+            <div class="legend-swatch" style="background:#1a1535;border:1.5px solid #bb9af7"></div>
+            <span>New interval (to insert / growing)</span>
+          </div>
+          <div class="legend-row">
+            <div class="legend-swatch" style="background:#2a2007;border:1.5px solid #e0af68"></div>
+            <span>Current existing interval (being compared)</span>
+          </div>
+          <div class="legend-row">
+            <div class="legend-swatch" style="background:#1a2b14;border:1.5px solid #4d7a23"></div>
+            <span>Result interval (finalised)</span>
+          </div>
+          <div class="legend-row">
+            <div class="legend-swatch" style="background:#1a1b26;border:1.5px solid #414868"></div>
+            <span>Pending — not yet processed</span>
+          </div>
+          <div class="legend-row">
+            <div class="legend-swatch" style="background:#1e1e2e;border:1.5px solid #292e42;opacity:0.6"></div>
+            <span>Already processed (passed over)</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+var PRESETS = [
+  { label: 'Gap left',     intervals: '1,3,6,9,12,15', newIv: '2,7'  },
+  { label: 'Full overlap', intervals: '1,2,3,5,6,7,8,10,12,16', newIv: '4,9' },
+  { label: 'Append right', intervals: '1,3,6,9',        newIv: '11,14' },
+];
+
+var simSteps = [], nav;
+var activePresetIdx = 0;
+
+var CODE = [
+  [1,  '<span class="kw">def</span> <span class="fn">insert</span><span class="op">(</span>intervals<span class="op">,</span> newInterval<span class="op">):</span>'],
+  [2,  '    res <span class="op">=</span> <span class="op">[]</span>'],
+  [3,  '    <span class="kw">for</span> i<span class="op">,</span> iv <span class="kw">in</span> <span class="bi">enumerate</span><span class="op">(</span>intervals<span class="op">):</span>'],
+  [4,  '        <span class="cm"># Phase 1 – iv ends before new starts</span>'],
+  [5,  '        <span class="kw">if</span> iv<span class="op">[</span><span class="nb">1</span><span class="op">]</span> <span class="op">&lt;</span> newInterval<span class="op">[</span><span class="nb">0</span><span class="op">]:</span>'],
+  [6,  '            res<span class="op">.</span><span class="bi">append</span><span class="op">(</span>iv<span class="op">)</span>'],
+  [7,  '        <span class="cm"># Phase 2 – iv overlaps new interval</span>'],
+  [8,  '        <span class="kw">elif</span> iv<span class="op">[</span><span class="nb">0</span><span class="op">]</span> <span class="op">&lt;=</span> newInterval<span class="op">[</span><span class="nb">1</span><span class="op">]:</span>'],
+  [9,  '            newInterval<span class="op">[</span><span class="nb">0</span><span class="op">]</span> <span class="op">=</span> <span class="bi">min</span><span class="op">(</span>newInterval<span class="op">[</span><span class="nb">0</span><span class="op">],</span> iv<span class="op">[</span><span class="nb">0</span><span class="op">])</span>'],
+  [10, '            newInterval<span class="op">[</span><span class="nb">1</span><span class="op">]</span> <span class="op">=</span> <span class="bi">max</span><span class="op">(</span>newInterval<span class="op">[</span><span class="nb">1</span><span class="op">],</span> iv<span class="op">[</span><span class="nb">1</span><span class="op">])</span>'],
+  [11, '        <span class="cm"># Phase 3 – iv starts after new ends</span>'],
+  [12, '        <span class="kw">else</span><span class="op">:</span>'],
+  [13, '            res<span class="op">.</span><span class="bi">append</span><span class="op">(</span>newInterval<span class="op">)</span>'],
+  [14, '            newInterval <span class="op">=</span> iv'],
+  [15, '    res<span class="op">.</span><span class="bi">append</span><span class="op">(</span>newInterval<span class="op">)</span>'],
+  [16, '    <span class="kw">return</span> res'],
+];
+
+window.addEventListener('DOMContentLoaded', function() {
+  buildCodePanel();
+  loadPreset(0, document.querySelector('.btn-preset'));
+
+  nav = VizNav({
+    btnPrev: document.getElementById('btn-prev'),
+    btnNext: document.getElementById('btn-next'),
+    btnPlay: document.getElementById('btn-play'),
+    speedSel: document.getElementById('speed-sel'),
+    render: function(snap, cur, total) {
+      renderStep(snap, cur > 0);
+      var phaseEl = document.getElementById('phase-label');
+      var descEl  = document.getElementById('step-desc');
+      if (phaseEl) phaseEl.textContent = 'Step ' + (cur + 1) + ' / ' + total + '  ·  ' + snap.phase;
+      if (descEl) {
+        gsap.fromTo(descEl, { opacity: 0 }, { opacity: 1, duration: 0.15 });
+        descEl.textContent = snap.desc;
+      }
+      var badge = document.getElementById('result-badge');
+      if (badge) {
+        badge.className = 'result-badge';
+        badge.textContent = '';
+        if (snap.phase === 'Done') {
+          badge.className = 'result-badge show';
+          badge.textContent = 'Result: ' + snap.result.map(fmtIv).join(', ');
+        }
+      }
+    }
+  });
+});
+
+function buildCodePanel() {
+  var body = document.getElementById('code-body');
+  body.innerHTML = CODE.map(function(e) {
+    return '<div class="code-line" id="cl-' + e[0] + '"><span class="ln">' + e[0] + '</span><span>' + e[1] + '</span></div>';
+  }).join('');
+}
+
+function loadPreset(idx, btn) {
+  activePresetIdx = idx;
+  document.querySelectorAll('.btn-preset').forEach(function(b) { b.classList.remove('active'); });
+  if (btn) btn.classList.add('active');
+  document.getElementById('inp-intervals').value = PRESETS[idx].intervals;
+  document.getElementById('inp-new').value       = PRESETS[idx].newIv;
+}
+
+function parseIntervals(raw) {
+  var nums = raw.split(',').map(function(s) { return parseInt(s.trim(), 10); }).filter(function(n) { return !isNaN(n); });
+  var result = [];
+  for (var i = 0; i + 1 < nums.length; i += 2) {
+    if (nums[i] <= nums[i + 1]) result.push([nums[i], nums[i + 1]]);
+  }
+  return result;
+}
+
+function buildAndRun() {
+  var intervals = parseIntervals(document.getElementById('inp-intervals').value);
+  var newParsed  = parseIntervals(document.getElementById('inp-new').value);
+  if (intervals.length < 1 || newParsed.length < 1) {
+    alert('Need at least 1 existing interval and a valid new interval.');
+    return;
+  }
+  simSteps = simulate(intervals, newParsed[0].slice());
+  nav.load(simSteps);
+}
+
+// ── Simulation ───────────────────────────────────────────────────────────────
+function fmtIv(iv) { return '[' + iv[0] + ',' + iv[1] + ']'; }
+
+// phase: 'before' | 'merge' | 'after' | 'done'
+function simulate(intervals, newInterval) {
+  var steps = [];
+  var res   = [];
+  var newIv = newInterval.slice();
+
+  function snap(phase, desc, lines, opts) {
+    opts = opts || {};
+    steps.push({
+      phase:      phase,
+      desc:       desc,
+      lines:      lines,
+      intervals:  intervals.slice(),
+      currentIdx: opts.currentIdx !== undefined ? opts.currentIdx : -1,
+      newIv:      (opts.newIv || newIv).slice(),
+      result:     (opts.result || res).map(function(x) { return x.slice(); }),
+      sweepPhase: opts.sweepPhase || 'before',
+      newInserted: !!opts.newInserted,
+    });
+  }
+
+  // Initial state
+  snap('Input', 'Input: ' + intervals.length + ' existing intervals + new interval ' + fmtIv(newIv) + '. Will sweep left-to-right in three phases.', [1, 2], {
+    sweepPhase: 'before',
+    result: [],
+    currentIdx: -1,
+  });
+
+  var newInserted = false;
+
+  for (var i = 0; i < intervals.length; i++) {
+    var iv = intervals[i];
+
+    if (iv[1] < newIv[0]) {
+      // Phase 1: interval ends before new starts — copy as-is
+      snap('Phase ①', fmtIv(iv) + ' ends at ' + iv[1] + ' before new starts at ' + newIv[0] + ' → copy to result.', [3, 5, 6], {
+        currentIdx: i,
+        sweepPhase: 'before',
+        result: res.slice(),
+        newIv: newIv.slice(),
+      });
+      res.push(iv.slice());
+    } else if (iv[0] <= newIv[1]) {
+      // Phase 2: overlap — expand new interval
+      var oldNew = newIv.slice();
+      newIv[0] = Math.min(newIv[0], iv[0]);
+      newIv[1] = Math.max(newIv[1], iv[1]);
+      snap('Phase ②', fmtIv(iv) + ' overlaps new interval. Expand: [min(' + oldNew[0] + ',' + iv[0] + '), max(' + oldNew[1] + ',' + iv[1] + ')] = ' + fmtIv(newIv) + '.', [3, 8, 9, 10], {
+        currentIdx: i,
+        sweepPhase: 'merge',
+        result: res.slice(),
+        newIv: newIv.slice(),
+      });
+    } else {
+      // Phase 3: interval starts after new ends — flush new, then copy
+      if (!newInserted) {
+        snap('Phase ③', 'New interval ' + fmtIv(newIv) + ' is fully placed. Flush it to result, then copy ' + fmtIv(iv) + '.', [3, 12, 13, 14], {
+          currentIdx: i,
+          sweepPhase: 'after',
+          result: res.concat([newIv.slice()]),
+          newIv: iv.slice(),
+          newInserted: true,
+        });
+        res.push(newIv.slice());
+        newIv = iv.slice();
+        newInserted = true;
+      } else {
+        snap('Phase ③', fmtIv(iv) + ' starts after new ends → copy to result.', [3, 12, 13, 14], {
+          currentIdx: i,
+          sweepPhase: 'after',
+          result: res.slice(),
+          newIv: newIv.slice(),
+          newInserted: true,
+        });
+        res.push(newIv.slice());
+        newIv = iv.slice();
+      }
+    }
+  }
+
+  // Final flush
+  res.push(newIv.slice());
+  snap('Done', 'All intervals processed. Append remaining new interval ' + fmtIv(newIv) + '. Result: ' + res.map(fmtIv).join(', '), [15, 16], {
+    currentIdx: -1,
+    sweepPhase: 'done',
+    result: res.slice(),
+    newIv: newIv.slice(),
+    newInserted: true,
+  });
+
+  return steps;
+}
+
+// ── Render ───────────────────────────────────────────────────────────────────
+function renderStep(snap, animate) {
+  renderSVG(snap, animate);
+  renderVars(snap, animate);
+  renderCode(snap.lines);
+  renderPhase(snap.sweepPhase);
+}
+
+var C = {
+  pending:   { fill: '#1a1b26', stroke: '#414868', text: '#565f89' },
+  processed: { fill: '#1e1e2e', stroke: '#292e42', text: '#3b4261' },
+  current:   { fill: '#2a2007', stroke: '#e0af68', text: '#e0af68' },
+  newIv:     { fill: '#1a1535', stroke: '#bb9af7', text: '#bb9af7' },
+  completed: { fill: '#1a2b14', stroke: '#4d7a23', text: '#9ece6a' },
+  axis:      '#414868',
+  axisText:  '#565f89',
+  label:     '#3b4261',
+  divider:   '#292e42',
+};
+
+function renderSVG(snap, animate) {
+  var svg = document.getElementById('timeline-svg');
+  if (!snap.intervals || snap.intervals.length === 0) return;
+
+  var n = snap.intervals.length;
+  var W = 700;
+  var PAD_L = 58;
+  var PAD_R = 24;
+  var CW = W - PAD_L - PAD_R;
+  var BAR_H = 20;
+  var ROW_H = 28;
+
+  // Compute value range across all data
+  var allVals = [];
+  snap.intervals.forEach(function(iv) { allVals.push(iv[0], iv[1]); });
+  allVals.push(snap.newIv[0], snap.newIv[1]);
+  snap.result.forEach(function(iv) { allVals.push(iv[0], iv[1]); });
+  var minV = Math.min.apply(null, allVals);
+  var maxV = Math.max.apply(null, allVals);
+  var span = maxV - minV || 1;
+  var vPad = span * 0.08;
+  var vMin = minV - vPad;
+  var vMax = maxV + vPad;
+
+  function xS(v) { return PAD_L + (v - vMin) / (vMax - vMin) * CW; }
+
+  var AXIS_Y  = 22;
+  var INP_Y0  = 42;
+  var DIV1_Y  = INP_Y0 + n * ROW_H + 8;
+  var NEW_Y0  = DIV1_Y + 22;
+  var DIV2_Y  = NEW_Y0 + ROW_H + 6;
+  var RES_Y0  = DIV2_Y + 22;
+  var TOTAL_H = RES_Y0 + ROW_H + 12;
+
+  svg.setAttribute('viewBox', '0 0 ' + W + ' ' + TOTAL_H);
+
+  var parts = [];
+
+  // Axis
+  var rawStep = span / 5;
+  var step = Math.max(1, Math.round(rawStep));
+  var tickStart = Math.ceil(minV / step) * step;
+  parts.push('<line x1="' + PAD_L + '" y1="' + AXIS_Y + '" x2="' + (W - PAD_R) + '" y2="' + AXIS_Y + '" stroke="' + C.axis + '" stroke-width="1"/>');
+  for (var tv = tickStart; tv <= maxV; tv += step) {
+    var tx = xS(tv);
+    parts.push('<line x1="' + tx + '" y1="' + (AXIS_Y - 4) + '" x2="' + tx + '" y2="' + (AXIS_Y + 4) + '" stroke="' + C.axis + '" stroke-width="1"/>');
+    parts.push('<text x="' + tx + '" y="' + (AXIS_Y + 16) + '" text-anchor="middle" fill="' + C.axisText + '" font-size="10" font-family="monospace">' + tv + '</text>');
+  }
+
+  // Section: INPUTS
+  parts.push('<text x="' + (PAD_L - 4) + '" y="' + (INP_Y0 - 6) + '" text-anchor="end" fill="' + C.label + '" font-size="10" font-weight="600" letter-spacing="0.05em">INPUTS</text>');
+
+  snap.intervals.forEach(function(iv, idx) {
+    var barY = INP_Y0 + idx * ROW_H;
+    var barCy = barY + BAR_H / 2;
+    var x1 = xS(iv[0]);
+    var x2 = xS(iv[1]);
+    var bw = Math.max(x2 - x1, 2);
+
+    var style;
+    if (idx === snap.currentIdx)                          style = C.current;
+    else if (snap.currentIdx >= 0 && idx < snap.currentIdx) style = C.processed;
+    else                                                   style = C.pending;
+
+    parts.push('<text x="' + (PAD_L - 5) + '" y="' + (barCy + 4) + '" text-anchor="end" fill="' + style.text + '" font-size="10" font-family="monospace">' + fmtIv(iv) + '</text>');
+    parts.push('<rect x="' + x1 + '" y="' + barY + '" width="' + bw + '" height="' + BAR_H + '" rx="4" fill="' + style.fill + '" stroke="' + style.stroke + '" stroke-width="1.5"/>');
+    if (bw > 30) {
+      parts.push('<text x="' + (x1 + bw / 2) + '" y="' + (barCy + 4) + '" text-anchor="middle" fill="' + style.text + '" font-size="9.5" font-family="monospace" font-weight="600">' + fmtIv(iv) + '</text>');
+    }
+  });
+
+  // Divider 1
+  parts.push('<line x1="' + (PAD_L - 10) + '" y1="' + DIV1_Y + '" x2="' + (W - PAD_R) + '" y2="' + DIV1_Y + '" stroke="' + C.divider + '" stroke-dasharray="4,4"/>');
+
+  // Section: NEW INTERVAL
+  parts.push('<text x="' + (PAD_L - 4) + '" y="' + (NEW_Y0 - 5) + '" text-anchor="end" fill="' + C.label + '" font-size="10" font-weight="600" letter-spacing="0.05em">NEW IV</text>');
+
+  var niv  = snap.newIv;
+  var nx1  = xS(niv[0]);
+  var nx2  = xS(niv[1]);
+  var nbw  = Math.max(nx2 - nx1, 2);
+  var ncy  = NEW_Y0 + BAR_H / 2;
+  parts.push('<rect x="' + nx1 + '" y="' + NEW_Y0 + '" width="' + nbw + '" height="' + BAR_H + '" rx="4" fill="' + C.newIv.fill + '" stroke="' + C.newIv.stroke + '" stroke-width="2"/>');
+  if (nbw > 28) {
+    parts.push('<text x="' + (nx1 + nbw / 2) + '" y="' + (ncy + 4) + '" text-anchor="middle" fill="' + C.newIv.text + '" font-size="9.5" font-family="monospace" font-weight="700">' + fmtIv(niv) + '</text>');
+  }
+
+  // Divider 2
+  parts.push('<line x1="' + (PAD_L - 10) + '" y1="' + DIV2_Y + '" x2="' + (W - PAD_R) + '" y2="' + DIV2_Y + '" stroke="' + C.divider + '" stroke-dasharray="4,4"/>');
+
+  // Section: RESULT
+  parts.push('<text x="' + (PAD_L - 4) + '" y="' + (RES_Y0 - 5) + '" text-anchor="end" fill="' + C.label + '" font-size="10" font-weight="600" letter-spacing="0.05em">RESULT</text>');
+
+  if (snap.result.length > 0) {
+    snap.result.forEach(function(iv) {
+      var rx1 = xS(iv[0]);
+      var rx2 = xS(iv[1]);
+      var rbw = Math.max(rx2 - rx1, 2);
+      var rcy = RES_Y0 + BAR_H / 2;
+      parts.push('<rect x="' + rx1 + '" y="' + RES_Y0 + '" width="' + rbw + '" height="' + BAR_H + '" rx="4" fill="' + C.completed.fill + '" stroke="' + C.completed.stroke + '" stroke-width="1.5"/>');
+      if (rbw > 28) {
+        parts.push('<text x="' + (rx1 + rbw / 2) + '" y="' + (rcy + 4) + '" text-anchor="middle" fill="' + C.completed.text + '" font-size="9.5" font-family="monospace" font-weight="600">' + fmtIv(iv) + '</text>');
+      }
+    });
+  } else {
+    parts.push('<text x="' + (PAD_L + 10) + '" y="' + (RES_Y0 + 13) + '" fill="' + C.label + '" font-size="10" font-family="monospace">building…</text>');
+  }
+
+  // Vertical guide lines during merge phase
+  if (snap.sweepPhase === 'merge' && snap.currentIdx >= 0) {
+    var iv = snap.intervals[snap.currentIdx];
+    var lineX = xS(snap.newIv[1]);
+    parts.push('<line x1="' + lineX + '" y1="' + (INP_Y0 + snap.currentIdx * ROW_H) + '" x2="' + lineX + '" y2="' + (NEW_Y0 + BAR_H) + '" stroke="#bb9af7" stroke-width="1" stroke-dasharray="3,3" opacity="0.5"/>');
+  }
+
+  svg.innerHTML = parts.join('');
+}
+
+function renderVars(snap, animate) {
+  function setVal(id, val) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    var text = (val === null || val === undefined) ? '—' : val;
+    if (animate && el.textContent !== text) {
+      gsap.fromTo(el, { scale: 0.85, opacity: 0.4 }, { scale: 1, opacity: 1, duration: 0.2, ease: 'back.out(1.7)' });
+    }
+    el.textContent = text;
+  }
+
+  var cur = snap.currentIdx >= 0 ? snap.intervals[snap.currentIdx] : null;
+  setVal('vv-curr', cur ? fmtIv(cur) : null);
+  setVal('vv-new',  fmtIv(snap.newIv));
+}
+
+function renderPhase(sweepPhase) {
+  var pips = {
+    before: document.getElementById('pip-before'),
+    merge:  document.getElementById('pip-merge'),
+    after:  document.getElementById('pip-after'),
+  };
+  Object.keys(pips).forEach(function(key) {
+    pips[key].className = 'phase-pip';
+  });
+  if (sweepPhase === 'before') {
+    pips.before.classList.add('active-before');
+    pips.merge.classList.add('done');
+    pips.after.classList.add('done');
+  } else if (sweepPhase === 'merge') {
+    pips.before.classList.add('done');
+    pips.merge.classList.add('active-merge');
+    pips.after.classList.add('done');
+  } else if (sweepPhase === 'after' || sweepPhase === 'done') {
+    pips.before.classList.add('done');
+    pips.merge.classList.add('done');
+    pips.after.classList.add('active-after');
+  }
+}
+
+function renderCode(lines) {
+  CODE.forEach(function(e) {
+    var el = document.getElementById('cl-' + e[0]);
+    if (!el) return;
+    if (lines.indexOf(e[0]) >= 0) el.classList.add('hl');
+    else el.classList.remove('hl');
+  });
+}
+</script>
+<script>
+  if (window.self !== window.top) {
+    var bl = document.querySelector('.back-link');
+    if (bl) bl.style.display = 'none';
+  }
+</script>
+</body>
+</html>
