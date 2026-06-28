@@ -35,7 +35,17 @@ type VizKataName =
   | "Jump Game"
   | "Invert Binary Tree"
   | "Max Depth of Binary Tree"
-  | "Same Tree";
+  | "Same Tree"
+  | "Coin Change"
+  | "Longest Increasing Subsequence"
+  | "Number of Islands"
+  | "Binary Tree Level Order"
+  | "Binary Tree Right Side View"
+  | "House Robber II"
+  | "Balanced Binary Tree"
+  | "Reverse Bits"
+  | "Diameter of Binary Tree"
+  | "Decode Ways";
 
 // Kata name → algo-viz subfolder served from /algo-viz/<folder>/index.html
 const VIZ_MAP: Partial<Record<VizKataName, string>> = {
@@ -60,6 +70,16 @@ const VIZ_MAP: Partial<Record<VizKataName, string>> = {
   "Invert Binary Tree":           "invert-binary-tree",
   "Max Depth of Binary Tree":     "max-depth-tree",
   "Same Tree":                    "same-tree",
+  "Coin Change":                  "coin-change",
+  "Longest Increasing Subsequence": "lis",
+  "Number of Islands":            "num-islands",
+  "Binary Tree Level Order":      "level-order",
+  "Binary Tree Right Side View":  "right-side-view",
+  "House Robber II":              "house-robber-2",
+  "Balanced Binary Tree":         "balanced-tree",
+  "Reverse Bits":                 "reverse-bits",
+  "Diameter of Binary Tree":      "diameter-tree",
+  "Decode Ways":                  "decode-ways",
 };
 
 // Overrides for slugs that can't be reliably derived from the display name
