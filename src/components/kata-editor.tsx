@@ -14,13 +14,30 @@ import type { Kata, TestResult } from "../types/editor";
 // Matches "Ref: LeetCode #123 Problem Name" at the end of a description
 const LC_REF_RE = /Ref:\s*LeetCode\s*#(\d+)\s+(.+)$/m;
 
+// Overrides for slugs that can't be reliably derived from the display name
+const LC_SLUG_OVERRIDES: Record<number, string> = {
+  50: "powx-n",
+  167: "two-sum-ii-input-array-is-sorted",
+};
+
+function lcSlug(problemNum: number, rawName: string): string {
+  if (LC_SLUG_OVERRIDES[problemNum]) return LC_SLUG_OVERRIDES[problemNum];
+  return rawName
+    .replace(/\s*\(closest match\)\s*/gi, " ") // strip annotation, keep real parens like "Pow(x, n)"
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/-+$/, "")
+    .replace(/^-+/, "");
+}
+
 function DescriptionWithLink({ text }: { text: string }) {
   const match = text.match(LC_REF_RE);
   if (!match) {
     return <span className="whitespace-pre-wrap">{text}</span>;
   }
-  const [fullMatch, , problemName] = match;
-  const slug = problemName.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/-+$/, "");
+  const [fullMatch, numStr, problemName] = match;
+  const slug = lcSlug(parseInt(numStr, 10), problemName.trim());
   const url = `https://leetcode.com/problems/${slug}/`;
   const before = text.slice(0, match.index);
   return (
