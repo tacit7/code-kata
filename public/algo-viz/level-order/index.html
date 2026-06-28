@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Binary Tree Level Order Traversal</title>
+  <link rel="stylesheet" href="../shared/style.css" />
+  <script src="../shared/gsap.min.js"></script>
+  <script src="../shared/viz.js"></script>
+  <style>
+    .viz-area {
+      width: 100%; max-width: 90%;
+      display: flex; flex-direction: column; gap: 12px;
+    }
+
+    .tree-wrap {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+    }
+    #tree-svg { display: block; width: 100%; }
+
+    .bottom-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      align-items: start;
+    }
+    @media (max-width: 680px) { .bottom-row { grid-template-columns: 1fr; } }
+
+    /* Queue panel */
+    #queue-pills {
+      display: flex; flex-wrap: wrap; gap: 8px;
+      min-height: 36px; align-items: center;
+    }
+    .q-pill {
+      background: rgba(var(--orange-ch), 0.15);
+      border: 1px solid var(--orange);
+      border-radius: 6px;
+      padding: 4px 13px;
+      font-size: 0.88rem; font-weight: 700;
+      color: var(--orange);
+      font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    }
+    .q-arrow {
+      color: var(--text-faint); font-size: 0.75rem;
+      align-self: center;
+    }
+    .panel-empty { color: var(--text-faint); font-size: 0.82rem; font-style: italic; }
+
+    /* Result panel */
+    #result-rows {
+      display: flex; flex-direction: column; gap: 7px;
+      min-height: 40px;
+    }
+    .result-level {
+      display: flex; align-items: center; gap: 8px;
+    }
+    .level-badge {
+      font-size: 0.63rem; font-weight: 700;
+      color: var(--text-dim); width: 26px; flex-shrink: 0;
+      text-align: right; font-family: 'JetBrains Mono', monospace;
+    }
+    .level-vals {
+      display: flex; gap: 5px; flex-wrap: wrap; align-items: center;
+    }
+    .lv-pill {
+      background: rgba(var(--green-ch), 0.12);
+      border: 1px solid var(--green-border);
+      border-radius: 5px;
+      padding: 2px 9px;
+      font-size: 0.83rem; font-weight: 600;
+      color: var(--green);
+      font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    }
+    .lv-pill.partial {
+      background: rgba(var(--orange-ch), 0.08);
+      border-color: rgba(var(--orange-ch), 0.4);
+      color: var(--orange); opacity: 0.7;
+    }
+    .lv-dots {
+      color: var(--text-faint); font-size: 0.78rem;
+    }
+  </style>
+</head>
+<body class="page">
+
+<div class="page-header">
+  <a class="back-link" href="../index.html">← All Algorithms</a>
+  <h1 class="page-title">Binary Tree Level Order Traversal</h1>
+</div>
+
+<div class="controls">
+  <div class="field">
+    <label>Level-order input (null for empty nodes)</label>
+    <input id="inp-tree" type="text" value="3,9,20,null,null,15,7" style="width:280px" />
+  </div>
+  <button class="btn-primary" onclick="build()">Build</button>
+</div>
+
+<div class="viz-area">
+
+  <div class="tree-wrap">
+    <svg id="tree-svg" viewBox="0 0 800 320"
+         preserveAspectRatio="xMidYMid meet"></svg>
+  </div>
+
+  <div class="status-bar" style="max-width:100%">
+    <span class="phase-label" id="phase-label">—</span>
+    <span class="step-desc"   id="step-desc">Click Build to start.</span>
+  </div>
+
+  <div class="bottom-row">
+
+    <div class="panel-box">
+      <div class="panel-title">Queue <span class="panel-sub">(front → back)</span></div>
+      <div id="queue-pills"><span class="panel-empty">empty</span></div>
+    </div>
+
+    <div class="panel-box">
+      <div class="panel-title">Result <span class="panel-sub">(levels collected)</span></div>
+      <div id="result-rows"><span class="panel-empty">none yet</span></div>
+    </div>
+
+  </div>
+
+</div>
+
+<div class="legend">
+  <div class="leg-item">
+    <svg width="14" height="14"><circle cx="7" cy="7" r="6" fill="#1e2130" stroke="#2d3148" stroke-width="2"/></svg>
+    Unvisited
+  </div>
+  <div class="leg-item">
+    <svg width="14" height="14"><circle cx="7" cy="7" r="6" fill="rgba(255,158,100,0.18)" stroke="#ff9e64" stroke-width="2"/></svg>
+    In Queue
+  </div>
+  <div class="leg-item">
+    <svg width="14" height="14"><circle cx="7" cy="7" r="6" fill="#4338ca" stroke="#7aa2f7" stroke-width="2"/></svg>
+    Processing
+  </div>
+  <div class="leg-item">
+    <svg width="14" height="14"><circle cx="7" cy="7" r="6" fill="#052e16" stroke="#16a34a" stroke-width="2"/></svg>
+    Done
+  </div>
+</div>
+
+<div class="step-nav">
+  <button class="btn-step" id="btn-back" disabled>← Back</button>
+  <button class="btn-step" id="btn-next" disabled>Next →</button>
+  <button id="btn-play" style="background:#15803d;color:#fff;border:none;border-radius:4px;padding:6px 14px;font-weight:600;cursor:pointer">&#9654; Play</button>
+  <select id="speed-select" style="background:var(--bg);border:1px solid var(--border);color:var(--text);border-radius:4px;padding:6px 8px;font-size:0.85rem">
+    <option value="700">Slow</option>
+    <option value="350" selected>Medium</option>
+    <option value="120">Fast</option>
+  </select>
+</div>
+
+<script>
+// ─── Node state colors ────────────────────────────────────────────────────────
+const COLORS = {
+  idle:    { fill: '#1e2130',             stroke: '#2d3148',          text: 'var(--text-muted)' },
+  queued:  { fill: 'rgba(255,158,100,0.18)', stroke: '#ff9e64',       text: '#ff9e64' },
+  active:  { fill: '#4338ca',             stroke: 'var(--accent)',     text: 'var(--accent-pale)' },
+  done:    { fill: '#052e16',             stroke: '#16a34a',           text: 'var(--green)' },
+};
+const EDGE_DEFAULT = '#2d3148';
+
+// ─── Global state ─────────────────────────────────────────────────────────────
+let nodeMap = {};
+let R = 22;
+let VW = 800, VH = 320;
+
+// ─── Parse ────────────────────────────────────────────────────────────────────
+function parseLevelOrder(s) {
+  return s.split(',').map(t => t.trim()).map(t =>
+    (t === '' || t.toLowerCase() === 'null' || t === 'n') ? null : Number(t)
+  );
+}
+
+// ─── Build tree ───────────────────────────────────────────────────────────────
+let nextId = 0;
+function buildTree(vals) {
+  nodeMap = {};
+  nextId = 0;
+  if (!vals.length || vals[0] === null) return null;
+  const makeNode = val => {
+    const n = { id: nextId++, val, left: null, right: null, x: 0, y: 0, depth: 0 };
+    nodeMap[n.id] = n;
+    return n;
+  };
+  const root = makeNode(vals[0]);
+  const q = [root];
+  let i = 1;
+  while (q.length && i < vals.length) {
+    const cur = q.shift();
+    if (i < vals.length) {
+      if (vals[i] !== null) { cur.left = makeNode(vals[i]); cur.left.depth = cur.depth + 1; q.push(cur.left); }
+      i++;
+    }
+    if (i < vals.length) {
+      if (vals[i] !== null) { cur.right = makeNode(vals[i]); cur.right.depth = cur.depth + 1; q.push(cur.right); }
+      i++;
+    }
+  }
+  return root;
+}
+
+// ─── Layout ───────────────────────────────────────────────────────────────────
+function layout(root) {
+  let idx = 0, maxDepth = 0;
+  function inorder(n) {
+    if (!n) return;
+    inorder(n.left);
+    n._inIdx = idx++;
+    if (n.depth > maxDepth) maxDepth = n.depth;
+    inorder(n.right);
+  }
+  inorder(root);
+  const count = idx;
+  const xSpace = Math.max(60, Math.min(110, 700 / Math.max(1, count)));
+  const ySpace = 70;
+  const padX = 40, padY = 30;
+  VW = padX * 2 + (count - 1) * xSpace;
+  VH = padY * 2 + maxDepth * ySpace + R * 2;
+  if (VW < 400) VW = 400;
+  for (const id in nodeMap) {
+    const n = nodeMap[id];
+    n.x = padX + n._inIdx * xSpace;
+    n.y = padY + n.depth * ySpace + R;
+  }
+}
+
+// ─── SVG helpers ──────────────────────────────────────────────────────────────
+function svgEl(tag, attrs) {
+  const el = document.createElementNS('http://www.w3.org/2000/svg', tag);
+  Object.entries(attrs).forEach(([k, v]) => el.setAttribute(k, v));
+  return el;
+}
+function svgG(id) {
+  const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  if (id) g.id = id;
+  return g;
+}
+
+function renderSVG(root) {
+  const svg = document.getElementById('tree-svg');
+  svg.innerHTML = '';
+  svg.setAttribute('viewBox', `0 0 ${VW} ${VH}`);
+  R = VW > 700 ? 22 : 18;
+
+  const edgeG = svgG('edges');
+  const nodeG = svgG('nodes');
+  svg.appendChild(edgeG);
+  svg.appendChild(nodeG);
+
+  function drawEdges(n) {
+    if (!n) return;
+    [n.left, n.right].forEach(c => {
+      if (!c) return;
+      edgeG.appendChild(svgEl('line', {
+        id: `edge-${n.id}-${c.id}`,
+        x1: n.x, y1: n.y, x2: c.x, y2: c.y,
+        stroke: EDGE_DEFAULT, 'stroke-width': 2, 'stroke-linecap': 'round',
+      }));
+    });
+    drawEdges(n.left); drawEdges(n.right);
+  }
+  drawEdges(root);
+
+  for (const id in nodeMap) {
+    const n = nodeMap[id];
+    const g = svgG(`node-g-${n.id}`);
+    g.appendChild(svgEl('circle', {
+      id: `nc-${n.id}`, cx: n.x, cy: n.y, r: R,
+      fill: COLORS.idle.fill, stroke: COLORS.idle.stroke, 'stroke-width': 2.5,
+    }));
+    const t = svgEl('text', {
+      id: `nt-${n.id}`, x: n.x, y: n.y,
+      'text-anchor': 'middle', 'dominant-baseline': 'middle',
+      fill: COLORS.idle.text,
+      'font-size': Math.round(R * 0.75), 'font-weight': 'bold',
+      'font-family': 'Segoe UI, system-ui, sans-serif',
+    });
+    t.textContent = n.val;
+    g.appendChild(t);
+    nodeG.appendChild(g);
+  }
+}
+
+// ─── Simulation: BFS level-order ──────────────────────────────────────────────
+function simulate(root) {
+  const stateMap = {};
+  for (const id in nodeMap) stateMap[id] = 'idle';
+
+  const out = [];
+  const result = [];  // fully completed levels
+
+  function snap(phase, desc, queueIds, resultSoFar, partialLevelVals) {
+    out.push({
+      phase, desc,
+      nodeStates: { ...stateMap },
+      queueIds: [...queueIds],
+      result: resultSoFar.map(l => [...l]),
+      partialLevel: partialLevelVals ? [...partialLevelVals] : null,
+    });
+  }
+
+  // Enqueue root
+  const bfsQueue = [root.id];
+  stateMap[root.id] = 'queued';
+  snap('Init', `Root (${root.val}) added to queue. BFS ready — each pass drains one full level.`, [root.id], [], null);
+
+  let level = 0;
+
+  while (bfsQueue.length > 0) {
+    level++;
+    const levelSize = bfsQueue.length;
+    const levelVals = [];
+
+    snap('Level ' + level,
+      `Level ${level}: drain exactly ${levelSize} node${levelSize > 1 ? 's' : ''} (current queue size). Enqueue their children.`,
+      [...bfsQueue], [...result], []);
+
+    for (let i = 0; i < levelSize; i++) {
+      const curId = bfsQueue.shift();
+      const n = nodeMap[curId];
+
+      stateMap[curId] = 'active';
+      snap('Dequeue',
+        `Dequeue ${n.val} (${i + 1}/${levelSize} in level ${level}). Collecting: [${[...levelVals, n.val].join(', ')}].`,
+        [...bfsQueue], [...result], [...levelVals, n.val]);
+
+      levelVals.push(n.val);
+
+      const childrenEnqueued = [];
+      if (n.left)  { bfsQueue.push(n.left.id);  stateMap[n.left.id]  = 'queued'; childrenEnqueued.push(n.left.val);  }
+      if (n.right) { bfsQueue.push(n.right.id); stateMap[n.right.id] = 'queued'; childrenEnqueued.push(n.right.val); }
+
+      stateMap[curId] = 'done';
+
+      const childTxt = childrenEnqueued.length
+        ? `Enqueued children: ${childrenEnqueued.join(', ')}.`
+        : 'Leaf — no children.';
+      snap('Enqueue', `${n.val} → done. ${childTxt}`, [...bfsQueue], [...result], [...levelVals]);
+    }
+
+    result.push([...levelVals]);
+    snap('Level Done',
+      `Level ${level} complete → [${levelVals.join(', ')}]. ${bfsQueue.length ? `${bfsQueue.length} node${bfsQueue.length > 1 ? 's' : ''} remain for next level.` : 'Queue empty.'}`,
+      [...bfsQueue], [...result], null);
+  }
+
+  snap('Done',
+    `BFS complete. Output: ${JSON.stringify(result)}.`,
+    [], [...result], null);
+
+  return out;
+}
+
+// ─── Apply step ───────────────────────────────────────────────────────────────
+function applyStep(s, animate) {
+  // Node colors
+  Object.entries(s.nodeStates).forEach(([id, st]) => setNodeColor(+id, st, animate));
+
+  // Queue panel
+  const qDiv = document.getElementById('queue-pills');
+  qDiv.innerHTML = '';
+  if (s.queueIds.length === 0) {
+    qDiv.innerHTML = '<span class="panel-empty">empty</span>';
+  } else {
+    s.queueIds.forEach((id, i) => {
+      if (i > 0) {
+        const arr = document.createElement('span');
+        arr.className = 'q-arrow';
+        arr.textContent = '→';
+        qDiv.appendChild(arr);
+      }
+      const n = nodeMap[id];
+      if (!n) return;
+      const pill = document.createElement('div');
+      pill.className = 'q-pill';
+      pill.textContent = n.val;
+      qDiv.appendChild(pill);
+      if (animate) gsap.from(pill, { opacity: 0, y: -5, duration: 0.18 });
+    });
+  }
+
+  // Result panel
+  const rDiv = document.getElementById('result-rows');
+  rDiv.innerHTML = '';
+  const hasAny = s.result.length > 0 || (s.partialLevel && s.partialLevel.length > 0);
+  if (!hasAny) {
+    rDiv.innerHTML = '<span class="panel-empty">none yet</span>';
+    return;
+  }
+
+  s.result.forEach((levelArr, li) => {
+    const row = document.createElement('div');
+    row.className = 'result-level';
+    const badge = document.createElement('span');
+    badge.className = 'level-badge';
+    badge.textContent = `L${li + 1}`;
+    row.appendChild(badge);
+    const vals = document.createElement('div');
+    vals.className = 'level-vals';
+    levelArr.forEach(v => {
+      const pill = document.createElement('div');
+      pill.className = 'lv-pill';
+      pill.textContent = v;
+      vals.appendChild(pill);
+    });
+    row.appendChild(vals);
+    rDiv.appendChild(row);
+    if (animate) gsap.from(row, { opacity: 0, x: 8, duration: 0.22 });
+  });
+
+  // In-progress level
+  if (s.partialLevel && s.partialLevel.length > 0) {
+    const row = document.createElement('div');
+    row.className = 'result-level';
+    const badge = document.createElement('span');
+    badge.className = 'level-badge';
+    badge.textContent = `L${s.result.length + 1}`;
+    badge.style.color = 'var(--orange)';
+    row.appendChild(badge);
+    const vals = document.createElement('div');
+    vals.className = 'level-vals';
+    s.partialLevel.forEach(v => {
+      const pill = document.createElement('div');
+      pill.className = 'lv-pill partial';
+      pill.textContent = v;
+      vals.appendChild(pill);
+    });
+    const dots = document.createElement('span');
+    dots.className = 'lv-dots';
+    dots.textContent = '…';
+    vals.appendChild(dots);
+    row.appendChild(vals);
+    rDiv.appendChild(row);
+  }
+}
+
+function setNodeColor(id, state, animate, dur) {
+  dur = dur || 0.3;
+  const c  = COLORS[state] || COLORS.idle;
+  const nc = document.getElementById(`nc-${id}`);
+  const nt = document.getElementById(`nt-${id}`);
+  if (!nc) return;
+  if (animate) {
+    gsap.to(nc, { duration: dur, ease: 'power2.out', attr: { fill: c.fill, stroke: c.stroke } });
+    if (nt) gsap.to(nt, { duration: dur, attr: { fill: c.text } });
+  } else {
+    nc.setAttribute('fill', c.fill);
+    nc.setAttribute('stroke', c.stroke);
+    if (nt) nt.setAttribute('fill', c.text);
+  }
+}
+
+// ─── Build / Run ──────────────────────────────────────────────────────────────
+function build() {
+  const txt = document.getElementById('inp-tree').value.trim();
+  const vals = parseLevelOrder(txt);
+  const root = buildTree(vals);
+  if (!root) {
+    document.getElementById('tree-svg').innerHTML = '';
+    document.getElementById('step-desc').textContent = 'Empty tree.';
+    document.getElementById('queue-pills').innerHTML = '<span class="panel-empty">empty</span>';
+    document.getElementById('result-rows').innerHTML = '<span class="panel-empty">none yet</span>';
+    return;
+  }
+  layout(root);
+  renderSVG(root);
+  const steps = simulate(root);
+  nav.load(steps);
+}
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
+var nav = VizNav({
+  btnPrev:  document.getElementById('btn-back'),
+  btnNext:  document.getElementById('btn-next'),
+  btnPlay:  document.getElementById('btn-play'),
+  speedSel: document.getElementById('speed-select'),
+  render: function(snap, cur, total) {
+    applyStep(snap, cur > 0);
+    var el = document.getElementById('phase-label');
+    if (el) el.textContent = 'Step ' + (cur + 1) + ' / ' + total + '  ·  ' + snap.phase;
+    var d = document.getElementById('step-desc');
+    if (d) d.textContent = snap.desc;
+  }
+});
+
+build();
+</script>
+<script>
+  if (window.self !== window.top) {
+    var bl = document.querySelector('.back-link');
+    if (bl) bl.style.display = 'none';
+  }
+</script>
+</body>
+</html>
