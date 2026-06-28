@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Subsets</title>
+  <link rel="stylesheet" href="../shared/style.css" />
+  <script src="../shared/gsap.min.js"></script>
+  <script src="../shared/viz.js"></script>
+  <style>
+    .viz-area { width: 100%; max-width: 96%; display: flex; flex-direction: column; gap: 12px; }
+
+    .main-layout { display: grid; grid-template-columns: 1fr 320px; gap: 12px; align-items: start; }
+    @media (max-width: 860px) { .main-layout { grid-template-columns: 1fr; } }
+
+    /* tree SVG */
+    .tree-wrap {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); overflow: hidden;
+    }
+    #tree-svg { display: block; width: 100%; }
+
+    /* right panel */
+    .right-col { display: flex; flex-direction: column; gap: 10px; }
+
+    .panel-box {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 13px 16px;
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .panel-title {
+      font-size: 0.67rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-dim);
+    }
+
+    /* subsets list */
+    #subsets-list {
+      display: flex; flex-wrap: wrap; gap: 6px;
+      max-height: 220px; overflow-y: auto;
+    }
+    .subset-chip {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: 5px; padding: 3px 9px;
+      font-family: monospace; font-size: 0.82rem; color: var(--text-dim);
+    }
+    .subset-chip.new {
+      border-color: var(--green); color: var(--green); background: rgba(22,163,74,0.08);
+    }
+
+    /* active path display */
+    #active-path {
+      font-family: monospace; font-size: 1.1rem; font-weight: 700;
+      color: var(--accent); min-height: 1.5em;
+      letter-spacing: 0.04em;
+    }
+
+    /* code */
+    .code-panel {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); overflow: hidden;
+    }
+    .code-header {
+      padding: 8px 14px; font-size: 0.67rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.1em;
+      color: var(--text-dim); border-bottom: 1px solid var(--border);
+      background: var(--bg);
+    }
+    .code-body {
+      padding: 8px 0; font-size: 0.76rem; line-height: 1.72;
+      font-family: 'JetBrains Mono', 'Fira Code', monospace; overflow-x: auto;
+    }
+    .cl {
+      display: flex; align-items: stretch;
+      border-left: 3px solid transparent; padding: 0 14px 0 0;
+      white-space: pre;
+    }
+    .cl .ln { width: 26px; min-width: 26px; text-align: right; color: #3d4468; user-select: none; padding-right: 12px; font-size: 0.7rem; line-height: 1.72; }
+    .cl .code { color: var(--text-muted); }
+
+    /* nav */
+    .btn-play {
+      background: #15803d; border: none; border-radius: var(--radius-sm);
+      color: #fff; cursor: pointer; font-size: 0.88rem; font-weight: 600;
+      padding: 8px 14px; transition: background 0.2s;
+    }
+    .btn-play:hover { background: #166534; }
+    .btn-play.playing { background: #c2410c; }
+    .btn-play.playing:hover { background: #9a3412; }
+    .btn-play:disabled { opacity: 0.4; cursor: not-allowed; }
+    .speed-select {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); color: var(--text);
+      font-size: 0.84rem; padding: 7px 9px; outline: none;
+    }
+    .nav-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+    /* legend */
+    .leg-row { display: flex; gap: 14px; flex-wrap: wrap; font-size: 0.76rem; color: var(--text-muted); }
+    .leg-item { display: flex; align-items: center; gap: 6px; }
+
+    .kw  { color: var(--purple); }
+    .fn  { color: var(--blue); }
+    .bi  { color: var(--orange); }
+    .cm  { color: #3d4468; font-style: italic; }
+    .op  { color: var(--text); }
+    .nb  { color: var(--green); }
+  </style>
+</head>
+<body class="page">
+
+<div class="page-header">
+  <a class="back-link" href="../index.html">&larr; All Algorithms</a>
+  <div class="page-title">Subsets</div>
+  <div class="page-sub">LeetCode 78 &middot; Backtracking: include or exclude each element &middot; O(n &times; 2<sup>n</sup>) time &middot; O(n) stack space</div>
+</div>
+
+<div class="controls">
+  <div class="field">
+    <label>Preset</label>
+    <select id="preset-sel" onchange="applyPreset()">
+      <option value="1,2,3" selected>[1,2,3]</option>
+      <option value="1,2,3,4">[1,2,3,4]</option>
+      <option value="0,1,2">[0,1,2]</option>
+    </select>
+  </div>
+  <div class="field">
+    <label>Custom (comma-sep)</label>
+    <input id="inp-nums" type="text" value="1,2,3" style="width:160px" />
+  </div>
+  <button class="btn-primary" onclick="buildAndRun()">Build &amp; Run</button>
+</div>
+
+<div class="viz-area">
+
+  <div class="main-layout">
+
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div class="tree-wrap">
+        <svg id="tree-svg" viewBox="0 0 800 400" preserveAspectRatio="xMidYMid meet"></svg>
+      </div>
+      <div class="code-panel">
+        <div class="code-header">Python</div>
+        <div class="code-body" id="code-body"></div>
+      </div>
+    </div>
+
+    <div class="right-col">
+
+      <div class="panel-box">
+        <div class="nav-row">
+          <button class="btn-step" id="btn-back" disabled>&larr;</button>
+          <button class="btn-step" id="btn-next" disabled>&rarr;</button>
+          <button class="btn-play" id="btn-play" disabled>&#9654; Play</button>
+          <select class="speed-select" id="speed-select">
+            <option value="900">Slow</option>
+            <option value="420" selected>Medium</option>
+            <option value="120">Fast</option>
+          </select>
+        </div>
+        <div class="panel-title" id="phase-label">&mdash;</div>
+        <div style="font-size:0.82rem;color:var(--text-muted)" id="step-desc">Choose a preset or enter numbers, then click Build &amp; Run.</div>
+      </div>
+
+      <div class="panel-box">
+        <div class="panel-title">Current path</div>
+        <div id="active-path">[ ]</div>
+        <div style="font-size:0.74rem;color:var(--text-muted)" id="path-hint"></div>
+      </div>
+
+      <div class="panel-box">
+        <div class="panel-title">Collected subsets <span id="subset-count" style="font-weight:400;color:var(--text-faint)"></span></div>
+        <div id="subsets-list"><span style="color:var(--text-faint);font-size:0.8rem;font-style:italic">none yet</span></div>
+      </div>
+
+      <div class="panel-box">
+        <div class="panel-title">Legend</div>
+        <div class="leg-row">
+          <div class="leg-item">
+            <svg width="14" height="14"><circle cx="7" cy="7" r="6" fill="#1e2130" stroke="#2d3148" stroke-width="2"/></svg>
+            Unvisited
+          </div>
+          <div class="leg-item">
+            <svg width="14" height="14"><circle cx="7" cy="7" r="6" fill="#4338ca" stroke="var(--accent)" stroke-width="2"/></svg>
+            Active
+          </div>
+          <div class="leg-item">
+            <svg width="14" height="14"><circle cx="7" cy="7" r="6" fill="#052e16" stroke="#16a34a" stroke-width="2"/></svg>
+            Leaf / done
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Code lines ──────────────────────────────────────────────────────────────
+var CODE_LINES = [
+  [1,  '<span class="kw">def</span> <span class="fn">subsets</span><span class="op">(</span>nums<span class="op">):</span>'],
+  [2,  '    res <span class="op">=</span> <span class="op">[]</span>'],
+  [3,  '    <span class="kw">def</span> <span class="fn">backtrack</span><span class="op">(</span>i<span class="op">,</span> path<span class="op">):</span>'],
+  [4,  '        res<span class="op">.</span><span class="fn">append</span><span class="op">(</span>path<span class="op">[:])</span>  <span class="cm"># record current subset</span>'],
+  [5,  '        <span class="kw">for</span> j <span class="kw">in</span> <span class="bi">range</span><span class="op">(</span>i<span class="op">,</span> <span class="bi">len</span><span class="op">(</span>nums<span class="op">)):</span>'],
+  [6,  '            path<span class="op">.</span><span class="fn">append</span><span class="op">(</span>nums<span class="op">[</span>j<span class="op">])</span>'],
+  [7,  '            <span class="fn">backtrack</span><span class="op">(</span>j <span class="op">+</span> <span class="nb">1</span><span class="op">,</span> path<span class="op">)</span>'],
+  [8,  '            path<span class="op">.</span><span class="fn">pop</span><span class="op">()</span>'],
+  [9,  '    <span class="fn">backtrack</span><span class="op">(</span><span class="nb">0</span><span class="op">,</span> <span class="op">[])</span>'],
+  [10, '    <span class="kw">return</span> res'],
+];
+
+function buildCodePanel() {
+  var body = document.getElementById('code-body');
+  body.innerHTML = CODE_LINES.map(function(e) {
+    return '<div class="cl" id="cl-' + e[0] + '">'
+      + '<span class="ln">' + e[0] + '</span>'
+      + '<span class="code">' + e[1] + '</span></div>';
+  }).join('');
+}
+
+// ── SVG helpers ─────────────────────────────────────────────────────────────
+function svgEl(tag, attrs) {
+  var el = document.createElementNS('http://www.w3.org/2000/svg', tag);
+  Object.keys(attrs).forEach(function(k) { el.setAttribute(k, attrs[k]); });
+  return el;
+}
+
+// ── Colors ──────────────────────────────────────────────────────────────────
+var C = {
+  idle:   { fill: '#1e2130', stroke: '#2d3148', text: '#7b82a3' },
+  active: { fill: '#4338ca', stroke: '#818cf8', text: '#e0e7ff' },
+  leaf:   { fill: '#052e16', stroke: '#16a34a', text: '#4ade80' },
+  path:   { stroke: '#818cf8' },
+  done:   { stroke: '#2d3148' },
+};
+
+// ── Global ──────────────────────────────────────────────────────────────────
+var gNums = [];
+var gNodes = [];   // { id, x, y, label, parentId, edgeLabel }
+var gSteps = [];
+var prevLines = [];
+var nav;
+
+// ── Tree layout ─────────────────────────────────────────────────────────────
+// Build the decision tree structure, then lay it out with Reingold-Tilford-ish
+// simple approach: assign positions level by level, left to right.
+
+function buildDecisionTree(nums) {
+  var nodes = [];
+  var id = 0;
+
+  function rec(idx, path, parentId, edgeLabel) {
+    var nid = id++;
+    nodes.push({ id: nid, idx: idx, path: path.slice(), parentId: parentId, edgeLabel: edgeLabel, children: [] });
+    if (parentId >= 0) nodes[parentId].children.push(nid);
+    // At each index, we include nums[idx], nums[idx+1], ..., nums[n-1]
+    // This mirrors the iterative for-loop backtracking
+    for (var j = idx; j < nums.length; j++) {
+      path.push(nums[j]);
+      rec(j + 1, path, nid, (idx === j ? 'include ' : 'skip→') + nums[j]);
+      path.pop();
+    }
+  }
+
+  rec(0, [], -1, '');
+  return nodes;
+}
+
+// Simple Reingold-Tilford clone: assign x via in-order traversal leaf counting
+function layoutTree(nodes) {
+  // Build children lookup
+  var n = nodes.length;
+  // Count leaf-positions per node using post-order
+  var leafCount = new Array(n).fill(0);
+  var leafStart = new Array(n).fill(0);
+  var totalLeaves = 0;
+
+  function countLeaves(nid) {
+    var node = nodes[nid];
+    if (node.children.length === 0) {
+      node._leafSpan = 1;
+      return;
+    }
+    node.children.forEach(function(cid) { countLeaves(cid); });
+    node._leafSpan = node.children.reduce(function(s, cid) { return s + nodes[cid]._leafSpan; }, 0);
+  }
+  countLeaves(0);
+  totalLeaves = nodes[0]._leafSpan;
+
+  // Assign x positions
+  var leafIdx = 0;
+  function assignX(nid) {
+    var node = nodes[nid];
+    if (node.children.length === 0) {
+      node._leafIdx = leafIdx++;
+      node.x = node._leafIdx;
+      return;
+    }
+    node.children.forEach(function(cid) { assignX(cid); });
+    // center over children
+    var first = nodes[node.children[0]].x;
+    var last  = nodes[node.children[node.children.length - 1]].x;
+    node.x = (first + last) / 2;
+  }
+  assignX(0);
+
+  // Assign y by depth
+  function depth(nid) {
+    var node = nodes[nid];
+    node.depth = node.parentId < 0 ? 0 : nodes[node.parentId].depth + 1;
+    node.children.forEach(function(cid) { depth(cid); });
+  }
+  depth(0);
+
+  // Compute bounding box
+  var maxDepth = 0;
+  nodes.forEach(function(nd) { if (nd.depth > maxDepth) maxDepth = nd.depth; });
+
+  return { totalLeaves: totalLeaves, maxDepth: maxDepth };
+}
+
+function renderTree(nodes, totalLeaves, maxDepth) {
+  var svg = document.getElementById('tree-svg');
+  svg.innerHTML = '';
+
+  var R = 20;
+  var PAD_X = 32, PAD_Y = 36;
+  var Y_STEP = Math.min(72, Math.max(52, 320 / Math.max(1, maxDepth)));
+  var xUnit = Math.max(38, Math.min(80, (900 - PAD_X * 2) / Math.max(1, totalLeaves - 1)));
+
+  var VW = Math.max(500, PAD_X * 2 + (totalLeaves - 1) * xUnit);
+  var VH = PAD_Y * 2 + maxDepth * Y_STEP + R * 2 + 30;
+
+  svg.setAttribute('viewBox', '0 0 ' + VW + ' ' + VH);
+
+  nodes.forEach(function(nd) {
+    nd.px = PAD_X + nd.x * xUnit;
+    nd.py = PAD_Y + nd.depth * Y_STEP + R;
+  });
+
+  var edgeG = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  edgeG.id = 'edges';
+  var nodeG = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  nodeG.id = 'nodes';
+  svg.appendChild(edgeG);
+  svg.appendChild(nodeG);
+
+  // Edges
+  nodes.forEach(function(nd) {
+    if (nd.parentId < 0) return;
+    var par = nodes[nd.parentId];
+    var line = svgEl('line', {
+      id: 'edge-' + par.id + '-' + nd.id,
+      x1: par.px, y1: par.py, x2: nd.px, y2: nd.py,
+      stroke: C.done.stroke, 'stroke-width': 1.5, 'stroke-linecap': 'round',
+    });
+    edgeG.appendChild(line);
+
+    // Edge label (midpoint)
+    var mx = (par.px + nd.px) / 2;
+    var my = (par.py + nd.py) / 2;
+    var lbl = svgEl('text', {
+      id: 'elbl-' + par.id + '-' + nd.id,
+      x: mx, y: my,
+      'text-anchor': 'middle', 'dominant-baseline': 'middle',
+      fill: '#3d4468', 'font-size': Math.max(8, Math.min(11, xUnit * 0.18)),
+      'font-family': 'JetBrains Mono, monospace',
+    });
+    lbl.textContent = nd.edgeLabel;
+    edgeG.appendChild(lbl);
+  });
+
+  // Nodes
+  nodes.forEach(function(nd) {
+    var g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    g.id = 'node-g-' + nd.id;
+
+    var circle = svgEl('circle', {
+      id: 'nc-' + nd.id, cx: nd.px, cy: nd.py, r: R,
+      fill: C.idle.fill, stroke: C.idle.stroke, 'stroke-width': 2,
+    });
+    g.appendChild(circle);
+
+    // Label: show path as short set notation
+    var label = nd.path.length === 0 ? '∅' : '[' + nd.path.join(',') + ']';
+    var fontSize = nd.path.length <= 2 ? 11 : nd.path.length <= 3 ? 9 : 8;
+    var txt = svgEl('text', {
+      id: 'nt-' + nd.id, x: nd.px, y: nd.py,
+      'text-anchor': 'middle', 'dominant-baseline': 'middle',
+      fill: C.idle.text,
+      'font-size': fontSize, 'font-weight': '700',
+      'font-family': 'JetBrains Mono, monospace',
+    });
+    txt.textContent = label;
+    g.appendChild(txt);
+    nodeG.appendChild(g);
+  });
+}
+
+// ── Simulate ────────────────────────────────────────────────────────────────
+function simulate(nums, nodes) {
+  var steps = [];
+  var collected = [];
+  var stateMap = {};
+  nodes.forEach(function(nd) { stateMap[nd.id] = 'idle'; });
+
+  function snap(phase, desc, lines, activeId, pathNow, newSubset) {
+    steps.push({
+      phase: phase,
+      desc: desc,
+      lines: lines,
+      activeId: activeId,
+      stateMap: Object.assign({}, stateMap),
+      path: pathNow ? pathNow.slice() : [],
+      collected: collected.slice(),
+      newSubset: newSubset || null,
+    });
+  }
+
+  function rec(nodeId) {
+    var nd = nodes[nodeId];
+    stateMap[nodeId] = 'active';
+
+    var pathStr = nd.path.length === 0 ? '[ ]' : '[ ' + nd.path.join(', ') + ' ]';
+    var subset = nd.path.slice();
+    collected.push(subset);
+
+    if (nd.children.length === 0) {
+      // leaf
+      snap('Leaf', 'Leaf reached. Record subset ' + pathStr + '.', [4], nodeId, nd.path, subset);
+      stateMap[nodeId] = 'leaf';
+    } else {
+      snap('Record', 'Record subset ' + pathStr + '. Now try including each remaining element.', [4, 5], nodeId, nd.path, subset);
+
+      nd.children.forEach(function(cid, ci) {
+        var child = nodes[cid];
+        var addedEl = child.path[child.path.length - 1];
+        snap('Include', 'Include ' + addedEl + ' → descend with path ' + (child.path.length === 0 ? '[ ]' : '[ ' + child.path.join(', ') + ' ]') + '.', [5, 6, 7], nodeId, nd.path, null);
+        rec(cid);
+        snap('Pop', 'Backtrack: remove ' + addedEl + '. Resume from ' + pathStr + '.', [8], nodeId, nd.path, null);
+      });
+
+      stateMap[nodeId] = 'leaf';
+      snap('Done', 'All branches from ' + pathStr + ' explored. Return.', [8], nodeId, nd.path, null);
+    }
+  }
+
+  snap('Start', 'Begin backtracking from root (empty path). We record every node we visit.', [3, 9], 0, [], null);
+  rec(0);
+  snap('Done', 'All ' + collected.length + ' subsets collected.', [10], -1, [], null);
+  return steps;
+}
+
+// ── Apply step ──────────────────────────────────────────────────────────────
+function applyStep(s, animate) {
+  // Node colors
+  Object.keys(s.stateMap).forEach(function(idStr) {
+    var id = +idStr;
+    var st = s.stateMap[id];
+    var c = st === 'active' ? C.active : st === 'leaf' ? C.leaf : C.idle;
+    var nc = document.getElementById('nc-' + id);
+    var nt = document.getElementById('nt-' + id);
+    if (!nc) return;
+    if (animate) {
+      gsap.to(nc, { duration: 0.25, attr: { fill: c.fill, stroke: c.stroke } });
+      gsap.to(nt, { duration: 0.25, attr: { fill: c.text } });
+    } else {
+      nc.setAttribute('fill', c.fill); nc.setAttribute('stroke', c.stroke);
+      if (nt) nt.setAttribute('fill', c.text);
+    }
+  });
+
+  // Highlight active node with pulse
+  if (animate && s.activeId >= 0) {
+    var nc = document.getElementById('nc-' + s.activeId);
+    if (nc) gsap.fromTo(nc, { attr: { r: 20 } }, { attr: { r: 24 }, duration: 0.15, yoyo: true, repeat: 1 });
+  }
+
+  // Edge highlighting: color edges on active path
+  gNodes.forEach(function(nd) {
+    if (nd.parentId < 0) return;
+    var edge = document.getElementById('edge-' + nd.parentId + '-' + nd.id);
+    var lbl  = document.getElementById('elbl-' + nd.parentId + '-' + nd.id);
+    if (!edge) return;
+    var onPath = s.stateMap[nd.id] === 'active' || s.stateMap[nd.id] === 'leaf';
+    var col = onPath ? C.path.stroke : C.done.stroke;
+    var lblCol = onPath ? '#a5b4fc' : '#3d4468';
+    if (animate) {
+      gsap.to(edge, { duration: 0.2, attr: { stroke: col } });
+    } else {
+      edge.setAttribute('stroke', col);
+    }
+    if (lbl) lbl.setAttribute('fill', lblCol);
+  });
+
+  // Active path display
+  var ap = document.getElementById('active-path');
+  var pathStr = s.path.length === 0 ? '[ ]' : '[ ' + s.path.join(', ') + ' ]';
+  if (ap) {
+    if (animate) gsap.fromTo(ap, { opacity: 0.3 }, { opacity: 1, duration: 0.2 });
+    ap.textContent = pathStr;
+  }
+
+  // Subsets list
+  var listEl = document.getElementById('subsets-list');
+  var countEl = document.getElementById('subset-count');
+  if (listEl) {
+    if (s.collected.length === 0) {
+      listEl.innerHTML = '<span style="color:var(--text-faint);font-size:0.8rem;font-style:italic">none yet</span>';
+    } else {
+      listEl.innerHTML = s.collected.map(function(sub, idx) {
+        var label = sub.length === 0 ? '[ ]' : '[' + sub.join(',') + ']';
+        var isNew = s.newSubset && idx === s.collected.length - 1;
+        return '<span class="subset-chip' + (isNew ? ' new' : '') + '">' + label + '</span>';
+      }).join('');
+      if (animate && s.newSubset) {
+        var chips = listEl.querySelectorAll('.subset-chip.new');
+        if (chips.length) gsap.from(chips[chips.length - 1], { scale: 0.6, opacity: 0, duration: 0.25, ease: 'back.out(1.7)' });
+      }
+    }
+    if (countEl) countEl.textContent = s.collected.length ? '(' + s.collected.length + ')' : '';
+  }
+
+  // Code highlighting
+  setCodeLines(prevLines, s.lines, animate);
+  prevLines = s.lines || [];
+}
+
+function setCodeLines(oldLines, newLines, animate) {
+  var HL_BG   = 'rgba(99,102,241,0.13)';
+  var HL_BORD = 'var(--accent)';
+  var DUR = 0.2;
+  (oldLines || []).filter(function(n) { return (newLines || []).indexOf(n) < 0; }).forEach(function(n) {
+    var el = document.getElementById('cl-' + n);
+    if (!el) return;
+    if (animate) gsap.to(el, { backgroundColor: 'transparent', borderLeftColor: 'transparent', duration: DUR });
+    else { el.style.backgroundColor = ''; el.style.borderLeftColor = ''; }
+  });
+  (newLines || []).filter(function(n) { return (oldLines || []).indexOf(n) < 0; }).forEach(function(n) {
+    var el = document.getElementById('cl-' + n);
+    if (!el) return;
+    if (animate) gsap.to(el, { backgroundColor: HL_BG, borderLeftColor: HL_BORD, duration: DUR, delay: 0.06 });
+    else { el.style.backgroundColor = HL_BG; el.style.borderLeftColor = HL_BORD; }
+  });
+}
+
+// ── Build & Run ─────────────────────────────────────────────────────────────
+function buildAndRun() {
+  var raw = document.getElementById('inp-nums').value;
+  var nums = raw.split(',').map(function(s) { return parseInt(s.trim(), 10); }).filter(function(n) { return !isNaN(n); });
+  if (nums.length === 0 || nums.length > 4) {
+    alert('Please enter 1–4 unique integers.');
+    return;
+  }
+
+  gNums = nums;
+  prevLines = [];
+
+  buildCodePanel();
+
+  var nodes = buildDecisionTree(nums);
+  var info = layoutTree(nodes);
+  gNodes = nodes;
+  renderTree(nodes, info.totalLeaves, info.maxDepth);
+
+  gSteps = simulate(nums, nodes);
+  nav.load(gSteps);
+}
+
+function applyPreset() {
+  var val = document.getElementById('preset-sel').value;
+  document.getElementById('inp-nums').value = val;
+}
+
+// ── Init ────────────────────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', function() {
+  buildCodePanel();
+
+  nav = VizNav({
+    btnPrev: document.getElementById('btn-back'),
+    btnNext: document.getElementById('btn-next'),
+    btnPlay: document.getElementById('btn-play'),
+    speedSel: document.getElementById('speed-select'),
+    render: function(snap, cur, total) {
+      applyStep(snap, cur > 0);
+      var pl = document.getElementById('phase-label');
+      if (pl) pl.textContent = 'Step ' + (cur + 1) + ' / ' + total + '  ·  ' + snap.phase;
+      var sd = document.getElementById('step-desc');
+      if (sd) { gsap.fromTo(sd, { opacity: 0.3 }, { opacity: 1, duration: 0.15 }); sd.textContent = snap.desc; }
+    }
+  });
+
+  buildAndRun();
+});
+</script>
+<script>
+if (window.self !== window.top) { var bl = document.querySelector('.back-link'); if (bl) bl.style.display = 'none'; }
+</script>
+</body>
+</html>
