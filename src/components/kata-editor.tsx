@@ -55,7 +55,17 @@ type VizKataName =
   | "Longest Common Subsequence"
   | "Word Break"
   | "Implement Trie"
-  | "Course Schedule";
+  | "Course Schedule"
+  | "Subsets"
+  | "Generate Parentheses"
+  | "Kth Largest Element in Array"
+  | "Pacific Atlantic Water Flow"
+  | "Insert Interval"
+  | "Palindromic Substrings"
+  | "Edit Distance"
+  | "Rotate Image"
+  | "Spiral Matrix"
+  | "Combination Sum";
 
 // Kata name → algo-viz subfolder served from /algo-viz/<folder>/index.html
 const VIZ_MAP: Partial<Record<VizKataName, string>> = {
@@ -100,6 +110,16 @@ const VIZ_MAP: Partial<Record<VizKataName, string>> = {
   "Word Break":                   "word-break",
   "Implement Trie":               "trie",
   "Course Schedule":              "course-schedule",
+  "Subsets":                      "subsets",
+  "Generate Parentheses":         "generate-parentheses",
+  "Kth Largest Element in Array": "kth-largest",
+  "Pacific Atlantic Water Flow":  "pacific-atlantic",
+  "Insert Interval":              "insert-interval",
+  "Palindromic Substrings":       "palindromic-substrings",
+  "Edit Distance":                "edit-distance",
+  "Rotate Image":                 "rotate-image",
+  "Spiral Matrix":                "spiral-matrix",
+  "Combination Sum":              "combination-sum",
 };
 
 // Overrides for slugs that can't be reliably derived from the display name
