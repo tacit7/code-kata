@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Reverse Bits</title>
+  <link rel="stylesheet" href="../shared/style.css" />
+  <script src="../shared/gsap.min.js"></script>
+  <script src="../shared/viz.js"></script>
+  <style>
+    .viz-area { width: 100%; max-width: 92%; }
+    .main-row { display: grid; grid-template-columns: 1fr 300px; gap: 20px; align-items: start; }
+    .left-col, .right-col { display: flex; flex-direction: column; gap: 12px; }
+    @media (max-width: 820px) { .main-row { grid-template-columns: 1fr; } }
+
+    .register-section {
+      padding: 16px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      display: flex; flex-direction: column; gap: 6px;
+      overflow-x: auto;
+    }
+    .register-label {
+      font-size: 0.68rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.1em; color: var(--text-dim);
+    }
+    .register-row { display: flex; gap: 6px; align-items: center; }
+    .nibble-group  { display: flex; gap: 2px; }
+    .nibble-sep    { width: 6px; flex-shrink: 0; }
+
+    .bit-cell {
+      width: 20px; height: 32px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      border: 1.5px solid var(--border-soft); border-radius: 3px;
+      background: #0f0f0f;
+      font-size: 0.78rem; font-weight: 700; font-family: monospace;
+      color: var(--text-ghost);
+    }
+    .bit-cell[data-val="1"] { color: var(--accent-pale); }
+    .bit-cell.lsb-glow {
+      border-color: #ca8a04;
+      box-shadow: 0 0 8px rgba(202,138,4,0.55);
+      color: #fde68a;
+    }
+    .bit-cell.result-placed {
+      border-color: var(--green-border);
+      box-shadow: 0 0 8px rgba(158,206,106,0.45);
+      background: var(--green-bg);
+      color: var(--green-light);
+    }
+
+    .register-indices { display: flex; gap: 6px; }
+    .nibble-idx-group { display: flex; gap: 2px; }
+    .nibble-idx-sep   { width: 6px; flex-shrink: 0; }
+    .bit-idx {
+      width: 20px; flex-shrink: 0; text-align: center;
+      font-size: 0.5rem; color: var(--text-ghost); font-family: monospace;
+    }
+
+    .flow-arrow {
+      display: flex; align-items: center; gap: 8px; padding: 0 4px;
+      font-size: 0.65rem; color: var(--text-faint); font-family: monospace;
+    }
+    .flow-arrow-line { flex: 1; height: 1px; background: var(--border-soft); }
+
+    .legend-row { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 4px; }
+    .legend-item { display: flex; align-items: center; gap: 5px; font-size: 0.68rem; color: var(--text-faint); }
+    .legend-dot  { width: 12px; height: 12px; border-radius: 2px; border: 1.5px solid; }
+
+    .panel-box {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 14px 16px;
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .panel-title {
+      font-size: 0.72rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim);
+    }
+
+    .var-main { display: flex; gap: 10px; }
+    .var-box {
+      flex: 1; padding: 10px 8px;
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      display: flex; flex-direction: column; align-items: center; gap: 3px;
+    }
+    .var-box.n-accent   { border-color: #854d0e; }
+    .var-box.bit-accent { border-color: var(--purple); }
+    .var-box.res-accent { border-color: #166534; }
+    .var-label   { font-size: 0.65rem; font-family: monospace; color: var(--text-faint); }
+    .var-val     { font-size: 1.25rem; font-weight: 700; color: var(--text-bright); }
+    .var-sub-val { font-size: 0.68rem; font-family: monospace; color: var(--text-dim); }
+
+    .code-panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
+    .code-header { padding: 8px 14px; font-size: 0.72rem; font-weight: 600; color: var(--text-dim); border-bottom: 1px solid var(--border); background: var(--bg); }
+    .code-body   { padding: 10px 0; font-size: 0.78rem; line-height: 1.75; white-space: pre; }
+    .code-line   { display: flex; align-items: center; padding: 0 14px; }
+    .code-line.hl { background: var(--border-soft); border-left: 2px solid var(--accent); }
+    .ln { min-width: 24px; color: var(--text-ghost); user-select: none; font-size: 0.7rem; }
+
+    .btn-play {
+      background: #15803d; border: none; border-radius: var(--radius-sm);
+      color: #fff; cursor: pointer; font-size: 0.88rem; font-weight: 600;
+      padding: 9px 16px; transition: background 0.2s;
+    }
+    .btn-play:hover:not(:disabled) { background: #166534; }
+    .btn-play:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .speed-select {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); color: var(--text);
+      font-size: 0.85rem; padding: 8px 10px; outline: none; width: 80px;
+    }
+    .step-nav { display: flex; gap: 8px; align-items: center; }
+
+    .kw { color: var(--purple); }
+    .fn { color: var(--blue); }
+    .op { color: var(--text); }
+    .nb { color: var(--green); }
+  </style>
+</head>
+<body class="page">
+
+<div class="page-header">
+  <a class="back-link" href="../index.html">&larr; All Algorithms</a>
+  <div class="page-title">Reverse Bits</div>
+  <div class="page-sub">LeetCode 190 &middot; Bit Manipulation &middot; O(32) time &middot; O(1) space</div>
+</div>
+
+<div class="controls">
+  <div class="field">
+    <label>n (decimal)</label>
+    <input id="inp-n" type="number" value="43261596" style="width:180px" />
+  </div>
+  <button class="btn-primary" onclick="loadAndRun()">Build</button>
+</div>
+
+<div class="viz-area">
+  <div class="main-row">
+    <div class="left-col">
+
+      <div class="register-section">
+        <div class="register-label">n &mdash; input register (MSB left · LSB right)</div>
+        <div class="register-row" id="n-reg-row">
+          <span style="color:var(--text-dim);font-size:0.82rem">Enter a number and click Build.</span>
+        </div>
+        <div class="register-indices" id="n-reg-idx"></div>
+        <div class="legend-row">
+          <div class="legend-item">
+            <div class="legend-dot" style="border-color:#ca8a04;background:rgba(202,138,4,0.15)"></div>
+            LSB being extracted
+          </div>
+        </div>
+      </div>
+
+      <div class="flow-arrow">
+        <span>LSB &#8594;</span>
+        <div class="flow-arrow-line"></div>
+        <span>&#8594; fills MSB first</span>
+      </div>
+
+      <div class="register-section">
+        <div class="register-label">result &mdash; output register (MSB left · fills left-to-right)</div>
+        <div class="register-row" id="r-reg-row">
+          <span style="color:var(--text-dim);font-size:0.82rem">Waiting&hellip;</span>
+        </div>
+        <div class="register-indices" id="r-reg-idx"></div>
+        <div class="legend-row">
+          <div class="legend-item">
+            <div class="legend-dot" style="border-color:#4d7a23;background:rgba(158,206,106,0.12)"></div>
+            Bit just placed
+          </div>
+        </div>
+      </div>
+
+      <div class="panel-box">
+        <div class="panel-title">Variables</div>
+        <div class="var-main">
+          <div class="var-box n-accent">
+            <div class="var-label">n</div>
+            <div class="var-val" id="vv-n">&mdash;</div>
+            <div class="var-sub-val" id="vv-n-hex">&mdash;</div>
+          </div>
+          <div class="var-box bit-accent">
+            <div class="var-label">bit = n &amp; 1</div>
+            <div class="var-val" id="vv-bit">&mdash;</div>
+          </div>
+          <div class="var-box res-accent">
+            <div class="var-label">result</div>
+            <div class="var-val" id="vv-result">&mdash;</div>
+            <div class="var-sub-val" id="vv-result-hex">&mdash;</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="right-col">
+
+      <div class="panel-box">
+        <div class="step-nav">
+          <button class="btn-step" id="btn-back" disabled>&larr;</button>
+          <button class="btn-step" id="btn-next" disabled>&rarr;</button>
+          <button class="btn-play" id="btn-play" disabled>&#9654; Play</button>
+          <select class="speed-select" id="speed-select">
+            <option value="700">Slow</option>
+            <option value="300" selected>Med</option>
+            <option value="100">Fast</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="status-bar">
+        <div class="phase-label" id="phase-label">&mdash;</div>
+        <div class="step-desc" id="step-desc">Enter a number and click Build.</div>
+      </div>
+
+      <div class="code-panel">
+        <div class="code-header">Python</div>
+        <div class="code-body" id="code-body"></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+var simSteps = [], nav;
+
+var CODE = [
+  [1, '<span class="kw">def</span> <span class="fn">reverseBits</span><span class="op">(</span>n<span class="op">):</span>'],
+  [2, '    result <span class="op">=</span> <span class="nb">0</span>'],
+  [0, ''],
+  [3, '    <span class="kw">for</span> i <span class="kw">in</span> <span class="fn">range</span><span class="op">(</span><span class="nb">32</span><span class="op">):</span>'],
+  [4, '        result <span class="op">= (</span>result <span class="op">&lt;&lt;</span> <span class="nb">1</span><span class="op">) | (</span>n <span class="op">&amp;</span> <span class="nb">1</span><span class="op">)</span>'],
+  [5, '        n <span class="op">&gt;&gt;=</span> <span class="nb">1</span>'],
+  [0, ''],
+  [6, '    <span class="kw">return</span> result'],
+];
+
+function toBits(n) {
+  var bits = [];
+  for (var i = 31; i >= 0; i--) bits.push((n >>> i) & 1);
+  return bits;
+}
+
+function toHex(n) {
+  return '0x' + (n >>> 0).toString(16).toUpperCase().padStart(8, '0');
+}
+
+window.addEventListener('DOMContentLoaded', function() {
+  buildCodePanel();
+  nav = VizNav({
+    btnPrev:  document.getElementById('btn-back'),
+    btnNext:  document.getElementById('btn-next'),
+    btnPlay:  document.getElementById('btn-play'),
+    speedSel: document.getElementById('speed-select'),
+    render: function(snap, cur, total) {
+      applyStep(snap, cur > 0);
+      var phaseEl = document.getElementById('phase-label');
+      var descEl  = document.getElementById('step-desc');
+      if (phaseEl) phaseEl.textContent = 'Step ' + (cur + 1) + ' / ' + total + '  ·  ' + snap.phase;
+      if (descEl)  descEl.textContent  = snap.desc;
+    }
+  });
+  loadAndRun();
+});
+
+function buildCodePanel() {
+  var body = document.getElementById('code-body');
+  body.innerHTML = CODE.map(function(e) {
+    var ln = e[0], html = e[1];
+    var id = ln > 0 ? ' id="cl-' + ln + '"' : '';
+    return '<div class="code-line"' + id + '><span class="ln">' + (ln || '') + '</span><span>' + html + '</span></div>';
+  }).join('');
+}
+
+function loadAndRun() {
+  var raw = document.getElementById('inp-n').value.trim();
+  var n = parseInt(raw, 10);
+  if (isNaN(n)) return;
+  n = n >>> 0;
+  buildRegister('n', toBits(n));
+  buildRegister('r', toBits(0));
+  simSteps = simulate(n);
+  nav.load(simSteps);
+}
+
+function buildRegister(prefix, bits) {
+  var row    = document.getElementById(prefix + '-reg-row');
+  var idxRow = document.getElementById(prefix + '-reg-idx');
+  if (!row) return;
+  row.innerHTML    = '';
+  idxRow.innerHTML = '';
+
+  for (var g = 0; g < 8; g++) {
+    if (g > 0) {
+      var sep = document.createElement('div'); sep.className = 'nibble-sep'; row.appendChild(sep);
+      var is  = document.createElement('div'); is.className  = 'nibble-idx-sep'; idxRow.appendChild(is);
+    }
+    var grp    = document.createElement('div'); grp.className    = 'nibble-group';
+    var idxGrp = document.createElement('div'); idxGrp.className = 'nibble-idx-group';
+
+    for (var b = 0; b < 4; b++) {
+      var di     = g * 4 + b;      // display index 0=MSB/left .. 31=LSB/right
+      var bitNum = 31 - di;        // bit position in the number
+
+      var cell = document.createElement('div');
+      cell.className   = 'bit-cell';
+      cell.id          = prefix + '-bit-' + di;
+      cell.dataset.val = String(bits[di]);
+      cell.textContent = String(bits[di]);
+      grp.appendChild(cell);
+
+      var idxEl = document.createElement('div');
+      idxEl.className  = 'bit-idx';
+      idxEl.textContent = (bitNum === 31 || bitNum === 23 || bitNum === 15 || bitNum === 7 || bitNum === 0) ? String(bitNum) : '';
+      idxGrp.appendChild(idxEl);
+    }
+    row.appendChild(grp);
+    idxRow.appendChild(idxGrp);
+  }
+}
+
+function simulate(n0) {
+  var steps  = [];
+  var n      = n0 >>> 0;
+  var result = 0;
+
+  steps.push({
+    phase: 'init', line: 2,
+    nBits: toBits(n), resultBits: toBits(0),
+    nVal: n, resultVal: 0, bit: null, hlN: -1, hlR: -1,
+    desc: 'n = ' + n0 + ' (' + toHex(n0) + '). result = 0. We will extract the LSB of n 32 times and build the mirror.',
+  });
+
+  for (var i = 0; i < 32; i++) {
+    var bit = (n >>> 0) & 1;
+
+    // extract: highlight LSB of n (display position 31 = rightmost)
+    steps.push({
+      phase: 'extract', line: 4,
+      nBits: toBits(n), resultBits: toBits(result),
+      nVal: n, resultVal: result, bit: bit, hlN: 31, hlR: -1,
+      desc: 'Iteration ' + (i + 1) + '/32: bit = n & 1 = ' + bit + '. Goes to bit ' + (31 - i) + ' (position ' + i + ' from left) of result.',
+    });
+
+    result = ((result << 1) | bit) >>> 0;
+    n      = (n >>> 1) >>> 0;
+
+    // place: highlight position i from left in result
+    steps.push({
+      phase: 'place', line: 5,
+      nBits: toBits(n), resultBits: toBits(result),
+      nVal: n, resultVal: result, bit: bit, hlN: -1, hlR: i,
+      desc: 'Placed bit ' + bit + ' at result[' + (31 - i) + ']. Shifted n right. result = ' + result + '.',
+    });
+  }
+
+  steps.push({
+    phase: 'done', line: 6,
+    nBits: toBits(0), resultBits: toBits(result),
+    nVal: 0, resultVal: result, bit: null, hlN: -1, hlR: -1,
+    desc: 'Done! Reversed bits: ' + result + ' (' + toHex(result) + ')',
+  });
+
+  return steps;
+}
+
+function updateRegister(prefix, bits, hlIdx, hlClass) {
+  for (var i = 0; i < 32; i++) {
+    var cell = document.getElementById(prefix + '-bit-' + i);
+    if (!cell) continue;
+    cell.textContent  = String(bits[i]);
+    cell.dataset.val  = String(bits[i]);
+    cell.className    = 'bit-cell';
+    if (i === hlIdx) cell.classList.add(hlClass);
+  }
+}
+
+function applyStep(s, animate) {
+  updateRegister('n', s.nBits, s.hlN, 'lsb-glow');
+  updateRegister('r', s.resultBits, s.hlR, 'result-placed');
+  applyVars(s, animate);
+  setCodeLine(s.line);
+
+  if (!animate) return;
+
+  if (s.phase === 'extract' && s.hlN >= 0) {
+    var nc = document.getElementById('n-bit-' + s.hlN);
+    if (nc) gsap.fromTo(nc, { scale: 1 }, { scale: 1.35, duration: 0.14, yoyo: true, repeat: 1, ease: 'power2.out' });
+  }
+
+  if (s.phase === 'place' && s.hlR >= 0) {
+    var rc = document.getElementById('r-bit-' + s.hlR);
+    if (rc) gsap.fromTo(rc, { scale: 1.5, opacity: 0.2 }, { scale: 1, opacity: 1, duration: 0.32, ease: 'back.out(1.7)' });
+  }
+
+  if (s.phase === 'done') {
+    var re = document.getElementById('vv-result');
+    if (re) gsap.fromTo(re, { scale: 1.4, color: '#4ade80' }, { scale: 1, color: '#ffffff', duration: 0.55, ease: 'elastic.out(1,0.5)' });
+  }
+}
+
+function applyVars(s, animate) {
+  function set(id, val) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    var text = (val === null || val === undefined) ? '—' : String(val);
+    if (animate && el.textContent !== text) {
+      gsap.fromTo(el, { scale: 0.82, opacity: 0.45 }, { scale: 1, opacity: 1, duration: 0.2, ease: 'back.out(1.7)' });
+    }
+    el.textContent = text;
+  }
+  set('vv-n',          s.nVal);
+  set('vv-n-hex',      toHex(s.nVal));
+  set('vv-bit',        s.bit === null ? null : String(s.bit));
+  set('vv-result',     s.resultVal);
+  set('vv-result-hex', toHex(s.resultVal));
+}
+
+function setCodeLine(line) {
+  CODE.forEach(function(e) {
+    var ln = e[0]; if (!ln) return;
+    var el = document.getElementById('cl-' + ln);
+    if (!el) return;
+    if (ln === line) el.classList.add('hl');
+    else el.classList.remove('hl');
+  });
+}
+</script>
+
+<script>
+  if (window.self !== window.top) {
+    var bl = document.querySelector('.back-link');
+    if (bl) bl.style.display = 'none';
+  }
+</script>
+</body>
+</html>
