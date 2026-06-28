@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Single Number (XOR)</title>
+  <link rel="stylesheet" href="../shared/style.css" />
+  <script src="../shared/gsap.min.js"></script>
+  <script src="../shared/viz.js"></script>
+  <style>
+    .viz-area { width: 100%; max-width: 90%; }
+    .main-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
+    .left-col, .right-col { display: flex; flex-direction: column; gap: 12px; }
+    @media (max-width: 700px) { .main-row { grid-template-columns: 1fr; } }
+
+    /* array section */
+    .array-section {
+      padding: 16px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      display: flex; flex-direction: column; gap: 8px;
+      min-height: 100px;
+    }
+    .arr-row { display: flex; gap: 6px; flex-wrap: wrap; }
+    .arr-cell {
+      width: 52px; height: 52px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      border: 2px solid var(--border-soft); border-radius: 5px;
+      background: #0f0f0f;
+      font-size: 0.92rem; font-weight: 700; font-family: monospace;
+      color: var(--text-ghost);
+      position: relative;
+      transition: border-color 0.15s;
+    }
+    .arr-cell[data-state="processed"] {
+      color: var(--text-dim); border-color: #2d3148; opacity: 0.55;
+    }
+    .arr-cell[data-state="processed"]::after {
+      content: "✓";
+      position: absolute; top: 2px; right: 3px;
+      font-size: 0.55rem; color: var(--green);
+    }
+    .arr-cell[data-state="current"] {
+      color: var(--accent-pale); border-color: var(--accent);
+      background: var(--surface-dark);
+      box-shadow: 0 0 8px rgba(99, 102, 241, 0.25);
+    }
+
+    .arr-indices { display: flex; gap: 6px; }
+    .arr-idx {
+      width: 52px; flex-shrink: 0;
+      text-align: center; font-size: 0.6rem;
+      color: var(--text-ghost); font-family: monospace;
+    }
+
+    /* panel-box */
+    .panel-box {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 14px 16px;
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .panel-title {
+      font-size: 0.72rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim);
+    }
+
+    /* XOR accumulator */
+    .xor-display {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 18px 16px;
+      display: flex; flex-direction: column; align-items: center; gap: 6px;
+    }
+    .xor-label { font-size: 0.65rem; font-family: monospace; color: var(--text-faint); }
+    .xor-val {
+      font-size: 2.4rem; font-weight: 700;
+      color: var(--text-bright);
+      font-family: monospace;
+      line-height: 1;
+    }
+    .xor-val.done-accent { color: var(--green); }
+    .xor-bin {
+      font-size: 0.72rem; font-family: monospace;
+      letter-spacing: 0.18em;
+      color: var(--text-ghost);
+    }
+    .bit-flip { color: var(--accent-pale); }
+
+    /* equation */
+    .eq-display {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 10px 14px;
+      font-size: 0.85rem; font-family: monospace;
+      color: var(--text-muted);
+      min-height: 36px;
+      display: flex; align-items: center;
+    }
+    .eq-display .eq-hi { color: var(--accent-pale); font-weight: 700; }
+    .eq-display .eq-op { color: var(--purple); }
+    .eq-display .eq-res { color: var(--green); font-weight: 700; }
+
+    /* code */
+    .code-panel {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); overflow: hidden;
+    }
+    .code-header {
+      padding: 8px 14px; font-size: 0.72rem; font-weight: 600;
+      color: var(--text-dim); border-bottom: 1px solid var(--border); background: var(--bg);
+    }
+    .code-body { padding: 10px 0; font-size: 0.78rem; line-height: 1.75; flex: 1; white-space: pre; }
+    .code-line { display: flex; align-items: center; padding: 0 14px; }
+    .code-line.hl { background: var(--border-soft); border-left: 2px solid var(--accent); }
+    .ln { min-width: 24px; color: var(--text-ghost); user-select: none; font-size: 0.7rem; }
+
+    /* nav */
+    .btn-play {
+      background: #15803d; border: none; border-radius: var(--radius-sm);
+      color: #fff; cursor: pointer; font-size: 0.88rem; font-weight: 600;
+      padding: 9px 16px; transition: background 0.2s;
+    }
+    .btn-play:hover { background: #166534; }
+    .btn-play.playing { background: #c2410c; }
+    .btn-play.playing:hover { background: #9a3412; }
+    .btn-play:disabled { opacity: 0.4; cursor: not-allowed; }
+    .speed-select {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); color: var(--text);
+      font-size: 0.85rem; padding: 8px 10px; outline: none; width: 80px;
+    }
+    .nav-row { display: flex; gap: 8px; align-items: center; }
+
+    .kw { color: var(--purple); }
+    .fn { color: var(--blue); }
+    .bi { color: var(--orange); }
+    .op { color: var(--text); }
+    .nb { color: var(--green); }
+    .cm { color: var(--text-ghost); font-style: italic; }
+
+    /* footer hint */
+    .hint-bar {
+      width: 100%; max-width: 90%;
+      padding: 10px 16px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      font-size: 0.78rem; color: var(--text-dim);
+      text-align: center;
+    }
+    .hint-bar strong { color: var(--accent-pale); }
+  </style>
+</head>
+<body class="page">
+
+<div class="page-header">
+  <a class="back-link" href="../index.html">&larr; All Algorithms</a>
+  <div class="page-title">Single Number (XOR)</div>
+  <div class="page-sub">LeetCode 136 &middot; Bit Manipulation &middot; O(n) time &middot; O(1) space</div>
+</div>
+
+<div class="controls">
+  <div class="field">
+    <label>nums</label>
+    <input id="inp-nums" type="text" value="4,1,2,1,2" style="width:220px" />
+  </div>
+  <button class="btn-primary" onclick="buildAndRun()">Build &amp; Run</button>
+</div>
+
+<div class="viz-area">
+  <div class="main-row">
+    <div class="left-col">
+      <div class="array-section" id="array-section">
+        <span style="color:var(--text-dim);font-size:0.82rem">Enter nums and click Build &amp; Run.</span>
+      </div>
+      <div class="code-panel">
+        <div class="code-header">Python</div>
+        <div class="code-body" id="code-body"></div>
+      </div>
+    </div>
+
+    <div class="right-col">
+      <div style="display:flex;gap:12px">
+        <div class="panel-box" style="flex:0 0 auto">
+          <div class="nav-row">
+            <button class="btn-step" id="btn-back" disabled>&larr;</button>
+            <button class="btn-step" id="btn-next" disabled>&rarr;</button>
+            <button class="btn-play" id="btn-play" disabled>&#9654; Play</button>
+            <select class="speed-select" id="speed-select">
+              <option value="700">Slow</option>
+              <option value="350" selected>Medium</option>
+              <option value="100">Fast</option>
+            </select>
+          </div>
+        </div>
+        <div class="panel-box" style="flex:1;min-width:0">
+          <div class="panel-title" id="phase-label">&mdash;</div>
+          <div style="font-size:0.82rem;color:var(--text-muted);margin-top:2px" id="step-desc">Enter nums and click Build &amp; Run.</div>
+        </div>
+      </div>
+
+      <div class="panel-box">
+        <div class="panel-title">XOR Accumulator</div>
+        <div class="xor-display">
+          <div class="xor-label">result</div>
+          <div class="xor-val" id="xor-val">—</div>
+          <div class="xor-bin" id="xor-bin">&nbsp;</div>
+        </div>
+        <div class="eq-display" id="eq-display">—</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="hint-bar">
+  <strong>XOR cancels duplicates</strong> — pairs zero out, the loner survives.
+  &nbsp;&nbsp;a &oplus; a = 0 &nbsp;&nbsp;&middot;&nbsp;&nbsp; a &oplus; 0 = a &nbsp;&nbsp;&middot;&nbsp;&nbsp; XOR is commutative &amp; associative.
+</div>
+
+<script>
+var simSteps = [], nav;
+var numLen = 0;
+
+var CODE = [
+  [1,  '<span class="kw">def</span> <span class="fn">singleNumber</span><span class="op">(</span>nums<span class="op">):</span>'],
+  [2,  '    result <span class="op">=</span> <span class="nb">0</span>'],
+  [0,  ''],
+  [4,  '    <span class="kw">for</span> x <span class="kw">in</span> nums<span class="op">:</span>'],
+  [5,  '        result <span class="op">=</span> result <span class="op">^</span> x'],
+  [0,  ''],
+  [7,  '    <span class="kw">return</span> result'],
+];
+
+window.addEventListener('DOMContentLoaded', function() {
+  buildCodePanel();
+  nav = VizNav({
+    btnPrev:  document.getElementById('btn-back'),
+    btnNext:  document.getElementById('btn-next'),
+    btnPlay:  document.getElementById('btn-play'),
+    speedSel: document.getElementById('speed-select'),
+    render: function(snap, cur, total) {
+      applyStep(snap, cur > 0);
+      var phaseEl = document.getElementById('phase-label');
+      var descEl  = document.getElementById('step-desc');
+      if (phaseEl) phaseEl.textContent = 'Step ' + (cur + 1) + ' / ' + total + '  ·  ' + snap.phase;
+      if (descEl)  descEl.textContent  = snap.desc;
+    }
+  });
+});
+
+function buildCodePanel() {
+  var body = document.getElementById('code-body');
+  body.innerHTML = CODE.map(function(e) {
+    var ln = e[0], html = e[1];
+    var id = ln > 0 ? ' id="cl-' + ln + '"' : '';
+    return '<div class="code-line"' + id + '><span class="ln">' + (ln || '') + '</span><span>' + html + '</span></div>';
+  }).join('');
+}
+
+function buildAndRun() {
+  var raw  = document.getElementById('inp-nums').value;
+  var nums = raw.split(',')
+    .map(function(x) { return parseInt(x.trim(), 10); })
+    .filter(function(x) { return !isNaN(x); })
+    .slice(0, 32);
+  if (nums.length < 1) return;
+  numLen = nums.length;
+  buildArraySection(nums);
+  simSteps = simulate(nums);
+  nav.load(simSteps);
+}
+
+function buildArraySection(nums) {
+  var sec = document.getElementById('array-section');
+  sec.innerHTML =
+    '<div class="arr-row" id="arr-row"></div>' +
+    '<div class="arr-indices" id="arr-indices"></div>';
+
+  var arrRow = document.getElementById('arr-row');
+  var idxRow = document.getElementById('arr-indices');
+
+  nums.forEach(function(v, i) {
+    var cell = document.createElement('div');
+    cell.className = 'arr-cell'; cell.id = 'ac-' + i; cell.dataset.state = 'idle';
+    cell.textContent = v; arrRow.appendChild(cell);
+
+    var idx = document.createElement('div');
+    idx.className = 'arr-idx'; idx.textContent = i; idxRow.appendChild(idx);
+  });
+}
+
+// --- Simulate ---
+function simulate(nums) {
+  var steps = [];
+  var result = 0;
+
+  function snap(phase, i, prevResult, curResult, desc, lines) {
+    steps.push({
+      phase:       phase,
+      i:           i,
+      result:      curResult,
+      prevResult:  prevResult,
+      nums:        nums.slice(),
+      desc:        desc,
+      lines:       lines,
+    });
+  }
+
+  // Init
+  snap('init', -1, 0, 0, 'Initialize result = 0.', [2]);
+
+  for (var i = 0; i < nums.length; i++) {
+    var prev = result;
+    result   = result ^ nums[i];
+    snap('xor', i, prev, result,
+      'result = ' + prev + ' ⊕ ' + nums[i] + ' = ' + result + '.',
+      [4, 5]);
+  }
+
+  snap('done', -1, result, result, 'Unique number = ' + result + '.', [7]);
+  return steps;
+}
+
+// --- Render ---
+function applyStep(s, animate) {
+  applyArrayCells(s.i, s.phase);
+  applyXorDisplay(s, animate);
+  setEquation(s);
+  setCodeLines(s.lines);
+}
+
+function applyArrayCells(curI, phase) {
+  for (var i = 0; i < numLen; i++) {
+    var el = document.getElementById('ac-' + i);
+    if (!el) continue;
+    if (phase === 'init' || phase === 'done') {
+      el.dataset.state = phase === 'done' ? 'processed' : 'idle';
+    } else if (i < curI) {
+      el.dataset.state = 'processed';
+    } else if (i === curI) {
+      el.dataset.state = 'current';
+    } else {
+      el.dataset.state = 'idle';
+    }
+  }
+}
+
+function toBin8(n) {
+  // 8-bit unsigned representation (handles small ints nicely)
+  var bits = (n >>> 0).toString(2);
+  while (bits.length < 8) bits = '0' + bits;
+  return bits;
+}
+
+function applyXorDisplay(s, animate) {
+  var valEl = document.getElementById('xor-val');
+  var binEl = document.getElementById('xor-bin');
+  if (!valEl || !binEl) return;
+
+  var isDone = s.phase === 'done';
+  var changed = animate && (s.result !== s.prevResult);
+
+  if (changed) {
+    gsap.fromTo(valEl, { scale: 1.3, opacity: 0.6 }, { scale: 1, opacity: 1, duration: 0.3, ease: 'back.out(1.7)' });
+  }
+
+  valEl.textContent = s.phase === 'init' ? '0' : String(s.result);
+  valEl.className   = 'xor-val' + (isDone ? ' done-accent' : '');
+
+  // Binary bits — highlight flipped bits
+  if (s.phase === 'init') {
+    binEl.innerHTML = '00000000';
+    return;
+  }
+  var prevBin = toBin8(s.prevResult);
+  var curBin  = toBin8(s.result);
+  var html = '';
+  for (var b = 0; b < 8; b++) {
+    if (curBin[b] !== prevBin[b] && s.phase === 'xor') {
+      html += '<span class="bit-flip">' + curBin[b] + '</span>';
+    } else {
+      html += curBin[b];
+    }
+  }
+  binEl.innerHTML = html;
+}
+
+function setEquation(s) {
+  var el = document.getElementById('eq-display');
+  if (!el) return;
+
+  if (s.phase === 'init') {
+    el.innerHTML = '<span style="color:var(--text-ghost)">result initialized to 0</span>';
+    return;
+  }
+  if (s.phase === 'done') {
+    el.innerHTML = '<span class="eq-res">&#8594; unique = ' + s.result + '</span>';
+    return;
+  }
+  // xor step
+  var prev = s.prevResult;
+  var cur  = s.nums[s.i];
+  var res  = s.result;
+  el.innerHTML =
+    '<span class="eq-hi">' + prev + '</span>' +
+    ' <span class="eq-op"> &oplus; </span>' +
+    '<span class="eq-hi">' + cur + '</span>' +
+    ' <span class="eq-op"> = </span>' +
+    '<span class="eq-res">' + res + '</span>';
+}
+
+function setCodeLines(lines) {
+  CODE.forEach(function(e) {
+    var ln = e[0]; if (!ln) return;
+    var el = document.getElementById('cl-' + ln);
+    if (!el) return;
+    if (lines.indexOf(ln) >= 0) el.classList.add('hl');
+    else el.classList.remove('hl');
+  });
+}
+</script>
+
+<script>
+  // Hide back-link when embedded in an iframe
+  if (window.self !== window.top) {
+    var bl = document.querySelector('.back-link');
+    if (bl) bl.style.display = 'none';
+  }
+</script>
+</body>
+</html>
