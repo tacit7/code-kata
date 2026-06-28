@@ -6,6 +6,7 @@
   <title>Kadane's Algorithm</title>
   <link rel="stylesheet" href="../shared/style.css" />
   <script src="../shared/gsap.min.js"></script>
+  <script src="../shared/viz.js"></script>
   <style>
     .viz-area { width: 100%; max-width: 90%; }
     .main-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
@@ -172,9 +173,9 @@
       <div style="display:flex;gap:12px">
         <div class="panel-box" style="flex:0 0 auto">
           <div class="nav-row">
-            <button class="btn-step" id="btn-back" onclick="stepBack()" disabled>&larr;</button>
-            <button class="btn-step" id="btn-next" onclick="stepNext()" disabled>&rarr;</button>
-            <button class="btn-play" id="btn-play" onclick="togglePlay()" disabled>&#9654; Play</button>
+            <button class="btn-step" id="btn-back" disabled>&larr;</button>
+            <button class="btn-step" id="btn-next" disabled>&rarr;</button>
+            <button class="btn-play" id="btn-play" disabled>&#9654; Play</button>
             <select class="speed-select" id="speed-select">
               <option value="700">Slow</option>
               <option value="250" selected>Medium</option>
@@ -237,7 +238,7 @@
 </div>
 
 <script>
-var simSteps = [], cursor = 0, simReady = false, playTimer = null;
+var simSteps = [], nav;
 var numLen = 0;
 
 var CODE = [
@@ -264,7 +265,22 @@ var CODE = [
   [21, '    <span class="kw">return</span> best_sum'],
 ];
 
-window.addEventListener('DOMContentLoaded', function() { buildCodePanel(); });
+window.addEventListener('DOMContentLoaded', function() {
+  buildCodePanel();
+  nav = VizNav({
+    btnPrev: document.getElementById('btn-back'),
+    btnNext: document.getElementById('btn-next'),
+    btnPlay: document.getElementById('btn-play'),
+    speedSel: document.getElementById('speed-select'),
+    render: function(snap, cur, total) {
+      applyStep(snap, cur > 0);
+      var phaseEl = document.getElementById('phase-label');
+      var descEl  = document.getElementById('step-desc');
+      if (phaseEl) phaseEl.textContent = 'Step ' + (cur + 1) + ' / ' + total + '  ·  ' + snap.phase;
+      if (descEl)  descEl.textContent  = snap.desc;
+    }
+  });
+});
 
 function buildCodePanel() {
   var body = document.getElementById('code-body');
@@ -276,16 +292,13 @@ function buildCodePanel() {
 }
 
 function buildAndRun() {
-  stopPlay();
   var raw = document.getElementById('inp-nums').value;
   var nums = raw.split(',').map(function(x) { return parseInt(x.trim()); }).filter(function(x) { return !isNaN(x); });
   if (nums.length < 2) return;
   numLen = nums.length;
   buildArraySection(nums);
   simSteps = simulate(nums);
-  cursor = 0; simReady = true;
-  applyStep(simSteps[0], false);
-  updateButtons();
+  nav.load(simSteps);
 }
 
 function buildArraySection(nums) {
@@ -397,16 +410,6 @@ function applyStep(s, animate) {
   applyVars(s, animate);
   applyDecision(s.dec);
   setCodeLines(s.lines);
-  refreshText(s);
-}
-
-function transition(from, to) {
-  applyArrayCells(to.cellStates, true);
-  applyBars(to.winStart, to.winEnd, to.bestStart, to.bestEnd);
-  applyVars(to, true);
-  applyDecision(to.dec);
-  setCodeLines(to.lines);
-  refreshText(to);
 }
 
 function applyArrayCells(states, animate) {
@@ -494,53 +497,6 @@ function setCodeLines(lines) {
   });
 }
 
-function refreshText(s) {
-  document.getElementById('phase-label').textContent =
-    'Step ' + (cursor + 1) + ' / ' + simSteps.length + '  ·  ' + s.phase;
-  document.getElementById('step-desc').textContent = s.desc;
-}
-
-// --- Navigation ---
-function stepNext() {
-  if (cursor >= simSteps.length - 1) { stopPlay(); return; }
-  var from = simSteps[cursor++];
-  transition(from, simSteps[cursor]);
-  updateButtons();
-}
-
-function stepBack() {
-  if (cursor <= 0) return;
-  stopPlay(); cursor--;
-  applyStep(simSteps[cursor], true);
-  updateButtons();
-}
-
-function updateButtons() {
-  var atEnd = cursor >= simSteps.length - 1;
-  document.getElementById('btn-back').disabled = cursor <= 0 || !simReady;
-  document.getElementById('btn-next').disabled = atEnd || !simReady;
-  document.getElementById('btn-play').disabled = !simReady;
-  if (atEnd && playTimer) stopPlay();
-}
-
-function togglePlay() { if (playTimer) stopPlay(); else startPlay(); }
-
-function startPlay() {
-  if (cursor >= simSteps.length - 1) cursor = 0;
-  var delay = parseInt(document.getElementById('speed-select').value) || 250;
-  var btn = document.getElementById('btn-play');
-  btn.textContent = '⏸ Pause'; btn.classList.add('playing');
-  playTimer = setInterval(function() {
-    if (cursor >= simSteps.length - 1) { stopPlay(); return; }
-    stepNext();
-  }, delay);
-}
-
-function stopPlay() {
-  if (playTimer) { clearInterval(playTimer); playTimer = null; }
-  var btn = document.getElementById('btn-play');
-  if (btn) { btn.textContent = '▶ Play'; btn.classList.remove('playing'); }
-}
 </script>
   <script>
     // Hide back-link when embedded in an iframe
