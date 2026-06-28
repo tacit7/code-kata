@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Spiral Matrix</title>
+  <link rel="stylesheet" href="../shared/style.css" />
+  <script src="../shared/gsap.min.js"></script>
+  <script src="../shared/viz.js"></script>
+  <style>
+    .viz-area { width: 100%; max-width: 90%; }
+    .main-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
+    .left-col, .right-col { display: flex; flex-direction: column; gap: 12px; }
+    @media (max-width: 700px) { .main-row { grid-template-columns: 1fr; } }
+
+    /* matrix grid */
+    .grid-section {
+      padding: 16px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      display: flex; flex-direction: column; gap: 10px;
+    }
+    .grid-scroll { overflow-x: auto; }
+    .matrix-wrap { display: inline-flex; flex-direction: column; gap: 5px; }
+    .matrix-row { display: flex; gap: 5px; }
+    .m-cell {
+      width: 52px; height: 52px;
+      display: flex; align-items: center; justify-content: center;
+      border: 2px dashed var(--border-soft); border-radius: 6px;
+      background: #0f0f0f;
+      font-size: 1rem; font-weight: 700; font-family: monospace;
+      color: var(--text-ghost);
+      transition: border-color 0.15s, background 0.15s, color 0.15s;
+      position: relative;
+    }
+    .m-cell[data-state="unvisited"] {
+      border-style: dashed; color: var(--text-ghost);
+    }
+    .m-cell[data-state="current"] {
+      border-style: solid; border-color: var(--accent); color: var(--accent-pale);
+      background: var(--surface-dark);
+    }
+    .m-cell[data-state="visited"] {
+      border-style: solid; border-color: #2d3148; color: var(--text-dim);
+      background: #111420;
+    }
+    .m-cell[data-state="boundary"] {
+      border-style: solid; border-color: #4a3800; color: var(--text-ghost);
+      background: #131000;
+    }
+
+    /* boundary highlight overlays */
+    .m-cell[data-top="1"]    { border-top-color: var(--orange) !important; border-top-style: solid !important; }
+    .m-cell[data-bottom="1"] { border-bottom-color: #22c55e !important; border-bottom-style: solid !important; }
+    .m-cell[data-left="1"]   { border-left-color: #60a5fa !important; border-left-style: solid !important; }
+    .m-cell[data-right="1"]  { border-right-color: #c084fc !important; border-right-style: solid !important; }
+
+    /* output array */
+    .output-section {
+      padding: 14px 16px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .output-scroll { overflow-x: auto; }
+    .output-row { display: flex; gap: 5px; flex-wrap: nowrap; padding-bottom: 4px; min-height: 44px; align-items: center; }
+    .out-chip {
+      min-width: 36px; height: 36px; padding: 0 6px;
+      display: flex; align-items: center; justify-content: center;
+      border: 1px solid #2d3148; border-radius: 5px;
+      background: #111420;
+      font-size: 0.85rem; font-weight: 700; font-family: monospace;
+      color: var(--text-dim); flex-shrink: 0;
+    }
+    .out-chip.fresh {
+      border-color: var(--accent); color: var(--accent-pale); background: var(--surface-dark);
+    }
+
+    /* direction badge */
+    .dir-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 5px 12px; border-radius: 6px; font-size: 0.85rem; font-weight: 700;
+      font-family: monospace;
+    }
+    .dir-badge.right  { background: rgba(139,92,246,0.12); border: 1px solid rgba(139,92,246,0.35); color: #c084fc; }
+    .dir-badge.down   { background: rgba(34,197,94,0.1);  border: 1px solid rgba(34,197,94,0.3);  color: #22c55e; }
+    .dir-badge.left   { background: rgba(96,165,250,0.1); border: 1px solid rgba(96,165,250,0.3); color: #60a5fa; }
+    .dir-badge.up     { background: rgba(251,146,60,0.1); border: 1px solid rgba(251,146,60,0.3); color: var(--orange); }
+    .dir-badge.done   { background: rgba(234,179,8,0.1);  border: 1px solid rgba(234,179,8,0.3);  color: var(--yellow); }
+
+    /* panel-box */
+    .panel-box {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 14px 16px;
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .panel-title {
+      font-size: 0.72rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim);
+    }
+
+    /* boundary vars */
+    .bound-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .bound-box {
+      padding: 8px 6px;
+      background: var(--bg); border: 2px solid var(--border);
+      border-radius: var(--radius-sm);
+      display: flex; flex-direction: column; align-items: center; gap: 3px;
+    }
+    .bound-box.top-b    { border-color: var(--orange); }
+    .bound-box.bottom-b { border-color: #22c55e; }
+    .bound-box.left-b   { border-color: #60a5fa; }
+    .bound-box.right-b  { border-color: #c084fc; }
+    .bound-label { font-size: 0.62rem; font-family: monospace; color: var(--text-faint); }
+    .bound-val   { font-size: 1.2rem; font-weight: 700; color: var(--text-bright); }
+
+    /* nav */
+    .btn-play {
+      background: #15803d; border: none; border-radius: var(--radius-sm);
+      color: #fff; cursor: pointer; font-size: 0.88rem; font-weight: 600;
+      padding: 9px 16px; transition: background 0.2s;
+    }
+    .btn-play:hover { background: #166534; }
+    .btn-play.playing { background: #c2410c; }
+    .btn-play.playing:hover { background: #9a3412; }
+    .btn-play:disabled { opacity: 0.4; cursor: not-allowed; }
+    .speed-select {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); color: var(--text);
+      font-size: 0.85rem; padding: 8px 10px; outline: none; width: 80px;
+    }
+    .nav-row { display: flex; gap: 8px; align-items: center; }
+
+    /* legend */
+    .legend-row { display: flex; flex-direction: column; gap: 6px; font-size: 0.78rem; color: var(--text-muted); }
+    .legend-item { display: flex; align-items: center; gap: 8px; }
+    .leg-swatch {
+      width: 16px; height: 16px; border-radius: 3px; flex-shrink: 0;
+    }
+  </style>
+</head>
+<body class="page">
+
+<div class="page-header">
+  <a class="back-link" href="../index.html">&larr; All Algorithms</a>
+  <div class="page-title">Spiral Matrix</div>
+  <div class="page-sub">LeetCode 54 &middot; Four shrinking boundaries: traverse right, down, left, up &middot; O(m&times;n) time &middot; O(1) extra space</div>
+</div>
+
+<div class="controls">
+  <div class="field">
+    <label>Preset</label>
+    <select id="preset-sel" onchange="applyPreset()">
+      <option value="3x3">3&times;3</option>
+      <option value="3x4">3&times;4</option>
+      <option value="4x4">4&times;4</option>
+    </select>
+  </div>
+  <button class="btn-primary" onclick="buildAndRun()">Build &amp; Run</button>
+</div>
+
+<div class="viz-area">
+  <div class="main-row">
+    <div class="left-col">
+      <div class="grid-section" id="grid-section">
+        <span style="color:var(--text-dim);font-size:0.82rem">Select a preset and click Build &amp; Run.</span>
+      </div>
+      <div class="output-section" id="output-section" style="display:none">
+        <div class="panel-title">Output (spiral order)</div>
+        <div class="output-scroll"><div class="output-row" id="output-row"></div></div>
+      </div>
+    </div>
+
+    <div class="right-col">
+      <div style="display:flex;gap:12px">
+        <div class="panel-box" style="flex:0 0 auto">
+          <div class="nav-row">
+            <button class="btn-step" id="btn-back" disabled>&larr;</button>
+            <button class="btn-step" id="btn-next" disabled>&rarr;</button>
+            <button class="btn-play" id="btn-play" disabled>&#9654; Play</button>
+            <select class="speed-select" id="speed-select">
+              <option value="700">Slow</option>
+              <option value="350" selected>Medium</option>
+              <option value="100">Fast</option>
+            </select>
+          </div>
+        </div>
+        <div class="panel-box" style="flex:1;min-width:0">
+          <div class="panel-title" id="phase-label">&mdash;</div>
+          <div style="font-size:0.82rem;color:var(--text-muted);margin-top:2px" id="step-desc">Select a preset and click Build &amp; Run.</div>
+          <div id="dir-badge-wrap" style="margin-top:4px"></div>
+        </div>
+      </div>
+
+      <div class="panel-box">
+        <div class="panel-title">Boundaries</div>
+        <div class="bound-grid">
+          <div class="bound-box top-b">
+            <div class="bound-label">top</div>
+            <div class="bound-val" id="bv-top">&mdash;</div>
+          </div>
+          <div class="bound-box bottom-b">
+            <div class="bound-label">bottom</div>
+            <div class="bound-val" id="bv-bottom">&mdash;</div>
+          </div>
+          <div class="bound-box left-b">
+            <div class="bound-label">left</div>
+            <div class="bound-val" id="bv-left">&mdash;</div>
+          </div>
+          <div class="bound-box right-b">
+            <div class="bound-label">right</div>
+            <div class="bound-val" id="bv-right">&mdash;</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel-box">
+        <div class="panel-title">Legend</div>
+        <div class="legend-row">
+          <div class="legend-item">
+            <div class="leg-swatch" style="border:2px solid var(--accent);background:var(--surface-dark)"></div>
+            <span>Current cell (being collected)</span>
+          </div>
+          <div class="legend-item">
+            <div class="leg-swatch" style="border:2px solid #2d3148;background:#111420"></div>
+            <span>Visited cell</span>
+          </div>
+          <div class="legend-item">
+            <div class="leg-swatch" style="border:2px dashed var(--border-soft);background:#0f0f0f"></div>
+            <span>Unvisited</span>
+          </div>
+          <div class="legend-item" style="margin-top:4px;flex-wrap:wrap;gap:6px">
+            <span style="color:var(--orange);font-weight:700;font-size:0.78rem">— top</span>
+            <span style="color:#22c55e;font-weight:700;font-size:0.78rem">— bottom</span>
+            <span style="color:#60a5fa;font-weight:700;font-size:0.78rem">— left</span>
+            <span style="color:#c084fc;font-weight:700;font-size:0.78rem">— right</span>
+            <span style="color:var(--text-faint);font-size:0.75rem">(boundary edges on cells)</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+var PRESETS = {
+  '3x3': [[1,2,3],[4,5,6],[7,8,9]],
+  '3x4': [[1,2,3,4],[5,6,7,8],[9,10,11,12]],
+  '4x4': [[1,2,3,4],[5,6,7,8],[9,10,11,12],[13,14,15,16]]
+};
+
+var currentMatrix = [];
+var simSteps = [];
+var nav;
+
+window.addEventListener('DOMContentLoaded', function() {
+  nav = VizNav({
+    btnPrev: document.getElementById('btn-back'),
+    btnNext: document.getElementById('btn-next'),
+    btnPlay: document.getElementById('btn-play'),
+    speedSel: document.getElementById('speed-select'),
+    render: function(snap, cur, total) {
+      applyStep(snap, cur > 0);
+      var phaseEl = document.getElementById('phase-label');
+      var descEl  = document.getElementById('step-desc');
+      if (phaseEl) phaseEl.textContent = 'Step ' + (cur + 1) + ' / ' + total + '  ·  ' + snap.phase;
+      if (descEl) {
+        gsap.fromTo(descEl, { opacity: 0 }, { opacity: 1, duration: 0.15 });
+        descEl.textContent = snap.desc;
+      }
+    }
+  });
+  applyPreset();
+  buildAndRun();
+});
+
+function applyPreset() {
+  var key = document.getElementById('preset-sel').value;
+  currentMatrix = PRESETS[key].map(function(r) { return r.slice(); });
+}
+
+function buildAndRun() {
+  applyPreset();
+  simSteps = simulate(currentMatrix);
+  buildGridSection();
+  buildOutputSection();
+  nav.load(simSteps);
+}
+
+// --- Build DOM ---
+function buildGridSection() {
+  var sec = document.getElementById('grid-section');
+  var rows = currentMatrix.length;
+  var cols = currentMatrix[0].length;
+  var html = '<div class="grid-scroll"><div class="matrix-wrap" id="matrix-wrap">';
+  for (var r = 0; r < rows; r++) {
+    html += '<div class="matrix-row">';
+    for (var c = 0; c < cols; c++) {
+      html += '<div class="m-cell" id="mc-' + r + '-' + c + '" data-state="unvisited">'
+        + currentMatrix[r][c] + '</div>';
+    }
+    html += '</div>';
+  }
+  html += '</div></div>';
+  sec.innerHTML = html;
+}
+
+function buildOutputSection() {
+  var sec = document.getElementById('output-section');
+  sec.style.display = '';
+  document.getElementById('output-row').innerHTML = '';
+}
+
+// --- Simulate ---
+function simulate(matrix) {
+  var steps = [];
+  var rows = matrix.length;
+  var cols = matrix[0].length;
+  var top = 0, bottom = rows - 1, left = 0, right = cols - 1;
+  var result = [];
+  var visited = [];
+  for (var r = 0; r < rows; r++) { visited.push(new Array(cols).fill(false)); }
+
+  function snap(phase, desc, dir, curR, curC, t, b, l, ri) {
+    steps.push({
+      phase: phase,
+      desc: desc,
+      dir: dir,
+      curR: curR,
+      curC: curC,
+      top: t, bottom: b, left: l, right: ri,
+      result: result.slice(),
+      visited: visited.map(function(row) { return row.slice(); })
+    });
+  }
+
+  snap('Init', 'Set boundaries: top=0, bottom=' + (rows-1) + ', left=0, right=' + (cols-1) + '. Ready to spiral.', '', -1, -1, top, bottom, left, right);
+
+  while (top <= bottom && left <= right) {
+    // traverse right along top row
+    for (var c = left; c <= right; c++) {
+      snap('Traverse', 'Direction: RIGHT along top row (row ' + top + '). Visit [' + top + '][' + c + '] = ' + matrix[top][c] + '.', 'right', top, c, top, bottom, left, right);
+      result.push(matrix[top][c]);
+      visited[top][c] = true;
+      snap('Collect', 'Collected ' + matrix[top][c] + '. Output so far: [' + result.join(', ') + '].', 'right', top, c, top, bottom, left, right);
+    }
+    top++;
+
+    // traverse down along right col
+    for (var r = top; r <= bottom; r++) {
+      snap('Traverse', 'Direction: DOWN along right col (col ' + right + '). Visit [' + r + '][' + right + '] = ' + matrix[r][right] + '.', 'down', r, right, top, bottom, left, right);
+      result.push(matrix[r][right]);
+      visited[r][right] = true;
+      snap('Collect', 'Collected ' + matrix[r][right] + '. Output so far: [' + result.join(', ') + '].', 'down', r, right, top, bottom, left, right);
+    }
+    right--;
+
+    // traverse left along bottom row
+    if (top <= bottom) {
+      for (var c = right; c >= left; c--) {
+        snap('Traverse', 'Direction: LEFT along bottom row (row ' + bottom + '). Visit [' + bottom + '][' + c + '] = ' + matrix[bottom][c] + '.', 'left', bottom, c, top, bottom, left, right);
+        result.push(matrix[bottom][c]);
+        visited[bottom][c] = true;
+        snap('Collect', 'Collected ' + matrix[bottom][c] + '. Output so far: [' + result.join(', ') + '].', 'left', bottom, c, top, bottom, left, right);
+      }
+      bottom--;
+    }
+
+    // traverse up along left col
+    if (left <= right) {
+      for (var r = bottom; r >= top; r--) {
+        snap('Traverse', 'Direction: UP along left col (col ' + left + '). Visit [' + r + '][' + left + '] = ' + matrix[r][left] + '.', 'up', r, left, top, bottom, left, right);
+        result.push(matrix[r][left]);
+        visited[r][left] = true;
+        snap('Collect', 'Collected ' + matrix[r][left] + '. Output so far: [' + result.join(', ') + '].', 'up', r, left, top, bottom, left, right);
+      }
+      left++;
+    }
+  }
+
+  snap('Done', 'All ' + result.length + ' elements collected in spiral order: [' + result.join(', ') + '].', 'done', -1, -1, top, bottom, left, right);
+  return steps;
+}
+
+// --- Render step ---
+function applyStep(s, animate) {
+  var rows = currentMatrix.length;
+  var cols = currentMatrix[0].length;
+
+  for (var r = 0; r < rows; r++) {
+    for (var c = 0; c < cols; c++) {
+      var el = document.getElementById('mc-' + r + '-' + c);
+      if (!el) continue;
+
+      // state
+      var state = 'unvisited';
+      if (r === s.curR && c === s.curC) {
+        state = 'current';
+      } else if (s.visited[r][c]) {
+        state = 'visited';
+      }
+      el.dataset.state = state;
+
+      // boundary edge highlights
+      el.dataset.top    = (r === s.top    && c >= s.left && c <= s.right) ? '1' : '0';
+      el.dataset.bottom = (r === s.bottom && c >= s.left && c <= s.right) ? '1' : '0';
+      el.dataset.left   = (c === s.left   && r >= s.top  && r <= s.bottom) ? '1' : '0';
+      el.dataset.right  = (c === s.right  && r >= s.top  && r <= s.bottom) ? '1' : '0';
+
+      if (animate && state === 'current') {
+        gsap.fromTo(el, { scale: 0.7 }, { scale: 1.1, duration: 0.18, ease: 'power2.out',
+          onComplete: function(e) { gsap.to(e, { scale: 1, duration: 0.12 }); }.bind(null, el)
+        });
+      }
+    }
+  }
+
+  // output chips
+  var row = document.getElementById('output-row');
+  if (row) {
+    var chips = '';
+    for (var i = 0; i < s.result.length; i++) {
+      var isLast = (i === s.result.length - 1) && s.phase === 'Collect';
+      chips += '<div class="out-chip' + (isLast ? ' fresh' : '') + '">' + s.result[i] + '</div>';
+    }
+    row.innerHTML = chips;
+    if (animate && s.phase === 'Collect' && s.result.length > 0) {
+      var last = row.lastElementChild;
+      if (last) gsap.fromTo(last, { scale: 0.5, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.25, ease: 'back.out(1.7)' });
+    }
+  }
+
+  // boundary values
+  function setBound(id, val) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    var text = (val < 0) ? '—' : String(val);
+    if (animate && el.textContent !== text) {
+      gsap.fromTo(el, { scale: 0.8, opacity: 0.4 }, { scale: 1, opacity: 1, duration: 0.2, ease: 'back.out(1.7)' });
+    }
+    el.textContent = text;
+  }
+  setBound('bv-top',    s.top);
+  setBound('bv-bottom', s.bottom);
+  setBound('bv-left',   s.left);
+  setBound('bv-right',  s.right);
+
+  // direction badge
+  var wrap = document.getElementById('dir-badge-wrap');
+  if (wrap) {
+    var labels = { right: '&rarr; RIGHT', down: '&darr; DOWN', left: '&larr; LEFT', up: '&uarr; UP', done: '&#10003; Done', '': '' };
+    if (s.dir && labels[s.dir] !== undefined && s.dir !== '') {
+      wrap.innerHTML = '<div class="dir-badge ' + s.dir + '">' + labels[s.dir] + '</div>';
+    } else {
+      wrap.innerHTML = '';
+    }
+  }
+}
+</script>
+<script>
+  if (window.self !== window.top) {
+    var bl = document.querySelector('.back-link');
+    if (bl) bl.style.display = 'none';
+  }
+</script>
+</body>
+</html>
