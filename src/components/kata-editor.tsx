@@ -25,21 +25,41 @@ type VizKataName =
   | "Matrix BFS"
   | "Matrix Grid BFS"
   | "Linked List Cycle"
-  | "Linked List Cycle Detection";
+  | "Linked List Cycle Detection"
+  | "Climbing Stairs"
+  | "Single Number XOR"
+  | "Missing Number"
+  | "Plus One"
+  | "Number of 1 Bits"
+  | "Counting Bits"
+  | "Jump Game"
+  | "Invert Binary Tree"
+  | "Max Depth of Binary Tree"
+  | "Same Tree";
 
 // Kata name → algo-viz subfolder served from /algo-viz/<folder>/index.html
 const VIZ_MAP: Partial<Record<VizKataName, string>> = {
   "Kadane's Algorithm":           "kadanes",
-  "Min Cost Climbing Stairs":       "min-cost-stairs",
-  "House Robber":                   "house-robber",
-  "Median of Two Sorted Arrays":    "median-sorted-arrays",
-  "Merge Two Sorted Lists":         "merge-sorted-lists",
-  "Longest Palindromic Substring":  "manachers",
-  "Binary Tree BFS":                "bfs",
-  "Matrix BFS":                     "bfs-grid",
-  "Matrix Grid BFS":                "bfs-traversal",
-  "Linked List Cycle":              "floyd-cycle",
-  "Linked List Cycle Detection":    "floyd-cycle",
+  "Min Cost Climbing Stairs":     "min-cost-stairs",
+  "House Robber":                 "house-robber",
+  "Median of Two Sorted Arrays":  "median-sorted-arrays",
+  "Merge Two Sorted Lists":       "merge-sorted-lists",
+  "Longest Palindromic Substring":"manachers",
+  "Binary Tree BFS":              "bfs",
+  "Matrix BFS":                   "bfs-grid",
+  "Matrix Grid BFS":              "bfs-traversal",
+  "Linked List Cycle":            "floyd-cycle",
+  "Linked List Cycle Detection":  "floyd-cycle",
+  "Climbing Stairs":              "climbing-stairs",
+  "Single Number XOR":            "single-number",
+  "Missing Number":               "missing-number",
+  "Plus One":                     "plus-one",
+  "Number of 1 Bits":             "number-1-bits",
+  "Counting Bits":                "counting-bits",
+  "Jump Game":                    "jump-game",
+  "Invert Binary Tree":           "invert-binary-tree",
+  "Max Depth of Binary Tree":     "max-depth-tree",
+  "Same Tree":                    "same-tree",
 };
 
 // Overrides for slugs that can't be reliably derived from the display name
