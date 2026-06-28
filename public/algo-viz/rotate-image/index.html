@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Rotate Image</title>
+  <link rel="stylesheet" href="../shared/style.css" />
+  <script src="../shared/gsap.min.js"></script>
+  <script src="../shared/viz.js"></script>
+  <style>
+    .viz-area { width: 100%; max-width: 90%; }
+    .main-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
+    .left-col, .right-col { display: flex; flex-direction: column; gap: 12px; }
+    @media (max-width: 700px) { .main-row { grid-template-columns: 1fr; } }
+
+    /* matrix grid */
+    .matrix-section {
+      padding: 20px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      display: flex; flex-direction: column; gap: 14px;
+    }
+    .matrix-wrap {
+      display: flex; justify-content: center;
+    }
+    .matrix-grid {
+      display: grid;
+      gap: 5px;
+    }
+    .cell {
+      width: 56px; height: 56px;
+      display: flex; align-items: center; justify-content: center;
+      border: 2px solid var(--border);
+      border-radius: 6px;
+      background: #0f0f0f;
+      font-size: 1rem; font-weight: 700; font-family: monospace;
+      color: var(--text-dim);
+      transition: border-color 0.15s, color 0.15s, background 0.15s;
+    }
+    .cell[data-state="swap-a"] {
+      border-color: var(--accent); color: var(--accent-pale);
+      background: var(--surface-dark);
+    }
+    .cell[data-state="swap-b"] {
+      border-color: #b45309; color: var(--orange);
+      background: #1c1200;
+    }
+    .cell[data-state="swapped"] {
+      border-color: var(--green-border); color: var(--green);
+      background: var(--green-bg);
+    }
+    .cell[data-state="diagonal"] {
+      border-color: #3d2d5c; color: var(--text-dim);
+      background: #111;
+    }
+
+    /* phase tag */
+    .phase-tag {
+      font-size: 0.72rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.08em;
+      padding: 3px 10px; border-radius: 4px;
+      display: inline-block; width: fit-content;
+    }
+    .phase-tag.transpose { background: #1a1a3e; color: var(--accent-pale); border: 1px solid var(--accent); }
+    .phase-tag.reverse   { background: #1c1200; color: var(--orange); border: 1px solid #b45309; }
+    .phase-tag.done      { background: var(--green-bg); color: var(--green); border: 1px solid var(--green-border); }
+    .phase-tag.init      { background: var(--surface); color: var(--text-dim); border: 1px solid var(--border); }
+
+    /* panel-box */
+    .panel-box {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 14px 16px;
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .panel-title {
+      font-size: 0.72rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim);
+    }
+
+    /* var grid */
+    .var-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .var-box {
+      padding: 10px 8px;
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      display: flex; flex-direction: column; align-items: center; gap: 3px;
+    }
+    .var-box.accent-border { border-color: var(--accent); }
+    .var-box.amber-border  { border-color: #b45309; }
+    .var-label { font-size: 0.65rem; font-family: monospace; color: var(--text-faint); text-align: center; }
+    .var-val   { font-size: 1.1rem; font-weight: 700; color: var(--text-bright); font-family: monospace; }
+
+    /* code */
+    .code-panel {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); overflow: hidden;
+    }
+    .code-header {
+      padding: 8px 14px; font-size: 0.72rem; font-weight: 600;
+      color: var(--text-dim); border-bottom: 1px solid var(--border); background: var(--bg);
+    }
+    .code-body { padding: 10px 0; font-size: 0.78rem; line-height: 1.75; white-space: pre; }
+    .code-line { display: flex; align-items: center; padding: 0 14px; }
+    .code-line.hl { background: var(--border-soft); border-left: 2px solid var(--accent); }
+    .ln { min-width: 24px; color: var(--text-ghost); user-select: none; font-size: 0.7rem; }
+
+    /* nav */
+    .btn-play {
+      background: #15803d; border: none; border-radius: var(--radius-sm);
+      color: #fff; cursor: pointer; font-size: 0.88rem; font-weight: 600;
+      padding: 9px 16px; transition: background 0.2s;
+    }
+    .btn-play:hover { background: #166534; }
+    .btn-play.playing { background: #c2410c; }
+    .btn-play.playing:hover { background: #9a3412; }
+    .btn-play:disabled { opacity: 0.4; cursor: not-allowed; }
+    .speed-select {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); color: var(--text);
+      font-size: 0.85rem; padding: 8px 10px; outline: none; width: 80px;
+    }
+    .nav-row { display: flex; gap: 8px; align-items: center; }
+
+    .kw { color: var(--purple); }
+    .fn { color: var(--blue); }
+    .cm { color: var(--text-ghost); }
+    .nb { color: var(--green); }
+    .op { color: var(--text); }
+    .st { color: var(--orange); }
+  </style>
+</head>
+<body class="page">
+
+<div class="page-header">
+  <a class="back-link" href="../index.html">&larr; All Algorithms</a>
+  <div class="page-title">Rotate Image</div>
+  <div class="page-sub">LeetCode 48 &middot; Transpose + reverse each row &middot; 90&deg; clockwise in-place &middot; O(n&sup2;) time &middot; O(1) space</div>
+</div>
+
+<div class="controls">
+  <div class="field">
+    <label>Matrix size</label>
+    <select id="inp-size">
+      <option value="3">3 &times; 3</option>
+      <option value="4">4 &times; 4</option>
+    </select>
+  </div>
+  <button class="btn-primary" onclick="buildAndRun()">Build &amp; Run</button>
+</div>
+
+<div class="viz-area">
+  <div class="main-row">
+    <div class="left-col">
+      <div class="matrix-section" id="matrix-section">
+        <span style="color:var(--text-dim);font-size:0.82rem">Select a size and click Build &amp; Run.</span>
+      </div>
+      <div class="code-panel">
+        <div class="code-header">Python</div>
+        <div class="code-body" id="code-body"></div>
+      </div>
+    </div>
+
+    <div class="right-col">
+      <div style="display:flex;gap:12px">
+        <div class="panel-box" style="flex:0 0 auto">
+          <div class="nav-row">
+            <button class="btn-step" id="btn-back" disabled>&larr;</button>
+            <button class="btn-step" id="btn-next" disabled>&rarr;</button>
+            <button class="btn-play" id="btn-play" disabled>&#9654; Play</button>
+            <select class="speed-select" id="speed-select">
+              <option value="700">Slow</option>
+              <option value="350" selected>Medium</option>
+              <option value="100">Fast</option>
+            </select>
+          </div>
+        </div>
+        <div class="panel-box" style="flex:1;min-width:0">
+          <div class="panel-title" id="step-counter">&mdash;</div>
+          <div style="font-size:0.82rem;color:var(--text-muted);margin-top:2px" id="step-desc">Select a size and click Build &amp; Run.</div>
+        </div>
+      </div>
+
+      <div class="panel-box">
+        <div class="panel-title">Phase</div>
+        <div id="phase-tag-wrap"><span class="phase-tag init">—</span></div>
+      </div>
+
+      <div class="panel-box">
+        <div class="panel-title">Current Swap</div>
+        <div class="var-grid">
+          <div class="var-box accent-border">
+            <div class="var-label">Cell A</div>
+            <div class="var-val" id="vv-a">&mdash;</div>
+          </div>
+          <div class="var-box amber-border">
+            <div class="var-label">Cell B</div>
+            <div class="var-val" id="vv-b">&mdash;</div>
+          </div>
+          <div class="var-box accent-border">
+            <div class="var-label">A value</div>
+            <div class="var-val" id="vv-va">&mdash;</div>
+          </div>
+          <div class="var-box amber-border">
+            <div class="var-label">B value</div>
+            <div class="var-val" id="vv-vb">&mdash;</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel-box">
+        <div class="panel-title">Legend</div>
+        <div style="display:flex;flex-direction:column;gap:6px;font-size:0.78rem;color:var(--text-muted)">
+          <div style="display:flex;align-items:center;gap:8px">
+            <div style="width:16px;height:16px;border-radius:3px;border:2px solid var(--accent);background:var(--surface-dark)"></div>
+            <span>Cell A — first swap target</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <div style="width:16px;height:16px;border-radius:3px;border:2px solid #b45309;background:#1c1200"></div>
+            <span>Cell B — second swap target</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <div style="width:16px;height:16px;border-radius:3px;border:2px solid var(--green-border);background:var(--green-bg)"></div>
+            <span>Just swapped</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+var simSteps = [], nav;
+var currentN = 3;
+
+var PRESETS = {
+  3: [[1,2,3],[4,5,6],[7,8,9]],
+  4: [[1,2,3,4],[5,6,7,8],[9,10,11,12],[13,14,15,16]]
+};
+
+var CODE = [
+  [1,  '<span class="kw">def</span> <span class="fn">rotate</span><span class="op">(matrix):</span>'],
+  [2,  '    n <span class="op">=</span> <span class="fn">len</span><span class="op">(matrix)</span>'],
+  [3,  '    <span class="cm"># Step 1: Transpose</span>'],
+  [4,  '    <span class="kw">for</span> i <span class="kw">in</span> <span class="fn">range</span><span class="op">(n):</span>'],
+  [5,  '        <span class="kw">for</span> j <span class="kw">in</span> <span class="fn">range</span><span class="op">(i </span><span class="op">+</span> <span class="nb">1</span><span class="op">, n):</span>'],
+  [6,  '            matrix<span class="op">[i][j],</span> matrix<span class="op">[j][i]</span> <span class="op">=</span> matrix<span class="op">[j][i],</span> matrix<span class="op">[i][j]</span>'],
+  [7,  '    <span class="cm"># Step 2: Reverse each row</span>'],
+  [8,  '    <span class="kw">for</span> row <span class="kw">in</span> matrix<span class="op">:</span>'],
+  [9,  '        row<span class="op">.</span><span class="fn">reverse</span><span class="op">()</span>'],
+];
+
+window.addEventListener('DOMContentLoaded', function() {
+  buildCodePanel();
+  nav = VizNav({
+    btnPrev: document.getElementById('btn-back'),
+    btnNext: document.getElementById('btn-next'),
+    btnPlay: document.getElementById('btn-play'),
+    speedSel: document.getElementById('speed-select'),
+    render: function(snap, cur, total) {
+      applyStep(snap, cur > 0);
+      document.getElementById('step-counter').textContent = 'Step ' + (cur + 1) + ' / ' + total;
+      var descEl = document.getElementById('step-desc');
+      if (descEl) {
+        gsap.fromTo(descEl, { opacity: 0 }, { opacity: 1, duration: 0.15 });
+        descEl.textContent = snap.desc;
+      }
+    }
+  });
+  buildAndRun();
+});
+
+function buildCodePanel() {
+  var body = document.getElementById('code-body');
+  body.innerHTML = CODE.map(function(e) {
+    return '<div class="code-line" id="cl-' + e[0] + '"><span class="ln">' + e[0] + '</span><span>' + e[1] + '</span></div>';
+  }).join('');
+}
+
+function buildAndRun() {
+  currentN = parseInt(document.getElementById('inp-size').value, 10);
+  var preset = PRESETS[currentN];
+  buildMatrixSection(currentN);
+  simSteps = simulate(preset);
+  nav.load(simSteps);
+}
+
+function buildMatrixSection(n) {
+  var sec = document.getElementById('matrix-section');
+  var cellSize = n === 3 ? 60 : 52;
+  var gap = 5;
+  var html = '<div class="matrix-wrap"><div class="matrix-grid" id="mat-grid" style="grid-template-columns:repeat(' + n + ',' + cellSize + 'px);gap:' + gap + 'px">';
+  for (var r = 0; r < n; r++) {
+    for (var c = 0; c < n; c++) {
+      html += '<div class="cell" id="cell-' + r + '-' + c + '" data-state="" style="width:' + cellSize + 'px;height:' + cellSize + 'px"></div>';
+    }
+  }
+  html += '</div></div>';
+  sec.innerHTML = html;
+}
+
+function simulate(initMat) {
+  var n = initMat.length;
+  var mat = initMat.map(function(r) { return r.slice(); });
+  var steps = [];
+
+  function snapMat() { return mat.map(function(r) { return r.slice(); }); }
+
+  function push(phase, desc, lines, cellA, cellB, afterSwap) {
+    steps.push({
+      phase: phase,
+      desc: desc,
+      lines: lines,
+      cellA: cellA || null,
+      cellB: cellB || null,
+      afterSwap: !!afterSwap,
+      mat: snapMat(),
+    });
+  }
+
+  push('init', 'Original ' + n + '×' + n + ' matrix. Phase 1 transposes across the diagonal; Phase 2 reverses each row — together they produce a 90° clockwise rotation.', [1, 2], null, null, false);
+
+  // Phase 1: Transpose
+  for (var i = 0; i < n; i++) {
+    for (var j = i + 1; j < n; j++) {
+      var va = mat[i][j], vb = mat[j][i];
+      push('transpose',
+        'Transpose: swap [' + i + '][' + j + ']=' + va + ' ↔ [' + j + '][' + i + ']=' + vb + '.',
+        [4, 5, 6],
+        { r: i, c: j, val: va },
+        { r: j, c: i, val: vb },
+        false);
+      var tmp = mat[i][j]; mat[i][j] = mat[j][i]; mat[j][i] = tmp;
+      push('transpose',
+        'After swap: [' + i + '][' + j + ']=' + mat[i][j] + ', [' + j + '][' + i + ']=' + mat[j][i] + '.',
+        [6],
+        { r: i, c: j, val: mat[i][j] },
+        { r: j, c: i, val: mat[j][i] },
+        true);
+    }
+  }
+
+  push('reverse', 'Transpose done. Now reverse each row to complete the 90° clockwise rotation.', [7, 8], null, null, false);
+
+  // Phase 2: Reverse rows
+  for (var ri = 0; ri < n; ri++) {
+    var l = 0, r2 = n - 1;
+    while (l < r2) {
+      var valL = mat[ri][l], valR = mat[ri][r2];
+      push('reverse',
+        'Row ' + ri + ': swap positions [' + l + ']=' + valL + ' ↔ [' + r2 + ']=' + valR + '.',
+        [8, 9],
+        { r: ri, c: l, val: valL },
+        { r: ri, c: r2, val: valR },
+        false);
+      var tmp2 = mat[ri][l]; mat[ri][l] = mat[ri][r2]; mat[ri][r2] = tmp2;
+      push('reverse',
+        'Row ' + ri + ' after swap: [' + l + ']=' + mat[ri][l] + ', [' + r2 + ']=' + mat[ri][r2] + '.',
+        [9],
+        { r: ri, c: l, val: mat[ri][l] },
+        { r: ri, c: r2, val: mat[ri][r2] },
+        true);
+      l++;
+      r2--;
+    }
+  }
+
+  push('done', 'Matrix rotated 90° clockwise! Each top-left element is now at top-right.', [1], null, null, false);
+  return steps;
+}
+
+function applyStep(s, animate) {
+  var n = currentN;
+  for (var r = 0; r < n; r++) {
+    for (var c = 0; c < n; c++) {
+      var el = document.getElementById('cell-' + r + '-' + c);
+      if (!el) continue;
+      el.textContent = s.mat[r][c];
+      var state = '';
+      if (s.cellA && s.cellA.r === r && s.cellA.c === c) {
+        state = s.afterSwap ? 'swapped' : 'swap-a';
+      } else if (s.cellB && s.cellB.r === r && s.cellB.c === c) {
+        state = s.afterSwap ? 'swapped' : 'swap-b';
+      }
+      el.dataset.state = state;
+      if (animate && s.afterSwap && state === 'swapped') {
+        gsap.fromTo(el, { scale: 0.75 }, { scale: 1, duration: 0.22, ease: 'back.out(1.7)' });
+      }
+    }
+  }
+
+  // Phase tag
+  var tagWrap = document.getElementById('phase-tag-wrap');
+  var phaseClass = 'init', phaseText = '—';
+  if (s.phase === 'transpose')  { phaseClass = 'transpose'; phaseText = 'Phase 1: Transpose'; }
+  if (s.phase === 'reverse')    { phaseClass = 'reverse';   phaseText = 'Phase 2: Reverse Rows'; }
+  if (s.phase === 'done')       { phaseClass = 'done';      phaseText = 'Done — 90° Rotated'; }
+  if (s.phase === 'init')       { phaseClass = 'init';      phaseText = 'Initial State'; }
+  tagWrap.innerHTML = '<span class="phase-tag ' + phaseClass + '">' + phaseText + '</span>';
+
+  // Variables
+  function setVar(id, val) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    var text = val !== null && val !== undefined ? String(val) : '—';
+    if (animate && el.textContent !== text) {
+      gsap.fromTo(el, { scale: 0.8, opacity: 0.4 }, { scale: 1, opacity: 1, duration: 0.2, ease: 'back.out(1.7)' });
+    }
+    el.textContent = text;
+  }
+  if (s.cellA) {
+    setVar('vv-a', '[' + s.cellA.r + '][' + s.cellA.c + ']');
+    setVar('vv-va', s.cellA.val);
+  } else {
+    setVar('vv-a', '—'); setVar('vv-va', '—');
+  }
+  if (s.cellB) {
+    setVar('vv-b', '[' + s.cellB.r + '][' + s.cellB.c + ']');
+    setVar('vv-vb', s.cellB.val);
+  } else {
+    setVar('vv-b', '—'); setVar('vv-vb', '—');
+  }
+
+  // Code lines
+  CODE.forEach(function(e) {
+    var el = document.getElementById('cl-' + e[0]);
+    if (!el) return;
+    if (s.lines && s.lines.indexOf(e[0]) >= 0) el.classList.add('hl');
+    else el.classList.remove('hl');
+  });
+}
+</script>
+<script>
+  if (window.self !== window.top) {
+    var bl = document.querySelector('.back-link');
+    if (bl) bl.style.display = 'none';
+  }
+</script>
+</body>
+</html>
