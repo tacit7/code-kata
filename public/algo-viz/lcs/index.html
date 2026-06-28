@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Longest Common Subsequence</title>
+  <link rel="stylesheet" href="../shared/style.css" />
+  <script src="../shared/gsap.min.js"></script>
+  <script src="../shared/viz.js"></script>
+  <style>
+    .viz-area { width: 100%; max-width: 98%; }
+    .main-row { display: grid; grid-template-columns: 1fr 340px; gap: 20px; align-items: start; }
+    @media (max-width: 820px) { .main-row { grid-template-columns: 1fr; } }
+
+    /* DP Table */
+    .table-section {
+      padding: 16px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      overflow-x: auto;
+    }
+    .dp-table { border-collapse: separate; border-spacing: 4px; font-family: monospace; }
+    .dp-table td { width: 40px; height: 40px; text-align: center; vertical-align: middle; font-size: 0.88rem; font-weight: 700; }
+    .dp-table .hdr-empty { width: 40px; height: 40px; }
+    .hdr-char {
+      width: 40px; height: 40px;
+      font-size: 0.95rem; font-weight: 700; text-align: center; vertical-align: middle;
+      color: var(--accent);
+      background: rgba(122,162,247,0.08);
+      border: 1px solid rgba(122,162,247,0.2);
+      border-radius: 5px;
+      transition: background 0.12s, color 0.12s, border-color 0.12s;
+    }
+    .hdr-char.eps { color: var(--text-dim); background: transparent; border-color: transparent; font-style: italic; }
+    .hdr-char.hl-match { color: var(--green-light); background: rgba(158,206,106,0.12); border-color: var(--green-border); }
+    .hdr-char.hl-miss  { color: var(--accent-pale); background: rgba(122,162,247,0.1); border-color: var(--accent); }
+
+    /* DP cells */
+    .dp-cell {
+      border: 2px dashed var(--border-soft);
+      border-radius: 5px;
+      background: #0f0f0f;
+      color: var(--text-ghost);
+      transition: border-color 0.1s, background 0.1s, color 0.1s;
+    }
+    .dp-cell[data-state="filled"] {
+      border-style: solid; border-color: #2d3148;
+      color: var(--text-dim); background: #0f0f0f;
+    }
+    .dp-cell[data-state="current-match"] {
+      border-style: solid; border-color: var(--green-border);
+      color: var(--green-light); background: var(--green-bg);
+    }
+    .dp-cell[data-state="current-miss"] {
+      border-style: solid; border-color: var(--accent);
+      color: var(--accent-pale); background: var(--surface-dark);
+    }
+    .dp-cell[data-state="source"] {
+      border-style: solid; border-color: #b45309;
+      color: var(--orange); background: #1c1200;
+    }
+    .dp-cell[data-state="backtrace"] {
+      border-style: solid; border-color: #7c3aed;
+      color: #c4b5fd; background: #1a1030;
+    }
+    .dp-cell[data-state="backtrace-match"] {
+      border-style: solid; border-color: var(--green-border);
+      color: var(--green-light); background: var(--green-bg);
+    }
+    .dp-cell[data-state="base"] {
+      border-style: solid; border-color: #2d3148;
+      color: var(--text-ghost); background: #0a0a12;
+    }
+
+    /* Panels */
+    .panel-box {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 14px 16px;
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .panel-title {
+      font-size: 0.72rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim);
+    }
+
+    /* Variables */
+    .var-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .var-box {
+      padding: 9px 8px;
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      display: flex; flex-direction: column; align-items: center; gap: 3px;
+    }
+    .var-box.accent-border { border-color: var(--accent); }
+    .var-box.amber-border  { border-color: #b45309; }
+    .var-box.green-border  { border-color: var(--green-border); }
+    .var-label { font-size: 0.62rem; font-family: monospace; color: var(--text-faint); text-align: center; }
+    .var-val   { font-size: 1.15rem; font-weight: 700; color: var(--text-bright); font-family: monospace; }
+
+    /* LCS display */
+    .lcs-display {
+      font-size: 1.3rem; font-weight: 700; font-family: monospace;
+      letter-spacing: 0.14em; min-height: 2.2rem;
+      padding: 8px 12px; border-radius: var(--radius-sm);
+      transition: background 0.2s, color 0.2s;
+    }
+    .lcs-display.has-lcs { color: var(--green-light); background: var(--green-bg); border: 1px solid var(--green-border); }
+    .lcs-display.empty   { color: var(--text-ghost);  background: var(--bg);       border: 1px solid var(--border); }
+
+    /* Presets */
+    .preset-row { display: flex; gap: 6px; flex-wrap: wrap; }
+    .preset-btn {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); color: var(--text-dim);
+      cursor: pointer; font-size: 0.75rem; padding: 5px 9px;
+      font-family: monospace; transition: border-color 0.15s, color 0.15s;
+    }
+    .preset-btn:hover { border-color: var(--accent); color: var(--accent-pale); }
+    .preset-btn.active { border-color: var(--accent); color: var(--accent-pale); background: var(--surface-dark); }
+
+    /* Nav */
+    .btn-play {
+      background: #15803d; border: none; border-radius: var(--radius-sm);
+      color: #fff; cursor: pointer; font-size: 0.88rem; font-weight: 600;
+      padding: 9px 16px; transition: background 0.2s;
+    }
+    .btn-play:hover { background: #166534; }
+    .btn-play.playing { background: #c2410c; }
+    .btn-play.playing:hover { background: #9a3412; }
+    .btn-play:disabled { opacity: 0.4; cursor: not-allowed; }
+    .speed-select {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); color: var(--text);
+      font-size: 0.85rem; padding: 8px 10px; outline: none; width: 80px;
+    }
+    .nav-row { display: flex; gap: 8px; align-items: center; }
+
+    /* Code */
+    .code-panel {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); overflow: hidden;
+    }
+    .code-header { padding: 8px 14px; font-size: 0.72rem; font-weight: 600; color: var(--text-dim); border-bottom: 1px solid var(--border); background: var(--bg); }
+    .code-body { padding: 10px 0; font-size: 0.78rem; line-height: 1.75; white-space: pre; }
+    .code-line { display: flex; align-items: center; padding: 0 14px; }
+    .code-line.hl { background: var(--border-soft); border-left: 2px solid var(--accent); }
+    .ln { min-width: 24px; color: var(--text-ghost); user-select: none; font-size: 0.7rem; }
+
+    .kw { color: var(--purple); }
+    .fn { color: var(--blue); }
+    .bi { color: var(--orange); }
+    .op { color: var(--text); }
+    .nb { color: var(--green); }
+    .cm { color: var(--text-ghost); }
+    .str { color: var(--yellow); }
+  </style>
+</head>
+<body class="page">
+
+<div class="page-header">
+  <a class="back-link" href="../index.html">&larr; All Algorithms</a>
+  <div class="page-title">Longest Common Subsequence</div>
+  <div class="page-sub">LeetCode 1143 &middot; 2-D DP: dp[i][j] = dp[i-1][j-1]+1 on match, else max(↑,←) &middot; O(m&times;n) time &middot; O(m&times;n) space</div>
+</div>
+
+<div class="controls">
+  <div class="field">
+    <label>Text 1</label>
+    <input id="inp-t1" type="text" value="ABCBDAB" maxlength="8" style="width:110px;font-family:monospace;text-transform:uppercase" />
+  </div>
+  <div class="field">
+    <label>Text 2</label>
+    <input id="inp-t2" type="text" value="BDCAB" maxlength="8" style="width:110px;font-family:monospace;text-transform:uppercase" />
+  </div>
+  <button class="btn-primary" onclick="buildAndRun()">Build &amp; Run</button>
+</div>
+
+<div class="viz-area">
+  <div class="main-row">
+
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div class="panel-box">
+        <div class="panel-title">Presets</div>
+        <div class="preset-row" id="preset-row"></div>
+      </div>
+      <div class="table-section" id="table-section">
+        <span style="color:var(--text-dim);font-size:0.82rem">Set strings and click Build &amp; Run.</span>
+      </div>
+      <div class="code-panel">
+        <div class="code-header">Python</div>
+        <div class="code-body" id="code-body"></div>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div style="display:flex;gap:10px">
+        <div class="panel-box" style="flex:0 0 auto">
+          <div class="nav-row">
+            <button class="btn-step" id="btn-back" disabled>&larr;</button>
+            <button class="btn-step" id="btn-next" disabled>&rarr;</button>
+            <button class="btn-play" id="btn-play" disabled>&#9654; Play</button>
+            <select class="speed-select" id="speed-select">
+              <option value="700">Slow</option>
+              <option value="350" selected>Medium</option>
+              <option value="100">Fast</option>
+            </select>
+          </div>
+        </div>
+        <div class="panel-box" style="flex:1;min-width:0">
+          <div class="panel-title" id="phase-label">&mdash;</div>
+          <div style="font-size:0.8rem;color:var(--text-muted);margin-top:2px;line-height:1.45" id="step-desc">Set strings and click Build &amp; Run.</div>
+        </div>
+      </div>
+
+      <div class="panel-box">
+        <div class="panel-title">Variables</div>
+        <div class="var-grid">
+          <div class="var-box accent-border">
+            <div class="var-label">i (text1 row)</div>
+            <div class="var-val" id="vv-i">&mdash;</div>
+          </div>
+          <div class="var-box amber-border">
+            <div class="var-label">j (text2 col)</div>
+            <div class="var-val" id="vv-j">&mdash;</div>
+          </div>
+          <div class="var-box">
+            <div class="var-label">text1[i-1]</div>
+            <div class="var-val" id="vv-c1">&mdash;</div>
+          </div>
+          <div class="var-box">
+            <div class="var-label">text2[j-1]</div>
+            <div class="var-val" id="vv-c2">&mdash;</div>
+          </div>
+          <div class="var-box green-border" style="grid-column:span 2">
+            <div class="var-label">dp[i][j]</div>
+            <div class="var-val" id="vv-dp">&mdash;</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel-box">
+        <div class="panel-title">LCS String</div>
+        <div class="lcs-display empty" id="lcs-display">&mdash;</div>
+      </div>
+
+      <div class="panel-box">
+        <div class="panel-title">Legend</div>
+        <div style="display:flex;flex-direction:column;gap:6px;font-size:0.77rem;color:var(--text-muted)">
+          <div style="display:flex;align-items:center;gap:8px">
+            <div style="width:15px;height:15px;border-radius:3px;border:2px solid var(--green-border);background:var(--green-bg);flex-shrink:0"></div>
+            <span>Match: dp[i][j] = diagonal + 1</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <div style="width:15px;height:15px;border-radius:3px;border:2px solid var(--accent);background:var(--surface-dark);flex-shrink:0"></div>
+            <span>No match: take max(↑, ←)</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <div style="width:15px;height:15px;border-radius:3px;border:2px solid #b45309;background:#1c1200;flex-shrink:0"></div>
+            <span>Source cell(s) used to compute current</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <div style="width:15px;height:15px;border-radius:3px;border:2px solid #7c3aed;background:#1a1030;flex-shrink:0"></div>
+            <span>Backtrace path (LCS reconstruction)</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+var simSteps = [], nav;
+var curText1 = '', curText2 = '';
+
+var PRESETS = [
+  { t1: 'ABCBDAB', t2: 'BDCAB',    label: 'Classic'  },
+  { t1: 'AGGTAB',  t2: 'GXTXAYB',  label: 'Gaps'     },
+  { t1: 'SUNDAY',  t2: 'SATURDAY', label: 'Days'     },
+];
+
+var CODE = [
+  [1,  '<span class="kw">def</span> <span class="fn">lcs</span><span class="op">(</span>text1<span class="op">,</span> text2<span class="op">):</span>'],
+  [2,  '    m<span class="op">,</span> n <span class="op">=</span> <span class="bi">len</span><span class="op">(</span>text1<span class="op">),</span> <span class="bi">len</span><span class="op">(</span>text2<span class="op">)</span>'],
+  [3,  '    dp <span class="op">=</span> <span class="op">[[</span><span class="nb">0</span><span class="op">]*(</span>n<span class="op">+</span><span class="nb">1</span><span class="op">)</span> <span class="kw">for</span> _ <span class="kw">in</span> <span class="bi">range</span><span class="op">(</span>m<span class="op">+</span><span class="nb">1</span><span class="op">)]  </span><span class="cm"># base: empty prefix = 0</span>'],
+  [4,  '    <span class="kw">for</span> i <span class="kw">in</span> <span class="bi">range</span><span class="op">(</span><span class="nb">1</span><span class="op">,</span> m<span class="op">+</span><span class="nb">1</span><span class="op">):</span>'],
+  [5,  '        <span class="kw">for</span> j <span class="kw">in</span> <span class="bi">range</span><span class="op">(</span><span class="nb">1</span><span class="op">,</span> n<span class="op">+</span><span class="nb">1</span><span class="op">):</span>'],
+  [6,  '            <span class="kw">if</span> text1<span class="op">[</span>i<span class="op">-</span><span class="nb">1</span><span class="op">]</span> <span class="op">==</span> text2<span class="op">[</span>j<span class="op">-</span><span class="nb">1</span><span class="op">]:</span>'],
+  [7,  '                dp<span class="op">[</span>i<span class="op">][</span>j<span class="op">]</span> <span class="op">=</span> dp<span class="op">[</span>i<span class="op">-</span><span class="nb">1</span><span class="op">][</span>j<span class="op">-</span><span class="nb">1</span><span class="op">]</span> <span class="op">+</span> <span class="nb">1</span>'],
+  [8,  '            <span class="kw">else</span><span class="op">:</span>'],
+  [9,  '                dp<span class="op">[</span>i<span class="op">][</span>j<span class="op">]</span> <span class="op">=</span> <span class="bi">max</span><span class="op">(</span>dp<span class="op">[</span>i<span class="op">-</span><span class="nb">1</span><span class="op">][</span>j<span class="op">],</span> dp<span class="op">[</span>i<span class="op">][</span>j<span class="op">-</span><span class="nb">1</span><span class="op">])</span>'],
+  [10, '    <span class="cm"># back-trace to reconstruct LCS</span>'],
+  [11, '    lcs<span class="op">,</span> i<span class="op">,</span> j <span class="op">=</span> <span class="str">""</span><span class="op">,</span> m<span class="op">,</span> n'],
+  [12, '    <span class="kw">while</span> i <span class="op">></span> <span class="nb">0</span> <span class="kw">and</span> j <span class="op">></span> <span class="nb">0</span><span class="op">:</span>'],
+  [13, '        <span class="kw">if</span> text1<span class="op">[</span>i<span class="op">-</span><span class="nb">1</span><span class="op">]</span> <span class="op">==</span> text2<span class="op">[</span>j<span class="op">-</span><span class="nb">1</span><span class="op">]:</span>'],
+  [14, '            lcs <span class="op">=</span> text1<span class="op">[</span>i<span class="op">-</span><span class="nb">1</span><span class="op">]</span> <span class="op">+</span> lcs<span class="op">;</span> i<span class="op">-=</span><span class="nb">1</span><span class="op">;</span> j<span class="op">-=</span><span class="nb">1</span>'],
+  [15, '        <span class="kw">elif</span> dp<span class="op">[</span>i<span class="op">-</span><span class="nb">1</span><span class="op">][</span>j<span class="op">]</span> <span class="op">>=</span> dp<span class="op">[</span>i<span class="op">][</span>j<span class="op">-</span><span class="nb">1</span><span class="op">]:</span>  i<span class="op">-=</span><span class="nb">1</span>'],
+  [16, '        <span class="kw">else</span><span class="op">:</span>  j<span class="op">-=</span><span class="nb">1</span>'],
+  [17, '    <span class="kw">return</span> lcs'],
+];
+
+window.addEventListener('DOMContentLoaded', function() {
+  buildCodePanel();
+  buildPresets();
+  nav = VizNav({
+    btnPrev: document.getElementById('btn-back'),
+    btnNext: document.getElementById('btn-next'),
+    btnPlay: document.getElementById('btn-play'),
+    speedSel: document.getElementById('speed-select'),
+    render: function(snap, cur, total) {
+      applyStep(snap, cur > 0);
+      var phaseEl = document.getElementById('phase-label');
+      var descEl  = document.getElementById('step-desc');
+      if (phaseEl) phaseEl.textContent = 'Step ' + (cur + 1) + ' / ' + total + '  ·  ' + snap.phase;
+      if (descEl) {
+        gsap.fromTo(descEl, { opacity: 0 }, { opacity: 1, duration: 0.15 });
+        descEl.textContent = snap.desc;
+      }
+    }
+  });
+  setPreset(0);
+});
+
+function buildPresets() {
+  var row = document.getElementById('preset-row');
+  row.innerHTML = PRESETS.map(function(p, idx) {
+    return '<button class="preset-btn" id="preset-' + idx + '" onclick="setPreset(' + idx + ')">'
+      + p.label + ': ' + p.t1 + ' / ' + p.t2 + '</button>';
+  }).join('');
+}
+
+function setPreset(idx) {
+  PRESETS.forEach(function(_, i) {
+    var el = document.getElementById('preset-' + i);
+    if (el) el.classList.toggle('active', i === idx);
+  });
+  document.getElementById('inp-t1').value = PRESETS[idx].t1;
+  document.getElementById('inp-t2').value = PRESETS[idx].t2;
+  buildAndRun();
+}
+
+function buildAndRun() {
+  var t1 = document.getElementById('inp-t1').value.trim().toUpperCase().slice(0, 8);
+  var t2 = document.getElementById('inp-t2').value.trim().toUpperCase().slice(0, 8);
+  if (!t1 || !t2) return;
+  curText1 = t1;
+  curText2 = t2;
+  buildTable(t1, t2);
+  simSteps = simulate(t1, t2);
+  nav.load(simSteps);
+}
+
+function buildTable(t1, t2) {
+  var m = t1.length, n = t2.length;
+  var html = '<table class="dp-table"><tbody>';
+
+  // Header row: empty corner | ε col header | text2 chars
+  html += '<tr>';
+  html += '<td class="hdr-empty"></td>';
+  html += '<td class="hdr-char eps" id="ch-0">&epsilon;</td>';
+  for (var j = 1; j <= n; j++) {
+    html += '<td class="hdr-char" id="ch-' + j + '">' + t2[j-1] + '</td>';
+  }
+  html += '</tr>';
+
+  // Row i=0 (ε row)
+  html += '<tr>';
+  html += '<td class="hdr-char eps" id="rh-0">&epsilon;</td>';
+  for (var j = 0; j <= n; j++) {
+    html += '<td class="dp-cell" id="cell-0-' + j + '" data-state="base">0</td>';
+  }
+  html += '</tr>';
+
+  // Rows i=1..m
+  for (var i = 1; i <= m; i++) {
+    html += '<tr>';
+    html += '<td class="hdr-char" id="rh-' + i + '">' + t1[i-1] + '</td>';
+    // j=0 base cell
+    html += '<td class="dp-cell" id="cell-' + i + '-0" data-state="base">0</td>';
+    for (var j = 1; j <= n; j++) {
+      html += '<td class="dp-cell" id="cell-' + i + '-' + j + '" data-state="empty">-</td>';
+    }
+    html += '</tr>';
+  }
+
+  html += '</tbody></table>';
+  document.getElementById('table-section').innerHTML = html;
+}
+
+function deepCopy2D(arr) {
+  return arr.map(function(row) { return row.slice(); });
+}
+
+function simulate(text1, text2) {
+  var m = text1.length, n = text2.length;
+  var steps = [];
+
+  // null = unfilled, number = computed value
+  var dp = [];
+  for (var i = 0; i <= m; i++) {
+    var row = [];
+    for (var j = 0; j <= n; j++) {
+      row.push((i === 0 || j === 0) ? 0 : null);
+    }
+    dp.push(row);
+  }
+
+  function snap(phase, desc, lines, cur, match, sources, backtrace, lcs) {
+    steps.push({
+      phase: phase, desc: desc, lines: lines || [],
+      cur: cur || null,
+      match: (match === undefined ? null : match),
+      sources: sources || [],
+      backtrace: backtrace || [],
+      lcs: lcs || '',
+      dp: deepCopy2D(dp),
+    });
+  }
+
+  snap('Init',
+    'Initialize (m+1)×(n+1) table. Row 0 and col 0 are base cases: any string vs empty prefix has LCS length 0.',
+    [2,3], null, null, [], [], '');
+
+  for (var i = 1; i <= m; i++) {
+    for (var j = 1; j <= n; j++) {
+      var c1 = text1[i-1], c2 = text2[j-1];
+      if (c1 === c2) {
+        dp[i][j] = dp[i-1][j-1] + 1;
+        snap('Fill',
+          'text1[' + (i-1) + ']=’' + c1 + '’ == text2[' + (j-1) + ']=’' + c2 + '’ ✓ Match! dp[' + i + '][' + j + '] = dp[' + (i-1) + '][' + (j-1) + '] + 1 = ' + dp[i][j],
+          [4,5,6,7], [i,j], true, [[i-1,j-1]], [], '');
+      } else {
+        var up   = dp[i-1][j];
+        var left = dp[i][j-1];
+        dp[i][j] = Math.max(up, left);
+        var srcs = [];
+        if (up >= left) srcs.push([i-1, j]);
+        if (left >= up)  srcs.push([i, j-1]);
+        snap('Fill',
+          'text1[' + (i-1) + ']=’' + c1 + '’ ≠ text2[' + (j-1) + ']=’' + c2 + '’. dp[' + i + '][' + j + '] = max(↑' + up + ', ←' + left + ') = ' + dp[i][j],
+          [4,5,8,9], [i,j], false, srcs, [], '');
+      }
+    }
+  }
+
+  // Backtrace
+  var ii = m, jj = n;
+  var lcsStr = '';
+  var path = [];
+
+  snap('Backtrace',
+    'Fill done. LCS length = dp[' + m + '][' + n + '] = ' + dp[m][n] + '. Back-trace from (' + m + ',' + n + ') to reconstruct.',
+    [10,11], [ii,jj], null, [], path, '');
+
+  while (ii > 0 && jj > 0) {
+    var c1 = text1[ii-1], c2 = text2[jj-1];
+    if (c1 === c2) {
+      path = [[ii,jj]].concat(path);
+      lcsStr = c1 + lcsStr;
+      snap('Backtrace',
+        '’' + c1 + '’ == ’' + c2 + '’ ✓ Match — prepend ’' + c1 + '’. LCS so far: "' + lcsStr + '". Move ↖ to (' + (ii-1) + ',' + (jj-1) + ').',
+        [12,13,14], [ii,jj], true, [[ii-1,jj-1]], path, lcsStr);
+      ii--; jj--;
+    } else if (dp[ii-1][jj] >= dp[ii][jj-1]) {
+      snap('Backtrace',
+        'No match. ↑dp[' + (ii-1) + '][' + jj + ']=' + dp[ii-1][jj] + ' ≥ ←dp[' + ii + '][' + (jj-1) + ']=' + dp[ii][jj-1] + '. Move up ↑ to (' + (ii-1) + ',' + jj + ').',
+        [12,15], [ii,jj], false, [[ii-1,jj]], path, lcsStr);
+      ii--;
+    } else {
+      snap('Backtrace',
+        'No match. ←dp[' + ii + '][' + (jj-1) + ']=' + dp[ii][jj-1] + ' > ↑dp[' + (ii-1) + '][' + jj + ']=' + dp[ii-1][jj] + '. Move left ← to (' + ii + ',' + (jj-1) + ').',
+        [12,16], [ii,jj], false, [[ii,jj-1]], path, lcsStr);
+      jj--;
+    }
+  }
+
+  snap('Done',
+    'LCS = "' + lcsStr + '" (length ' + lcsStr.length + '). Backtrace complete — the highlighted diagonal path shows every matched character.',
+    [17], null, null, [], path, lcsStr);
+
+  return steps;
+}
+
+function buildCodePanel() {
+  var body = document.getElementById('code-body');
+  body.innerHTML = CODE.map(function(e) {
+    return '<div class="code-line" id="cl-' + e[0] + '"><span class="ln">' + e[0] + '</span><span>' + e[1] + '</span></div>';
+  }).join('');
+}
+
+function applyStep(s, animate) {
+  applyTable(s, animate);
+  applyVars(s, animate);
+  applyLCS(s, animate);
+  setCodeLines(s.lines);
+}
+
+function applyTable(s, animate) {
+  var m = curText1.length, n = curText2.length;
+
+  var curKey = s.cur ? (s.cur[0] + ',' + s.cur[1]) : null;
+
+  var srcSet = {};
+  s.sources.forEach(function(p) { srcSet[p[0] + ',' + p[1]] = true; });
+
+  var btSet = {};
+  s.backtrace.forEach(function(p) { btSet[p[0] + ',' + p[1]] = true; });
+
+  // Reset all header highlights
+  for (var i = 0; i <= m; i++) {
+    var el = document.getElementById('rh-' + i);
+    if (el) { el.className = i === 0 ? 'hdr-char eps' : 'hdr-char'; }
+  }
+  for (var j = 0; j <= n; j++) {
+    var el = document.getElementById('ch-' + j);
+    if (el) { el.className = j === 0 ? 'hdr-char eps' : 'hdr-char'; }
+  }
+
+  // Highlight headers for current cell
+  if (s.cur && s.cur[0] >= 1 && s.cur[1] >= 1) {
+    var ci = s.cur[0], cj = s.cur[1];
+    var hlCls = s.match === true ? 'hdr-char hl-match' : 'hdr-char hl-miss';
+    var rh = document.getElementById('rh-' + ci);
+    var ch = document.getElementById('ch-' + cj);
+    if (rh) rh.className = hlCls;
+    if (ch) ch.className = hlCls;
+  }
+
+  for (var i = 0; i <= m; i++) {
+    for (var j = 0; j <= n; j++) {
+      var cell = document.getElementById('cell-' + i + '-' + j);
+      if (!cell) continue;
+      var key = i + ',' + j;
+      var val = s.dp[i][j];
+
+      // Display value
+      cell.textContent = val === null ? '-' : String(val);
+
+      // State
+      var state;
+      if (key === curKey) {
+        state = s.match === true ? 'current-match' : 'current-miss';
+      } else if (srcSet[key]) {
+        state = 'source';
+      } else if (btSet[key]) {
+        state = 'backtrace';
+      } else if (i === 0 || j === 0) {
+        state = 'base';
+      } else if (val !== null) {
+        state = 'filled';
+      } else {
+        state = 'empty';
+      }
+
+      cell.dataset.state = state;
+
+      if (animate && key === curKey && s.phase === 'Fill') {
+        gsap.fromTo(cell, { scale: 0.6 }, { scale: 1.15, duration: 0.18, ease: 'power2.out',
+          onComplete: function(el) { gsap.to(el, { scale: 1, duration: 0.12 }); }.bind(null, cell)
+        });
+      }
+      if (animate && s.phase === 'Backtrace' && s.match === true && key === curKey) {
+        gsap.fromTo(cell, { scale: 1 }, { scale: 1.2, duration: 0.14, yoyo: true, repeat: 1 });
+      }
+    }
+  }
+}
+
+function applyVars(s, animate) {
+  function setVal(id, val) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    var text = (val === null || val === undefined) ? '—' : String(val);
+    if (animate && el.textContent !== text) {
+      gsap.fromTo(el, { scale: 0.8, opacity: 0.4 }, { scale: 1, opacity: 1, duration: 0.2, ease: 'back.out(1.7)' });
+    }
+    el.textContent = text;
+  }
+  var ci = s.cur ? s.cur[0] : null;
+  var cj = s.cur ? s.cur[1] : null;
+  setVal('vv-i',  ci !== null ? ci : null);
+  setVal('vv-j',  cj !== null ? cj : null);
+  setVal('vv-c1', (ci !== null && ci >= 1) ? curText1[ci-1] : null);
+  setVal('vv-c2', (cj !== null && cj >= 1) ? curText2[cj-1] : null);
+  setVal('vv-dp', (ci !== null && cj !== null && s.dp[ci][cj] !== null) ? s.dp[ci][cj] : null);
+}
+
+function applyLCS(s, animate) {
+  var el = document.getElementById('lcs-display');
+  if (!el) return;
+  if (s.lcs) {
+    if (animate && el.textContent !== s.lcs) {
+      gsap.fromTo(el, { opacity: 0.3 }, { opacity: 1, duration: 0.25 });
+    }
+    el.textContent = s.lcs;
+    el.className = 'lcs-display has-lcs';
+  } else {
+    el.textContent = '—';
+    el.className = 'lcs-display empty';
+  }
+}
+
+function setCodeLines(lines) {
+  CODE.forEach(function(e) {
+    var el = document.getElementById('cl-' + e[0]);
+    if (!el) return;
+    if (lines && lines.indexOf(e[0]) >= 0) el.classList.add('hl');
+    else el.classList.remove('hl');
+  });
+}
+</script>
+<script>
+  if (window.self !== window.top) {
+    var bl = document.querySelector('.back-link');
+    if (bl) bl.style.display = 'none';
+  }
+</script>
+</body>
+</html>
