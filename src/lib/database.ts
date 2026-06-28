@@ -12,6 +12,14 @@ import { blind75Part7 } from "./blind75-additions-part7";
 import { blind75Part8 } from "./blind75-additions-part8";
 import { neetcodeStack } from "./neetcode-stack";
 import { neetcodeBinarySearch } from "./neetcode-binary-search";
+import { neetcodeTrees } from "./neetcode-trees";
+import { neetcodeBacktracking } from "./neetcode-backtracking";
+import { neetcodeHeap } from "./neetcode-heap";
+import { neetcodeGraphs } from "./neetcode-graphs";
+import { neetcodeGreedy } from "./neetcode-greedy";
+import { neetcodeAdvancedGraphs } from "./neetcode-advanced-graphs";
+import { neetcode2dDp } from "./neetcode-2d-dp";
+import { neetcodeMathBit } from "./neetcode-math-bit";
 
 let db: Database | null = null;
 
@@ -160,6 +168,14 @@ const blind75Katas = [
   ...blind75Part5, ...blind75Part6, ...blind75Part7, ...blind75Part8,
   ...neetcodeStack,
   ...neetcodeBinarySearch,
+  ...neetcodeTrees,
+  ...neetcodeBacktracking,
+  ...neetcodeHeap,
+  ...neetcodeGraphs,
+  ...neetcodeGreedy,
+  ...neetcodeAdvancedGraphs,
+  ...neetcode2dDp,
+  ...neetcodeMathBit,
 ];
 
 async function seedKatas(db: Database) {
