@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Max Depth of Binary Tree</title>
+  <link rel="stylesheet" href="../shared/style.css" />
+  <script src="../shared/gsap.min.js"></script>
+  <script src="../shared/viz.js"></script>
+  <style>
+    .viz-area {
+      width: 100%; max-width: 90%;
+      display: flex; flex-direction: column; gap: 12px;
+    }
+
+    .tree-wrap {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+    }
+    #tree-svg { display: block; width: 100%; }
+
+    .bottom-row {
+      display: grid;
+      grid-template-columns: 50% 1fr;
+      gap: 12px;
+      align-items: start;
+    }
+    .right-col { display: flex; flex-direction: column; gap: 12px; }
+    @media (max-width: 680px) { .bottom-row { grid-template-columns: 1fr; } }
+
+    .code-panel {
+      background: #0a0d14;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      display: flex; flex-direction: column;
+    }
+    .code-header {
+      padding: 9px 14px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      font-size: 0.67rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.11em;
+      color: var(--text-dim);
+    }
+    .code-body {
+      padding: 10px 0;
+      flex: 1;
+      font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+      font-size: 0.78rem;
+      line-height: 1.7;
+      overflow-x: auto;
+    }
+    .cl {
+      display: flex; align-items: stretch;
+      border-left: 3px solid transparent;
+      padding: 0 14px 0 0;
+      transition: background-color 0.01s;
+      white-space: pre;
+    }
+    .cl .ln {
+      width: 28px; min-width: 28px;
+      text-align: right; color: #3d4468;
+      user-select: none; padding-right: 14px;
+      font-size: 0.72rem; line-height: 1.7;
+    }
+    .cl .code { color: var(--text-muted); }
+
+    .kw  { color: var(--purple); }
+    .fn  { color: var(--blue); }
+    .bi  { color: var(--orange); }
+    .str { color: var(--green); }
+    .cm  { color: #3d4468; font-style: italic; }
+    .op  { color: var(--text); }
+
+    .panel-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 13px 18px;
+    }
+    .panel-title {
+      font-size: 0.67rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.11em;
+      color: var(--text-dim); margin-bottom: 10px;
+      display: flex; align-items: center; gap: 8px;
+    }
+
+    #call-stack {
+      display: flex; flex-direction: column-reverse; gap: 5px;
+      min-height: 40px;
+    }
+    .cs-frame {
+      background: #1e1a3a; color: var(--accent-pale);
+      border: 1px solid var(--accent); border-radius: 6px;
+      padding: 5px 11px; font-size: 0.84rem; font-weight: 600;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .cs-frame.top {
+      background: #4338ca; color: #fff;
+    }
+    .cs-empty { color: var(--text-faint); font-size: 0.82rem; font-style: italic; }
+
+    .depth-row {
+      display: flex; gap: 10px;
+    }
+    .depth-slot {
+      flex: 1;
+      background: #0a0d14;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 8px 12px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.82rem;
+    }
+    .depth-slot .ds-label { color: var(--text-dim); font-size: 0.7rem; margin-bottom: 4px; }
+    .depth-slot .ds-val { color: var(--text-bright); font-size: 1.1rem; font-weight: 700; }
+    .depth-slot.active-slot { border-color: var(--accent); }
+    .depth-slot .ds-val.unknown { color: var(--text-faint); }
+  </style>
+</head>
+<body class="page">
+
+<div class="page-header">
+  <a class="back-link" href="../index.html">← All Algorithms</a>
+  <h1 class="page-title">Max Depth of Binary Tree</h1>
+</div>
+
+<div class="controls">
+  <div class="field">
+    <label>Level-order (use null for empty)</label>
+    <input id="inp-tree" type="text" value="3,9,20,null,null,15,7" style="width:280px" />
+  </div>
+  <button class="btn-primary" onclick="build()">Build</button>
+</div>
+
+<div class="viz-area">
+
+  <div class="tree-wrap">
+    <svg id="tree-svg" viewBox="0 0 800 320"
+         preserveAspectRatio="xMidYMid meet"></svg>
+  </div>
+
+  <div class="status-bar" style="max-width:100%">
+    <span class="phase-label" id="phase-label">—</span>
+    <span class="step-desc"   id="step-desc">Click Build to start.</span>
+  </div>
+
+  <div class="bottom-row">
+
+    <div class="code-panel">
+      <div class="code-header">Python</div>
+      <div class="code-body" id="code-body"></div>
+    </div>
+
+    <div class="right-col">
+      <div class="panel-box">
+        <div class="panel-title">Active Frame — Depths</div>
+        <div class="depth-row">
+          <div class="depth-slot" id="slot-left">
+            <div class="ds-label">left_depth</div>
+            <div class="ds-val unknown" id="ds-left">—</div>
+          </div>
+          <div class="depth-slot" id="slot-right">
+            <div class="ds-label">right_depth</div>
+            <div class="ds-val unknown" id="ds-right">—</div>
+          </div>
+        </div>
+      </div>
+      <div class="panel-box">
+        <div class="panel-title">Call Stack <span style="font-size:0.65rem;font-weight:400;color:var(--text-faint)">(top = active)</span></div>
+        <div id="call-stack"><span class="cs-empty">empty</span></div>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<div class="legend">
+  <div class="leg-item">
+    <svg width="14" height="14"><circle cx="7" cy="7" r="6" fill="#1e2130" stroke="#2d3148" stroke-width="2"/></svg>
+    Unvisited
+  </div>
+  <div class="leg-item">
+    <svg width="14" height="14"><circle cx="7" cy="7" r="6" fill="#4338ca" stroke="var(--accent)" stroke-width="2"/></svg>
+    Active
+  </div>
+  <div class="leg-item">
+    <svg width="14" height="14"><circle cx="7" cy="7" r="6" fill="#052e16" stroke="#16a34a" stroke-width="2"/></svg>
+    Computed
+  </div>
+</div>
+
+<div class="step-nav">
+  <button class="btn-step" id="btn-back" disabled>← Back</button>
+  <button class="btn-step" id="btn-next" disabled>Next →</button>
+  <button id="btn-play" style="background:#15803d;color:#fff;border:none;border-radius:4px;padding:6px 14px;font-weight:600;cursor:pointer">&#9654; Play</button>
+  <select id="speed-select" style="background:var(--bg);border:1px solid var(--border);color:var(--text);border-radius:4px;padding:6px 8px;font-size:0.85rem">
+    <option value="700">Slow</option>
+    <option value="350" selected>Medium</option>
+    <option value="120">Fast</option>
+  </select>
+</div>
+
+<script>
+// ─── Code lines ───────────────────────────────────────────────────────────────
+const CODE_LINES = [
+  [1, `<span class="kw">def</span> <span class="fn">maxDepth</span><span class="op">(</span>root<span class="op">):</span>`],
+  [2, `    <span class="kw">if</span> root <span class="kw">is</span> <span class="bi">None</span><span class="op">:</span>`],
+  [3, `        <span class="kw">return</span> <span class="bi">0</span>`],
+  [0, ``],
+  [5, `    left  <span class="op">=</span> <span class="fn">maxDepth</span><span class="op">(</span>root.left<span class="op">)</span>`],
+  [6, `    right <span class="op">=</span> <span class="fn">maxDepth</span><span class="op">(</span>root.right<span class="op">)</span>`],
+  [0, ``],
+  [8, `    <span class="kw">return</span> <span class="fn">max</span><span class="op">(</span>left<span class="op">,</span> right<span class="op">)</span> <span class="op">+</span> <span class="bi">1</span>`],
+];
+
+function buildCodePanel() {
+  const body = document.getElementById('code-body');
+  body.innerHTML = '';
+  CODE_LINES.forEach(([ln, html]) => {
+    const row = document.createElement('div');
+    row.className = 'cl';
+    if (ln > 0) row.id = `cl-${ln}`;
+    row.innerHTML =
+      `<span class="ln">${ln > 0 ? ln : ''}</span>` +
+      `<span class="code">${html}</span>`;
+    body.appendChild(row);
+  });
+}
+
+// ─── Node state colors ────────────────────────────────────────────────────────
+const COLORS = {
+  idle:   { fill: '#1e2130', stroke: '#2d3148', text: 'var(--text-muted)' },
+  active: { fill: '#4338ca', stroke: 'var(--accent)', text: 'var(--accent-pale)' },
+  done:   { fill: '#052e16', stroke: '#16a34a', text: 'var(--green)' },
+};
+const EDGE_DEFAULT = '#2d3148';
+
+// ─── Global state ─────────────────────────────────────────────────────────────
+let nodeMap = {};
+let R = 22;
+let VW = 800, VH = 320;
+
+// ─── Build tree from level-order ──────────────────────────────────────────────
+function parseLevelOrder(s) {
+  return s.split(',').map(t => t.trim()).map(t =>
+    (t === '' || t.toLowerCase() === 'null' || t === 'n') ? null : Number(t)
+  );
+}
+
+let nextId = 0;
+function buildTree(vals) {
+  nodeMap = {};
+  nextId = 0;
+  if (!vals.length || vals[0] === null) return null;
+  const makeNode = (val) => {
+    const n = { id: nextId++, val, left: null, right: null, x: 0, y: 0, depth: 0 };
+    nodeMap[n.id] = n;
+    return n;
+  };
+  const root = makeNode(vals[0]);
+  const queue = [root];
+  let i = 1;
+  while (queue.length && i < vals.length) {
+    const cur = queue.shift();
+    if (i < vals.length) {
+      if (vals[i] !== null) { cur.left = makeNode(vals[i]); cur.left.depth = cur.depth + 1; queue.push(cur.left); }
+      i++;
+    }
+    if (i < vals.length) {
+      if (vals[i] !== null) { cur.right = makeNode(vals[i]); cur.right.depth = cur.depth + 1; queue.push(cur.right); }
+      i++;
+    }
+  }
+  return root;
+}
+
+// ─── Layout ───────────────────────────────────────────────────────────────────
+function layout(root) {
+  let idx = 0, maxD = 0;
+  function inorder(node) {
+    if (!node) return;
+    inorder(node.left);
+    node._inIdx = idx++;
+    if (node.depth > maxD) maxD = node.depth;
+    inorder(node.right);
+  }
+  inorder(root);
+  const count = idx;
+  const xSpace = Math.max(60, Math.min(110, 700 / Math.max(1, count)));
+  const ySpace = 70;
+  const padX = 40, padY = 30;
+  VW = padX * 2 + (count - 1) * xSpace;
+  VH = padY * 2 + maxD * ySpace + R * 2 + 24; // extra room for depth badges above nodes
+  if (VW < 400) VW = 400;
+  for (const id in nodeMap) {
+    const n = nodeMap[id];
+    n.x = padX + n._inIdx * xSpace;
+    n.y = padY + 22 + n.depth * ySpace + R; // +22 for badge space above root
+  }
+}
+
+// ─── SVG render ───────────────────────────────────────────────────────────────
+function svgEl(tag, attrs) {
+  const el = document.createElementNS('http://www.w3.org/2000/svg', tag);
+  Object.entries(attrs).forEach(([k, v]) => el.setAttribute(k, v));
+  return el;
+}
+function svgG(id) {
+  const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  if (id) g.id = id;
+  return g;
+}
+
+function renderSVG(root) {
+  const svg = document.getElementById('tree-svg');
+  svg.innerHTML = '';
+  svg.setAttribute('viewBox', `0 0 ${VW} ${VH}`);
+  R = VW > 700 ? 22 : 18;
+
+  const edgeG = svgG('edges');
+  const nodeG = svgG('nodes');
+  svg.appendChild(edgeG);
+  svg.appendChild(nodeG);
+
+  // edges
+  (function drawEdges(n) {
+    if (!n) return;
+    [n.left, n.right].forEach(c => {
+      if (!c) return;
+      edgeG.appendChild(svgEl('line', {
+        id: `edge-${n.id}-${c.id}`,
+        x1: n.x, y1: n.y, x2: c.x, y2: c.y,
+        stroke: EDGE_DEFAULT, 'stroke-width': 2, 'stroke-linecap': 'round',
+      }));
+    });
+    drawEdges(n.left); drawEdges(n.right);
+  })(root);
+
+  // nodes
+  for (const id in nodeMap) {
+    const n = nodeMap[id];
+    const g = svgG(`node-g-${n.id}`);
+
+    // depth badge (hidden initially)
+    const badge = svgEl('text', {
+      id: `nb-${n.id}`,
+      x: n.x, y: n.y - R - 6,
+      'text-anchor': 'middle', 'dominant-baseline': 'auto',
+      fill: '#16a34a', 'font-size': 13, 'font-weight': '800',
+      'font-family': 'JetBrains Mono, monospace',
+      opacity: 0,
+    });
+    badge.textContent = '';
+    g.appendChild(badge);
+
+    g.appendChild(svgEl('circle', {
+      id: `nc-${n.id}`, cx: n.x, cy: n.y, r: R,
+      fill: COLORS.idle.fill, stroke: COLORS.idle.stroke, 'stroke-width': 2.5,
+    }));
+    const t = svgEl('text', {
+      id: `nt-${n.id}`, x: n.x, y: n.y,
+      'text-anchor': 'middle', 'dominant-baseline': 'middle',
+      fill: COLORS.idle.text,
+      'font-size': Math.round(R * 0.75), 'font-weight': 'bold',
+      'font-family': 'Segoe UI, system-ui, sans-serif',
+    });
+    t.textContent = n.val;
+    g.appendChild(t);
+    nodeG.appendChild(g);
+  }
+}
+
+// ─── Simulation ───────────────────────────────────────────────────────────────
+function simulate(root) {
+  const stateMap = {};
+  const depthMap = {}; // id -> computed depth (null if not yet)
+  for (const id in nodeMap) { stateMap[id] = 'idle'; depthMap[id] = null; }
+  const callStack = [];
+  const out = [];
+
+  function snap(phase, desc, lines, activeLeft, activeRight) {
+    out.push({
+      phase, desc, lines: lines || [],
+      stateMap: { ...stateMap },
+      depthMap: { ...depthMap },
+      callStack: [...callStack],
+      activeLeft: activeLeft !== undefined ? activeLeft : null,
+      activeRight: activeRight !== undefined ? activeRight : null,
+    });
+  }
+
+  function dfs(node) {
+    if (!node) {
+      callStack.push('maxDepth(None)');
+      snap('Base', 'root is None → return 0.', [2, 3], null, null);
+      callStack.pop();
+      return 0;
+    }
+    callStack.push(`maxDepth(${node.val})`);
+    stateMap[node.id] = 'active';
+    snap('Visit', `Enter maxDepth(${node.val}).`, [1, 2], null, null);
+
+    // recurse left
+    snap('Left', `Call maxDepth(root.left) from node ${node.val}.`, [5], null, null);
+    const leftD = dfs(node.left);
+
+    // recurse right
+    snap('Right', `Call maxDepth(root.right) from node ${node.val}. left_depth = ${leftD}.`, [6], leftD, null);
+    const rightD = dfs(node.right);
+
+    const result = Math.max(leftD, rightD) + 1;
+    depthMap[node.id] = result;
+    stateMap[node.id] = 'done';
+    snap('Return', `max(${leftD}, ${rightD}) + 1 = ${result}. Return ${result} from ${node.val}.`, [8], leftD, rightD);
+
+    callStack.pop();
+    return result;
+  }
+
+  snap('Start', `Call maxDepth(root = ${root.val}).`, []);
+  const ans = dfs(root);
+  snap('Done', `Max depth = ${ans}.`, []);
+  return out;
+}
+
+// ─── Apply step ───────────────────────────────────────────────────────────────
+let prevLines = [];
+
+function applyStep(s, animate) {
+  // node colors
+  Object.entries(s.stateMap).forEach(([id, st]) => setNodeColor(+id, st, animate));
+
+  // depth badges
+  for (const id in s.depthMap) {
+    const badge = document.getElementById(`nb-${id}`);
+    if (!badge) continue;
+    const val = s.depthMap[id];
+    if (val !== null) {
+      badge.textContent = val;
+      if (animate) {
+        gsap.to(badge, { opacity: 1, duration: 0.3 });
+      } else {
+        badge.setAttribute('opacity', 1);
+      }
+    } else {
+      badge.textContent = '';
+      badge.setAttribute('opacity', 0);
+    }
+  }
+
+  // depth slots
+  const slotL = document.getElementById('slot-left');
+  const slotR = document.getElementById('slot-right');
+  const dsL   = document.getElementById('ds-left');
+  const dsR   = document.getElementById('ds-right');
+
+  if (s.activeLeft !== null) {
+    dsL.textContent = s.activeLeft;
+    dsL.className = 'ds-val';
+    slotL.className = 'depth-slot active-slot';
+  } else {
+    dsL.textContent = '—';
+    dsL.className = 'ds-val unknown';
+    slotL.className = 'depth-slot';
+  }
+  if (s.activeRight !== null) {
+    dsR.textContent = s.activeRight;
+    dsR.className = 'ds-val';
+    slotR.className = 'depth-slot active-slot';
+  } else {
+    dsR.textContent = '—';
+    dsR.className = 'ds-val unknown';
+    slotR.className = 'depth-slot';
+  }
+
+  // call stack
+  renderCallStack(s.callStack, animate);
+
+  // code lines
+  setCodeLines(prevLines, s.lines, animate);
+  prevLines = s.lines || [];
+}
+
+// ─── Code line highlighting ───────────────────────────────────────────────────
+const HL_BG   = 'rgba(var(--orange-ch),0.13)';
+const HL_NONE = 'rgba(var(--orange-ch),0)';
+const HL_BORD = 'var(--orange)';
+const NO_BORD = 'transparent';
+
+function setCodeLines(oldLines, newLines, animate) {
+  const DUR = 0.22;
+  (oldLines || []).filter(n => !(newLines || []).includes(n)).forEach(n => {
+    const el = document.getElementById(`cl-${n}`);
+    if (!el) return;
+    if (animate) {
+      gsap.to(el, { backgroundColor: HL_NONE, borderLeftColor: NO_BORD, duration: DUR });
+      gsap.to(el.querySelector('.ln'), { color: '#3d4468', duration: DUR });
+    } else {
+      el.style.backgroundColor = ''; el.style.borderLeftColor = '';
+      const ln = el.querySelector('.ln'); if (ln) ln.style.color = '';
+    }
+  });
+  (newLines || []).filter(n => !(oldLines || []).includes(n)).forEach(n => {
+    const el = document.getElementById(`cl-${n}`);
+    if (!el) return;
+    if (animate) {
+      gsap.to(el, { backgroundColor: HL_BG, borderLeftColor: HL_BORD, duration: DUR, delay: 0.08 });
+      gsap.to(el.querySelector('.ln'), { color: 'var(--orange)', duration: DUR, delay: 0.08 });
+    } else {
+      el.style.backgroundColor = HL_BG; el.style.borderLeftColor = HL_BORD;
+      const ln = el.querySelector('.ln'); if (ln) ln.style.color = 'var(--orange)';
+    }
+  });
+  if (newLines && newLines.length) {
+    const el = document.getElementById(`cl-${newLines[0]}`);
+    if (el) el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }
+}
+
+// ─── Node color ──────────────────────────────────────────────────────────────
+function setNodeColor(id, state, animate, dur) {
+  dur = dur || 0.3;
+  const c  = COLORS[state] || COLORS.idle;
+  const nc = document.getElementById(`nc-${id}`);
+  const nt = document.getElementById(`nt-${id}`);
+  if (!nc) return;
+  if (animate) {
+    gsap.to(nc, { duration: dur, ease: 'power2.out', attr: { fill: c.fill, stroke: c.stroke } });
+    gsap.to(nt, { duration: dur, attr: { fill: c.text } });
+  } else {
+    nc.setAttribute('fill', c.fill); nc.setAttribute('stroke', c.stroke);
+    if (nt) nt.setAttribute('fill', c.text);
+  }
+}
+
+// ─── Call stack ──────────────────────────────────────────────────────────────
+function renderCallStack(stack, animate) {
+  const c = document.getElementById('call-stack');
+  c.innerHTML = '';
+  if (!stack.length) {
+    c.innerHTML = '<span class="cs-empty">empty</span>';
+    return;
+  }
+  stack.forEach((label, i) => {
+    const el = document.createElement('div');
+    el.className = 'cs-frame' + (i === stack.length - 1 ? ' top' : '');
+    el.textContent = label;
+    c.appendChild(el);
+    if (animate && i === stack.length - 1) {
+      gsap.from(el, { opacity: 0, x: -10, duration: 0.2 });
+    }
+  });
+}
+
+// ─── Build / Run ──────────────────────────────────────────────────────────────
+function build() {
+  const txt = document.getElementById('inp-tree').value.trim();
+  const vals = parseLevelOrder(txt);
+  buildCodePanel();
+  const root = buildTree(vals);
+  if (!root) {
+    document.getElementById('tree-svg').innerHTML = '';
+    document.getElementById('step-desc').textContent = 'Empty tree.';
+    return;
+  }
+  layout(root);
+  renderSVG(root);
+  prevLines = [];
+  nav.load(simulate(root));
+}
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
+var nav = VizNav({
+  btnPrev: document.getElementById('btn-back'),
+  btnNext: document.getElementById('btn-next'),
+  btnPlay: document.getElementById('btn-play'),
+  speedSel: document.getElementById('speed-select'),
+  render: function(snap, cur, total) {
+    applyStep(snap, cur > 0);
+    var el = document.getElementById('phase-label');
+    if (el) el.textContent = 'Step ' + (cur + 1) + ' / ' + total + '  ·  ' + snap.phase;
+    var d = document.getElementById('step-desc');
+    if (d) d.textContent = snap.desc;
+  }
+});
+
+build();
+</script>
+<script>
+  if (window.self !== window.top) {
+    var bl = document.querySelector('.back-link');
+    if (bl) bl.style.display = 'none';
+  }
+</script>
+</body>
+</html>
