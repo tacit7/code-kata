@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lowest Common Ancestor of BST</title>
+  <link rel="stylesheet" href="../shared/style.css" />
+  <script src="../shared/gsap.min.js"></script>
+  <script src="../shared/viz.js"></script>
+  <style>
+    .viz-area {
+      width: 100%; max-width: 90%;
+      display: flex; flex-direction: column; gap: 12px;
+    }
+
+    .tree-wrap {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+    }
+    #tree-svg { display: block; width: 100%; }
+
+    .bottom-row {
+      display: grid;
+      grid-template-columns: 50% 1fr;
+      gap: 12px;
+      align-items: start;
+    }
+    .right-col { display: flex; flex-direction: column; gap: 10px; }
+    @media (max-width: 700px) { .bottom-row { grid-template-columns: 1fr; } }
+
+    .code-panel {
+      background: #0a0d14;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+    }
+    .code-header {
+      padding: 9px 14px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      font-size: 0.67rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.11em;
+      color: var(--text-dim);
+    }
+    .code-body {
+      padding: 10px 0;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.78rem;
+      line-height: 1.75;
+      overflow-x: auto;
+    }
+    .cl {
+      display: flex; align-items: stretch;
+      border-left: 3px solid transparent;
+      padding: 0 14px 0 0;
+      white-space: pre;
+    }
+    .cl .ln {
+      width: 28px; min-width: 28px;
+      text-align: right; color: #3d4468;
+      user-select: none; padding-right: 14px;
+      font-size: 0.72rem; line-height: 1.75;
+    }
+    .cl .code { color: var(--text-muted); }
+
+    .panel-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 13px 16px;
+    }
+    .panel-title {
+      font-size: 0.67rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.11em;
+      color: var(--text-dim); margin-bottom: 10px;
+    }
+
+    /* Targets panel */
+    .targets-row {
+      display: flex; align-items: center; gap: 10px;
+    }
+    .target-slot {
+      flex: 1;
+      background: #0a0d14;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 8px 10px;
+      text-align: center;
+    }
+    .target-slot.p-slot { border-color: #16a34a; }
+    .target-slot.q-slot { border-color: #2563eb; }
+    .ts-label { color: var(--text-dim); font-size: 0.65rem; margin-bottom: 4px; }
+    .ts-val {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 1.1rem; font-weight: 700;
+      color: var(--text-bright);
+    }
+    .targets-vs { color: var(--text-dim); font-size: 0.8rem; font-weight: 600; flex-shrink: 0; }
+
+    /* Decision panel */
+    .decision-box {
+      background: #0a0d14;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 10px 12px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.82rem;
+      min-height: 38px;
+      display: flex; align-items: center; gap: 8px;
+      color: var(--text-dim);
+    }
+    .decision-box.go-left  { border-color: #4f46e5; color: #a5b4fc; background: #1e1a3a; }
+    .decision-box.go-right { border-color: #0ea5e9; color: #7dd3fc; background: #082f49; }
+    .decision-box.lca-found { border-color: #d97706; color: #fcd34d; background: #1c1207; }
+    .decision-arrow { font-size: 1.1rem; }
+
+    /* Path trail */
+    .path-trail {
+      display: flex; flex-wrap: wrap; gap: 4px; align-items: center;
+      min-height: 28px;
+    }
+    .trail-node {
+      background: #1e1a3a; color: #a5b4fc;
+      border: 1px solid #4f46e5; border-radius: 4px;
+      padding: 2px 8px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.74rem; font-weight: 600;
+    }
+    .trail-arrow { color: var(--text-dim); font-size: 0.75rem; }
+    .trail-empty { color: var(--text-faint); font-size: 0.8rem; font-style: italic; }
+
+    /* Result badge */
+    .result-badge {
+      font-size: 0.95rem; font-weight: 700;
+      padding: 10px 16px; border-radius: 8px;
+      text-align: center;
+    }
+    .result-badge.lca-result { background: #1c1207; color: #fcd34d; border: 1px solid #d97706; }
+
+    /* Syntax highlighting */
+    .kw { color: var(--purple); }
+    .fn { color: var(--blue); }
+    .bi { color: var(--orange); }
+    .cm { color: #3d4468; font-style: italic; }
+    .op { color: var(--text); }
+    .pv { color: #4ade80; }
+    .qv { color: #60a5fa; }
+    .cv { color: #fcd34d; }
+  </style>
+</head>
+<body class="page">
+
+<div class="page-header">
+  <a class="back-link" href="../index.html">&larr; All Visualizations</a>
+  <h1 class="page-title">Lowest Common Ancestor of BST</h1>
+  <div class="page-sub">LeetCode 235 &middot; BST property eliminates branches without recursion &middot; O(h) time &middot; O(1) space</div>
+</div>
+
+<div class="controls">
+  <div class="field">
+    <label>Preset</label>
+    <select id="preset-sel" onchange="applyPreset()">
+      <option value="6,2,8,0,4,7,9,null,null,3,5|2|8">p=2, q=8 → LCA splits at root</option>
+      <option value="6,2,8,0,4,7,9,null,null,3,5|2|4">p=2, q=4 → LCA is an ancestor (p itself)</option>
+      <option value="20,10,30,5,15,25,35|5|15">p=5, q=15 → LCA one level up</option>
+    </select>
+  </div>
+  <div class="field">
+    <label>Tree (level-order)</label>
+    <input id="inp-tree" type="text" value="6,2,8,0,4,7,9,null,null,3,5" style="width:260px" />
+  </div>
+  <div class="field">
+    <label>p</label>
+    <input id="inp-p" type="number" value="2" style="width:64px" />
+  </div>
+  <div class="field">
+    <label>q</label>
+    <input id="inp-q" type="number" value="8" style="width:64px" />
+  </div>
+  <button class="btn-primary" onclick="build()">Build &amp; Run</button>
+</div>
+
+<div class="viz-area">
+
+  <div class="tree-wrap">
+    <svg id="tree-svg" viewBox="0 0 800 300" preserveAspectRatio="xMidYMid meet"></svg>
+  </div>
+
+  <div class="status-bar" style="max-width:100%">
+    <span class="phase-label" id="phase-label">&mdash;</span>
+    <span class="step-desc" id="step-desc">Choose a preset and click Build &amp; Run.</span>
+  </div>
+
+  <div class="bottom-row">
+
+    <div class="code-panel">
+      <div class="code-header">Python</div>
+      <div class="code-body" id="code-body"></div>
+    </div>
+
+    <div class="right-col">
+
+      <div class="panel-box">
+        <div class="panel-title">Targets</div>
+        <div class="targets-row">
+          <div class="target-slot p-slot">
+            <div class="ts-label">p</div>
+            <div class="ts-val" id="tv-p">&mdash;</div>
+          </div>
+          <div class="targets-vs">vs</div>
+          <div class="target-slot" id="cur-slot" style="border-color:#6366f1">
+            <div class="ts-label">cur.val</div>
+            <div class="ts-val" id="tv-cur">&mdash;</div>
+          </div>
+          <div class="targets-vs">vs</div>
+          <div class="target-slot q-slot">
+            <div class="ts-label">q</div>
+            <div class="ts-val" id="tv-q">&mdash;</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel-box">
+        <div class="panel-title">Decision</div>
+        <div class="decision-box" id="decision-box">Waiting&hellip;</div>
+      </div>
+
+      <div class="panel-box">
+        <div class="panel-title">
+          Path Taken
+          <span style="font-size:0.65rem;font-weight:400;color:var(--text-faint);margin-left:6px">(root → LCA)</span>
+        </div>
+        <div class="path-trail" id="path-trail"><span class="trail-empty">not started</span></div>
+      </div>
+
+      <div class="result-badge" id="result-badge" style="display:none"></div>
+
+    </div>
+  </div>
+
+</div>
+
+<div class="legend">
+  <div class="leg-item">
+    <svg width="14" height="14"><circle cx="7" cy="7" r="6" fill="#1e2130" stroke="#2d3148" stroke-width="2"/></svg>
+    Unvisited
+  </div>
+  <div class="leg-item">
+    <svg width="14" height="14"><circle cx="7" cy="7" r="6" fill="#312e81" stroke="#818cf8" stroke-width="3"/></svg>
+    Current (comparing)
+  </div>
+  <div class="leg-item">
+    <svg width="14" height="14"><circle cx="7" cy="7" r="6" fill="#1e1a3a" stroke="#4f46e5" stroke-width="2"/></svg>
+    Visited (on path)
+  </div>
+  <div class="leg-item">
+    <svg width="14" height="14"><circle cx="7" cy="7" r="6" fill="#052e16" stroke="#16a34a" stroke-width="2"/></svg>
+    p node
+  </div>
+  <div class="leg-item">
+    <svg width="14" height="14"><circle cx="7" cy="7" r="6" fill="#082f49" stroke="#2563eb" stroke-width="2"/></svg>
+    q node
+  </div>
+  <div class="leg-item">
+    <svg width="14" height="14"><circle cx="7" cy="7" r="6" fill="#1c1207" stroke="#d97706" stroke-width="3"/></svg>
+    LCA (answer)
+  </div>
+</div>
+
+<div class="step-nav">
+  <button class="btn-step" id="btn-back" disabled>&larr; Back</button>
+  <button class="btn-step" id="btn-next" disabled>Next &rarr;</button>
+  <button id="btn-play" style="background:#15803d;color:#fff;border:none;border-radius:4px;padding:6px 14px;font-weight:600;cursor:pointer">&#9654; Play</button>
+  <select id="speed-select" style="background:var(--bg);border:1px solid var(--border);color:var(--text);border-radius:4px;padding:6px 8px;font-size:0.85rem">
+    <option value="700">Slow</option>
+    <option value="350" selected>Medium</option>
+    <option value="120">Fast</option>
+  </select>
+</div>
+
+<script>
+// ─── Code lines ───────────────────────────────────────────────────────────────
+const CODE_LINES = [
+  [1, `<span class="kw">def</span> <span class="fn">lowestCommonAncestor</span><span class="op">(</span>root<span class="op">,</span> <span class="pv">p</span><span class="op">,</span> <span class="qv">q</span><span class="op">):</span>`],
+  [2, `    cur <span class="op">=</span> root`],
+  [3, `    <span class="kw">while</span> cur<span class="op">:</span>`],
+  [4, `        <span class="kw">if</span> <span class="pv">p</span>.val <span class="op">&lt;</span> cur.val <span class="kw">and</span> <span class="qv">q</span>.val <span class="op">&lt;</span> cur.val<span class="op">:</span>`],
+  [5, `            cur <span class="op">=</span> cur.left    <span class="cm"># both go left</span>`],
+  [6, `        <span class="kw">elif</span> <span class="pv">p</span>.val <span class="op">&gt;</span> cur.val <span class="kw">and</span> <span class="qv">q</span>.val <span class="op">&gt;</span> cur.val<span class="op">:</span>`],
+  [7, `            cur <span class="op">=</span> cur.right   <span class="cm"># both go right</span>`],
+  [8, `        <span class="kw">else</span><span class="op">:</span>`],
+  [9, `            <span class="kw">return</span> cur        <span class="cm"># split point — this IS the LCA</span>`],
+];
+
+// ─── Colors ───────────────────────────────────────────────────────────────────
+const COLORS = {
+  idle:    { fill: '#1e2130', stroke: '#2d3148', text: '#565f89', sw: 2 },
+  current: { fill: '#312e81', stroke: '#818cf8', text: '#e0e7ff', sw: 3.5 },
+  visited: { fill: '#1e1a3a', stroke: '#4f46e5', text: '#a5b4fc', sw: 2 },
+  p_node:  { fill: '#052e16', stroke: '#16a34a', text: '#4ade80', sw: 2 },
+  q_node:  { fill: '#082f49', stroke: '#2563eb', text: '#93c5fd', sw: 2 },
+  lca:     { fill: '#1c1207', stroke: '#d97706', text: '#fcd34d', sw: 3.5 },
+};
+
+// ─── Globals ──────────────────────────────────────────────────────────────────
+let nodeMap = {};
+let R = 22;
+let VW = 800, VH = 300;
+let prevLines = [];
+let pVal, qVal;
+
+// ─── Parse level-order ───────────────────────────────────────────────────────
+function parseLevelOrder(s) {
+  return s.split(',').map(t => t.trim()).map(t =>
+    (t === '' || t.toLowerCase() === 'null' || t === 'n') ? null : Number(t)
+  );
+}
+
+// ─── Build tree ──────────────────────────────────────────────────────────────
+let nextId = 0;
+function buildTree(vals) {
+  nodeMap = {};
+  nextId = 0;
+  if (!vals.length || vals[0] === null) return null;
+  const make = val => {
+    const n = { id: nextId++, val, left: null, right: null, x: 0, y: 0, depth: 0 };
+    nodeMap[n.id] = n;
+    return n;
+  };
+  const root = make(vals[0]);
+  const queue = [root];
+  let i = 1;
+  while (queue.length && i < vals.length) {
+    const cur = queue.shift();
+    if (i < vals.length) {
+      if (vals[i] !== null) { cur.left = make(vals[i]); cur.left.depth = cur.depth + 1; queue.push(cur.left); }
+      i++;
+    }
+    if (i < vals.length) {
+      if (vals[i] !== null) { cur.right = make(vals[i]); cur.right.depth = cur.depth + 1; queue.push(cur.right); }
+      i++;
+    }
+  }
+  return root;
+}
+
+// ─── Layout ──────────────────────────────────────────────────────────────────
+function layout(root) {
+  let idx = 0, maxD = 0;
+  function inorder(n) {
+    if (!n) return;
+    inorder(n.left);
+    n._inIdx = idx++;
+    if (n.depth > maxD) maxD = n.depth;
+    inorder(n.right);
+  }
+  inorder(root);
+  const count = idx;
+  const xSpace = Math.max(60, Math.min(110, 680 / Math.max(1, count)));
+  const ySpace = 76;
+  const padX = 50, padY = 36;
+  VW = Math.max(480, padX * 2 + (count - 1) * xSpace);
+  VH = padY * 2 + maxD * ySpace + R * 2 + 20;
+  for (const id in nodeMap) {
+    const n = nodeMap[id];
+    n.x = padX + n._inIdx * xSpace;
+    n.y = padY + 26 + n.depth * ySpace + R;
+  }
+}
+
+// ─── SVG helpers ─────────────────────────────────────────────────────────────
+function svgEl(tag, attrs) {
+  const el = document.createElementNS('http://www.w3.org/2000/svg', tag);
+  Object.entries(attrs).forEach(([k, v]) => el.setAttribute(k, v));
+  return el;
+}
+function svgG(id) {
+  const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  if (id) g.id = id;
+  return g;
+}
+
+// ─── Render SVG ──────────────────────────────────────────────────────────────
+function renderSVG(root) {
+  const svg = document.getElementById('tree-svg');
+  svg.innerHTML = '';
+  svg.setAttribute('viewBox', `0 0 ${VW} ${VH}`);
+  R = VW > 650 ? 22 : 18;
+
+  const edgeG = svgG('edges');
+  const nodeG = svgG('nodes');
+  svg.appendChild(edgeG);
+  svg.appendChild(nodeG);
+
+  (function drawEdges(n) {
+    if (!n) return;
+    [n.left, n.right].forEach(c => {
+      if (!c) return;
+      edgeG.appendChild(svgEl('line', {
+        id: `edge-${n.id}-${c.id}`,
+        x1: n.x, y1: n.y, x2: c.x, y2: c.y,
+        stroke: '#2d3148', 'stroke-width': 2, 'stroke-linecap': 'round',
+      }));
+    });
+    drawEdges(n.left); drawEdges(n.right);
+  })(root);
+
+  for (const id in nodeMap) {
+    const n = nodeMap[id];
+    const g = svgG(`node-g-${n.id}`);
+
+    g.appendChild(svgEl('circle', {
+      id: `nc-${n.id}`, cx: n.x, cy: n.y, r: R,
+      fill: COLORS.idle.fill, stroke: COLORS.idle.stroke, 'stroke-width': COLORS.idle.sw,
+    }));
+
+    const t = svgEl('text', {
+      id: `nt-${n.id}`, x: n.x, y: n.y,
+      'text-anchor': 'middle', 'dominant-baseline': 'middle',
+      fill: COLORS.idle.text,
+      'font-size': Math.round(R * 0.75), 'font-weight': 'bold',
+      'font-family': 'JetBrains Mono, monospace',
+    });
+    t.textContent = n.val;
+    g.appendChild(t);
+
+    nodeG.appendChild(g);
+  }
+}
+
+// ─── Find node by value ───────────────────────────────────────────────────────
+function findNodeByVal(val) {
+  for (const id in nodeMap) {
+    if (nodeMap[id].val === val) return nodeMap[id];
+  }
+  return null;
+}
+
+// ─── Simulation ───────────────────────────────────────────────────────────────
+function simulate(root) {
+  const stateMap = {};
+  for (const id in nodeMap) stateMap[id] = 'idle';
+  const path = [];
+  const out = [];
+
+  function snap(phase, desc, lines, curId, decision) {
+    out.push({
+      phase, desc,
+      lines: lines || [],
+      stateMap: { ...stateMap },
+      curId: curId !== undefined ? curId : null,
+      path: [...path],
+      decision: decision || null,
+    });
+  }
+
+  snap('Start', 'Find LCA of p=' + pVal + ' and q=' + qVal + '. Start at root.', [1, 2, 3]);
+
+  let cur = root;
+  while (cur) {
+    stateMap[cur.id] = 'current';
+    snap('Compare', 'At node ' + cur.val + '. Compare p=' + pVal + ' and q=' + qVal + ' against ' + cur.val + '.', [3, 4], cur.id, null);
+
+    if (pVal < cur.val && qVal < cur.val) {
+      // go left
+      snap('GoLeft', 'Both p=' + pVal + ' and q=' + qVal + ' < ' + cur.val + '. LCA must be in the left subtree.', [4, 5], cur.id, 'left');
+      path.push(cur.id);
+      stateMap[cur.id] = 'visited';
+      cur = cur.left;
+    } else if (pVal > cur.val && qVal > cur.val) {
+      // go right
+      snap('GoRight', 'Both p=' + pVal + ' and q=' + qVal + ' > ' + cur.val + '. LCA must be in the right subtree.', [6, 7], cur.id, 'right');
+      path.push(cur.id);
+      stateMap[cur.id] = 'visited';
+      cur = cur.right;
+    } else {
+      // LCA found — split point or one equals cur
+      path.push(cur.id);
+      stateMap[cur.id] = 'lca';
+
+      // also mark p and q nodes
+      const pNode = findNodeByVal(pVal);
+      const qNode = findNodeByVal(qVal);
+      if (pNode && stateMap[pNode.id] !== 'lca') stateMap[pNode.id] = 'p_node';
+      if (qNode && stateMap[qNode.id] !== 'lca') stateMap[qNode.id] = 'q_node';
+
+      const reason = pVal === cur.val
+        ? 'p=' + pVal + ' equals cur.val — p itself is LCA.'
+        : qVal === cur.val
+          ? 'q=' + qVal + ' equals cur.val — q itself is LCA.'
+          : 'p=' + pVal + ' and q=' + qVal + ' split here — one on each side.';
+
+      snap('LCA', 'SPLIT POINT! ' + reason + ' Return node ' + cur.val + '.', [8, 9], cur.id, 'lca');
+      snap('Done', '✓ LCA found: node ' + cur.val, [], cur.id, 'lca');
+      return out;
+    }
+  }
+
+  snap('Done', 'No LCA found (p or q not in tree).', [], null, null);
+  return out;
+}
+
+// ─── Node color ───────────────────────────────────────────────────────────────
+function setNodeColor(id, colorKey, animate) {
+  const c = COLORS[colorKey] || COLORS.idle;
+  const nc = document.getElementById('nc-' + id);
+  const nt = document.getElementById('nt-' + id);
+  if (!nc) return;
+  if (animate) {
+    gsap.to(nc, { duration: 0.28, ease: 'power2.out', attr: { fill: c.fill, stroke: c.stroke, 'stroke-width': c.sw } });
+    if (nt) gsap.to(nt, { duration: 0.28, attr: { fill: c.text } });
+  } else {
+    nc.setAttribute('fill', c.fill);
+    nc.setAttribute('stroke', c.stroke);
+    nc.setAttribute('stroke-width', c.sw);
+    if (nt) nt.setAttribute('fill', c.text);
+  }
+}
+
+// ─── Code line highlighting ───────────────────────────────────────────────────
+function setCodeLines(oldLines, newLines, animate) {
+  const HL_BG   = 'rgba(99,102,241,0.16)';
+  const NO_BG   = 'rgba(99,102,241,0)';
+  const HL_BORD = '#818cf8';
+  const NO_BORD = 'transparent';
+  (oldLines || []).filter(n => !(newLines || []).includes(n)).forEach(n => {
+    const el = document.getElementById('cl-' + n);
+    if (!el) return;
+    if (animate) gsap.to(el, { backgroundColor: NO_BG, borderLeftColor: NO_BORD, duration: 0.2 });
+    else { el.style.backgroundColor = ''; el.style.borderLeftColor = ''; }
+  });
+  (newLines || []).filter(n => !(oldLines || []).includes(n)).forEach(n => {
+    const el = document.getElementById('cl-' + n);
+    if (!el) return;
+    if (animate) gsap.to(el, { backgroundColor: HL_BG, borderLeftColor: HL_BORD, duration: 0.2, delay: 0.05 });
+    else { el.style.backgroundColor = HL_BG; el.style.borderLeftColor = HL_BORD; }
+  });
+}
+
+// ─── Path trail ───────────────────────────────────────────────────────────────
+function renderPathTrail(path, animate) {
+  const c = document.getElementById('path-trail');
+  c.innerHTML = '';
+  if (!path.length) {
+    c.innerHTML = '<span class="trail-empty">not started</span>';
+    return;
+  }
+  path.forEach((id, i) => {
+    if (i > 0) {
+      const arr = document.createElement('span');
+      arr.className = 'trail-arrow';
+      arr.textContent = ' → ';
+      c.appendChild(arr);
+    }
+    const n = nodeMap[id];
+    const el = document.createElement('span');
+    el.className = 'trail-node';
+    el.textContent = n ? String(n.val) : '?';
+    c.appendChild(el);
+    if (animate && i === path.length - 1) gsap.from(el, { opacity: 0, x: -6, duration: 0.18 });
+  });
+}
+
+// ─── Apply step ───────────────────────────────────────────────────────────────
+function applyStep(s, animate) {
+  // Node colors
+  Object.entries(s.stateMap).forEach(([id, state]) => {
+    setNodeColor(+id, state, animate);
+  });
+
+  // Targets panel
+  const cur = s.curId !== null ? nodeMap[s.curId] : null;
+  const setTV = function(id, val, faint) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = val;
+    el.style.opacity = faint ? '0.4' : '1';
+    if (animate) gsap.fromTo(el, { opacity: 0.3 }, { opacity: faint ? 0.4 : 1, duration: 0.18 });
+  };
+  setTV('tv-p',   String(pVal), false);
+  setTV('tv-q',   String(qVal), false);
+  setTV('tv-cur', cur ? String(cur.val) : '—', !cur);
+
+  // Decision box
+  const db = document.getElementById('decision-box');
+  if (db) {
+    db.className = 'decision-box';
+    if (s.decision === 'left') {
+      db.className = 'decision-box go-left';
+      db.innerHTML = '<span class="decision-arrow">&#8592;</span> Both &lt; cur.val &rarr; go left';
+    } else if (s.decision === 'right') {
+      db.className = 'decision-box go-right';
+      db.innerHTML = '<span class="decision-arrow">&#8594;</span> Both &gt; cur.val &rarr; go right';
+    } else if (s.decision === 'lca') {
+      db.className = 'decision-box lca-found';
+      db.innerHTML = '<span class="decision-arrow">&#9733;</span> Split here &rarr; this IS the LCA';
+    } else {
+      db.className = 'decision-box';
+      db.innerHTML = 'Waiting&hellip;';
+    }
+    if (animate && s.decision) gsap.from(db, { opacity: 0.4, duration: 0.2 });
+  }
+
+  // Path trail
+  renderPathTrail(s.path, animate);
+
+  // Result badge
+  const rb = document.getElementById('result-badge');
+  if (rb) {
+    if (s.phase === 'Done' && s.curId !== null) {
+      const lcaNode = nodeMap[s.curId];
+      rb.style.display = 'block';
+      rb.className = 'result-badge lca-result';
+      rb.textContent = '★ LCA = node ' + (lcaNode ? lcaNode.val : '?');
+      if (animate) gsap.from(rb, { opacity: 0, scale: 0.9, duration: 0.35, ease: 'back.out(1.7)' });
+    } else {
+      rb.style.display = 'none';
+    }
+  }
+
+  // Code lines
+  setCodeLines(prevLines, s.lines, animate);
+  prevLines = s.lines || [];
+}
+
+// ─── Build code panel ─────────────────────────────────────────────────────────
+function buildCodePanel() {
+  const body = document.getElementById('code-body');
+  body.innerHTML = '';
+  CODE_LINES.forEach(([ln, html]) => {
+    const row = document.createElement('div');
+    row.className = 'cl';
+    if (ln > 0) row.id = 'cl-' + ln;
+    row.innerHTML = '<span class="ln">' + (ln > 0 ? ln : '') + '</span><span class="code">' + html + '</span>';
+    body.appendChild(row);
+  });
+}
+
+// ─── Preset selector ─────────────────────────────────────────────────────────
+function applyPreset() {
+  const sel = document.getElementById('preset-sel');
+  const parts = sel.value.split('|');
+  document.getElementById('inp-tree').value = parts[0] || '';
+  document.getElementById('inp-p').value    = parts[1] || '';
+  document.getElementById('inp-q').value    = parts[2] || '';
+}
+
+// ─── Build & Run ──────────────────────────────────────────────────────────────
+function build() {
+  const txt = document.getElementById('inp-tree').value.trim();
+  pVal = Number(document.getElementById('inp-p').value);
+  qVal = Number(document.getElementById('inp-q').value);
+  const vals = parseLevelOrder(txt);
+  buildCodePanel();
+  const root = buildTree(vals);
+  if (!root) {
+    document.getElementById('tree-svg').innerHTML = '';
+    document.getElementById('step-desc').textContent = 'Empty tree — nothing to search.';
+    return;
+  }
+  layout(root);
+  renderSVG(root);
+  prevLines = [];
+  document.getElementById('result-badge').style.display = 'none';
+  nav.load(simulate(root));
+}
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
+var nav = VizNav({
+  btnPrev: document.getElementById('btn-back'),
+  btnNext: document.getElementById('btn-next'),
+  btnPlay: document.getElementById('btn-play'),
+  speedSel: document.getElementById('speed-select'),
+  render: function(snap, cur, total) {
+    applyStep(snap, cur > 0);
+    var pl = document.getElementById('phase-label');
+    if (pl) pl.textContent = 'Step ' + (cur + 1) + ' / ' + total + '  ·  ' + snap.phase;
+    var sd = document.getElementById('step-desc');
+    if (sd) {
+      if (cur > 0) gsap.fromTo(sd, { opacity: 0.5 }, { opacity: 1, duration: 0.15 });
+      sd.textContent = snap.desc;
+    }
+  }
+});
+
+build();
+</script>
+<script>
+  if (window.self !== window.top) {
+    var bl = document.querySelector('.back-link');
+    if (bl) bl.style.display = 'none';
+  }
+</script>
+</body>
+</html>
