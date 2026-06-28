@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>House Robber II — DP Visualization</title>
+  <link rel="stylesheet" href="../shared/style.css" />
+  <script src="../shared/gsap.min.js"></script>
+  <script src="../shared/viz.js"></script>
+  <style>
+    .viz-area { width: 100%; max-width: 90%; display: flex; flex-direction: column; gap: 16px; }
+
+    /* Pass sections */
+    .pass-section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 14px 16px;
+      transition: opacity 0.3s, border-color 0.3s;
+    }
+    .pass-section.inactive { opacity: 0.45; }
+    .pass-section.active   { border-color: var(--accent); }
+
+    .pass-header {
+      display: flex; align-items: center; gap: 10px; margin-bottom: 10px;
+      flex-wrap: wrap;
+    }
+    .pass-badge {
+      font-size: 0.68rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.1em; padding: 3px 9px; border-radius: 4px;
+      background: var(--bg); border: 1px solid var(--border); color: var(--text-dim);
+      transition: background 0.3s, border-color 0.3s, color 0.3s;
+    }
+    .pass-section.active .pass-badge {
+      background: rgba(122,162,247,0.12); border-color: var(--accent); color: var(--accent);
+    }
+    .pass-hint { font-size: 0.78rem; color: var(--text-dim); }
+    .pass-result-badge {
+      margin-left: auto; font-size: 0.82rem; font-weight: 700;
+      color: var(--green); display: none;
+    }
+    .pass-result-badge.visible { display: block; }
+
+    .houses-wrap {
+      display: flex; gap: 10px; flex-wrap: wrap; align-items: center; min-height: 70px;
+    }
+    .house { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+    .house-cell {
+      width: 52px; height: 52px;
+      display: flex; align-items: center; justify-content: center;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      background: #0f0f0f;
+      font-size: 0.92rem; font-weight: 700;
+      color: var(--text-ghost); font-family: monospace;
+    }
+    .house-cell.excluded {
+      background: transparent !important;
+      border-color: var(--text-ghost) !important;
+      color: var(--text-ghost) !important;
+      opacity: 0.25;
+      text-decoration: line-through;
+    }
+    .house-idx { font-size: 0.65rem; color: var(--text-faint); font-family: monospace; }
+
+    /* DP + Decision row */
+    .main-row {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start;
+    }
+    @media (max-width: 700px) { .main-row { grid-template-columns: 1fr; } }
+
+    .panel-box {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 14px 16px;
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .panel-title {
+      font-size: 0.72rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--text-dim);
+    }
+
+    .dp-boxes { display: flex; gap: 10px; }
+    .dp-box {
+      flex: 1; display: flex; flex-direction: column;
+      align-items: center; gap: 3px; padding: 10px 6px;
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+    }
+    .dp-box.accent { border-color: var(--accent); }
+    .dp-box-label { font-size: 0.68rem; font-family: monospace; color: var(--text-faint); }
+    .dp-box-val   { font-size: 1.4rem; font-weight: 700; color: var(--text-bright); }
+
+    .dec-row { display: flex; gap: 10px; }
+    .dec-card {
+      flex: 1; padding: 10px 12px;
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      display: flex; flex-direction: column; gap: 4px;
+      opacity: 0.25;
+    }
+    .dec-card.visible { opacity: 1; }
+    .dec-card.winner  { border-color: #15803d; background: #052e16; opacity: 1; }
+    .dec-card.loser   { opacity: 0.3; }
+    .dec-label   { font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-faint); }
+    .dec-formula { font-size: 0.73rem; font-family: monospace; color: var(--text-dim); min-height: 16px; }
+    .dec-val     { font-size: 1.2rem; font-weight: 700; color: var(--text-bright); }
+    .dec-result  {
+      font-size: 0.8rem; font-family: monospace; color: var(--text-muted);
+      padding-top: 6px; border-top: 1px solid var(--border); min-height: 20px;
+    }
+    .dec-result strong { color: var(--text-bright); }
+
+    /* Result panel */
+    .result-panel {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 16px 20px;
+      display: flex; flex-direction: column; gap: 10px;
+    }
+    .result-row { display: flex; gap: 14px; align-items: stretch; flex-wrap: wrap; }
+    .result-box {
+      flex: 1; min-width: 100px; padding: 10px 14px;
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      display: flex; flex-direction: column; gap: 3px;
+      transition: border-color 0.3s, background 0.3s;
+    }
+    .result-box.winner { border-color: var(--green-border); background: var(--green-bg); }
+    .result-box-label { font-size: 0.68rem; font-family: monospace; color: var(--text-faint); text-transform: uppercase; }
+    .result-box-val   { font-size: 1.4rem; font-weight: 700; color: var(--text-muted); }
+    .result-box.winner .result-box-val { color: var(--green); }
+
+    .result-max {
+      flex: 0 0 auto; text-align: center; padding: 10px 24px;
+      background: var(--green-bg); border: 1px solid var(--green-border);
+      border-radius: var(--radius-sm); display: none;
+    }
+    .result-max.visible { display: block; }
+    .result-max-label { font-size: 0.65rem; color: var(--green); font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; }
+    .result-max-val   { font-size: 2rem; font-weight: 700; color: var(--green); }
+
+    /* Nav */
+    .btn-play {
+      background: #15803d; border: none; border-radius: var(--radius-sm);
+      color: #fff; cursor: pointer; font-size: 0.88rem; font-weight: 600;
+      padding: 9px 16px; transition: background 0.2s;
+    }
+    .btn-play:hover:not(:disabled) { background: #166534; }
+    .btn-play.playing              { background: #c2410c; }
+    .btn-play.playing:hover        { background: #9a3412; }
+    .btn-play:disabled             { opacity: 0.4; cursor: not-allowed; }
+  </style>
+</head>
+<body class="page">
+
+<div class="page-header">
+  <a class="back-link" href="../index.html">&larr; All Algorithms</a>
+  <div class="page-title">House Robber II</div>
+  <div style="font-size:0.82rem;color:var(--text-dim)">LeetCode 213 &middot; Two-Pass DP &middot; O(n) time &middot; O(1) space</div>
+</div>
+
+<div class="controls">
+  <div class="field">
+    <label>nums (circular houses)</label>
+    <input id="inp-nums" type="text" value="2, 3, 2" style="width:220px" />
+  </div>
+  <button class="btn-primary" onclick="buildAndRun()">Build &amp; Run</button>
+</div>
+
+<div class="viz-area">
+
+  <!-- Pass 1 -->
+  <div class="pass-section" id="pass1-section">
+    <div class="pass-header">
+      <div class="pass-badge">Pass 1</div>
+      <span class="pass-hint">Skip last house [n-1]</span>
+      <span class="pass-result-badge" id="pass1-result-badge"></span>
+    </div>
+    <div class="houses-wrap" id="houses-row1">
+      <span style="color:var(--text-dim);font-size:0.82rem">Enter nums and click Build &amp; Run.</span>
+    </div>
+  </div>
+
+  <!-- Pass 2 -->
+  <div class="pass-section" id="pass2-section">
+    <div class="pass-header">
+      <div class="pass-badge">Pass 2</div>
+      <span class="pass-hint">Skip first house [0]</span>
+      <span class="pass-result-badge" id="pass2-result-badge"></span>
+    </div>
+    <div class="houses-wrap" id="houses-row2">
+      <span style="color:var(--text-dim);font-size:0.82rem">Enter nums and click Build &amp; Run.</span>
+    </div>
+  </div>
+
+  <!-- DP Variables + Decision -->
+  <div class="main-row">
+    <div class="panel-box">
+      <div class="panel-title">DP Variables</div>
+      <div class="dp-boxes">
+        <div class="dp-box" id="dp-pt">
+          <div class="dp-box-label">prev_two</div>
+          <div class="dp-box-val" id="dp-pt-val">&mdash;</div>
+        </div>
+        <div class="dp-box" id="dp-po">
+          <div class="dp-box-label">prev_one</div>
+          <div class="dp-box-val" id="dp-po-val">&mdash;</div>
+        </div>
+        <div class="dp-box accent">
+          <div class="dp-box-label">current</div>
+          <div class="dp-box-val" id="dp-cur-val">&mdash;</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel-box">
+      <div class="panel-title">Decision</div>
+      <div class="dec-row">
+        <div class="dec-card" id="dec-skip">
+          <div class="dec-label">A &middot; Skip</div>
+          <div class="dec-formula" id="dec-skip-f">prev_one</div>
+          <div class="dec-val" id="dec-skip-v">&mdash;</div>
+        </div>
+        <div class="dec-card" id="dec-rob">
+          <div class="dec-label">B &middot; Rob</div>
+          <div class="dec-formula" id="dec-rob-f">prev_two + money</div>
+          <div class="dec-val" id="dec-rob-v">&mdash;</div>
+        </div>
+      </div>
+      <div class="dec-result" id="dec-result"></div>
+    </div>
+  </div>
+
+  <!-- Final Result -->
+  <div class="result-panel">
+    <div class="panel-title">Final Result</div>
+    <div class="result-row">
+      <div class="result-box" id="res-box1">
+        <div class="result-box-label">Pass 1 result</div>
+        <div class="result-box-val" id="res-val1">&mdash;</div>
+      </div>
+      <div class="result-box" id="res-box2">
+        <div class="result-box-label">Pass 2 result</div>
+        <div class="result-box-val" id="res-val2">&mdash;</div>
+      </div>
+      <div class="result-max" id="result-max">
+        <div class="result-max-label">max(p1, p2)</div>
+        <div class="result-max-val" id="result-max-val">&mdash;</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="status-bar">
+  <div class="phase-label" id="phase-label">&mdash;</div>
+  <div class="step-desc" id="step-desc">Enter nums and click Build &amp; Run.</div>
+</div>
+
+<div class="step-nav">
+  <button class="btn-step" id="btn-back" disabled>&larr;</button>
+  <button class="btn-step" id="btn-next" disabled>&rarr;</button>
+  <button class="btn-play" id="btn-play" disabled>&#9654; Play</button>
+  <select class="speed-select" id="speed-select">
+    <option value="700">Slow</option>
+    <option value="250" selected>Medium</option>
+    <option value="80">Fast</option>
+  </select>
+</div>
+
+<script>
+var nav;
+
+window.addEventListener('DOMContentLoaded', function() {
+  nav = VizNav({
+    btnPrev:  document.getElementById('btn-back'),
+    btnNext:  document.getElementById('btn-next'),
+    btnPlay:  document.getElementById('btn-play'),
+    speedSel: document.getElementById('speed-select'),
+    render: function(snap, cur, total) {
+      applyStep(snap, cur > 0);
+      document.getElementById('phase-label').textContent =
+        'Step ' + (cur + 1) + ' / ' + total + '  ·  ' + snap.phase;
+      document.getElementById('step-desc').textContent = snap.desc;
+    }
+  });
+});
+
+function buildAndRun() {
+  var raw  = document.getElementById('inp-nums').value;
+  var nums = raw.split(',')
+               .map(function(x) { return parseInt(x.trim(), 10); })
+               .filter(function(x) { return !isNaN(x); });
+  if (!nums.length) return;
+  buildHouseRows(nums);
+  nav.load(simulate(nums));
+}
+
+// ── DOM builders ─────────────────────────────────────────────────────────────
+
+function buildHouseRows(nums) {
+  buildRow(nums, 'houses-row1', 1);
+  buildRow(nums, 'houses-row2', 2);
+}
+
+function buildRow(nums, rowId, pass) {
+  var row = document.getElementById(rowId);
+  row.innerHTML = '';
+  nums.forEach(function(v, i) {
+    var excl = (pass === 1 && i === nums.length - 1) ||
+               (pass === 2 && i === 0);
+    var wrap = document.createElement('div');
+    wrap.className = 'house';
+    wrap.innerHTML =
+      '<div class="house-cell' + (excl ? ' excluded' : '') + '" id="hc-p' + pass + '-' + i + '">$' + v + '</div>' +
+      '<div class="house-idx">[' + i + ']</div>';
+    row.appendChild(wrap);
+  });
+}
+
+// ── Simulation ───────────────────────────────────────────────────────────────
+
+function simulate(nums) {
+  var n = nums.length;
+  var steps = [];
+
+  if (n === 0) {
+    steps.push({ pass: 1, houseStates1: [], houseStates2: [],
+      dp0: 0, dp1: 0, curVal: null, skipVal: null, robVal: null, winner: null,
+      pass1Result: 0, pass2Result: 0,
+      phase: 'Result', desc: 'Empty input. Answer: $0.' });
+    return steps;
+  }
+
+  if (n === 1) {
+    steps.push({ pass: 1, houseStates1: ['current'], houseStates2: ['current'],
+      dp0: 0, dp1: nums[0], curVal: nums[0], skipVal: null, robVal: null, winner: null,
+      pass1Result: nums[0], pass2Result: nums[0],
+      phase: 'Result', desc: 'Single house — rob it. Answer: $' + nums[0] + '.' });
+    return steps;
+  }
+
+  function initStates(pass) {
+    return nums.map(function(_, i) {
+      if (pass === 1 && i === n - 1) return 'excluded';
+      if (pass === 2 && i === 0)     return 'excluded';
+      return 'idle';
+    });
+  }
+
+  var hs1 = initStates(1);
+  var hs2 = initStates(2);
+
+  function snap(pass, phase, desc, dp0, dp1, curVal, skipVal, robVal, winner, p1r, p2r) {
+    steps.push({
+      pass: pass,
+      houseStates1: hs1.slice(),
+      houseStates2: hs2.slice(),
+      dp0: dp0, dp1: dp1, curVal: curVal,
+      skipVal: skipVal, robVal: robVal, winner: winner,
+      pass1Result: p1r, pass2Result: p2r,
+      phase: phase, desc: desc
+    });
+  }
+
+  // ── Pass 1: houses 0 .. n-2 ─────────────────────────────────────────────
+  var dp0 = 0, dp1 = 0;
+  snap(1, 'Pass 1 · Init',
+    'Pass 1: rob from houses [0..' + (n - 2) + '] (skip last). Init prev_two = 0, prev_one = 0.',
+    0, 0, null, null, null, null, null, null);
+
+  for (var i = 0; i < n - 1; i++) {
+    var money = nums[i];
+    hs1[i] = 'current';
+    snap(1, 'Pass 1 · Loop', 'House [' + i + ']: $' + money + '.', dp0, dp1, null, null, null, null, null, null);
+
+    var skipVal = dp1;
+    var robVal  = dp0 + money;
+    snap(1, 'Pass 1 · Loop', 'Option A — skip house [' + i + ']: keep prev_one = ' + skipVal + '.', dp0, dp1, null, skipVal, null, null, null, null);
+    snap(1, 'Pass 1 · Loop', 'Option B — rob house [' + i + ']: prev_two + $' + money + ' = ' + dp0 + ' + ' + money + ' = ' + robVal + '.', dp0, dp1, null, skipVal, robVal, null, null, null);
+
+    var cur    = Math.max(skipVal, robVal);
+    var winner = robVal > skipVal ? 'rob' : robVal < skipVal ? 'skip' : 'tie';
+    snap(1, 'Pass 1 · Loop', 'current = max(' + skipVal + ', ' + robVal + ') = ' + cur + '. Choose: ' + (winner === 'tie' ? 'tie.' : winner + '.'), dp0, dp1, cur, skipVal, robVal, winner, null, null);
+
+    dp0 = dp1; dp1 = cur;
+    hs1[i] = 'done';
+    snap(1, 'Pass 1 · Loop', 'Slide: prev_two ← ' + dp0 + ',  prev_one ← ' + dp1 + '.', dp0, dp1, null, null, null, null, null, null);
+  }
+
+  var pass1Result = dp1;
+  snap(1, 'Pass 1 · Done', 'Pass 1 complete. Result = prev_one = $' + pass1Result + '.', dp0, dp1, null, null, null, null, pass1Result, null);
+
+  // ── Pass 2: houses 1 .. n-1 ─────────────────────────────────────────────
+  dp0 = 0; dp1 = 0;
+  hs2 = initStates(2);
+
+  snap(2, 'Pass 2 · Init',
+    'Pass 2: rob from houses [1..' + (n - 1) + '] (skip first). Init prev_two = 0, prev_one = 0.',
+    0, 0, null, null, null, null, pass1Result, null);
+
+  for (var j = 0; j < n - 1; j++) {
+    var gIdx  = j + 1;
+    money = nums[gIdx];
+    hs2[gIdx] = 'current';
+    snap(2, 'Pass 2 · Loop', 'House [' + gIdx + ']: $' + money + '.', dp0, dp1, null, null, null, null, pass1Result, null);
+
+    skipVal = dp1;
+    robVal  = dp0 + money;
+    snap(2, 'Pass 2 · Loop', 'Option A — skip house [' + gIdx + ']: keep prev_one = ' + skipVal + '.', dp0, dp1, null, skipVal, null, null, pass1Result, null);
+    snap(2, 'Pass 2 · Loop', 'Option B — rob house [' + gIdx + ']: prev_two + $' + money + ' = ' + dp0 + ' + ' + money + ' = ' + robVal + '.', dp0, dp1, null, skipVal, robVal, null, pass1Result, null);
+
+    cur    = Math.max(skipVal, robVal);
+    winner = robVal > skipVal ? 'rob' : robVal < skipVal ? 'skip' : 'tie';
+    snap(2, 'Pass 2 · Loop', 'current = max(' + skipVal + ', ' + robVal + ') = ' + cur + '. Choose: ' + (winner === 'tie' ? 'tie.' : winner + '.'), dp0, dp1, cur, skipVal, robVal, winner, pass1Result, null);
+
+    dp0 = dp1; dp1 = cur;
+    hs2[gIdx] = 'done';
+    snap(2, 'Pass 2 · Loop', 'Slide: prev_two ← ' + dp0 + ',  prev_one ← ' + dp1 + '.', dp0, dp1, null, null, null, null, pass1Result, null);
+  }
+
+  var pass2Result = dp1;
+  snap(2, 'Pass 2 · Done', 'Pass 2 complete. Result = prev_one = $' + pass2Result + '.', dp0, dp1, null, null, null, null, pass1Result, pass2Result);
+
+  var finalResult = Math.max(pass1Result, pass2Result);
+  snap(2, 'Result', 'Answer = max(pass1=$' + pass1Result + ', pass2=$' + pass2Result + ') = $' + finalResult + '.', dp0, dp1, null, null, null, null, pass1Result, pass2Result);
+
+  return steps;
+}
+
+// ── Render ───────────────────────────────────────────────────────────────────
+
+function applyStep(s, animate) {
+  // Active pass highlighting
+  var sec1 = document.getElementById('pass1-section');
+  var sec2 = document.getElementById('pass2-section');
+  if (s.phase === 'Result') {
+    sec1.className = 'pass-section inactive';
+    sec2.className = 'pass-section inactive';
+  } else if (s.pass === 1) {
+    sec1.className = 'pass-section active';
+    sec2.className = 'pass-section inactive';
+  } else {
+    sec1.className = 'pass-section inactive';
+    sec2.className = 'pass-section active';
+  }
+
+  // House rows
+  applyHouseRow(s.houseStates1, 1, animate);
+  applyHouseRow(s.houseStates2, 2, animate);
+
+  // Pass result badges
+  var b1 = document.getElementById('pass1-result-badge');
+  var b2 = document.getElementById('pass2-result-badge');
+  if (s.pass1Result !== null) {
+    b1.textContent = 'Result: $' + s.pass1Result;
+    b1.className = 'pass-result-badge visible';
+  } else {
+    b1.className = 'pass-result-badge';
+  }
+  if (s.pass2Result !== null) {
+    b2.textContent = 'Result: $' + s.pass2Result;
+    b2.className = 'pass-result-badge visible';
+  } else {
+    b2.className = 'pass-result-badge';
+  }
+
+  // DP vars
+  setDPVal('dp-pt-val', s.dp0, animate);
+  setDPVal('dp-po-val', s.dp1, animate);
+  setDPVal('dp-cur-val', s.curVal, animate);
+
+  // Decision
+  applyDecision(s);
+
+  // Result panel
+  applyResult(s, animate);
+}
+
+function applyHouseRow(states, pass, animate) {
+  if (!states) return;
+  states.forEach(function(state, i) {
+    var el = document.getElementById('hc-p' + pass + '-' + i);
+    if (!el || state === 'excluded') return;
+    var bg     = state === 'current' ? '#15803d' : state === 'done' ? '#1a2b3c' : '#0f0f0f';
+    var color  = state === 'current' ? '#fff'    : state === 'done' ? 'var(--blue-light)' : 'var(--text-ghost)';
+    var border = state === 'current' ? 'var(--green)' : state === 'done' ? 'var(--blue-border)' : 'var(--border)';
+    if (animate) {
+      gsap.to(el, { backgroundColor: bg, color: color, duration: 0.2, ease: 'power2.out' });
+    } else {
+      el.style.backgroundColor = bg;
+      el.style.color = color;
+    }
+    el.style.borderColor = border;
+  });
+}
+
+function setDPVal(id, val, animate) {
+  var el = document.getElementById(id);
+  if (!el) return;
+  var text = (val === null || val === undefined) ? '—' : String(val);
+  if (animate && el.textContent !== text) {
+    gsap.fromTo(el, { scale: 0.8, opacity: 0.4 }, { scale: 1, opacity: 1, duration: 0.22, ease: 'back.out(1.7)' });
+  }
+  el.textContent = text;
+}
+
+function applyDecision(s) {
+  var skipCard = document.getElementById('dec-skip');
+  var robCard  = document.getElementById('dec-rob');
+  var skipV    = document.getElementById('dec-skip-v');
+  var robF     = document.getElementById('dec-rob-f');
+  var robV     = document.getElementById('dec-rob-v');
+  var result   = document.getElementById('dec-result');
+
+  skipCard.className = 'dec-card';
+  robCard.className  = 'dec-card';
+  skipV.textContent  = '—';
+  robF.textContent   = 'prev_two + money';
+  robV.textContent   = '—';
+  result.innerHTML   = '';
+
+  if (s.skipVal === null || s.skipVal === undefined) return;
+
+  skipCard.className = 'dec-card visible';
+  skipV.textContent  = String(s.skipVal);
+
+  if (s.robVal !== null && s.robVal !== undefined) {
+    robCard.className = 'dec-card visible';
+    robV.textContent  = String(s.robVal);
+  }
+
+  if (s.winner) {
+    if (s.winner === 'rob') {
+      robCard.className  = 'dec-card winner';
+      skipCard.className = 'dec-card loser';
+    } else if (s.winner === 'skip') {
+      skipCard.className = 'dec-card winner';
+      robCard.className  = 'dec-card loser';
+    } else {
+      skipCard.className = 'dec-card winner';
+      robCard.className  = 'dec-card winner';
+    }
+    result.innerHTML = 'current = max(' + s.skipVal + ', ' + s.robVal + ') = <strong>' + s.curVal + '</strong>';
+  }
+}
+
+function applyResult(s, animate) {
+  var val1   = document.getElementById('res-val1');
+  var val2   = document.getElementById('res-val2');
+  var box1   = document.getElementById('res-box1');
+  var box2   = document.getElementById('res-box2');
+  var maxDiv = document.getElementById('result-max');
+  var maxVal = document.getElementById('result-max-val');
+
+  val1.textContent = s.pass1Result !== null ? '$' + s.pass1Result : '—';
+  val2.textContent = s.pass2Result !== null ? '$' + s.pass2Result : '—';
+
+  box1.className = 'result-box';
+  box2.className = 'result-box';
+
+  if (s.pass1Result !== null && s.pass2Result !== null) {
+    var final = Math.max(s.pass1Result, s.pass2Result);
+    if (s.pass1Result >= s.pass2Result) box1.className = 'result-box winner';
+    else                                box2.className = 'result-box winner';
+
+    var wasHidden = maxDiv.className.indexOf('visible') === -1;
+    maxDiv.className = 'result-max visible';
+    maxVal.textContent = '$' + final;
+    if (animate && wasHidden) {
+      gsap.fromTo(maxDiv, { scale: 0.8, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.3, ease: 'back.out(1.7)' });
+    }
+  } else {
+    maxDiv.className = 'result-max';
+  }
+}
+</script>
+
+<script>
+if (window.self !== window.top) {
+  var bl = document.querySelector('.back-link');
+  if (bl) bl.style.display = 'none';
+}
+</script>
+</body>
+</html>
