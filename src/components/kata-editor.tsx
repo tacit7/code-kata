@@ -45,7 +45,17 @@ type VizKataName =
   | "Balanced Binary Tree"
   | "Reverse Bits"
   | "Diameter of Binary Tree"
-  | "Decode Ways";
+  | "Decode Ways"
+  | "Validate BST"
+  | "Max Area of Island"
+  | "Rotting Oranges"
+  | "Jump Game II"
+  | "Merge Intervals"
+  | "Unique Paths"
+  | "Longest Common Subsequence"
+  | "Word Break"
+  | "Implement Trie"
+  | "Course Schedule";
 
 // Kata name → algo-viz subfolder served from /algo-viz/<folder>/index.html
 const VIZ_MAP: Partial<Record<VizKataName, string>> = {
@@ -80,6 +90,16 @@ const VIZ_MAP: Partial<Record<VizKataName, string>> = {
   "Reverse Bits":                 "reverse-bits",
   "Diameter of Binary Tree":      "diameter-tree",
   "Decode Ways":                  "decode-ways",
+  "Validate BST":                 "validate-bst",
+  "Max Area of Island":           "max-area-island",
+  "Rotting Oranges":              "rotting-oranges",
+  "Jump Game II":                 "jump-game-2",
+  "Merge Intervals":              "merge-intervals",
+  "Unique Paths":                 "unique-paths",
+  "Longest Common Subsequence":   "lcs",
+  "Word Break":                   "word-break",
+  "Implement Trie":               "trie",
+  "Course Schedule":              "course-schedule",
 };
 
 // Overrides for slugs that can't be reliably derived from the display name
