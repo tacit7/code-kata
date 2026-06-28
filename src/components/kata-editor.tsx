@@ -115,14 +115,6 @@ export function KataEditor({ kata, isSession, onTestComplete }: KataEditorProps)
 
   const vizFolder = VIZ_MAP[kata.name] ?? null;
 
-  // Widen panel when switching to Viz tab; reset if kata has no viz
-  useEffect(() => {
-    if (showPanel === "viz") {
-      if (!vizFolder) { setShowPanel(null); return; }
-      setPanelWidth((w) => Math.max(w, 500));
-    }
-  }, [showPanel, vizFolder]);
-
   const handleEditorMount: OnMount = (editorInstance) => {
     editorRef.current = editorInstance;
     setEditorReady(true);
@@ -229,6 +221,50 @@ export function KataEditor({ kata, isSession, onTestComplete }: KataEditorProps)
 
   const initialCode = savedCode ?? kata.code;
 
+  if (showPanel === "viz" && vizFolder) {
+    return (
+      <div className="flex flex-col h-full">
+        <div className="flex border-b border-base-300/60 shrink-0">
+          {kata.description && (
+            <button
+              onClick={() => setShowPanel("description")}
+              className={tabClass("description")}
+            >
+              Problem
+            </button>
+          )}
+          {kata.solution && (
+            <button
+              onClick={() => setShowPanel("solution")}
+              className={tabClass("solution")}
+            >
+              Solution
+            </button>
+          )}
+          <button
+            onClick={() => setShowPanel("notes")}
+            className={tabClass("notes")}
+          >
+            Notes{!notesSaved && " •"}
+          </button>
+          <button
+            onClick={() => setShowPanel((v) => v === "viz" ? null : "viz")}
+            className={tabClass("viz")}
+          >
+            Viz ↗
+          </button>
+        </div>
+        <div className="flex-1 min-h-0">
+          <iframe
+            src={`/algo-viz/${vizFolder}/index.html`}
+            className="w-full h-full border-0"
+            title={`${kata.name} visualization`}
+          />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex h-full">
       {/* Side panel: tabs + content (full height) */}
@@ -293,15 +329,6 @@ export function KataEditor({ kata, isSession, onTestComplete }: KataEditorProps)
                   readOnly: true,
                   lineNumbers: "off",
                 }}
-              />
-            </div>
-          )}
-          {showPanel === "viz" && vizFolder && (
-            <div className="flex-1 min-h-0">
-              <iframe
-                src={`/algo-viz/${vizFolder}/index.html`}
-                className="w-full h-full border-0"
-                title={`${kata.name} visualization`}
               />
             </div>
           )}
