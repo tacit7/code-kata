@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Algorithm Visualizations</title>
+  <link rel="stylesheet" href="shared/style.css" />
+  <style>
+    body {
+      display: flex; flex-direction: column;
+      align-items: center; padding: 48px 16px; gap: 40px;
+    }
+    .hub-header { text-align: center; }
+    .hub-title  { font-size: 2rem; font-weight: 700; color: var(--text-bright); margin-bottom: 6px; }
+    .hub-sub    { font-size: 0.95rem; color: var(--text-dim); }
+
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 16px;
+      width: 100%; max-width: 900px;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 22px 20px;
+      display: flex; flex-direction: column; gap: 10px;
+      transition: border-color 0.2s, transform 0.15s;
+      cursor: pointer;
+    }
+    .card:hover {
+      border-color: var(--accent);
+      transform: translateY(-2px);
+    }
+
+    .card-tag {
+      font-size: 0.65rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.1em;
+      color: var(--accent); background: #6366f115;
+      border: 1px solid #6366f130;
+      border-radius: 4px; padding: 2px 7px; width: fit-content;
+    }
+    .card-name { font-size: 1.05rem; font-weight: 600; color: var(--text-bright); }
+    .card-desc { font-size: 0.82rem; color: var(--text-dim); line-height: 1.5; }
+
+    /* placeholder card */
+    .card.soon {
+      opacity: 0.45; cursor: default; pointer-events: none;
+    }
+    .card.soon .card-tag { color: var(--text-dim); background: transparent; border-color: var(--border); }
+  </style>
+</head>
+<body>
+
+<div class="hub-header">
+  <div class="hub-title">Algorithm Visualizations</div>
+  <div class="hub-sub">Step through algorithms one move at a time.</div>
+</div>
+
+<div class="card-grid">
+
+  <a href="floyd-cycle/index.html">
+    <div class="card">
+      <span class="card-tag">Linked List</span>
+      <div class="card-name">Floyd's Cycle Detection</div>
+      <div class="card-desc">Two-pointer tortoise &amp; hare algorithm to detect and locate cycles.</div>
+    </div>
+  </a>
+
+  <a href="bfs/index.html">
+    <div class="card">
+      <span class="card-tag">Tree</span>
+      <div class="card-name">BFS &mdash; Binary Tree</div>
+      <div class="card-desc">Level-by-level traversal with live queue and visited order tracking.</div>
+    </div>
+  </a>
+
+  <a href="bfs-grid/index.html">
+    <div class="card">
+      <span class="card-tag">Grid</span>
+      <div class="card-name">BFS &mdash; Grid / Matrix</div>
+      <div class="card-desc">Shortest path on a 2D grid with walls. Draw obstacles, then watch BFS explore.</div>
+    </div>
+  </a>
+
+  <a href="bfs-traversal/index.html">
+    <div class="card">
+      <span class="card-tag">Grid</span>
+      <div class="card-name">BFS &mdash; Grid Traversal</div>
+      <div class="card-desc">Pure traversal from a chosen start. Cells show their distance from the source.</div>
+    </div>
+  </a>
+
+  <a href="kadanes/index.html">
+    <div class="card">
+      <span class="card-tag">DP</span>
+      <div class="card-name">Kadane's Algorithm</div>
+      <div class="card-desc">Maximum subarray sum. Watch the extend vs restart decision and the live range bars.</div>
+    </div>
+  </a>
+
+  <a href="min-cost-stairs/index.html">
+    <div class="card">
+      <span class="card-tag">DP</span>
+      <div class="card-name">Min Cost Climbing Stairs</div>
+      <div class="card-desc">Bottom-up DP. Watch dp[i] get built from two sources at each step.</div>
+    </div>
+  </a>
+
+  <a href="house-robber/index.html">
+    <div class="card">
+      <span class="card-tag">DP</span>
+      <div class="card-name">House Robber</div>
+      <div class="card-desc">Space-optimized DP with rolling variables. Watch the decision unfold at every house.</div>
+    </div>
+  </a>
+
+  <a href="median-sorted-arrays/index.html">
+    <div class="card">
+      <span class="card-tag">Binary Search</span>
+      <div class="card-name">Median of Two Sorted Arrays</div>
+      <div class="card-desc">Binary search on partition index i. Watch the four boundary values determine if the cut is valid.</div>
+    </div>
+  </a>
+
+  <a href="merge-sorted-lists/index.html">
+    <div class="card">
+      <span class="card-tag">Linked List</span>
+      <div class="card-name">Merge Two Sorted Lists</div>
+      <div class="card-desc">Iterative dummy-node merge. Watch the pointer advance and the output list grow node by node.</div>
+    </div>
+  </a>
+
+  <a href="manachers/index.html">
+    <div class="card">
+      <span class="card-tag">String</span>
+      <div class="card-name">Manacher's Algorithm</div>
+      <div class="card-desc">Longest palindromic substring in O(n). Watch the mirror optimization skip redundant work.</div>
+    </div>
+  </a>
+
+  <div class="card soon">
+    <span class="card-tag">Tree</span>
+    <div class="card-name">Binary Search Tree</div>
+    <div class="card-desc">Insert, search, and delete on a BST with balance visualization.</div>
+  </div>
+
+</div>
+
+</body>
+</html>

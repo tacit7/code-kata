@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BFS — Grid / Matrix</title>
+  <link rel="stylesheet" href="../shared/style.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <style>
+    .viz-area {
+      width: 100%; max-width: 90%;
+      display: flex; flex-direction: column; gap: 12px;
+    }
+
+    .grid-wrap {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 16px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    #grid {
+      display: grid;
+      gap: 2px;
+      user-select: none;
+    }
+
+    .cell {
+      border-radius: 3px;
+      cursor: pointer;
+      box-sizing: border-box;
+    }
+
+    .cell[data-state="empty"]   { background: #1e2130; }
+    .cell[data-state="wall"]    { background: #080a10; }
+    .cell[data-state="start"]   { background: #15803d; border: 1px solid var(--green); }
+    .cell[data-state="end"]     { background: #7f1d1d; border: 1px solid var(--red); }
+    .cell[data-state="queued"]  { background: #4338ca; }
+    .cell[data-state="current"] { background: #c2410c; }
+    .cell[data-state="visited"] { background: #065f46; }
+    .cell[data-state="path"]    { background: #a16207; border: 1px solid var(--yellow); }
+
+    .bottom-row {
+      display: grid;
+      grid-template-columns: 50% 1fr;
+      gap: 12px;
+      align-items: start;
+    }
+    .right-col { display: flex; flex-direction: column; gap: 12px; }
+
+    @media (max-width: 680px) { .bottom-row { grid-template-columns: 1fr; } }
+
+    .code-panel {
+      background: #0a0d14;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .code-header {
+      padding: 9px 14px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      font-size: 0.67rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.11em;
+      color: var(--text-dim);
+    }
+    .code-body {
+      padding: 10px 0;
+      flex: 1;
+      font-family: 'JetBrains Mono','Fira Code','Cascadia Code',monospace;
+      font-size: 0.75rem;
+      line-height: 1.7;
+      overflow-x: auto;
+    }
+    .cl {
+      display: flex;
+      align-items: stretch;
+      border-left: 3px solid transparent;
+      padding: 0 14px 0 0;
+      white-space: pre;
+    }
+    .cl .ln {
+      width: 28px; min-width: 28px;
+      text-align: right;
+      color: #3d4468;
+      user-select: none;
+      padding-right: 14px;
+      font-size: 0.7rem;
+      line-height: 1.7;
+    }
+    .cl .code { color: var(--text-muted); }
+    .kw { color: var(--purple); }
+    .fn { color: var(--blue); }
+    .bi { color: var(--orange); }
+    .op { color: var(--text); }
+    .cm { color: #3d4468; font-style: italic; }
+    .nb { color: var(--green); }
+
+    .panel-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 13px 18px;
+    }
+    .panel-title {
+      font-size: 0.67rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.11em;
+      color: var(--text-dim);
+      margin-bottom: 10px;
+    }
+
+    .panel-sub {
+      font-size: 0.75rem; font-weight: 400;
+      text-transform: none; letter-spacing: 0; color: var(--text-faint);
+    }
+    .queue-row {
+      display: flex; align-items: center; gap: 10px; min-height: 42px;
+    }
+    .q-hint { font-size: 0.7rem; color: var(--text-faint); white-space: nowrap; }
+    #queue-items {
+      display: flex; gap: 6px; align-items: center;
+      flex-wrap: nowrap; overflow-x: auto; flex: 1; min-height: 36px;
+    }
+    .q-chip {
+      background: #4338ca; color: var(--accent-pale);
+      border: 1px solid var(--accent); border-radius: 5px;
+      padding: 3px 9px; font-size: 0.78rem; font-weight: 700;
+      white-space: nowrap; flex-shrink: 0; font-family: monospace;
+    }
+    .q-empty, .v-empty { color: var(--text-faint); font-size: 0.82rem; font-style: italic; }
+
+    #visited-items {
+      display: flex; gap: 5px; flex-wrap: wrap;
+      min-height: 30px; align-items: flex-start;
+      max-height: 110px; overflow-y: auto;
+    }
+    .v-chip {
+      background: #052e16; color: var(--green);
+      border: 1px solid #16a34a; border-radius: 5px;
+      padding: 2px 8px; font-size: 0.72rem; font-weight: 700;
+      font-family: monospace; white-space: nowrap;
+    }
+
+    .btn-play {
+      background: #15803d;
+      border: none;
+      border-radius: var(--radius-sm);
+      color: #fff;
+      cursor: pointer;
+      font-size: 0.88rem;
+      font-weight: 600;
+      padding: 9px 20px;
+      transition: background 0.2s;
+    }
+    .btn-play:hover { background: #166534; }
+    .btn-play.playing { background: #c2410c; }
+    .btn-play.playing:hover { background: #9a3412; }
+    .btn-play:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .speed-select {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      font-size: 0.85rem;
+      padding: 8px 10px;
+      outline: none;
+    }
+
+    .nav-row {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+      width: 100%;
+      max-width: 90%;
+    }
+  </style>
+</head>
+<body class="page">
+
+<div class="page-header">
+  <a class="back-link" href="../index.html">&larr; All Algorithms</a>
+  <h1 class="page-title">BFS &mdash; Grid / Matrix</h1>
+</div>
+
+<div class="controls">
+  <div class="field">
+    <label>Rows</label>
+    <input id="inp-rows" type="number" min="4" max="20" value="10" />
+  </div>
+  <div class="field">
+    <label>Cols</label>
+    <input id="inp-cols" type="number" min="4" max="20" value="10" />
+  </div>
+  <div class="field">
+    <label>Wall %</label>
+    <input id="inp-walls" type="number" min="0" max="50" value="25" />
+  </div>
+  <button class="btn-primary" onclick="buildGrid()">Randomize</button>
+  <button class="btn-primary" style="background:var(--surface);border:1px solid var(--border);color:var(--text)" onclick="clearWalls()">Clear Walls</button>
+  <button class="btn-primary" onclick="runBFS()">Run BFS</button>
+</div>
+
+<div class="viz-area">
+  <div class="grid-wrap">
+    <div id="grid"></div>
+  </div>
+
+  <div class="status-bar" style="max-width:100%">
+    <span class="phase-label" id="phase-label">&mdash;</span>
+    <span class="step-desc" id="step-desc">Click or drag cells to toggle walls, then click Run BFS.</span>
+  </div>
+
+  <div class="bottom-row">
+    <div class="code-panel">
+      <div class="code-header">Python</div>
+      <div class="code-body" id="code-body"></div>
+    </div>
+
+    <div class="right-col">
+      <div class="panel-box">
+        <div class="panel-title">Queue <span class="panel-sub">(front &rarr; back)</span></div>
+        <div class="queue-row">
+          <span class="q-hint">&larr; dequeue</span>
+          <div id="queue-items"><span class="q-empty">not started</span></div>
+          <span class="q-hint">enqueue &rarr;</span>
+        </div>
+      </div>
+
+      <div class="panel-box">
+        <div class="panel-title">Visited <span class="panel-sub" id="visited-count"></span></div>
+        <div id="visited-items"><span class="v-empty">none yet</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="legend">
+  <div class="leg-item"><div class="leg-swatch" style="background:#15803d;border:1px solid var(--green)"></div>Start</div>
+  <div class="leg-item"><div class="leg-swatch" style="background:#7f1d1d;border:1px solid var(--red)"></div>End</div>
+  <div class="leg-item"><div class="leg-swatch" style="background:#1e2130;border:1px solid #2d3148"></div>Empty</div>
+  <div class="leg-item"><div class="leg-swatch" style="background:#080a10"></div>Wall</div>
+  <div class="leg-item"><div class="leg-swatch" style="background:#4338ca"></div>In queue</div>
+  <div class="leg-item"><div class="leg-swatch" style="background:#c2410c"></div>Current</div>
+  <div class="leg-item"><div class="leg-swatch" style="background:#065f46"></div>Visited</div>
+  <div class="leg-item"><div class="leg-swatch" style="background:#a16207;border:1px solid var(--yellow)"></div>Path</div>
+</div>
+
+<div class="nav-row">
+  <div class="step-nav">
+    <button class="btn-step" id="btn-back" onclick="stepBack()" disabled>&larr; Back</button>
+    <button class="btn-step" id="btn-next" onclick="stepNext()" disabled>Next &rarr;</button>
+  </div>
+  <button class="btn-play" id="btn-play" onclick="togglePlay()" disabled>&#9654; Play</button>
+  <select class="speed-select" id="speed-select">
+    <option value="400">Slow</option>
+    <option value="100" selected>Medium</option>
+    <option value="25">Fast</option>
+  </select>
+</div>
+
+<script>
+// --- Code lines ---
+const CODE = [
+  [1,  '<span class="kw">from</span> collections <span class="kw">import</span> <span class="bi">deque</span>'],
+  [0,  ''],
+  [3,  '<span class="kw">def</span> <span class="fn">bfs</span><span class="op">(</span>grid, start, end<span class="op">):</span>'],
+  [4,  '    rows, cols <span class="op">=</span> <span class="bi">len</span><span class="op">(</span>grid<span class="op">),</span> <span class="bi">len</span><span class="op">(</span>grid<span class="op">[</span><span class="nb">0</span><span class="op">])</span>'],
+  [5,  '    queue <span class="op">=</span> <span class="bi">deque</span><span class="op">([</span>start<span class="op">])</span>'],
+  [6,  '    visited <span class="op">= {</span>start<span class="op">:</span> <span class="kw">None</span><span class="op">}</span>  <span class="cm"># parent map</span>'],
+  [0,  ''],
+  [8,  '    <span class="kw">while</span> queue<span class="op">:</span>'],
+  [9,  '        r, c <span class="op">=</span> queue<span class="op">.</span><span class="fn">popleft</span><span class="op">()</span>'],
+  [0,  ''],
+  [11, '        <span class="kw">if</span> <span class="op">(</span>r, c<span class="op">) ==</span> end<span class="op">:</span>'],
+  [12, '            <span class="kw">return</span> <span class="fn">reconstruct</span><span class="op">(</span>visited, end<span class="op">)</span>'],
+  [0,  ''],
+  [14, '        <span class="kw">for</span> dr, dc <span class="kw">in</span> <span class="op">[(-</span><span class="nb">1</span><span class="op">,</span><span class="nb">0</span><span class="op">),(</span><span class="nb">1</span><span class="op">,</span><span class="nb">0</span><span class="op">),(</span><span class="nb">0</span><span class="op">,-</span><span class="nb">1</span><span class="op">),(</span><span class="nb">0</span><span class="op">,</span><span class="nb">1</span><span class="op">)]:</span>'],
+  [15, '            nr, nc <span class="op">=</span> r<span class="op">+</span>dr, c<span class="op">+</span>dc'],
+  [16, '            <span class="kw">if</span> <span class="op">(</span><span class="nb">0</span> <span class="op">&lt;=</span> nr <span class="op">&lt;</span> rows <span class="kw">and</span>'],
+  [17, '                <span class="nb">0</span> <span class="op">&lt;=</span> nc <span class="op">&lt;</span> cols <span class="kw">and</span>'],
+  [18, '                grid<span class="op">[</span>nr<span class="op">][</span>nc<span class="op">] !=</span> <span class="nb">1</span> <span class="kw">and</span>'],
+  [19, '                <span class="op">(</span>nr, nc<span class="op">)</span> <span class="kw">not in</span> visited<span class="op">):</span>'],
+  [20, '                visited<span class="op">[(</span>nr, nc<span class="op">)] = (</span>r, c<span class="op">)</span>'],
+  [21, '                queue<span class="op">.</span><span class="fn">append</span><span class="op">((</span>nr, nc<span class="op">))</span>'],
+  [0,  ''],
+  [23, '    <span class="kw">return</span> <span class="kw">None</span>  <span class="cm"># no path found</span>'],
+];
+
+function buildCodePanel() {
+  const body = document.getElementById('code-body');
+  body.innerHTML = '';
+  CODE.forEach(([ln, html]) => {
+    const row = document.createElement('div');
+    row.className = 'cl';
+    if (ln > 0) row.id = 'cl-' + ln;
+    row.innerHTML = '<span class="ln">' + (ln > 0 ? ln : '') + '</span><span class="code">' + html + '</span>';
+    body.appendChild(row);
+  });
+}
+
+// --- State ---
+let ROWS = 10, COLS = 10;
+let wallGrid = [];
+let simSteps = [];
+let cursor = 0;
+let playTimer = null;
+let simReady = false;
+let isDrawing = false;
+let drawMode = null;
+
+const startCell = () => [0, 0];
+const endCell   = () => [ROWS - 1, COLS - 1];
+
+// --- Build grid ---
+function buildGrid() {
+  stopPlay();
+  simReady = false;
+  ROWS = Math.max(4, Math.min(20, parseInt(document.getElementById('inp-rows').value) || 10));
+  COLS = Math.max(4, Math.min(20, parseInt(document.getElementById('inp-cols').value) || 10));
+  const wallPct = Math.max(0, Math.min(50, parseInt(document.getElementById('inp-walls').value) || 25));
+
+  const [sr, sc] = startCell(), [er, ec] = endCell();
+  wallGrid = Array.from({ length: ROWS }, (_, r) =>
+    Array.from({ length: COLS }, (_, c) => {
+      if ((r === sr && c === sc) || (r === er && c === ec)) return 0;
+      return Math.random() * 100 < wallPct ? 1 : 0;
+    })
+  );
+
+  renderGrid();
+  resetStatus();
+}
+
+function clearWalls() {
+  stopPlay(); simReady = false;
+  wallGrid = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
+  renderGrid(); resetStatus();
+}
+
+function renderGrid() {
+  const container = document.getElementById('grid');
+  const maxW = container.parentElement.clientWidth - 32;
+  const cellSize = Math.max(18, Math.min(50, Math.floor(maxW / COLS) - 2));
+  container.style.gridTemplateColumns = 'repeat(' + COLS + ', ' + cellSize + 'px)';
+  container.innerHTML = '';
+
+  const [sr, sc] = startCell(), [er, ec] = endCell();
+
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      const cell = document.createElement('div');
+      cell.className = 'cell';
+      cell.id = 'cell-' + r + '-' + c;
+      cell.style.width = cell.style.height = cellSize + 'px';
+
+      if (r === sr && c === sc)       cell.dataset.state = 'start';
+      else if (r === er && c === ec)  cell.dataset.state = 'end';
+      else                             cell.dataset.state = wallGrid[r][c] ? 'wall' : 'empty';
+
+      (function(row, col) {
+        cell.addEventListener('mousedown', function(e) {
+          if (simReady) return;
+          e.preventDefault();
+          const [sr2, sc2] = startCell(), [er2, ec2] = endCell();
+          if ((row === sr2 && col === sc2) || (row === er2 && col === ec2)) return;
+          drawMode = wallGrid[row][col] ? 'remove' : 'add';
+          isDrawing = true;
+          applyDraw(row, col);
+        });
+        cell.addEventListener('mouseenter', function() {
+          if (!isDrawing || simReady) return;
+          const [sr2, sc2] = startCell(), [er2, ec2] = endCell();
+          if ((row === sr2 && col === sc2) || (row === er2 && col === ec2)) return;
+          applyDraw(row, col);
+        });
+      })(r, c);
+
+      container.appendChild(cell);
+    }
+  }
+}
+
+document.addEventListener('mouseup', function() { isDrawing = false; drawMode = null; });
+
+function applyDraw(r, c) {
+  if (drawMode === 'add' && wallGrid[r][c] === 0) {
+    wallGrid[r][c] = 1;
+    document.getElementById('cell-' + r + '-' + c).dataset.state = 'wall';
+  } else if (drawMode === 'remove' && wallGrid[r][c] === 1) {
+    wallGrid[r][c] = 0;
+    document.getElementById('cell-' + r + '-' + c).dataset.state = 'empty';
+  }
+}
+
+// --- BFS simulation ---
+function runBFS() {
+  stopPlay();
+  simSteps = [];
+  simReady = true;
+
+  const [sr, sc] = startCell(), [er, ec] = endCell();
+
+  const stateGrid = wallGrid.map(function(row, r) {
+    return row.map(function(v, c) {
+      if (r === sr && c === sc) return 'start';
+      if (r === er && c === ec) return 'end';
+      return v ? 'wall' : 'empty';
+    });
+  });
+
+  const snap = function(phase, desc, lines, extra) {
+    simSteps.push(Object.assign({
+      phase: phase, desc: desc,
+      lines: lines || [],
+      states: stateGrid.map(function(r) { return r.slice(); }),
+      queue: bfsQ.slice(),
+      visitedOrder: visitedOrder.slice(),
+    }, extra || {}));
+  };
+
+  const bfsQ = [[sr, sc]];
+  const visited = new Set([sr + ',' + sc]);
+  const parent = {};
+  const visitedOrder = [[sr, sc]];
+
+  stateGrid[sr][sc] = 'queued';
+  snap('Init', 'Enqueue start (' + sr + ',' + sc + '). Mark as visited.', [5, 6]);
+
+  const DIRS = [[-1,0],[1,0],[0,-1],[0,1]];
+  let found = false;
+
+  while (bfsQ.length && !found) {
+    const cur = bfsQ.shift();
+    const r = cur[0], c = cur[1];
+    stateGrid[r][c] = 'current';
+    snap('BFS', 'Dequeue (' + r + ',' + c + ').', [8, 9]);
+
+    if (r === er && c === ec) {
+      const path = [];
+      let k = r + ',' + c;
+      while (k) {
+        const parts = k.split(',');
+        path.unshift([parseInt(parts[0]), parseInt(parts[1])]);
+        k = parent[k] || null;
+      }
+      path.forEach(function(p) { stateGrid[p[0]][p[1]] = 'path'; });
+      stateGrid[sr][sc] = 'start';
+      snap('Done', 'Reached end (' + r + ',' + c + '). Shortest path: ' + path.length + ' cell' + (path.length !== 1 ? 's' : '') + '.', [11, 12], { foundPath: true, pathLen: path.length });
+      found = true;
+      break;
+    }
+
+    snap('BFS', '(' + r + ',' + c + ') is not the end — check neighbors.', [11, 14]);
+
+    for (let d = 0; d < DIRS.length; d++) {
+      const nr = r + DIRS[d][0], nc = c + DIRS[d][1];
+      const key = nr + ',' + nc;
+      if (nr < 0 || nr >= ROWS || nc < 0 || nc >= COLS || wallGrid[nr][nc] === 1 || visited.has(key)) continue;
+
+      visited.add(key);
+      parent[key] = r + ',' + c;
+      bfsQ.push([nr, nc]);
+      visitedOrder.push([nr, nc]);
+      stateGrid[nr][nc] = (nr === er && nc === ec) ? 'end' : 'queued';
+      snap('BFS', '(' + nr + ',' + nc + ') is valid and unvisited — enqueue.', [15, 16, 17, 18, 19, 20, 21]);
+    }
+
+    if (!(r === sr && c === sc)) stateGrid[r][c] = 'visited';
+  }
+
+  if (!found) {
+    snap('Done', 'Queue empty. No path to end exists.', [23], { noPath: true });
+  }
+
+  cursor = 0;
+  applyStep(simSteps[0], false);
+  document.getElementById('visited-count').textContent = '';
+  updateButtons();
+}
+
+// --- Apply / transition ---
+const STATE_BG = {
+  empty:   '#1e2130',
+  wall:    '#080a10',
+  start:   '#15803d',
+  end:     '#7f1d1d',
+  queued:  '#4338ca',
+  current: '#c2410c',
+  visited: '#065f46',
+  path:    '#a16207',
+};
+
+function setCellState(r, c, state, animate) {
+  const el = document.getElementById('cell-' + r + '-' + c);
+  if (!el) return;
+  el.dataset.state = state;
+  const bg = STATE_BG[state] || STATE_BG.empty;
+  if (animate) gsap.to(el, { backgroundColor: bg, duration: 0.18, ease: 'power2.out' });
+  else         el.style.backgroundColor = bg;
+}
+
+function applyStep(s, animate) {
+  for (let r = 0; r < ROWS; r++)
+    for (let c = 0; c < COLS; c++)
+      setCellState(r, c, s.states[r][c], animate);
+  renderQueue(s.queue, [], true, false);
+  renderVisited(s.visitedOrder || [], [], true, false);
+  setCodeLines([], s.lines, false);
+  refreshText();
+}
+
+function transition(from, to) {
+  for (let r = 0; r < ROWS; r++)
+    for (let c = 0; c < COLS; c++)
+      if (from.states[r][c] !== to.states[r][c])
+        setCellState(r, c, to.states[r][c], true);
+  renderQueue(to.queue, from.queue, false, true);
+  renderVisited(to.visitedOrder || [], from.visitedOrder || [], false, true);
+  setCodeLines(from.lines, to.lines, true);
+  refreshText();
+}
+
+// --- Navigation ---
+function stepNext() {
+  if (cursor >= simSteps.length - 1) { stopPlay(); return; }
+  const from = simSteps[cursor++];
+  transition(from, simSteps[cursor]);
+  updateButtons();
+}
+
+function stepBack() {
+  if (cursor <= 0) return;
+  stopPlay();
+  cursor--;
+  applyStep(simSteps[cursor], true);
+  updateButtons();
+}
+
+function updateButtons() {
+  const atEnd   = cursor >= simSteps.length - 1;
+  const atStart = cursor <= 0;
+  document.getElementById('btn-back').disabled = atStart || !simReady;
+  document.getElementById('btn-next').disabled = atEnd   || !simReady;
+  document.getElementById('btn-play').disabled = !simReady;
+  if (atEnd && playTimer) stopPlay();
+}
+
+function refreshText() {
+  if (!simSteps.length) return;
+  const s = simSteps[cursor];
+  document.getElementById('phase-label').textContent = 'Step ' + (cursor + 1) + ' / ' + simSteps.length + '  ·  ' + s.phase;
+  document.getElementById('step-desc').textContent = s.desc;
+}
+
+// --- Playback ---
+function togglePlay() {
+  if (playTimer) stopPlay();
+  else           startPlay();
+}
+
+function startPlay() {
+  if (cursor >= simSteps.length - 1) cursor = 0;
+  const delay = parseInt(document.getElementById('speed-select').value) || 100;
+  const btn = document.getElementById('btn-play');
+  btn.textContent = '⏸ Pause'; btn.classList.add('playing');
+  playTimer = setInterval(function() {
+    if (cursor >= simSteps.length - 1) { stopPlay(); return; }
+    stepNext();
+  }, delay);
+}
+
+function stopPlay() {
+  if (playTimer) { clearInterval(playTimer); playTimer = null; }
+  const btn = document.getElementById('btn-play');
+  btn.textContent = '▶ Play'; btn.classList.remove('playing');
+}
+
+// --- Queue display ---
+function qkey(q) { return q[0] + ',' + q[1]; }
+
+function renderQueue(newQ, oldQ, rebuild, animate) {
+  const container = document.getElementById('queue-items');
+
+  if (rebuild) {
+    container.innerHTML = '';
+    if (!newQ.length) { container.innerHTML = '<span class="q-empty">empty</span>'; return; }
+    newQ.forEach(function(q) { container.appendChild(makeChip(q)); });
+    return;
+  }
+
+  const oldKeys = new Set(oldQ.map(qkey));
+  const newKeys = new Set(newQ.map(qkey));
+
+  oldQ.filter(function(q) { return !newKeys.has(qkey(q)); }).forEach(function(q) {
+    const el = document.getElementById('qchip-' + qkey(q));
+    if (!el) return;
+    if (animate) gsap.to(el, { x: -14, opacity: 0, duration: 0.15, onComplete: function() {
+      el.remove();
+      if (!container.querySelector('.q-chip'))
+        container.innerHTML = '<span class="q-empty">empty</span>';
+    }});
+    else el.remove();
+  });
+
+  newQ.filter(function(q) { return !oldKeys.has(qkey(q)); }).forEach(function(q) {
+    const e = container.querySelector('.q-empty'); if (e) e.remove();
+    const el = makeChip(q);
+    container.appendChild(el);
+    if (animate) gsap.from(el, { x: 14, opacity: 0, duration: 0.15 });
+  });
+}
+
+function renderVisited(newV, oldV, rebuild, animate) {
+  const container = document.getElementById('visited-items');
+  const vkey = function(v) { return v[0] + ',' + v[1]; };
+
+  if (rebuild) {
+    container.innerHTML = '';
+    if (!newV.length) { container.innerHTML = '<span class="v-empty">none yet</span>'; }
+    else newV.forEach(function(v) { container.appendChild(makeVChip(v, false)); });
+    document.getElementById('visited-count').textContent = newV.length ? '(' + newV.length + ')' : '';
+    return;
+  }
+
+  const oldKeys = new Set(oldV.map(vkey));
+  const newKeys = new Set(newV.map(vkey));
+
+  oldV.filter(function(v) { return !newKeys.has(vkey(v)); }).forEach(function(v) {
+    const el = document.getElementById('vchip-' + vkey(v));
+    if (el) el.remove();
+  });
+
+  newV.filter(function(v) { return !oldKeys.has(vkey(v)); }).forEach(function(v) {
+    const e = container.querySelector('.v-empty'); if (e) e.remove();
+    const el = makeVChip(v, animate);
+    container.appendChild(el);
+  });
+
+  if (!container.querySelector('.v-chip'))
+    container.innerHTML = '<span class="v-empty">none yet</span>';
+  document.getElementById('visited-count').textContent = newV.length ? '(' + newV.length + ')' : '';
+}
+
+function makeVChip(v, animate) {
+  const el = document.createElement('div');
+  el.className = 'v-chip';
+  el.id = 'vchip-' + v[0] + ',' + v[1];
+  el.textContent = '(' + v[0] + ',' + v[1] + ')';
+  if (animate) gsap.from(el, { scale: 0.7, opacity: 0, duration: 0.15 });
+  return el;
+}
+
+function makeChip(q) {
+  const el = document.createElement('div');
+  el.className = 'q-chip';
+  el.id = 'qchip-' + qkey(q);
+  el.textContent = '(' + q[0] + ',' + q[1] + ')';
+  return el;
+}
+
+// --- Code highlighting ---
+const HL_BG   = 'rgba(var(--orange-ch),0.13)';
+const HL_NONE = 'rgba(var(--orange-ch),0)';
+
+function setCodeLines(oldLines, newLines, animate) {
+  const dur = 0.2;
+  (oldLines || []).filter(function(n) { return !(newLines || []).includes(n); }).forEach(function(n) {
+    const el = document.getElementById('cl-' + n); if (!el) return;
+    if (animate) {
+      gsap.to(el, { backgroundColor: HL_NONE, borderLeftColor: 'transparent', duration: dur });
+      gsap.to(el.querySelector('.ln'), { color: '#3d4468', duration: dur });
+    } else {
+      el.style.backgroundColor = ''; el.style.borderLeftColor = '';
+      const ln = el.querySelector('.ln'); if (ln) ln.style.color = '';
+    }
+  });
+  (newLines || []).filter(function(n) { return !(oldLines || []).includes(n); }).forEach(function(n) {
+    const el = document.getElementById('cl-' + n); if (!el) return;
+    if (animate) {
+      gsap.to(el, { backgroundColor: HL_BG, borderLeftColor: 'var(--orange)', duration: dur, delay: 0.05 });
+      gsap.to(el.querySelector('.ln'), { color: 'var(--orange)', duration: dur, delay: 0.05 });
+    } else {
+      el.style.backgroundColor = HL_BG; el.style.borderLeftColor = 'var(--orange)';
+      const ln = el.querySelector('.ln'); if (ln) ln.style.color = 'var(--orange)';
+    }
+  });
+  if (newLines && newLines.length) {
+    const el = document.getElementById('cl-' + newLines[0]);
+    if (el) el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }
+}
+
+// --- Helpers ---
+function resetStatus() {
+  simSteps = []; cursor = 0; simReady = false;
+  document.getElementById('phase-label').textContent = '—';
+  document.getElementById('step-desc').textContent = 'Click or drag cells to toggle walls, then click Run BFS.';
+  document.getElementById('btn-back').disabled = true;
+  document.getElementById('btn-next').disabled = true;
+  document.getElementById('btn-play').disabled = true;
+  document.getElementById('queue-items').innerHTML = '<span class="q-empty">not started</span>';
+  document.getElementById('visited-items').innerHTML = '<span class="v-empty">none yet</span>';
+  document.getElementById('visited-count').textContent = '';
+}
+
+
+// --- Init ---
+window.addEventListener('resize', function() { if (!simReady) renderGrid(); });
+buildCodePanel();
+buildGrid();
+</script>
+</body>
+</html>

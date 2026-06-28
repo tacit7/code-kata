@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Floyd's Cycle Detection</title>
+  <link rel="stylesheet" href="../shared/style.css" />
+  <style>
+    #viz { height: 300px; }
+  </style>
+</head>
+<body class="page">
+
+<div class="page-header">
+  <a class="back-link" href="../index.html">← All Algorithms</a>
+  <h1 class="page-title">Floyd's Cycle Detection</h1>
+</div>
+
+<div class="controls">
+  <div class="field">
+    <label>List length (2–12)</label>
+    <input id="inp-len" type="number" min="2" max="12" value="8" />
+  </div>
+  <div class="field">
+    <label>Cycle from (node)</label>
+    <input id="inp-from" type="number" min="0" max="11" value="7" />
+  </div>
+  <div class="field">
+    <label>Cycle to (−1 = none)</label>
+    <input id="inp-to" type="number" min="-1" max="11" value="3" />
+  </div>
+  <button class="btn-primary" onclick="build()">Build</button>
+</div>
+
+<div class="status-bar">
+  <span class="phase-label" id="phase-label">—</span>
+  <span class="step-desc"   id="step-desc">Click Build to start.</span>
+  <span class="result-badge" id="result-badge"></span>
+</div>
+
+<div class="canvas-wrap">
+  <canvas id="viz"></canvas>
+</div>
+
+<div class="legend">
+  <div class="leg-item"><div class="leg-swatch" style="background:var(--orange)"></div>Slow (tortoise)</div>
+  <div class="leg-item"><div class="leg-swatch" style="background:#a855f7"></div>Fast (hare)</div>
+  <div class="leg-item"><div class="leg-swatch" style="background:#22d3ee"></div>Both on same node</div>
+  <div class="leg-item"><div class="leg-swatch square" style="background:var(--yellow)"></div>Cycle entry</div>
+</div>
+
+<div class="step-nav">
+  <button class="btn-step" id="btn-back" onclick="stepBack()" disabled>← Back</button>
+  <button class="btn-step" id="btn-next" onclick="stepNext()" disabled>Next →</button>
+</div>
+
+<script>
+// ─── State ────────────────────────────────────────────────────────────────────
+let steps  = [];
+let cursor = 0;
+
+let animRaf       = null;
+let animStartTime = null;
+let animFromSlow  = 0;
+let animFromFast  = 0;
+let animT         = 1;
+
+const ANIM_MS = 360;
+const R   = 26;
+const GAP = 20;
+
+const C = {
+  nodeFill:    '#1e2130',
+  nodeBorder:  '#2d3148',
+  nodeDimFill: '#161824',
+  nodeDimBord: '#1e2230',
+  slow:        'var(--orange)',
+  fast:        '#a855f7',
+  both:        '#22d3ee',
+  entry:       'var(--yellow)',
+  arrow:       'var(--text-faint)',
+  cycleArrow:  'var(--yellow)',
+  text:        'var(--text)',
+  textDim:     '#2d3a58',
+  nullColor:   'var(--text-dim)',
+};
+
+// ─── Build ────────────────────────────────────────────────────────────────────
+function build() {
+  let n         = clamp(parseInt(document.getElementById('inp-len').value)  || 6, 2, 12);
+  let cycleFrom = clamp(parseInt(document.getElementById('inp-from').value) ?? n-1, 0, n-1);
+  let cycleTo   = parseInt(document.getElementById('inp-to').value);
+  if (isNaN(cycleTo)) cycleTo = -1;
+  if (cycleTo >= 0)   cycleTo = clamp(cycleTo, 0, cycleFrom);
+
+  stopAnim();
+  steps        = simulate(n, cycleFrom, cycleTo);
+  cursor       = 0;
+  animFromSlow = steps[0].slow;
+  animFromFast = steps[0].fast;
+  animT        = 1;
+
+  updateText();
+  renderFrame();
+  updateButtons();
+}
+
+function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+
+// ─── Linked-list traversal ────────────────────────────────────────────────────
+function nxt(idx, n, cycleFrom, cycleTo) {
+  if (idx === null) return null;
+  if (idx === cycleFrom) return cycleTo >= 0 ? cycleTo : null;
+  if (idx < cycleFrom)   return idx + 1;
+  return null;
+}
+
+// ─── Simulate ─────────────────────────────────────────────────────────────────
+function simulate(n, cycleFrom, cycleTo) {
+  const out = [];
+  const snap = (phase, desc, slow, fast, extra) =>
+    out.push(Object.assign({ phase, desc, slow, fast, n, cycleFrom, cycleTo }, extra || {}));
+
+  let slow = 0, fast = 0;
+  snap('Phase 1 — Detect', 'Initial state. Slow (S) and Fast (F) both at node 0.', 0, 0);
+
+  let meetAt = null;
+  const MAX  = n * n + 30;
+
+  for (let iter = 0; iter < MAX; iter++) {
+    // Fast hop 1
+    fast = nxt(fast, n, cycleFrom, cycleTo);
+    if (fast === null) {
+      snap('Phase 1 — Detect', 'Fast reaches null (step 1 of 2) — no cycle.', slow, null);
+      snap('Done', 'This list has no cycle.', slow, null, { done: true, noCycle: true });
+      return out;
+    }
+    snap('Phase 1 — Detect', `Fast hops to node ${fast}  (step 1 of 2).`, slow, fast);
+
+    // Fast hop 2
+    fast = nxt(fast, n, cycleFrom, cycleTo);
+    if (fast === null) {
+      snap('Phase 1 — Detect', 'Fast reaches null (step 2 of 2) — no cycle.', slow, null);
+      snap('Done', 'This list has no cycle.', slow, null, { done: true, noCycle: true });
+      return out;
+    }
+    snap('Phase 1 — Detect', `Fast hops to node ${fast}  (step 2 of 2).`, slow, fast);
+
+    // Slow hop
+    slow = nxt(slow, n, cycleFrom, cycleTo);
+    snap('Phase 1 — Detect', `Slow hops to node ${slow}.`, slow, fast);
+
+    if (slow === fast) {
+      snap('Phase 1 — Detect', `Slow and Fast meet at node ${slow} — cycle confirmed!`,
+        slow, fast, { meetAt: slow });
+      meetAt = slow;
+      break;
+    }
+  }
+
+  if (meetAt === null) {
+    snap('Done', 'No cycle detected.', slow, fast, { done: true, noCycle: true });
+    return out;
+  }
+
+  // Phase 2 — find entry
+  let p1 = 0, p2 = meetAt;
+  snap('Phase 2 — Find Entry',
+    `Reset p1 to head (node 0). p2 stays at meeting node ${meetAt}. Each advances 1 step.`,
+    p1, p2, { meetAt });
+
+  while (p1 !== p2) {
+    const np1 = nxt(p1, n, cycleFrom, cycleTo);
+    const np2 = nxt(p2, n, cycleFrom, cycleTo);
+    p1 = np1;
+    snap('Phase 2 — Find Entry', `p1 hops to node ${p1}.`, p1, p2, { meetAt });
+    if (p1 === p2) break;
+    p2 = np2;
+    snap('Phase 2 — Find Entry', `p2 hops to node ${p2}.`, p1, p2, { meetAt });
+  }
+
+  snap('Done', `Both pointers meet at node ${p1} — that is the cycle entry point!`,
+    p1, p2, { done: true, cycleEntry: p1 });
+
+  return out;
+}
+
+// ─── Navigation ───────────────────────────────────────────────────────────────
+function stepNext() {
+  if (cursor >= steps.length - 1) return;
+  const from = steps[cursor];
+  stopAnim(); cursor++;
+  startAnim(from.slow, from.fast);
+  updateText(); updateButtons();
+}
+
+function stepBack() {
+  if (cursor <= 0) return;
+  const from = steps[cursor];
+  stopAnim(); cursor--;
+  startAnim(from.slow, from.fast);
+  updateText(); updateButtons();
+}
+
+function updateButtons() {
+  document.getElementById('btn-back').disabled = cursor <= 0;
+  document.getElementById('btn-next').disabled = cursor >= steps.length - 1;
+}
+
+function updateText() {
+  const s = steps[cursor];
+  document.getElementById('phase-label').textContent =
+    `Step ${cursor + 1} / ${steps.length}  ·  ${s.phase}`;
+  document.getElementById('step-desc').textContent = s.desc;
+  const badge = document.getElementById('result-badge');
+  if (s.done) {
+    badge.textContent = s.noCycle ? 'No cycle detected' : `Cycle entry: node ${s.cycleEntry}`;
+    badge.className   = 'result-badge ' + (s.noCycle ? 'none' : 'found');
+  } else {
+    badge.className = 'result-badge';
+  }
+}
+
+// ─── Animation ────────────────────────────────────────────────────────────────
+function startAnim(fromSlow, fromFast) {
+  animFromSlow = fromSlow; animFromFast = fromFast;
+  animT = 0; animStartTime = null;
+  function tick(now) {
+    if (!animStartTime) animStartTime = now;
+    animT = Math.min((now - animStartTime) / ANIM_MS, 1);
+    renderFrame();
+    if (animT < 1) animRaf = requestAnimationFrame(tick);
+    else animRaf = null;
+  }
+  animRaf = requestAnimationFrame(tick);
+}
+
+function stopAnim() {
+  if (animRaf) { cancelAnimationFrame(animRaf); animRaf = null; }
+  if (steps.length) {
+    animFromSlow = steps[cursor].slow;
+    animFromFast = steps[cursor].fast;
+  }
+  animT = 1;
+}
+
+function easeIO(t) { return t < 0.5 ? 2*t*t : -1+(4-2*t)*t; }
+function lerp(a, b, t) { return a + (b - a) * t; }
+
+// ─── Canvas ───────────────────────────────────────────────────────────────────
+function computeNX(n, W) {
+  const sp = R * 2 + GAP;
+  const sx = Math.max(R + 16, (W - (n * sp - GAP)) / 2 + R);
+  return Array.from({ length: n }, (_, i) => sx + i * sp);
+}
+
+function nodeX(idx, nx, n) {
+  return idx === null ? nx[n - 1] + R * 2 + GAP + 14 : nx[idx];
+}
+
+function renderFrame() {
+  const s      = steps[cursor];
+  const canvas = document.getElementById('viz');
+  const W      = canvas.parentElement.clientWidth || 900;
+  const H      = 300;
+  const dpr    = window.devicePixelRatio || 1;
+  canvas.width  = W * dpr; canvas.height = H * dpr;
+  canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
+
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  ctx.clearRect(0, 0, W, H);
+
+  const { n, cycleFrom, cycleTo } = s;
+  const nx = computeNX(n, W);
+  const cy = H / 2 - 22;
+  const et = easeIO(animT);
+
+  const visSlowX = lerp(nodeX(animFromSlow, nx, n), nodeX(s.slow, nx, n), et);
+  const visFastX = lerp(nodeX(animFromFast, nx, n), nodeX(s.fast, nx, n), et);
+  const dotY = cy + R + 24;
+
+  // Forward arrows
+  for (let i = 0; i < cycleFrom; i++) {
+    ctx.strokeStyle = C.arrow; ctx.lineWidth = 1.5; ctx.setLineDash([]);
+    arrowLine(ctx, nx[i] + R + 5, cy, nx[i+1] - R - 5, cy);
+  }
+
+  // Back edge or null
+  if (cycleTo >= 0) {
+    ctx.strokeStyle = C.cycleArrow; ctx.lineWidth = 2; ctx.setLineDash([6, 4]);
+    curvedArrow(ctx, nx[cycleFrom], cy, nx[cycleTo], cy, H);
+    ctx.setLineDash([]);
+  } else {
+    const ex = nx[cycleFrom] + R + 28;
+    ctx.strokeStyle = C.arrow; ctx.lineWidth = 1.5; ctx.setLineDash([]);
+    arrowLine(ctx, nx[cycleFrom] + R + 5, cy, ex, cy);
+    ctx.fillStyle = C.nullColor;
+    ctx.font = 'bold 13px Segoe UI,sans-serif';
+    ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    ctx.fillText('null', ex + 2, cy);
+  }
+
+  // Nodes
+  for (let i = 0; i < n; i++) {
+    const reachable = i <= cycleFrom;
+    const isEntry   = i === cycleTo && cycleTo >= 0;
+    const isFrom    = i === cycleFrom && cycleTo >= 0;
+
+    ctx.beginPath(); ctx.arc(nx[i], cy, R, 0, Math.PI * 2);
+    ctx.fillStyle = reachable ? C.nodeFill : C.nodeDimFill; ctx.fill();
+    ctx.lineWidth   = isEntry ? 2.5 : 2;
+    ctx.strokeStyle = !reachable ? C.nodeDimBord : isEntry ? C.entry : C.nodeBorder;
+    ctx.stroke();
+
+    ctx.fillStyle    = !reachable ? C.textDim : isEntry ? C.entry : C.text;
+    ctx.font         = `bold ${Math.round(R * 0.68)}px Segoe UI,sans-serif`;
+    ctx.textAlign    = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(i, nx[i], cy);
+
+    if (isFrom) {
+      ctx.fillStyle = C.cycleArrow; ctx.font = '11px Segoe UI,sans-serif';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+      ctx.fillText('↩', nx[i], cy - R - 4);
+    }
+  }
+
+  // Pointer dots
+  const bothSame = Math.abs(visSlowX - visFastX) < 3 && s.fast !== null;
+  if (s.fast === null) {
+    dot(ctx, visSlowX, dotY, C.slow, 'S');
+    drawCross(ctx, visFastX, dotY);
+  } else if (bothSame) {
+    dot(ctx, visSlowX, dotY, C.both, 'S+F');
+  } else {
+    dot(ctx, visSlowX, dotY, C.slow, 'S');
+    dot(ctx, visFastX, dotY, C.fast, 'F');
+  }
+}
+
+function dot(ctx, x, y, color, label) {
+  ctx.beginPath(); ctx.arc(x, y, 13, 0, Math.PI * 2);
+  ctx.fillStyle = color + '28'; ctx.fill();
+  ctx.beginPath(); ctx.arc(x, y, 9, 0, Math.PI * 2);
+  ctx.fillStyle = color; ctx.fill();
+  ctx.fillStyle = '#0f1117';
+  ctx.font = 'bold 7px Segoe UI,sans-serif';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(label, x, y);
+}
+
+function drawCross(ctx, x, y) {
+  ctx.strokeStyle = C.nullColor; ctx.lineWidth = 2;
+  const d = 5;
+  ctx.beginPath();
+  ctx.moveTo(x-d, y-d); ctx.lineTo(x+d, y+d);
+  ctx.moveTo(x+d, y-d); ctx.lineTo(x-d, y+d);
+  ctx.stroke();
+}
+
+function arrowLine(ctx, x1, y1, x2, y2) {
+  const hl = 8, a = Math.atan2(y2-y1, x2-x1);
+  ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(x2,y2);
+  ctx.lineTo(x2 - hl*Math.cos(a-0.4), y2 - hl*Math.sin(a-0.4));
+  ctx.lineTo(x2 - hl*Math.cos(a+0.4), y2 - hl*Math.sin(a+0.4));
+  ctx.closePath(); ctx.fillStyle = ctx.strokeStyle; ctx.fill();
+}
+
+function curvedArrow(ctx, x1, cy1, x2, cy2, H) {
+  const cpY = cy1 + H * 0.36;
+  ctx.beginPath(); ctx.moveTo(x1, cy1+R);
+  ctx.bezierCurveTo(x1, cpY, x2, cpY, x2, cy2+R); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.beginPath(); ctx.moveTo(x2, cy2+R);
+  ctx.lineTo(x2-6, cy2+R+11); ctx.lineTo(x2+6, cy2+R+11);
+  ctx.closePath(); ctx.fillStyle = C.cycleArrow; ctx.fill();
+}
+
+window.addEventListener('resize', () => { if (steps.length) renderFrame(); });
+build();
+</script>
+</body>
+</html>

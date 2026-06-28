@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kadane's Algorithm</title>
+  <link rel="stylesheet" href="../shared/style.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <style>
+    .viz-area { width: 100%; max-width: 90%; }
+    .main-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
+    .left-col, .right-col { display: flex; flex-direction: column; gap: 12px; }
+    @media (max-width: 700px) { .main-row { grid-template-columns: 1fr; } }
+
+    /* array section */
+    .array-section {
+      padding: 16px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      display: flex; flex-direction: column; gap: 4px;
+      min-height: 100px;
+    }
+    .arr-row { display: flex; gap: 6px; flex-wrap: nowrap; }
+    .arr-cell {
+      width: 48px; height: 48px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      border: 2px solid var(--border-soft); border-radius: 5px;
+      background: #0f0f0f;
+      font-size: 0.92rem; font-weight: 700; font-family: monospace;
+      color: var(--text-ghost);
+    }
+    .arr-cell[data-state="processed"] { color: var(--text-dim); border-color: #2d3148; }
+    .arr-cell[data-state="current"]   { color: var(--accent-pale); border-color: var(--accent); background: var(--surface-dark); }
+
+    .bar-row { display: flex; gap: 6px; }
+    .bar-cell { width: 48px; height: 6px; flex-shrink: 0; border-radius: 3px; background: transparent; }
+    .bar-cell.amber { background: #b45309; }
+    .bar-cell.green { background: #15803d; }
+
+    .arr-indices { display: flex; gap: 6px; }
+    .arr-idx {
+      width: 48px; flex-shrink: 0;
+      text-align: center; font-size: 0.6rem;
+      color: var(--text-ghost); font-family: monospace;
+    }
+
+    .bar-legend {
+      display: flex; gap: 16px; margin-top: 2px;
+    }
+    .legend-item { display: flex; align-items: center; gap: 5px; font-size: 0.68rem; color: var(--text-faint); }
+    .legend-dot { width: 10px; height: 6px; border-radius: 2px; }
+
+    /* panel-box */
+    .panel-box {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 14px 16px;
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .panel-title {
+      font-size: 0.72rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim);
+    }
+
+    /* variable boxes */
+    .var-main { display: flex; gap: 10px; }
+    .var-box {
+      flex: 1; padding: 10px 8px;
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      display: flex; flex-direction: column; align-items: center; gap: 3px;
+    }
+    .var-box.best-accent { border-color: #166534; }
+    .var-label  { font-size: 0.65rem; font-family: monospace; color: var(--text-faint); }
+    .var-val    { font-size: 1.4rem; font-weight: 700; color: var(--text-bright); }
+
+    .var-sub { display: flex; gap: 8px; }
+    .var-box-sm {
+      flex: 1; padding: 6px 4px;
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      display: flex; flex-direction: column; align-items: center; gap: 2px;
+    }
+    .var-label-sm { font-size: 0.6rem; font-family: monospace; color: var(--text-ghost); text-align: center; }
+    .var-val-sm   { font-size: 0.95rem; font-weight: 700; color: var(--text-muted); }
+
+    /* decision */
+    .dec-row { display: flex; gap: 10px; }
+    .dec-card {
+      flex: 1; padding: 10px 12px;
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      display: flex; flex-direction: column; gap: 4px; opacity: 0.25;
+    }
+    .dec-card.visible { opacity: 1; }
+    .dec-card.winner  { border-color: #15803d; background: #052e16; opacity: 1; }
+    .dec-card.loser   { opacity: 0.3; }
+    .dec-lbl   { font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-faint); }
+    .dec-form  { font-size: 0.72rem; font-family: monospace; color: var(--text-dim); min-height: 16px; }
+    .dec-val   { font-size: 1.2rem; font-weight: 700; color: var(--text-bright); }
+    .dec-result {
+      font-size: 0.8rem; font-family: monospace; color: var(--text-muted);
+      padding-top: 6px; border-top: 1px solid var(--border); min-height: 20px;
+    }
+    .dec-result strong { color: var(--text-bright); }
+
+    /* code */
+    .code-panel {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); overflow: hidden;
+    }
+    .code-header {
+      padding: 8px 14px; font-size: 0.72rem; font-weight: 600;
+      color: var(--text-dim); border-bottom: 1px solid var(--border); background: var(--bg);
+    }
+    .code-body { padding: 10px 0; font-size: 0.78rem; line-height: 1.75; flex: 1; white-space: pre; }
+    .code-line { display: flex; align-items: center; padding: 0 14px; }
+    .code-line.hl { background: var(--border-soft); border-left: 2px solid var(--accent); }
+    .ln { min-width: 24px; color: var(--text-ghost); user-select: none; font-size: 0.7rem; }
+
+    /* nav */
+    .btn-play {
+      background: #15803d; border: none; border-radius: var(--radius-sm);
+      color: #fff; cursor: pointer; font-size: 0.88rem; font-weight: 600;
+      padding: 9px 16px; transition: background 0.2s;
+    }
+    .btn-play:hover { background: #166534; }
+    .btn-play.playing { background: #c2410c; }
+    .btn-play.playing:hover { background: #9a3412; }
+    .btn-play:disabled { opacity: 0.4; cursor: not-allowed; }
+    .speed-select {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); color: var(--text);
+      font-size: 0.85rem; padding: 8px 10px; outline: none; width: 80px;
+    }
+    .nav-row { display: flex; gap: 8px; align-items: center; }
+    .kw { color: var(--purple); }
+    .fn { color: var(--blue); }
+    .bi { color: var(--orange); }
+    .op { color: var(--text); }
+    .nb { color: var(--green); }
+  </style>
+</head>
+<body class="page">
+
+<div class="page-header">
+  <a class="back-link" href="../index.html">&larr; All Algorithms</a>
+  <div class="page-title">Kadane's Algorithm</div>
+  <div class="page-sub">LeetCode 53 &middot; Maximum Subarray &middot; O(n) time &middot; O(1) space</div>
+</div>
+
+<div class="controls">
+  <div class="field">
+    <label>nums</label>
+    <input id="inp-nums" type="text" value="-2, 1, -3, 4, -1, 2, 1, -5, 4" style="width:260px" />
+  </div>
+  <button class="btn-primary" onclick="buildAndRun()">Build &amp; Run</button>
+</div>
+
+<div class="viz-area">
+  <div class="main-row">
+    <div class="left-col">
+      <div class="array-section" id="array-section">
+        <span style="color:var(--text-dim);font-size:0.82rem">Enter nums and click Build &amp; Run.</span>
+      </div>
+      <div class="code-panel">
+        <div class="code-header">Python</div>
+        <div class="code-body" id="code-body"></div>
+      </div>
+    </div>
+
+    <div class="right-col">
+      <div style="display:flex;gap:12px">
+        <div class="panel-box" style="flex:0 0 auto">
+          <div class="nav-row">
+            <button class="btn-step" id="btn-back" onclick="stepBack()" disabled>&larr;</button>
+            <button class="btn-step" id="btn-next" onclick="stepNext()" disabled>&rarr;</button>
+            <button class="btn-play" id="btn-play" onclick="togglePlay()" disabled>&#9654; Play</button>
+            <select class="speed-select" id="speed-select">
+              <option value="700">Slow</option>
+              <option value="250" selected>Medium</option>
+              <option value="80">Fast</option>
+            </select>
+          </div>
+        </div>
+        <div class="panel-box" style="flex:1;min-width:0">
+          <div class="panel-title" id="phase-label">&mdash;</div>
+          <div style="font-size:0.82rem;color:var(--text-muted);margin-top:2px" id="step-desc">Enter nums and click Build &amp; Run.</div>
+        </div>
+      </div>
+
+      <div class="panel-box">
+        <div class="panel-title">Variables</div>
+        <div class="var-main">
+          <div class="var-box">
+            <div class="var-label">current_sum</div>
+            <div class="var-val" id="vv-csum">&mdash;</div>
+          </div>
+          <div class="var-box best-accent">
+            <div class="var-label">best_sum</div>
+            <div class="var-val" id="vv-bsum">&mdash;</div>
+          </div>
+        </div>
+        <div class="var-sub">
+          <div class="var-box-sm">
+            <div class="var-label-sm">window_start</div>
+            <div class="var-val-sm" id="vv-ws">&mdash;</div>
+          </div>
+          <div class="var-box-sm">
+            <div class="var-label-sm">best_start</div>
+            <div class="var-val-sm" id="vv-bs">&mdash;</div>
+          </div>
+          <div class="var-box-sm">
+            <div class="var-label-sm">best_end</div>
+            <div class="var-val-sm" id="vv-be">&mdash;</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel-box">
+        <div class="panel-title">Decision</div>
+        <div class="dec-row">
+          <div class="dec-card" id="dec-ext">
+            <div class="dec-lbl">Extend</div>
+            <div class="dec-form" id="dec-ext-f">current_sum + nums[i]</div>
+            <div class="dec-val" id="dec-ext-v">&mdash;</div>
+          </div>
+          <div class="dec-card" id="dec-rst">
+            <div class="dec-lbl">Restart</div>
+            <div class="dec-form" id="dec-rst-f">nums[i] alone</div>
+            <div class="dec-val" id="dec-rst-v">&mdash;</div>
+          </div>
+        </div>
+        <div class="dec-result" id="dec-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+var simSteps = [], cursor = 0, simReady = false, playTimer = null;
+var numLen = 0;
+
+var CODE = [
+  [1,  '<span class="kw">def</span> <span class="fn">max_subarray</span><span class="op">(</span>nums<span class="op">):</span>'],
+  [2,  '    best_sum     <span class="op">=</span> nums<span class="op">[</span><span class="nb">0</span><span class="op">]</span>'],
+  [3,  '    current_sum  <span class="op">=</span> nums<span class="op">[</span><span class="nb">0</span><span class="op">]</span>'],
+  [4,  '    window_start <span class="op">=</span> <span class="nb">0</span>'],
+  [5,  '    best_start   <span class="op">=</span> <span class="nb">0</span>'],
+  [6,  '    best_end     <span class="op">=</span> <span class="nb">0</span>'],
+  [0,  ''],
+  [8,  '    <span class="kw">for</span> i <span class="kw">in</span> <span class="bi">range</span><span class="op">(</span><span class="nb">1</span><span class="op">,</span> <span class="bi">len</span><span class="op">(</span>nums<span class="op">)):</span>'],
+  [9,  '        extend  <span class="op">=</span> current_sum <span class="op">+</span> nums<span class="op">[</span>i<span class="op">]</span>'],
+  [10, '        restart <span class="op">=</span> nums<span class="op">[</span>i<span class="op">]</span>'],
+  [11, '        <span class="kw">if</span> restart <span class="op">&gt;</span> extend<span class="op">:</span>'],
+  [12, '            current_sum  <span class="op">=</span> restart'],
+  [13, '            window_start <span class="op">=</span> i'],
+  [14, '        <span class="kw">else</span><span class="op">:</span>'],
+  [15, '            current_sum <span class="op">=</span> extend'],
+  [16, '        <span class="kw">if</span> current_sum <span class="op">&gt;</span> best_sum<span class="op">:</span>'],
+  [17, '            best_sum   <span class="op">=</span> current_sum'],
+  [18, '            best_start <span class="op">=</span> window_start'],
+  [19, '            best_end   <span class="op">=</span> i'],
+  [0,  ''],
+  [21, '    <span class="kw">return</span> best_sum'],
+];
+
+window.addEventListener('DOMContentLoaded', function() { buildCodePanel(); });
+
+function buildCodePanel() {
+  var body = document.getElementById('code-body');
+  body.innerHTML = CODE.map(function(e) {
+    var ln = e[0], html = e[1];
+    var id = ln > 0 ? ' id="cl-' + ln + '"' : '';
+    return '<div class="code-line"' + id + '><span class="ln">' + (ln || '') + '</span><span>' + html + '</span></div>';
+  }).join('');
+}
+
+function buildAndRun() {
+  stopPlay();
+  var raw = document.getElementById('inp-nums').value;
+  var nums = raw.split(',').map(function(x) { return parseInt(x.trim()); }).filter(function(x) { return !isNaN(x); });
+  if (nums.length < 2) return;
+  numLen = nums.length;
+  buildArraySection(nums);
+  simSteps = simulate(nums);
+  cursor = 0; simReady = true;
+  applyStep(simSteps[0], false);
+  updateButtons();
+}
+
+function buildArraySection(nums) {
+  var sec = document.getElementById('array-section');
+  sec.innerHTML =
+    '<div class="arr-row" id="arr-row"></div>' +
+    '<div class="bar-row" id="cur-bar"></div>' +
+    '<div class="bar-row" id="best-bar"></div>' +
+    '<div class="arr-indices" id="arr-indices"></div>' +
+    '<div class="bar-legend">' +
+      '<div class="legend-item"><div class="legend-dot" style="background:#b45309"></div>current range</div>' +
+      '<div class="legend-item"><div class="legend-dot" style="background:#15803d"></div>best range</div>' +
+    '</div>';
+
+  var arrRow    = document.getElementById('arr-row');
+  var curBar    = document.getElementById('cur-bar');
+  var bestBar   = document.getElementById('best-bar');
+  var idxRow    = document.getElementById('arr-indices');
+
+  nums.forEach(function(v, i) {
+    var cell = document.createElement('div');
+    cell.className = 'arr-cell'; cell.id = 'ac-' + i; cell.dataset.state = 'idle';
+    cell.textContent = v; arrRow.appendChild(cell);
+
+    var cb = document.createElement('div');
+    cb.className = 'bar-cell'; cb.id = 'cb-' + i; curBar.appendChild(cb);
+
+    var bb = document.createElement('div');
+    bb.className = 'bar-cell'; bb.id = 'bb-' + i; bestBar.appendChild(bb);
+
+    var idx = document.createElement('div');
+    idx.className = 'arr-idx'; idx.textContent = i; idxRow.appendChild(idx);
+  });
+}
+
+// --- Simulate ---
+function simulate(nums) {
+  var n = nums.length;
+  var steps = [];
+  var bestSum    = nums[0];
+  var curSum     = nums[0];
+  var winStart   = 0;
+  var bestStart  = 0;
+  var bestEnd    = 0;
+  var cellStates = Array.from({length: n}, function(_, i) { return i === 0 ? 'processed' : 'idle'; });
+
+  function snap(phase, desc, lines, curI, winEnd, dec) {
+    steps.push({
+      phase: phase, desc: desc, lines: lines,
+      cellStates: cellStates.slice(),
+      winStart: winStart, winEnd: winEnd,
+      bestStart: bestStart, bestEnd: bestEnd,
+      curSum: curSum, bestSum: bestSum,
+      dec: dec || null,
+    });
+  }
+
+  // Init
+  snap('Init', 'best_sum = current_sum = nums[0] = ' + nums[0] + '.', [2, 3], -1, 0, null);
+  snap('Init', 'window_start = best_start = best_end = 0. Both ranges start at index 0.', [4, 5, 6], -1, 0, null);
+
+  for (var i = 1; i < n; i++) {
+    cellStates[i] = 'current';
+
+    // Step 1: enter
+    snap('Loop', 'Evaluating nums[' + i + '] = ' + nums[i] + '.', [8], i, i - 1, null);
+
+    // Step 2: extend card
+    var extVal = curSum + nums[i];
+    snap('Loop',
+      'extend = current_sum + nums[' + i + '] = ' + curSum + ' + ' + nums[i] + ' = ' + extVal + '.',
+      [9], i, i - 1, { extVal: extVal, rstVal: null, winner: null });
+
+    // Step 3: restart card + pick
+    var rstVal = nums[i];
+    var winner = rstVal > extVal ? 'restart' : 'extend';
+    var oldWinStart = winStart;
+    if (winner === 'restart') winStart = i;
+    curSum = winner === 'restart' ? rstVal : extVal;
+
+    var pickLines = winner === 'restart' ? [10, 11, 12, 13] : [10, 11, 14, 15];
+    var pickDesc  = winner === 'restart'
+      ? 'restart = ' + rstVal + '. Restart wins (' + rstVal + ' > ' + extVal + '). window_start ← ' + i + '.'
+      : 'restart = ' + rstVal + '. Extend wins (' + extVal + ' ≥ ' + rstVal + '). Window grows.';
+
+    snap('Loop', pickDesc, pickLines, i, i, { extVal: extVal, rstVal: rstVal, winner: winner, curSum: curSum });
+
+    // Step 4: update best
+    var oldBestSum = bestSum;
+    var improved   = curSum > bestSum;
+    if (improved) { bestSum = curSum; bestStart = winStart; bestEnd = i; }
+    cellStates[i] = 'processed';
+
+    var bestDesc = improved
+      ? 'best_sum updates to ' + bestSum + '. Best range: [' + bestStart + ', ' + bestEnd + '].'
+      : 'best_sum stays at ' + bestSum + '. current_sum = ' + curSum + ' is not better.';
+
+    snap('Loop', bestDesc, improved ? [16, 17, 18, 19] : [16], i, i, null);
+  }
+
+  snap('Done', 'return best_sum = ' + bestSum + '. Best subarray: indices ' + bestStart + '–' + bestEnd + '.', [21], -1, n - 1, null);
+  return steps;
+}
+
+// --- Render ---
+function applyStep(s, animate) {
+  applyArrayCells(s.cellStates, animate);
+  applyBars(s.winStart, s.winEnd, s.bestStart, s.bestEnd);
+  applyVars(s, animate);
+  applyDecision(s.dec);
+  setCodeLines(s.lines);
+  refreshText(s);
+}
+
+function transition(from, to) {
+  applyArrayCells(to.cellStates, true);
+  applyBars(to.winStart, to.winEnd, to.bestStart, to.bestEnd);
+  applyVars(to, true);
+  applyDecision(to.dec);
+  setCodeLines(to.lines);
+  refreshText(to);
+}
+
+function applyArrayCells(states, animate) {
+  states.forEach(function(state, i) {
+    var el = document.getElementById('ac-' + i);
+    if (!el) return;
+    el.dataset.state = state;
+  });
+}
+
+function applyBars(winStart, winEnd, bestStart, bestEnd) {
+  for (var i = 0; i < numLen; i++) {
+    var cb = document.getElementById('cb-' + i);
+    var bb = document.getElementById('bb-' + i);
+    if (cb) cb.className = 'bar-cell' + (i >= winStart && i <= winEnd ? ' amber' : '');
+    if (bb) bb.className = 'bar-cell' + (i >= bestStart && i <= bestEnd ? ' green' : '');
+  }
+}
+
+function applyVars(s, animate) {
+  function setVal(id, val) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    var text = val === null ? '—' : String(val);
+    if (animate && el.textContent !== text) {
+      gsap.fromTo(el, { scale: 0.8, opacity: 0.4 }, { scale: 1, opacity: 1, duration: 0.22, ease: 'back.out(1.7)' });
+    }
+    el.textContent = text;
+  }
+  setVal('vv-csum', s.curSum);
+  setVal('vv-bsum', s.bestSum);
+  setVal('vv-ws',   s.winStart);
+  setVal('vv-bs',   s.bestStart);
+  setVal('vv-be',   s.bestEnd);
+}
+
+function applyDecision(dec) {
+  var extCard = document.getElementById('dec-ext');
+  var rstCard = document.getElementById('dec-rst');
+  var extF    = document.getElementById('dec-ext-f');
+  var rstF    = document.getElementById('dec-rst-f');
+  var extV    = document.getElementById('dec-ext-v');
+  var rstV    = document.getElementById('dec-rst-v');
+  var result  = document.getElementById('dec-result');
+
+  extCard.className = 'dec-card';
+  rstCard.className = 'dec-card';
+  extF.textContent  = 'current_sum + nums[i]';
+  rstF.textContent  = 'nums[i] alone';
+  extV.textContent  = '—';
+  rstV.textContent  = '—';
+  result.innerHTML  = '';
+
+  if (!dec) return;
+
+  extCard.className = 'dec-card visible';
+  extF.textContent  = 'current_sum + nums[i] = ' + dec.extVal;
+  extV.textContent  = String(dec.extVal);
+
+  if (dec.rstVal !== null) {
+    rstCard.className = 'dec-card visible';
+    rstF.textContent  = 'nums[i] alone = ' + dec.rstVal;
+    rstV.textContent  = String(dec.rstVal);
+  }
+
+  if (dec.winner !== null) {
+    if (dec.winner === 'extend') {
+      extCard.className = 'dec-card winner';
+      rstCard.className = 'dec-card loser';
+    } else {
+      rstCard.className = 'dec-card winner';
+      extCard.className = 'dec-card loser';
+    }
+    result.innerHTML = 'current_sum = <strong>' + dec.curSum + '</strong>';
+  }
+}
+
+function setCodeLines(lines) {
+  CODE.forEach(function(e) {
+    var ln = e[0]; if (!ln) return;
+    var el = document.getElementById('cl-' + ln);
+    if (!el) return;
+    if (lines.indexOf(ln) >= 0) el.classList.add('hl');
+    else el.classList.remove('hl');
+  });
+}
+
+function refreshText(s) {
+  document.getElementById('phase-label').textContent =
+    'Step ' + (cursor + 1) + ' / ' + simSteps.length + '  ·  ' + s.phase;
+  document.getElementById('step-desc').textContent = s.desc;
+}
+
+// --- Navigation ---
+function stepNext() {
+  if (cursor >= simSteps.length - 1) { stopPlay(); return; }
+  var from = simSteps[cursor++];
+  transition(from, simSteps[cursor]);
+  updateButtons();
+}
+
+function stepBack() {
+  if (cursor <= 0) return;
+  stopPlay(); cursor--;
+  applyStep(simSteps[cursor], true);
+  updateButtons();
+}
+
+function updateButtons() {
+  var atEnd = cursor >= simSteps.length - 1;
+  document.getElementById('btn-back').disabled = cursor <= 0 || !simReady;
+  document.getElementById('btn-next').disabled = atEnd || !simReady;
+  document.getElementById('btn-play').disabled = !simReady;
+  if (atEnd && playTimer) stopPlay();
+}
+
+function togglePlay() { if (playTimer) stopPlay(); else startPlay(); }
+
+function startPlay() {
+  if (cursor >= simSteps.length - 1) cursor = 0;
+  var delay = parseInt(document.getElementById('speed-select').value) || 250;
+  var btn = document.getElementById('btn-play');
+  btn.textContent = '⏸ Pause'; btn.classList.add('playing');
+  playTimer = setInterval(function() {
+    if (cursor >= simSteps.length - 1) { stopPlay(); return; }
+    stepNext();
+  }, delay);
+}
+
+function stopPlay() {
+  if (playTimer) { clearInterval(playTimer); playTimer = null; }
+  var btn = document.getElementById('btn-play');
+  if (btn) { btn.textContent = '▶ Play'; btn.classList.remove('playing'); }
+}
+</script>
+</body>
+</html>

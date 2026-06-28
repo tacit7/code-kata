@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Manacher's Algorithm</title>
+  <link rel="stylesheet" href="../shared/style.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <script src="../shared/viz.js"></script>
+  <style>
+    body { display:flex; flex-direction:column; height:100vh; overflow:hidden; }
+
+    .page-title {
+      font-size:1rem; font-weight:700; color:var(--text-bright);
+      padding:12px 16px 0; letter-spacing:0.01em; flex-shrink:0;
+    }
+
+    .viz-root {
+      display:flex; flex:1; gap:16px;
+      padding:12px 16px 16px; min-height:0;
+    }
+
+    .left-col  { display:flex; flex-direction:column; gap:12px; flex:1; min-width:0; }
+    .right-col { display:flex; flex-direction:column; gap:12px; flex:1; min-width:0; }
+
+    /* ── String section ── */
+    .str-section { flex-shrink:0; }
+    .str-scroll  { overflow-x:auto; }
+    .str-row, .idx-row, .p-row { display:flex; gap:2px; min-width:max-content; }
+
+    .str-cell {
+      width:34px; height:38px; border-radius:6px;
+      display:flex; align-items:center; justify-content:center;
+      font-size:0.9rem; font-weight:600;
+      border:2px solid transparent;
+      background:var(--surface); color:var(--border-soft); flex-shrink:0;
+      transition:background 0.12s, border-color 0.12s;
+    }
+    .str-cell.letter { color:var(--text); }
+    .str-cell.hash   { width:22px; font-size:0.68rem; color:var(--text-ghost); background:#0f1929; }
+
+    .str-cell.in-c-range { background:rgba(var(--accent-ch),0.10); }
+    .str-cell.in-i-range { background:rgba(var(--yellow-ch),0.13); }
+    .str-cell.is-center  { border-color:var(--accent); background:rgba(var(--accent-ch),0.28); color:var(--accent-pale); }
+    .str-cell.is-mirror  { border-color:var(--orange); background:rgba(var(--orange-ch),0.18); color:var(--orange-pale); }
+    .str-cell.cmp-match    { border-color:var(--green); background:rgba(var(--green-ch),0.14); }
+    .str-cell.cmp-mismatch { border-color:var(--red); background:rgba(var(--red-ch),0.14); }
+
+    .idx-cell {
+      height:16px; display:flex; align-items:center; justify-content:center;
+      font-size:0.55rem; color:var(--text-faint); flex-shrink:0;
+    }
+    .idx-cell.normal { width:34px; }
+    .idx-cell.hash   { width:22px; }
+    .idx-cell.is-c   { color:var(--accent-dim); font-weight:700; }
+    .idx-cell.is-r   { color:var(--blue); font-weight:700; }
+    .idx-cell.both   { color:var(--purple); font-weight:700; }
+
+    .p-cell {
+      height:20px; display:flex; align-items:center; justify-content:center;
+      font-size:0.62rem; color:var(--text-faint); flex-shrink:0;
+    }
+    .p-cell.normal   { width:34px; }
+    .p-cell.hash     { width:22px; }
+    .p-cell.computed { color:var(--text-muted); }
+    .p-cell.current  { color:var(--accent-dim); font-weight:700; }
+    .p-cell.best     { color:var(--green); font-weight:700; }
+
+    .legend-row {
+      display:flex; gap:10px; flex-wrap:wrap; margin-top:6px;
+    }
+    .legend-item { display:flex; align-items:center; gap:5px; font-size:0.62rem; color:var(--text-dim); }
+    .legend-dot  { width:10px; height:10px; border-radius:3px; border:2px solid transparent; flex-shrink:0; }
+
+    /* ── Code panel ── */
+    .code-panel { flex:1; min-height:0; overflow:auto; display:flex; flex-direction:column; }
+    .code-body  {
+      font-family:'Fira Code','Cascadia Code',monospace;
+      font-size:0.78rem; line-height:1.65; color:var(--text-muted);
+      flex:1; white-space:pre;
+    }
+    .code-line { display:block; padding:0 4px; border-radius:3px; }
+    .code-line.active { background:rgba(var(--accent-ch),0.18); color:var(--text); }
+    .kw { color:var(--purple); }
+    .fn { color:var(--blue); }
+    .bi { color:var(--orange); }
+    .nb { color:var(--green); }
+
+    /* ── Controls ── */
+    .ctrl-row { display:flex; align-items:center; gap:6px; }
+    .btn {
+      background:var(--surface); border:1px solid var(--border);
+      color:var(--text); border-radius:6px; padding:5px 10px;
+      cursor:pointer; font-size:0.78rem;
+    }
+    .btn:hover { border-color:var(--accent); }
+    .btn.primary { background:var(--accent); border-color:var(--accent); color:#fff; }
+    .speed-select, .preset-select {
+      background:var(--surface); border:1px solid var(--border);
+      color:var(--text); border-radius:6px; padding:5px 6px; font-size:0.75rem;
+    }
+    .speed-select { width:78px; }
+    .preset-select { width:100%; margin-top:6px; }
+    .counter { font-size:0.68rem; color:var(--text-dim); margin-top:4px; }
+
+    /* ── Status ── */
+    .phase-badge {
+      font-size:0.6rem; font-weight:700; text-transform:uppercase; letter-spacing:0.1em;
+      color:var(--accent); background:#6366f115; border:1px solid #6366f130;
+      border-radius:4px; padding:2px 7px; display:inline-block;
+    }
+    .status-desc { font-size:0.76rem; color:var(--text-muted); margin-top:6px; line-height:1.45; }
+
+    /* ── Variable boxes ── */
+    .vars-grid { display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:6px; }
+    .var-box {
+      background:var(--surface-dark); border:1px solid var(--border);
+      border-radius:8px; padding:8px 6px; text-align:center;
+    }
+    .var-box.accent { border-color:var(--accent); }
+    .var-box.orange { border-color:var(--orange); }
+    .var-box.muted  { opacity:0.3; }
+
+    /* ── Zone bracket row ── */
+    .zone-row { display:flex; gap:2px; min-width:max-content; margin-top:2px; }
+    .zone-cell {
+      height:14px; display:flex; align-items:center; justify-content:center;
+      font-size:0.52rem; color:transparent; flex-shrink:0; position:relative;
+    }
+    .zone-cell.normal { width:34px; }
+    .zone-cell.hash   { width:22px; }
+    .zone-cell.zone-fill {
+      border-bottom:2px solid rgba(var(--accent-ch),0.45);
+      color:var(--accent); font-weight:700;
+    }
+    .zone-cell.zone-label {
+      border-bottom:2px solid rgba(var(--accent-ch),0.45);
+      color:var(--accent); font-weight:700; letter-spacing:0;
+    }
+    .var-label { font-size:0.58rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.08em; }
+    .var-value { font-size:1.1rem; font-weight:700; color:var(--text-bright); margin-top:3px; }
+    .var-sub   { font-size:0.55rem; color:var(--text-faint); margin-top:3px; line-height:1.3; }
+
+    /* ── Case panel ── */
+    .case-cards { display:flex; flex-direction:column; gap:5px; }
+    .case-card {
+      padding:7px 10px; border-radius:8px;
+      border:1px solid var(--border); opacity:0.45;
+    }
+    .case-card.active   { border-color:var(--accent); background:rgba(var(--accent-ch),0.08); opacity:1; }
+    .case-card.inactive { opacity:0.2; }
+    .case-num   { font-size:0.6rem; font-weight:700; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.08em; }
+    .case-card.active .case-num { color:var(--accent-dim); }
+    .case-title { font-size:0.7rem; font-weight:600; color:var(--text-dim); margin-top:2px; }
+    .case-card.active .case-title { color:var(--text); }
+    .case-body  { font-size:0.65rem; color:var(--text-faint); margin-top:3px; line-height:1.4; }
+    .case-card.active .case-body  { color:var(--text-muted); }
+
+    /* ── Expansion panel ── */
+    .expand-cmp {
+      display:flex; align-items:center; justify-content:center;
+      gap:10px; padding:10px 0;
+    }
+    .cmp-box {
+      width:44px; height:44px; border-radius:8px;
+      background:var(--surface-dark); border:2px solid var(--border);
+      display:flex; flex-direction:column; align-items:center; justify-content:center;
+      font-size:0.9rem; font-weight:700; color:var(--text); flex-shrink:0;
+    }
+    .cmp-box .cmp-idx { font-size:0.52rem; color:var(--text-dim); margin-top:2px; }
+    .cmp-box.match    { border-color:var(--green); }
+    .cmp-box.mismatch { border-color:var(--red); }
+    .cmp-op   { font-size:1.1rem; color:var(--text-faint); }
+    .cmp-icon { font-size:1.3rem; }
+    .expand-note { font-size:0.72rem; color:var(--text-faint); text-align:center; padding:10px 0; }
+
+    /* ── Answer box ── */
+    .answer-box {
+      background:var(--surface-dark); border:1px solid #4ade8040;
+      border-radius:8px; padding:12px; text-align:center; margin-top:4px;
+    }
+    .answer-label { font-size:0.62rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.08em; }
+    .answer-value { font-size:1.25rem; font-weight:700; color:var(--green); margin-top:4px; letter-spacing:0.1em; }
+  </style>
+</head>
+<body>
+
+<div class="page-title">Manacher's Algorithm &mdash; Longest Palindromic Substring</div>
+
+<div class="viz-root">
+
+  <!-- LEFT COLUMN -->
+  <div class="left-col">
+
+    <div class="panel-box str-section">
+      <div class="panel-title">
+        Transformed String
+        <span class="panel-sub" id="transform-sub"></span>
+      </div>
+      <div class="str-scroll">
+        <div class="str-row" id="str-row"></div>
+        <div class="idx-row" id="idx-row"></div>
+        <div class="p-row"   id="p-row"></div>
+        <div class="zone-row" id="zone-row"></div>
+      </div>
+      <div class="legend-row">
+        <div class="legend-item">
+          <div class="legend-dot" style="background:rgba(var(--accent-ch),0.28);border-color:var(--accent)"></div>center i
+        </div>
+        <div class="legend-item">
+          <div class="legend-dot" style="background:rgba(var(--orange-ch),0.18);border-color:var(--orange)"></div>mirror
+        </div>
+        <div class="legend-item">
+          <div class="legend-dot" style="background:rgba(var(--yellow-ch),0.13)"></div>i&rsquo;s palindrome
+        </div>
+        <div class="legend-item">
+          <div class="legend-dot" style="background:rgba(var(--accent-ch),0.10)"></div>C&rsquo;s known zone
+        </div>
+        <div class="legend-item">
+          <div class="legend-dot" style="background:rgba(var(--green-ch),0.14);border-color:var(--green)"></div>match
+        </div>
+        <div class="legend-item">
+          <div class="legend-dot" style="background:rgba(var(--red-ch),0.14);border-color:var(--red)"></div>mismatch
+        </div>
+      </div>
+    </div>
+
+    <div class="panel-box code-panel">
+      <div class="panel-title">Code</div>
+      <pre class="code-body" id="code-body"></pre>
+    </div>
+
+  </div>
+
+  <!-- RIGHT COLUMN -->
+  <div class="right-col">
+
+    <!-- Controls + Status -->
+    <div style="display:flex;gap:10px">
+      <div class="panel-box" style="flex:0 0 auto">
+        <div class="ctrl-row">
+          <button class="btn" id="btn-prev">&larr;</button>
+          <button class="btn" id="btn-next">&rarr;</button>
+          <button class="btn primary" id="btn-play">Play</button>
+          <select class="speed-select" id="speed-select">
+            <option value="1200">Slow</option>
+            <option value="700" selected>Normal</option>
+            <option value="320">Fast</option>
+          </select>
+        </div>
+        <div class="counter" id="counter">Step 0 / 0</div>
+        <select class="preset-select" id="preset-select">
+          <option value="cbbd">cbbd</option>
+          <option value="babad">babad</option>
+          <option value="abacaba">abacaba</option>
+          <option value="racecar">racecar</option>
+          <option value="aacecaaa">aacecaaa</option>
+        </select>
+      </div>
+      <div class="panel-box" style="flex:1">
+        <span class="phase-badge" id="phase-badge">&mdash;</span>
+        <div class="status-desc" id="status-desc">Press Play or step forward to begin.</div>
+      </div>
+    </div>
+
+    <!-- Variables -->
+    <div class="panel-box">
+      <div class="panel-title">Variables</div>
+      <div class="vars-grid">
+        <div class="var-box accent">
+          <div class="var-label">i</div>
+          <div class="var-value" id="val-i">&mdash;</div>
+        </div>
+        <div class="var-box">
+          <div class="var-label">C</div>
+          <div class="var-value" id="val-c">0</div>
+          <div class="var-sub">center of rightmost palindrome</div>
+        </div>
+        <div class="var-box">
+          <div class="var-label">R</div>
+          <div class="var-value" id="val-r">0</div>
+          <div class="var-sub">its right boundary</div>
+        </div>
+        <div class="var-box orange">
+          <div class="var-label">mirror</div>
+          <div class="var-value" id="val-mirror">&mdash;</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Case panel -->
+    <div class="panel-box">
+      <div class="panel-title">Case</div>
+      <div class="case-cards">
+        <div class="case-card" id="case-card-1">
+          <div class="case-num">Case 1</div>
+          <div class="case-title">i &ge; R &mdash; outside known zone</div>
+          <div class="case-body">Start fresh. P[i] = 0, expand from scratch.</div>
+        </div>
+        <div class="case-card" id="case-card-2">
+          <div class="case-num">Case 2</div>
+          <div class="case-title">P[mirror] &lt; R &minus; i &mdash; mirror fits</div>
+          <div class="case-body">Mirror palindrome fits inside C&rsquo;s zone. P[i] = P[mirror]. No expansion needed.</div>
+        </div>
+        <div class="case-card" id="case-card-3">
+          <div class="case-num">Case 3</div>
+          <div class="case-title">P[mirror] &ge; R &minus; i &mdash; hits boundary</div>
+          <div class="case-body">Mirror reaches the edge. P[i] = R &minus; i. Try to expand beyond R.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Expansion panel -->
+    <div class="panel-box">
+      <div class="panel-title">Expansion</div>
+      <div id="expand-inner"><div class="expand-note">&mdash;</div></div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ── Code HTML ──────────────────────────────────────────────────────────
+const CODE_HTML = [
+  '<span class="code-line" data-lines="1"><span class="kw">def</span> <span class="fn">manacher</span>(s):</span>',
+  '<span class="code-line" data-lines="2">    t = <span class="nb">\'#\'</span> + <span class="nb">\'#\'</span>.join(s) + <span class="nb">\'#\'</span></span>',
+  '<span class="code-line" data-lines="3">    n = <span class="bi">len</span>(t)</span>',
+  '<span class="code-line" data-lines="4">    P = [<span class="nb">0</span>] * n</span>',
+  '<span class="code-line" data-lines="5">    C = R = <span class="nb">0</span></span>',
+  '<span class="code-line" data-lines="6">    <span class="kw">for</span> i <span class="kw">in</span> <span class="bi">range</span>(n):</span>',
+  '<span class="code-line" data-lines="7">        mirror = <span class="nb">2</span> * C - i</span>',
+  '<span class="code-line" data-lines="8">        <span class="kw">if</span> i &lt; R:</span>',
+  '<span class="code-line" data-lines="9">            P[i] = <span class="bi">min</span>(R - i, P[mirror])</span>',
+  '<span class="code-line" data-lines="10">        <span class="kw">while</span> i-P[i]-1 &gt;= 0 <span class="kw">and</span> i+P[i]+1 &lt; n \\</span>',
+  '<span class="code-line" data-lines="11">              <span class="kw">and</span> t[i-P[i]-1] == t[i+P[i]+1]:</span>',
+  '<span class="code-line" data-lines="12">            P[i] += <span class="nb">1</span></span>',
+  '<span class="code-line" data-lines="13">        <span class="kw">if</span> i + P[i] &gt; R:</span>',
+  '<span class="code-line" data-lines="14">            C, R = i, i + P[i]</span>',
+  '<span class="code-line" data-lines="15">    best = <span class="bi">max</span>(<span class="bi">range</span>(n), key=<span class="kw">lambda</span> i: P[i])</span>',
+  '<span class="code-line" data-lines="16">    start = (best - P[best]) // <span class="nb">2</span></span>',
+  '<span class="code-line" data-lines="17">    <span class="kw">return</span> s[start : start + P[best]]</span>',
+].join('');
+
+// ── Step generation ────────────────────────────────────────────────────
+function buildSteps(s) {
+  const steps = [];
+  const t = '#' + s.split('').join('#') + '#';
+  const n = t.length;
+  const P = new Array(n).fill(null);
+  let C = 0, R = 0;
+
+  function snap(phase, desc, lines, extra) {
+    const base = {
+      phase, desc,
+      lines: Array.isArray(lines) ? lines : [lines],
+      t, P: P.slice(), C, R,
+      i: -1, mirror: -1,
+      caseNum: null,
+      cmpLeft: -1, cmpRight: -1, cmpResult: null,
+      bestI: -1, answer: null,
+    };
+    return Object.assign(base, extra || {});
+  }
+
+  // Init steps
+  steps.push(snap('Init',
+    'Transform: insert # between every character and at both ends. Every palindrome becomes odd-length.',
+    [2]));
+  steps.push(snap('Init',
+    'n = length of transformed string. P[i] = palindrome radius at each center. C = R = 0.',
+    [3,4,5]));
+
+  for (let i = 0; i < n; i++) {
+    const mirror = 2 * C - i;
+    const mStr = (mirror >= 0 && mirror < n) ? ("'" + t[mirror] + "'") : 'OOB';
+
+    // Enter step
+    steps.push(snap('Loop',
+      "i=" + i + " ('" + t[i] + "'). mirror = 2×" + C + " − " + i + " = " + mirror + " " + (mirror >= 0 && mirror < n ? "('" + t[mirror] + "')" : "(out of range)") + ". R=" + R + ".",
+      [6,7], { i, mirror }));
+
+    // Case
+    let initVal, caseNum;
+    if (i >= R) {
+      caseNum = 1; initVal = 0;
+      steps.push(snap('Case',
+        "i=" + i + " ≥ R=" + R + ". Outside the known zone. Case 1: start fresh, P[" + i + "] = 0.",
+        [8], { i, mirror, caseNum }));
+    } else {
+      const pm = P[mirror] !== null ? P[mirror] : 0;
+      const ri = R - i;
+      if (pm < ri) {
+        caseNum = 2; initVal = pm;
+        steps.push(snap('Case',
+          "P[mirror=" + mirror + "]=" + pm + " < R−i=" + ri + ". Case 2: mirror palindrome fits entirely inside C's zone. P[" + i + "] = " + pm + ". No expansion needed.",
+          [8,9], { i, mirror, caseNum }));
+      } else {
+        caseNum = 3; initVal = ri;
+        steps.push(snap('Case',
+          "P[mirror=" + mirror + "]=" + pm + " ≥ R−i=" + ri + ". Case 3: mirror hits the left boundary. P[" + i + "] = R−i = " + ri + ". Try to expand beyond R.",
+          [8,9], { i, mirror, caseNum }));
+      }
+    }
+
+    P[i] = initVal;
+    steps.push(snap('Init P',
+      "P[" + i + "] ← " + initVal,
+      [8,9], { i, mirror, caseNum }));
+
+    // Expand (skip Case 2 — mirror guarantees no expansion)
+    if (caseNum !== 2) {
+      while (true) {
+        const left  = i - P[i] - 1;
+        const right = i + P[i] + 1;
+        if (left < 0 || right >= n) break;
+        if (t[left] === t[right]) {
+          P[i]++;
+          steps.push(snap('Expand',
+            "t[" + left + "]='" + t[left] + "' == t[" + right + "]='" + t[right] + "' ✓  P[" + i + "] = " + P[i],
+            [10,11,12], { i, mirror, caseNum, cmpLeft: left, cmpRight: right, cmpResult: true }));
+        } else {
+          steps.push(snap('Expand',
+            "t[" + left + "]='" + t[left] + "' ≠ t[" + right + "]='" + t[right] + "' ✗  Stop expanding.",
+            [10,11], { i, mirror, caseNum, cmpLeft: left, cmpRight: right, cmpResult: false }));
+          break;
+        }
+      }
+    }
+
+    // Update C/R
+    if (i + P[i] > R) {
+      const oldR = R;
+      C = i; R = i + P[i];
+      steps.push(snap('Update',
+        "i+P[i] = " + i + "+" + P[i] + " = " + R + " > R=" + oldR + ". New rightmost palindrome: C=" + C + ", R=" + R + ".",
+        [13,14], { i, mirror, caseNum }));
+    }
+  }
+
+  // Done
+  const bestI   = P.indexOf(Math.max(...P));
+  const bestLen = P[bestI];
+  const start   = (bestI - bestLen) / 2;
+  const answer  = s.slice(start, start + bestLen);
+  steps.push(snap('Done',
+    "Longest palindromic substring: \"" + answer + "\". Center i=" + bestI + ", radius=" + bestLen + ".",
+    [15,16,17], { bestI, answer }));
+
+  return steps;
+}
+
+// ── DOM refs ───────────────────────────────────────────────────────────
+const strRow      = document.getElementById('str-row');
+const idxRow      = document.getElementById('idx-row');
+const pRow        = document.getElementById('p-row');
+const codeBody    = document.getElementById('code-body');
+const phBadge     = document.getElementById('phase-badge');
+const statusDesc  = document.getElementById('status-desc');
+const counter     = document.getElementById('counter');
+const expandInner = document.getElementById('expand-inner');
+const btnPrev     = document.getElementById('btn-prev');
+const btnNext     = document.getElementById('btn-next');
+const btnPlay     = document.getElementById('btn-play');
+const speedSel    = document.getElementById('speed-select');
+const presetSel   = document.getElementById('preset-select');
+const transformSub = document.getElementById('transform-sub');
+const valI        = document.getElementById('val-i');
+const valC        = document.getElementById('val-c');
+const valR        = document.getElementById('val-r');
+const valMirror   = document.getElementById('val-mirror');
+const caseCards   = [1,2,3].map(function(n){ return document.getElementById('case-card-' + n); });
+const zoneRow     = document.getElementById('zone-row');
+const mirrorBox   = document.querySelector('.var-box.orange');
+
+let currentT = '';
+
+// ── Build DOM cells for a given transformed string ─────────────────────
+function buildCells(t) {
+  currentT = t;
+  strRow.innerHTML = '';
+  idxRow.innerHTML = '';
+  pRow.innerHTML   = '';
+  for (let idx = 0; idx < t.length; idx++) {
+    const isH = t[idx] === '#';
+    const wc  = isH ? 'hash' : 'normal';
+
+    const sc = document.createElement('div');
+    sc.className = 'str-cell ' + (isH ? 'hash' : 'letter');
+    sc.dataset.idx = idx;
+    sc.textContent = t[idx];
+    strRow.appendChild(sc);
+
+    const ic = document.createElement('div');
+    ic.className = 'idx-cell ' + wc;
+    ic.dataset.idx = idx;
+    ic.textContent = idx;
+    idxRow.appendChild(ic);
+
+    const pc = document.createElement('div');
+    pc.className = 'p-cell ' + wc;
+    pc.dataset.idx = idx;
+    pRow.appendChild(pc);
+
+    const zc = document.createElement('div');
+    zc.className = 'zone-cell ' + wc;
+    zc.dataset.idx = idx;
+    zoneRow.appendChild(zc);
+  }
+}
+
+// ── Render a single step ───────────────────────────────────────────────
+function render(snap, cursor, total) {
+  const t = snap.t;
+  const n = t.length;
+
+  // C's palindrome range
+  const cRadius = (snap.C >= 0 && snap.P[snap.C] !== null) ? snap.P[snap.C] : 0;
+  const cL = snap.C - cRadius, cR = snap.C + cRadius;
+
+  // i's current palindrome range
+  const iRadius = (snap.i >= 0 && snap.P[snap.i] !== null) ? snap.P[snap.i] : 0;
+  const iL = snap.i - iRadius, iR = snap.i + iRadius;
+
+  // String cells
+  const strCells = strRow.querySelectorAll('.str-cell');
+  strCells.forEach(function(cell) {
+    const idx = parseInt(cell.dataset.idx);
+    const isH = t[idx] === '#';
+    let cls = 'str-cell ' + (isH ? 'hash' : 'letter');
+    if (cRadius > 0 && idx >= cL && idx <= cR) cls += ' in-c-range';
+    if (snap.i >= 0 && idx >= iL && idx <= iR)  cls += ' in-i-range';
+    if (idx === snap.i) {
+      cls += ' is-center';
+    } else if (snap.mirror >= 0 && snap.mirror < n && idx === snap.mirror) {
+      cls += ' is-mirror';
+    }
+    if (idx === snap.cmpLeft || idx === snap.cmpRight) {
+      cls += snap.cmpResult ? ' cmp-match' : ' cmp-mismatch';
+    }
+    cell.className = cls;
+  });
+
+  // Index row: mark C and R
+  idxRow.querySelectorAll('.idx-cell').forEach(function(cell) {
+    const idx = parseInt(cell.dataset.idx);
+    const isH = t[idx] === '#';
+    const isC = idx === snap.C;
+    const isR = idx === snap.R;
+    let cls = 'idx-cell ' + (isH ? 'hash' : 'normal');
+    if (isC && isR) cls += ' both';
+    else if (isC)   cls += ' is-c';
+    else if (isR)   cls += ' is-r';
+    cell.className = cls;
+  });
+
+  // P row
+  pRow.querySelectorAll('.p-cell').forEach(function(cell) {
+    const idx = parseInt(cell.dataset.idx);
+    const isH = t[idx] === '#';
+    const val = snap.P[idx];
+    let cls = 'p-cell ' + (isH ? 'hash' : 'normal');
+    if (val !== null) {
+      if (snap.bestI >= 0 && idx === snap.bestI) cls += ' best';
+      else if (idx === snap.i) cls += ' current';
+      else cls += ' computed';
+    }
+    cell.className = cls;
+    cell.textContent = val !== null ? val : '';
+  });
+
+  // Zone bracket row — highlight C's known palindrome range
+  zoneRow.querySelectorAll('.zone-cell').forEach(function(cell) {
+    const idx = parseInt(cell.dataset.idx);
+    const isH = t[idx] === '#';
+    let cls = 'zone-cell ' + (isH ? 'hash' : 'normal');
+    let text = '';
+    if (cRadius > 0 && idx >= cL && idx <= cR) {
+      if (idx === cL)   { cls += ' zone-label'; text = '◄'; }
+      else if (idx === cR) { cls += ' zone-label'; text = '►'; }
+      else if (idx === snap.C) { cls += ' zone-label'; text = 'C'; }
+      else if (idx === snap.R) { cls += ' zone-label'; text = 'R'; }
+      else { cls += ' zone-fill'; text = '─'; }
+    }
+    cell.className = cls;
+    cell.textContent = text;
+  });
+
+  // Variables
+  valI.textContent = snap.i >= 0 ? snap.i : '—';
+  valC.textContent = snap.C;
+  valR.textContent = snap.R;
+  // Mute mirror when Case 1 (i >= R) — mirror is irrelevant outside the known zone
+  if (snap.caseNum === 1 || snap.i < 0) {
+    valMirror.textContent = 'n/a';
+    mirrorBox.classList.add('muted');
+  } else {
+    valMirror.textContent = (snap.mirror >= 0 && snap.mirror < n) ? snap.mirror : '—';
+    mirrorBox.classList.remove('muted');
+  }
+
+  // Case cards
+  caseCards.forEach(function(card, idx) {
+    const num = idx + 1;
+    if (snap.caseNum === null) card.className = 'case-card';
+    else if (snap.caseNum === num) card.className = 'case-card active';
+    else card.className = 'case-card inactive';
+  });
+
+  // Expansion panel
+  if (snap.cmpLeft >= 0 && snap.cmpRight >= 0) {
+    const mc  = snap.cmpResult ? 'match' : 'mismatch';
+    const ico = snap.cmpResult ? '✓' : '✗';
+    const icoBg = snap.cmpResult ? 'var(--green)' : 'var(--red)';
+    expandInner.innerHTML =
+      '<div class="expand-cmp">' +
+        '<div class="cmp-box ' + mc + '">' +
+          '<span>' + t[snap.cmpLeft] + '</span>' +
+          '<span class="cmp-idx">t[' + snap.cmpLeft + ']</span>' +
+        '</div>' +
+        '<span class="cmp-op">==</span>' +
+        '<div class="cmp-box ' + mc + '">' +
+          '<span>' + t[snap.cmpRight] + '</span>' +
+          '<span class="cmp-idx">t[' + snap.cmpRight + ']</span>' +
+        '</div>' +
+        '<span class="cmp-icon" style="color:' + icoBg + '">' + ico + '</span>' +
+      '</div>';
+  } else if (snap.phase === 'Done' && snap.answer) {
+    expandInner.innerHTML =
+      '<div class="answer-box">' +
+        '<div class="answer-label">Longest Palindrome</div>' +
+        '<div class="answer-value">' + snap.answer + '</div>' +
+      '</div>';
+  } else if (snap.caseNum === 2) {
+    expandInner.innerHTML = '<div class="expand-note">No expansion &mdash; mirror palindrome fits exactly inside C&rsquo;s zone.</div>';
+  } else {
+    expandInner.innerHTML = '<div class="expand-note">&mdash;</div>';
+  }
+
+  // Status
+  phBadge.textContent   = snap.phase;
+  statusDesc.textContent = snap.desc;
+  counter.textContent   = 'Step ' + (cursor + 1) + ' / ' + total;
+
+  // Code highlight
+  codeBody.querySelectorAll('.code-line').forEach(function(line) {
+    const lineNums = (line.dataset.lines || '').split(',').map(Number);
+    line.classList.toggle('active', snap.lines.some(function(l){ return lineNums.indexOf(l) >= 0; }));
+  });
+
+  // GSAP: pop current center
+  if (snap.i >= 0 && strRow.children[snap.i]) {
+    gsap.fromTo(strRow.children[snap.i],
+      { scale: 0.8 }, { scale: 1, duration: 0.2, ease: 'back.out(1.7)' });
+  }
+  if (snap.phase === 'Done' && snap.bestI >= 0 && strRow.children[snap.bestI]) {
+    gsap.fromTo(strRow.children[snap.bestI],
+      { scale: 0.8, opacity: 0.5 }, { scale: 1, opacity: 1, duration: 0.28, ease: 'back.out(2)' });
+  }
+}
+
+// ── Load a new input string ────────────────────────────────────────────
+function loadInput(str) {
+  const newSteps = buildSteps(str);
+  const t = newSteps[0].t;
+  transformSub.textContent = '“' + str + '” → “' + t + '”';
+  buildCells(t);
+  codeBody.innerHTML = CODE_HTML;
+  nav.load(newSteps);
+}
+
+// ── Navigation ─────────────────────────────────────────────────────────
+const nav = VizNav({ btnPrev, btnNext, btnPlay, speedSel, render });
+presetSel.addEventListener('change', function() { loadInput(presetSel.value); });
+
+loadInput('abacaba');
+</script>
+</body>
+</html>

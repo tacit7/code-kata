@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Min Cost Climbing Stairs</title>
+  <link rel="stylesheet" href="../shared/style.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <style>
+    .viz-area { width: 100%; max-width: 90%; }
+    .main-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
+    .left-col, .right-col { display: flex; flex-direction: column; gap: 12px; }
+    @media (max-width: 700px) { .main-row { grid-template-columns: 1fr; } }
+
+    /* stairs */
+    .stairs-wrap {
+      display: flex; align-items: flex-end; gap: 6px; flex-wrap: wrap;
+      padding: 16px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); min-height: 120px;
+    }
+    .stair { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+    .stair-body {
+      width: 62px;
+      display: flex; flex-direction: column; align-items: center;
+      justify-content: center; gap: 3px; padding: 7px 4px;
+      border: 2px solid var(--border); border-radius: 5px;
+      background: #0f0f0f; transition: border-color 0.2s, background 0.2s;
+    }
+    .stair-cost { font-size: 0.65rem; color: var(--text-faint); font-family: monospace; }
+    .stair-cost span { color: var(--text-muted); }
+    .stair-cost.none-label { color: var(--text-ghost); font-style: italic; }
+    .stair-divider { width: 100%; height: 1px; background: var(--border-soft); }
+    .stair-computing {
+      display: none; font-size: 0.56rem; color: var(--accent-dim);
+      font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
+    }
+    .stair-dp {
+      font-size: 1.0rem; font-weight: 700;
+      color: var(--border-soft); font-family: monospace;
+    }
+    .stair-idx { font-size: 0.62rem; color: var(--text-ghost); font-family: monospace; }
+
+    .stair-body[data-state="computed"] { border-color: #166534; }
+    .stair-body[data-state="computed"] .stair-dp { color: var(--green); }
+    .stair-body[data-state="current"]  { border-color: var(--accent); background: var(--surface-dark); }
+    .stair-body[data-state="current"]  .stair-dp { color: var(--accent-pale); }
+    .stair-body[data-state="current"]  .stair-computing { display: block; }
+    .stair-body[data-state="source1"]  { border-color: #b45309; background: #1c0e00; }
+    .stair-body[data-state="source1"]  .stair-dp { color: var(--yellow-light); }
+    .stair-body[data-state="source2"]  { border-color: #b91c1c; background: #1c0000; }
+    .stair-body[data-state="source2"]  .stair-dp { color: var(--red-light); }
+
+    /* panel-box */
+    .panel-box {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 14px 16px;
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .panel-title {
+      font-size: 0.72rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim);
+    }
+
+    /* dp array panel */
+    .dp-array-row { display: flex; gap: 6px; flex-wrap: wrap; }
+    .dp-cell { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+    .dp-cell-val {
+      width: 38px; height: 32px;
+      display: flex; align-items: center; justify-content: center;
+      border: 1px solid var(--border); border-radius: 4px;
+      background: #0f0f0f;
+      font-size: 0.85rem; font-weight: 700; color: var(--border-soft); font-family: monospace;
+    }
+    .dp-cell-val.computed { border-color: #166534; color: var(--green); }
+    .dp-cell-val.current  { border-color: var(--accent); color: var(--accent-pale); background: var(--surface-dark); }
+    .dp-cell-idx { font-size: 0.58rem; color: var(--text-ghost); font-family: monospace; }
+
+    /* decision */
+    .dec-row { display: flex; gap: 10px; }
+    .dec-card {
+      flex: 1; padding: 10px 12px;
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      display: flex; flex-direction: column; gap: 4px; opacity: 0.25;
+    }
+    .dec-card.visible  { opacity: 1; }
+    .dec-card.winner   { border-color: #15803d; background: #052e16; opacity: 1; }
+    .dec-card.loser    { opacity: 0.3; }
+    .dec-lbl   { font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-faint); }
+    .dec-form  { font-size: 0.72rem; font-family: monospace; color: var(--text-dim); min-height: 16px; }
+    .dec-val   { font-size: 1.2rem; font-weight: 700; color: var(--text-bright); }
+    .src-dot   { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px; vertical-align: middle; }
+    .dec-result {
+      font-size: 0.8rem; font-family: monospace; color: var(--text-muted);
+      padding-top: 6px; border-top: 1px solid var(--border); min-height: 20px;
+    }
+    .dec-result strong { color: var(--text-bright); }
+
+    /* code */
+    .code-panel {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); overflow: hidden;
+    }
+    .code-header {
+      padding: 8px 14px; font-size: 0.72rem; font-weight: 600;
+      color: var(--text-dim); border-bottom: 1px solid var(--border); background: var(--bg);
+    }
+    .code-body { padding: 10px 0; font-size: 0.82rem; line-height: 1.8; flex: 1; white-space: pre; }
+    .code-line { display: flex; align-items: center; padding: 0 14px; }
+    .code-line.hl { background: var(--border-soft); border-left: 2px solid var(--accent); }
+    .ln { min-width: 24px; color: var(--text-ghost); user-select: none; font-size: 0.72rem; }
+
+    /* nav */
+    .btn-play {
+      background: #15803d; border: none; border-radius: var(--radius-sm);
+      color: #fff; cursor: pointer; font-size: 0.88rem; font-weight: 600;
+      padding: 9px 16px; transition: background 0.2s;
+    }
+    .btn-play:hover { background: #166534; }
+    .btn-play.playing { background: #c2410c; }
+    .btn-play.playing:hover { background: #9a3412; }
+    .btn-play:disabled { opacity: 0.4; cursor: not-allowed; }
+    .speed-select {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); color: var(--text);
+      font-size: 0.85rem; padding: 8px 10px; outline: none; width: 80px;
+    }
+    .nav-row { display: flex; gap: 8px; align-items: center; }
+    .kw { color: var(--purple); }
+    .fn { color: var(--blue); }
+    .bi { color: var(--orange); }
+    .op { color: var(--text); }
+    .nb { color: var(--green); }
+  </style>
+</head>
+<body class="page">
+
+<div class="page-header">
+  <a class="back-link" href="../index.html">&larr; All Algorithms</a>
+  <div class="page-title">Min Cost Climbing Stairs</div>
+  <div class="page-sub">LeetCode 746 &middot; Bottom-Up DP &middot; O(n) time &middot; O(n) space</div>
+</div>
+
+<div class="controls">
+  <div class="field">
+    <label>cost</label>
+    <input id="inp-cost" type="text" value="10, 15, 20" style="width:220px" />
+  </div>
+  <button class="btn-primary" onclick="buildAndRun()">Build &amp; Run</button>
+</div>
+
+<div class="viz-area">
+  <div class="main-row">
+    <div class="left-col">
+      <div class="stairs-wrap" id="stairs-row">
+        <span style="color:var(--text-dim);font-size:0.82rem">Enter cost and click Build &amp; Run.</span>
+      </div>
+      <div class="code-panel">
+        <div class="code-header">Python</div>
+        <div class="code-body" id="code-body"></div>
+      </div>
+    </div>
+
+    <div class="right-col">
+      <div style="display:flex;gap:12px">
+        <div class="panel-box" style="flex:0 0 auto">
+          <div class="nav-row">
+            <button class="btn-step" id="btn-back" onclick="stepBack()" disabled>&larr;</button>
+            <button class="btn-step" id="btn-next" onclick="stepNext()" disabled>&rarr;</button>
+            <button class="btn-play" id="btn-play" onclick="togglePlay()" disabled>&#9654; Play</button>
+            <select class="speed-select" id="speed-select">
+              <option value="700">Slow</option>
+              <option value="250" selected>Medium</option>
+              <option value="80">Fast</option>
+            </select>
+          </div>
+        </div>
+        <div class="panel-box" style="flex:1;min-width:0">
+          <div class="panel-title" id="phase-label">&mdash;</div>
+          <div style="font-size:0.82rem;color:var(--text-muted);margin-top:2px" id="step-desc">Enter cost and click Build &amp; Run.</div>
+        </div>
+      </div>
+
+      <div class="panel-box">
+        <div class="panel-title">dp array</div>
+        <div class="dp-array-row" id="dp-array-row"></div>
+      </div>
+
+      <div class="panel-box">
+        <div class="panel-title">Decision</div>
+        <div class="dec-row">
+          <div class="dec-card" id="dec-one">
+            <div class="dec-lbl"><span class="src-dot" style="background:#b45309"></span>from i&minus;1</div>
+            <div class="dec-form" id="dec-one-f">dp[i-1] + cost[i-1]</div>
+            <div class="dec-val" id="dec-one-v">&mdash;</div>
+          </div>
+          <div class="dec-card" id="dec-two">
+            <div class="dec-lbl"><span class="src-dot" style="background:#b91c1c"></span>from i&minus;2</div>
+            <div class="dec-form" id="dec-two-f">dp[i-2] + cost[i-2]</div>
+            <div class="dec-val" id="dec-two-v">&mdash;</div>
+          </div>
+        </div>
+        <div class="dec-result" id="dec-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+var simSteps = [], cursor = 0, simReady = false, playTimer = null;
+
+var CODE = [
+  [1,  '<span class="kw">def</span> <span class="fn">min_cost_climbing_stairs</span><span class="op">(</span>cost<span class="op">):</span>'],
+  [2,  '    n <span class="op">=</span> <span class="bi">len</span><span class="op">(</span>cost<span class="op">)</span>'],
+  [3,  '    dp <span class="op">=</span> <span class="op">[</span><span class="nb">0</span><span class="op">]</span> <span class="op">*</span> <span class="op">(</span>n <span class="op">+</span> <span class="nb">1</span><span class="op">)</span>'],
+  [0,  ''],
+  [5,  '    <span class="kw">for</span> i <span class="kw">in</span> <span class="bi">range</span><span class="op">(</span><span class="nb">2</span><span class="op">,</span> n <span class="op">+</span> <span class="nb">1</span><span class="op">):</span>'],
+  [6,  '        one_step  <span class="op">=</span> dp<span class="op">[</span>i<span class="op">-</span><span class="nb">1</span><span class="op">]</span> <span class="op">+</span> cost<span class="op">[</span>i<span class="op">-</span><span class="nb">1</span><span class="op">]</span>'],
+  [7,  '        two_steps <span class="op">=</span> dp<span class="op">[</span>i<span class="op">-</span><span class="nb">2</span><span class="op">]</span> <span class="op">+</span> cost<span class="op">[</span>i<span class="op">-</span><span class="nb">2</span><span class="op">]</span>'],
+  [8,  '        dp<span class="op">[</span>i<span class="op">]</span> <span class="op">=</span> <span class="bi">min</span><span class="op">(</span>one_step<span class="op">,</span> two_steps<span class="op">)</span>'],
+  [0,  ''],
+  [10, '    <span class="kw">return</span> dp<span class="op">[</span>n<span class="op">]</span>'],
+];
+
+window.addEventListener('DOMContentLoaded', function() { buildCodePanel(); });
+
+function buildCodePanel() {
+  var body = document.getElementById('code-body');
+  body.innerHTML = CODE.map(function(e) {
+    var ln = e[0], html = e[1];
+    var id = ln > 0 ? ' id="cl-' + ln + '"' : '';
+    return '<div class="code-line"' + id + '><span class="ln">' + (ln || '') + '</span><span>' + html + '</span></div>';
+  }).join('');
+}
+
+function buildAndRun() {
+  stopPlay();
+  var raw = document.getElementById('inp-cost').value;
+  var cost = raw.split(',').map(function(x) { return parseInt(x.trim()); }).filter(function(x) { return !isNaN(x); });
+  if (cost.length < 2) return;
+  buildStairs(cost);
+  buildDPArrayPanel(cost.length + 1);
+  simSteps = simulate(cost);
+  cursor = 0; simReady = true;
+  applyStep(simSteps[0], false);
+  updateButtons();
+}
+
+function buildStairs(cost) {
+  var n = cost.length;
+  var row = document.getElementById('stairs-row');
+  row.innerHTML = '';
+  for (var i = 0; i <= n; i++) {
+    var isTop = i === n;
+    var costHtml = isTop
+      ? '<div class="stair-cost none-label">cost: none</div><div class="stair-divider"></div>'
+      : '<div class="stair-cost">cost: <span>' + cost[i] + '</span></div><div class="stair-divider"></div>';
+    var stair = document.createElement('div');
+    stair.className = 'stair';
+    stair.innerHTML =
+      '<div class="stair-body" id="sb-' + i + '" data-state="idle">' +
+        costHtml +
+        '<div class="stair-computing">computing</div>' +
+        '<div class="stair-dp" id="sdp-' + i + '">?</div>' +
+      '</div>' +
+      '<div class="stair-idx">' + (isTop ? '[' + n + '] TOP' : '[' + i + ']') + '</div>';
+    row.appendChild(stair);
+  }
+}
+
+function buildDPArrayPanel(len) {
+  var row = document.getElementById('dp-array-row');
+  row.innerHTML = '';
+  for (var i = 0; i < len; i++) {
+    var cell = document.createElement('div');
+    cell.className = 'dp-cell';
+    cell.innerHTML =
+      '<div class="dp-cell-val" id="dpv-' + i + '">?</div>' +
+      '<div class="dp-cell-idx">dp[' + i + ']</div>';
+    row.appendChild(cell);
+  }
+}
+
+// --- Simulate ---
+function simulate(cost) {
+  var n = cost.length;
+  // null = not yet computed; 0 = base case
+  var dp = Array.from({length: n + 1}, function(_, i) { return i <= 1 ? 0 : null; });
+  var steps = [];
+
+  function getStates(curI) {
+    return Array.from({length: n + 1}, function(_, j) {
+      if (curI >= 0 && j === curI)     return 'current';
+      if (curI >= 0 && j === curI - 1) return 'source1';
+      if (curI >= 0 && j === curI - 2) return 'source2';
+      if (dp[j] !== null)              return 'computed';
+      return 'idle';
+    });
+  }
+
+  function snap(phase, desc, lines, curI, dec) {
+    steps.push({
+      phase: phase, desc: desc, lines: lines,
+      dpArr: dp.slice(),
+      stairStates: getStates(curI),
+      dec: dec || null,
+      currentIdx: curI,
+    });
+  }
+
+  snap('Init',
+    'n = ' + n + '. dp = [0] * (n+1). dp[0] = dp[1] = 0 — start from stair 0 or 1 for free.',
+    [2, 3], -1, null);
+
+  for (var i = 2; i <= n; i++) {
+    snap('Loop', 'i = ' + i + '. Computing dp[' + i + '].', [5], i, null);
+
+    var oneStep = dp[i-1] + cost[i-1];
+    snap('Loop',
+      'one_step = dp[' + (i-1) + '] + cost[' + (i-1) + '] = ' + dp[i-1] + ' + ' + cost[i-1] + ' = ' + oneStep + '.',
+      [6], i, {
+        oneStep: oneStep, twoSteps: null, cur: null, winner: null,
+        oneCalc: 'dp[' + (i-1) + '] + cost[' + (i-1) + '] = ' + dp[i-1] + ' + ' + cost[i-1] + ' = ' + oneStep,
+        twoCalc: null,
+      });
+
+    var twoSteps = dp[i-2] + cost[i-2];
+    snap('Loop',
+      'two_steps = dp[' + (i-2) + '] + cost[' + (i-2) + '] = ' + dp[i-2] + ' + ' + cost[i-2] + ' = ' + twoSteps + '.',
+      [7], i, {
+        oneStep: oneStep, twoSteps: twoSteps, cur: null, winner: null,
+        oneCalc: 'dp[' + (i-1) + '] + cost[' + (i-1) + '] = ' + dp[i-1] + ' + ' + cost[i-1] + ' = ' + oneStep,
+        twoCalc: 'dp[' + (i-2) + '] + cost[' + (i-2) + '] = ' + dp[i-2] + ' + ' + cost[i-2] + ' = ' + twoSteps,
+      });
+
+    dp[i] = Math.min(oneStep, twoSteps);
+    var winner = oneStep < twoSteps ? 'one' : oneStep > twoSteps ? 'two' : 'tie';
+
+    snap('Loop',
+      'dp[' + i + '] = min(' + oneStep + ', ' + twoSteps + ') = ' + dp[i] + '.',
+      [8], i, {
+        oneStep: oneStep, twoSteps: twoSteps, cur: dp[i], winner: winner,
+        oneCalc: 'dp[' + (i-1) + '] + cost[' + (i-1) + '] = ' + dp[i-1] + ' + ' + cost[i-1] + ' = ' + oneStep,
+        twoCalc: 'dp[' + (i-2) + '] + cost[' + (i-2) + '] = ' + dp[i-2] + ' + ' + cost[i-2] + ' = ' + twoSteps,
+      });
+  }
+
+  snap('Done',
+    'return dp[' + n + '] = ' + dp[n] + '. Minimum cost to reach the top.',
+    [10], -1, null);
+
+  return steps;
+}
+
+// --- Render ---
+function applyStep(s, animate) {
+  applyStairs(s.stairStates, s.dpArr, animate);
+  applyDPArray(s.dpArr, s.currentIdx);
+  applyDecision(s.dec);
+  setCodeLines(s.lines);
+  refreshText(s);
+}
+
+function transition(from, to) {
+  applyStairs(to.stairStates, to.dpArr, true);
+  applyDPArray(to.dpArr, to.currentIdx);
+  applyDecision(to.dec);
+  setCodeLines(to.lines);
+  refreshText(to);
+}
+
+function applyStairs(states, dpArr, animate) {
+  states.forEach(function(state, i) {
+    var body = document.getElementById('sb-' + i);
+    var dpEl = document.getElementById('sdp-' + i);
+    if (!body || !dpEl) return;
+    body.dataset.state = state;
+    var val = dpArr[i];
+    var text = val === null ? '?' : String(val);
+    if (animate && text !== dpEl.textContent && text !== '?') {
+      gsap.fromTo(dpEl, { scale: 0.75, opacity: 0.3 }, { scale: 1, opacity: 1, duration: 0.22, ease: 'back.out(1.7)' });
+    }
+    dpEl.textContent = text;
+  });
+}
+
+function applyDPArray(dpArr, curI) {
+  dpArr.forEach(function(val, i) {
+    var el = document.getElementById('dpv-' + i);
+    if (!el) return;
+    var text = val === null ? '?' : String(val);
+    var isCurrent  = i === curI;
+    var isComputed = val !== null;
+    el.className = 'dp-cell-val' + (isCurrent ? ' current' : isComputed ? ' computed' : '');
+    if (text !== el.textContent && text !== '?') {
+      gsap.fromTo(el, { scale: 0.8, opacity: 0.4 }, { scale: 1, opacity: 1, duration: 0.2, ease: 'back.out(1.7)' });
+    }
+    el.textContent = text;
+  });
+}
+
+function applyDecision(dec) {
+  var oneCard = document.getElementById('dec-one');
+  var twoCard = document.getElementById('dec-two');
+  var oneF    = document.getElementById('dec-one-f');
+  var twoF    = document.getElementById('dec-two-f');
+  var oneV    = document.getElementById('dec-one-v');
+  var twoV    = document.getElementById('dec-two-v');
+  var result  = document.getElementById('dec-result');
+
+  oneCard.className = 'dec-card';
+  twoCard.className = 'dec-card';
+  oneF.textContent  = 'dp[i-1] + cost[i-1]';
+  twoF.textContent  = 'dp[i-2] + cost[i-2]';
+  oneV.textContent  = '—';
+  twoV.textContent  = '—';
+  result.innerHTML  = '';
+
+  if (!dec) return;
+
+  oneCard.className = 'dec-card visible';
+  oneF.textContent  = dec.oneCalc || 'dp[i-1] + cost[i-1]';
+  oneV.textContent  = String(dec.oneStep);
+
+  if (dec.twoSteps !== null) {
+    twoCard.className = 'dec-card visible';
+    twoF.textContent  = dec.twoCalc || 'dp[i-2] + cost[i-2]';
+    twoV.textContent  = String(dec.twoSteps);
+  }
+
+  if (dec.winner !== null) {
+    if (dec.winner === 'one') {
+      oneCard.className = 'dec-card winner';
+      twoCard.className = 'dec-card loser';
+    } else if (dec.winner === 'two') {
+      twoCard.className = 'dec-card winner';
+      oneCard.className = 'dec-card loser';
+    } else {
+      oneCard.className = 'dec-card winner';
+      twoCard.className = 'dec-card winner';
+    }
+    result.innerHTML = 'dp[i] = min(' + dec.oneStep + ', ' + dec.twoSteps + ') = <strong>' + dec.cur + '</strong>';
+  }
+}
+
+function setCodeLines(lines) {
+  CODE.forEach(function(e) {
+    var ln = e[0]; if (!ln) return;
+    var el = document.getElementById('cl-' + ln);
+    if (!el) return;
+    if (lines.indexOf(ln) >= 0) el.classList.add('hl');
+    else el.classList.remove('hl');
+  });
+}
+
+function refreshText(s) {
+  document.getElementById('phase-label').textContent =
+    'Step ' + (cursor + 1) + ' / ' + simSteps.length + '  ·  ' + s.phase;
+  document.getElementById('step-desc').textContent = s.desc;
+}
+
+// --- Navigation ---
+function stepNext() {
+  if (cursor >= simSteps.length - 1) { stopPlay(); return; }
+  var from = simSteps[cursor++];
+  transition(from, simSteps[cursor]);
+  updateButtons();
+}
+
+function stepBack() {
+  if (cursor <= 0) return;
+  stopPlay(); cursor--;
+  applyStep(simSteps[cursor], true);
+  updateButtons();
+}
+
+function updateButtons() {
+  var atEnd = cursor >= simSteps.length - 1;
+  document.getElementById('btn-back').disabled  = cursor <= 0 || !simReady;
+  document.getElementById('btn-next').disabled  = atEnd || !simReady;
+  document.getElementById('btn-play').disabled  = !simReady;
+  if (atEnd && playTimer) stopPlay();
+}
+
+function togglePlay() { if (playTimer) stopPlay(); else startPlay(); }
+
+function startPlay() {
+  if (cursor >= simSteps.length - 1) cursor = 0;
+  var delay = parseInt(document.getElementById('speed-select').value) || 250;
+  var btn = document.getElementById('btn-play');
+  btn.textContent = '⏸ Pause'; btn.classList.add('playing');
+  playTimer = setInterval(function() {
+    if (cursor >= simSteps.length - 1) { stopPlay(); return; }
+    stepNext();
+  }, delay);
+}
+
+function stopPlay() {
+  if (playTimer) { clearInterval(playTimer); playTimer = null; }
+  var btn = document.getElementById('btn-play');
+  if (btn) { btn.textContent = '▶ Play'; btn.classList.remove('playing'); }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BFS — Breadth-First Search</title>
+  <link rel="stylesheet" href="../shared/style.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <style>
+    .viz-area {
+      width: 100%; max-width: 90%;
+      display: flex; flex-direction: column; gap: 12px;
+    }
+
+    /* ── Tree: full width row ── */
+    .tree-wrap {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+    }
+    #tree-svg { display: block; width: 100%; }
+
+    /* ── Bottom row: code | (queue + visited) ── */
+    .bottom-row {
+      display: grid;
+      grid-template-columns: 50% 1fr;
+      gap: 12px;
+      align-items: start;
+    }
+    .right-col {
+      display: flex; flex-direction: column; gap: 12px;
+    }
+    @media (max-width: 680px) {
+      .bottom-row { grid-template-columns: 1fr; }
+    }
+
+    /* ── Code panel ── */
+    .code-panel {
+      background: #0a0d14;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      display: flex; flex-direction: column;
+    }
+    .code-header {
+      padding: 9px 14px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      font-size: 0.67rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.11em;
+      color: var(--text-dim);
+    }
+    .code-body {
+      padding: 10px 0;
+      flex: 1;
+      font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+      font-size: 0.78rem;
+      line-height: 1.7;
+      overflow-x: auto;
+    }
+    .cl {
+      display: flex;
+      align-items: stretch;
+      border-left: 3px solid transparent;
+      padding: 0 14px 0 0;
+      transition: background-color 0.01s; /* let GSAP handle it */
+      white-space: pre;
+    }
+    .cl .ln {
+      width: 28px; min-width: 28px;
+      text-align: right;
+      color: #3d4468;
+      user-select: none;
+      padding-right: 14px;
+      font-size: 0.72rem;
+      line-height: 1.7;
+    }
+    .cl .code { color: var(--text-muted); }
+
+    /* Python syntax colors */
+    .kw  { color: var(--purple); }   /* keyword */
+    .fn  { color: var(--blue); }   /* function/method */
+    .bi  { color: var(--orange); }   /* built-in */
+    .str { color: var(--green); }   /* string/var */
+    .cm  { color: #3d4468; font-style: italic; } /* comment */
+    .op  { color: var(--text); }   /* operators, parens */
+
+    /* ── Queue ── */
+    .panel-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 13px 18px;
+    }
+    .panel-title {
+      font-size: 0.67rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.11em;
+      color: var(--text-dim); margin-bottom: 10px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .panel-sub {
+      font-size: 0.75rem; font-weight: 400;
+      text-transform: none; letter-spacing: 0; color: var(--text-faint);
+    }
+    .queue-row {
+      display: flex; align-items: center; gap: 10px; min-height: 42px;
+    }
+    .q-hint { font-size: 0.7rem; color: var(--text-faint); white-space: nowrap; }
+    #queue-items {
+      display: flex; gap: 7px; align-items: center;
+      flex-wrap: nowrap; overflow-x: auto; flex: 1; min-height: 36px;
+    }
+    .q-chip {
+      background: #4338ca; color: var(--accent-pale);
+      border: 1px solid var(--accent); border-radius: 7px;
+      padding: 5px 13px; font-size: 0.88rem; font-weight: 700;
+      white-space: nowrap; flex-shrink: 0;
+    }
+    .q-empty, .v-empty { color: var(--text-faint); font-size: 0.82rem; font-style: italic; }
+
+    /* ── Visited ── */
+    #visited-items {
+      display: flex; gap: 6px; flex-wrap: wrap;
+      min-height: 30px; align-items: center;
+    }
+    .v-chip {
+      background: #052e16; color: var(--green);
+      border: 1px solid #16a34a; border-radius: 6px;
+      padding: 4px 11px; font-size: 0.85rem; font-weight: 700;
+    }
+  </style>
+</head>
+<body class="page">
+
+<div class="page-header">
+  <a class="back-link" href="../index.html">← All Algorithms</a>
+  <h1 class="page-title">BFS — Breadth-First Search</h1>
+</div>
+
+<div class="controls">
+  <div class="field">
+    <label>Tree depth (1–4)</label>
+    <input id="inp-depth" type="number" min="1" max="4" value="3" />
+  </div>
+  <button class="btn-primary" onclick="build()">Build</button>
+</div>
+
+
+<div class="viz-area">
+
+  <!-- Tree: full width -->
+  <div class="tree-wrap">
+    <svg id="tree-svg" viewBox="0 0 800 300"
+         preserveAspectRatio="xMidYMid meet"></svg>
+  </div>
+
+  <div class="status-bar" style="max-width:100%">
+    <span class="phase-label" id="phase-label">—</span>
+    <span class="step-desc"   id="step-desc">Click Build to start.</span>
+  </div>
+
+  <!-- Code (50%) | Queue + Visited (50%) -->
+  <div class="bottom-row">
+
+    <div class="code-panel">
+      <div class="code-header">Python</div>
+      <div class="code-body" id="code-body"></div>
+    </div>
+
+    <div class="right-col">
+      <div class="panel-box">
+        <div class="panel-title">Queue <span class="panel-sub">(front → back)</span></div>
+        <div class="queue-row">
+          <span class="q-hint">← dequeue</span>
+          <div id="queue-items"><span class="q-empty">empty</span></div>
+          <span class="q-hint">enqueue →</span>
+        </div>
+      </div>
+
+      <div class="panel-box">
+        <div class="panel-title">Visited</div>
+        <div id="visited-items"><span class="v-empty">none yet</span></div>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<div class="legend">
+  <div class="leg-item">
+    <svg width="14" height="14"><circle cx="7" cy="7" r="6" fill="#1e2130" stroke="#2d3148" stroke-width="2"/></svg>
+    Unvisited
+  </div>
+  <div class="leg-item">
+    <svg width="14" height="14"><circle cx="7" cy="7" r="6" fill="#4338ca" stroke="var(--accent)" stroke-width="2"/></svg>
+    In queue
+  </div>
+  <div class="leg-item">
+    <svg width="14" height="14"><circle cx="7" cy="7" r="6" fill="#c2410c" stroke="var(--orange)" stroke-width="2"/></svg>
+    Current
+  </div>
+  <div class="leg-item">
+    <svg width="14" height="14"><circle cx="7" cy="7" r="6" fill="#052e16" stroke="#16a34a" stroke-width="2"/></svg>
+    Visited
+  </div>
+</div>
+
+<div class="step-nav">
+  <button class="btn-step" id="btn-back" onclick="stepBack()" disabled>← Back</button>
+  <button class="btn-step" id="btn-next" onclick="stepNext()" disabled>Next →</button>
+</div>
+
+<script>
+// ─── Code lines to display ────────────────────────────────────────────────────
+// Each entry: [lineNumber, html]  (lineNumber used for highlighting)
+const CODE_LINES = [
+  [1,  `<span class="kw">from</span> collections <span class="kw">import</span> <span class="bi">deque</span>`],
+  [0,  ``],
+  [3,  `queue <span class="op">=</span> <span class="bi">deque</span><span class="op">([</span>start<span class="op">])</span>`],
+  [4,  `visited <span class="op">=</span> <span class="bi">set</span><span class="op">([</span>start<span class="op">])</span>`],
+  [0,  ``],
+  [6,  `<span class="kw">while</span> queue<span class="op">:</span>`],
+  [7,  `    current <span class="op">=</span> queue<span class="op">.</span><span class="fn">popleft</span><span class="op">()</span>`],
+  [0,  ``],
+  [9,  `    <span class="kw">for</span> neighbor <span class="kw">in</span> neighbors<span class="op">:</span>`],
+  [10, `        <span class="kw">if</span> neighbor <span class="kw">not in</span> visited<span class="op">:</span>`],
+  [11, `            visited<span class="op">.</span><span class="fn">add</span><span class="op">(</span>neighbor<span class="op">)</span>`],
+  [12, `            queue<span class="op">.</span><span class="fn">append</span><span class="op">(</span>neighbor<span class="op">)</span>`],
+];
+
+function buildCodePanel() {
+  const body = document.getElementById('code-body');
+  body.innerHTML = '';
+  let displayLine = 1;
+  CODE_LINES.forEach(([ln, html]) => {
+    const row = document.createElement('div');
+    row.className = 'cl';
+    if (ln > 0) row.id = `cl-${ln}`;
+    row.innerHTML =
+      `<span class="ln">${ln > 0 ? ln : ''}</span>` +
+      `<span class="code">${html}</span>`;
+    body.appendChild(row);
+    displayLine++;
+  });
+}
+
+// ─── Node state colors ────────────────────────────────────────────────────────
+const COLORS = {
+  unvisited: { fill: '#1e2130', stroke: '#2d3148', text: 'var(--text-muted)' },
+  queued:    { fill: '#4338ca', stroke: 'var(--accent)', text: 'var(--accent-pale)' },
+  current:   { fill: '#c2410c', stroke: 'var(--orange)', text: '#ffffff' },
+  visited:   { fill: '#052e16', stroke: '#16a34a', text: 'var(--green)' },
+};
+const EDGE_DEFAULT = '#2d3148';
+const EDGE_ACTIVE  = 'var(--orange)';
+
+// ─── Global state ─────────────────────────────────────────────────────────────
+let nodeMap = {};
+let steps   = [];
+let cursor  = 0;
+
+// ─── Tree construction ────────────────────────────────────────────────────────
+function buildTree(depth) {
+  nodeMap = {};
+  function make(id, d) {
+    if (d > depth) return null;
+    const node = { id, value: randInt(1, 99), left: null, right: null, x: 0, y: 0 };
+    nodeMap[id] = node;
+    node.left  = make(id * 2 + 1, d + 1);
+    node.right = make(id * 2 + 2, d + 1);
+    return node;
+  }
+  return make(0, 0);
+}
+
+function randInt(lo, hi) { return lo + Math.floor(Math.random() * (hi - lo + 1)); }
+
+// ─── Tree layout ──────────────────────────────────────────────────────────────
+function layout(node, x, y, spread, levelH) {
+  if (!node) return;
+  node.x = x; node.y = y;
+  layout(node.left,  x - spread, y + levelH, spread / 2, levelH);
+  layout(node.right, x + spread, y + levelH, spread / 2, levelH);
+}
+
+// ─── SVG rendering ────────────────────────────────────────────────────────────
+function buildSVG(root, depth) {
+  const svg = document.getElementById('tree-svg');
+  svg.innerHTML = '';
+  const VW   = 800;
+  const R    = depth <= 2 ? 24 : depth === 3 ? 20 : 15;
+  const LHGP = depth <= 2 ? 64 : depth === 3 ? 56 : 46;
+  const PAD  = 20;
+  const VH   = PAD + depth * LHGP + R * 2 + 12;
+  svg.setAttribute('viewBox', `0 0 ${VW} ${VH}`);
+  layout(root, VW / 2, PAD + R, VW / 4, LHGP);
+
+  const edgeG = svgG('edges');
+  const nodeG = svgG('nodes');
+  svg.appendChild(edgeG);
+  svg.appendChild(nodeG);
+
+  function draw(node) {
+    if (!node) return;
+    [node.left, node.right].forEach(child => {
+      if (!child) return;
+      edgeG.appendChild(svgEl('line', {
+        id: `edge-${node.id}-${child.id}`,
+        x1: node.x, y1: node.y, x2: child.x, y2: child.y,
+        stroke: EDGE_DEFAULT, 'stroke-width': 2, 'stroke-linecap': 'round',
+      }));
+    });
+    const g = svgG(`node-g-${node.id}`);
+    g.appendChild(svgEl('circle', {
+      id: `nc-${node.id}`, cx: node.x, cy: node.y, r: R,
+      fill: COLORS.unvisited.fill, stroke: COLORS.unvisited.stroke, 'stroke-width': 2.5,
+    }));
+    const t = svgEl('text', {
+      id: `nt-${node.id}`, x: node.x, y: node.y,
+      'text-anchor': 'middle', 'dominant-baseline': 'middle',
+      fill: COLORS.unvisited.text,
+      'font-size': Math.round(R * 0.7), 'font-weight': 'bold',
+      'font-family': 'Segoe UI, system-ui, sans-serif',
+    });
+    t.textContent = node.value;
+    g.appendChild(t); nodeG.appendChild(g);
+    draw(node.left); draw(node.right);
+  }
+  draw(root);
+}
+
+function svgEl(tag, attrs) {
+  const el = document.createElementNS('http://www.w3.org/2000/svg', tag);
+  Object.entries(attrs).forEach(([k, v]) => el.setAttribute(k, v));
+  return el;
+}
+function svgG(id) {
+  const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  if (id) g.id = id;
+  return g;
+}
+
+// ─── BFS simulation ───────────────────────────────────────────────────────────
+// lines[] refers to code line numbers (matching CODE_LINES above)
+function simulate(root) {
+  const out = [];
+  const ids = Object.keys(nodeMap).map(Number);
+  const stateMap = Object.fromEntries(ids.map(id => [id, 'unvisited']));
+  const bfsQ = [];
+  const visited = new Set();
+  const visitedOrder = [];
+
+  function snap(phase, desc, edge, lines) {
+    out.push({
+      phase, desc, edge: edge || null, lines: lines || [],
+      stateMap: { ...stateMap },
+      queue: [...bfsQ],
+      visitedOrder: [...visitedOrder],
+    });
+  }
+
+  bfsQ.push(root.id);
+  visited.add(root.id);
+  visitedOrder.push(root.id);
+  stateMap[root.id] = 'queued';
+  snap('BFS', `Initialise: enqueue root (${root.value}) and add to visited.`, null, [3, 4]);
+
+  while (bfsQ.length) {
+    const curId = bfsQ.shift();
+    const cur   = nodeMap[curId];
+    stateMap[curId] = 'current';
+    snap('BFS', `while queue — queue is non-empty. Dequeue ${cur.value}.`, null, [6, 7]);
+
+    for (const child of [cur.left, cur.right].filter(Boolean)) {
+      snap('BFS',
+        `for neighbor — examine child ${nodeMap[child.id].value}.`,
+        { from: curId, to: child.id }, [9]);
+
+      if (!visited.has(child.id)) {
+        visited.add(child.id);
+        visitedOrder.push(child.id);
+        bfsQ.push(child.id);
+        stateMap[child.id] = 'queued';
+        snap('BFS',
+          `${nodeMap[child.id].value} not in visited → add and enqueue.`,
+          { from: curId, to: child.id }, [10, 11, 12]);
+      } else {
+        snap('BFS',
+          `${nodeMap[child.id].value} already in visited → skip.`,
+          { from: curId, to: child.id }, [10]);
+      }
+    }
+
+    stateMap[curId] = 'visited';
+    snap('BFS', `${cur.value} fully processed. Back to while.`, null, [6]);
+  }
+
+  snap('Done', `while queue — queue is empty. BFS complete.`, null, [6]);
+  return out;
+}
+
+// ─── Build ────────────────────────────────────────────────────────────────────
+function build() {
+  const depth = Math.max(1, Math.min(4, parseInt(document.getElementById('inp-depth').value) || 3));
+  buildCodePanel();
+  const root = buildTree(depth);
+  buildSVG(root, depth);
+  steps  = simulate(root);
+  cursor = 0;
+  applyStep(steps[0], false);
+  updateButtons();
+}
+
+// ─── Navigation ───────────────────────────────────────────────────────────────
+function stepNext() {
+  if (cursor >= steps.length - 1) return;
+  const from = steps[cursor]; cursor++;
+  transition(from, steps[cursor], true);
+  updateText(); updateButtons();
+}
+
+function stepBack() {
+  if (cursor <= 0) return;
+  const from = steps[cursor]; cursor--;
+  transition(from, steps[cursor], false);
+  updateText(); updateButtons();
+}
+
+function updateButtons() {
+  document.getElementById('btn-back').disabled = cursor <= 0;
+  document.getElementById('btn-next').disabled = cursor >= steps.length - 1;
+}
+
+function updateText() {
+  const s = steps[cursor];
+  document.getElementById('phase-label').textContent =
+    `Step ${cursor + 1} / ${steps.length}  ·  ${s.phase}`;
+  document.getElementById('step-desc').textContent = s.desc;
+}
+
+// ─── Apply step (no animation) ────────────────────────────────────────────────
+function applyStep(s, animate) {
+  Object.entries(s.stateMap).forEach(([id, state]) => setNodeColor(+id, state, false));
+  resetEdges(false);
+  if (s.edge) setEdge(s.edge, false);
+  renderQueue(s.queue, [], true, false);
+  renderVisited(s.visitedOrder, [], false);
+  setCodeLines([], s.lines, false);
+  updateText();
+}
+
+// ─── Transition ───────────────────────────────────────────────────────────────
+function transition(from, to, forward) {
+  const DUR = 0.3;
+
+  Object.keys(to.stateMap).forEach(id => {
+    if (from.stateMap[id] !== to.stateMap[id])
+      setNodeColor(+id, to.stateMap[id], true, DUR);
+  });
+
+  resetEdges(true, DUR * 0.7);
+  if (to.edge) setEdge(to.edge, true, DUR * 0.7);
+
+  if (forward) renderQueue(to.queue, from.queue, false, true);
+  else         renderQueue(to.queue, from.queue, true,  false);
+
+  renderVisited(to.visitedOrder, from.visitedOrder, true);
+  setCodeLines(from.lines, to.lines, true);
+}
+
+// ─── Code line highlighting ───────────────────────────────────────────────────
+const HL_BG    = 'rgba(var(--orange-ch),0.13)';
+const HL_NONE  = 'rgba(var(--orange-ch),0)';
+const HL_BORD  = 'var(--orange)';
+const NO_BORD  = 'transparent';
+
+function setCodeLines(oldLines, newLines, animate) {
+  const DUR = 0.22;
+
+  // Remove highlight from lines no longer active
+  (oldLines || []).filter(n => !(newLines || []).includes(n)).forEach(n => {
+    const el = document.getElementById(`cl-${n}`);
+    if (!el) return;
+    if (animate) {
+      gsap.to(el, { backgroundColor: HL_NONE, borderLeftColor: NO_BORD, duration: DUR });
+      gsap.to(el.querySelector('.ln'), { color: '#3d4468', duration: DUR });
+    } else {
+      el.style.backgroundColor = '';
+      el.style.borderLeftColor = '';
+      const ln = el.querySelector('.ln');
+      if (ln) ln.style.color = '';
+    }
+  });
+
+  // Add highlight to newly active lines
+  (newLines || []).filter(n => !(oldLines || []).includes(n)).forEach(n => {
+    const el = document.getElementById(`cl-${n}`);
+    if (!el) return;
+    if (animate) {
+      gsap.to(el, { backgroundColor: HL_BG, borderLeftColor: HL_BORD, duration: DUR, delay: 0.08 });
+      gsap.to(el.querySelector('.ln'), { color: 'var(--orange)', duration: DUR, delay: 0.08 });
+    } else {
+      el.style.backgroundColor = HL_BG;
+      el.style.borderLeftColor = HL_BORD;
+      const ln = el.querySelector('.ln');
+      if (ln) ln.style.color = 'var(--orange)';
+    }
+  });
+
+  // Scroll the highlighted line into view
+  if (newLines && newLines.length) {
+    const el = document.getElementById(`cl-${newLines[0]}`);
+    if (el) el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }
+}
+
+// ─── Node colors ──────────────────────────────────────────────────────────────
+function setNodeColor(id, state, animate, dur = 0.3) {
+  const c  = COLORS[state];
+  const nc = document.getElementById(`nc-${id}`);
+  const nt = document.getElementById(`nt-${id}`);
+  if (!nc) return;
+  if (animate) {
+    gsap.to(nc, { duration: dur, ease: 'power2.out', attr: { fill: c.fill, stroke: c.stroke } });
+    gsap.to(nt, { duration: dur, attr: { fill: c.text } });
+  } else {
+    nc.setAttribute('fill', c.fill); nc.setAttribute('stroke', c.stroke);
+    nt.setAttribute('fill', c.text);
+  }
+}
+
+// ─── Edges ────────────────────────────────────────────────────────────────────
+function resetEdges(animate, dur = 0.18) {
+  document.querySelectorAll('[id^="edge-"]').forEach(el => {
+    if (animate) gsap.to(el, { duration: dur, attr: { stroke: EDGE_DEFAULT, 'stroke-width': 2 } });
+    else { el.setAttribute('stroke', EDGE_DEFAULT); el.setAttribute('stroke-width', 2); }
+  });
+}
+
+function setEdge(edge, animate, dur = 0.18) {
+  const el = document.getElementById(`edge-${edge.from}-${edge.to}`);
+  if (!el) return;
+  if (animate) gsap.to(el, { duration: dur, attr: { stroke: EDGE_ACTIVE, 'stroke-width': 3.5 } });
+  else { el.setAttribute('stroke', EDGE_ACTIVE); el.setAttribute('stroke-width', 3.5); }
+}
+
+// ─── Queue ────────────────────────────────────────────────────────────────────
+function renderQueue(newQ, oldQ, rebuild, animate) {
+  const container = document.getElementById('queue-items');
+  if (rebuild) {
+    gsap.to([...container.children], { opacity: 0, duration: 0.12, onComplete: () => {
+      container.innerHTML = '';
+      if (!newQ.length) { container.innerHTML = '<span class="q-empty">empty</span>'; return; }
+      newQ.forEach(id => container.appendChild(makeQChip(id)));
+      gsap.from([...container.querySelectorAll('.q-chip')], { opacity: 0, duration: 0.18, stagger: 0.04 });
+    }});
+    return;
+  }
+  const oldSet = new Set(oldQ), newSet = new Set(newQ);
+  oldQ.filter(id => !newSet.has(id)).forEach(id => {
+    const el = document.getElementById(`qchip-${id}`);
+    if (el) gsap.to(el, { x: -22, opacity: 0, duration: 0.2, onComplete: () => {
+      el.remove(); if (!container.querySelector('.q-chip'))
+        container.innerHTML = '<span class="q-empty">empty</span>';
+    }});
+  });
+  newQ.filter(id => !oldSet.has(id)).forEach(id => {
+    const e = container.querySelector('.q-empty'); if (e) e.remove();
+    const el = makeQChip(id);
+    container.appendChild(el);
+    gsap.from(el, { x: 22, opacity: 0, duration: 0.2 });
+  });
+}
+
+function makeQChip(id) {
+  const el = document.createElement('div');
+  el.className = 'q-chip'; el.id = `qchip-${id}`;
+  el.textContent = nodeMap[id].value;
+  return el;
+}
+
+// ─── Visited ──────────────────────────────────────────────────────────────────
+function renderVisited(newV, oldV, animate) {
+  const container = document.getElementById('visited-items');
+  const oldSet = new Set(oldV), newSet = new Set(newV);
+  oldV.filter(id => !newSet.has(id)).forEach(id => {
+    const el = document.getElementById(`vchip-${id}`);
+    if (el) { if (animate) gsap.to(el, { opacity: 0, scale: 0.7, duration: 0.18, onComplete: () => el.remove() }); else el.remove(); }
+  });
+  newV.filter(id => !oldSet.has(id)).forEach(id => {
+    const e = container.querySelector('.v-empty'); if (e) e.remove();
+    const el = document.createElement('div');
+    el.className = 'v-chip'; el.id = `vchip-${id}`;
+    el.textContent = nodeMap[id].value;
+    container.appendChild(el);
+    if (animate) gsap.from(el, { scale: 0.5, opacity: 0, duration: 0.26, ease: 'back.out(2)' });
+  });
+  if (!newV.length && !container.querySelector('.v-chip'))
+    container.innerHTML = '<span class="v-empty">none yet</span>';
+}
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
+build();
+</script>
+</body>
+</html>

@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BFS — Grid Traversal</title>
+  <link rel="stylesheet" href="../shared/style.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <style>
+    .viz-area {
+      width: 100%; max-width: 90%;
+      display: flex; flex-direction: column; gap: 12px;
+    }
+
+    .grid-wrap {
+      background: #0a0a0a;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 8px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    #grid {
+      display: grid;
+      gap: 2px;
+      user-select: none;
+    }
+
+    .cell {
+      border-radius: 3px;
+      box-sizing: border-box;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-family: monospace;
+      color: transparent;
+    }
+
+    /* CSS defaults — GSAP takes over after simulation starts */
+    .cell[data-state="empty"]   { background: #0f0f0f; }
+    .cell[data-state="queued"]  { background: #854d0e; }
+    .cell[data-state="current"] { background: #15803d; }
+    .cell[data-state="visited"] { background: #14532d; }
+
+    .main-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      align-items: start;
+    }
+    .left-col  { display: flex; flex-direction: column; gap: 12px; }
+    .right-col { display: flex; flex-direction: column; gap: 12px; }
+
+    @media (max-width: 680px) { .main-row { grid-template-columns: 1fr; } }
+
+    .code-panel {
+      background: #0a0d14;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .code-header {
+      padding: 9px 14px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      font-size: 0.67rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.11em;
+      color: var(--text-dim);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .toggle-btn {
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--text-faint);
+      cursor: pointer;
+      font-size: 0.6rem; font-weight: 700;
+      letter-spacing: 0.08em;
+      padding: 3px 8px;
+      text-transform: uppercase;
+      transition: color 0.15s, border-color 0.15s;
+    }
+    .toggle-btn:hover { color: var(--text); border-color: var(--accent); }
+    .code-body {
+      padding: 10px 0;
+      flex: 1;
+      font-family: 'JetBrains Mono','Fira Code','Cascadia Code',monospace;
+      font-size: 0.75rem;
+      line-height: 1.7;
+      overflow-x: auto;
+    }
+    .cl {
+      display: flex;
+      align-items: stretch;
+      border-left: 3px solid transparent;
+      padding: 0 14px 0 0;
+      white-space: pre;
+    }
+    .cl .ln {
+      width: 28px; min-width: 28px;
+      text-align: right;
+      color: #3d4468;
+      user-select: none;
+      padding-right: 14px;
+      font-size: 0.7rem;
+      line-height: 1.7;
+    }
+    .cl .code { color: var(--text-muted); }
+    .kw { color: var(--purple); }
+    .fn { color: var(--blue); }
+    .bi { color: var(--orange); }
+    .op { color: var(--text); }
+    .cm { color: #3d4468; font-style: italic; }
+    .nb { color: var(--green); }
+
+    .panel-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 13px 18px;
+    }
+    .panel-title {
+      font-size: 0.67rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.11em;
+      color: var(--text-dim); margin-bottom: 10px;
+    }
+    .panel-sub {
+      font-size: 0.75rem; font-weight: 400;
+      text-transform: none; letter-spacing: 0; color: var(--text-faint);
+    }
+
+    .queue-row {
+      display: flex; align-items: center; gap: 10px; min-height: 42px;
+    }
+    .q-hint { font-size: 0.7rem; color: var(--text-faint); white-space: nowrap; }
+    #queue-items {
+      display: flex; gap: 6px; align-items: center;
+      flex-wrap: nowrap; overflow-x: auto; flex: 1; min-height: 36px;
+    }
+    .q-chip {
+      background: #78350f; color: #fef3c7;
+      border: 1px solid #b45309; border-radius: 5px;
+      padding: 3px 9px; font-size: 0.78rem; font-weight: 700;
+      white-space: nowrap; flex-shrink: 0; font-family: monospace;
+    }
+    .q-empty, .v-empty { color: var(--text-faint); font-size: 0.82rem; font-style: italic; }
+
+    #visited-items {
+      display: flex; gap: 5px; flex-wrap: wrap;
+      min-height: 30px; align-items: flex-start;
+      max-height: 110px; overflow-y: auto;
+    }
+    .v-chip {
+      background: #052e16; color: var(--green);
+      border: 1px solid #16a34a; border-radius: 5px;
+      padding: 2px 8px; font-size: 0.72rem; font-weight: 700;
+      font-family: monospace; white-space: nowrap;
+    }
+
+    #neighbors-list {
+      display: flex; flex-direction: column; gap: 5px;
+      min-height: 24px;
+    }
+    .nb-row {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 0.82rem;
+    }
+    .nb-arrow { font-size: 1rem; width: 16px; text-align: center; color: var(--text-bright); }
+    .nb-coord { font-family: monospace; color: var(--text-muted); font-size: 0.78rem; }
+    .nb-badge {
+      font-size: 0.68rem; font-weight: 700; padding: 1px 6px;
+      border-radius: 4px; text-transform: uppercase; letter-spacing: 0.05em;
+    }
+    .nb-badge.pending  { background: var(--border-soft); color: var(--text-faint); }
+    .nb-badge.oob      { background: #3b1414; color: var(--red); border: 1px solid #7f1d1d; }
+    .nb-badge.visited  { background: #1a2e1a; color: var(--green-light); border: 1px solid #166534; }
+    .nb-badge.enqueued { background: #431407; color: var(--yellow-light); border: 1px solid #b45309; }
+    .nb-badge.checking { background: #1e3a5f; color: var(--blue-light); border: 1px solid #1d4ed8; }
+    .nb-row { padding-left: 0; margin-left: 0; transition: background 0.15s; }
+    .nb-row.active {
+      background: var(--surface-dark);
+      border-left: 2px solid var(--accent);
+      padding-left: 6px;
+      border-radius: 4px;
+      margin-left: -8px;
+    }
+    .nb-empty { font-size: 0.8rem; color: var(--text-faint); }
+
+    .btn-play {
+      background: #15803d; border: none;
+      border-radius: var(--radius-sm);
+      color: #fff; cursor: pointer;
+      font-size: 0.88rem; font-weight: 600;
+      padding: 9px 20px; transition: background 0.2s;
+    }
+    .btn-play:hover { background: #166534; }
+    .btn-play.playing { background: #c2410c; }
+    .btn-play.playing:hover { background: #9a3412; }
+    .btn-play:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .speed-select {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text); font-size: 0.85rem;
+      padding: 8px 10px; outline: none;
+      width: 80px;
+    }
+
+    .nav-row {
+      display: flex; gap: 8px; align-items: center;
+      flex-wrap: wrap;
+    }
+  </style>
+</head>
+<body class="page">
+
+<div class="page-header">
+  <a class="back-link" href="../index.html">&larr; All Algorithms</a>
+  <h1 class="page-title">BFS &mdash; Grid Traversal</h1>
+</div>
+
+<div class="controls">
+  <div class="field">
+    <label>Size (N&times;N)</label>
+    <input id="inp-size" type="number" min="3" max="18" value="8" />
+  </div>
+  <div class="field">
+    <label>Start row</label>
+    <input id="inp-sr" type="number" min="0" value="3" />
+  </div>
+  <div class="field">
+    <label>Start col</label>
+    <input id="inp-sc" type="number" min="0" value="3" />
+  </div>
+  <button class="btn-primary" onclick="buildGrid()">Build</button>
+  <button class="btn-primary" onclick="runBFS()">Run BFS</button>
+</div>
+
+<div class="viz-area">
+  <div class="main-row">
+    <div class="left-col">
+      <div class="grid-wrap">
+        <div id="grid"></div>
+      </div>
+
+      <div class="legend" style="justify-content:flex-start">
+        <div class="leg-item"><div class="leg-swatch" style="background:#0f0f0f;border:1px solid #2d3148"></div>Empty</div>
+        <div class="leg-item"><div class="leg-swatch" style="background:#854d0e;border:1px solid #b45309"></div>In queue</div>
+        <div class="leg-item"><div class="leg-swatch" style="background:#15803d;border:1px solid var(--green)"></div>Current</div>
+        <div class="leg-item"><div class="leg-swatch" style="background:#14532d;border:1px solid #166534"></div>Visited</div>
+      </div>
+
+      <div class="code-panel">
+        <div class="code-header">Python<button class="toggle-btn" id="code-toggle" onclick="toggleCode()">Modular</button></div>
+        <div class="code-body" id="code-body"></div>
+      </div>
+    </div>
+
+    <div class="right-col">
+      <div style="display:flex;gap:12px">
+        <div class="panel-box" style="flex:0 0 auto">
+          <div class="nav-row">
+            <button class="btn-step" id="btn-back" onclick="stepBack()" disabled>&larr;</button>
+            <button class="btn-step" id="btn-next" onclick="stepNext()" disabled>&rarr;</button>
+            <button class="btn-play" id="btn-play" onclick="togglePlay()" disabled>&#9654; Play</button>
+            <select class="speed-select" id="speed-select">
+              <option value="500">Slow</option>
+              <option value="150" selected>Medium</option>
+              <option value="40">Fast</option>
+            </select>
+          </div>
+        </div>
+        <div class="panel-box" style="flex:1;min-width:0">
+          <div class="panel-title" id="phase-label">&mdash;</div>
+          <div style="font-size:0.85rem;color:var(--text-muted);margin-top:4px" id="step-desc">Set a start cell and click Run BFS.</div>
+        </div>
+      </div>
+      <div class="panel-box">
+        <div class="panel-title">Neighbors</div>
+        <div id="neighbors-list"><span class="nb-empty">not started</span></div>
+      </div>
+
+      <div class="panel-box">
+        <div class="panel-title">Queue <span class="panel-sub">(front &rarr; back)</span></div>
+        <div class="queue-row">
+          <span class="q-hint">&larr; dequeue</span>
+          <div id="queue-items"><span class="q-empty">not started</span></div>
+          <span class="q-hint">enqueue &rarr;</span>
+        </div>
+      </div>
+
+      <div class="panel-box">
+        <div class="panel-title">Visited <span class="panel-sub" id="visited-count"></span></div>
+        <div id="visited-items"><span class="v-empty">none yet</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+
+<script>
+// --- Code ---
+let activeCode = 'compact';
+
+const CODE_COMPACT = [
+  [1,  '<span class="kw">from</span> collections <span class="kw">import</span> <span class="bi">deque</span>'],
+  [0,  ''],
+  [3,  '<span class="kw">def</span> <span class="fn">bfs</span><span class="op">(</span>grid, start<span class="op">):</span>'],
+  [4,  '    n <span class="op">=</span> <span class="bi">len</span><span class="op">(</span>grid<span class="op">)</span>'],
+  [5,  '    queue <span class="op">=</span> <span class="bi">deque</span><span class="op">([</span>start<span class="op">])</span>'],
+  [6,  '    visited <span class="op">= {</span>start<span class="op">}</span>'],
+  [0,  ''],
+  [8,  '    <span class="kw">while</span> queue<span class="op">:</span>'],
+  [9,  '        r, c <span class="op">=</span> queue<span class="op">.</span><span class="fn">popleft</span><span class="op">()</span>'],
+  [0,  ''],
+  [11, '        <span class="kw">for</span> dr, dc <span class="kw">in</span> <span class="op">[(-</span><span class="nb">1</span><span class="op">,</span><span class="nb">0</span><span class="op">),(</span><span class="nb">1</span><span class="op">,</span><span class="nb">0</span><span class="op">),(</span><span class="nb">0</span><span class="op">,-</span><span class="nb">1</span><span class="op">),(</span><span class="nb">0</span><span class="op">,</span><span class="nb">1</span><span class="op">)]:</span>'],
+  [12, '            nr, nc <span class="op">=</span> r<span class="op">+</span>dr, c<span class="op">+</span>dc'],
+  [13, '            <span class="kw">if</span> <span class="op">(</span><span class="nb">0</span> <span class="op">&lt;=</span> nr <span class="op">&lt;</span> n <span class="kw">and</span>'],
+  [14, '                <span class="nb">0</span> <span class="op">&lt;=</span> nc <span class="op">&lt;</span> n <span class="kw">and</span>'],
+  [15, '                <span class="op">(</span>nr, nc<span class="op">)</span> <span class="kw">not in</span> visited<span class="op">):</span>'],
+  [16, '                visited<span class="op">.</span><span class="fn">add</span><span class="op">((</span>nr, nc<span class="op">))</span>'],
+  [17, '                queue<span class="op">.</span><span class="fn">append</span><span class="op">((</span>nr, nc<span class="op">))</span>'],
+];
+
+const CODE_MODULAR = [
+  [1,  '<span class="kw">from</span> collections <span class="kw">import</span> <span class="bi">deque</span>'],
+  [0,  ''],
+  [3,  'DIRECTIONS <span class="op">=</span> <span class="op">[(-</span><span class="nb">1</span><span class="op">,</span><span class="nb">0</span><span class="op">),(</span><span class="nb">1</span><span class="op">,</span><span class="nb">0</span><span class="op">),(</span><span class="nb">0</span><span class="op">,-</span><span class="nb">1</span><span class="op">),(</span><span class="nb">0</span><span class="op">,</span><span class="nb">1</span><span class="op">)]</span>'],
+  [0,  ''],
+  [5,  '<span class="kw">def</span> <span class="fn">in_bounds</span><span class="op">(</span>grid, row, col<span class="op">):</span>'],
+  [6,  '    <span class="kw">return</span> <span class="op">(</span>'],
+  [7,  '        <span class="nb">0</span> <span class="op">&lt;=</span> row <span class="op">&lt;</span> <span class="bi">len</span><span class="op">(</span>grid<span class="op">)</span> <span class="kw">and</span>'],
+  [8,  '        <span class="nb">0</span> <span class="op">&lt;=</span> col <span class="op">&lt;</span> <span class="bi">len</span><span class="op">(</span>grid<span class="op">[</span>row<span class="op">])</span>'],
+  [9,  '    <span class="op">)</span>'],
+  [0,  ''],
+  [11, '<span class="kw">def</span> <span class="fn">get_neighbors</span><span class="op">(</span>grid, row, col<span class="op">):</span>'],
+  [12, '    <span class="kw">for</span> dr, dc <span class="kw">in</span> DIRECTIONS<span class="op">:</span>'],
+  [13, '        nr, nc <span class="op">=</span> row<span class="op">+</span>dr, col<span class="op">+</span>dc'],
+  [14, '        <span class="kw">if</span> <span class="fn">in_bounds</span><span class="op">(</span>grid, nr, nc<span class="op">):</span>'],
+  [15, '            <span class="kw">yield</span> nr, nc'],
+  [0,  ''],
+  [17, '<span class="kw">def</span> <span class="fn">bfs</span><span class="op">(</span>grid, start<span class="op">):</span>'],
+  [18, '    queue <span class="op">=</span> <span class="bi">deque</span><span class="op">([</span>start<span class="op">])</span>'],
+  [19, '    visited <span class="op">= {</span>start<span class="op">}</span>'],
+  [0,  ''],
+  [21, '    <span class="kw">while</span> queue<span class="op">:</span>'],
+  [22, '        row, col <span class="op">=</span> queue<span class="op">.</span><span class="fn">popleft</span><span class="op">()</span>'],
+  [0,  ''],
+  [24, '        <span class="kw">for</span> neighbor <span class="kw">in</span> <span class="fn">get_neighbors</span><span class="op">(</span>grid, row, col<span class="op">):</span>'],
+  [25, '            <span class="kw">if</span> neighbor <span class="kw">in</span> visited<span class="op">:</span>'],
+  [26, '                <span class="kw">continue</span>'],
+  [0,  ''],
+  [28, '            visited<span class="op">.</span><span class="fn">add</span><span class="op">(</span>neighbor<span class="op">)</span>'],
+  [29, '            queue<span class="op">.</span><span class="fn">append</span><span class="op">(</span>neighbor<span class="op">)</span>'],
+  [0,  ''],
+  [31, '    <span class="kw">return</span> visited'],
+];
+
+function buildCodePanel() {
+  const code = activeCode === 'compact' ? CODE_COMPACT : CODE_MODULAR;
+  const body = document.getElementById('code-body');
+  body.innerHTML = '';
+  code.forEach(function(e) {
+    const row = document.createElement('div');
+    row.className = 'cl';
+    if (e[0] > 0) row.id = 'cl-' + e[0];
+    row.innerHTML = '<span class="ln">' + (e[0] > 0 ? e[0] : '') + '</span><span class="code">' + e[1] + '</span>';
+    body.appendChild(row);
+  });
+}
+
+function toggleCode() {
+  activeCode = activeCode === 'compact' ? 'modular' : 'compact';
+  buildCodePanel();
+  const btn = document.getElementById('code-toggle');
+  btn.textContent = activeCode === 'compact' ? 'Modular' : 'Compact';
+  if (simSteps.length) setCodeLines([], getLines(simSteps[cursor]), false);
+}
+
+function getLines(s) {
+  return activeCode === 'compact' ? (s.lines || []) : (s.linesM || []);
+}
+
+// --- State ---
+let N = 8, SR = 3, SC = 3;
+let simSteps = [], cursor = 0;
+let playTimer = null, simReady = false;
+
+// --- Build ---
+function buildGrid() {
+  stopPlay(); simReady = false;
+  N  = Math.max(3, Math.min(18, parseInt(document.getElementById('inp-size').value) || 8));
+  SR = Math.max(0, Math.min(N - 1, parseInt(document.getElementById('inp-sr').value) || 0));
+  SC = Math.max(0, Math.min(N - 1, parseInt(document.getElementById('inp-sc').value) || 0));
+  // clamp inputs
+  document.getElementById('inp-sr').max = N - 1;
+  document.getElementById('inp-sc').max = N - 1;
+  renderGrid();
+  resetStatus();
+}
+
+function renderGrid() {
+  const container = document.getElementById('grid');
+  const maxW = container.parentElement.clientWidth - 20;
+  const maxH = Math.floor(window.innerHeight * 0.22);
+  const cellByW = Math.floor(maxW / N) - 3;
+  const cellByH = Math.floor(maxH / N) - 3;
+  const cellSize = Math.max(14, Math.min(28, cellByW, cellByH));
+  const fontSize = Math.max(8, Math.min(13, cellSize - 10));
+  container.style.gridTemplateColumns = 'repeat(' + N + ', ' + cellSize + 'px)';
+  container.innerHTML = '';
+
+  for (let r = 0; r < N; r++) {
+    for (let c = 0; c < N; c++) {
+      const cell = document.createElement('div');
+      cell.className = 'cell';
+      cell.id = 'cell-' + r + '-' + c;
+      cell.style.width = cell.style.height = cellSize + 'px';
+      cell.style.fontSize = fontSize + 'px';
+      cell.dataset.state = (r === SR && c === SC) ? 'start' : 'empty';
+      if (r === SR && c === SC) {
+        cell.textContent = 'S';
+        cell.style.background = '#15803d';
+        cell.style.color = '#fff';
+        cell.style.border = '1px solid var(--green)';
+      }
+      container.appendChild(cell);
+    }
+  }
+}
+
+// --- Simulate ---
+const DIRS = [[-1,0,'↑','up'],  [1,0,'↓','down'],
+              [0,-1,'←','left'],[0,1,'→','right']];
+
+const STATE_BG = {
+  empty:   '#0f0f0f',
+  queued:  '#854d0e',
+  current: '#15803d',
+  visited: '#14532d',
+};
+const STATE_FG = {
+  empty: 'transparent', queued: '#fef3c7',
+  current: '#fff',      visited: 'var(--green-light)',
+};
+
+function runBFS() {
+  stopPlay(); simSteps = []; simReady = true;
+
+  const stateGrid = Array.from({ length: N }, function(_, r) {
+    return Array.from({ length: N }, function(_, c) {
+      return (r === SR && c === SC) ? 'queued' : 'empty';
+    });
+  });
+
+  const snap = function(phase, desc, lines, extra) {
+    simSteps.push(Object.assign({
+      phase: phase, desc: desc, lines: lines || [],
+      states: stateGrid.map(function(r) { return r.slice(); }),
+      queue: bfsQ.slice(),
+      visitedOrder: visitedOrder.slice(),
+    }, extra || {}));
+  };
+  let nbStatus = [];
+
+  const bfsQ = [[SR, SC]];
+  const visited = new Set([SR + ',' + SC]);
+  const visitedOrder = [[SR, SC]];
+
+  snap('Init', 'Enqueue start (' + SR + ',' + SC + '). Mark visited.', [5, 6], { linesM: [18, 19] });
+
+  while (bfsQ.length) {
+    const cur = bfsQ.shift();
+    const r = cur[0], c = cur[1];
+    const isStart = r === SR && c === SC;
+
+    stateGrid[r][c] = 'current';
+    nbStatus = DIRS.map(function(d) {
+      return { arrow: d[2], nr: r+d[0], nc: c+d[1], status: 'pending' };
+    });
+    snap('BFS', 'Dequeue (' + r + ',' + c + ').', [8, 9], { linesM: [21, 22], neighbors: nbStatus.map(function(x){return Object.assign({},x);}) });
+
+    for (let d = 0; d < DIRS.length; d++) {
+      const dr = DIRS[d][0], dc = DIRS[d][1];
+      const arrow = DIRS[d][2], name = DIRS[d][3];
+      const nr = r + dr, nc = c + dc;
+      const key = nr + ',' + nc;
+
+      if (nr < 0 || nr >= N || nc < 0 || nc >= N) {
+        nbStatus[d].status = 'oob';
+        snap('BFS', arrow + ' (' + nr + ',' + nc + ') — out of bounds, skip.', [11, 12, 13], { linesM: [24, 12, 13, 14], neighbors: nbStatus.map(function(x){return Object.assign({},x);}), checkingIdx: d });
+        continue;
+      }
+      if (visited.has(key)) {
+        nbStatus[d].status = 'visited';
+        snap('BFS', arrow + ' (' + nr + ',' + nc + ') — already visited, skip.', [11, 12, 13, 14, 15], { linesM: [24, 12, 13, 14, 15, 25, 26], neighbors: nbStatus.map(function(x){return Object.assign({},x);}), checkingIdx: d });
+        continue;
+      }
+      visited.add(key);
+      bfsQ.push([nr, nc]);
+      visitedOrder.push([nr, nc]);
+      stateGrid[nr][nc] = 'queued';
+      nbStatus[d].status = 'enqueued';
+      snap('BFS', arrow + ' (' + nr + ',' + nc + ') — valid, enqueue.', [11, 12, 13, 14, 15, 16, 17], { linesM: [24, 12, 13, 14, 15, 25, 28, 29], neighbors: nbStatus.map(function(x){return Object.assign({},x);}), checkingIdx: d });
+    }
+
+    if (!isStart) stateGrid[r][c] = 'visited';
+    else          stateGrid[r][c] = 'visited';
+  }
+
+  snap('Done', 'BFS complete. All reachable cells visited.', [8], { linesM: [21] });
+
+  cursor = 0;
+  applyStep(simSteps[0], false);
+  updateButtons();
+}
+
+// --- Apply ---
+function setCellBg(r, c, state, label, animate) {
+  const el = document.getElementById('cell-' + r + '-' + c);
+  if (!el) return;
+  el.dataset.state = state;
+  const bg = STATE_BG[state] || STATE_BG.empty;
+  const fg = STATE_FG[state] || 'transparent';
+  const isStart = r === SR && c === SC;
+  const text = isStart ? 'S' : (label || '');
+  el.textContent = text;
+  if (animate) {
+    gsap.to(el, { backgroundColor: bg, color: text ? fg : 'transparent', duration: 0.2, ease: 'power2.out' });
+  } else {
+    el.style.backgroundColor = bg;
+    el.style.color = text ? fg : 'transparent';
+  }
+}
+
+function applyStep(s, animate) {
+  for (let r = 0; r < N; r++)
+    for (let c = 0; c < N; c++)
+      setCellBg(r, c, s.states[r][c], '', animate);
+  renderQueue(s.queue, [], true, false);
+  renderVisited(s.visitedOrder || [], [], true, false);
+  renderNeighbors(s.neighbors || null, s.checkingIdx);
+  setCodeLines([], getLines(s), false);
+  refreshText();
+}
+
+function transition(from, to) {
+  for (let r = 0; r < N; r++)
+    for (let c = 0; c < N; c++)
+      if (from.states[r][c] !== to.states[r][c])
+        setCellBg(r, c, to.states[r][c], '', true);
+  renderQueue(to.queue, from.queue, false, true);
+  renderVisited(to.visitedOrder || [], from.visitedOrder || [], false, true);
+  renderNeighbors(to.neighbors || null, to.checkingIdx);
+  setCodeLines(getLines(from), getLines(to), true);
+  refreshText();
+}
+
+// --- Navigation ---
+function stepNext() {
+  if (cursor >= simSteps.length - 1) { stopPlay(); return; }
+  const from = simSteps[cursor++];
+  transition(from, simSteps[cursor]);
+  updateButtons();
+}
+
+function stepBack() {
+  if (cursor <= 0) return;
+  stopPlay(); cursor--;
+  applyStep(simSteps[cursor], true);
+  updateButtons();
+}
+
+function updateButtons() {
+  const atEnd = cursor >= simSteps.length - 1;
+  document.getElementById('btn-back').disabled = cursor <= 0 || !simReady;
+  document.getElementById('btn-next').disabled = atEnd || !simReady;
+  document.getElementById('btn-play').disabled = !simReady;
+  if (atEnd && playTimer) stopPlay();
+}
+
+function refreshText() {
+  if (!simSteps.length) return;
+  const s = simSteps[cursor];
+  document.getElementById('phase-label').textContent =
+    'Step ' + (cursor + 1) + ' / ' + simSteps.length + '  ·  ' + s.phase;
+  document.getElementById('step-desc').textContent = s.desc;
+}
+
+// --- Playback ---
+function togglePlay() { if (playTimer) stopPlay(); else startPlay(); }
+
+function startPlay() {
+  if (cursor >= simSteps.length - 1) cursor = 0;
+  const delay = parseInt(document.getElementById('speed-select').value) || 150;
+  const btn = document.getElementById('btn-play');
+  btn.textContent = '⏸ Pause'; btn.classList.add('playing');
+  playTimer = setInterval(function() {
+    if (cursor >= simSteps.length - 1) { stopPlay(); return; }
+    stepNext();
+  }, delay);
+}
+
+function stopPlay() {
+  if (playTimer) { clearInterval(playTimer); playTimer = null; }
+  const btn = document.getElementById('btn-play');
+  btn.textContent = '▶ Play'; btn.classList.remove('playing');
+}
+
+// --- Neighbors ---
+function renderNeighbors(neighbors, checkingIdx) {
+  const el = document.getElementById('neighbors-list');
+  if (!neighbors || !neighbors.length) {
+    el.innerHTML = '<span class="nb-empty">not started</span>';
+    return;
+  }
+  el.innerHTML = neighbors.map(function(nb, i) {
+    const coord = '(' + nb.nr + ',' + nb.nc + ')';
+    const label = { pending: '—', oob: 'OOB', visited: 'Visited', enqueued: 'Enqueued' }[nb.status] || nb.status;
+    const isActive = i === checkingIdx;
+    return '<div class="nb-row' + (isActive ? ' active' : '') + '">' +
+      '<span class="nb-arrow">' + nb.arrow + '</span>' +
+      '<span class="nb-coord">' + coord + '</span>' +
+      '<span class="nb-badge ' + nb.status + '">' + label + '</span>' +
+      '</div>';
+  }).join('');
+}
+
+// --- Queue ---
+function qkey(q) { return q[0] + ',' + q[1]; }
+
+function renderQueue(newQ, oldQ, rebuild, animate) {
+  const container = document.getElementById('queue-items');
+  if (rebuild) {
+    container.innerHTML = '';
+    if (!newQ.length) { container.innerHTML = '<span class="q-empty">empty</span>'; return; }
+    newQ.forEach(function(q) { container.appendChild(makeQChip(q)); });
+    return;
+  }
+  const oldKeys = new Set(oldQ.map(qkey));
+  const newKeys = new Set(newQ.map(qkey));
+  oldQ.filter(function(q) { return !newKeys.has(qkey(q)); }).forEach(function(q) {
+    const el = document.getElementById('qchip-' + qkey(q)); if (!el) return;
+    if (animate) gsap.to(el, { x: -14, opacity: 0, duration: 0.15, onComplete: function() {
+      el.remove();
+      if (!container.querySelector('.q-chip'))
+        container.innerHTML = '<span class="q-empty">empty</span>';
+    }});
+    else el.remove();
+  });
+  newQ.filter(function(q) { return !oldKeys.has(qkey(q)); }).forEach(function(q) {
+    const e = container.querySelector('.q-empty'); if (e) e.remove();
+    const el = makeQChip(q); container.appendChild(el);
+    if (animate) gsap.from(el, { x: 14, opacity: 0, duration: 0.15 });
+  });
+}
+
+function makeQChip(q) {
+  const el = document.createElement('div');
+  el.className = 'q-chip'; el.id = 'qchip-' + qkey(q);
+  el.textContent = '(' + q[0] + ',' + q[1] + ')';
+  return el;
+}
+
+// --- Visited ---
+function renderVisited(newV, oldV, rebuild, animate) {
+  const container = document.getElementById('visited-items');
+  const vkey = function(v) { return v[0] + ',' + v[1]; };
+  if (rebuild) {
+    container.innerHTML = '';
+    if (!newV.length) container.innerHTML = '<span class="v-empty">none yet</span>';
+    else newV.forEach(function(v) { container.appendChild(makeVChip(v, false)); });
+    document.getElementById('visited-count').textContent = newV.length ? '(' + newV.length + ')' : '';
+    return;
+  }
+  const oldKeys = new Set(oldV.map(vkey));
+  const newKeys = new Set(newV.map(vkey));
+  oldV.filter(function(v) { return !newKeys.has(vkey(v)); }).forEach(function(v) {
+    const el = document.getElementById('vchip-' + vkey(v)); if (el) el.remove();
+  });
+  newV.filter(function(v) { return !oldKeys.has(vkey(v)); }).forEach(function(v) {
+    const e = container.querySelector('.v-empty'); if (e) e.remove();
+    container.appendChild(makeVChip(v, animate));
+  });
+  if (!container.querySelector('.v-chip'))
+    container.innerHTML = '<span class="v-empty">none yet</span>';
+  document.getElementById('visited-count').textContent = newV.length ? '(' + newV.length + ')' : '';
+}
+
+function makeVChip(v, animate) {
+  const el = document.createElement('div');
+  el.className = 'v-chip'; el.id = 'vchip-' + v[0] + ',' + v[1];
+  el.textContent = '(' + v[0] + ',' + v[1] + ')';
+  if (animate) gsap.from(el, { scale: 0.7, opacity: 0, duration: 0.15 });
+  return el;
+}
+
+// --- Code highlighting ---
+const HL_BG = 'rgba(var(--orange-ch),0.13)', HL_NONE = 'rgba(var(--orange-ch),0)';
+
+function setCodeLines(oldLines, newLines, animate) {
+  const dur = 0.2;
+  (oldLines || []).filter(function(n) { return !(newLines || []).includes(n); }).forEach(function(n) {
+    const el = document.getElementById('cl-' + n); if (!el) return;
+    if (animate) {
+      gsap.to(el, { backgroundColor: HL_NONE, borderLeftColor: 'transparent', duration: dur });
+      gsap.to(el.querySelector('.ln'), { color: '#3d4468', duration: dur });
+    } else {
+      el.style.backgroundColor = ''; el.style.borderLeftColor = '';
+      const ln = el.querySelector('.ln'); if (ln) ln.style.color = '';
+    }
+  });
+  (newLines || []).filter(function(n) { return !(oldLines || []).includes(n); }).forEach(function(n) {
+    const el = document.getElementById('cl-' + n); if (!el) return;
+    if (animate) {
+      gsap.to(el, { backgroundColor: HL_BG, borderLeftColor: 'var(--orange)', duration: dur, delay: 0.05 });
+      gsap.to(el.querySelector('.ln'), { color: 'var(--orange)', duration: dur, delay: 0.05 });
+    } else {
+      el.style.backgroundColor = HL_BG; el.style.borderLeftColor = 'var(--orange)';
+      const ln = el.querySelector('.ln'); if (ln) ln.style.color = 'var(--orange)';
+    }
+  });
+  if (newLines && newLines.length) {
+    const el = document.getElementById('cl-' + newLines[0]);
+    if (el) el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }
+}
+
+// --- Reset ---
+function resetStatus() {
+  simSteps = []; cursor = 0; simReady = false;
+  document.getElementById('phase-label').textContent = '—';
+  document.getElementById('step-desc').textContent = 'Set a start cell and click Run BFS.';
+  document.getElementById('btn-back').disabled = true;
+  document.getElementById('btn-next').disabled = true;
+  document.getElementById('btn-play').disabled = true;
+  document.getElementById('queue-items').innerHTML = '<span class="q-empty">not started</span>';
+  document.getElementById('visited-items').innerHTML = '<span class="v-empty">none yet</span>';
+  document.getElementById('visited-count').textContent = '';
+  buildCodePanel();
+}
+
+// --- Init ---
+window.addEventListener('resize', function() { if (!simReady) renderGrid(); });
+buildCodePanel();
+buildGrid();
+</script>
+</body>
+</html>
