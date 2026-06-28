@@ -6,6 +6,7 @@
   <title>BFS — Grid / Matrix</title>
   <link rel="stylesheet" href="../shared/style.css" />
   <script src="../shared/gsap.min.js"></script>
+  <script src="../shared/viz.js"></script>
   <style>
     .viz-area {
       width: 100%; max-width: 90%;
@@ -258,10 +259,10 @@
 
 <div class="nav-row">
   <div class="step-nav">
-    <button class="btn-step" id="btn-back" onclick="stepBack()" disabled>&larr; Back</button>
-    <button class="btn-step" id="btn-next" onclick="stepNext()" disabled>Next &rarr;</button>
+    <button class="btn-step" id="btn-back" disabled>&larr; Back</button>
+    <button class="btn-step" id="btn-next" disabled>Next &rarr;</button>
   </div>
-  <button class="btn-play" id="btn-play" onclick="togglePlay()" disabled>&#9654; Play</button>
+  <button class="btn-play" id="btn-play" disabled>&#9654; Play</button>
   <select class="speed-select" id="speed-select">
     <option value="400">Slow</option>
     <option value="100" selected>Medium</option>
@@ -312,9 +313,6 @@ function buildCodePanel() {
 // --- State ---
 let ROWS = 10, COLS = 10;
 let wallGrid = [];
-let simSteps = [];
-let cursor = 0;
-let playTimer = null;
 let simReady = false;
 let isDrawing = false;
 let drawMode = null;
@@ -324,7 +322,6 @@ const endCell   = () => [ROWS - 1, COLS - 1];
 
 // --- Build grid ---
 function buildGrid() {
-  stopPlay();
   simReady = false;
   ROWS = Math.max(4, Math.min(20, parseInt(document.getElementById('inp-rows').value) || 10));
   COLS = Math.max(4, Math.min(20, parseInt(document.getElementById('inp-cols').value) || 10));
@@ -343,7 +340,7 @@ function buildGrid() {
 }
 
 function clearWalls() {
-  stopPlay(); simReady = false;
+  simReady = false;
   wallGrid = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
   renderGrid(); resetStatus();
 }
@@ -405,8 +402,7 @@ function applyDraw(r, c) {
 
 // --- BFS simulation ---
 function runBFS() {
-  stopPlay();
-  simSteps = [];
+  const simSteps = [];
   simReady = true;
 
   const [sr, sc] = startCell(), [er, ec] = endCell();
@@ -483,10 +479,7 @@ function runBFS() {
     snap('Done', 'Queue empty. No path to end exists.', [23], { noPath: true });
   }
 
-  cursor = 0;
-  applyStep(simSteps[0], false);
-  document.getElementById('visited-count').textContent = '';
-  updateButtons();
+  nav.load(simSteps);
 }
 
 // --- Apply / transition ---
@@ -517,73 +510,6 @@ function applyStep(s, animate) {
   renderQueue(s.queue, [], true, false);
   renderVisited(s.visitedOrder || [], [], true, false);
   setCodeLines([], s.lines, false);
-  refreshText();
-}
-
-function transition(from, to) {
-  for (let r = 0; r < ROWS; r++)
-    for (let c = 0; c < COLS; c++)
-      if (from.states[r][c] !== to.states[r][c])
-        setCellState(r, c, to.states[r][c], true);
-  renderQueue(to.queue, from.queue, false, true);
-  renderVisited(to.visitedOrder || [], from.visitedOrder || [], false, true);
-  setCodeLines(from.lines, to.lines, true);
-  refreshText();
-}
-
-// --- Navigation ---
-function stepNext() {
-  if (cursor >= simSteps.length - 1) { stopPlay(); return; }
-  const from = simSteps[cursor++];
-  transition(from, simSteps[cursor]);
-  updateButtons();
-}
-
-function stepBack() {
-  if (cursor <= 0) return;
-  stopPlay();
-  cursor--;
-  applyStep(simSteps[cursor], true);
-  updateButtons();
-}
-
-function updateButtons() {
-  const atEnd   = cursor >= simSteps.length - 1;
-  const atStart = cursor <= 0;
-  document.getElementById('btn-back').disabled = atStart || !simReady;
-  document.getElementById('btn-next').disabled = atEnd   || !simReady;
-  document.getElementById('btn-play').disabled = !simReady;
-  if (atEnd && playTimer) stopPlay();
-}
-
-function refreshText() {
-  if (!simSteps.length) return;
-  const s = simSteps[cursor];
-  document.getElementById('phase-label').textContent = 'Step ' + (cursor + 1) + ' / ' + simSteps.length + '  ·  ' + s.phase;
-  document.getElementById('step-desc').textContent = s.desc;
-}
-
-// --- Playback ---
-function togglePlay() {
-  if (playTimer) stopPlay();
-  else           startPlay();
-}
-
-function startPlay() {
-  if (cursor >= simSteps.length - 1) cursor = 0;
-  const delay = parseInt(document.getElementById('speed-select').value) || 100;
-  const btn = document.getElementById('btn-play');
-  btn.textContent = '⏸ Pause'; btn.classList.add('playing');
-  playTimer = setInterval(function() {
-    if (cursor >= simSteps.length - 1) { stopPlay(); return; }
-    stepNext();
-  }, delay);
-}
-
-function stopPlay() {
-  if (playTimer) { clearInterval(playTimer); playTimer = null; }
-  const btn = document.getElementById('btn-play');
-  btn.textContent = '▶ Play'; btn.classList.remove('playing');
 }
 
 // --- Queue display ---
@@ -703,12 +629,10 @@ function setCodeLines(oldLines, newLines, animate) {
 
 // --- Helpers ---
 function resetStatus() {
-  simSteps = []; cursor = 0; simReady = false;
+  simReady = false;
+  if (nav) nav.load([]);
   document.getElementById('phase-label').textContent = '—';
   document.getElementById('step-desc').textContent = 'Click or drag cells to toggle walls, then click Run BFS.';
-  document.getElementById('btn-back').disabled = true;
-  document.getElementById('btn-next').disabled = true;
-  document.getElementById('btn-play').disabled = true;
   document.getElementById('queue-items').innerHTML = '<span class="q-empty">not started</span>';
   document.getElementById('visited-items').innerHTML = '<span class="v-empty">none yet</span>';
   document.getElementById('visited-count').textContent = '';
@@ -717,6 +641,19 @@ function resetStatus() {
 
 // --- Init ---
 window.addEventListener('resize', function() { if (!simReady) renderGrid(); });
+var nav = VizNav({
+  btnPrev: document.getElementById('btn-back'),
+  btnNext: document.getElementById('btn-next'),
+  btnPlay: document.getElementById('btn-play'),
+  speedSel: document.getElementById('speed-select'),
+  render: function(snap, cur, total) {
+    applyStep(snap, cur > 0);
+    var phaseEl = document.getElementById('phase-label');
+    var descEl  = document.getElementById('step-desc');
+    if (phaseEl) phaseEl.textContent = 'Step ' + (cur + 1) + ' / ' + total + '  ·  ' + snap.phase;
+    if (descEl)  descEl.textContent  = snap.desc;
+  }
+});
 buildCodePanel();
 buildGrid();
 </script>
