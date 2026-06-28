@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Kadane's Algorithm</title>
   <link rel="stylesheet" href="../shared/style.css" />
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <script src="../shared/gsap.min.js"></script>
   <style>
     .viz-area { width: 100%; max-width: 90%; }
     .main-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
@@ -542,5 +542,12 @@ function stopPlay() {
   if (btn) { btn.textContent = '▶ Play'; btn.classList.remove('playing'); }
 }
 </script>
+  <script>
+    // Hide back-link when embedded in an iframe
+    if (window.self !== window.top) {
+      var bl = document.querySelector('.back-link');
+      if (bl) bl.style.display = 'none';
+    }
+  </script>
 </body>
 </html>

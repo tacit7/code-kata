@@ -381,5 +381,12 @@ function curvedArrow(ctx, x1, cy1, x2, cy2, H) {
 window.addEventListener('resize', () => { if (steps.length) renderFrame(); });
 build();
 </script>
+  <script>
+    // Hide back-link when embedded in an iframe
+    if (window.self !== window.top) {
+      var bl = document.querySelector('.back-link');
+      if (bl) bl.style.display = 'none';
+    }
+  </script>
 </body>
 </html>
