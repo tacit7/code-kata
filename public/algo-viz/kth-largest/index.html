@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kth Largest Element in Array</title>
+  <link rel="stylesheet" href="../shared/style.css" />
+  <script src="../shared/gsap.min.js"></script>
+  <script src="../shared/viz.js"></script>
+  <style>
+    .viz-area { width: 100%; max-width: 90%; }
+    .main-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
+    .left-col, .right-col { display: flex; flex-direction: column; gap: 12px; }
+    @media (max-width: 700px) { .main-row { grid-template-columns: 1fr; } }
+
+    /* Input array */
+    .array-section {
+      padding: 16px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      display: flex; flex-direction: column; gap: 10px;
+    }
+    .arr-scroll { overflow-x: auto; }
+    .arr-wrap { display: flex; gap: 6px; flex-wrap: nowrap; padding-bottom: 4px; }
+    .arr-cell-group { display: flex; flex-direction: column; align-items: center; gap: 2px; flex-shrink: 0; }
+    .arr-idx { font-size: 0.6rem; color: var(--text-ghost); font-family: monospace; text-align: center; }
+    .arr-cell {
+      width: 44px; height: 44px;
+      display: flex; align-items: center; justify-content: center;
+      border: 2px solid var(--border-soft); border-radius: 5px;
+      background: #0f0f0f;
+      font-size: 0.9rem; font-weight: 700; font-family: monospace;
+      color: var(--text-ghost);
+      transition: border-color 0.2s, background 0.2s, color 0.2s;
+    }
+    .arr-cell[data-state="current"] { border-color: #b45309; background: #1c1200; color: var(--orange); }
+    .arr-cell[data-state="done"]    { border-color: #2d3148; color: var(--text-dim); background: #0f0f0f; }
+
+    /* Heap tree */
+    .heap-section {
+      padding: 16px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .heap-header { display: flex; align-items: center; justify-content: space-between; }
+    #heap-size-badge {
+      font-size: 0.72rem; font-weight: 700; font-family: monospace;
+      padding: 2px 10px; border-radius: 20px;
+      background: var(--bg); border: 1px solid var(--border);
+      color: var(--text-dim);
+    }
+    #heap-svg { display: block; width: 100%; }
+    #heap-empty { color: var(--text-ghost); font-size: 0.82rem; text-align: center; padding: 24px 0; }
+
+    /* Panel box */
+    .panel-box {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 14px 16px;
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .panel-title {
+      font-size: 0.72rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim);
+    }
+
+    /* Variables */
+    .var-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .var-box {
+      padding: 10px 8px;
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      display: flex; flex-direction: column; align-items: center; gap: 3px;
+    }
+    .var-box.accent-border { border-color: var(--accent); }
+    .var-box.amber-border  { border-color: #b45309; }
+    .var-box.green-border  { border-color: var(--green-border); }
+    .var-label { font-size: 0.65rem; font-family: monospace; color: var(--text-faint); text-align: center; }
+    .var-val   { font-size: 1.3rem; font-weight: 700; color: var(--text-bright); }
+
+    /* Code panel */
+    .code-panel {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); overflow: hidden;
+    }
+    .code-header { padding: 8px 14px; font-size: 0.72rem; font-weight: 600; color: var(--text-dim); border-bottom: 1px solid var(--border); background: var(--bg); }
+    .code-body { padding: 10px 0; font-size: 0.78rem; line-height: 1.75; white-space: pre; }
+    .code-line { display: flex; align-items: center; padding: 0 14px; }
+    .code-line.hl { background: rgba(99,102,241,0.1); border-left: 2px solid var(--accent); }
+    .ln { min-width: 24px; color: var(--text-ghost); user-select: none; font-size: 0.7rem; }
+
+    /* Nav */
+    .btn-play {
+      background: #15803d; border: none; border-radius: var(--radius-sm);
+      color: #fff; cursor: pointer; font-size: 0.88rem; font-weight: 600;
+      padding: 9px 16px; transition: background 0.2s;
+    }
+    .btn-play:hover { background: #166534; }
+    .btn-play.playing { background: #c2410c; }
+    .btn-play.playing:hover { background: #9a3412; }
+    .btn-play:disabled { opacity: 0.4; cursor: not-allowed; }
+    .speed-select {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); color: var(--text);
+      font-size: 0.85rem; padding: 8px 10px; outline: none; width: 80px;
+    }
+    .nav-row { display: flex; gap: 8px; align-items: center; }
+
+    /* Result badge */
+    .result-badge {
+      font-size: 0.88rem; font-weight: 700;
+      padding: 4px 13px; border-radius: 6px;
+      display: none; width: fit-content; margin-top: 2px;
+    }
+    .result-badge.found { background: var(--green-bg); color: var(--green); border: 1px solid var(--green-border); display: block; }
+
+    .kw { color: var(--purple); }
+    .fn { color: var(--blue); }
+    .bi { color: var(--orange); }
+    .op { color: var(--text); }
+    .nb { color: var(--green); }
+    .cm { color: var(--text-ghost); }
+  </style>
+</head>
+<body class="page">
+
+<div class="page-header">
+  <a class="back-link" href="../index.html">&larr; All Algorithms</a>
+  <div class="page-title">Kth Largest Element in Array</div>
+  <div class="page-sub">LeetCode 215 &middot; Min-heap of size k &middot; O(n log k) time &middot; O(k) space</div>
+</div>
+
+<div class="controls">
+  <div class="field">
+    <label>Array (comma-separated)</label>
+    <input id="inp-nums" type="text" value="3,2,1,5,6,4" style="width:200px" />
+  </div>
+  <div class="field">
+    <label>k</label>
+    <input id="inp-k" type="number" value="2" min="1" max="20" style="width:60px" />
+  </div>
+  <div class="field">
+    <label>Preset</label>
+    <select id="preset-sel" onchange="applyPreset()">
+      <option value="0">Custom</option>
+      <option value="1" selected>[3,2,1,5,6,4], k=2</option>
+      <option value="2">[3,2,3,1,2,4,5,5,6], k=4</option>
+      <option value="3">[1,2,3,4,5,6,7,8], k=3</option>
+    </select>
+  </div>
+  <button class="btn-primary" onclick="buildAndRun()">Build &amp; Run</button>
+</div>
+
+<div class="viz-area">
+  <div class="main-row">
+    <div class="left-col">
+
+      <div class="array-section">
+        <div class="panel-title">Input Array</div>
+        <div class="arr-scroll"><div class="arr-wrap" id="arr-wrap"></div></div>
+      </div>
+
+      <div class="heap-section">
+        <div class="heap-header">
+          <div class="panel-title">Min-Heap</div>
+          <span id="heap-size-badge">size: 0 / k: —</span>
+        </div>
+        <svg id="heap-svg" viewBox="0 0 400 160" preserveAspectRatio="xMidYMid meet" style="display:none"></svg>
+        <div id="heap-empty">Heap is empty</div>
+      </div>
+
+      <div class="code-panel">
+        <div class="code-header">Python</div>
+        <div class="code-body" id="code-body"></div>
+      </div>
+
+    </div>
+
+    <div class="right-col">
+
+      <div style="display:flex;gap:12px">
+        <div class="panel-box" style="flex:0 0 auto">
+          <div class="nav-row">
+            <button class="btn-step" id="btn-back" disabled>&larr;</button>
+            <button class="btn-step" id="btn-next" disabled>&rarr;</button>
+            <button class="btn-play" id="btn-play" disabled>&#9654; Play</button>
+            <select class="speed-select" id="speed-select">
+              <option value="800">Slow</option>
+              <option value="400" selected>Medium</option>
+              <option value="120">Fast</option>
+            </select>
+          </div>
+        </div>
+        <div class="panel-box" style="flex:1;min-width:0">
+          <div class="panel-title" id="phase-label">&mdash;</div>
+          <div style="font-size:0.82rem;color:var(--text-muted);margin-top:2px" id="step-desc">Set array &amp; k, then click Build &amp; Run.</div>
+          <div class="result-badge" id="result-badge"></div>
+        </div>
+      </div>
+
+      <div class="panel-box">
+        <div class="panel-title">Variables</div>
+        <div class="var-grid">
+          <div class="var-box amber-border">
+            <div class="var-label">Current element</div>
+            <div class="var-val" id="vv-cur">&mdash;</div>
+          </div>
+          <div class="var-box accent-border">
+            <div class="var-label">k</div>
+            <div class="var-val" id="vv-k">&mdash;</div>
+          </div>
+          <div class="var-box">
+            <div class="var-label">Heap size</div>
+            <div class="var-val" id="vv-size">&mdash;</div>
+          </div>
+          <div class="var-box green-border">
+            <div class="var-label">Heap root (kth largest)</div>
+            <div class="var-val" id="vv-root">&mdash;</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel-box">
+        <div class="panel-title">Legend</div>
+        <div style="display:flex;flex-direction:column;gap:6px;font-size:0.78rem;color:var(--text-muted)">
+          <div style="display:flex;align-items:center;gap:8px">
+            <svg width="18" height="18"><circle cx="9" cy="9" r="8" fill="#1c1200" stroke="#b45309" stroke-width="2"/></svg>
+            Current input element / active heap node
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <svg width="18" height="18"><circle cx="9" cy="9" r="8" fill="#052e16" stroke="#16a34a" stroke-width="2"/></svg>
+            Heap root = kth largest seen so far
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <svg width="18" height="18"><circle cx="9" cy="9" r="8" fill="#1e1a3a" stroke="var(--accent)" stroke-width="2"/></svg>
+            Node involved in sift swap
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <svg width="18" height="18"><circle cx="9" cy="9" r="8" fill="#1e2130" stroke="#2d3148" stroke-width="2"/></svg>
+            Stable heap node
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+var simSteps = [], nav;
+var currentNums = [], currentK = 0;
+var prevHeapSize = -1;
+
+var PRESETS = [
+  null,
+  { nums: [3,2,1,5,6,4], k: 2 },
+  { nums: [3,2,3,1,2,4,5,5,6], k: 4 },
+  { nums: [1,2,3,4,5,6,7,8], k: 3 },
+];
+
+var CODE = [
+  [1, '<span class="kw">import</span> heapq'],
+  [2, '<span class="kw">def</span> <span class="fn">findKthLargest</span><span class="op">(</span>nums<span class="op">,</span> k<span class="op">):</span>'],
+  [3, '    heap <span class="op">=</span> <span class="op">[]</span>'],
+  [4, '    <span class="kw">for</span> num <span class="kw">in</span> nums<span class="op">:</span>'],
+  [5, '        heapq<span class="op">.</span><span class="fn">heappush</span><span class="op">(</span>heap<span class="op">,</span> num<span class="op">)</span>'],
+  [6, '        <span class="kw">if</span> <span class="bi">len</span><span class="op">(</span>heap<span class="op">)</span> <span class="op">&gt;</span> k<span class="op">:</span>'],
+  [7, '            heapq<span class="op">.</span><span class="fn">heappop</span><span class="op">(</span>heap<span class="op">)</span>'],
+  [8, '    <span class="kw">return</span> heap<span class="op">[</span><span class="nb">0</span><span class="op">]</span>'],
+];
+
+// Node visual states
+var C_IDLE   = { fill: '#1e2130', stroke: '#2d3148',       text: 'var(--text-muted)' };
+var C_ROOT   = { fill: '#052e16', stroke: '#16a34a',       text: 'var(--green)' };
+var C_SWAP   = { fill: '#1e1a3a', stroke: 'var(--accent)', text: 'var(--accent-pale)' };
+var C_HOT    = { fill: '#1c1200', stroke: '#b45309',       text: 'var(--orange)' };
+
+window.addEventListener('DOMContentLoaded', function() {
+  buildCodePanel();
+  nav = VizNav({
+    btnPrev:  document.getElementById('btn-back'),
+    btnNext:  document.getElementById('btn-next'),
+    btnPlay:  document.getElementById('btn-play'),
+    speedSel: document.getElementById('speed-select'),
+    render: function(snap, cur, total) {
+      applyStep(snap, cur > 0);
+      var phaseEl = document.getElementById('phase-label');
+      var descEl  = document.getElementById('step-desc');
+      if (phaseEl) phaseEl.textContent = 'Step ' + (cur + 1) + ' / ' + total + '  ·  ' + snap.phase;
+      if (descEl) {
+        gsap.fromTo(descEl, { opacity: 0 }, { opacity: 1, duration: 0.15 });
+        descEl.textContent = snap.desc;
+      }
+      var badge = document.getElementById('result-badge');
+      if (badge) {
+        badge.className = 'result-badge';
+        badge.textContent = '';
+        if (snap.phase === 'Done' && snap.heap.length > 0) {
+          badge.className = 'result-badge found';
+          badge.textContent = 'Answer: ' + snap.heap[0];
+        }
+      }
+    }
+  });
+  applyPreset();
+  buildAndRun();
+});
+
+function applyPreset() {
+  var sel = document.getElementById('preset-sel');
+  var v = parseInt(sel.value, 10);
+  if (!v || !PRESETS[v]) return;
+  document.getElementById('inp-nums').value = PRESETS[v].nums.join(',');
+  document.getElementById('inp-k').value = PRESETS[v].k;
+}
+
+function buildCodePanel() {
+  var body = document.getElementById('code-body');
+  body.innerHTML = CODE.map(function(e) {
+    return '<div class="code-line" id="cl-' + e[0] + '"><span class="ln">' + e[0] + '</span><span>' + e[1] + '</span></div>';
+  }).join('');
+}
+
+function buildAndRun() {
+  var raw = document.getElementById('inp-nums').value;
+  var k   = parseInt(document.getElementById('inp-k').value, 10);
+  if (isNaN(k) || k < 1) return;
+  var nums = raw.split(',').map(function(s) { return parseInt(s.trim(), 10); }).filter(function(n) { return !isNaN(n); });
+  if (!nums.length || k > nums.length) return;
+
+  currentNums = nums;
+  currentK = k;
+  prevHeapSize = -1;
+
+  buildArraySection(nums);
+  simSteps = simulate(nums, k);
+  nav.load(simSteps);
+}
+
+function buildArraySection(nums) {
+  var wrap = document.getElementById('arr-wrap');
+  wrap.innerHTML = nums.map(function(v, i) {
+    return '<div class="arr-cell-group">'
+      + '<div class="arr-idx">' + i + '</div>'
+      + '<div class="arr-cell" id="ac-' + i + '" data-state="pending">' + v + '</div>'
+      + '</div>';
+  }).join('');
+}
+
+// ─── Simulation ───────────────────────────────────────────────────────────────
+function simulate(nums, k) {
+  var steps = [];
+  var heap  = [];
+
+  function snap(phase, desc, lines, inputIdx, heapSnap, swapPair) {
+    steps.push({
+      phase:    phase,
+      desc:     desc,
+      lines:    lines || [],
+      inputIdx: (inputIdx !== undefined && inputIdx !== null) ? inputIdx : -1,
+      heap:     heapSnap.slice(),
+      swapPair: swapPair ? swapPair.slice() : [],
+    });
+  }
+
+  function hswap(a, b) { var t = heap[a]; heap[a] = heap[b]; heap[b] = t; }
+
+  snap('Init', 'Initialize empty min-heap. k = ' + k + '. We keep at most k elements — the root will always be the kth largest seen so far.', [2, 3], null, heap, []);
+
+  for (var i = 0; i < nums.length; i++) {
+    var num = nums[i];
+
+    snap('Consider', 'Process element ' + num + ' (index ' + i + '). Push it onto the min-heap.', [4], i, heap, []);
+
+    // ── push ──────────────────────────────────────────────────────────────────
+    heap.push(num);
+    var ci = heap.length - 1;
+    snap('Push', 'heappush: added ' + num + ' at leaf index ' + ci + '. Heap size = ' + heap.length + '. Now sift up to restore min-heap.', [5], i, heap, [ci]);
+
+    // sift up
+    while (ci > 0) {
+      var pi = Math.floor((ci - 1) / 2);
+      if (heap[ci] < heap[pi]) {
+        snap('Sift-up', 'heap[' + ci + '] = ' + heap[ci] + ' < parent heap[' + pi + '] = ' + heap[pi] + '. Swap upward.', [5], i, heap, [ci, pi]);
+        hswap(ci, pi);
+        ci = pi;
+        snap('Sift-up', 'Swapped. ' + heap[ci] + ' is now at index ' + ci + '. Continue checking.', [5], i, heap, [ci]);
+      } else {
+        snap('Sift-up', 'heap[' + ci + '] = ' + heap[ci] + ' ≥ parent heap[' + pi + '] = ' + heap[pi] + '. Min-heap property satisfied.', [5], i, heap, []);
+        break;
+      }
+    }
+
+    // ── check size and pop ────────────────────────────────────────────────────
+    if (heap.length > k) {
+      snap('Check size', 'Heap size ' + heap.length + ' > k (' + k + '). Pop the minimum to keep heap ≤ k elements.', [6], i, heap, [0]);
+
+      var popped = heap[0];
+      heap[0] = heap[heap.length - 1];
+      heap.pop();
+
+      if (heap.length === 0) {
+        snap('Pop', 'Popped minimum ' + popped + '. Heap is now empty.', [7], i, heap, []);
+      } else {
+        snap('Pop', 'Popped minimum ' + popped + '. Moved heap[' + heap.length + '] = ' + heap[0] + ' to root. Now sift down.', [7], i, heap, [0]);
+
+        // sift down
+        var di = 0;
+        while (true) {
+          var left = 2*di+1, right = 2*di+2, smallest = di;
+          if (left  < heap.length && heap[left]  < heap[smallest]) smallest = left;
+          if (right < heap.length && heap[right] < heap[smallest]) smallest = right;
+          if (smallest !== di) {
+            snap('Sift-down', 'heap[' + di + '] = ' + heap[di] + ' > child heap[' + smallest + '] = ' + heap[smallest] + '. Swap downward.', [7], i, heap, [di, smallest]);
+            hswap(di, smallest);
+            di = smallest;
+            snap('Sift-down', 'Swapped. ' + heap[di] + ' moved down to index ' + di + '. Continue checking.', [7], i, heap, [di]);
+          } else {
+            snap('Sift-down', heap.length > 1 ? ('heap[' + di + '] = ' + heap[di] + ' ≤ children. Min-heap restored.') : 'Min-heap restored.', [7], i, heap, []);
+            break;
+          }
+        }
+      }
+    }
+
+    // ── status after this element ─────────────────────────────────────────────
+    var statusDesc = heap.length >= k
+      ? 'Heap full (size ' + heap.length + '). Root = ' + heap[0] + ' = ' + k + 'th largest of elements seen so far.'
+      : 'Heap growing (' + heap.length + '/' + k + '). Need ' + (k - heap.length) + ' more element(s) before root becomes the kth largest.';
+    snap('Status', statusDesc, [4], i, heap, []);
+  }
+
+  snap('Done', 'All ' + nums.length + ' elements processed. heap[0] = ' + heap[0] + ' is the ' + k + 'th largest element.', [8], null, heap, []);
+  return steps;
+}
+
+// ─── Render ───────────────────────────────────────────────────────────────────
+function applyStep(s, animate) {
+  applyInputArray(s);
+  applyHeap(s, animate);
+  applyVars(s, animate);
+  setCodeLines(s.lines);
+}
+
+function applyInputArray(s) {
+  for (var i = 0; i < currentNums.length; i++) {
+    var el = document.getElementById('ac-' + i);
+    if (!el) continue;
+    var state = i < s.inputIdx ? 'done' : (i === s.inputIdx ? 'current' : 'pending');
+    el.dataset.state = state;
+  }
+}
+
+// ─── Heap tree layout (complete binary tree inorder) ─────────────────────────
+function heapLayout(size) {
+  var positions = {};
+  var xc = { v: 0 };
+  function inorder(i, depth) {
+    if (i >= size) return;
+    inorder(2*i+1, depth+1);
+    positions[i] = { xi: xc.v++, depth: depth };
+    inorder(2*i+2, depth+1);
+  }
+  inorder(0, 0);
+  return positions;
+}
+
+function applyHeap(s, animate) {
+  var svg      = document.getElementById('heap-svg');
+  var emptyEl  = document.getElementById('heap-empty');
+  var badge    = document.getElementById('heap-size-badge');
+  var heap     = s.heap;
+  var size     = heap.length;
+
+  if (badge) badge.textContent = 'size: ' + size + ' / k: ' + currentK;
+
+  if (size === 0) {
+    svg.style.display = 'none';
+    if (emptyEl) emptyEl.style.display = '';
+    prevHeapSize = 0;
+    return;
+  }
+  if (emptyEl) emptyEl.style.display = 'none';
+  svg.style.display = '';
+
+  var pos   = heapLayout(size);
+  var R     = 22;
+  var ySpace = 66;
+  var xSpace = Math.max(52, Math.min(88, 380 / Math.max(1, size)));
+  var padX  = 36, padY = 30;
+
+  var maxXi = 0, maxDepth = 0;
+  for (var i = 0; i < size; i++) {
+    if (pos[i].xi    > maxXi)    maxXi    = pos[i].xi;
+    if (pos[i].depth > maxDepth) maxDepth = pos[i].depth;
+  }
+
+  var VW = padX * 2 + maxXi * xSpace + R * 2;
+  var VH = padY * 2 + maxDepth * ySpace + R * 2;
+  if (VW < 180) VW = 180;
+  if (VH < 80)  VH = 80;
+  svg.setAttribute('viewBox', '0 0 ' + VW + ' ' + VH);
+
+  var coords = {};
+  for (var i = 0; i < size; i++) {
+    coords[i] = {
+      cx: padX + pos[i].xi * xSpace + R,
+      cy: padY + pos[i].depth * ySpace + R,
+    };
+  }
+
+  // Build swapSet for fast lookup
+  var swapSet = {};
+  for (var si = 0; si < s.swapPair.length; si++) swapSet[s.swapPair[si]] = true;
+
+  var needsRebuild = (size !== prevHeapSize);
+  prevHeapSize = size;
+
+  if (needsRebuild) {
+    svg.innerHTML = '';
+
+    // edges
+    var eg = svgG('heap-edges');
+    for (var i = 0; i < size; i++) {
+      [2*i+1, 2*i+2].forEach(function(ci) {
+        if (ci >= size) return;
+        eg.appendChild(svgLine('hedge-' + i + '-' + ci, coords[i].cx, coords[i].cy, coords[ci].cx, coords[ci].cy));
+      });
+    }
+    svg.appendChild(eg);
+
+    // nodes
+    var ng = svgG('heap-nodes');
+    for (var i = 0; i < size; i++) {
+      var g = svgG('hn-g-' + i);
+      var c = nodeColor(i, swapSet);
+      g.appendChild(svgCircle('hn-c-' + i, coords[i].cx, coords[i].cy, R, c));
+      g.appendChild(svgText('hn-t-' + i, coords[i].cx, coords[i].cy, heap[i], R, c.text));
+      ng.appendChild(g);
+    }
+    svg.appendChild(ng);
+
+    if (animate) gsap.from(ng, { opacity: 0, duration: 0.25 });
+
+  } else {
+    // update values and colors in place
+    for (var i = 0; i < size; i++) {
+      var c  = nodeColor(i, swapSet);
+      var nc = document.getElementById('hn-c-' + i);
+      var nt = document.getElementById('hn-t-' + i);
+      if (!nc) continue;
+
+      if (animate) {
+        gsap.to(nc, { duration: 0.25, ease: 'power2.out', attr: { fill: c.fill, stroke: c.stroke } });
+        if (swapSet[i]) {
+          gsap.fromTo(nc, { attr: { r: R } }, { attr: { r: R * 1.35 }, duration: 0.15, yoyo: true, repeat: 1 });
+        }
+      } else {
+        nc.setAttribute('fill', c.fill);
+        nc.setAttribute('stroke', c.stroke);
+      }
+      if (nt) { nt.textContent = String(heap[i]); nt.setAttribute('fill', c.text); }
+    }
+  }
+}
+
+function nodeColor(i, swapSet) {
+  if (swapSet[i]) return (i === 0 ? C_HOT : C_SWAP);
+  if (i === 0)    return C_ROOT;
+  return C_IDLE;
+}
+
+// ─── SVG helpers ─────────────────────────────────────────────────────────────
+function svgG(id) {
+  var g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  if (id) g.id = id;
+  return g;
+}
+function svgLine(id, x1, y1, x2, y2) {
+  var l = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+  l.setAttribute('id', id);
+  l.setAttribute('x1', x1); l.setAttribute('y1', y1);
+  l.setAttribute('x2', x2); l.setAttribute('y2', y2);
+  l.setAttribute('stroke', '#2d3148');
+  l.setAttribute('stroke-width', '2');
+  l.setAttribute('stroke-linecap', 'round');
+  return l;
+}
+function svgCircle(id, cx, cy, r, c) {
+  var el = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+  el.setAttribute('id', id);
+  el.setAttribute('cx', cx); el.setAttribute('cy', cy); el.setAttribute('r', r);
+  el.setAttribute('fill', c.fill); el.setAttribute('stroke', c.stroke);
+  el.setAttribute('stroke-width', '2.5');
+  return el;
+}
+function svgText(id, cx, cy, val, r, fill) {
+  var el = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+  el.setAttribute('id', id);
+  el.setAttribute('x', cx); el.setAttribute('y', cy);
+  el.setAttribute('text-anchor', 'middle');
+  el.setAttribute('dominant-baseline', 'middle');
+  el.setAttribute('fill', fill);
+  el.setAttribute('font-size', Math.round(r * 0.78));
+  el.setAttribute('font-weight', 'bold');
+  el.setAttribute('font-family', 'Segoe UI, system-ui, sans-serif');
+  el.textContent = String(val);
+  return el;
+}
+
+// ─── Variables panel ─────────────────────────────────────────────────────────
+function applyVars(s, animate) {
+  function setVal(id, val) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    var text = (val === null || val === undefined) ? '—' : String(val);
+    if (animate && el.textContent !== text) {
+      gsap.fromTo(el, { scale: 0.8, opacity: 0.4 }, { scale: 1, opacity: 1, duration: 0.22, ease: 'back.out(1.7)' });
+    }
+    el.textContent = text;
+  }
+  setVal('vv-k',    currentK || null);
+  setVal('vv-cur',  s.inputIdx >= 0 ? currentNums[s.inputIdx] : null);
+  setVal('vv-size', s.heap.length);
+  setVal('vv-root', s.heap.length > 0 ? s.heap[0] : null);
+}
+
+// ─── Code line highlighting ───────────────────────────────────────────────────
+function setCodeLines(lines) {
+  CODE.forEach(function(e) {
+    var el = document.getElementById('cl-' + e[0]);
+    if (!el) return;
+    if (lines.indexOf(e[0]) >= 0) el.classList.add('hl');
+    else el.classList.remove('hl');
+  });
+}
+</script>
+<script>
+  if (window.self !== window.top) {
+    var bl = document.querySelector('.back-link');
+    if (bl) bl.style.display = 'none';
+  }
+</script>
+</body>
+</html>
