@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Climbing Stairs</title>
+  <link rel="stylesheet" href="../shared/style.css" />
+  <script src="../shared/gsap.min.js"></script>
+  <script src="../shared/viz.js"></script>
+  <style>
+    .viz-area { width: 100%; max-width: 92%; }
+    .main-row { display: grid; grid-template-columns: 1fr 340px; gap: 20px; align-items: start; }
+    @media (max-width: 760px) { .main-row { grid-template-columns: 1fr; } }
+
+    /* dp cells */
+    .dp-track {
+      display: flex; gap: 8px; flex-wrap: wrap;
+      padding: 20px 16px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); min-height: 100px;
+      align-items: flex-end;
+    }
+    .dp-cell-wrap {
+      display: flex; flex-direction: column; align-items: center; gap: 4px;
+      position: relative;
+    }
+    .dp-cell-box {
+      width: 58px; height: 58px;
+      display: flex; flex-direction: column; align-items: center;
+      justify-content: center; gap: 2px;
+      border: 2px solid var(--border); border-radius: 7px;
+      background: #0f0f0f;
+      transition: border-color 0.18s, background 0.18s;
+      position: relative;
+    }
+    .dp-cell-box[data-state="empty"]    { border-style: dashed; opacity: 0.45; }
+    .dp-cell-box[data-state="filled"]   { border-color: #166534; }
+    .dp-cell-box[data-state="current"]  { border-color: var(--accent); background: var(--surface-dark); }
+    .dp-cell-box[data-state="prev1"]    { border-color: #b45309; background: #1c0e00; }
+    .dp-cell-box[data-state="prev2"]    { border-color: #b91c1c; background: #1c0000; }
+    .dp-cell-box[data-state="answer"]   { border-color: #15803d; background: #052e16; }
+
+    .dp-cell-idx {
+      font-size: 0.58rem; color: var(--text-ghost);
+      font-family: monospace; position: absolute; top: 5px; left: 0; right: 0;
+      text-align: center;
+    }
+    .dp-cell-val {
+      font-size: 1.15rem; font-weight: 700; font-family: monospace;
+      color: var(--border-soft); margin-top: 10px;
+    }
+    .dp-cell-box[data-state="filled"]   .dp-cell-val { color: var(--green); }
+    .dp-cell-box[data-state="current"]  .dp-cell-val { color: var(--accent-pale); }
+    .dp-cell-box[data-state="prev1"]    .dp-cell-val { color: var(--yellow-light); }
+    .dp-cell-box[data-state="prev2"]    .dp-cell-val { color: var(--red-light); }
+    .dp-cell-box[data-state="answer"]   .dp-cell-val { color: #4ade80; }
+
+    .dp-cell-label-bot {
+      font-size: 0.6rem; color: var(--text-ghost); font-family: monospace; text-align: center;
+    }
+
+    /* arrow connector badges */
+    .arrow-badge {
+      position: absolute; bottom: -18px; left: 50%; transform: translateX(-50%);
+      font-size: 0.55rem; font-weight: 700; text-transform: uppercase;
+      padding: 1px 5px; border-radius: 3px; white-space: nowrap; pointer-events: none;
+    }
+    .arrow-badge.p1 { background: #431407; color: #fbbf24; }
+    .arrow-badge.p2 { background: #3f0000; color: #f87171; }
+
+    /* panel-box */
+    .panel-box {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 14px 16px;
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .panel-title {
+      font-size: 0.72rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim);
+    }
+
+    /* sum readout */
+    .sum-readout {
+      font-size: 0.85rem; font-family: monospace; color: var(--text-muted);
+      padding: 8px 10px;
+      background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm);
+      min-height: 28px;
+    }
+    .sum-readout strong { color: var(--text-bright); }
+    .sum-readout .val-p1 { color: #fbbf24; }
+    .sum-readout .val-p2 { color: #f87171; }
+    .sum-readout .val-ans { color: #4ade80; font-weight: 700; }
+
+    /* code */
+    .code-panel {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); overflow: hidden;
+    }
+    .code-header {
+      padding: 8px 14px; font-size: 0.72rem; font-weight: 600;
+      color: var(--text-dim); border-bottom: 1px solid var(--border); background: var(--bg);
+    }
+    .code-body { padding: 10px 0; font-size: 0.82rem; line-height: 1.8; white-space: pre; }
+    .code-line { display: flex; align-items: center; padding: 0 14px; }
+    .code-line.hl { background: var(--border-soft); border-left: 2px solid var(--accent); }
+    .ln { min-width: 24px; color: var(--text-ghost); user-select: none; font-size: 0.72rem; }
+
+    /* nav */
+    .btn-play {
+      background: #15803d; border: none; border-radius: var(--radius-sm);
+      color: #fff; cursor: pointer; font-size: 0.88rem; font-weight: 600;
+      padding: 9px 16px; transition: background 0.2s;
+    }
+    .btn-play:hover { background: #166534; }
+    .btn-play.playing { background: #c2410c; }
+    .btn-play.playing:hover { background: #9a3412; }
+    .btn-play:disabled { opacity: 0.4; cursor: not-allowed; }
+    .speed-select {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); color: var(--text);
+      font-size: 0.85rem; padding: 8px 10px; outline: none; width: 80px;
+    }
+    .nav-row { display: flex; gap: 8px; align-items: center; }
+    .kw { color: var(--purple); }
+    .fn { color: var(--blue); }
+    .bi { color: var(--orange); }
+    .op { color: var(--text); }
+    .nb { color: var(--green); }
+  </style>
+</head>
+<body class="page">
+
+<div class="page-header">
+  <a class="back-link" href="../index.html">&larr; All Algorithms</a>
+  <div class="page-title">Climbing Stairs</div>
+  <div class="page-sub">LeetCode 70 &middot; Bottom-Up DP &middot; O(n) time &middot; O(n) space</div>
+</div>
+
+<div class="controls">
+  <div class="field">
+    <label>n</label>
+    <input id="inp-n" type="number" value="8" min="1" max="15" style="width:80px" />
+  </div>
+  <button class="btn-primary" onclick="buildAndRun()">Build &amp; Run</button>
+</div>
+
+<div class="viz-area">
+  <div class="main-row">
+    <div class="left-col" style="display:flex;flex-direction:column;gap:12px">
+
+      <div class="dp-track" id="dp-track">
+        <span style="color:var(--text-dim);font-size:0.82rem">Enter n and click Build &amp; Run.</span>
+      </div>
+
+      <div class="code-panel">
+        <div class="code-header">Python</div>
+        <div class="code-body" id="code-body"></div>
+      </div>
+    </div>
+
+    <div class="right-col" style="display:flex;flex-direction:column;gap:12px">
+
+      <div style="display:flex;gap:12px">
+        <div class="panel-box" style="flex:0 0 auto">
+          <div class="nav-row">
+            <button class="btn-step" id="btn-back" disabled>&larr;</button>
+            <button class="btn-step" id="btn-next" disabled>&rarr;</button>
+            <button class="btn-play" id="btn-play" disabled>&#9654; Play</button>
+            <select class="speed-select" id="speed-select">
+              <option value="700">Slow</option>
+              <option value="300" selected>Medium</option>
+              <option value="80">Fast</option>
+            </select>
+          </div>
+        </div>
+        <div class="panel-box" style="flex:1;min-width:0">
+          <div class="panel-title" id="phase-label">&mdash;</div>
+          <div style="font-size:0.82rem;color:var(--text-muted);margin-top:2px" id="step-desc">Enter n and click Build &amp; Run.</div>
+        </div>
+      </div>
+
+      <div class="panel-box">
+        <div class="panel-title">Recurrence</div>
+        <div class="sum-readout" id="sum-readout">&mdash;</div>
+      </div>
+
+      <div class="code-panel">
+        <div class="code-header">Pseudocode</div>
+        <div class="code-body" id="pseudo-body"></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+var simSteps = [], nav;
+
+var CODE = [
+  [1,  '<span class="kw">def</span> <span class="fn">climbStairs</span><span class="op">(</span>n<span class="op">):</span>'],
+  [2,  '    dp <span class="op">=</span> <span class="op">[</span><span class="nb">0</span><span class="op">]</span> <span class="op">*</span> <span class="op">(</span>n <span class="op">+</span> <span class="nb">1</span><span class="op">)</span>'],
+  [3,  '    dp<span class="op">[</span><span class="nb">0</span><span class="op">]</span> <span class="op">=</span> <span class="nb">1</span>'],
+  [4,  '    dp<span class="op">[</span><span class="nb">1</span><span class="op">]</span> <span class="op">=</span> <span class="nb">1</span>'],
+  [0,  ''],
+  [6,  '    <span class="kw">for</span> i <span class="kw">in</span> <span class="bi">range</span><span class="op">(</span><span class="nb">2</span><span class="op">,</span> n <span class="op">+</span> <span class="nb">1</span><span class="op">):</span>'],
+  [7,  '        dp<span class="op">[</span>i<span class="op">]</span> <span class="op">=</span> dp<span class="op">[</span>i<span class="op">-</span><span class="nb">1</span><span class="op">]</span> <span class="op">+</span> dp<span class="op">[</span>i<span class="op">-</span><span class="nb">2</span><span class="op">]</span>'],
+  [0,  ''],
+  [9,  '    <span class="kw">return</span> dp<span class="op">[</span>n<span class="op">]</span>'],
+];
+
+var PSEUDO = [
+  [1,  'function climbStairs(n):'],
+  [2,  '  dp[0] = 1'],
+  [3,  '  dp[1] = 1'],
+  [0,  ''],
+  [5,  '  for i = 2 to n:'],
+  [6,  '    dp[i] = dp[i-1] + dp[i-2]'],
+  [0,  ''],
+  [8,  '  return dp[n]'],
+];
+
+window.addEventListener('DOMContentLoaded', function() {
+  buildCodePanel('code-body', CODE);
+  buildCodePanel('pseudo-body', PSEUDO);
+
+  nav = VizNav({
+    btnPrev:  document.getElementById('btn-back'),
+    btnNext:  document.getElementById('btn-next'),
+    btnPlay:  document.getElementById('btn-play'),
+    speedSel: document.getElementById('speed-select'),
+    render: function(snap, cur, total) {
+      renderSnap(snap, cur > 0);
+      var phaseEl = document.getElementById('phase-label');
+      var descEl  = document.getElementById('step-desc');
+      if (phaseEl) phaseEl.textContent = 'Step ' + (cur + 1) + ' / ' + total + '  ·  ' + snap.phase;
+      if (descEl)  descEl.textContent  = snap.desc;
+    }
+  });
+
+  buildAndRun();
+});
+
+function buildCodePanel(id, lines) {
+  var body = document.getElementById(id);
+  body.innerHTML = lines.map(function(e) {
+    var ln = e[0], html = e[1];
+    var idAttr = ln > 0 ? ' id="' + id + '-cl-' + ln + '"' : '';
+    return '<div class="code-line"' + idAttr + '><span class="ln">' + (ln || '') + '</span><span>' + html + '</span></div>';
+  }).join('');
+}
+
+function buildAndRun() {
+  var n = parseInt(document.getElementById('inp-n').value);
+  if (isNaN(n) || n < 1) n = 1;
+  if (n > 15) n = 15;
+  buildTrack(n);
+  simSteps = buildSteps(n);
+  nav.load(simSteps);
+}
+
+function buildTrack(n) {
+  var track = document.getElementById('dp-track');
+  track.innerHTML = '';
+  for (var i = 0; i <= n; i++) {
+    var wrap = document.createElement('div');
+    wrap.className = 'dp-cell-wrap';
+    wrap.id = 'dpw-' + i;
+    wrap.innerHTML =
+      '<div class="dp-cell-box" id="dpb-' + i + '" data-state="empty">' +
+        '<span class="dp-cell-idx">dp[' + i + ']</span>' +
+        '<span class="dp-cell-val" id="dpv-' + i + '">?</span>' +
+      '</div>' +
+      '<div class="dp-cell-label-bot" id="dpl-' + i + '"></div>';
+    track.appendChild(wrap);
+  }
+}
+
+// ── buildSteps ───────────────────────────────────────────────────────────────
+function buildSteps(n) {
+  var dp = new Array(n + 1).fill(null);
+  var steps = [];
+
+  function snap(i, desc, lines, phase, prev1, prev2) {
+    steps.push({
+      i:      i,
+      dp:     dp.slice(),
+      desc:   desc,
+      lines:  lines,
+      phase:  phase,
+      prev1:  prev1 !== undefined ? prev1 : -1,
+      prev2:  prev2 !== undefined ? prev2 : -1,
+    });
+  }
+
+  // step 1 — init empty array
+  snap(-1, 'Allocate dp[0..n] with n+1 slots. All cells empty.', [2], 'Init');
+
+  // step 2 — dp[0] = 1
+  dp[0] = 1;
+  snap(-1, 'dp[0] = 1 — one way to be at step 0 (do nothing).', [3], 'Init');
+
+  // step 3 — dp[1] = 1
+  dp[1] = 1;
+  snap(-1, 'dp[1] = 1 — one way to reach step 1 (take one step).', [4], 'Init');
+
+  // loop
+  for (var i = 2; i <= n; i++) {
+    // 4a — highlight sources
+    snap(i,
+      'i = ' + i + '. dp[i] = dp[' + (i-1) + '] + dp[' + (i-2) + '] = ' + dp[i-1] + ' + ' + dp[i-2] + ' = ?',
+      [6, 7], 'Compute', i-1, i-2);
+
+    // 4b — write result
+    dp[i] = dp[i-1] + dp[i-2];
+    snap(i,
+      'dp[' + i + '] = ' + dp[i-1] + ' + ' + dp[i-2] + ' = ' + dp[i] + '.',
+      [7], 'Compute', i-1, i-2);
+  }
+
+  // done
+  snap(-1, 'dp[' + n + '] = ' + dp[n] + ' — total distinct ways to climb ' + n + ' stairs.', [9], 'Done');
+
+  return steps;
+}
+
+// ── renderSnap ───────────────────────────────────────────────────────────────
+function renderSnap(snap, animate) {
+  gsap.killTweensOf('.dp-cell-box');
+  gsap.killTweensOf('.dp-cell-val');
+  gsap.killTweensOf('.sum-readout');
+
+  var n = snap.dp.length - 1;
+
+  for (var i = 0; i <= n; i++) {
+    var box  = document.getElementById('dpb-' + i);
+    var valEl = document.getElementById('dpv-' + i);
+    var lbl  = document.getElementById('dpl-' + i);
+    if (!box || !valEl) continue;
+
+    var prevText = valEl.textContent;
+    var val = snap.dp[i];
+    var text = val === null ? '?' : String(val);
+
+    var state = 'empty';
+    var isDone = snap.phase === 'Done';
+
+    if (isDone && i === n) {
+      state = 'answer';
+    } else if (i === snap.i) {
+      state = 'current';
+    } else if (i === snap.prev1) {
+      state = 'prev1';
+    } else if (i === snap.prev2) {
+      state = 'prev2';
+    } else if (val !== null) {
+      state = 'filled';
+    }
+
+    box.dataset.state = state;
+    valEl.textContent = text;
+
+    // pop-in animation on newly filled cells
+    if (animate && text !== '?' && prevText !== text) {
+      gsap.fromTo(box, { scale: 0.7, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.35, ease: 'back.out(2)' });
+    }
+
+    // pulse on prev1/prev2
+    if (animate && (state === 'prev1' || state === 'prev2')) {
+      gsap.fromTo(box, { scale: 1 }, { scale: 1.08, duration: 0.25, yoyo: true, repeat: 1 });
+    }
+
+    // label badges
+    if (lbl) {
+      if (i === snap.prev1) lbl.innerHTML = '<span style="font-size:0.58rem;color:#fbbf24">i-1</span>';
+      else if (i === snap.prev2) lbl.innerHTML = '<span style="font-size:0.58rem;color:#f87171">i-2</span>';
+      else lbl.innerHTML = '';
+    }
+  }
+
+  // sum readout
+  var readout = document.getElementById('sum-readout');
+  if (readout) {
+    var html = '&mdash;';
+    if (snap.i >= 2) {
+      var p1 = snap.dp[snap.i - 1];
+      var p2 = snap.dp[snap.i - 2];
+      var cur = snap.dp[snap.i];
+      var p1s = p1 !== null ? String(p1) : '?';
+      var p2s = p2 !== null ? String(p2) : '?';
+      html = 'dp[' + snap.i + '] = ' +
+        '<span class="val-p1">dp[' + (snap.i-1) + ']</span> + ' +
+        '<span class="val-p2">dp[' + (snap.i-2) + ']</span> = ' +
+        '<span class="val-p1">' + p1s + '</span> + ' +
+        '<span class="val-p2">' + p2s + '</span>';
+      if (cur !== null) {
+        html += ' = <span class="val-ans">' + cur + '</span>';
+      }
+    } else if (snap.phase === 'Done') {
+      var ans = snap.dp[n];
+      html = 'Answer: <span class="val-ans">dp[' + n + '] = ' + ans + '</span>';
+    }
+    readout.innerHTML = html;
+    if (animate) {
+      gsap.from(readout, { opacity: 0, y: 6, duration: 0.25 });
+    }
+  }
+
+  // code highlights
+  setCodeLines('code-body', CODE, snap.lines);
+  setCodeLines('pseudo-body', PSEUDO, snap.lines.map(function(l) {
+    // map Python line numbers to pseudocode line numbers
+    var map = { 2:2, 3:2, 4:3, 6:5, 7:6, 9:8 };
+    return map[l] || l;
+  }));
+}
+
+function setCodeLines(panelId, lines, activeLines) {
+  lines.forEach(function(e) {
+    var ln = e[0]; if (!ln) return;
+    var el = document.getElementById(panelId + '-cl-' + ln);
+    if (!el) return;
+    if (activeLines.indexOf(ln) >= 0) el.classList.add('hl');
+    else el.classList.remove('hl');
+  });
+}
+</script>
+
+<script>
+  if (window.self !== window.top) {
+    var bl = document.querySelector('.back-link');
+    if (bl) bl.style.display = 'none';
+  }
+</script>
+</body>
+</html>
