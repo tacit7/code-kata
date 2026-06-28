@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Non-Overlapping Intervals</title>
+  <link rel="stylesheet" href="../shared/style.css" />
+  <script src="../shared/gsap.min.js"></script>
+  <script src="../shared/viz.js"></script>
+  <style>
+    .viz-area { width: 100%; max-width: 90%; }
+    .main-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
+    .left-col, .right-col { display: flex; flex-direction: column; gap: 12px; }
+    @media (max-width: 700px) { .main-row { grid-template-columns: 1fr; } }
+
+    .timeline-panel {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 16px;
+      display: flex; flex-direction: column; gap: 10px;
+    }
+    .panel-title {
+      font-size: 0.72rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim);
+    }
+    #timeline-svg { width: 100%; display: block; overflow: visible; }
+
+    .panel-box {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 14px 16px;
+      display: flex; flex-direction: column; gap: 8px;
+    }
+
+    .var-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+    .var-box {
+      padding: 10px 8px; background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      display: flex; flex-direction: column; align-items: center; gap: 3px;
+    }
+    .var-box.accent-border { border-color: var(--accent); }
+    .var-box.yellow-border { border-color: var(--yellow); }
+    .var-box.red-border    { border-color: #f7768e; }
+    .var-label { font-size: 0.65rem; font-family: monospace; color: var(--text-faint); text-align: center; }
+    .var-val   { font-size: 1.1rem; font-weight: 700; color: var(--text-bright); font-family: monospace; }
+
+    .cmp-box {
+      background: var(--bg); border: 1px solid var(--border-soft);
+      border-radius: var(--radius-sm); padding: 10px 12px;
+      display: flex; flex-direction: column; gap: 6px;
+    }
+    .cmp-row { display: flex; align-items: center; gap: 8px; font-family: monospace; font-size: 0.85rem; }
+    .cmp-side { color: var(--text-dim); }
+    .cmp-op { color: var(--yellow); font-weight: 700; }
+    .cmp-badge {
+      padding: 3px 10px; border-radius: 5px; font-size: 0.8rem; font-weight: 700;
+      display: none; font-family: monospace;
+    }
+    .cmp-badge.keep   { display: inline-block; background: #1a2b14; color: #9ece6a; border: 1px solid #4d7a23; }
+    .cmp-badge.remove { display: inline-block; background: #2b1420; color: #f7768e; border: 1px solid #8b3a4a; }
+
+    .result-badge {
+      font-size: 0.82rem; font-weight: 600; padding: 5px 12px; border-radius: 6px;
+      font-family: monospace; display: none;
+    }
+    .result-badge.show { display: block; background: #1a2b14; color: #9ece6a; border: 1px solid #4d7a23; }
+
+    .code-panel {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); overflow: hidden;
+    }
+    .code-header { padding: 8px 14px; font-size: 0.72rem; font-weight: 600; color: var(--text-dim); border-bottom: 1px solid var(--border); background: var(--bg); }
+    .code-body { padding: 10px 0; font-size: 0.78rem; line-height: 1.75; white-space: pre; }
+    .code-line { display: flex; align-items: center; padding: 0 14px; }
+    .code-line.hl { background: var(--border-soft); border-left: 2px solid var(--accent); }
+    .ln { min-width: 24px; color: var(--text-ghost); user-select: none; font-size: 0.7rem; }
+
+    .btn-play {
+      background: #15803d; border: none; border-radius: var(--radius-sm);
+      color: #fff; cursor: pointer; font-size: 0.88rem; font-weight: 600;
+      padding: 9px 16px; transition: background 0.2s;
+    }
+    .btn-play:hover { background: #166534; }
+    .btn-play.playing { background: #c2410c; }
+    .btn-play.playing:hover { background: #9a3412; }
+    .btn-play:disabled { opacity: 0.4; cursor: not-allowed; }
+    .speed-select {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); color: var(--text);
+      font-size: 0.85rem; padding: 8px 10px; outline: none; width: 80px;
+    }
+    .nav-row { display: flex; gap: 8px; align-items: center; }
+
+    .preset-row { display: flex; gap: 8px; flex-wrap: wrap; }
+    .btn-preset {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); color: var(--text-dim);
+      font-size: 0.78rem; padding: 5px 10px; cursor: pointer;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .btn-preset:hover { border-color: var(--accent); color: var(--accent-pale); }
+    .btn-preset.active { border-color: var(--accent); color: var(--accent-pale); background: var(--surface-dark); }
+
+    .legend-row { display: flex; align-items: center; gap: 8px; font-size: 0.78rem; color: var(--text-muted); }
+    .legend-swatch { width: 28px; height: 14px; border-radius: 3px; flex-shrink: 0; }
+
+    .kw { color: #bb9af7; }
+    .fn { color: #7dcfff; }
+    .bi { color: #ff9e64; }
+    .op { color: #c0caf5; }
+    .nb { color: #9ece6a; }
+    .cm { color: #3b4261; }
+    .str { color: #9ece6a; }
+  </style>
+</head>
+<body class="page">
+
+<div class="page-header">
+  <a class="back-link" href="../index.html">&larr; All Algorithms</a>
+  <div class="page-title">Non-Overlapping Intervals</div>
+  <div class="page-sub">LeetCode 435 &middot; Sort by end time, greedily keep non-overlapping intervals &middot; O(n log n) time &middot; O(1) extra space</div>
+</div>
+
+<div class="controls">
+  <div class="field">
+    <label>Preset</label>
+    <div class="preset-row" id="preset-row">
+      <button class="btn-preset active" onclick="loadPreset(0,this)">Classic</button>
+      <button class="btn-preset" onclick="loadPreset(1,this)">No removals</button>
+      <button class="btn-preset" onclick="loadPreset(2,this)">Heavy overlap</button>
+    </div>
+  </div>
+  <div class="field">
+    <label>Intervals (flat pairs: s,e,s,e,...)</label>
+    <input id="inp-intervals" type="text" value="1,2,2,3,3,4,1,3" style="width:240px" />
+  </div>
+  <button class="btn-primary" onclick="buildAndRun()">Build &amp; Run</button>
+</div>
+
+<div class="viz-area">
+  <div class="main-row">
+    <div class="left-col">
+      <div class="timeline-panel">
+        <div class="panel-title">Timeline</div>
+        <svg id="timeline-svg" viewBox="0 0 700 100" preserveAspectRatio="xMidYMid meet">
+          <text x="350" y="55" text-anchor="middle" fill="#3b4261" font-size="13" font-family="monospace">Run simulation to see timeline</text>
+        </svg>
+      </div>
+      <div class="code-panel">
+        <div class="code-header">Python</div>
+        <div class="code-body" id="code-body"></div>
+      </div>
+    </div>
+
+    <div class="right-col">
+      <div style="display:flex;gap:12px">
+        <div class="panel-box" style="flex:0 0 auto">
+          <div class="nav-row">
+            <button class="btn-step" id="btn-prev" disabled>&larr;</button>
+            <button class="btn-step" id="btn-next" disabled>&rarr;</button>
+            <button class="btn-play" id="btn-play" disabled>&#9654; Play</button>
+            <select class="speed-select" id="speed-sel">
+              <option value="900">Slow</option>
+              <option value="450" selected>Medium</option>
+              <option value="150">Fast</option>
+            </select>
+          </div>
+        </div>
+        <div class="panel-box" style="flex:1;min-width:0">
+          <div class="panel-title" id="phase-label">&mdash;</div>
+          <div style="font-size:0.82rem;color:var(--text-muted);margin-top:2px" id="step-desc">Choose a preset and click Build &amp; Run.</div>
+          <div class="result-badge" id="result-badge"></div>
+        </div>
+      </div>
+
+      <div class="panel-box">
+        <div class="panel-title">Variables</div>
+        <div class="var-grid">
+          <div class="var-box yellow-border">
+            <div class="var-label">current interval</div>
+            <div class="var-val" id="vv-curr">&mdash;</div>
+          </div>
+          <div class="var-box accent-border">
+            <div class="var-label">last_end</div>
+            <div class="var-val" id="vv-last-end">&mdash;</div>
+          </div>
+          <div class="var-box red-border">
+            <div class="var-label">removals</div>
+            <div class="var-val" id="vv-removals">&mdash;</div>
+          </div>
+        </div>
+        <div class="cmp-box">
+          <div class="panel-title" style="margin-bottom:2px">Overlap Check</div>
+          <div class="cmp-row">
+            <span class="cmp-side" id="cmp-lhs">current.start</span>
+            <span class="cmp-op">&ge;</span>
+            <span class="cmp-side" id="cmp-rhs">last_end</span>
+            <span class="cmp-badge" id="cmp-badge"></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel-box">
+        <div class="panel-title">Legend</div>
+        <div style="display:flex;flex-direction:column;gap:7px">
+          <div class="legend-row">
+            <div class="legend-swatch" style="background:#2a2007;border:1.5px solid #e0af68"></div>
+            <span>Current interval (being examined)</span>
+          </div>
+          <div class="legend-row">
+            <div class="legend-swatch" style="background:#1a2b14;border:1.5px solid #4d7a23"></div>
+            <span>Kept — no overlap with last_end</span>
+          </div>
+          <div class="legend-row">
+            <div class="legend-swatch" style="background:#2b1420;border:1.5px solid #8b3a4a"></div>
+            <span>Removed — overlaps, counted</span>
+          </div>
+          <div class="legend-row">
+            <div class="legend-swatch" style="background:#1a1b26;border:1.5px solid #414868"></div>
+            <span>Pending / not yet processed</span>
+          </div>
+          <div class="legend-row">
+            <div class="legend-swatch" style="background:#0d1a35;border:1.5px solid #7aa2f7"></div>
+            <span>last_end pointer (vertical line)</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+var PRESETS = [
+  { label: 'Classic',      raw: '1,2,2,3,3,4,1,3' },
+  { label: 'No removals',  raw: '1,2,2,3,3,4,4,5' },
+  { label: 'Heavy overlap', raw: '1,4,1,3,2,5,3,6' },
+];
+
+var simSteps = [], nav;
+var activePresetIdx = 0;
+
+// ── Code panel ──────────────────────────────────────────────────────────────
+var CODE = [
+  [1,  '<span class="kw">def</span> <span class="fn">eraseOverlapIntervals</span><span class="op">(</span>intervals<span class="op">):</span>'],
+  [2,  '    intervals<span class="op">.</span><span class="bi">sort</span><span class="op">(</span><span class="kw">key</span><span class="op">=</span><span class="kw">lambda</span> x<span class="op">:</span> x<span class="op">[</span><span class="nb">1</span><span class="op">])</span>  <span class="cm"># sort by end</span>'],
+  [3,  '    removals <span class="op">=</span> <span class="nb">0</span>'],
+  [4,  '    last_end <span class="op">=</span> intervals<span class="op">[</span><span class="nb">0</span><span class="op">][</span><span class="nb">1</span><span class="op">]</span>'],
+  [5,  '    <span class="kw">for</span> i <span class="kw">in</span> <span class="bi">range</span><span class="op">(</span><span class="nb">1</span><span class="op">,</span> <span class="bi">len</span><span class="op">(</span>intervals<span class="op">)):</span>'],
+  [6,  '        <span class="kw">if</span> intervals<span class="op">[</span>i<span class="op">][</span><span class="nb">0</span><span class="op">]</span> <span class="op">&gt;=</span> last_end<span class="op">:</span>'],
+  [7,  '            last_end <span class="op">=</span> intervals<span class="op">[</span>i<span class="op">][</span><span class="nb">1</span><span class="op">]</span>'],
+  [8,  '        <span class="kw">else</span><span class="op">:</span>'],
+  [9,  '            removals <span class="op">+=</span> <span class="nb">1</span>'],
+  [10, '    <span class="kw">return</span> removals'],
+];
+
+window.addEventListener('DOMContentLoaded', function() {
+  buildCodePanel();
+  loadPreset(0, document.querySelector('.btn-preset'));
+
+  nav = VizNav({
+    btnPrev: document.getElementById('btn-prev'),
+    btnNext: document.getElementById('btn-next'),
+    btnPlay: document.getElementById('btn-play'),
+    speedSel: document.getElementById('speed-sel'),
+    render: function(snap, cur, total) {
+      renderStep(snap, cur > 0);
+      var phaseEl = document.getElementById('phase-label');
+      var descEl  = document.getElementById('step-desc');
+      if (phaseEl) phaseEl.textContent = 'Step ' + (cur + 1) + ' / ' + total + '  ·  ' + snap.phase;
+      if (descEl) {
+        gsap.fromTo(descEl, { opacity: 0 }, { opacity: 1, duration: 0.15 });
+        descEl.textContent = snap.desc;
+      }
+      var badge = document.getElementById('result-badge');
+      if (badge) {
+        badge.className = 'result-badge';
+        badge.textContent = '';
+        if (snap.phase === 'Done') {
+          badge.className = 'result-badge show';
+          badge.textContent = 'Removals: ' + snap.removals;
+        }
+      }
+    }
+  });
+});
+
+function buildCodePanel() {
+  var body = document.getElementById('code-body');
+  body.innerHTML = CODE.map(function(e) {
+    return '<div class="code-line" id="cl-' + e[0] + '"><span class="ln">' + e[0] + '</span><span>' + e[1] + '</span></div>';
+  }).join('');
+}
+
+function loadPreset(idx, btn) {
+  activePresetIdx = idx;
+  document.querySelectorAll('.btn-preset').forEach(function(b) { b.classList.remove('active'); });
+  if (btn) btn.classList.add('active');
+  document.getElementById('inp-intervals').value = PRESETS[idx].raw;
+}
+
+function parseIntervals(raw) {
+  var nums = raw.split(',').map(function(s) { return parseInt(s.trim(), 10); }).filter(function(n) { return !isNaN(n); });
+  var result = [];
+  for (var i = 0; i + 1 < nums.length; i += 2) {
+    if (nums[i] <= nums[i + 1]) result.push([nums[i], nums[i + 1]]);
+  }
+  return result;
+}
+
+function buildAndRun() {
+  var raw = document.getElementById('inp-intervals').value;
+  var intervals = parseIntervals(raw);
+  if (intervals.length < 2) {
+    alert('Need at least 2 intervals.');
+    return;
+  }
+  simSteps = simulate(intervals);
+  nav.load(simSteps);
+}
+
+// ── Simulation ───────────────────────────────────────────────────────────────
+function fmtIv(iv) { return '[' + iv[0] + ',' + iv[1] + ']'; }
+
+function simulate(intervals) {
+  var steps = [];
+
+  // keepStatus: array parallel to sorted — 'keep', 'remove', or null (pending)
+  function snap(phase, desc, lines, opts) {
+    opts = opts || {};
+    steps.push({
+      phase: phase,
+      desc: desc,
+      lines: lines,
+      sorted:     (opts.sorted     || intervals).slice(),
+      isSorted:   !!opts.isSorted,
+      currentIdx: opts.currentIdx !== undefined ? opts.currentIdx : -1,
+      keepStatus: (opts.keepStatus || []).slice(),
+      lastEnd:    opts.lastEnd !== undefined ? opts.lastEnd : null,
+      removals:   opts.removals !== undefined ? opts.removals : 0,
+      decision:   opts.decision !== undefined ? opts.decision : null,  // 'keep', 'remove', or null
+    });
+  }
+
+  // Step 1: Input
+  snap('Input', 'Input: ' + intervals.length + ' intervals. Goal: minimum removals so none overlap.', [1], {
+    sorted: intervals.slice(),
+    isSorted: false,
+    keepStatus: new Array(intervals.length).fill(null),
+    removals: 0,
+  });
+
+  // Step 2: Sort by end time
+  var sorted = intervals.slice().sort(function(a, b) { return a[1] - b[1]; });
+  snap('Sort', 'Sort by end time: ' + sorted.map(fmtIv).join(' → ') + '. Sorting by end leaves maximum room for future intervals.', [2], {
+    sorted: sorted.slice(),
+    isSorted: true,
+    keepStatus: new Array(sorted.length).fill(null),
+    removals: 0,
+  });
+
+  // Step 3: Init — keep first interval
+  var removals = 0;
+  var lastEnd = sorted[0][1];
+  var keepStatus = new Array(sorted.length).fill(null);
+  keepStatus[0] = 'keep';
+  snap('Init', 'Keep first interval ' + fmtIv(sorted[0]) + '. Set last_end = ' + lastEnd + '.', [3, 4], {
+    sorted: sorted,
+    isSorted: true,
+    currentIdx: 0,
+    keepStatus: keepStatus.slice(),
+    lastEnd: lastEnd,
+    removals: 0,
+  });
+
+  // Step 4: Process remaining
+  for (var i = 1; i < sorted.length; i++) {
+    var cur = sorted[i];
+
+    // Compare step
+    snap('Compare', 'Examine ' + fmtIv(cur) + '. Is ' + cur[0] + ' ≥ last_end (' + lastEnd + ')?', [5, 6], {
+      sorted: sorted,
+      isSorted: true,
+      currentIdx: i,
+      keepStatus: keepStatus.slice(),
+      lastEnd: lastEnd,
+      removals: removals,
+      decision: null,
+    });
+
+    if (cur[0] >= lastEnd) {
+      // Keep: no overlap
+      keepStatus[i] = 'keep';
+      var oldEnd = lastEnd;
+      lastEnd = cur[1];
+      snap('Keep', cur[0] + ' ≥ ' + oldEnd + ' → no overlap. Keep ' + fmtIv(cur) + ', update last_end = ' + lastEnd + '.', [6, 7], {
+        sorted: sorted,
+        isSorted: true,
+        currentIdx: i,
+        keepStatus: keepStatus.slice(),
+        lastEnd: lastEnd,
+        removals: removals,
+        decision: 'keep',
+      });
+    } else {
+      // Remove: overlaps — discard current (it has larger/equal end since sorted)
+      keepStatus[i] = 'remove';
+      removals++;
+      snap('Remove', cur[0] + ' < ' + lastEnd + ' → overlap! Remove ' + fmtIv(cur) + '. removals = ' + removals + '.', [8, 9], {
+        sorted: sorted,
+        isSorted: true,
+        currentIdx: i,
+        keepStatus: keepStatus.slice(),
+        lastEnd: lastEnd,
+        removals: removals,
+        decision: 'remove',
+      });
+    }
+  }
+
+  // Done
+  snap('Done', 'All intervals processed. Minimum removals = ' + removals + '. Kept ' + (sorted.length - removals) + ' intervals.', [10], {
+    sorted: sorted,
+    isSorted: true,
+    currentIdx: -1,
+    keepStatus: keepStatus.slice(),
+    lastEnd: lastEnd,
+    removals: removals,
+    decision: null,
+  });
+
+  return steps;
+}
+
+// ── Render ───────────────────────────────────────────────────────────────────
+function renderStep(snap, animate) {
+  renderSVG(snap, animate);
+  renderVars(snap, animate);
+  renderCode(snap.lines);
+}
+
+// Color constants
+var C = {
+  pending:  { fill: '#1a1b26', stroke: '#414868', text: '#565f89' },
+  current:  { fill: '#2a2007', stroke: '#e0af68', text: '#e0af68' },
+  keep:     { fill: '#1a2b14', stroke: '#4d7a23', text: '#9ece6a' },
+  remove:   { fill: '#2b1420', stroke: '#8b3a4a', text: '#f7768e' },
+  axis:     '#414868',
+  axisText: '#565f89',
+  label:    '#3b4261',
+  divider:  '#292e42',
+  lastEnd:  '#7aa2f7',
+};
+
+function renderSVG(snap, animate) {
+  var svg = document.getElementById('timeline-svg');
+  if (!snap.sorted || snap.sorted.length === 0) return;
+
+  var n = snap.sorted.length;
+  var W = 700;
+  var PAD_L = 58;
+  var PAD_R = 24;
+  var CW = W - PAD_L - PAD_R;
+  var BAR_H = 20;
+  var ROW_H = 28;
+
+  // Compute value range
+  var allVals = [];
+  snap.sorted.forEach(function(iv) { allVals.push(iv[0], iv[1]); });
+  var minV = Math.min.apply(null, allVals);
+  var maxV = Math.max.apply(null, allVals);
+  var span = maxV - minV || 1;
+  var vPad = span * 0.08;
+  var vMin = minV - vPad;
+  var vMax = maxV + vPad;
+
+  function xS(v) { return PAD_L + (v - vMin) / (vMax - vMin) * CW; }
+
+  // Layout
+  var AXIS_Y   = 22;
+  var INPUT_Y0 = 42;
+  var TOTAL_H  = INPUT_Y0 + n * ROW_H + 20;
+
+  svg.setAttribute('viewBox', '0 0 ' + W + ' ' + TOTAL_H);
+
+  var parts = [];
+
+  // ── Axis ──
+  var rawStep = span / 5;
+  var step = Math.max(1, Math.round(rawStep));
+  var tickStart = Math.ceil(minV / step) * step;
+  parts.push('<line x1="' + PAD_L + '" y1="' + AXIS_Y + '" x2="' + (W - PAD_R) + '" y2="' + AXIS_Y + '" stroke="' + C.axis + '" stroke-width="1"/>');
+  for (var tv = tickStart; tv <= maxV; tv += step) {
+    var tx = xS(tv);
+    parts.push('<line x1="' + tx + '" y1="' + (AXIS_Y - 4) + '" x2="' + tx + '" y2="' + (AXIS_Y + 4) + '" stroke="' + C.axis + '" stroke-width="1"/>');
+    parts.push('<text x="' + tx + '" y="' + (AXIS_Y + 16) + '" text-anchor="middle" fill="' + C.axisText + '" font-size="10" font-family="monospace">' + tv + '</text>');
+  }
+
+  // ── Section label ──
+  parts.push('<text x="' + (PAD_L - 4) + '" y="' + (INPUT_Y0 - 6) + '" text-anchor="end" fill="' + C.label + '" font-size="10" font-weight="600" letter-spacing="0.05em">SORTED</text>');
+
+  // ── Interval rows ──
+  snap.sorted.forEach(function(iv, idx) {
+    var barY = INPUT_Y0 + idx * ROW_H;
+    var barCy = barY + BAR_H / 2;
+    var x1 = xS(iv[0]);
+    var x2 = xS(iv[1]);
+    var bw = Math.max(x2 - x1, 2);
+
+    var status = snap.keepStatus[idx] || null;
+    var style;
+    if (idx === snap.currentIdx) {
+      style = C.current;
+    } else if (status === 'keep') {
+      style = C.keep;
+    } else if (status === 'remove') {
+      style = C.remove;
+    } else {
+      style = C.pending;
+    }
+
+    // Row label on left
+    parts.push('<text x="' + (PAD_L - 5) + '" y="' + (barCy + 4) + '" text-anchor="end" fill="' + style.text + '" font-size="10" font-family="monospace">' + fmtIv(iv) + '</text>');
+
+    // Bar
+    parts.push('<rect x="' + x1 + '" y="' + barY + '" width="' + bw + '" height="' + BAR_H + '" rx="4" fill="' + style.fill + '" stroke="' + style.stroke + '" stroke-width="1.5"/>');
+
+    // Label inside bar
+    if (bw > 30) {
+      parts.push('<text x="' + (x1 + bw / 2) + '" y="' + (barCy + 4) + '" text-anchor="middle" fill="' + style.text + '" font-size="9.5" font-family="monospace" font-weight="600">' + fmtIv(iv) + '</text>');
+    }
+
+    // Remove strike-through
+    if (status === 'remove') {
+      parts.push('<line x1="' + x1 + '" y1="' + barCy + '" x2="' + (x1 + bw) + '" y2="' + barCy + '" stroke="#f7768e" stroke-width="2" opacity="0.6"/>');
+    }
+  });
+
+  // ── last_end vertical line ──
+  if (snap.lastEnd !== null) {
+    var lex = xS(snap.lastEnd);
+    var lineTop = INPUT_Y0 - 4;
+    var lineBot = INPUT_Y0 + n * ROW_H + 4;
+    parts.push('<line x1="' + lex + '" y1="' + lineTop + '" x2="' + lex + '" y2="' + lineBot + '" stroke="' + C.lastEnd + '" stroke-width="2" stroke-dasharray="5,3" opacity="0.8"/>');
+    parts.push('<text x="' + lex + '" y="' + (lineBot + 12) + '" text-anchor="middle" fill="' + C.lastEnd + '" font-size="9.5" font-family="monospace" font-weight="700">last_end=' + snap.lastEnd + '</text>');
+    // Triangle pointer at top
+    var tx = lex;
+    var ty = lineTop;
+    parts.push('<polygon points="' + tx + ',' + ty + ' ' + (tx - 5) + ',' + (ty - 8) + ' ' + (tx + 5) + ',' + (ty - 8) + '" fill="' + C.lastEnd + '" opacity="0.8"/>');
+  }
+
+  svg.innerHTML = parts.join('');
+}
+
+function renderVars(snap, animate) {
+  function setVal(id, val) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    var text = (val === null || val === undefined) ? '—' : String(val);
+    if (animate && el.textContent !== text) {
+      gsap.fromTo(el, { scale: 0.85, opacity: 0.4 }, { scale: 1, opacity: 1, duration: 0.2, ease: 'back.out(1.7)' });
+    }
+    el.textContent = text;
+  }
+
+  var cur = snap.currentIdx >= 0 ? snap.sorted[snap.currentIdx] : null;
+  setVal('vv-curr', cur ? fmtIv(cur) : null);
+  setVal('vv-last-end', snap.lastEnd !== null ? snap.lastEnd : null);
+  setVal('vv-removals', snap.removals !== undefined ? snap.removals : null);
+
+  // Comparison zone
+  var lhsEl   = document.getElementById('cmp-lhs');
+  var rhsEl   = document.getElementById('cmp-rhs');
+  var badgeEl = document.getElementById('cmp-badge');
+
+  if (cur && snap.lastEnd !== null) {
+    lhsEl.textContent = cur[0];
+    rhsEl.textContent = snap.lastEnd;
+    badgeEl.className = 'cmp-badge';
+    if (snap.decision === 'keep') {
+      badgeEl.className = 'cmp-badge keep';
+      badgeEl.textContent = 'no overlap → keep';
+    } else if (snap.decision === 'remove') {
+      badgeEl.className = 'cmp-badge remove';
+      badgeEl.textContent = 'overlap → remove';
+    } else {
+      badgeEl.textContent = '';
+    }
+  } else {
+    lhsEl.textContent = 'current.start';
+    rhsEl.textContent = 'last_end';
+    badgeEl.className = 'cmp-badge';
+    badgeEl.textContent = '';
+  }
+}
+
+function renderCode(lines) {
+  CODE.forEach(function(e) {
+    var el = document.getElementById('cl-' + e[0]);
+    if (!el) return;
+    if (lines.indexOf(e[0]) >= 0) el.classList.add('hl');
+    else el.classList.remove('hl');
+  });
+}
+</script>
+<script>
+  if (window.self !== window.top) {
+    var bl = document.querySelector('.back-link');
+    if (bl) bl.style.display = 'none';
+  }
+</script>
+</body>
+</html>
