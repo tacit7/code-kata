@@ -6,6 +6,7 @@
   <title>BFS — Breadth-First Search</title>
   <link rel="stylesheet" href="../shared/style.css" />
   <script src="../shared/gsap.min.js"></script>
+  <script src="../shared/viz.js"></script>
   <style>
     .viz-area {
       width: 100%; max-width: 90%;
@@ -208,8 +209,14 @@
 </div>
 
 <div class="step-nav">
-  <button class="btn-step" id="btn-back" onclick="stepBack()" disabled>← Back</button>
-  <button class="btn-step" id="btn-next" onclick="stepNext()" disabled>Next →</button>
+  <button class="btn-step" id="btn-back" disabled>← Back</button>
+  <button class="btn-step" id="btn-next" disabled>Next →</button>
+  <button id="btn-play" style="background:#15803d;color:#fff;border:none;border-radius:4px;padding:6px 14px;font-weight:600;cursor:pointer">&#9654; Play</button>
+  <select id="speed-select" style="background:var(--bg);border:1px solid var(--border);color:var(--text);border-radius:4px;padding:6px 8px;font-size:0.85rem">
+    <option value="700">Slow</option>
+    <option value="350" selected>Medium</option>
+    <option value="120">Fast</option>
+  </select>
 </div>
 
 <script>
@@ -259,7 +266,6 @@ const EDGE_ACTIVE  = 'var(--orange)';
 // ─── Global state ─────────────────────────────────────────────────────────────
 let nodeMap = {};
 let steps   = [];
-let cursor  = 0;
 
 // ─── Tree construction ────────────────────────────────────────────────────────
 function buildTree(depth) {
@@ -407,37 +413,8 @@ function build() {
   buildCodePanel();
   const root = buildTree(depth);
   buildSVG(root, depth);
-  steps  = simulate(root);
-  cursor = 0;
-  applyStep(steps[0], false);
-  updateButtons();
-}
-
-// ─── Navigation ───────────────────────────────────────────────────────────────
-function stepNext() {
-  if (cursor >= steps.length - 1) return;
-  const from = steps[cursor]; cursor++;
-  transition(from, steps[cursor], true);
-  updateText(); updateButtons();
-}
-
-function stepBack() {
-  if (cursor <= 0) return;
-  const from = steps[cursor]; cursor--;
-  transition(from, steps[cursor], false);
-  updateText(); updateButtons();
-}
-
-function updateButtons() {
-  document.getElementById('btn-back').disabled = cursor <= 0;
-  document.getElementById('btn-next').disabled = cursor >= steps.length - 1;
-}
-
-function updateText() {
-  const s = steps[cursor];
-  document.getElementById('phase-label').textContent =
-    `Step ${cursor + 1} / ${steps.length}  ·  ${s.phase}`;
-  document.getElementById('step-desc').textContent = s.desc;
+  steps = simulate(root);
+  nav.load(steps);
 }
 
 // ─── Apply step (no animation) ────────────────────────────────────────────────
@@ -448,26 +425,6 @@ function applyStep(s, animate) {
   renderQueue(s.queue, [], true, false);
   renderVisited(s.visitedOrder, [], false);
   setCodeLines([], s.lines, false);
-  updateText();
-}
-
-// ─── Transition ───────────────────────────────────────────────────────────────
-function transition(from, to, forward) {
-  const DUR = 0.3;
-
-  Object.keys(to.stateMap).forEach(id => {
-    if (from.stateMap[id] !== to.stateMap[id])
-      setNodeColor(+id, to.stateMap[id], true, DUR);
-  });
-
-  resetEdges(true, DUR * 0.7);
-  if (to.edge) setEdge(to.edge, true, DUR * 0.7);
-
-  if (forward) renderQueue(to.queue, from.queue, false, true);
-  else         renderQueue(to.queue, from.queue, true,  false);
-
-  renderVisited(to.visitedOrder, from.visitedOrder, true);
-  setCodeLines(from.lines, to.lines, true);
 }
 
 // ─── Code line highlighting ───────────────────────────────────────────────────
@@ -602,6 +559,20 @@ function renderVisited(newV, oldV, animate) {
 }
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
+var nav = VizNav({
+  btnPrev: document.getElementById('btn-back'),
+  btnNext: document.getElementById('btn-next'),
+  btnPlay: document.getElementById('btn-play'),
+  speedSel: document.getElementById('speed-select'),
+  render: function(snap, cur, total) {
+    applyStep(snap, cur > 0);
+    var el = document.getElementById('phase-label') || document.getElementById('step-label');
+    if (el) el.textContent = 'Step ' + (cur + 1) + ' / ' + total + '  ·  ' + snap.phase;
+    var descEl = document.getElementById('step-desc');
+    if (descEl) descEl.textContent = snap.desc;
+  }
+});
+
 build();
 </script>
   <script>
