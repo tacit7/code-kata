@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Jump Game</title>
+  <link rel="stylesheet" href="../shared/style.css" />
+  <script src="../shared/gsap.min.js"></script>
+  <script src="../shared/viz.js"></script>
+  <style>
+    .viz-area { width: 100%; max-width: 90%; }
+    .main-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
+    .left-col, .right-col { display: flex; flex-direction: column; gap: 12px; }
+    @media (max-width: 700px) { .main-row { grid-template-columns: 1fr; } }
+
+    .array-section {
+      padding: 16px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      display: flex; flex-direction: column; gap: 4px;
+      min-height: 100px;
+    }
+    .arr-row { display: flex; gap: 6px; flex-wrap: nowrap; }
+    .arr-cell {
+      width: 48px; height: 48px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      border: 2px solid var(--border-soft); border-radius: 5px;
+      background: #0f0f0f;
+      font-size: 0.92rem; font-weight: 700; font-family: monospace;
+      color: var(--text-ghost);
+      position: relative;
+      transition: background 0.18s, border-color 0.18s, color 0.18s;
+    }
+    .arr-cell[data-state="reached"]      { color: var(--text-dim); border-color: #166534; background: #052e16; }
+    .arr-cell[data-state="current"]      { color: var(--accent-pale); border-color: var(--accent); background: var(--surface-dark); }
+    .arr-cell[data-state="unreachable"]  { color: #fecaca; border-color: #b91c1c; background: #450a0a; }
+    .arr-cell[data-state="goal"]         { color: #bbf7d0; border-color: #15803d; background: #14532d; }
+
+    .reach-row { display: flex; gap: 6px; }
+    .reach-cell { width: 48px; height: 6px; flex-shrink: 0; border-radius: 3px; background: transparent; }
+    .reach-cell.lit { background: #15803d; }
+
+    .arr-indices { display: flex; gap: 6px; }
+    .arr-idx {
+      width: 48px; flex-shrink: 0;
+      text-align: center; font-size: 0.6rem;
+      color: var(--text-ghost); font-family: monospace;
+    }
+
+    .bar-legend { display: flex; gap: 16px; margin-top: 2px; }
+    .legend-item { display: flex; align-items: center; gap: 5px; font-size: 0.68rem; color: var(--text-faint); }
+    .legend-dot { width: 10px; height: 10px; border-radius: 2px; border: 1px solid var(--border-soft); }
+
+    .panel-box {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 14px 16px;
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .panel-title {
+      font-size: 0.72rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim);
+    }
+
+    .var-main { display: flex; gap: 10px; }
+    .var-box {
+      flex: 1; padding: 10px 8px;
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      display: flex; flex-direction: column; align-items: center; gap: 3px;
+    }
+    .var-box.reach-accent { border-color: #166534; }
+    .var-label  { font-size: 0.65rem; font-family: monospace; color: var(--text-faint); }
+    .var-val    { font-size: 1.4rem; font-weight: 700; color: var(--text-bright); }
+
+    .var-sub { display: flex; gap: 8px; }
+    .var-box-sm {
+      flex: 1; padding: 6px 4px;
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      display: flex; flex-direction: column; align-items: center; gap: 2px;
+    }
+    .var-label-sm { font-size: 0.6rem; font-family: monospace; color: var(--text-ghost); text-align: center; }
+    .var-val-sm   { font-size: 0.95rem; font-weight: 700; color: var(--text-muted); }
+
+    .result-card {
+      padding: 10px 12px;
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-size: 0.85rem; font-family: monospace; color: var(--text-muted);
+    }
+    .result-card.success { border-color: #15803d; background: #052e16; color: #bbf7d0; }
+    .result-card.fail    { border-color: #b91c1c; background: #450a0a; color: #fecaca; }
+    .result-card strong { color: var(--text-bright); }
+
+    .code-panel {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); overflow: hidden;
+    }
+    .code-header {
+      padding: 8px 14px; font-size: 0.72rem; font-weight: 600;
+      color: var(--text-dim); border-bottom: 1px solid var(--border); background: var(--bg);
+    }
+    .code-body { padding: 10px 0; font-size: 0.78rem; line-height: 1.75; flex: 1; white-space: pre; }
+    .code-line { display: flex; align-items: center; padding: 0 14px; }
+    .code-line.hl { background: var(--border-soft); border-left: 2px solid var(--accent); }
+    .ln { min-width: 24px; color: var(--text-ghost); user-select: none; font-size: 0.7rem; }
+
+    .btn-play {
+      background: #15803d; border: none; border-radius: var(--radius-sm);
+      color: #fff; cursor: pointer; font-size: 0.88rem; font-weight: 600;
+      padding: 9px 16px; transition: background 0.2s;
+    }
+    .btn-play:hover { background: #166534; }
+    .btn-play.playing { background: #c2410c; }
+    .btn-play.playing:hover { background: #9a3412; }
+    .btn-play:disabled { opacity: 0.4; cursor: not-allowed; }
+    .speed-select {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); color: var(--text);
+      font-size: 0.85rem; padding: 8px 10px; outline: none; width: 80px;
+    }
+    .nav-row { display: flex; gap: 8px; align-items: center; }
+    .kw { color: var(--purple); }
+    .fn { color: var(--blue); }
+    .bi { color: var(--orange); }
+    .op { color: var(--text); }
+    .nb { color: var(--green); }
+  </style>
+</head>
+<body class="page">
+
+<div class="page-header">
+  <a class="back-link" href="../index.html">&larr; All Algorithms</a>
+  <div class="page-title">Jump Game</div>
+  <div class="page-sub">LeetCode 55 &middot; Greedy max-reach &middot; O(n) time &middot; O(1) space</div>
+</div>
+
+<div class="controls">
+  <div class="field">
+    <label>nums</label>
+    <input id="inp-nums" type="text" value="2, 3, 1, 1, 4" style="width:260px" />
+  </div>
+  <button class="btn-primary" onclick="buildAndRun()">Build &amp; Run</button>
+  <button class="btn-primary" onclick="loadExample('2,3,1,1,4')" style="background:var(--surface)">Reachable</button>
+  <button class="btn-primary" onclick="loadExample('3,2,1,0,4')" style="background:var(--surface)">Stuck</button>
+  <button class="btn-primary" onclick="loadExample('2,0,0')" style="background:var(--surface)">Edge</button>
+</div>
+
+<div class="viz-area">
+  <div class="main-row">
+    <div class="left-col">
+      <div class="array-section" id="array-section">
+        <span style="color:var(--text-dim);font-size:0.82rem">Enter nums and click Build &amp; Run.</span>
+      </div>
+      <div class="code-panel">
+        <div class="code-header">Python</div>
+        <div class="code-body" id="code-body"></div>
+      </div>
+    </div>
+
+    <div class="right-col">
+      <div style="display:flex;gap:12px">
+        <div class="panel-box" style="flex:0 0 auto">
+          <div class="nav-row">
+            <button class="btn-step" id="btn-back" disabled>&larr;</button>
+            <button class="btn-step" id="btn-next" disabled>&rarr;</button>
+            <button class="btn-play" id="btn-play" disabled>&#9654; Play</button>
+            <select class="speed-select" id="speed-select">
+              <option value="700">Slow</option>
+              <option value="350" selected>Medium</option>
+              <option value="120">Fast</option>
+            </select>
+          </div>
+        </div>
+        <div class="panel-box" style="flex:1;min-width:0">
+          <div class="panel-title" id="phase-label">&mdash;</div>
+          <div style="font-size:0.82rem;color:var(--text-muted);margin-top:2px" id="step-desc">Enter nums and click Build &amp; Run.</div>
+        </div>
+      </div>
+
+      <div class="panel-box">
+        <div class="panel-title">Variables</div>
+        <div class="var-main">
+          <div class="var-box">
+            <div class="var-label">i</div>
+            <div class="var-val" id="vv-i">&mdash;</div>
+          </div>
+          <div class="var-box reach-accent">
+            <div class="var-label">max_reach</div>
+            <div class="var-val" id="vv-mr">&mdash;</div>
+          </div>
+        </div>
+        <div class="var-sub">
+          <div class="var-box-sm">
+            <div class="var-label-sm">nums[i]</div>
+            <div class="var-val-sm" id="vv-ni">&mdash;</div>
+          </div>
+          <div class="var-box-sm">
+            <div class="var-label-sm">i + nums[i]</div>
+            <div class="var-val-sm" id="vv-reach">&mdash;</div>
+          </div>
+          <div class="var-box-sm">
+            <div class="var-label-sm">goal (n-1)</div>
+            <div class="var-val-sm" id="vv-goal">&mdash;</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel-box">
+        <div class="panel-title">Result</div>
+        <div class="result-card" id="result-card">&mdash;</div>
+        <div class="bar-legend">
+          <div class="legend-item"><div class="legend-dot" style="background:#052e16;border-color:#166534"></div>reached</div>
+          <div class="legend-item"><div class="legend-dot" style="background:var(--surface-dark);border-color:var(--accent)"></div>current i</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#450a0a;border-color:#b91c1c"></div>unreachable</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#14532d;border-color:#15803d"></div>goal</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+var simSteps = [], nav;
+var numLen = 0;
+
+var CODE = [
+  [1,  '<span class="kw">def</span> <span class="fn">can_jump</span><span class="op">(</span>nums<span class="op">):</span>'],
+  [2,  '    max_reach <span class="op">=</span> <span class="nb">0</span>'],
+  [3,  '    n <span class="op">=</span> <span class="bi">len</span><span class="op">(</span>nums<span class="op">)</span>'],
+  [0,  ''],
+  [5,  '    <span class="kw">for</span> i <span class="kw">in</span> <span class="bi">range</span><span class="op">(</span>n<span class="op">):</span>'],
+  [6,  '        <span class="kw">if</span> i <span class="op">&gt;</span> max_reach<span class="op">:</span>'],
+  [7,  '            <span class="kw">return</span> <span class="kw">False</span>'],
+  [8,  '        max_reach <span class="op">=</span> <span class="bi">max</span><span class="op">(</span>max_reach<span class="op">,</span> i <span class="op">+</span> nums<span class="op">[</span>i<span class="op">])</span>'],
+  [9,  '        <span class="kw">if</span> max_reach <span class="op">&gt;=</span> n <span class="op">-</span> <span class="nb">1</span><span class="op">:</span>'],
+  [10, '            <span class="kw">return</span> <span class="kw">True</span>'],
+  [0,  ''],
+  [12, '    <span class="kw">return</span> <span class="kw">True</span>'],
+];
+
+window.addEventListener('DOMContentLoaded', function() {
+  buildCodePanel();
+  nav = VizNav({
+    btnPrev: document.getElementById('btn-back'),
+    btnNext: document.getElementById('btn-next'),
+    btnPlay: document.getElementById('btn-play'),
+    speedSel: document.getElementById('speed-select'),
+    render: function(snap, cur, total) {
+      applyStep(snap, cur > 0);
+      var phaseEl = document.getElementById('phase-label');
+      var descEl  = document.getElementById('step-desc');
+      if (phaseEl) phaseEl.textContent = 'Step ' + (cur + 1) + ' / ' + total + '  ·  ' + snap.phase;
+      if (descEl)  descEl.textContent  = snap.desc;
+    }
+  });
+});
+
+function buildCodePanel() {
+  var body = document.getElementById('code-body');
+  body.innerHTML = CODE.map(function(e) {
+    var ln = e[0], html = e[1];
+    var id = ln > 0 ? ' id="cl-' + ln + '"' : '';
+    return '<div class="code-line"' + id + '><span class="ln">' + (ln || '') + '</span><span>' + html + '</span></div>';
+  }).join('');
+}
+
+function loadExample(s) {
+  document.getElementById('inp-nums').value = s;
+  buildAndRun();
+}
+
+function buildAndRun() {
+  var raw = document.getElementById('inp-nums').value;
+  var nums = raw.split(',').map(function(x) { return parseInt(x.trim()); }).filter(function(x) { return !isNaN(x); });
+  if (nums.length < 1) return;
+  numLen = nums.length;
+  buildArraySection(nums);
+  simSteps = simulate(nums);
+  nav.load(simSteps);
+}
+
+function buildArraySection(nums) {
+  var sec = document.getElementById('array-section');
+  sec.innerHTML =
+    '<div class="arr-row" id="arr-row"></div>' +
+    '<div class="reach-row" id="reach-row"></div>' +
+    '<div class="arr-indices" id="arr-indices"></div>';
+
+  var arrRow = document.getElementById('arr-row');
+  var rRow   = document.getElementById('reach-row');
+  var idxRow = document.getElementById('arr-indices');
+
+  nums.forEach(function(v, i) {
+    var cell = document.createElement('div');
+    cell.className = 'arr-cell'; cell.id = 'ac-' + i; cell.dataset.state = 'idle';
+    cell.textContent = v; arrRow.appendChild(cell);
+
+    var rc = document.createElement('div');
+    rc.className = 'reach-cell'; rc.id = 'rc-' + i; rRow.appendChild(rc);
+
+    var idx = document.createElement('div');
+    idx.className = 'arr-idx'; idx.textContent = i; idxRow.appendChild(idx);
+  });
+}
+
+// --- Simulate ---
+function simulate(nums) {
+  var n = nums.length;
+  var steps = [];
+  var maxReach = 0;
+  var cellStates = Array.from({length: n}, function() { return 'idle'; });
+
+  function snap(phase, desc, lines, i, reach, result) {
+    steps.push({
+      phase: phase, desc: desc, lines: lines,
+      cellStates: cellStates.slice(),
+      maxReach: maxReach,
+      i: i,
+      ni: i >= 0 && i < n ? nums[i] : null,
+      reach: reach,
+      goal: n - 1,
+      result: result,
+    });
+  }
+
+  snap('Init', 'max_reach = 0. Goal is index ' + (n - 1) + '. Need to confirm every visited index is reachable.', [2, 3], -1, null, null);
+
+  if (n === 1) {
+    cellStates[0] = 'goal';
+    snap('Done', 'n = 1. Already at the goal.', [12], 0, null, true);
+    return steps;
+  }
+
+  for (var i = 0; i < n; i++) {
+    // check reachability
+    if (i > maxReach) {
+      cellStates[i] = 'unreachable';
+      snap('Check', 'i = ' + i + ' > max_reach = ' + maxReach + '. Stuck — cannot reach this index. Return False.', [6, 7], i, null, false);
+      return steps;
+    }
+    cellStates[i] = 'current';
+    snap('Check', 'i = ' + i + ' ≤ max_reach = ' + maxReach + '. Index is reachable.', [5, 6], i, null, null);
+
+    // update max_reach
+    var candidate = i + nums[i];
+    var grew = candidate > maxReach;
+    var prevReach = maxReach;
+    if (grew) maxReach = candidate;
+    var updateDesc = grew
+      ? 'i + nums[' + i + '] = ' + i + ' + ' + nums[i] + ' = ' + candidate + ' > ' + prevReach + '. max_reach ← ' + maxReach + '.'
+      : 'i + nums[' + i + '] = ' + candidate + ' ≤ ' + prevReach + '. max_reach stays at ' + maxReach + '.';
+    snap('Update', updateDesc, [8], i, candidate, null);
+
+    // early exit?
+    if (maxReach >= n - 1) {
+      for (var j = 0; j <= i; j++) cellStates[j] = 'reached';
+      cellStates[n - 1] = 'goal';
+      snap('Done', 'max_reach = ' + maxReach + ' ≥ ' + (n - 1) + '. Goal is reachable. Return True.', [9, 10], i, candidate, true);
+      return steps;
+    }
+    cellStates[i] = 'reached';
+  }
+
+  cellStates[n - 1] = 'goal';
+  snap('Done', 'Loop finished. Goal reached. Return True.', [12], n - 1, null, true);
+  return steps;
+}
+
+// --- Render ---
+function applyStep(s, animate) {
+  applyArrayCells(s.cellStates, s.i, animate);
+  applyReachBar(s.maxReach);
+  applyVars(s, animate);
+  applyResult(s.result);
+  setCodeLines(s.lines);
+}
+
+function applyArrayCells(states, curI, animate) {
+  states.forEach(function(state, i) {
+    var el = document.getElementById('ac-' + i);
+    if (!el) return;
+    var prev = el.dataset.state;
+    el.dataset.state = state;
+    if (animate && i === curI && state === 'current' && prev !== 'current') {
+      gsap.fromTo(el, { scale: 0.85 }, { scale: 1, duration: 0.22, ease: 'back.out(2)' });
+    }
+    if (animate && state === 'unreachable' && prev !== 'unreachable') {
+      gsap.fromTo(el, { x: -6 }, { x: 0, duration: 0.35, ease: 'elastic.out(1, 0.4)' });
+    }
+    if (animate && state === 'goal' && prev !== 'goal') {
+      gsap.fromTo(el, { scale: 1.2 }, { scale: 1, duration: 0.35, ease: 'back.out(1.8)' });
+    }
+  });
+}
+
+function applyReachBar(maxReach) {
+  for (var i = 0; i < numLen; i++) {
+    var rc = document.getElementById('rc-' + i);
+    if (!rc) continue;
+    rc.className = 'reach-cell' + (i <= maxReach ? ' lit' : '');
+  }
+}
+
+function applyVars(s, animate) {
+  function setVal(id, val) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    var text = val === null || val === undefined ? '—' : String(val);
+    if (animate && el.textContent !== text) {
+      gsap.fromTo(el, { scale: 0.8, opacity: 0.4 }, { scale: 1, opacity: 1, duration: 0.22, ease: 'back.out(1.7)' });
+    }
+    el.textContent = text;
+  }
+  setVal('vv-i',    s.i >= 0 ? s.i : null);
+  setVal('vv-mr',   s.maxReach);
+  setVal('vv-ni',   s.ni);
+  setVal('vv-reach', s.reach);
+  setVal('vv-goal', s.goal);
+}
+
+function applyResult(result) {
+  var card = document.getElementById('result-card');
+  if (!card) return;
+  card.className = 'result-card';
+  if (result === true) {
+    card.className = 'result-card success';
+    card.innerHTML = '<strong>True</strong> &mdash; goal is reachable';
+  } else if (result === false) {
+    card.className = 'result-card fail';
+    card.innerHTML = '<strong>False</strong> &mdash; stuck before the goal';
+  } else {
+    card.textContent = '—';
+  }
+}
+
+function setCodeLines(lines) {
+  CODE.forEach(function(e) {
+    var ln = e[0]; if (!ln) return;
+    var el = document.getElementById('cl-' + ln);
+    if (!el) return;
+    if (lines.indexOf(ln) >= 0) el.classList.add('hl');
+    else el.classList.remove('hl');
+  });
+}
+</script>
+  <script>
+    if (window.self !== window.top) {
+      var bl = document.querySelector('.back-link');
+      if (bl) bl.style.display = 'none';
+    }
+  </script>
+</body>
+</html>
