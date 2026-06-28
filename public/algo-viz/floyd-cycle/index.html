@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Floyd's Cycle Detection</title>
   <link rel="stylesheet" href="../shared/style.css" />
+  <script src="../shared/viz.js"></script>
   <style>
     #viz { height: 300px; }
   </style>
@@ -50,22 +51,18 @@
 </div>
 
 <div class="step-nav">
-  <button class="btn-step" id="btn-back" onclick="stepBack()" disabled>← Back</button>
-  <button class="btn-step" id="btn-next" onclick="stepNext()" disabled>Next →</button>
+  <button class="btn-step" id="btn-back" disabled>← Back</button>
+  <button class="btn-step" id="btn-next" disabled>Next →</button>
+  <button id="btn-play" style="background:#15803d;color:#fff;border:none;border-radius:4px;padding:6px 14px;font-weight:600;cursor:pointer;">&#9654; Play</button>
+  <select id="speed-select" style="background:#1a1b26;border:1px solid #2d3148;color:#c0caf5;border-radius:4px;padding:6px 8px;">
+    <option value="900">Slow</option>
+    <option value="400" selected>Medium</option>
+    <option value="150">Fast</option>
+  </select>
 </div>
 
 <script>
-// ─── State ────────────────────────────────────────────────────────────────────
-let steps  = [];
-let cursor = 0;
-
-let animRaf       = null;
-let animStartTime = null;
-let animFromSlow  = 0;
-let animFromFast  = 0;
-let animT         = 1;
-
-const ANIM_MS = 360;
+// ─── Constants ────────────────────────────────────────────────────────────────
 const R   = 26;
 const GAP = 20;
 
@@ -85,24 +82,38 @@ const C = {
   nullColor:   'var(--text-dim)',
 };
 
+// ─── VizNav init ─────────────────────────────────────────────────────────────
+var nav = VizNav({
+  btnPrev:  document.getElementById('btn-back'),
+  btnNext:  document.getElementById('btn-next'),
+  btnPlay:  document.getElementById('btn-play'),
+  speedSel: document.getElementById('speed-select'),
+  render: function(snap, cur, total) {
+    drawSnap(snap);
+    document.getElementById('phase-label').textContent =
+      'Step ' + (cur + 1) + ' / ' + total + '  ·  ' + snap.phase;
+    document.getElementById('step-desc').textContent = snap.desc;
+    var badge = document.getElementById('result-badge');
+    if (snap.done) {
+      badge.textContent = snap.noCycle ? 'No cycle detected' : 'Cycle entry: node ' + snap.cycleEntry;
+      badge.className   = 'result-badge ' + (snap.noCycle ? 'none' : 'found');
+    } else {
+      badge.textContent = '';
+      badge.className   = 'result-badge';
+    }
+  }
+});
+
 // ─── Build ────────────────────────────────────────────────────────────────────
 function build() {
-  let n         = clamp(parseInt(document.getElementById('inp-len').value)  || 6, 2, 12);
-  let cycleFrom = clamp(parseInt(document.getElementById('inp-from').value) ?? n-1, 0, n-1);
-  let cycleTo   = parseInt(document.getElementById('inp-to').value);
+  var n         = clamp(parseInt(document.getElementById('inp-len').value)  || 6, 2, 12);
+  var cycleFrom = clamp(parseInt(document.getElementById('inp-from').value) || n-1, 0, n-1);
+  var cycleTo   = parseInt(document.getElementById('inp-to').value);
   if (isNaN(cycleTo)) cycleTo = -1;
   if (cycleTo >= 0)   cycleTo = clamp(cycleTo, 0, cycleFrom);
 
-  stopAnim();
-  steps        = simulate(n, cycleFrom, cycleTo);
-  cursor       = 0;
-  animFromSlow = steps[0].slow;
-  animFromFast = steps[0].fast;
-  animT        = 1;
-
-  updateText();
-  renderFrame();
-  updateButtons();
+  var steps = simulate(n, cycleFrom, cycleTo);
+  nav.load(steps);
 }
 
 function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
@@ -185,68 +196,6 @@ function simulate(n, cycleFrom, cycleTo) {
   return out;
 }
 
-// ─── Navigation ───────────────────────────────────────────────────────────────
-function stepNext() {
-  if (cursor >= steps.length - 1) return;
-  const from = steps[cursor];
-  stopAnim(); cursor++;
-  startAnim(from.slow, from.fast);
-  updateText(); updateButtons();
-}
-
-function stepBack() {
-  if (cursor <= 0) return;
-  const from = steps[cursor];
-  stopAnim(); cursor--;
-  startAnim(from.slow, from.fast);
-  updateText(); updateButtons();
-}
-
-function updateButtons() {
-  document.getElementById('btn-back').disabled = cursor <= 0;
-  document.getElementById('btn-next').disabled = cursor >= steps.length - 1;
-}
-
-function updateText() {
-  const s = steps[cursor];
-  document.getElementById('phase-label').textContent =
-    `Step ${cursor + 1} / ${steps.length}  ·  ${s.phase}`;
-  document.getElementById('step-desc').textContent = s.desc;
-  const badge = document.getElementById('result-badge');
-  if (s.done) {
-    badge.textContent = s.noCycle ? 'No cycle detected' : `Cycle entry: node ${s.cycleEntry}`;
-    badge.className   = 'result-badge ' + (s.noCycle ? 'none' : 'found');
-  } else {
-    badge.className = 'result-badge';
-  }
-}
-
-// ─── Animation ────────────────────────────────────────────────────────────────
-function startAnim(fromSlow, fromFast) {
-  animFromSlow = fromSlow; animFromFast = fromFast;
-  animT = 0; animStartTime = null;
-  function tick(now) {
-    if (!animStartTime) animStartTime = now;
-    animT = Math.min((now - animStartTime) / ANIM_MS, 1);
-    renderFrame();
-    if (animT < 1) animRaf = requestAnimationFrame(tick);
-    else animRaf = null;
-  }
-  animRaf = requestAnimationFrame(tick);
-}
-
-function stopAnim() {
-  if (animRaf) { cancelAnimationFrame(animRaf); animRaf = null; }
-  if (steps.length) {
-    animFromSlow = steps[cursor].slow;
-    animFromFast = steps[cursor].fast;
-  }
-  animT = 1;
-}
-
-function easeIO(t) { return t < 0.5 ? 2*t*t : -1+(4-2*t)*t; }
-function lerp(a, b, t) { return a + (b - a) * t; }
-
 // ─── Canvas ───────────────────────────────────────────────────────────────────
 function computeNX(n, W) {
   const sp = R * 2 + GAP;
@@ -258,8 +207,7 @@ function nodeX(idx, nx, n) {
   return idx === null ? nx[n - 1] + R * 2 + GAP + 14 : nx[idx];
 }
 
-function renderFrame() {
-  const s      = steps[cursor];
+function drawSnap(snap) {
   const canvas = document.getElementById('viz');
   const W      = canvas.parentElement.clientWidth || 900;
   const H      = 300;
@@ -271,14 +219,13 @@ function renderFrame() {
   ctx.scale(dpr, dpr);
   ctx.clearRect(0, 0, W, H);
 
-  const { n, cycleFrom, cycleTo } = s;
+  const { n, cycleFrom, cycleTo } = snap;
   const nx = computeNX(n, W);
   const cy = H / 2 - 22;
-  const et = easeIO(animT);
 
-  const visSlowX = lerp(nodeX(animFromSlow, nx, n), nodeX(s.slow, nx, n), et);
-  const visFastX = lerp(nodeX(animFromFast, nx, n), nodeX(s.fast, nx, n), et);
-  const dotY = cy + R + 24;
+  const slowX = nodeX(snap.slow, nx, n);
+  const fastX = nodeX(snap.fast, nx, n);
+  const dotY  = cy + R + 24;
 
   // Forward arrows
   for (let i = 0; i < cycleFrom; i++) {
@@ -326,15 +273,15 @@ function renderFrame() {
   }
 
   // Pointer dots
-  const bothSame = Math.abs(visSlowX - visFastX) < 3 && s.fast !== null;
-  if (s.fast === null) {
-    dot(ctx, visSlowX, dotY, C.slow, 'S');
-    drawCross(ctx, visFastX, dotY);
+  const bothSame = snap.slow === snap.fast && snap.fast !== null;
+  if (snap.fast === null) {
+    dot(ctx, slowX, dotY, C.slow, 'S');
+    drawCross(ctx, fastX, dotY);
   } else if (bothSame) {
-    dot(ctx, visSlowX, dotY, C.both, 'S+F');
+    dot(ctx, slowX, dotY, C.both, 'S+F');
   } else {
-    dot(ctx, visSlowX, dotY, C.slow, 'S');
-    dot(ctx, visFastX, dotY, C.fast, 'F');
+    dot(ctx, slowX, dotY, C.slow, 'S');
+    dot(ctx, fastX, dotY, C.fast, 'F');
   }
 }
 
@@ -378,7 +325,7 @@ function curvedArrow(ctx, x1, cy1, x2, cy2, H) {
   ctx.closePath(); ctx.fillStyle = C.cycleArrow; ctx.fill();
 }
 
-window.addEventListener('resize', () => { if (steps.length) renderFrame(); });
+window.addEventListener('resize', function() { if (nav.total()) nav.goTo(nav.cursor()); });
 build();
 </script>
   <script>
