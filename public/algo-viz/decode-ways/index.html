@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Decode Ways</title>
+  <link rel="stylesheet" href="../shared/style.css" />
+  <script src="../shared/gsap.min.js"></script>
+  <script src="../shared/viz.js"></script>
+  <style>
+    .viz-area { width: 100%; max-width: 92%; }
+    .main-row {
+      display: grid;
+      grid-template-columns: 1fr 340px;
+      gap: 20px;
+      align-items: start;
+    }
+    @media (max-width: 760px) { .main-row { grid-template-columns: 1fr; } }
+
+    /* ── Decode track: two rows (string + dp) as flex columns ── */
+    .decode-track {
+      display: flex;
+      gap: 8px;
+      padding: 20px 16px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      overflow-x: auto;
+      min-height: 140px;
+      align-items: flex-end;
+    }
+
+    .decode-col {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+
+    /* String char cells */
+    .str-cell {
+      width: 54px; height: 46px;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      border: 2px solid var(--border);
+      border-radius: 7px;
+      background: #0f0f0f;
+      transition: border-color 0.18s, background 0.18s, color 0.18s;
+      position: relative;
+      flex-shrink: 0;
+    }
+    .str-cell[data-state="single"] { border-color: #b45309; background: #1c0e00; }
+    .str-cell[data-state="double"] { border-color: #b91c1c; background: #1c0000; }
+    .str-cell[data-state="both"]   { border-color: #9a5a00; background: #1c0a00; }
+
+    .str-cell-idx {
+      position: absolute; top: 3px; left: 0; right: 0;
+      text-align: center;
+      font-size: 0.52rem; color: var(--text-ghost);
+      font-family: monospace;
+    }
+    .str-cell-char {
+      font-size: 1.05rem; font-weight: 700;
+      font-family: monospace; color: var(--text-dim);
+      margin-top: 8px;
+    }
+    .str-cell[data-state="single"] .str-cell-char { color: #fbbf24; }
+    .str-cell[data-state="double"] .str-cell-char { color: #f87171; }
+    .str-cell[data-state="both"]   .str-cell-char { color: #fb923c; }
+
+    .str-spacer {
+      width: 54px; height: 46px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.65rem; color: var(--text-ghost);
+      font-style: italic;
+    }
+
+    /* DP cells */
+    .dp-cell-wrap {
+      display: flex; flex-direction: column;
+      align-items: center; gap: 4px;
+      position: relative;
+    }
+    .dp-cell-box {
+      width: 54px; height: 54px;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      border: 2px solid var(--border);
+      border-radius: 7px;
+      background: #0f0f0f;
+      transition: border-color 0.18s, background 0.18s;
+      position: relative;
+      flex-shrink: 0;
+    }
+    .dp-cell-box[data-state="empty"]   { border-style: dashed; opacity: 0.45; }
+    .dp-cell-box[data-state="filled"]  { border-color: #166534; }
+    .dp-cell-box[data-state="current"] { border-color: var(--accent); background: var(--surface-dark); }
+    .dp-cell-box[data-state="single"]  { border-color: #b45309; background: #1c0e00; }
+    .dp-cell-box[data-state="double"]  { border-color: #b91c1c; background: #1c0000; }
+    .dp-cell-box[data-state="answer"]  { border-color: #15803d; background: #052e16; }
+
+    .dp-cell-idx {
+      font-size: 0.52rem; color: var(--text-ghost);
+      font-family: monospace;
+      position: absolute; top: 4px; left: 0; right: 0;
+      text-align: center;
+    }
+    .dp-cell-val {
+      font-size: 1.1rem; font-weight: 700;
+      font-family: monospace; color: var(--text-ghost);
+      margin-top: 10px;
+    }
+    .dp-cell-box[data-state="filled"]  .dp-cell-val { color: var(--green); }
+    .dp-cell-box[data-state="current"] .dp-cell-val { color: var(--accent-pale); }
+    .dp-cell-box[data-state="single"]  .dp-cell-val { color: #fbbf24; }
+    .dp-cell-box[data-state="double"]  .dp-cell-val { color: #f87171; }
+    .dp-cell-box[data-state="answer"]  .dp-cell-val { color: #4ade80; }
+
+    .dp-cell-label-bot {
+      font-size: 0.58rem; color: var(--text-ghost);
+      font-family: monospace; text-align: center; min-height: 14px;
+    }
+
+    /* Code panel */
+    .code-panel {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); overflow: hidden;
+    }
+    .code-header {
+      padding: 8px 14px; font-size: 0.72rem; font-weight: 600;
+      color: var(--text-dim); border-bottom: 1px solid var(--border);
+      background: var(--bg);
+    }
+    .code-body { padding: 10px 0; font-size: 0.82rem; line-height: 1.8; white-space: pre; }
+    .code-line { display: flex; align-items: center; padding: 0 14px; }
+    .code-line.hl { background: var(--border-soft); border-left: 2px solid var(--accent); }
+    .ln { min-width: 24px; color: var(--text-ghost); user-select: none; font-size: 0.72rem; }
+
+    /* Recurrence readout */
+    .sum-readout {
+      font-size: 0.85rem; font-family: monospace; color: var(--text-muted);
+      padding: 8px 10px;
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      min-height: 28px; line-height: 1.6;
+    }
+    .val-p1  { color: #fbbf24; }
+    .val-p2  { color: #f87171; }
+    .val-ans { color: #4ade80; font-weight: 700; }
+
+    /* Nav */
+    .btn-play {
+      background: #15803d; border: none;
+      border-radius: var(--radius-sm); color: #fff;
+      cursor: pointer; font-size: 0.88rem; font-weight: 600;
+      padding: 9px 16px; transition: background 0.2s;
+    }
+    .btn-play:hover { background: #166534; }
+    .btn-play.playing { background: #c2410c; }
+    .btn-play.playing:hover { background: #9a3412; }
+    .btn-play:disabled { opacity: 0.4; cursor: not-allowed; }
+    .speed-select {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); color: var(--text);
+      font-size: 0.85rem; padding: 8px 10px; outline: none; width: 80px;
+    }
+    .nav-row { display: flex; gap: 8px; align-items: center; }
+
+    /* Syntax colors */
+    .kw { color: var(--purple); }
+    .fn { color: var(--blue); }
+    .bi { color: var(--orange); }
+    .op { color: var(--text); }
+    .nb { color: var(--green); }
+    .st { color: var(--yellow); }
+  </style>
+</head>
+<body class="page">
+
+<div class="page-header">
+  <a class="back-link" href="../index.html">&larr; All Algorithms</a>
+  <div class="page-title">Decode Ways</div>
+  <div class="page-sub">LeetCode 91 &middot; 1-D DP on string &middot; O(n) time &middot; O(n) space</div>
+</div>
+
+<div class="controls">
+  <div class="field">
+    <label>String s (digits only)</label>
+    <input id="inp-s" type="text" value="226" maxlength="12" style="width:130px" />
+  </div>
+  <button class="btn-primary" onclick="buildAndRun()">Build &amp; Run</button>
+</div>
+
+<div class="viz-area">
+  <div class="main-row">
+    <div class="left-col" style="display:flex;flex-direction:column;gap:12px">
+
+      <div class="decode-track" id="decode-track">
+        <span style="color:var(--text-dim);font-size:0.82rem">Enter a digit string and click Build &amp; Run.</span>
+      </div>
+
+      <div class="code-panel">
+        <div class="code-header">Python</div>
+        <div class="code-body" id="code-body"></div>
+      </div>
+    </div>
+
+    <div class="right-col" style="display:flex;flex-direction:column;gap:12px">
+
+      <div style="display:flex;gap:12px">
+        <div class="panel-box" style="flex:0 0 auto">
+          <div class="nav-row">
+            <button class="btn-step" id="btn-back" disabled>&larr;</button>
+            <button class="btn-step" id="btn-next" disabled>&rarr;</button>
+            <button class="btn-play" id="btn-play" disabled>&#9654; Play</button>
+            <select class="speed-select" id="speed-select">
+              <option value="700">Slow</option>
+              <option value="350" selected>Medium</option>
+              <option value="100">Fast</option>
+            </select>
+          </div>
+        </div>
+        <div class="panel-box" style="flex:1;min-width:0">
+          <div class="panel-title" id="phase-label">&mdash;</div>
+          <div style="font-size:0.82rem;color:var(--text-muted);margin-top:2px" id="step-desc">Enter a digit string and click Build &amp; Run.</div>
+        </div>
+      </div>
+
+      <div class="panel-box">
+        <div class="panel-title">Recurrence</div>
+        <div class="sum-readout" id="sum-readout">&mdash;</div>
+      </div>
+
+      <div class="code-panel">
+        <div class="code-header">Pseudocode</div>
+        <div class="code-body" id="pseudo-body"></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+var simSteps = [], nav;
+
+var CODE = [
+  [1,  '<span class="kw">def</span> <span class="fn">numDecodings</span><span class="op">(</span>s<span class="op">):</span>'],
+  [2,  '    n <span class="op">=</span> <span class="bi">len</span><span class="op">(</span>s<span class="op">)</span>'],
+  [3,  '    dp <span class="op">=</span> <span class="op">[</span><span class="nb">0</span><span class="op">]</span> <span class="op">*</span> <span class="op">(</span>n <span class="op">+</span> <span class="nb">1</span><span class="op">)</span>'],
+  [4,  '    dp<span class="op">[</span><span class="nb">0</span><span class="op">]</span> <span class="op">=</span> <span class="nb">1</span>'],
+  [5,  '    dp<span class="op">[</span><span class="nb">1</span><span class="op">]</span> <span class="op">=</span> <span class="nb">1</span> <span class="kw">if</span> s<span class="op">[</span><span class="nb">0</span><span class="op">]</span> <span class="op">!=</span> <span class="st">\'0\'</span> <span class="kw">else</span> <span class="nb">0</span>'],
+  [0,  ''],
+  [7,  '    <span class="kw">for</span> i <span class="kw">in</span> <span class="bi">range</span><span class="op">(</span><span class="nb">2</span><span class="op">,</span> n <span class="op">+</span> <span class="nb">1</span><span class="op">):</span>'],
+  [8,  '        <span class="kw">if</span> s<span class="op">[</span>i<span class="op">-</span><span class="nb">1</span><span class="op">]</span> <span class="op">!=</span> <span class="st">\'0\'</span><span class="op">:</span>'],
+  [9,  '            dp<span class="op">[</span>i<span class="op">]</span> <span class="op">+=</span> dp<span class="op">[</span>i<span class="op">-</span><span class="nb">1</span><span class="op">]</span>'],
+  [10, '        two <span class="op">=</span> <span class="bi">int</span><span class="op">(</span>s<span class="op">[</span>i<span class="op">-</span><span class="nb">2</span><span class="op">:</span>i<span class="op">])</span>'],
+  [11, '        <span class="kw">if</span> <span class="nb">10</span> <span class="op">&lt;=</span> two <span class="op">&lt;=</span> <span class="nb">26</span><span class="op">:</span>'],
+  [12, '            dp<span class="op">[</span>i<span class="op">]</span> <span class="op">+=</span> dp<span class="op">[</span>i<span class="op">-</span><span class="nb">2</span><span class="op">]</span>'],
+  [0,  ''],
+  [14, '    <span class="kw">return</span> dp<span class="op">[</span>n<span class="op">]</span>'],
+];
+
+var PSEUDO = [
+  [1,  'numDecodings(s):'],
+  [2,  '  dp[0] = 1              // empty prefix'],
+  [3,  '  dp[1] = s[0]!=\'0\' ? 1 : 0'],
+  [0,  ''],
+  [5,  '  for i = 2 to n:'],
+  [6,  '    if s[i-1] != \'0\':'],
+  [7,  '      dp[i] += dp[i-1]  // 1-digit ok'],
+  [8,  '    two = s[i-2..i-1]'],
+  [9,  '    if 10 <= two <= 26:'],
+  [10, '      dp[i] += dp[i-2]  // 2-digit ok'],
+  [0,  ''],
+  [12, '  return dp[n]'],
+];
+
+window.addEventListener('DOMContentLoaded', function() {
+  buildCodePanel('code-body', CODE);
+  buildCodePanel('pseudo-body', PSEUDO);
+
+  nav = VizNav({
+    btnPrev:  document.getElementById('btn-back'),
+    btnNext:  document.getElementById('btn-next'),
+    btnPlay:  document.getElementById('btn-play'),
+    speedSel: document.getElementById('speed-select'),
+    render: function(snap, cur, total) {
+      renderSnap(snap, cur > 0);
+      var phaseEl = document.getElementById('phase-label');
+      var descEl  = document.getElementById('step-desc');
+      if (phaseEl) phaseEl.textContent = 'Step ' + (cur + 1) + ' / ' + total + '  ·  ' + snap.phase;
+      if (descEl)  descEl.textContent  = snap.desc;
+    }
+  });
+
+  buildAndRun();
+});
+
+function buildCodePanel(id, lines) {
+  var body = document.getElementById(id);
+  body.innerHTML = lines.map(function(e) {
+    var ln = e[0], html = e[1];
+    var idAttr = ln > 0 ? ' id="' + id + '-cl-' + ln + '"' : '';
+    return '<div class="code-line"' + idAttr + '><span class="ln">' + (ln || '') + '</span><span>' + html + '</span></div>';
+  }).join('');
+}
+
+function buildAndRun() {
+  var raw = document.getElementById('inp-s').value.replace(/[^0-9]/g, '');
+  if (!raw) raw = '226';
+  if (raw.length > 12) raw = raw.slice(0, 12);
+  document.getElementById('inp-s').value = raw;
+  buildTrack(raw);
+  simSteps = buildSteps(raw);
+  nav.load(simSteps);
+}
+
+// ── Build the two-row grid (string chars + dp cells) ────────────────────────
+function buildTrack(s) {
+  var n = s.length;
+  var track = document.getElementById('decode-track');
+  track.innerHTML = '';
+
+  // n+1 columns: col 0 = dp[0] base only, cols 1..n = s[i-1] char + dp[i]
+  for (var i = 0; i <= n; i++) {
+    var col = document.createElement('div');
+    col.className = 'decode-col';
+    col.id = 'col-' + i;
+
+    if (i === 0) {
+      var spacer = document.createElement('div');
+      spacer.className = 'str-spacer';
+      spacer.textContent = 'ε';
+      col.appendChild(spacer);
+    } else {
+      var sc = document.createElement('div');
+      sc.className = 'str-cell';
+      sc.id = 'str-' + (i - 1);
+      sc.dataset.state = 'normal';
+      sc.innerHTML =
+        '<span class="str-cell-idx">[' + (i - 1) + ']</span>' +
+        '<span class="str-cell-char">' + s[i - 1] + '</span>';
+      col.appendChild(sc);
+    }
+
+    var dpWrap = document.createElement('div');
+    dpWrap.className = 'dp-cell-wrap';
+    dpWrap.id = 'dpw-' + i;
+    dpWrap.innerHTML =
+      '<div class="dp-cell-box" id="dpb-' + i + '" data-state="empty">' +
+        '<span class="dp-cell-idx">dp[' + i + ']</span>' +
+        '<span class="dp-cell-val" id="dpv-' + i + '">?</span>' +
+      '</div>' +
+      '<div class="dp-cell-label-bot" id="dpl-' + i + '"></div>';
+    col.appendChild(dpWrap);
+    track.appendChild(col);
+  }
+}
+
+// ── Build simulation steps ───────────────────────────────────────────────────
+function buildSteps(s) {
+  var n = s.length;
+  var dp = new Array(n + 1).fill(null);
+  var steps = [];
+
+  function snap(opts) {
+    steps.push({
+      s:          s,
+      n:          n,
+      dp:         dp.slice(),
+      phase:      opts.phase   || 'Init',
+      desc:       opts.desc    || '',
+      lines:      opts.lines   || [],
+      dpCurrent:  opts.dpCurrent  !== undefined ? opts.dpCurrent  : -1,
+      dpSrc1:     opts.dpSrc1     !== undefined ? opts.dpSrc1     : -1,
+      dpSrc2:     opts.dpSrc2     !== undefined ? opts.dpSrc2     : -1,
+      singleOk:   opts.singleOk !== undefined ? opts.singleOk : false,
+      doubleOk:   opts.doubleOk !== undefined ? opts.doubleOk : false,
+    });
+  }
+
+  // 1 — Init
+  snap({ phase: 'Init', desc: 'Allocate dp[0..' + n + '] — all cells start empty.', lines: [2, 3] });
+
+  // 2 — dp[0] = 1
+  dp[0] = 1;
+  snap({ phase: 'Base', desc: 'dp[0] = 1 — the empty prefix has exactly one decoding.', lines: [4], dpCurrent: 0 });
+
+  // 3 — dp[1]
+  if (n >= 1) {
+    var base1Ok = s[0] !== '0';
+    dp[1] = base1Ok ? 1 : 0;
+    snap({
+      phase: 'Base',
+      desc: base1Ok
+        ? 'dp[1] = 1 — s[0]="' + s[0] + '" is a valid single digit (1–9).'
+        : 'dp[1] = 0 — s[0]="0" cannot stand alone as a digit.',
+      lines: [5],
+      dpCurrent: 1,
+      dpSrc1: base1Ok ? 0 : -1,
+      singleOk: base1Ok,
+    });
+  }
+
+  // 4 — Loop i = 2..n
+  for (var i = 2; i <= n; i++) {
+    var singleOk = s[i - 1] !== '0';
+    var twoStr   = s.substring(i - 2, i);
+    var twoVal   = parseInt(twoStr, 10);
+    var doubleOk = twoVal >= 10 && twoVal <= 26;
+
+    var src1 = singleOk ? i - 1 : -1;
+    var src2 = doubleOk ? i - 2 : -1;
+
+    // 4a — pre-write: show sources
+    var parts = [];
+    if (singleOk) {
+      parts.push('s[' + (i-1) + ']="' + s[i-1] + '" ≠ 0 → add dp[' + (i-1) + ']=' + dp[i-1]);
+    } else {
+      parts.push('s[' + (i-1) + ']="0" → skip 1-digit');
+    }
+    if (doubleOk) {
+      parts.push('"' + twoStr + '" ∈ [10,26] → add dp[' + (i-2) + ']=' + dp[i-2]);
+    } else {
+      parts.push('"' + twoStr + '" ∉ [10,26] → skip 2-digit');
+    }
+    snap({
+      phase: 'Compute',
+      desc: 'i=' + i + ': ' + parts.join(' | '),
+      lines: [7, 8, 9, 10, 11, 12],
+      dpCurrent: i,
+      dpSrc1: src1,
+      dpSrc2: src2,
+      singleOk: singleOk,
+      doubleOk: doubleOk,
+    });
+
+    // 4b — post-write: dp[i] filled
+    var addends = [];
+    if (singleOk) addends.push('dp[' + (i-1) + ']=' + dp[i-1]);
+    if (doubleOk) addends.push('dp[' + (i-2) + ']=' + dp[i-2]);
+    if (!addends.length) addends.push('0');
+    dp[i] = (singleOk ? dp[i-1] : 0) + (doubleOk ? dp[i-2] : 0);
+    snap({
+      phase: 'Compute',
+      desc: 'dp[' + i + '] = ' + addends.join(' + ') + ' = ' + dp[i] + '.',
+      lines: [9, 12],
+      dpCurrent: i,
+      dpSrc1: src1,
+      dpSrc2: src2,
+      singleOk: singleOk,
+      doubleOk: doubleOk,
+    });
+  }
+
+  // 5 — Done
+  snap({
+    phase: 'Done',
+    desc: 'dp[' + n + '] = ' + dp[n] + ' — total distinct decodings of "' + s + '".',
+    lines: [14],
+  });
+
+  return steps;
+}
+
+// ── Render a snapshot ────────────────────────────────────────────────────────
+function renderSnap(snap, animate) {
+  gsap.killTweensOf('.dp-cell-box');
+  gsap.killTweensOf('.dp-cell-val');
+  gsap.killTweensOf('.str-cell');
+  gsap.killTweensOf('.sum-readout');
+
+  var n = snap.n;
+  var i = snap.dpCurrent;
+  var isDone = snap.phase === 'Done';
+
+  // ── String cells
+  for (var j = 0; j < n; j++) {
+    var sc = document.getElementById('str-' + j);
+    if (!sc) continue;
+    var state = 'normal';
+    if (i >= 2) {
+      var isSingleChar = (j === i - 1) && snap.singleOk;
+      var isDoubleChar = (j === i - 2 || j === i - 1) && snap.doubleOk;
+      if (isSingleChar && isDoubleChar) state = 'both';
+      else if (isSingleChar) state = 'single';
+      else if (isDoubleChar) state = 'double';
+    } else if (i === 1 && j === 0 && snap.singleOk) {
+      state = 'single';
+    }
+    sc.dataset.state = state;
+  }
+
+  // ── DP cells
+  for (var k = 0; k <= n; k++) {
+    var box   = document.getElementById('dpb-' + k);
+    var valEl = document.getElementById('dpv-' + k);
+    var lbl   = document.getElementById('dpl-' + k);
+    if (!box || !valEl) continue;
+
+    var prevText = valEl.textContent;
+    var val  = snap.dp[k];
+    var text = val === null ? '?' : String(val);
+
+    var state = 'empty';
+    if (isDone && k === n) {
+      state = 'answer';
+    } else if (k === snap.dpCurrent) {
+      state = 'current';
+    } else if (k === snap.dpSrc1) {
+      state = 'single';
+    } else if (k === snap.dpSrc2) {
+      state = 'double';
+    } else if (val !== null) {
+      state = 'filled';
+    }
+
+    box.dataset.state = state;
+    valEl.textContent = text;
+
+    if (animate && text !== '?' && prevText !== text) {
+      gsap.fromTo(box, { scale: 0.7, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.35, ease: 'back.out(2)' });
+    }
+    if (animate && (state === 'single' || state === 'double')) {
+      gsap.fromTo(box, { scale: 1 }, { scale: 1.08, duration: 0.25, yoyo: true, repeat: 1 });
+    }
+
+    if (lbl) {
+      if (k === snap.dpSrc1) lbl.innerHTML = '<span style="font-size:0.55rem;color:#fbbf24">1-dig</span>';
+      else if (k === snap.dpSrc2) lbl.innerHTML = '<span style="font-size:0.55rem;color:#f87171">2-dig</span>';
+      else lbl.innerHTML = '';
+    }
+  }
+
+  // ── Recurrence readout
+  var readout = document.getElementById('sum-readout');
+  if (readout) {
+    var html = '&mdash;';
+    if (isDone) {
+      html = 'Answer: <span class="val-ans">dp[' + n + '] = ' + snap.dp[n] + '</span>';
+    } else if (i === 0) {
+      html = 'dp[0] = <span class="val-ans">1</span> &nbsp;<span style="color:var(--text-dim)">(empty prefix)</span>';
+    } else if (i === 1) {
+      var c0 = snap.s[0];
+      var v1 = snap.dp[1];
+      html = 'dp[1] = s[0]≠"0" ? <span class="val-ans">1</span> : <span style="color:var(--text-dim)">0</span>' +
+             ' &nbsp;&rarr; <span class="val-ans">' + (v1 !== null ? v1 : '?') + '</span>' +
+             ' &nbsp;<span style="color:var(--text-dim)">[s[0]="' + c0 + '"]</span>';
+    } else if (i >= 2) {
+      var s  = snap.s;
+      var p1 = snap.dp[i - 1];
+      var p2 = snap.dp[i - 2];
+      var cur = snap.dp[i];
+      var twoStr = s.substring(i - 2, i);
+
+      var p1html = snap.singleOk
+        ? '<span class="val-p1">dp[' + (i-1) + ']=' + (p1 !== null ? p1 : '?') + '</span>'
+        : '<span style="color:var(--text-dim);text-decoration:line-through">s[' + (i-1) + ']="0"</span>';
+      var p2html = snap.doubleOk
+        ? '<span class="val-p2">dp[' + (i-2) + ']=' + (p2 !== null ? p2 : '?') + '</span>'
+        : '<span style="color:var(--text-dim);text-decoration:line-through">"' + twoStr + '"∉[10,26]</span>';
+
+      html = 'dp[' + i + '] = ' + p1html + ' + ' + p2html;
+      if (cur !== null) html += ' = <span class="val-ans">' + cur + '</span>';
+    }
+    readout.innerHTML = html;
+    if (animate) gsap.from(readout, { opacity: 0, y: 6, duration: 0.25 });
+  }
+
+  // ── Code highlights
+  setCodeLines('code-body', CODE, snap.lines);
+  setCodeLines('pseudo-body', PSEUDO, snap.lines.map(function(l) {
+    var map = { 2:null, 3:null, 4:2, 5:3, 7:5, 8:6, 9:7, 10:8, 11:9, 12:10, 14:12 };
+    return map[l] !== undefined ? map[l] : l;
+  }).filter(function(l) { return l; }));
+}
+
+function setCodeLines(panelId, lines, activeLines) {
+  lines.forEach(function(e) {
+    var ln = e[0]; if (!ln) return;
+    var el = document.getElementById(panelId + '-cl-' + ln);
+    if (!el) return;
+    if (activeLines.indexOf(ln) >= 0) el.classList.add('hl');
+    else el.classList.remove('hl');
+  });
+}
+</script>
+
+<script>
+  if (window.self !== window.top) {
+    var bl = document.querySelector('.back-link');
+    if (bl) bl.style.display = 'none';
+  }
+</script>
+</body>
+</html>
