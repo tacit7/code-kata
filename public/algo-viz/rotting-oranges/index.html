@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Rotting Oranges</title>
+  <link rel="stylesheet" href="../shared/style.css" />
+  <script src="../shared/gsap.min.js"></script>
+  <script src="../shared/viz.js"></script>
+  <style>
+    .viz-area {
+      width: 100%; max-width: 90%;
+      display: flex; flex-direction: column; gap: 12px;
+    }
+
+    .grid-wrap {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 20px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 120px;
+    }
+
+    #grid {
+      display: grid;
+      gap: 4px;
+      user-select: none;
+    }
+
+    .cell {
+      border-radius: 5px;
+      box-sizing: border-box;
+      border: 2px solid transparent;
+      transition: none;
+    }
+
+    .bottom-row {
+      display: grid;
+      grid-template-columns: 55% 1fr;
+      gap: 12px;
+      align-items: start;
+    }
+    .right-col { display: flex; flex-direction: column; gap: 12px; }
+
+    @media (max-width: 680px) { .bottom-row { grid-template-columns: 1fr; } }
+
+    .code-panel {
+      background: #0a0d14;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .code-header {
+      padding: 9px 14px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      font-size: 0.67rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.11em;
+      color: var(--text-dim);
+    }
+    .code-body {
+      padding: 10px 0;
+      flex: 1;
+      font-family: 'JetBrains Mono','Fira Code','Cascadia Code',monospace;
+      font-size: 0.73rem;
+      line-height: 1.7;
+      overflow-x: auto;
+    }
+    .cl {
+      display: flex;
+      align-items: stretch;
+      border-left: 3px solid transparent;
+      padding: 0 14px 0 0;
+      white-space: pre;
+    }
+    .cl .ln {
+      width: 28px; min-width: 28px;
+      text-align: right;
+      color: #3d4468;
+      user-select: none;
+      padding-right: 14px;
+      font-size: 0.68rem;
+      line-height: 1.7;
+    }
+    .cl .code { color: var(--text-muted); }
+    .kw  { color: var(--purple); }
+    .fn  { color: var(--blue); }
+    .bi  { color: var(--orange); }
+    .op  { color: var(--text); }
+    .cm  { color: #3d4468; font-style: italic; }
+    .nb  { color: var(--green); }
+    .st  { color: var(--yellow); }
+
+    .panel-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 13px 18px;
+    }
+    .panel-title {
+      font-size: 0.67rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.11em;
+      color: var(--text-dim);
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .panel-sub {
+      font-size: 0.72rem; font-weight: 400;
+      text-transform: none; letter-spacing: 0; color: var(--text-faint);
+    }
+
+    .stats-row {
+      display: flex;
+      gap: 24px;
+      align-items: flex-start;
+    }
+    .stat-item {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+    .stat-label {
+      font-size: 0.65rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-dim);
+      font-weight: 700;
+    }
+    .stat-value {
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--text-bright);
+      font-family: monospace;
+      line-height: 1;
+    }
+    .stat-value.red { color: #f7768e; }
+    .stat-value.orange { color: #ff9e64; }
+
+    .queue-list {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      min-height: 36px;
+      max-height: 120px;
+      overflow-y: auto;
+      align-items: flex-start;
+      align-content: flex-start;
+    }
+    .q-chip {
+      background: #4d1830;
+      color: #f7768e;
+      border: 1px solid #f7768e;
+      border-radius: 5px;
+      padding: 3px 9px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      white-space: nowrap;
+      flex-shrink: 0;
+      font-family: monospace;
+    }
+    .q-empty { color: var(--text-faint); font-size: 0.82rem; font-style: italic; }
+
+    .btn-play {
+      background: #15803d;
+      border: none;
+      border-radius: var(--radius-sm);
+      color: #fff;
+      cursor: pointer;
+      font-size: 0.88rem;
+      font-weight: 600;
+      padding: 9px 20px;
+      transition: background 0.2s;
+    }
+    .btn-play:hover { background: #166534; }
+    .btn-play.playing { background: #c2410c; }
+    .btn-play.playing:hover { background: #9a3412; }
+    .btn-play:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .speed-select {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      font-size: 0.85rem;
+      padding: 8px 10px;
+      outline: none;
+    }
+
+    .nav-row {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+      width: 100%;
+      max-width: 90%;
+    }
+
+    textarea {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      font-family: 'JetBrains Mono','Fira Code',monospace;
+      font-size: 0.9rem;
+      padding: 8px 11px;
+      resize: vertical;
+      outline: none;
+      transition: border-color 0.2s;
+      line-height: 1.6;
+      width: 100%;
+      min-height: 80px;
+    }
+    textarea:focus { border-color: var(--accent); }
+
+    select.preset-sel {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      font-size: 0.88rem;
+      padding: 8px 12px;
+      outline: none;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body class="page">
+
+<div class="page-header">
+  <a class="back-link" href="../index.html">&larr; All Algorithms</a>
+  <h1 class="page-title">Rotting Oranges</h1>
+</div>
+
+<div class="controls">
+  <div class="field">
+    <label>Preset</label>
+    <select class="preset-sel" id="preset-sel" onchange="loadPreset()">
+      <option value="0">Simple Spread &mdash; answer: 4</option>
+      <option value="1">Two Sources &mdash; answer: 2</option>
+      <option value="2">Impossible &mdash; answer: &minus;1</option>
+    </select>
+  </div>
+  <div class="field" style="flex: 2; min-width: 200px;">
+    <label>Grid (0 = empty &middot; 1 = fresh &middot; 2 = rotten &mdash; one row per line, space-separated)</label>
+    <textarea id="inp-grid">2 1 1
+1 1 0
+0 1 1</textarea>
+  </div>
+  <button class="btn-primary" onclick="buildViz()">Build</button>
+</div>
+
+<div class="viz-area">
+  <div class="grid-wrap">
+    <div id="grid"></div>
+  </div>
+
+  <div class="status-bar" style="max-width:100%">
+    <span class="phase-label" id="phase-label">&mdash;</span>
+    <span class="step-desc" id="step-desc">Choose a preset or edit the grid above, then click Build.</span>
+  </div>
+
+  <div class="bottom-row">
+    <div class="code-panel">
+      <div class="code-header">Python &mdash; Multi-Source BFS</div>
+      <div class="code-body" id="code-body"></div>
+    </div>
+
+    <div class="right-col">
+      <div class="panel-box">
+        <div class="panel-title">Progress</div>
+        <div class="stats-row">
+          <div class="stat-item">
+            <div class="stat-label">Minutes</div>
+            <div class="stat-value" id="minute-display">&mdash;</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-label">Fresh Left</div>
+            <div class="stat-value" id="fresh-display">&mdash;</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel-box">
+        <div class="panel-title">BFS Queue <span class="panel-sub">(current wave)</span></div>
+        <div id="queue-items" class="queue-list"><span class="q-empty">not started</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="legend">
+  <div class="leg-item">
+    <div class="leg-swatch square" style="background:#070a10;border:1px solid #1a1e2a"></div>Empty
+  </div>
+  <div class="leg-item">
+    <div class="leg-swatch square" style="background:#7d4010;border:2px solid #c07020"></div>Fresh orange
+  </div>
+  <div class="leg-item">
+    <div class="leg-swatch square" style="background:#3d1020;border:1px solid #6d2040"></div>Rotten orange
+  </div>
+  <div class="leg-item">
+    <div class="leg-swatch square" style="background:#f7768e;border:2px solid #fff"></div>Spreading now
+  </div>
+  <div class="leg-item">
+    <div class="leg-swatch square" style="background:#a03030;border:2px solid #f7768e"></div>Just turned rotten
+  </div>
+</div>
+
+<div class="nav-row">
+  <div class="step-nav">
+    <button class="btn-step" id="btn-prev" disabled>&larr; Back</button>
+    <button class="btn-step" id="btn-next" disabled>Next &rarr;</button>
+  </div>
+  <button class="btn-play" id="btn-play" disabled>&#9654; Play</button>
+  <select class="speed-select" id="speed">
+    <option value="700">Slow</option>
+    <option value="280" selected>Medium</option>
+    <option value="80">Fast</option>
+  </select>
+</div>
+
+<script>
+// ── Presets ────────────────────────────────────────────────────────────────────
+var PRESETS = [
+  { grid: '2 1 1\n1 1 0\n0 1 1' },
+  { grid: '2 1 1\n1 0 1\n1 1 2' },
+  { grid: '2 1 1\n0 0 1\n1 0 1' },
+];
+
+function loadPreset() {
+  var idx = parseInt(document.getElementById('preset-sel').value);
+  document.getElementById('inp-grid').value = PRESETS[idx].grid;
+  buildViz();
+}
+
+// ── Code panel ─────────────────────────────────────────────────────────────────
+var CODE = [
+  [1,  '<span class="kw">from</span> collections <span class="kw">import</span> <span class="bi">deque</span>'],
+  [0,  ''],
+  [3,  '<span class="kw">def</span> <span class="fn">orangesRotting</span><span class="op">(</span>grid<span class="op">):</span>'],
+  [4,  '    rows, cols <span class="op">=</span> <span class="bi">len</span><span class="op">(</span>grid<span class="op">),</span> <span class="bi">len</span><span class="op">(</span>grid<span class="op">[</span><span class="nb">0</span><span class="op">])</span>'],
+  [5,  '    fresh <span class="op">=</span> <span class="nb">0</span>'],
+  [6,  '    queue <span class="op">=</span> <span class="bi">deque</span><span class="op">()</span>'],
+  [7,  '    <span class="kw">for</span> r <span class="kw">in</span> <span class="bi">range</span><span class="op">(</span>rows<span class="op">):</span>'],
+  [8,  '        <span class="kw">for</span> c <span class="kw">in</span> <span class="bi">range</span><span class="op">(</span>cols<span class="op">):</span>'],
+  [9,  '            <span class="kw">if</span> grid<span class="op">[</span>r<span class="op">][</span>c<span class="op">] ==</span> <span class="nb">2</span><span class="op">:</span>'],
+  [10, '                queue<span class="op">.</span><span class="fn">append</span><span class="op">((</span>r, c, <span class="nb">0</span><span class="op">))</span>'],
+  [11, '            <span class="kw">elif</span> grid<span class="op">[</span>r<span class="op">][</span>c<span class="op">] ==</span> <span class="nb">1</span><span class="op">:</span>'],
+  [12, '                fresh <span class="op">+=</span> <span class="nb">1</span>'],
+  [0,  ''],
+  [14, '    minutes <span class="op">=</span> <span class="nb">0</span>'],
+  [15, '    <span class="kw">while</span> queue<span class="op">:</span>'],
+  [16, '        r, c, t <span class="op">=</span> queue<span class="op">.</span><span class="fn">popleft</span><span class="op">()</span>'],
+  [17, '        <span class="kw">for</span> dr, dc <span class="kw">in</span> <span class="op">[(-</span><span class="nb">1</span><span class="op">,</span><span class="nb">0</span><span class="op">),(</span><span class="nb">1</span><span class="op">,</span><span class="nb">0</span><span class="op">),</span>'],
+  [18, '                           <span class="op">(</span><span class="nb">0</span><span class="op">,-</span><span class="nb">1</span><span class="op">),(</span><span class="nb">0</span><span class="op">,</span><span class="nb">1</span><span class="op">)]:</span>'],
+  [19, '            nr, nc <span class="op">=</span> r<span class="op">+</span>dr, c<span class="op">+</span>dc'],
+  [20, '            <span class="kw">if</span> <span class="op">(</span><span class="nb">0</span> <span class="op">&lt;=</span> nr <span class="op">&lt;</span> rows <span class="kw">and</span>'],
+  [21, '                <span class="nb">0</span> <span class="op">&lt;=</span> nc <span class="op">&lt;</span> cols <span class="kw">and</span>'],
+  [22, '                grid<span class="op">[</span>nr<span class="op">][</span>nc<span class="op">] ==</span> <span class="nb">1</span><span class="op">):</span>'],
+  [23, '                grid<span class="op">[</span>nr<span class="op">][</span>nc<span class="op">] =</span> <span class="nb">2</span>'],
+  [24, '                fresh <span class="op">-=</span> <span class="nb">1</span>'],
+  [25, '                minutes <span class="op">=</span> t <span class="op">+</span> <span class="nb">1</span>'],
+  [26, '                queue<span class="op">.</span><span class="fn">append</span><span class="op">((</span>nr, nc, t<span class="op">+</span><span class="nb">1</span><span class="op">))</span>'],
+  [0,  ''],
+  [28, '    <span class="kw">return</span> minutes <span class="kw">if</span> fresh <span class="op">==</span> <span class="nb">0</span> <span class="kw">else</span> <span class="op">-</span><span class="nb">1</span>'],
+];
+
+function buildCodePanel() {
+  var body = document.getElementById('code-body');
+  body.innerHTML = '';
+  CODE.forEach(function(pair) {
+    var ln = pair[0], html = pair[1];
+    var row = document.createElement('div');
+    row.className = 'cl';
+    if (ln > 0) row.id = 'cl-' + ln;
+    row.innerHTML = '<span class="ln">' + (ln > 0 ? ln : '') + '</span><span class="code">' + html + '</span>';
+    body.appendChild(row);
+  });
+}
+
+// ── State ──────────────────────────────────────────────────────────────────────
+var ROWS = 0, COLS = 0;
+var simSteps = [];
+
+// ── Parse grid ─────────────────────────────────────────────────────────────────
+function parseGrid() {
+  var raw = document.getElementById('inp-grid').value.trim();
+  var lines = raw.split(/\n+/).map(function(l) { return l.trim(); }).filter(function(l) { return l.length > 0; });
+  if (!lines.length) return null;
+  var parsed = lines.map(function(line) {
+    var tokens = line.split(/[\s,]+/).filter(function(t) { return t.length > 0; });
+    if (tokens.length === 1 && tokens[0].length > 1) {
+      tokens = tokens[0].split('');
+    }
+    return tokens.map(function(t) {
+      var v = parseInt(t, 10);
+      return (v === 0 || v === 1 || v === 2) ? v : 0;
+    });
+  });
+  var maxC = parsed.reduce(function(m, r) { return Math.max(m, r.length); }, 0);
+  parsed = parsed.map(function(r) {
+    while (r.length < maxC) r.push(0);
+    return r;
+  });
+  return parsed;
+}
+
+// ── Build simulation steps ─────────────────────────────────────────────────────
+function buildSteps(grid) {
+  var rows = grid.length, cols = grid[0].length;
+  var steps = [];
+  var DIRS = [[-1,0],[1,0],[0,-1],[0,1]];
+
+  var cellSt = grid.map(function(row) {
+    return row.map(function(v) {
+      return v === 0 ? 'empty' : v === 1 ? 'fresh' : 'rotten';
+    });
+  });
+
+  var freshCount = 0;
+  var initRotten = [];
+  for (var r = 0; r < rows; r++) {
+    for (var c = 0; c < cols; c++) {
+      if (grid[r][c] === 1) freshCount++;
+      else if (grid[r][c] === 2) initRotten.push([r, c]);
+    }
+  }
+
+  var minute = 0;
+
+  function snap(phase, desc, lines, qView) {
+    steps.push({
+      phase: phase,
+      desc: desc,
+      lines: lines || [],
+      cells: cellSt.map(function(row) { return row.slice(); }),
+      queue: (qView || []).slice(),
+      minute: minute,
+      freshCount: freshCount,
+    });
+  }
+
+  if (freshCount === 0 && initRotten.length === 0) {
+    snap('Done', 'Grid is empty — no oranges at all. Answer: 0.', [28], []);
+    return steps;
+  }
+
+  snap('Init',
+    'Found ' + freshCount + ' fresh orange(s) and ' + initRotten.length + ' rotten orange(s). All rotten are enqueued at t=0.',
+    [3,4,5,6,7,8,9,10,11,12],
+    initRotten.map(function(rc) { return [rc[0], rc[1]]; })
+  );
+
+  if (initRotten.length === 0) {
+    snap('Done',
+      freshCount + ' fresh orange(s) exist but there are no rotten oranges to start the spread. Answer: −1.',
+      [28], []
+    );
+    return steps;
+  }
+
+  var visited = {};
+  initRotten.forEach(function(rc) { visited[rc[0]+','+rc[1]] = true; });
+  var currentLevel = initRotten.slice();
+
+  while (currentLevel.length > 0) {
+    currentLevel.forEach(function(rc) {
+      cellSt[rc[0]][rc[1]] = 'current';
+    });
+    snap('BFS',
+      'Dequeuing ' + currentLevel.length + ' source(s) at minute ' + minute + '. Each checks its 4-directional neighbors for fresh oranges.',
+      [15, 16, 17, 18, 19, 20, 21, 22],
+      currentLevel.map(function(rc) { return [rc[0], rc[1]]; })
+    );
+
+    var nextLevel = [];
+    var nextKeys = {};
+    currentLevel.forEach(function(rc) {
+      var r = rc[0], c = rc[1];
+      DIRS.forEach(function(d) {
+        var nr = r + d[0], nc = c + d[1];
+        var key = nr + ',' + nc;
+        if (nr >= 0 && nr < rows && nc >= 0 && nc < cols
+            && cellSt[nr][nc] === 'fresh'
+            && !visited[key] && !nextKeys[key]) {
+          nextKeys[key] = true;
+          visited[key] = true;
+          nextLevel.push([nr, nc]);
+        }
+      });
+    });
+
+    currentLevel.forEach(function(rc) {
+      cellSt[rc[0]][rc[1]] = 'rotten';
+    });
+
+    if (nextLevel.length > 0) {
+      minute++;
+      freshCount -= nextLevel.length;
+
+      nextLevel.forEach(function(rc) {
+        cellSt[rc[0]][rc[1]] = 'turning';
+      });
+
+      snap('BFS',
+        nextLevel.length + ' fresh orange(s) turn rotten at minute ' + minute + '. ' + freshCount + ' fresh remain.',
+        [23, 24, 25, 26],
+        nextLevel.map(function(rc) { return [rc[0], rc[1]]; })
+      );
+
+      nextLevel.forEach(function(rc) {
+        cellSt[rc[0]][rc[1]] = 'rotten';
+      });
+    }
+
+    currentLevel = nextLevel;
+  }
+
+  if (freshCount === 0) {
+    snap('Done',
+      'All oranges are rotten. Answer: ' + minute + ' minute(s).',
+      [28], []
+    );
+  } else {
+    snap('Done',
+      freshCount + ' fresh orange(s) are isolated — unreachable from any rotten orange. Answer: −1.',
+      [28], []
+    );
+  }
+
+  return steps;
+}
+
+// ── Grid shell ─────────────────────────────────────────────────────────────────
+function renderGridShell() {
+  var container = document.getElementById('grid');
+  var maxW = container.parentElement.clientWidth - 40;
+  var cellSize = Math.max(22, Math.min(64, Math.floor(maxW / COLS) - 4));
+  container.style.gridTemplateColumns = 'repeat(' + COLS + ', ' + cellSize + 'px)';
+  container.innerHTML = '';
+
+  for (var r = 0; r < ROWS; r++) {
+    for (var c = 0; c < COLS; c++) {
+      var cell = document.createElement('div');
+      cell.className = 'cell';
+      cell.id = 'cell-' + r + '-' + c;
+      cell.style.width = cellSize + 'px';
+      cell.style.height = cellSize + 'px';
+      container.appendChild(cell);
+    }
+  }
+}
+
+// ── Cell colors ────────────────────────────────────────────────────────────────
+var CELL_COLORS = {
+  empty:   { bg: '#070a10', border: 'transparent' },
+  fresh:   { bg: '#7d4010', border: '#c07020' },
+  rotten:  { bg: '#3d1020', border: '#6d2040' },
+  current: { bg: '#f7768e', border: '#ffffff' },
+  turning: { bg: '#a03030', border: '#f7768e' },
+};
+
+function applyCellColor(r, c, st, animate) {
+  var el = document.getElementById('cell-' + r + '-' + c);
+  if (!el) return;
+  var col = CELL_COLORS[st] || CELL_COLORS.empty;
+  if (animate) {
+    gsap.to(el, { backgroundColor: col.bg, borderColor: col.border, duration: 0.18, ease: 'power2.out' });
+  } else {
+    el.style.backgroundColor = col.bg;
+    el.style.borderColor = col.border;
+  }
+}
+
+function applyStep(s, animate) {
+  for (var r = 0; r < ROWS; r++) {
+    for (var c = 0; c < COLS; c++) {
+      applyCellColor(r, c, s.cells[r][c], animate);
+    }
+  }
+  renderQueue(s.queue);
+  renderStats(s.minute, s.freshCount, s.phase === 'Done' && s.freshCount > 0);
+  setCodeLines(s.lines || []);
+}
+
+// ── Queue display ──────────────────────────────────────────────────────────────
+function renderQueue(queue) {
+  var container = document.getElementById('queue-items');
+  container.innerHTML = '';
+  if (!queue || queue.length === 0) {
+    container.innerHTML = '<span class="q-empty">empty</span>';
+    return;
+  }
+  queue.forEach(function(rc) {
+    var chip = document.createElement('div');
+    chip.className = 'q-chip';
+    chip.textContent = '(' + rc[0] + ',' + rc[1] + ')';
+    container.appendChild(chip);
+  });
+}
+
+// ── Stats display ──────────────────────────────────────────────────────────────
+function renderStats(minute, fresh, impossible) {
+  var mEl = document.getElementById('minute-display');
+  var fEl = document.getElementById('fresh-display');
+  if (impossible) {
+    mEl.textContent = '−1';
+    mEl.className = 'stat-value red';
+  } else {
+    mEl.textContent = minute;
+    mEl.className = 'stat-value';
+  }
+  fEl.textContent = fresh;
+  fEl.className = fresh > 0 ? 'stat-value orange' : 'stat-value';
+}
+
+// ── Code highlighting ──────────────────────────────────────────────────────────
+var HL_BG = 'rgba(122,162,247,0.12)';
+var prevLines = [];
+
+function setCodeLines(newLines) {
+  prevLines.forEach(function(n) {
+    if (newLines.indexOf(n) === -1) {
+      var el = document.getElementById('cl-' + n); if (!el) return;
+      el.style.backgroundColor = '';
+      el.style.borderLeftColor = '';
+      var ln = el.querySelector('.ln'); if (ln) ln.style.color = '';
+    }
+  });
+  newLines.forEach(function(n) {
+    if (prevLines.indexOf(n) === -1) {
+      var el = document.getElementById('cl-' + n); if (!el) return;
+      el.style.backgroundColor = HL_BG;
+      el.style.borderLeftColor = 'var(--accent)';
+      var ln = el.querySelector('.ln'); if (ln) ln.style.color = 'var(--accent)';
+    }
+  });
+  if (newLines.length) {
+    var el = document.getElementById('cl-' + newLines[0]);
+    if (el) el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }
+  prevLines = newLines.slice();
+}
+
+// ── Build viz ──────────────────────────────────────────────────────────────────
+function buildViz() {
+  nav.stopPlay();
+  var grid = parseGrid();
+  if (!grid) {
+    document.getElementById('step-desc').textContent = 'Could not parse grid. Use 0/1/2 per cell, one row per line.';
+    return;
+  }
+  ROWS = grid.length;
+  COLS = grid[0].length;
+  simSteps = buildSteps(grid);
+  renderGridShell();
+  prevLines = [];
+  document.getElementById('minute-display').textContent = '—';
+  document.getElementById('minute-display').className = 'stat-value';
+  document.getElementById('fresh-display').textContent = '—';
+  document.getElementById('fresh-display').className = 'stat-value';
+  document.getElementById('queue-items').innerHTML = '<span class="q-empty">not started</span>';
+  nav.load(simSteps);
+}
+
+// ── VizNav ─────────────────────────────────────────────────────────────────────
+var nav = VizNav({
+  btnPrev: document.getElementById('btn-prev'),
+  btnNext: document.getElementById('btn-next'),
+  btnPlay: document.getElementById('btn-play'),
+  speedSel: document.getElementById('speed'),
+  render: function(s, cur, total) {
+    applyStep(s, cur > 0);
+    var phaseEl = document.getElementById('phase-label');
+    var descEl  = document.getElementById('step-desc');
+    if (phaseEl) phaseEl.textContent = 'Step ' + (cur + 1) + ' / ' + total + '  \xb7  ' + s.phase;
+    if (descEl)  descEl.textContent  = s.desc;
+  }
+});
+
+window.addEventListener('resize', function() { if (ROWS > 0) renderGridShell(); });
+
+buildCodePanel();
+buildViz();
+</script>
+
+<script>
+if (window.self !== window.top) {
+  var bl = document.querySelector('.back-link');
+  if (bl) bl.style.display = 'none';
+}
+</script>
+</body>
+</html>
