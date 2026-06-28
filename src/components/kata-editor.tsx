@@ -2,6 +2,7 @@ import { useRef, useEffect, useState, useCallback } from "react";
 import Editor, { type OnMount } from "@monaco-editor/react";
 import type { editor } from "monaco-editor";
 import { initVimMode, type VimAdapterInstance } from "monaco-vim";
+import { open } from "@tauri-apps/plugin-shell";
 import { useSettingsStore } from "../stores/settings-store";
 import { useTimerStore } from "../stores/timer-store";
 import { useKeyboardShortcuts } from "../hooks/use-keyboard-shortcuts";
@@ -9,6 +10,32 @@ import { runTests } from "../lib/test-runner";
 import { saveUserCode, loadUserCode, deleteUserCode, saveKataNotes, loadKataNotes } from "../lib/database";
 import { TestOutput } from "./test-output";
 import type { Kata, TestResult } from "../types/editor";
+
+// Matches "Ref: LeetCode #123 Problem Name" at the end of a description
+const LC_REF_RE = /Ref:\s*LeetCode\s*#(\d+)\s+(.+)$/m;
+
+function DescriptionWithLink({ text }: { text: string }) {
+  const match = text.match(LC_REF_RE);
+  if (!match) {
+    return <span className="whitespace-pre-wrap">{text}</span>;
+  }
+  const [fullMatch, , problemName] = match;
+  const slug = problemName.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/-+$/, "");
+  const url = `https://leetcode.com/problems/${slug}/`;
+  const before = text.slice(0, match.index);
+  return (
+    <span className="whitespace-pre-wrap">
+      {before}
+      <button
+        onClick={() => open(url)}
+        className="text-primary underline hover:text-primary/80 cursor-pointer"
+        title={url}
+      >
+        {fullMatch}
+      </button>
+    </span>
+  );
+}
 
 interface KataEditorProps {
   kata: Kata;
@@ -201,8 +228,8 @@ export function KataEditor({ kata, isSession, onTestComplete }: KataEditorProps)
 
           {/* Tab content */}
           {showPanel === "description" && (
-            <div className="flex-1 overflow-y-auto px-4 py-3 text-sm text-base-content/70 whitespace-pre-wrap">
-              {kata.description || "No description available."}
+            <div className="flex-1 overflow-y-auto px-4 py-3 text-sm text-base-content/70">
+              <DescriptionWithLink text={kata.description || "No description available."} />
             </div>
           )}
           {showPanel === "solution" && kata.solution && (
