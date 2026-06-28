@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Binary Tree Right Side View</title>
+  <link rel="stylesheet" href="../shared/style.css" />
+  <script src="../shared/gsap.min.js"></script>
+  <script src="../shared/viz.js"></script>
+  <style>
+    .viz-area {
+      width: 100%; max-width: 90%;
+      display: flex; flex-direction: column; gap: 12px;
+    }
+
+    .tree-wrap {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+    }
+    #tree-svg { display: block; width: 100%; }
+
+    .bottom-row {
+      display: grid;
+      grid-template-columns: 1fr 220px;
+      gap: 12px;
+      align-items: start;
+    }
+    @media (max-width: 640px) { .bottom-row { grid-template-columns: 1fr; } }
+
+    /* Queue panel */
+    #queue-pills {
+      display: flex; flex-wrap: wrap; gap: 7px;
+      min-height: 34px; align-items: center;
+    }
+    .q-pill {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 34px; height: 34px; border-radius: 50%;
+      font-size: 0.84rem; font-weight: 700;
+      border: 2px solid;
+      transition: all 0.2s;
+    }
+    .q-pill.idle      { background: #1e2130; border-color: #2d3148; color: var(--text-muted); }
+    .q-pill.queued    { background: #1a2b3c; border-color: var(--blue); color: var(--blue); }
+    .q-pill.active    { background: #2d1f6a; border-color: var(--accent); color: var(--accent-pale); }
+    .q-pill.rightmost { background: #3d1a00; border-color: var(--orange); color: var(--orange); }
+    .q-empty { font-size: 0.82rem; color: var(--text-faint); font-style: italic; }
+
+    /* Result panel */
+    #result-list {
+      display: flex; flex-direction: column; gap: 6px; min-height: 34px;
+    }
+    .r-row {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 0.88rem; color: var(--text-muted);
+      padding: 5px 10px; border-radius: 6px;
+      background: var(--surface-dark); border: 1px solid var(--border-soft);
+      transition: all 0.25s;
+    }
+    .r-row.new {
+      background: rgba(255,158,100,0.12);
+      border-color: var(--orange);
+      color: var(--orange);
+    }
+    .r-lbl { font-size: 0.72rem; color: var(--text-dim); min-width: 52px; }
+    .r-val { font-weight: 700; font-size: 1rem; }
+    .r-empty { font-size: 0.82rem; color: var(--text-faint); font-style: italic; }
+  </style>
+</head>
+<body class="page">
+
+<div class="page-header">
+  <a class="back-link" href="../index.html">← All Algorithms</a>
+  <h1 class="page-title">Binary Tree Right Side View</h1>
+</div>
+
+<div class="controls">
+  <div class="field">
+    <label>Level-order (use null for empty)</label>
+    <input id="inp-tree" type="text" value="1,2,3,null,5,null,4" style="width:280px" />
+  </div>
+  <button class="btn-primary" onclick="build()">Build</button>
+</div>
+
+<div class="viz-area">
+
+  <div class="tree-wrap">
+    <svg id="tree-svg" viewBox="0 0 800 320"
+         preserveAspectRatio="xMidYMid meet"></svg>
+  </div>
+
+  <div class="status-bar" style="max-width:100%">
+    <span class="phase-label" id="phase-label">—</span>
+    <span class="step-desc"   id="step-desc">Click Build to start.</span>
+  </div>
+
+  <div class="bottom-row">
+
+    <div class="panel-box">
+      <div class="panel-title">BFS Queue <span class="panel-sub">(front → back)</span></div>
+      <div id="queue-pills"><span class="q-empty">empty</span></div>
+    </div>
+
+    <div class="panel-box">
+      <div class="panel-title">Right Side View</div>
+      <div id="result-list"><span class="r-empty">none yet</span></div>
+    </div>
+
+  </div>
+
+</div>
+
+<div class="legend">
+  <div class="leg-item">
+    <svg width="14" height="14"><circle cx="7" cy="7" r="6" fill="#1e2130" stroke="#2d3148" stroke-width="2"/></svg>
+    Idle
+  </div>
+  <div class="leg-item">
+    <svg width="14" height="14"><circle cx="7" cy="7" r="6" fill="#1a2b3c" stroke="var(--blue)" stroke-width="2"/></svg>
+    In Queue
+  </div>
+  <div class="leg-item">
+    <svg width="14" height="14"><circle cx="7" cy="7" r="6" fill="#2d1f6a" stroke="var(--accent)" stroke-width="2"/></svg>
+    Active
+  </div>
+  <div class="leg-item">
+    <svg width="14" height="14"><circle cx="7" cy="7" r="6" fill="#3d1a00" stroke="var(--orange)" stroke-width="2.5"/></svg>
+    Rightmost
+  </div>
+  <div class="leg-item">
+    <svg width="14" height="14"><circle cx="7" cy="7" r="6" fill="#052e16" stroke="#16a34a" stroke-width="2"/></svg>
+    Done
+  </div>
+</div>
+
+<div class="step-nav">
+  <button class="btn-step" id="btn-back" disabled>← Back</button>
+  <button class="btn-step" id="btn-next" disabled>Next →</button>
+  <button id="btn-play" style="background:#15803d;color:#fff;border:none;border-radius:4px;padding:6px 14px;font-weight:600;cursor:pointer">&#9654; Play</button>
+  <select id="speed-select" style="background:var(--bg);border:1px solid var(--border);color:var(--text);border-radius:4px;padding:6px 8px;font-size:0.85rem">
+    <option value="900">Slow</option>
+    <option value="450" selected>Medium</option>
+    <option value="150">Fast</option>
+  </select>
+</div>
+
+<script>
+// ─── Node state colors ────────────────────────────────────────────────────────
+const COLORS = {
+  idle:      { fill: '#1e2130', stroke: '#2d3148',       text: 'var(--text-muted)' },
+  queued:    { fill: '#1a2b3c', stroke: 'var(--blue)',   text: 'var(--blue)' },
+  active:    { fill: '#2d1f6a', stroke: 'var(--accent)', text: 'var(--accent-pale)' },
+  rightmost: { fill: '#3d1a00', stroke: 'var(--orange)', text: 'var(--orange)' },
+  done:      { fill: '#052e16', stroke: '#16a34a',       text: 'var(--green)' },
+};
+const EDGE_DEFAULT = '#2d3148';
+
+// ─── Global ───────────────────────────────────────────────────────────────────
+let nodeMap = {};
+let R = 22;
+let VW = 800, VH = 320;
+
+// ─── Parse level-order string ─────────────────────────────────────────────────
+function parseLevelOrder(s) {
+  return s.split(',').map(t => t.trim()).map(t =>
+    (t === '' || t.toLowerCase() === 'null' || t === 'n') ? null : Number(t)
+  );
+}
+
+// ─── Build tree ───────────────────────────────────────────────────────────────
+let nextId = 0;
+function buildTree(vals) {
+  nodeMap = {};
+  nextId = 0;
+  if (!vals.length || vals[0] === null) return null;
+  const makeNode = (val) => {
+    const n = { id: nextId++, val, left: null, right: null, x: 0, y: 0, depth: 0 };
+    nodeMap[n.id] = n;
+    return n;
+  };
+  const root = makeNode(vals[0]);
+  const queue = [root];
+  let i = 1;
+  while (queue.length && i < vals.length) {
+    const cur = queue.shift();
+    if (i < vals.length) {
+      if (vals[i] !== null) {
+        cur.left = makeNode(vals[i]);
+        cur.left.depth = cur.depth + 1;
+        queue.push(cur.left);
+      }
+      i++;
+    }
+    if (i < vals.length) {
+      if (vals[i] !== null) {
+        cur.right = makeNode(vals[i]);
+        cur.right.depth = cur.depth + 1;
+        queue.push(cur.right);
+      }
+      i++;
+    }
+  }
+  return root;
+}
+
+// ─── Layout ───────────────────────────────────────────────────────────────────
+function layout(root) {
+  let idx = 0;
+  let maxDepth = 0;
+  function inorder(node) {
+    if (!node) return;
+    inorder(node.left);
+    node._inIdx = idx++;
+    if (node.depth > maxDepth) maxDepth = node.depth;
+    inorder(node.right);
+  }
+  inorder(root);
+  const count = idx;
+  const xSpace = Math.max(60, Math.min(110, 700 / Math.max(1, count)));
+  const ySpace = 70;
+  const padX = 40, padY = 30;
+  VW = padX * 2 + (count - 1) * xSpace;
+  VH = padY * 2 + maxDepth * ySpace + R * 2;
+  if (VW < 400) VW = 400;
+  for (const id in nodeMap) {
+    const n = nodeMap[id];
+    n.x = padX + n._inIdx * xSpace;
+    n.y = padY + n.depth * ySpace + R;
+  }
+}
+
+// ─── SVG helpers ──────────────────────────────────────────────────────────────
+function svgEl(tag, attrs) {
+  const el = document.createElementNS('http://www.w3.org/2000/svg', tag);
+  Object.entries(attrs).forEach(([k, v]) => el.setAttribute(k, v));
+  return el;
+}
+function svgG(id) {
+  const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  if (id) g.id = id;
+  return g;
+}
+
+// ─── Render SVG skeleton ──────────────────────────────────────────────────────
+function renderSVG(root) {
+  const svg = document.getElementById('tree-svg');
+  svg.innerHTML = '';
+  svg.setAttribute('viewBox', `0 0 ${VW} ${VH}`);
+  R = VW > 700 ? 22 : 18;
+
+  const edgeG = svgG('edges');
+  const glowG = svgG('glows');
+  const nodeG = svgG('nodes');
+  svg.appendChild(edgeG);
+  svg.appendChild(glowG);
+  svg.appendChild(nodeG);
+
+  // edges
+  function drawEdges(n) {
+    if (!n) return;
+    [n.left, n.right].forEach(c => {
+      if (!c) return;
+      edgeG.appendChild(svgEl('line', {
+        id: `edge-${n.id}-${c.id}`,
+        x1: n.x, y1: n.y, x2: c.x, y2: c.y,
+        stroke: EDGE_DEFAULT, 'stroke-width': 2, 'stroke-linecap': 'round',
+      }));
+    });
+    drawEdges(n.left); drawEdges(n.right);
+  }
+  drawEdges(root);
+
+  // nodes
+  for (const id in nodeMap) {
+    const n = nodeMap[id];
+    const g = svgG(`node-g-${n.id}`);
+    // outer glow ring (hidden by default, shown for rightmost)
+    g.appendChild(svgEl('circle', {
+      id: `glow-${n.id}`, cx: n.x, cy: n.y, r: R + 6,
+      fill: 'none', stroke: 'var(--orange)',
+      'stroke-width': 2.5, opacity: 0,
+    }));
+    g.appendChild(svgEl('circle', {
+      id: `nc-${n.id}`, cx: n.x, cy: n.y, r: R,
+      fill: COLORS.idle.fill, stroke: COLORS.idle.stroke, 'stroke-width': 2.5,
+    }));
+    const t = svgEl('text', {
+      id: `nt-${n.id}`, x: n.x, y: n.y,
+      'text-anchor': 'middle', 'dominant-baseline': 'middle',
+      fill: COLORS.idle.text,
+      'font-size': Math.round(R * 0.75), 'font-weight': 'bold',
+      'font-family': 'Segoe UI, system-ui, sans-serif',
+    });
+    t.textContent = n.val;
+    g.appendChild(t);
+    nodeG.appendChild(g);
+  }
+}
+
+// ─── Simulation: BFS level by level ──────────────────────────────────────────
+function simulate(root) {
+  const stateMap = {};
+  for (const id in nodeMap) stateMap[id] = 'idle';
+  const out = [];
+  const result = [];
+
+  function snap(phase, desc, queueIds, newResultIdx) {
+    out.push({
+      phase, desc,
+      nodeStates: { ...stateMap },
+      queueIds: [...queueIds],
+      result: [...result],
+      newResultIdx: newResultIdx !== undefined ? newResultIdx : -1,
+    });
+  }
+
+  // initial queue = [root]
+  const bfsQueue = [root.id];
+  stateMap[root.id] = 'queued';
+  snap('Start', `Tree built. Root ${root.val} enters the BFS queue.`, bfsQueue);
+
+  let level = 0;
+  while (bfsQueue.length) {
+    const levelSize = bfsQueue.length;
+    snap('BFS', `Level ${level}: processing ${levelSize} node${levelSize > 1 ? 's' : ''}.`, bfsQueue);
+
+    for (let i = 0; i < levelSize; i++) {
+      const id = bfsQueue.shift();
+      const n = nodeMap[id];
+      const isLast = i === levelSize - 1;
+
+      stateMap[id] = 'active';
+      snap('Dequeue', `Dequeue ${n.val} (position ${i + 1}/${levelSize} in level ${level}).`, bfsQueue);
+
+      // enqueue children
+      const childMsgs = [];
+      if (n.left) {
+        bfsQueue.push(n.left.id);
+        stateMap[n.left.id] = 'queued';
+        childMsgs.push(`left child ${n.left.val}`);
+      }
+      if (n.right) {
+        bfsQueue.push(n.right.id);
+        stateMap[n.right.id] = 'queued';
+        childMsgs.push(`right child ${n.right.val}`);
+      }
+      if (childMsgs.length) {
+        snap('Enqueue', `Enqueue ${childMsgs.join(' and ')} from ${n.val}.`, bfsQueue);
+      }
+
+      if (isLast) {
+        stateMap[id] = 'rightmost';
+        result.push({ level, val: n.val });
+        snap('Rightmost', `${n.val} is the last node at level ${level} — visible from the right! Added to result.`, bfsQueue, result.length - 1);
+      } else {
+        stateMap[id] = 'done';
+      }
+    }
+
+    // mark all level nodes done (rightmost already marked)
+    // everything queued that was in this level is now done
+    snap('LevelDone', `Level ${level} complete. Right side value: ${result[result.length - 1].val}.`, bfsQueue);
+
+    // transition rightmost to done for next level
+    for (const id in stateMap) {
+      if (stateMap[id] === 'rightmost') stateMap[id] = 'done';
+      else if (stateMap[id] === 'active') stateMap[id] = 'done';
+    }
+
+    level++;
+  }
+
+  snap('Done', `BFS complete. Right side view: [${result.map(r => r.val).join(', ')}].`, [], -1);
+  return out;
+}
+
+// ─── Apply step ───────────────────────────────────────────────────────────────
+function applyStep(s, animate) {
+  const dur = animate ? 0.3 : 0;
+
+  // node colors + glow
+  for (const id in s.nodeStates) {
+    const st = s.nodeStates[id];
+    const c  = COLORS[st] || COLORS.idle;
+    const nc = document.getElementById(`nc-${+id}`);
+    const nt = document.getElementById(`nt-${+id}`);
+    const gw = document.getElementById(`glow-${+id}`);
+    if (!nc) continue;
+    if (animate) {
+      gsap.to(nc, { duration: dur, ease: 'power2.out', attr: { fill: c.fill, stroke: c.stroke } });
+      gsap.to(nt, { duration: dur, attr: { fill: c.text } });
+      gsap.to(gw, { duration: dur, opacity: st === 'rightmost' ? 1 : 0 });
+    } else {
+      nc.setAttribute('fill', c.fill); nc.setAttribute('stroke', c.stroke);
+      nt.setAttribute('fill', c.text);
+      gw.setAttribute('opacity', st === 'rightmost' ? '1' : '0');
+    }
+  }
+
+  // queue pills
+  const pillContainer = document.getElementById('queue-pills');
+  pillContainer.innerHTML = '';
+  if (!s.queueIds.length) {
+    pillContainer.innerHTML = '<span class="q-empty">empty</span>';
+  } else {
+    s.queueIds.forEach(id => {
+      const n = nodeMap[id];
+      if (!n) return;
+      const st = s.nodeStates[id] || 'queued';
+      const pill = document.createElement('div');
+      pill.className = `q-pill ${st === 'active' ? 'active' : st === 'rightmost' ? 'rightmost' : 'queued'}`;
+      pill.textContent = n.val;
+      pillContainer.appendChild(pill);
+    });
+  }
+
+  // result list
+  const resultList = document.getElementById('result-list');
+  resultList.innerHTML = '';
+  if (!s.result.length) {
+    resultList.innerHTML = '<span class="r-empty">none yet</span>';
+  } else {
+    s.result.forEach((entry, i) => {
+      const row = document.createElement('div');
+      row.className = 'r-row' + (i === s.newResultIdx ? ' new' : '');
+      row.innerHTML = `<span class="r-lbl">Level ${entry.level}</span><span class="r-val">${entry.val}</span>`;
+      resultList.appendChild(row);
+    });
+  }
+}
+
+// ─── Build / Run ──────────────────────────────────────────────────────────────
+function build() {
+  const txt = document.getElementById('inp-tree').value.trim();
+  const vals = parseLevelOrder(txt);
+  const root = buildTree(vals);
+  if (!root) {
+    document.getElementById('tree-svg').innerHTML = '';
+    document.getElementById('step-desc').textContent = 'Empty tree.';
+    document.getElementById('phase-label').textContent = '—';
+    document.getElementById('queue-pills').innerHTML = '<span class="q-empty">empty</span>';
+    document.getElementById('result-list').innerHTML  = '<span class="r-empty">none yet</span>';
+    return;
+  }
+  layout(root);
+  renderSVG(root);
+  const steps = simulate(root);
+  nav.load(steps);
+}
+
+// ─── Init VizNav ──────────────────────────────────────────────────────────────
+var nav = VizNav({
+  btnPrev: document.getElementById('btn-back'),
+  btnNext: document.getElementById('btn-next'),
+  btnPlay: document.getElementById('btn-play'),
+  speedSel: document.getElementById('speed-select'),
+  render: function(snap, cur, total) {
+    applyStep(snap, cur > 0);
+    var el = document.getElementById('phase-label');
+    if (el) el.textContent = 'Step ' + (cur + 1) + ' / ' + total + '  ·  ' + snap.phase;
+    var d = document.getElementById('step-desc');
+    if (d) d.textContent = snap.desc;
+  }
+});
+
+build();
+</script>
+<script>
+  if (window.self !== window.top) {
+    var bl = document.querySelector('.back-link');
+    if (bl) bl.style.display = 'none';
+  }
+</script>
+</body>
+</html>
