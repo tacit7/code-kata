@@ -14,14 +14,32 @@ import type { Kata, TestResult } from "../types/editor";
 // Matches "Ref: LeetCode #123 Problem Name" at the end of a description
 const LC_REF_RE = /Ref:\s*LeetCode\s*#(\d+)\s+(.+)$/m;
 
+type VizKataName =
+  | "Kadane's Algorithm"
+  | "Min Cost Climbing Stairs"
+  | "House Robber"
+  | "Median of Two Sorted Arrays"
+  | "Merge Two Sorted Lists"
+  | "Longest Palindromic Substring"
+  | "Binary Tree BFS"
+  | "Matrix BFS"
+  | "Matrix Grid BFS"
+  | "Linked List Cycle"
+  | "Linked List Cycle Detection";
+
 // Kata name → algo-viz subfolder served from /algo-viz/<folder>/index.html
-const VIZ_MAP: Record<string, string> = {
+const VIZ_MAP: Partial<Record<VizKataName, string>> = {
   "Kadane's Algorithm":           "kadanes",
   "Min Cost Climbing Stairs":       "min-cost-stairs",
   "House Robber":                   "house-robber",
   "Median of Two Sorted Arrays":    "median-sorted-arrays",
   "Merge Two Sorted Lists":         "merge-sorted-lists",
   "Longest Palindromic Substring":  "manachers",
+  "Binary Tree BFS":                "bfs",
+  "Matrix BFS":                     "bfs-grid",
+  "Matrix Grid BFS":                "bfs-traversal",
+  "Linked List Cycle":              "floyd-cycle",
+  "Linked List Cycle Detection":    "floyd-cycle",
 };
 
 // Overrides for slugs that can't be reliably derived from the display name
@@ -113,7 +131,7 @@ export function KataEditor({ kata, isSession, onTestComplete }: KataEditorProps)
     };
   }, [kata.id]);
 
-  const vizFolder = VIZ_MAP[kata.name] ?? null;
+  const vizFolder = VIZ_MAP[kata.name as VizKataName] ?? null;
 
   const handleEditorMount: OnMount = (editorInstance) => {
     editorRef.current = editorInstance;
@@ -217,6 +235,47 @@ export function KataEditor({ kata, isSession, onTestComplete }: KataEditorProps)
         : "border-transparent text-base-content/40 hover:text-base-content/70"
     }`;
 
+  const renderTabBar = (toggleMode: boolean) => (
+    <div className="flex border-b border-base-300/60 shrink-0">
+      {kata.description && (
+        <button
+          onClick={() => toggleMode
+            ? setShowPanel((v) => v === "description" ? null : "description")
+            : setShowPanel("description")}
+          className={tabClass("description")}
+        >
+          Problem
+        </button>
+      )}
+      {kata.solution && (
+        <button
+          onClick={() => toggleMode
+            ? setShowPanel((v) => v === "solution" ? null : "solution")
+            : setShowPanel("solution")}
+          className={tabClass("solution")}
+        >
+          Solution
+        </button>
+      )}
+      <button
+        onClick={() => toggleMode
+          ? setShowPanel((v) => v === "notes" ? null : "notes")
+          : setShowPanel("notes")}
+        className={tabClass("notes")}
+      >
+        Notes{!notesSaved && " •"}
+      </button>
+      {vizFolder && (
+        <button
+          onClick={() => setShowPanel((v) => v === "viz" ? null : "viz")}
+          className={tabClass("viz")}
+        >
+          Viz ↗
+        </button>
+      )}
+    </div>
+  );
+
   if (!codeLoaded) return null;
 
   const initialCode = savedCode ?? kata.code;
@@ -224,36 +283,7 @@ export function KataEditor({ kata, isSession, onTestComplete }: KataEditorProps)
   if (showPanel === "viz" && vizFolder) {
     return (
       <div className="flex flex-col h-full">
-        <div className="flex border-b border-base-300/60 shrink-0">
-          {kata.description && (
-            <button
-              onClick={() => setShowPanel("description")}
-              className={tabClass("description")}
-            >
-              Problem
-            </button>
-          )}
-          {kata.solution && (
-            <button
-              onClick={() => setShowPanel("solution")}
-              className={tabClass("solution")}
-            >
-              Solution
-            </button>
-          )}
-          <button
-            onClick={() => setShowPanel("notes")}
-            className={tabClass("notes")}
-          >
-            Notes{!notesSaved && " •"}
-          </button>
-          <button
-            onClick={() => setShowPanel((v) => v === "viz" ? null : "viz")}
-            className={tabClass("viz")}
-          >
-            Viz ↗
-          </button>
-        </div>
+        {renderTabBar(false)}
         <div className="flex-1 min-h-0">
           <iframe
             src={`/algo-viz/${vizFolder}/index.html`}
@@ -274,38 +304,7 @@ export function KataEditor({ kata, isSession, onTestComplete }: KataEditorProps)
           style={showPanel ? { width: panelWidth } : undefined}
         >
           {/* Tab bar */}
-          <div className="flex border-b border-base-300/60 shrink-0">
-            {kata.description && (
-              <button
-                onClick={() => setShowPanel((v) => v === "description" ? null : "description")}
-                className={tabClass("description")}
-              >
-                Problem
-              </button>
-            )}
-            {kata.solution && (
-              <button
-                onClick={() => setShowPanel((v) => v === "solution" ? null : "solution")}
-                className={tabClass("solution")}
-              >
-                Solution
-              </button>
-            )}
-            <button
-              onClick={() => setShowPanel((v) => v === "notes" ? null : "notes")}
-              className={tabClass("notes")}
-            >
-              Notes{!notesSaved && " •"}
-            </button>
-            {vizFolder && (
-              <button
-                onClick={() => setShowPanel((v) => v === "viz" ? null : "viz")}
-                className={tabClass("viz")}
-              >
-                Viz ↗
-              </button>
-            )}
-          </div>
+          {renderTabBar(true)}
 
           {/* Tab content */}
           {showPanel === "description" && (
