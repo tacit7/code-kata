@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Longest Increasing Subsequence</title>
+  <link rel="stylesheet" href="../shared/style.css" />
+  <script src="../shared/gsap.min.js"></script>
+  <script src="../shared/viz.js"></script>
+  <style>
+    .viz-area { width: 100%; max-width: 90%; }
+
+    /* two-row array grid */
+    .arrays-wrap {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 20px 22px;
+      display: flex; flex-direction: column; gap: 14px;
+      overflow-x: auto;
+    }
+    .row-label-pair {
+      display: flex; align-items: center; gap: 12px;
+    }
+    .row-name {
+      font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.1em; color: var(--text-dim);
+      min-width: 36px; text-align: right;
+    }
+    .cell-row { display: flex; gap: 6px; }
+    .cell-group {
+      display: flex; flex-direction: column; align-items: center; gap: 3px;
+    }
+    .cell-idx {
+      font-size: 0.58rem; color: var(--text-ghost);
+      font-family: monospace; text-align: center;
+    }
+    .arr-cell {
+      width: 52px; height: 52px;
+      display: flex; align-items: center; justify-content: center;
+      border: 2px solid var(--border-soft); border-radius: 6px;
+      background: var(--surface-dark);
+      font-size: 0.9rem; font-weight: 700; font-family: monospace;
+      color: var(--text-muted);
+      transition: border-color 0.2s, background 0.2s, color 0.2s;
+    }
+    .arr-cell.state-i {
+      border-color: var(--accent); color: var(--accent-pale);
+      background: #0e1a2e;
+    }
+    .arr-cell.state-j {
+      border-color: var(--orange); color: var(--orange-light);
+      background: #1e1200;
+    }
+    .arr-cell.state-ij {
+      border-color: var(--purple); color: #d9bfff;
+      background: #1a1230;
+    }
+    .arr-cell.state-dp-updated {
+      border-color: var(--green); color: var(--green-light);
+      background: var(--green-bg);
+    }
+    .arr-cell.state-dp-set {
+      border-color: #2d3148; color: var(--text-dim);
+      background: #0f111a;
+    }
+
+    /* connector arrow */
+    .arrow-row {
+      display: flex; gap: 6px; padding: 0 0 0 48px;
+      min-height: 20px; align-items: center;
+    }
+    .arrow-slot {
+      width: 52px; display: flex; justify-content: center;
+      font-size: 0.7rem; color: var(--green);
+    }
+
+    /* result + vars row */
+    .bottom-row {
+      display: flex; gap: 16px; flex-wrap: wrap;
+    }
+    .result-panel {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 16px 20px;
+      display: flex; flex-direction: column; gap: 6px;
+      min-width: 150px;
+    }
+    .result-title {
+      font-size: 0.68rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.1em; color: var(--text-dim);
+    }
+    .result-value {
+      font-size: 2rem; font-weight: 700; color: var(--green);
+      font-family: monospace;
+    }
+    .result-sub {
+      font-size: 0.72rem; color: var(--text-ghost);
+    }
+
+    .vars-panel {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 16px 20px;
+      display: flex; flex-direction: column; gap: 8px; flex: 1;
+    }
+    .vars-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .var-box {
+      padding: 9px 8px; background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      display: flex; flex-direction: column; align-items: center; gap: 3px;
+    }
+    .var-box.accent-border { border-color: var(--accent); }
+    .var-box.orange-border { border-color: var(--orange); }
+    .var-box.green-border  { border-color: var(--green); }
+    .var-label { font-size: 0.62rem; font-family: monospace; color: var(--text-faint); text-align: center; }
+    .var-val   { font-size: 1.2rem; font-weight: 700; color: var(--text-bright); }
+
+    /* nav row */
+    .nav-row { display: flex; gap: 8px; align-items: center; }
+    .btn-play {
+      background: #15803d; border: none; border-radius: var(--radius-sm);
+      color: #fff; cursor: pointer; font-size: 0.88rem; font-weight: 600;
+      padding: 9px 16px; transition: background 0.2s;
+    }
+    .btn-play:hover { background: #166534; }
+    .btn-play.playing { background: #c2410c; }
+    .btn-play.playing:hover { background: #9a3412; }
+    .btn-play:disabled { opacity: 0.4; cursor: not-allowed; }
+    .speed-select {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); color: var(--text);
+      font-size: 0.85rem; padding: 8px 10px; outline: none; width: 85px;
+    }
+
+    /* legend */
+    .legend {
+      display: flex; gap: 18px; flex-wrap: wrap;
+      padding: 0 4px;
+    }
+    .leg-item { display: flex; align-items: center; gap: 7px; font-size: 0.76rem; color: var(--text-muted); }
+    .leg-sw {
+      width: 14px; height: 14px; border-radius: 3px; flex-shrink: 0;
+      border: 2px solid;
+    }
+    .leg-sw.i   { border-color: var(--accent);  background: #0e1a2e; }
+    .leg-sw.j   { border-color: var(--orange);  background: #1e1200; }
+    .leg-sw.upd { border-color: var(--green);   background: var(--green-bg); }
+    .leg-sw.set { border-color: #2d3148; background: #0f111a; }
+  </style>
+</head>
+<body class="page">
+
+<div class="page-header">
+  <a class="back-link" href="../index.html">&larr; All Algorithms</a>
+  <div class="page-title">Longest Increasing Subsequence</div>
+</div>
+
+<div class="controls">
+  <div class="field">
+    <label>nums (comma-separated)</label>
+    <input id="inp-nums" type="text" value="10,9,2,5,3,7,101,18" style="min-width:260px" />
+  </div>
+  <button class="btn-primary" onclick="buildAndRun()">Build &amp; Run</button>
+</div>
+
+<div class="viz-area" id="viz-area">
+  <div style="padding:24px;color:var(--text-dim);font-size:0.9rem">
+    Enter numbers and click Build &amp; Run.
+  </div>
+</div>
+
+<div class="status-bar">
+  <div class="phase-label" id="phase-label">&mdash;</div>
+  <div class="step-desc" id="step-desc">Set input and click Build &amp; Run.</div>
+</div>
+
+<div class="step-nav">
+  <button class="btn-step" id="btn-back" disabled>&larr; Back</button>
+  <button class="btn-step" id="btn-next" disabled>Next &rarr;</button>
+  <button class="btn-play" id="btn-play" disabled>&#9654; Play</button>
+  <select class="speed-select" id="speed-select">
+    <option value="900">Slow</option>
+    <option value="450" selected>Medium</option>
+    <option value="120">Fast</option>
+  </select>
+</div>
+
+<script>
+var simSteps = [];
+var currentNums = [];
+var nav;
+
+window.addEventListener('DOMContentLoaded', function() {
+  nav = VizNav({
+    btnPrev:  document.getElementById('btn-back'),
+    btnNext:  document.getElementById('btn-next'),
+    btnPlay:  document.getElementById('btn-play'),
+    speedSel: document.getElementById('speed-select'),
+    render: function(snap, cur, total) {
+      applyStep(snap, cur > 0);
+      var phaseEl = document.getElementById('phase-label');
+      var descEl  = document.getElementById('step-desc');
+      if (phaseEl) phaseEl.textContent = 'Step ' + (cur + 1) + ' / ' + total + '  ·  ' + snap.phase;
+      if (descEl) {
+        gsap.fromTo(descEl, { opacity: 0 }, { opacity: 1, duration: 0.15 });
+        descEl.textContent = snap.desc;
+      }
+    }
+  });
+});
+
+function parseNums() {
+  var raw = document.getElementById('inp-nums').value;
+  var parts = raw.split(',').map(function(s) { return parseInt(s.trim(), 10); });
+  return parts.filter(function(n) { return !isNaN(n); });
+}
+
+function buildAndRun() {
+  var nums = parseNums();
+  if (nums.length === 0) return;
+  currentNums = nums;
+  buildVizArea(nums);
+  simSteps = simulate(nums);
+  nav.load(simSteps);
+}
+
+// ── Build static DOM ──────────────────────────────────────────────────────
+function buildVizArea(nums) {
+  var n = nums.length;
+  var html = '<div style="display:flex;flex-direction:column;gap:16px">';
+
+  // arrays block
+  html += '<div class="arrays-wrap">';
+
+  // index row
+  html += '<div class="row-label-pair"><div class="row-name">idx</div><div class="cell-row">';
+  for (var k = 0; k < n; k++) {
+    html += '<div class="cell-group"><div class="arr-cell" style="border-color:transparent;background:transparent;color:var(--text-ghost);font-size:0.72rem">' + k + '</div></div>';
+  }
+  html += '</div></div>';
+
+  // nums row
+  html += '<div class="row-label-pair"><div class="row-name">nums</div><div class="cell-row" id="nums-row">';
+  for (var k = 0; k < n; k++) {
+    html += '<div class="cell-group">'
+      + '<div class="arr-cell state-set" id="nc-' + k + '">' + nums[k] + '</div>'
+      + '</div>';
+  }
+  html += '</div></div>';
+
+  // arrow connector row
+  html += '<div class="arrow-row" id="arrow-row">';
+  for (var k = 0; k < n; k++) {
+    html += '<div class="arrow-slot" id="arr-' + k + '"></div>';
+  }
+  html += '</div>';
+
+  // dp row
+  html += '<div class="row-label-pair"><div class="row-name">dp</div><div class="cell-row" id="dp-row">';
+  for (var k = 0; k < n; k++) {
+    html += '<div class="cell-group">'
+      + '<div class="arr-cell" id="dc-' + k + '">—</div>'
+      + '</div>';
+  }
+  html += '</div></div>';
+
+  html += '</div>'; // arrays-wrap
+
+  // legend
+  html += '<div class="legend">'
+    + '<div class="leg-item"><div class="leg-sw i"></div>current i (outer)</div>'
+    + '<div class="leg-item"><div class="leg-sw j"></div>current j (inner)</div>'
+    + '<div class="leg-item"><div class="leg-sw upd"></div>dp[i] just updated</div>'
+    + '<div class="leg-item"><div class="leg-sw set"></div>dp filled</div>'
+    + '</div>';
+
+  // bottom row: result + vars
+  html += '<div class="bottom-row">';
+
+  // result panel
+  html += '<div class="result-panel">'
+    + '<div class="result-title">LIS Length</div>'
+    + '<div class="result-value" id="result-val">—</div>'
+    + '<div class="result-sub" id="result-sub">max(dp) so far</div>'
+    + '</div>';
+
+  // vars panel
+  html += '<div class="vars-panel">'
+    + '<div style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--text-dim)">Variables</div>'
+    + '<div class="vars-grid">'
+    + '<div class="var-box accent-border"><div class="var-label">i</div><div class="var-val" id="vv-i">—</div></div>'
+    + '<div class="var-box accent-border"><div class="var-label">nums[i]</div><div class="var-val" id="vv-ni">—</div></div>'
+    + '<div class="var-box orange-border"><div class="var-label">j</div><div class="var-val" id="vv-j">—</div></div>'
+    + '<div class="var-box orange-border"><div class="var-label">nums[j]</div><div class="var-val" id="vv-nj">—</div></div>'
+    + '<div class="var-box green-border"><div class="var-label">dp[i]</div><div class="var-val" id="vv-di">—</div></div>'
+    + '<div class="var-box green-border"><div class="var-label">dp[j]</div><div class="var-val" id="vv-dj">—</div></div>'
+    + '</div>'
+    + '</div>';
+
+  html += '</div>'; // bottom-row
+  html += '</div>'; // outer column
+
+  document.getElementById('viz-area').innerHTML = html;
+}
+
+// ── Simulate ──────────────────────────────────────────────────────────────
+function simulate(nums) {
+  var n = nums.length;
+  var dp = new Array(n).fill(1);
+  var steps = [];
+
+  function snap(phase, desc, i, j, dpSnap) {
+    steps.push({
+      phase: phase, desc: desc,
+      i: i, j: j,
+      dp: dpSnap.slice(),
+      updated: phase === 'update',
+      validCompare: phase === 'update' || phase === 'compare-valid',
+    });
+  }
+
+  snap('init', 'Initialize dp[0..' + (n-1) + '] = 1. Each element alone is a subsequence of length 1.',
+    null, null, dp);
+
+  for (var i = 0; i < n; i++) {
+    snap('outer',
+      'Outer loop: i = ' + i + ', nums[i] = ' + nums[i] + '. dp[' + i + '] currently = ' + dp[i] + '.',
+      i, null, dp);
+
+    for (var j = 0; j < i; j++) {
+      if (nums[j] < nums[i]) {
+        var newVal = dp[j] + 1;
+        if (newVal > dp[i]) {
+          dp[i] = newVal;
+          snap('update',
+            'nums[' + j + ']=' + nums[j] + ' < nums[' + i + ']=' + nums[i]
+            + ' ✓  dp[' + j + ']+1=' + newVal + ' is better  →  dp[' + i + '] updated to ' + dp[i] + '.',
+            i, j, dp);
+        } else {
+          snap('compare-valid',
+            'nums[' + j + ']=' + nums[j] + ' < nums[' + i + ']=' + nums[i]
+            + ' ✓  but dp[' + j + ']+1=' + newVal + ' ≤ dp[' + i + ']=' + dp[i] + '  —  no update.',
+            i, j, dp);
+        }
+      } else {
+        snap('compare-skip',
+          'nums[' + j + ']=' + nums[j] + ' ≥ nums[' + i + ']=' + nums[i] + '  —  not strictly increasing, skip.',
+          i, j, dp);
+      }
+    }
+  }
+
+  snap('done',
+    'Done. max(dp) = ' + Math.max.apply(null, dp) + '. That is the length of the LIS.',
+    null, null, dp);
+
+  return steps;
+}
+
+// ── Render ────────────────────────────────────────────────────────────────
+function applyStep(s, animate) {
+  var n = currentNums.length;
+  var maxDp = s.dp.reduce(function(a, b) { return Math.max(a, b); }, 0);
+
+  // nums cells
+  for (var k = 0; k < n; k++) {
+    var nc = document.getElementById('nc-' + k);
+    if (!nc) continue;
+    nc.className = 'arr-cell';
+    if (k === s.i && k === s.j) nc.classList.add('state-ij');
+    else if (k === s.i)         nc.classList.add('state-i');
+    else if (k === s.j)         nc.classList.add('state-j');
+    else                        nc.classList.add('state-set');
+  }
+
+  // dp cells
+  for (var k = 0; k < n; k++) {
+    var dc = document.getElementById('dc-' + k);
+    if (!dc) continue;
+    var val = s.dp[k];
+    dc.className = 'arr-cell';
+    if (k === s.i && s.updated) {
+      dc.classList.add('state-dp-updated');
+      if (animate) {
+        gsap.fromTo(dc, { scale: 0.6, opacity: 0.5 }, {
+          scale: 1.15, opacity: 1, duration: 0.2, ease: 'back.out(1.7)',
+          onComplete: function(el) { gsap.to(el, { scale: 1, duration: 0.12 }); }.bind(null, dc)
+        });
+      }
+    } else if (val > 1 || (s.i !== null && k < s.i) || s.phase === 'done') {
+      dc.classList.add('state-dp-set');
+    }
+    dc.textContent = val;
+  }
+
+  // arrow slots: show ↑ under j for all valid comparisons (nums[j] < nums[i])
+  for (var k = 0; k < n; k++) {
+    var slot = document.getElementById('arr-' + k);
+    if (!slot) continue;
+    if (s.j !== null && k === s.j && s.validCompare) {
+      slot.textContent = '↑';
+      slot.style.color = s.updated ? 'var(--green)' : 'var(--orange)';
+    } else {
+      slot.textContent = '';
+    }
+  }
+
+  // result value
+  var rv = document.getElementById('result-val');
+  if (rv) {
+    var prevText = rv.textContent;
+    var newText = s.phase === 'init' ? '—' : String(maxDp);
+    rv.textContent = newText;
+    if (animate && prevText !== newText && s.phase !== 'init') {
+      gsap.fromTo(rv, { scale: 0.8 }, { scale: 1, duration: 0.25, ease: 'back.out(1.5)' });
+    }
+  }
+  var rs = document.getElementById('result-sub');
+  if (rs) rs.textContent = s.phase === 'done' ? 'final answer' : 'max(dp) so far';
+
+  // vars
+  function setVar(id, val) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    var text = (val === null || val === undefined) ? '—' : String(val);
+    if (animate && el.textContent !== text) {
+      gsap.fromTo(el, { opacity: 0.4, scale: 0.85 }, { opacity: 1, scale: 1, duration: 0.2, ease: 'back.out(1.5)' });
+    }
+    el.textContent = text;
+  }
+  setVar('vv-i',  s.i !== null ? s.i  : null);
+  setVar('vv-ni', s.i !== null ? currentNums[s.i] : null);
+  setVar('vv-j',  s.j !== null ? s.j  : null);
+  setVar('vv-nj', s.j !== null ? currentNums[s.j] : null);
+  setVar('vv-di', s.i !== null ? s.dp[s.i] : null);
+  setVar('vv-dj', s.j !== null ? s.dp[s.j] : null);
+}
+</script>
+<script>
+  if (window.self !== window.top) {
+    var bl = document.querySelector('.back-link');
+    if (bl) bl.style.display = 'none';
+  }
+</script>
+</body>
+</html>
