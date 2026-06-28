@@ -6,6 +6,7 @@
   <title>BFS — Grid Traversal</title>
   <link rel="stylesheet" href="../shared/style.css" />
   <script src="../shared/gsap.min.js"></script>
+  <script src="../shared/viz.js"></script>
   <style>
     .viz-area {
       width: 100%; max-width: 90%;
@@ -266,9 +267,9 @@
       <div style="display:flex;gap:12px">
         <div class="panel-box" style="flex:0 0 auto">
           <div class="nav-row">
-            <button class="btn-step" id="btn-back" onclick="stepBack()" disabled>&larr;</button>
-            <button class="btn-step" id="btn-next" onclick="stepNext()" disabled>&rarr;</button>
-            <button class="btn-play" id="btn-play" onclick="togglePlay()" disabled>&#9654; Play</button>
+            <button class="btn-step" id="btn-back" disabled>&larr;</button>
+            <button class="btn-step" id="btn-next" disabled>&rarr;</button>
+            <button class="btn-play" id="btn-play" disabled>&#9654; Play</button>
             <select class="speed-select" id="speed-select">
               <option value="500">Slow</option>
               <option value="150" selected>Medium</option>
@@ -381,7 +382,6 @@ function toggleCode() {
   buildCodePanel();
   const btn = document.getElementById('code-toggle');
   btn.textContent = activeCode === 'compact' ? 'Modular' : 'Compact';
-  if (simSteps.length) setCodeLines([], getLines(simSteps[cursor]), false);
 }
 
 function getLines(s) {
@@ -390,12 +390,9 @@ function getLines(s) {
 
 // --- State ---
 let N = 8, SR = 3, SC = 3;
-let simSteps = [], cursor = 0;
-let playTimer = null, simReady = false;
 
 // --- Build ---
 function buildGrid() {
-  stopPlay(); simReady = false;
   N  = Math.max(3, Math.min(18, parseInt(document.getElementById('inp-size').value) || 8));
   SR = Math.max(0, Math.min(N - 1, parseInt(document.getElementById('inp-sr').value) || 0));
   SC = Math.max(0, Math.min(N - 1, parseInt(document.getElementById('inp-sc').value) || 0));
@@ -452,7 +449,7 @@ const STATE_FG = {
 };
 
 function runBFS() {
-  stopPlay(); simSteps = []; simReady = true;
+  const simSteps = [];
 
   const stateGrid = Array.from({ length: N }, function(_, r) {
     return Array.from({ length: N }, function(_, c) {
@@ -517,9 +514,7 @@ function runBFS() {
 
   snap('Done', 'BFS complete. All reachable cells visited.', [8], { linesM: [21] });
 
-  cursor = 0;
-  applyStep(simSteps[0], false);
-  updateButtons();
+  nav.load(simSteps);
 }
 
 // --- Apply ---
@@ -548,70 +543,6 @@ function applyStep(s, animate) {
   renderVisited(s.visitedOrder || [], [], true, false);
   renderNeighbors(s.neighbors || null, s.checkingIdx);
   setCodeLines([], getLines(s), false);
-  refreshText();
-}
-
-function transition(from, to) {
-  for (let r = 0; r < N; r++)
-    for (let c = 0; c < N; c++)
-      if (from.states[r][c] !== to.states[r][c])
-        setCellBg(r, c, to.states[r][c], '', true);
-  renderQueue(to.queue, from.queue, false, true);
-  renderVisited(to.visitedOrder || [], from.visitedOrder || [], false, true);
-  renderNeighbors(to.neighbors || null, to.checkingIdx);
-  setCodeLines(getLines(from), getLines(to), true);
-  refreshText();
-}
-
-// --- Navigation ---
-function stepNext() {
-  if (cursor >= simSteps.length - 1) { stopPlay(); return; }
-  const from = simSteps[cursor++];
-  transition(from, simSteps[cursor]);
-  updateButtons();
-}
-
-function stepBack() {
-  if (cursor <= 0) return;
-  stopPlay(); cursor--;
-  applyStep(simSteps[cursor], true);
-  updateButtons();
-}
-
-function updateButtons() {
-  const atEnd = cursor >= simSteps.length - 1;
-  document.getElementById('btn-back').disabled = cursor <= 0 || !simReady;
-  document.getElementById('btn-next').disabled = atEnd || !simReady;
-  document.getElementById('btn-play').disabled = !simReady;
-  if (atEnd && playTimer) stopPlay();
-}
-
-function refreshText() {
-  if (!simSteps.length) return;
-  const s = simSteps[cursor];
-  document.getElementById('phase-label').textContent =
-    'Step ' + (cursor + 1) + ' / ' + simSteps.length + '  ·  ' + s.phase;
-  document.getElementById('step-desc').textContent = s.desc;
-}
-
-// --- Playback ---
-function togglePlay() { if (playTimer) stopPlay(); else startPlay(); }
-
-function startPlay() {
-  if (cursor >= simSteps.length - 1) cursor = 0;
-  const delay = parseInt(document.getElementById('speed-select').value) || 150;
-  const btn = document.getElementById('btn-play');
-  btn.textContent = '⏸ Pause'; btn.classList.add('playing');
-  playTimer = setInterval(function() {
-    if (cursor >= simSteps.length - 1) { stopPlay(); return; }
-    stepNext();
-  }, delay);
-}
-
-function stopPlay() {
-  if (playTimer) { clearInterval(playTimer); playTimer = null; }
-  const btn = document.getElementById('btn-play');
-  btn.textContent = '▶ Play'; btn.classList.remove('playing');
 }
 
 // --- Neighbors ---
@@ -735,12 +666,9 @@ function setCodeLines(oldLines, newLines, animate) {
 
 // --- Reset ---
 function resetStatus() {
-  simSteps = []; cursor = 0; simReady = false;
+  if (nav) nav.load([]);
   document.getElementById('phase-label').textContent = '—';
   document.getElementById('step-desc').textContent = 'Set a start cell and click Run BFS.';
-  document.getElementById('btn-back').disabled = true;
-  document.getElementById('btn-next').disabled = true;
-  document.getElementById('btn-play').disabled = true;
   document.getElementById('queue-items').innerHTML = '<span class="q-empty">not started</span>';
   document.getElementById('visited-items').innerHTML = '<span class="v-empty">none yet</span>';
   document.getElementById('visited-count').textContent = '';
@@ -748,7 +676,20 @@ function resetStatus() {
 }
 
 // --- Init ---
-window.addEventListener('resize', function() { if (!simReady) renderGrid(); });
+window.addEventListener('resize', renderGrid);
+var nav = VizNav({
+  btnPrev: document.getElementById('btn-back'),
+  btnNext: document.getElementById('btn-next'),
+  btnPlay: document.getElementById('btn-play'),
+  speedSel: document.getElementById('speed-select'),
+  render: function(snap, cur, total) {
+    applyStep(snap, cur > 0);
+    var phaseEl = document.getElementById('phase-label');
+    var descEl  = document.getElementById('step-desc');
+    if (phaseEl) phaseEl.textContent = 'Step ' + (cur + 1) + ' / ' + total + '  ·  ' + snap.phase;
+    if (descEl)  descEl.textContent  = snap.desc;
+  }
+});
 buildCodePanel();
 buildGrid();
 </script>
