@@ -6,8 +6,9 @@ import { useSessionStore, fetchKataStats, medianTime, srWeight } from "../stores
 import { useTimerStore } from "../stores/timer-store";
 import type { KataStats } from "../stores/session-store";
 import type { Kata } from "../types/editor";
+import { LEVELS, CATEGORY_LEVEL } from "../lib/levels";
 
-type Mode = "sr" | "daily" | "weak" | "speed";
+type Mode = "sr" | "daily" | "weak" | "speed" | "level";
 type SizeOpt = 5 | 10 | 15 | 20 | "all";
 type KataStatus = "new" | "failed" | "slow" | "due" | "ok";
 
@@ -40,6 +41,11 @@ const MODES: { id: Mode; title: string; desc: string }[] = [
     id: "speed",
     title: "Speed Run",
     desc: "Katas you've already solved. Race your best time.",
+  },
+  {
+    id: "level",
+    title: "Level Up",
+    desc: "Pick one or more levels and drill only those topics.",
   },
 ];
 
@@ -110,6 +116,7 @@ const MODE_LABEL: Record<Mode, string> = {
   daily: "Daily",
   weak: "Weak Spots",
   speed: "Speed Run",
+  level: "Level Up",
 };
 
 const MODE_SUBTITLE: Record<Mode, string> = {
@@ -117,6 +124,7 @@ const MODE_SUBTITLE: Record<Mode, string> = {
   daily: "Starred katas",
   weak: "Failed last attempt",
   speed: "Sorted by best time",
+  level: "By level",
 };
 
 export function PracticeQueuePage() {
@@ -131,6 +139,7 @@ export function PracticeQueuePage() {
 
   const [mode, setMode] = useState<Mode>("sr");
   const [categoryFilter, setCategoryFilter] = useState("");
+  const [selectedLevels, setSelectedLevels] = useState<Set<number>>(new Set());
   const [sessionSize, setSessionSize] = useState<SizeOpt>(10);
   const [statsMap, setStatsMap] = useState<Map<number, KataStats>>(new Map());
   const [medianMs, setMedianMs] = useState(Infinity);
@@ -173,6 +182,11 @@ export function PracticeQueuePage() {
           return s !== undefined && s.pass_count > 0;
         });
         break;
+      case "level":
+        if (selectedLevels.size > 0) {
+          pool = pool.filter((k) => selectedLevels.has(CATEGORY_LEVEL[k.category] ?? -1));
+        }
+        break;
     }
 
     const items: QueueItem[] = pool.map((kata) => {
@@ -198,22 +212,26 @@ export function PracticeQueuePage() {
     }
 
     return items;
-  }, [katas, statsMap, medianMs, mode, categoryFilter, dailyKataIds, streaks, bestTimes]);
+  }, [katas, statsMap, medianMs, mode, categoryFilter, selectedLevels, dailyKataIds, streaks, bestTimes]);
 
   const modeCounts = useMemo(() => {
     const dailySet = new Set(dailyKataIds);
     const allItems = katas.map((k) => {
       const stats = statsMap.get(k.id);
       const score = srWeight(stats, medianMs);
-      return { id: k.id, status: computeStatus(score), stats, inDaily: dailySet.has(k.id) };
+      return { id: k.id, status: computeStatus(score), stats, inDaily: dailySet.has(k.id), category: k.category };
     });
+    const levelPool = selectedLevels.size > 0
+      ? allItems.filter((i) => selectedLevels.has(CATEGORY_LEVEL[i.category] ?? -1))
+      : allItems;
     return {
       sr: allItems.filter((i) => i.status !== "ok").length,
       daily: allItems.filter((i) => i.inDaily).length,
       weak: allItems.filter((i) => i.stats?.last_passed === 0).length,
       speed: allItems.filter((i) => (i.stats?.pass_count ?? 0) > 0).length,
+      level: levelPool.length,
     };
-  }, [katas, statsMap, medianMs, dailyKataIds]);
+  }, [katas, statsMap, medianMs, dailyKataIds, selectedLevels]);
 
   const dueNow = queueItems.filter((i) => i.status !== "ok");
   const doingWell = queueItems.filter((i) => i.status === "ok");
@@ -271,7 +289,7 @@ export function PracticeQueuePage() {
                   <p
                     className={`text-[11px] font-semibold mt-1.5 ${active ? "text-primary" : "text-base-content/40"}`}
                   >
-                    {id === "sr" ? `${count} due now` : `${count} katas`}
+                    {id === "sr" ? `${count} due now` : id === "level" ? `${count} in selection` : `${count} katas`}
                   </p>
                 </button>
               );
@@ -279,37 +297,81 @@ export function PracticeQueuePage() {
           </div>
         </div>
 
-        {/* Category filter */}
-        <div>
-          <p className="text-[11px] font-bold uppercase tracking-widest text-base-content/35 mb-2">
-            Category
-          </p>
-          <div className="flex flex-wrap gap-1.5">
-            <button
-              onClick={() => setCategoryFilter("")}
-              className={`text-[11px] font-semibold px-2.5 py-1 rounded-full border transition-all ${
-                !categoryFilter
-                  ? "border-primary/50 bg-primary/10 text-primary"
-                  : "border-base-300/60 text-base-content/40 hover:border-base-300 hover:text-base-content/60"
-              }`}
-            >
-              All
-            </button>
-            {categories.map((cat) => (
+        {/* Level picker (Level Up mode) or Category filter (other modes) */}
+        {mode === "level" ? (
+          <div>
+            <p className="text-[11px] font-bold uppercase tracking-widest text-base-content/35 mb-2">
+              Levels
+            </p>
+            <div className="flex flex-col gap-1.5">
+              {LEVELS.map(({ level, label }) => {
+                const active = selectedLevels.has(level);
+                return (
+                  <button
+                    key={level}
+                    onClick={() => {
+                      const next = new Set(selectedLevels);
+                      if (next.has(level)) next.delete(level);
+                      else next.add(level);
+                      setSelectedLevels(next);
+                    }}
+                    className={`w-full text-left rounded-lg px-3 py-2 border transition-colors ${
+                      active
+                        ? "border-primary/60 bg-primary/[0.06]"
+                        : "border-base-300/60 bg-base-200 hover:border-base-300"
+                    }`}
+                  >
+                    <span className={`text-[11px] font-bold mr-2 tabular-nums ${active ? "text-primary" : "text-base-content/35"}`}>
+                      Lv.{level}
+                    </span>
+                    <span className={`text-[12px] ${active ? "text-base-content" : "text-base-content/50"}`}>
+                      {label}
+                    </span>
+                  </button>
+                );
+              })}
+              {selectedLevels.size > 0 && (
+                <button
+                  onClick={() => setSelectedLevels(new Set())}
+                  className="text-[11px] text-base-content/35 hover:text-base-content/60 transition-colors mt-0.5 text-left px-1"
+                >
+                  Clear selection
+                </button>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div>
+            <p className="text-[11px] font-bold uppercase tracking-widest text-base-content/35 mb-2">
+              Category
+            </p>
+            <div className="flex flex-wrap gap-1.5">
               <button
-                key={cat}
-                onClick={() => setCategoryFilter(cat === categoryFilter ? "" : cat)}
+                onClick={() => setCategoryFilter("")}
                 className={`text-[11px] font-semibold px-2.5 py-1 rounded-full border transition-all ${
-                  categoryFilter === cat
+                  !categoryFilter
                     ? "border-primary/50 bg-primary/10 text-primary"
                     : "border-base-300/60 text-base-content/40 hover:border-base-300 hover:text-base-content/60"
                 }`}
               >
-                {cat}
+                All
               </button>
-            ))}
+              {categories.map((cat) => (
+                <button
+                  key={cat}
+                  onClick={() => setCategoryFilter(cat === categoryFilter ? "" : cat)}
+                  className={`text-[11px] font-semibold px-2.5 py-1 rounded-full border transition-all ${
+                    categoryFilter === cat
+                      ? "border-primary/50 bg-primary/10 text-primary"
+                      : "border-base-300/60 text-base-content/40 hover:border-base-300 hover:text-base-content/60"
+                  }`}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Session size */}
         <div>
@@ -383,7 +445,10 @@ export function PracticeQueuePage() {
         <div className="px-5 py-4 border-b border-base-300/60 flex items-center gap-3 shrink-0">
           <h2 className="text-[15px] font-bold text-base-content">{MODE_LABEL[mode]}</h2>
           <span className="text-[12px] text-base-content/35 ml-auto">
-            {MODE_SUBTITLE[mode]} · {queueItems.length} katas
+            {mode === "level" && selectedLevels.size > 0
+              ? `Lv.${[...selectedLevels].sort((a, b) => a - b).join(", ")} · `
+              : `${MODE_SUBTITLE[mode]} · `}
+            {queueItems.length} katas
           </span>
         </div>
 
@@ -476,6 +541,11 @@ function KataRow({ item, rank, bestTime, formatMs }: KataRowProps) {
           {bestTime !== undefined && ` · best: ${formatMs(bestTime)}`}
         </p>
       </div>
+      {CATEGORY_LEVEL[kata.category] !== undefined && (
+        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-base-300/60 text-base-content/40 tabular-nums shrink-0">
+          Lv.{CATEGORY_LEVEL[kata.category]}
+        </span>
+      )}
       <span
         className={`text-[10px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wide shrink-0 ${BADGE_CLASS[status]}`}
       >

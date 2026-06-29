@@ -6,6 +6,7 @@ import { useSettingsStore } from "../stores/settings-store";
 import { useSessionStore, selectRandomKatas, sortBySpacedRepetition } from "../stores/session-store";
 import { useTimerStore } from "../stores/timer-store";
 import type { SessionType } from "../types/editor";
+import { CATEGORY_LEVEL } from "../lib/levels";
 
 type Tab = "browse" | "daily" | "random" | "custom";
 const SIZE_OPTIONS = [5, 10, 15, 20];
@@ -527,7 +528,16 @@ export function PracticePage() {
                         </button>
                       </span>
                     </td>
-                    <td className="text-base-content/45 text-sm">{kata.category}</td>
+                    <td className="text-base-content/45 text-sm">
+                      <span className="inline-flex items-center gap-1.5">
+                        {kata.category}
+                        {CATEGORY_LEVEL[kata.category] !== undefined && (
+                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-base-300/60 text-base-content/40 tabular-nums">
+                            Lv.{CATEGORY_LEVEL[kata.category]}
+                          </span>
+                        )}
+                      </span>
+                    </td>
                     <td>
                       <span className={`badge badge-sm ${diffColor(kata.difficulty)}`}>
                         {kata.difficulty ?? "-"}
