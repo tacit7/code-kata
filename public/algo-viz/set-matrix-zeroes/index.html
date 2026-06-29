@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Set Matrix Zeroes</title>
+  <link rel="stylesheet" href="../shared/style.css" />
+  <script src="../shared/gsap.min.js"></script>
+  <script src="../shared/viz.js"></script>
+  <style>
+    .viz-area { width: 100%; max-width: 90%; }
+    .main-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
+    .left-col, .right-col { display: flex; flex-direction: column; gap: 12px; }
+    @media (max-width: 700px) { .main-row { grid-template-columns: 1fr; } }
+
+    .matrix-section {
+      padding: 20px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      display: flex; flex-direction: column; gap: 14px;
+    }
+    .matrix-wrap { display: flex; justify-content: center; }
+    .matrix-grid { display: grid; gap: 5px; }
+
+    .cell {
+      width: 56px; height: 56px;
+      display: flex; align-items: center; justify-content: center;
+      border: 2px solid var(--border);
+      border-radius: 6px;
+      background: #0f0f0f;
+      font-size: 1rem; font-weight: 700; font-family: monospace;
+      color: var(--text-dim);
+      transition: border-color 0.15s, color 0.15s, background 0.15s;
+    }
+    /* scanning current cell */
+    .cell[data-state="scan"] {
+      border-color: var(--accent); color: var(--accent-pale);
+      background: var(--surface-dark);
+    }
+    /* cell is a zero found during scan */
+    .cell[data-state="zero-found"] {
+      border-color: #c2410c; color: var(--orange);
+      background: #1c1200;
+    }
+    /* marker cells: first row / first col */
+    .cell[data-state="marker"] {
+      border-color: #7c3aed; color: #c4b5fd;
+      background: #1a1030;
+    }
+    /* cell being zeroed out in step 2 */
+    .cell[data-state="zeroing"] {
+      border-color: #0891b2; color: #67e8f9;
+      background: #041f2a;
+    }
+    /* cell that has been set to 0 */
+    .cell[data-state="zeroed"] {
+      border-color: var(--green-border); color: var(--green);
+      background: var(--green-bg);
+    }
+    /* done — all zeros applied */
+    .cell[data-state="done"] {
+      border-color: var(--green-border); color: var(--green);
+      background: var(--green-bg);
+    }
+
+    /* phase tag */
+    .phase-tag {
+      font-size: 0.72rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.08em;
+      padding: 3px 10px; border-radius: 4px;
+      display: inline-block; width: fit-content;
+    }
+    .phase-tag.scan    { background: #1a1a3e; color: var(--accent-pale); border: 1px solid var(--accent); }
+    .phase-tag.mark    { background: #1a1030; color: #c4b5fd;           border: 1px solid #7c3aed; }
+    .phase-tag.zero    { background: #041f2a; color: #67e8f9;           border: 1px solid #0891b2; }
+    .phase-tag.handle  { background: #1c1200; color: var(--orange);     border: 1px solid #b45309; }
+    .phase-tag.done    { background: var(--green-bg); color: var(--green); border: 1px solid var(--green-border); }
+    .phase-tag.init    { background: var(--surface); color: var(--text-dim); border: 1px solid var(--border); }
+
+    .panel-box {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 14px 16px;
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .panel-title {
+      font-size: 0.72rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim);
+    }
+
+    .var-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .var-box {
+      padding: 10px 8px;
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      display: flex; flex-direction: column; align-items: center; gap: 3px;
+    }
+    .var-box.purple-border { border-color: #7c3aed; }
+    .var-box.cyan-border   { border-color: #0891b2; }
+    .var-label { font-size: 0.65rem; font-family: monospace; color: var(--text-faint); text-align: center; }
+    .var-val   { font-size: 0.95rem; font-weight: 700; color: var(--text-bright); font-family: monospace; }
+
+    .code-panel {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); overflow: hidden;
+    }
+    .code-header {
+      padding: 8px 14px; font-size: 0.72rem; font-weight: 600;
+      color: var(--text-dim); border-bottom: 1px solid var(--border); background: var(--bg);
+    }
+    .code-body { padding: 10px 0; font-size: 0.78rem; line-height: 1.75; white-space: pre; }
+    .code-line { display: flex; align-items: center; padding: 0 14px; }
+    .code-line.hl { background: var(--border-soft); border-left: 2px solid var(--accent); }
+    .ln { min-width: 24px; color: var(--text-ghost); user-select: none; font-size: 0.7rem; }
+
+    .btn-play {
+      background: #15803d; border: none; border-radius: var(--radius-sm);
+      color: #fff; cursor: pointer; font-size: 0.88rem; font-weight: 600;
+      padding: 9px 16px; transition: background 0.2s;
+    }
+    .btn-play:hover { background: #166534; }
+    .btn-play.playing { background: #c2410c; }
+    .btn-play.playing:hover { background: #9a3412; }
+    .btn-play:disabled { opacity: 0.4; cursor: not-allowed; }
+    .speed-select {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); color: var(--text);
+      font-size: 0.85rem; padding: 8px 10px; outline: none; width: 80px;
+    }
+    .nav-row { display: flex; gap: 8px; align-items: center; }
+
+    .flag-row {
+      display: flex; gap: 10px; flex-wrap: wrap;
+    }
+    .flag-box {
+      padding: 7px 12px;
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      display: flex; flex-direction: column; align-items: center; gap: 2px;
+      min-width: 90px;
+    }
+    .flag-label { font-size: 0.62rem; font-family: monospace; color: var(--text-faint); }
+    .flag-val   { font-size: 0.9rem; font-weight: 700; font-family: monospace; color: var(--text-bright); }
+    .flag-box.active { border-color: #c2410c; }
+    .flag-box.active .flag-val { color: var(--orange); }
+
+    .kw { color: var(--purple); }
+    .fn { color: var(--blue); }
+    .cm { color: var(--text-ghost); }
+    .nb { color: var(--green); }
+    .op { color: var(--text); }
+    .st { color: var(--orange); }
+  </style>
+</head>
+<body class="page">
+
+<div class="page-header">
+  <a class="back-link" href="../index.html">&larr; All Algorithms</a>
+  <div class="page-title">Set Matrix Zeroes</div>
+  <div class="page-sub">LeetCode 73 &middot; Use first row &amp; col as markers &middot; O(m&middot;n) time &middot; O(1) space</div>
+</div>
+
+<div class="controls">
+  <div class="field">
+    <label>Preset</label>
+    <select id="inp-preset">
+      <option value="0">[[1,1,1],[1,0,1],[1,1,1]]</option>
+      <option value="1">[[0,1,2,0],[3,4,5,2],[1,3,1,5]]</option>
+      <option value="2">[[1,2,3],[4,5,6],[7,8,0]]</option>
+    </select>
+  </div>
+  <button class="btn-primary" onclick="buildAndRun()">Build &amp; Run</button>
+</div>
+
+<div class="viz-area">
+  <div class="main-row">
+    <div class="left-col">
+      <div class="matrix-section" id="matrix-section">
+        <span style="color:var(--text-dim);font-size:0.82rem">Select a preset and click Build &amp; Run.</span>
+      </div>
+      <div class="code-panel">
+        <div class="code-header">Python</div>
+        <div class="code-body" id="code-body"></div>
+      </div>
+    </div>
+
+    <div class="right-col">
+      <div style="display:flex;gap:12px">
+        <div class="panel-box" style="flex:0 0 auto">
+          <div class="nav-row">
+            <button class="btn-step" id="btn-back" disabled>&larr;</button>
+            <button class="btn-step" id="btn-next" disabled>&rarr;</button>
+            <button class="btn-play" id="btn-play" disabled>&#9654; Play</button>
+            <select class="speed-select" id="speed-select">
+              <option value="700">Slow</option>
+              <option value="350" selected>Medium</option>
+              <option value="100">Fast</option>
+            </select>
+          </div>
+        </div>
+        <div class="panel-box" style="flex:1;min-width:0">
+          <div class="panel-title" id="step-counter">&mdash;</div>
+          <div style="font-size:0.82rem;color:var(--text-muted);margin-top:2px" id="step-desc">Select a preset and click Build &amp; Run.</div>
+        </div>
+      </div>
+
+      <div class="panel-box">
+        <div class="panel-title">Phase</div>
+        <div id="phase-tag-wrap"><span class="phase-tag init">—</span></div>
+      </div>
+
+      <div class="panel-box">
+        <div class="panel-title">Flags (first row / col had original zeros)</div>
+        <div class="flag-row" id="flag-row">
+          <div class="flag-box" id="flag-row0">
+            <div class="flag-label">firstRowZero</div>
+            <div class="flag-val" id="fv-row0">False</div>
+          </div>
+          <div class="flag-box" id="flag-col0">
+            <div class="flag-label">firstColZero</div>
+            <div class="flag-val" id="fv-col0">False</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel-box">
+        <div class="panel-title">Current Cell</div>
+        <div class="var-grid">
+          <div class="var-box purple-border">
+            <div class="var-label">row</div>
+            <div class="var-val" id="vv-row">&mdash;</div>
+          </div>
+          <div class="var-box purple-border">
+            <div class="var-label">col</div>
+            <div class="var-val" id="vv-col">&mdash;</div>
+          </div>
+          <div class="var-box cyan-border">
+            <div class="var-label">value</div>
+            <div class="var-val" id="vv-val">&mdash;</div>
+          </div>
+          <div class="var-box cyan-border">
+            <div class="var-label">action</div>
+            <div class="var-val" id="vv-action">&mdash;</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel-box">
+        <div class="panel-title">Legend</div>
+        <div style="display:flex;flex-direction:column;gap:6px;font-size:0.78rem;color:var(--text-muted)">
+          <div style="display:flex;align-items:center;gap:8px">
+            <div style="width:16px;height:16px;border-radius:3px;border:2px solid var(--accent);background:var(--surface-dark)"></div>
+            <span>Scanning — current cell being examined</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <div style="width:16px;height:16px;border-radius:3px;border:2px solid #c2410c;background:#1c1200"></div>
+            <span>Zero found — will mark its row/col headers</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <div style="width:16px;height:16px;border-radius:3px;border:2px solid #7c3aed;background:#1a1030"></div>
+            <span>Marker written to row 0 / col 0</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <div style="width:16px;height:16px;border-radius:3px;border:2px solid #0891b2;background:#041f2a"></div>
+            <span>Cell being zeroed by marker</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <div style="width:16px;height:16px;border-radius:3px;border:2px solid var(--green-border);background:var(--green-bg)"></div>
+            <span>Confirmed zero</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+var simSteps = [], nav;
+var currentRows = 0, currentCols = 0;
+
+var PRESETS = [
+  [[1,1,1],[1,0,1],[1,1,1]],
+  [[0,1,2,0],[3,4,5,2],[1,3,1,5]],
+  [[1,2,3],[4,5,6],[7,8,0]]
+];
+
+var CODE = [
+  [1,  '<span class="kw">def</span> <span class="fn">setZeroes</span><span class="op">(matrix):</span>'],
+  [2,  '    rows, cols <span class="op">=</span> <span class="fn">len</span><span class="op">(matrix),</span> <span class="fn">len</span><span class="op">(matrix[</span><span class="nb">0</span><span class="op">])</span>'],
+  [3,  '    <span class="cm"># track if first row/col originally had a zero</span>'],
+  [4,  '    firstRowZero <span class="op">=</span> <span class="nb">0</span> <span class="kw">in</span> matrix<span class="op">[</span><span class="nb">0</span><span class="op">]</span>'],
+  [5,  '    firstColZero <span class="op">=</span> <span class="nb">0</span> <span class="kw">in</span> <span class="op">[</span>matrix<span class="op">[r][</span><span class="nb">0</span><span class="op">]</span> <span class="kw">for</span> r <span class="kw">in</span> <span class="fn">range</span><span class="op">(rows)]</span>'],
+  [6,  '    <span class="cm"># Step 1: scan interior, write markers to row 0 / col 0</span>'],
+  [7,  '    <span class="kw">for</span> r <span class="kw">in</span> <span class="fn">range</span><span class="op">(</span><span class="nb">1</span><span class="op">, rows):</span>'],
+  [8,  '        <span class="kw">for</span> c <span class="kw">in</span> <span class="fn">range</span><span class="op">(</span><span class="nb">1</span><span class="op">, cols):</span>'],
+  [9,  '            <span class="kw">if</span> matrix<span class="op">[r][c] ==</span> <span class="nb">0</span><span class="op">:</span>'],
+  [10, '                matrix<span class="op">[r][</span><span class="nb">0</span><span class="op">] = matrix[</span><span class="nb">0</span><span class="op">][c] =</span> <span class="nb">0</span>'],
+  [11, '    <span class="cm"># Step 2: zero interior cells using markers</span>'],
+  [12, '    <span class="kw">for</span> r <span class="kw">in</span> <span class="fn">range</span><span class="op">(</span><span class="nb">1</span><span class="op">, rows):</span>'],
+  [13, '        <span class="kw">for</span> c <span class="kw">in</span> <span class="fn">range</span><span class="op">(</span><span class="nb">1</span><span class="op">, cols):</span>'],
+  [14, '            <span class="kw">if</span> matrix<span class="op">[r][</span><span class="nb">0</span><span class="op">] ==</span> <span class="nb">0</span> <span class="kw">or</span> matrix<span class="op">[</span><span class="nb">0</span><span class="op">][c] ==</span> <span class="nb">0</span><span class="op">:</span>'],
+  [15, '                matrix<span class="op">[r][c] =</span> <span class="nb">0</span>'],
+  [16, '    <span class="cm"># Step 3: handle first row and col</span>'],
+  [17, '    <span class="kw">if</span> firstRowZero<span class="op">:</span>'],
+  [18, '        <span class="kw">for</span> c <span class="kw">in</span> <span class="fn">range</span><span class="op">(cols):</span> matrix<span class="op">[</span><span class="nb">0</span><span class="op">][c] =</span> <span class="nb">0</span>'],
+  [19, '    <span class="kw">if</span> firstColZero<span class="op">:</span>'],
+  [20, '        <span class="kw">for</span> r <span class="kw">in</span> <span class="fn">range</span><span class="op">(rows):</span> matrix<span class="op">[r][</span><span class="nb">0</span><span class="op">] =</span> <span class="nb">0</span>'],
+];
+
+window.addEventListener('DOMContentLoaded', function() {
+  buildCodePanel();
+  nav = VizNav({
+    btnPrev: document.getElementById('btn-back'),
+    btnNext: document.getElementById('btn-next'),
+    btnPlay: document.getElementById('btn-play'),
+    speedSel: document.getElementById('speed-select'),
+    render: function(snap, cur, total) {
+      applyStep(snap, cur > 0);
+      document.getElementById('step-counter').textContent = 'Step ' + (cur + 1) + ' / ' + total;
+      var descEl = document.getElementById('step-desc');
+      if (descEl) {
+        gsap.fromTo(descEl, { opacity: 0 }, { opacity: 1, duration: 0.15 });
+        descEl.textContent = snap.desc;
+      }
+    }
+  });
+  buildAndRun();
+});
+
+function buildCodePanel() {
+  var body = document.getElementById('code-body');
+  body.innerHTML = CODE.map(function(e) {
+    return '<div class="code-line" id="cl-' + e[0] + '"><span class="ln">' + e[0] + '</span><span>' + e[1] + '</span></div>';
+  }).join('');
+}
+
+function buildAndRun() {
+  var idx = parseInt(document.getElementById('inp-preset').value, 10);
+  var preset = PRESETS[idx];
+  currentRows = preset.length;
+  currentCols = preset[0].length;
+  buildMatrixSection(currentRows, currentCols);
+  simSteps = simulate(preset);
+  nav.load(simSteps);
+}
+
+function buildMatrixSection(rows, cols) {
+  var cellSize = (cols <= 3 && rows <= 3) ? 60 : 52;
+  var sec = document.getElementById('matrix-section');
+  var html = '<div class="matrix-wrap"><div class="matrix-grid" id="mat-grid" style="grid-template-columns:repeat(' + cols + ',' + cellSize + 'px);gap:5px">';
+  for (var r = 0; r < rows; r++) {
+    for (var c = 0; c < cols; c++) {
+      html += '<div class="cell" id="cell-' + r + '-' + c + '" data-state="" style="width:' + cellSize + 'px;height:' + cellSize + 'px"></div>';
+    }
+  }
+  html += '</div></div>';
+  sec.innerHTML = html;
+}
+
+function simulate(initMat) {
+  var rows = initMat.length, cols = initMat[0].length;
+  var mat = initMat.map(function(r) { return r.slice(); });
+  var steps = [];
+
+  function snapMat() { return mat.map(function(r) { return r.slice(); }); }
+
+  // cell-state map: r,c -> state string
+  function snapStates(extra) {
+    var m = {};
+    if (extra) {
+      Object.keys(extra).forEach(function(k) { m[k] = extra[k]; });
+    }
+    return m;
+  }
+
+  function push(phase, desc, lines, cellRow, cellCol, action, cellStates, firstRowZero, firstColZero) {
+    steps.push({
+      phase: phase,
+      desc: desc,
+      lines: lines || [],
+      cellRow: cellRow !== undefined ? cellRow : null,
+      cellCol: cellCol !== undefined ? cellCol : null,
+      action: action || '',
+      cellStates: cellStates || {},
+      firstRowZero: !!firstRowZero,
+      firstColZero: !!firstColZero,
+      mat: snapMat(),
+    });
+  }
+
+  // detect flags
+  var firstRowZero = mat[0].indexOf(0) >= 0;
+  var firstColZero = false;
+  for (var r = 0; r < rows; r++) { if (mat[r][0] === 0) { firstColZero = true; break; } }
+
+  push('init',
+    'Original matrix. Strategy: use row 0 and col 0 as markers. First check if they contain zeros themselves (those flags are saved separately).',
+    [1, 2], null, null, '', {}, firstRowZero, firstColZero);
+
+  push('init',
+    'firstRowZero=' + firstRowZero + ', firstColZero=' + firstColZero + '. These flags tell us whether to zero out row 0 / col 0 at the very end.',
+    [3, 4, 5], null, null, '', {}, firstRowZero, firstColZero);
+
+  // Step 1: scan interior, write markers
+  var markerStates = {};
+  for (var ri = 1; ri < rows; ri++) {
+    for (var ci = 1; ci < cols; ci++) {
+      var val = mat[ri][ci];
+      var curStates = {};
+      // keep existing markers visible
+      Object.keys(markerStates).forEach(function(k) { curStates[k] = markerStates[k]; });
+      curStates[ri + ',' + ci] = 'scan';
+
+      push('scan',
+        'Scan [' + ri + '][' + ci + '] = ' + val + '. ' + (val === 0 ? 'Zero found — mark row 0 col ' + ci + ' and col 0 row ' + ri + '.' : 'Non-zero. Continue.'),
+        val === 0 ? [7, 8, 9] : [7, 8],
+        ri, ci, val === 0 ? 'zero' : 'non-zero',
+        Object.assign({}, curStates),
+        firstRowZero, firstColZero);
+
+      if (val === 0) {
+        curStates[ri + ',' + ci] = 'zero-found';
+        // mark row marker: mat[ri][0]
+        mat[ri][0] = 0;
+        curStates[ri + ',0'] = 'marker';
+        markerStates[ri + ',0'] = 'marker';
+        // mark col marker: mat[0][ci]
+        mat[0][ci] = 0;
+        curStates['0,' + ci] = 'marker';
+        markerStates['0,' + ci] = 'marker';
+
+        push('mark',
+          'Marked mat[' + ri + '][0]=0 and mat[0][' + ci + ']=0. These tell Step 2 to zero the entire row ' + ri + ' and col ' + ci + '.',
+          [10],
+          ri, ci, 'mark',
+          Object.assign({}, curStates),
+          firstRowZero, firstColZero);
+      }
+    }
+  }
+
+  push('zero',
+    'Scan complete. Now use the markers in row 0 and col 0 to zero out interior cells.',
+    [11, 12, 13],
+    null, null, '',
+    Object.assign({}, markerStates),
+    firstRowZero, firstColZero);
+
+  // Step 2: zero interior by markers
+  for (var ri2 = 1; ri2 < rows; ri2++) {
+    for (var ci2 = 1; ci2 < cols; ci2++) {
+      var rowMarker = mat[ri2][0] === 0;
+      var colMarker = mat[0][ci2] === 0;
+      if (rowMarker || colMarker) {
+        var curStates2 = Object.assign({}, markerStates);
+        curStates2[ri2 + ',' + ci2] = 'zeroing';
+        push('zero',
+          'mat[' + ri2 + '][0]=' + mat[ri2][0] + ', mat[0][' + ci2 + ']=' + mat[0][ci2] + ' — at least one is 0, so zero [' + ri2 + '][' + ci2 + '].',
+          [12, 13, 14, 15],
+          ri2, ci2, 'zero',
+          Object.assign({}, curStates2),
+          firstRowZero, firstColZero);
+
+        mat[ri2][ci2] = 0;
+        curStates2[ri2 + ',' + ci2] = 'zeroed';
+        push('zero',
+          'Set mat[' + ri2 + '][' + ci2 + '] = 0.',
+          [15],
+          ri2, ci2, 'zeroed',
+          Object.assign({}, curStates2),
+          firstRowZero, firstColZero);
+      }
+    }
+  }
+
+  // Step 3a: handle first row
+  push('handle',
+    firstRowZero
+      ? 'firstRowZero=True — zero the entire first row now.'
+      : 'firstRowZero=False — first row stays as markers (no original zeros there).',
+    [16, 17],
+    null, null, firstRowZero ? 'zero row 0' : 'skip row 0',
+    Object.assign({}, markerStates),
+    firstRowZero, firstColZero);
+
+  if (firstRowZero) {
+    for (var c2 = 0; c2 < cols; c2++) {
+      mat[0][c2] = 0;
+    }
+    var s3a = Object.assign({}, markerStates);
+    for (var c3 = 0; c3 < cols; c3++) { s3a['0,' + c3] = 'zeroed'; }
+    push('handle',
+      'First row zeroed.',
+      [18],
+      0, null, 'zeroed row 0',
+      s3a,
+      firstRowZero, firstColZero);
+    markerStates = s3a;
+  }
+
+  // Step 3b: handle first col
+  push('handle',
+    firstColZero
+      ? 'firstColZero=True — zero the entire first column now.'
+      : 'firstColZero=False — first column stays as markers (no original zeros there).',
+    [19],
+    null, null, firstColZero ? 'zero col 0' : 'skip col 0',
+    Object.assign({}, markerStates),
+    firstRowZero, firstColZero);
+
+  if (firstColZero) {
+    for (var r3 = 0; r3 < rows; r3++) {
+      mat[r3][0] = 0;
+    }
+    var s3b = Object.assign({}, markerStates);
+    for (var r4 = 0; r4 < rows; r4++) { s3b[r4 + ',0'] = 'zeroed'; }
+    push('handle',
+      'First column zeroed.',
+      [20],
+      null, 0, 'zeroed col 0',
+      s3b,
+      firstRowZero, firstColZero);
+    markerStates = s3b;
+  }
+
+  // final done
+  var doneStates = {};
+  for (var dr = 0; dr < rows; dr++) {
+    for (var dc = 0; dc < cols; dc++) {
+      if (mat[dr][dc] === 0) doneStates[dr + ',' + dc] = 'done';
+    }
+  }
+  push('done',
+    'Done! All zeros propagated correctly. Rows and columns that contained a zero are fully zeroed out.',
+    [1],
+    null, null, '',
+    doneStates,
+    firstRowZero, firstColZero);
+
+  return steps;
+}
+
+function applyStep(s, animate) {
+  var rows = currentRows, cols = currentCols;
+  for (var r = 0; r < rows; r++) {
+    for (var c = 0; c < cols; c++) {
+      var el = document.getElementById('cell-' + r + '-' + c);
+      if (!el) continue;
+      el.textContent = s.mat[r][c];
+      var key = r + ',' + c;
+      var state = (s.cellStates && s.cellStates[key]) ? s.cellStates[key] : '';
+      el.dataset.state = state;
+      if (animate && (state === 'zeroed' || state === 'done')) {
+        gsap.fromTo(el, { scale: 0.75 }, { scale: 1, duration: 0.22, ease: 'back.out(1.7)' });
+      }
+    }
+  }
+
+  // Phase tag
+  var tagWrap = document.getElementById('phase-tag-wrap');
+  var phaseClass = 'init', phaseText = '—';
+  if (s.phase === 'scan')   { phaseClass = 'scan';   phaseText = 'Phase 1: Scan'; }
+  if (s.phase === 'mark')   { phaseClass = 'mark';   phaseText = 'Phase 1: Mark Headers'; }
+  if (s.phase === 'zero')   { phaseClass = 'zero';   phaseText = 'Phase 2: Zero Interior'; }
+  if (s.phase === 'handle') { phaseClass = 'handle'; phaseText = 'Phase 3: Handle Row 0 / Col 0'; }
+  if (s.phase === 'done')   { phaseClass = 'done';   phaseText = 'Done'; }
+  if (s.phase === 'init')   { phaseClass = 'init';   phaseText = 'Initial State'; }
+  tagWrap.innerHTML = '<span class="phase-tag ' + phaseClass + '">' + phaseText + '</span>';
+
+  // Flags
+  function setFlag(boxId, valId, active, val) {
+    var box = document.getElementById(boxId);
+    var el = document.getElementById(valId);
+    if (!box || !el) return;
+    var text = val ? 'True' : 'False';
+    if (animate && el.textContent !== text) {
+      gsap.fromTo(el, { scale: 0.8, opacity: 0.4 }, { scale: 1, opacity: 1, duration: 0.2 });
+    }
+    el.textContent = text;
+    if (active) box.classList.add('active'); else box.classList.remove('active');
+  }
+  setFlag('flag-row0', 'fv-row0', s.firstRowZero, s.firstRowZero);
+  setFlag('flag-col0', 'fv-col0', s.firstColZero, s.firstColZero);
+
+  // Variables
+  function setVar(id, text) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    if (animate && el.textContent !== text) {
+      gsap.fromTo(el, { scale: 0.8, opacity: 0.4 }, { scale: 1, opacity: 1, duration: 0.2, ease: 'back.out(1.7)' });
+    }
+    el.textContent = text;
+  }
+  setVar('vv-row', s.cellRow !== null ? String(s.cellRow) : '—');
+  setVar('vv-col', s.cellCol !== null ? String(s.cellCol) : '—');
+  setVar('vv-val', s.action && s.cellRow !== null ? String(s.mat[s.cellRow] ? s.mat[s.cellRow][s.cellCol] : '—') : '—');
+  setVar('vv-action', s.action || '—');
+
+  // Code lines
+  CODE.forEach(function(e) {
+    var el = document.getElementById('cl-' + e[0]);
+    if (!el) return;
+    if (s.lines && s.lines.indexOf(e[0]) >= 0) el.classList.add('hl');
+    else el.classList.remove('hl');
+  });
+}
+</script>
+<script>
+  if (window.self !== window.top) {
+    var bl = document.querySelector('.back-link');
+    if (bl) bl.style.display = 'none';
+  }
+</script>
+</body>
+</html>
