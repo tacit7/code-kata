@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Target Sum</title>
+  <link rel="stylesheet" href="../shared/style.css" />
+  <script src="../shared/gsap.min.js"></script>
+  <script src="../shared/viz.js"></script>
+  <style>
+    .viz-area {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      min-height: 0;
+      gap: 12px;
+    }
+
+    .main-row {
+      display: flex;
+      flex: 1;
+      gap: 16px;
+      min-height: 0;
+    }
+
+    /* ── Left: nums array ── */
+    .left-panel {
+      width: 160px;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 14px;
+      overflow-y: auto;
+    }
+
+    .panel-title {
+      font-size: 0.68rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim);
+      margin-bottom: 2px;
+    }
+
+    .nums-list { display: flex; flex-direction: column; gap: 5px; }
+
+    .num-box {
+      display: flex; align-items: center; gap: 8px;
+      padding: 7px 10px;
+      border: 1px solid var(--border-soft);
+      border-radius: var(--radius-sm);
+      background: var(--bg);
+      font-family: monospace; font-size: 0.88rem;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .num-box .nb-idx { font-size: 0.62rem; color: var(--text-ghost); width: 16px; }
+    .num-box .nb-val { font-weight: 700; color: var(--text-dim); flex: 1; }
+    .num-box .nb-ptr { font-size: 0.7rem; color: var(--accent); display: none; }
+    .num-box.active { border-color: var(--accent); background: var(--surface-dark); }
+    .num-box.active .nb-val { color: var(--accent-pale); }
+    .num-box.active .nb-ptr { display: block; }
+    .num-box.done .nb-val { color: var(--text-ghost); }
+
+    /* ── Right: dp panels ── */
+    .right-panel {
+      flex: 1; min-width: 0;
+      display: flex; gap: 14px; min-height: 0;
+    }
+
+    .dp-panel {
+      flex: 1; min-width: 0;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 14px;
+      display: flex; flex-direction: column; gap: 8px;
+      overflow: hidden;
+    }
+
+    .dp-scroll { overflow-y: auto; flex: 1; }
+
+    .dp-header {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 0 4px 6px 4px;
+      border-bottom: 1px solid var(--border-soft);
+      font-size: 0.62rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-ghost);
+    }
+
+    .dp-entry {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 7px 10px;
+      margin-bottom: 4px;
+      background: var(--bg);
+      border: 1px solid var(--border-soft);
+      border-radius: var(--radius-sm);
+      font-family: monospace; font-size: 0.88rem;
+      transition: border-color 0.15s, background 0.15s, color 0.15s;
+    }
+    .dp-entry .de-sum { color: var(--text-dim); }
+    .dp-entry .de-count { font-weight: 700; color: var(--text-bright); }
+
+    .dp-entry[data-state="expanding"] {
+      border-color: var(--accent);
+      background: var(--surface-dark);
+    }
+    .dp-entry[data-state="expanding"] .de-sum { color: var(--accent-pale); }
+    .dp-entry[data-state="expanding"] .de-count { color: var(--accent-pale); }
+
+    .dp-entry[data-state="just-added"] {
+      border-color: #166534;
+      background: #052e16;
+    }
+    .dp-entry[data-state="just-added"] .de-sum { color: #4ade80; }
+    .dp-entry[data-state="just-added"] .de-count { color: #4ade80; }
+
+    .dp-entry[data-state="target"] {
+      border-color: #ca8a04;
+      background: #1e1800;
+    }
+    .dp-entry[data-state="target"] .de-sum { color: #fde68a; }
+    .dp-entry[data-state="target"] .de-count { color: #fef08a; }
+
+    .dp-entry[data-state="target-found"] {
+      border-color: #166534;
+      background: #052e16;
+      box-shadow: 0 0 0 2px #22c55e;
+    }
+    .dp-entry[data-state="target-found"] .de-sum { color: #4ade80; }
+    .dp-entry[data-state="target-found"] .de-count { color: #4ade80; }
+
+    .dp-empty {
+      font-size: 0.78rem; color: var(--text-ghost);
+      padding: 10px 4px; font-style: italic;
+    }
+
+    /* arrow between panels */
+    .expand-arrow {
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; color: var(--text-ghost); font-size: 1.2rem;
+      width: 24px;
+    }
+
+    /* ── Bottom ── */
+    .bottom-section {
+      display: flex; gap: 10px; flex-shrink: 0;
+    }
+    .nav-panel {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 12px 14px;
+      display: flex; gap: 8px; align-items: center; flex-shrink: 0;
+    }
+    .info-panel {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 12px 16px;
+      flex: 1; min-width: 0;
+    }
+    .speed-select {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); color: var(--text);
+      font-size: 0.85rem; padding: 8px 10px; outline: none; width: 80px;
+    }
+    .result-badge {
+      font-size: 0.85rem; font-weight: 700; padding: 4px 12px;
+      border-radius: 5px; display: none; width: fit-content; margin-top: 6px;
+    }
+    .result-badge.found {
+      background: var(--green-bg); color: var(--green);
+      border: 1px solid var(--green-border); display: block;
+    }
+    .result-badge.zero {
+      background: #1c0000; color: #f87171;
+      border: 1px solid #7f1d1d; display: block;
+    }
+  </style>
+</head>
+<body class="page">
+
+<div class="page-header">
+  <a class="back-link" href="../index.html">&larr; All Algorithms</a>
+  <div class="page-title">Target Sum</div>
+  <div class="page-sub">LeetCode 494 &middot; 2-D DP / Hash Map &middot; each number splits every reachable sum into +num and &minus;num branches &middot; O(n &sdot; |dp|) time</div>
+</div>
+
+<div class="controls">
+  <div class="field">
+    <label>Numbers</label>
+    <input id="inp-nums" type="text" value="1,1,1,1,1" style="width:150px" />
+  </div>
+  <div class="field">
+    <label>Target</label>
+    <input id="inp-target" type="number" value="3" style="width:60px" />
+  </div>
+  <button class="btn-primary" onclick="buildAndRun()">Build &amp; Run</button>
+</div>
+
+<div class="viz-area" id="viz-area">
+
+  <div class="main-row">
+
+    <!-- Left: nums array -->
+    <div class="left-panel">
+      <div class="panel-title">Array</div>
+      <div class="nums-list" id="nums-list">
+        <div style="color:var(--text-ghost);font-size:0.8rem">Click Build &amp; Run</div>
+      </div>
+    </div>
+
+    <!-- Right: dp + next_dp panels -->
+    <div class="right-panel" id="right-panel">
+
+      <div class="dp-panel" id="dp-panel">
+        <div class="panel-title" id="dp-panel-title">dp</div>
+        <div class="dp-header">
+          <span>sum</span><span>count</span>
+        </div>
+        <div class="dp-scroll">
+          <div id="dp-list">
+            <div class="dp-empty">Enter numbers and click Build &amp; Run.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="expand-arrow" id="expand-arrow" style="display:none">&rarr;</div>
+
+      <div class="dp-panel" id="next-dp-panel" style="display:none">
+        <div class="panel-title">next_dp (building)</div>
+        <div class="dp-header">
+          <span>sum</span><span>count</span>
+        </div>
+        <div class="dp-scroll">
+          <div id="next-dp-list"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="bottom-section">
+    <div class="nav-panel">
+      <button class="btn-step" id="btn-back" disabled>&larr;</button>
+      <button class="btn-step" id="btn-next" disabled>&rarr;</button>
+      <button class="btn-play" id="btn-play" disabled>&#9654; Play</button>
+      <select class="speed-select" id="speed-select">
+        <option value="700">Slow</option>
+        <option value="350" selected>Med</option>
+        <option value="100">Fast</option>
+      </select>
+    </div>
+
+    <div class="info-panel">
+      <div class="panel-title" id="phase-label">&mdash;</div>
+      <div style="font-size:0.82rem;color:var(--text-muted)" id="step-desc">Enter numbers and click Build &amp; Run.</div>
+      <div class="result-badge" id="result-badge"></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+var simSteps = [], nav;
+
+function copyMap(m) {
+  var out = {};
+  var keys = Object.keys(m);
+  for (var i = 0; i < keys.length; i++) out[keys[i]] = m[keys[i]];
+  return out;
+}
+
+function buildSteps(nums, target) {
+  var steps = [];
+  var dp = {'0': 1};
+
+  steps.push({
+    phase: 'Init',
+    desc: 'dp = {0: 1} — one way to reach sum 0: assign nothing. Each number will fork every reachable sum into sum+num and sum−num.',
+    numIdx: -1,
+    nums: nums,
+    target: target,
+    dp: copyMap(dp),
+    nextDp: null,
+    expandingSum: null,
+    addedSums: null,
+    done: false,
+    answer: null,
+  });
+
+  for (var i = 0; i < nums.length; i++) {
+    var num = nums[i];
+    var nextDp = {};
+
+    steps.push({
+      phase: 'num[' + i + '] = ' + num,
+      desc: 'nums[' + i + '] = ' + num + '. For every (sum, count) in dp, add count to next_dp[sum+' + num + '] and next_dp[sum−' + num + ']. Start: next_dp = {}.',
+      numIdx: i,
+      nums: nums,
+      target: target,
+      dp: copyMap(dp),
+      nextDp: {},
+      expandingSum: null,
+      addedSums: null,
+      done: false,
+      answer: null,
+    });
+
+    var entries = Object.keys(dp).map(Number).sort(function(a, b) { return a - b; });
+    for (var j = 0; j < entries.length; j++) {
+      var s = entries[j];
+      var c = dp[String(s)];
+      var plusS = s + num;
+      var minusS = s - num;
+
+      if (nextDp[String(plusS)] === undefined) nextDp[String(plusS)] = 0;
+      nextDp[String(plusS)] += c;
+      if (nextDp[String(minusS)] === undefined) nextDp[String(minusS)] = 0;
+      nextDp[String(minusS)] += c;
+
+      var addedSums = plusS === minusS ? [plusS] : [plusS, minusS];
+
+      steps.push({
+        phase: 'num=' + num + ' · expand sum=' + s,
+        desc: 'sum=' + s + ', count=' + c + '  →  next_dp[' + s + '+' + num + '=' + plusS + '] += ' + c + (plusS !== minusS ? '  and  next_dp[' + s + '−' + num + '=' + minusS + '] += ' + c : '  (same bucket since num=0)') + '.',
+        numIdx: i,
+        nums: nums,
+        target: target,
+        dp: copyMap(dp),
+        nextDp: copyMap(nextDp),
+        expandingSum: s,
+        addedSums: addedSums,
+        done: false,
+        answer: null,
+      });
+    }
+
+    dp = nextDp;
+
+    steps.push({
+      phase: 'num[' + i + '] = ' + num + ' · merged',
+      desc: 'All ' + entries.length + ' entr' + (entries.length === 1 ? 'y' : 'ies') + ' expanded. dp = next_dp. dp now has ' + Object.keys(dp).length + ' distinct reachable sum' + (Object.keys(dp).length === 1 ? '' : 's') + '.',
+      numIdx: i,
+      nums: nums,
+      target: target,
+      dp: copyMap(dp),
+      nextDp: null,
+      expandingSum: null,
+      addedSums: null,
+      done: false,
+      answer: null,
+    });
+  }
+
+  var answer = dp[String(target)] !== undefined ? dp[String(target)] : 0;
+  steps.push({
+    phase: 'Done',
+    desc: 'dp[' + target + '] = ' + answer + '. There ' + (answer === 1 ? 'is 1 way' : 'are ' + answer + ' ways') + ' to assign + and − to each number and reach target ' + target + '.',
+    numIdx: -1,
+    nums: nums,
+    target: target,
+    dp: copyMap(dp),
+    nextDp: null,
+    expandingSum: null,
+    addedSums: null,
+    done: true,
+    answer: answer,
+  });
+
+  return steps;
+}
+
+function buildNumsList(nums) {
+  var list = document.getElementById('nums-list');
+  list.innerHTML = '';
+  for (var i = 0; i < nums.length; i++) {
+    var box = document.createElement('div');
+    box.className = 'num-box';
+    box.id = 'nb-' + i;
+    box.innerHTML =
+      '<span class="nb-idx">' + i + '</span>' +
+      '<span class="nb-val">' + nums[i] + '</span>' +
+      '<span class="nb-ptr">&#9654;</span>';
+    list.appendChild(box);
+  }
+}
+
+function renderDpList(listId, dpMap, target, expandingSum, addedSums, isNextDp, isDone) {
+  var container = document.getElementById(listId);
+  var entries = Object.keys(dpMap).map(Number).sort(function(a, b) { return a - b; });
+
+  // Keyed by sum string for O(1) lookup
+  var existing = {};
+  var nodes = container.querySelectorAll('.dp-entry');
+  for (var k = 0; k < nodes.length; k++) {
+    existing[nodes[k].dataset.sum] = nodes[k];
+  }
+
+  // Mark which sums are needed
+  var needed = {};
+  for (var ei = 0; ei < entries.length; ei++) needed[String(entries[ei])] = true;
+
+  // Remove stale entries
+  for (var sk in existing) {
+    if (!needed[sk]) container.removeChild(existing[sk]);
+  }
+
+  // Upsert entries in sorted order
+  for (var i = 0; i < entries.length; i++) {
+    var s = entries[i];
+    var sKey = String(s);
+    var count = dpMap[sKey];
+
+    // Determine state
+    var state = 'normal';
+    if (isDone && s === target) {
+      state = 'target-found';
+    } else if (!isNextDp && expandingSum !== null && s === expandingSum) {
+      state = 'expanding';
+    } else if (isNextDp && addedSums && addedSums.indexOf(s) >= 0) {
+      state = 'just-added';
+    } else if (s === target) {
+      state = 'target';
+    }
+
+    var el = existing[sKey];
+    if (el) {
+      el.dataset.state = state;
+      el.querySelector('.de-sum').textContent = s;
+      el.querySelector('.de-count').textContent = count;
+    } else {
+      el = document.createElement('div');
+      el.className = 'dp-entry';
+      el.dataset.sum = sKey;
+      el.dataset.state = state;
+      el.innerHTML =
+        '<span class="de-sum">' + s + '</span>' +
+        '<span class="de-count">' + count + '</span>';
+
+      // Insert in sorted position
+      var rows = container.querySelectorAll('.dp-entry');
+      var inserted = false;
+      for (var r = 0; r < rows.length; r++) {
+        if (Number(rows[r].dataset.sum) > s) {
+          container.insertBefore(el, rows[r]);
+          inserted = true;
+          break;
+        }
+      }
+      if (!inserted) container.appendChild(el);
+
+      gsap.fromTo(el,
+        { opacity: 0, x: 10 },
+        { opacity: 1, x: 0, duration: 0.2, ease: 'power2.out' });
+    }
+
+    existing[sKey] = el;
+  }
+
+  // Show empty message if needed
+  var emptyEl = container.querySelector('.dp-empty');
+  if (entries.length === 0) {
+    if (!emptyEl) {
+      emptyEl = document.createElement('div');
+      emptyEl.className = 'dp-empty';
+      emptyEl.textContent = 'empty';
+      container.appendChild(emptyEl);
+    }
+  } else if (emptyEl) {
+    container.removeChild(emptyEl);
+  }
+}
+
+function renderSnap(snap) {
+  var nums = snap.nums;
+  var isDone = snap.done;
+
+  // Nums array
+  for (var i = 0; i < nums.length; i++) {
+    var box = document.getElementById('nb-' + i);
+    if (!box) continue;
+    box.className = 'num-box';
+    if (snap.numIdx === i) {
+      box.className = 'num-box active';
+    } else if (isDone || snap.numIdx > i) {
+      box.className = 'num-box done';
+    }
+  }
+
+  // Show/hide next_dp panel
+  var showNext = snap.nextDp !== null;
+  document.getElementById('next-dp-panel').style.display = showNext ? '' : 'none';
+  document.getElementById('expand-arrow').style.display = showNext ? '' : 'none';
+  document.getElementById('dp-panel-title').textContent = showNext ? 'dp (current)' : 'dp';
+
+  // Render dp
+  renderDpList('dp-list', snap.dp, snap.target, snap.expandingSum, null, false, isDone);
+
+  // Render next_dp
+  if (showNext) {
+    renderDpList('next-dp-list', snap.nextDp, snap.target, null, snap.addedSums, true, false);
+  }
+
+  // Result badge
+  var badge = document.getElementById('result-badge');
+  badge.className = 'result-badge';
+  badge.textContent = '';
+  if (isDone) {
+    if (snap.answer > 0) {
+      badge.className = 'result-badge found';
+      badge.textContent = snap.answer + ' way' + (snap.answer !== 1 ? 's' : '') + ' to reach target ' + snap.target;
+    } else {
+      badge.className = 'result-badge zero';
+      badge.textContent = '0 ways — target unreachable';
+    }
+  }
+}
+
+window.addEventListener('DOMContentLoaded', function() {
+  nav = VizNav({
+    btnPrev:  document.getElementById('btn-back'),
+    btnNext:  document.getElementById('btn-next'),
+    btnPlay:  document.getElementById('btn-play'),
+    speedSel: document.getElementById('speed-select'),
+    render: function(snap, cur, total) {
+      renderSnap(snap);
+      document.getElementById('phase-label').textContent =
+        'Step ' + (cur + 1) + ' / ' + total + '  ·  ' + snap.phase;
+      document.getElementById('step-desc').textContent = snap.desc;
+    }
+  });
+  buildAndRun();
+});
+
+function buildAndRun() {
+  var rawNums = document.getElementById('inp-nums').value.trim();
+  var nums = rawNums.split(',')
+    .map(function(x) { return parseInt(x.trim(), 10); })
+    .filter(function(x) { return !isNaN(x); });
+  var target = parseInt(document.getElementById('inp-target').value.trim(), 10);
+  if (!nums.length || isNaN(target)) return;
+
+  buildNumsList(nums);
+  document.getElementById('dp-list').innerHTML = '';
+  document.getElementById('next-dp-list').innerHTML = '';
+
+  simSteps = buildSteps(nums, target);
+  nav.load(simSteps);
+}
+</script>
+
+<script>
+  if (window.self !== window.top) {
+    var bl = document.querySelector('.back-link');
+    if (bl) bl.style.display = 'none';
+  }
+</script>
+</body>
+</html>

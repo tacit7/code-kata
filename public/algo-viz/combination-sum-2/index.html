@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Combination Sum II</title>
+  <link rel="stylesheet" href="../shared/style.css" />
+  <script src="../shared/gsap.min.js"></script>
+  <script src="../shared/viz.js"></script>
+  <style>
+    .viz-area { width: 100%; max-width: 90%; }
+    .main-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
+    .left-col, .right-col { display: flex; flex-direction: column; gap: 12px; }
+    @media (max-width: 700px) { .main-row { grid-template-columns: 1fr; } }
+
+    .page-sub { font-size: 0.8rem; color: var(--text-dim); margin-left: auto; white-space: nowrap; }
+
+    .sect {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 14px 16px;
+      display: flex; flex-direction: column; gap: 8px;
+    }
+
+    /* Candidates */
+    .cands-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 4px; }
+    .cand-chip {
+      width: 44px; height: 44px;
+      display: flex; align-items: center; justify-content: center;
+      border: 2px solid var(--border); border-radius: 8px;
+      background: var(--bg);
+      font-size: 1rem; font-weight: 700; font-family: monospace;
+      color: var(--text-dim);
+      transition: border-color 0.15s, color 0.15s, background 0.15s, opacity 0.15s;
+      position: relative;
+    }
+    .cand-chip .cand-idx {
+      position: absolute; top: -9px; left: 50%;
+      transform: translateX(-50%);
+      font-size: 0.55rem; color: var(--text-ghost); font-family: monospace;
+      pointer-events: none;
+    }
+    .cand-chip.active      { border-color: var(--yellow); color: var(--yellow-light); background: #1e1600; }
+    .cand-chip.pruned      { border-color: var(--red);    color: var(--red);          background: #200a0a; opacity: 0.65; }
+    .cand-chip.skipped-dup { border-color: #6e4c7e; color: #9d72ae; background: #1a0e20; opacity: 0.75; }
+    .cand-chip.skipped     { opacity: 0.3; }
+    .dup-badge {
+      position: absolute; bottom: -9px; left: 50%;
+      transform: translateX(-50%);
+      font-size: 0.48rem; color: #9d72ae; font-family: monospace; white-space: nowrap;
+      pointer-events: none;
+    }
+
+    /* Path */
+    .path-row {
+      display: flex; align-items: center; gap: 6px;
+      flex-wrap: wrap; min-height: 42px; margin-top: 4px;
+    }
+    .path-item {
+      width: 38px; height: 38px;
+      display: flex; align-items: center; justify-content: center;
+      border: 2px solid var(--accent); border-radius: 6px;
+      background: var(--surface-dark);
+      font-size: 0.95rem; font-weight: 700; font-family: monospace;
+      color: var(--accent-pale);
+    }
+    .path-item.found { border-color: var(--green); color: var(--green-light); background: var(--green-bg); }
+    .path-sum  { font-size: 0.88rem; color: var(--text-muted); font-family: monospace; margin-left: 4px; }
+    .path-tag  { font-size: 0.78rem; font-weight: 700; }
+    .path-tag.found { color: var(--green); }
+    .path-tag.prune { color: var(--red); }
+    .path-tag.skip  { color: #9d72ae; }
+    .path-empty { color: var(--text-ghost); font-size: 0.82rem; font-style: italic; }
+
+    /* Call stack */
+    .stack-body {
+      font-family: monospace; font-size: 0.74rem;
+      max-height: 190px; overflow-y: auto; margin-top: 4px;
+    }
+    .stack-frame     { padding: 1px 0; color: var(--text-muted); white-space: nowrap; }
+    .stack-frame.top { color: var(--accent-pale); font-weight: 700; }
+    .stack-frame.win { color: var(--green); font-weight: 700; }
+
+    /* Code */
+    .code-panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
+    .code-header { padding: 8px 14px; font-size: 0.72rem; font-weight: 600; color: var(--text-dim); border-bottom: 1px solid var(--border); background: var(--bg); }
+    .code-body { padding: 10px 0; font-size: 0.78rem; line-height: 1.75; white-space: pre; }
+    .code-line { display: flex; align-items: center; padding: 0 14px; }
+    .code-line.hl      { background: var(--border-soft); border-left: 2px solid var(--accent); }
+    .code-line.hl-skip { background: #1a0e20; border-left: 2px solid #6e4c7e; }
+    .ln { min-width: 24px; color: var(--text-ghost); user-select: none; font-size: 0.7rem; }
+
+    /* Nav */
+    .btn-play {
+      background: #15803d; border: none; border-radius: var(--radius-sm);
+      color: #fff; cursor: pointer; font-size: 0.88rem; font-weight: 600;
+      padding: 9px 16px; transition: background 0.2s;
+    }
+    .btn-play:hover         { background: #166534; }
+    .btn-play.playing       { background: #c2410c; }
+    .btn-play.playing:hover { background: #9a3412; }
+    .btn-play:disabled      { opacity: 0.4; cursor: not-allowed; }
+    .speed-select {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); color: var(--text);
+      font-size: 0.85rem; padding: 8px 10px; outline: none; width: 80px;
+    }
+    .nav-row { display: flex; gap: 8px; align-items: center; }
+
+    /* Variables */
+    .var-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+    .var-box {
+      padding: 10px 8px; background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); display: flex; flex-direction: column;
+      align-items: center; gap: 3px;
+    }
+    .var-box.ab { border-color: var(--accent); }
+    .var-box.ob { border-color: #b45309; }
+    .var-box.gb { border-color: var(--green-border); }
+    .var-label { font-size: 0.62rem; font-family: monospace; color: var(--text-faint); text-align: center; }
+    .var-val   { font-size: 1.2rem; font-weight: 700; color: var(--text-bright); font-family: monospace; }
+
+    /* Results */
+    .results-list { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; min-height: 38px; }
+    .result-combo {
+      display: flex; align-items: center; gap: 6px;
+      padding: 6px 10px;
+      background: var(--green-bg); border: 1px solid var(--green-border);
+      border-radius: 6px; font-family: monospace; font-size: 0.82rem; color: var(--green);
+    }
+    .result-empty { color: var(--text-ghost); font-size: 0.82rem; font-style: italic; }
+
+    .kw { color: var(--purple); }
+    .fn { color: var(--blue); }
+    .bi { color: var(--orange); }
+    .nb { color: var(--green); }
+    .cm { color: var(--text-ghost); }
+  </style>
+</head>
+<body class="page">
+
+<div class="page-header">
+  <a class="back-link" href="../index.html">&larr; All Algorithms</a>
+  <div class="page-title">Combination Sum II</div>
+  <div class="page-sub">LeetCode 40 &middot; Backtracking &middot; each candidate used once &middot; skip duplicates at same depth</div>
+</div>
+
+<div class="controls">
+  <div class="field">
+    <label>Candidates (comma-sep)</label>
+    <input id="inp-cands" type="text" value="10,1,2,7,6,1,5" style="width:180px" />
+  </div>
+  <div class="field">
+    <label>Target</label>
+    <input id="inp-target" type="number" value="8" min="1" max="40" style="width:80px" />
+  </div>
+  <div class="field">
+    <label>Preset</label>
+    <select id="preset-sel" onchange="loadPreset(this.value)" style="width:200px">
+      <option value="0">[10,1,2,7,6,1,5] target=8</option>
+      <option value="1">[2,5,2,1,2] target=5</option>
+      <option value="2">[1,1,1,2] target=3</option>
+    </select>
+  </div>
+  <button class="btn-primary" onclick="buildAndRun()">Build &amp; Run</button>
+</div>
+
+<div class="viz-area">
+  <div class="main-row">
+
+    <!-- ── Left column ── -->
+    <div class="left-col">
+
+      <!-- Candidates -->
+      <div class="sect">
+        <div class="panel-title">Sorted Candidates <span class="panel-sub" id="target-sub"></span></div>
+        <div class="cands-row" id="cands-row">
+          <span style="color:var(--text-ghost);font-size:0.82rem">Click Build &amp; Run.</span>
+        </div>
+      </div>
+
+      <!-- Path -->
+      <div class="sect">
+        <div class="panel-title">Current Path</div>
+        <div class="path-row" id="path-row">
+          <span class="path-empty">empty</span>
+        </div>
+      </div>
+
+      <!-- Call stack -->
+      <div class="sect" style="gap:4px">
+        <div class="panel-title">Call Stack <span class="panel-sub">(deepest = active frame)</span></div>
+        <div class="stack-body" id="stack-body">
+          <div style="color:var(--text-ghost);font-size:0.78rem">No active recursion.</div>
+        </div>
+      </div>
+
+      <!-- Code -->
+      <div class="code-panel">
+        <div class="code-header">Python</div>
+        <div class="code-body" id="code-body"></div>
+      </div>
+
+    </div>
+
+    <!-- ── Right column ── -->
+    <div class="right-col">
+
+      <!-- Nav + description -->
+      <div style="display:flex;gap:12px">
+        <div class="panel-box" style="flex:0 0 auto;display:flex;flex-direction:column;gap:8px">
+          <div class="nav-row">
+            <button class="btn-step" id="btn-back" disabled>&larr;</button>
+            <button class="btn-step" id="btn-next" disabled>&rarr;</button>
+            <button class="btn-play" id="btn-play" disabled>&#9654; Play</button>
+            <select class="speed-select" id="speed-select">
+              <option value="900">Slow</option>
+              <option value="450" selected>Medium</option>
+              <option value="150">Fast</option>
+            </select>
+          </div>
+        </div>
+        <div class="panel-box" style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px">
+          <div class="panel-title" id="phase-label">&mdash;</div>
+          <div style="font-size:0.82rem;color:var(--text-muted)" id="step-desc">
+            Set candidates &amp; target, then click Build &amp; Run.
+          </div>
+        </div>
+      </div>
+
+      <!-- Variables -->
+      <div class="panel-box" style="display:flex;flex-direction:column;gap:8px">
+        <div class="panel-title">Variables</div>
+        <div class="var-grid">
+          <div class="var-box ab">
+            <div class="var-label">start</div>
+            <div class="var-val" id="vv-start">&mdash;</div>
+          </div>
+          <div class="var-box ob">
+            <div class="var-label">sum</div>
+            <div class="var-val" id="vv-sum">&mdash;</div>
+          </div>
+          <div class="var-box gb">
+            <div class="var-label">remaining</div>
+            <div class="var-val" id="vv-rem">&mdash;</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Results -->
+      <div class="sect">
+        <div class="panel-title">Results <span class="panel-sub" id="result-count"></span></div>
+        <div class="results-list" id="results-list">
+          <span class="result-empty">No combinations found yet.</span>
+        </div>
+      </div>
+
+      <!-- Legend -->
+      <div class="panel-box" style="display:flex;flex-direction:column;gap:8px">
+        <div class="panel-title">Legend</div>
+        <div style="display:flex;flex-direction:column;gap:7px;font-size:0.78rem;color:var(--text-muted)">
+          <div style="display:flex;align-items:center;gap:8px">
+            <div style="width:16px;height:16px;border-radius:3px;border:2px solid var(--yellow);background:#1e1600"></div>
+            <span>Candidate currently being tried</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <div style="width:16px;height:16px;border-radius:3px;border:2px solid #6e4c7e;background:#1a0e20"></div>
+            <span>Duplicate skipped at same depth</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <div style="width:16px;height:16px;border-radius:3px;border:2px solid var(--red);background:#200a0a"></div>
+            <span>Pruned (sum would exceed target)</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <div style="width:16px;height:16px;border-radius:3px;border:2px solid var(--accent);background:var(--surface-dark)"></div>
+            <span>Element in current path</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <div style="width:16px;height:16px;border-radius:3px;background:var(--green-bg);border:1px solid var(--green-border)"></div>
+            <span>Valid combination found</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+var simSteps = [], nav;
+var currentCands = [], currentTarget = 0;
+
+var CODE = [
+  [1,  '<span class="kw">def</span> <span class="fn">combination_sum2</span>(candidates, target):'],
+  [2,  '    candidates.<span class="bi">sort</span>()'],
+  [3,  '    results = []'],
+  [4,  '    <span class="kw">def</span> <span class="fn">backtrack</span>(start, path, s):'],
+  [5,  '        <span class="kw">if</span> s == target:'],
+  [6,  '            results.<span class="bi">append</span>(path[:])'],
+  [7,  '            <span class="kw">return</span>'],
+  [8,  '        <span class="kw">for</span> i <span class="kw">in</span> <span class="bi">range</span>(start, <span class="bi">len</span>(candidates)):'],
+  [9,  '            <span class="kw">if</span> i > start <span class="kw">and</span> candidates[i] == candidates[i-<span class="nb">1</span>]:'],
+  [10, '                <span class="kw">continue</span>  <span class="cm"># skip dup at this depth</span>'],
+  [11, '            c = candidates[i]'],
+  [12, '            <span class="kw">if</span> s + c > target: <span class="kw">break</span>  <span class="cm"># prune</span>'],
+  [13, '            path.<span class="bi">append</span>(c)'],
+  [14, '            <span class="fn">backtrack</span>(i+<span class="nb">1</span>, path, s+c)  <span class="cm"># i+1: no reuse</span>'],
+  [15, '            path.<span class="bi">pop</span>()'],
+  [16, '    <span class="fn">backtrack</span>(<span class="nb">0</span>, [], <span class="nb">0</span>)'],
+  [17, '    <span class="kw">return</span> results'],
+];
+
+var PHASE_LINES = {
+  'enter':    [4],
+  'found':    [5, 6, 7],
+  'skip-dup': [9, 10],
+  'try':      [8, 11],
+  'prune':    [12],
+  'add':      [13, 14],
+  'remove':   [15],
+  'done':     [16, 17],
+};
+
+var PRESETS = [
+  { cands: '10,1,2,7,6,1,5', target: 8 },
+  { cands: '2,5,2,1,2',      target: 5 },
+  { cands: '1,1,1,2',        target: 3 },
+];
+
+function loadPreset(idx) {
+  var p = PRESETS[parseInt(idx, 10)];
+  document.getElementById('inp-cands').value = p.cands;
+  document.getElementById('inp-target').value = p.target;
+  buildAndRun();
+}
+
+function simulate(cands, target) {
+  var steps = [], results = [], callStack = [];
+
+  function snap(phase, candIdx, skipIdx, desc, path) {
+    var curSum = path.reduce(function(a, b) { return a + b; }, 0);
+    steps.push({
+      phase:   phase,
+      desc:    desc,
+      stack:   callStack.map(function(f) {
+        return { start: f.start, sum: f.sum, path: f.path.slice() };
+      }),
+      path:    path.slice(),
+      sum:     curSum,
+      candIdx: candIdx,
+      skipIdx: skipIdx,
+      results: results.slice(),
+      lines:   PHASE_LINES[phase] || [],
+    });
+  }
+
+  function backtrack(start, path, sum) {
+    callStack.push({ start: start, sum: sum, path: path.slice() });
+
+    snap('enter', -1, -1,
+      'backtrack(start=' + start + ', sum=' + sum + '). ' +
+      (path.length ? 'path=[' + path.join(', ') + ']. ' : 'path empty. ') +
+      'Will try candidates[' + start + '..].',
+      path);
+
+    if (sum === target) {
+      results.push(path.slice());
+      snap('found', -1, -1,
+        'sum (' + sum + ') == target (' + target + '). ' +
+        'Found: [' + path.join(', ') + ']. Append and return.',
+        path);
+      callStack.pop();
+      return;
+    }
+
+    for (var i = start; i < cands.length; i++) {
+      var c = cands[i];
+
+      if (i > start && cands[i] === cands[i - 1]) {
+        snap('skip-dup', -1, i,
+          'i=' + i + ' > start=' + start + ' and candidates[' + i + ']=' + c +
+          ' == candidates[' + (i-1) + ']=' + cands[i-1] +
+          '. Duplicate at this depth — skip to avoid repeat combinations.',
+          path);
+        continue;
+      }
+
+      if (sum + c > target) {
+        snap('prune', i, -1,
+          'sum + ' + c + ' = ' + (sum + c) + ' > ' + target + '. ' +
+          'Sorted — all remaining exceed target. Break.',
+          path);
+        break;
+      }
+
+      snap('try', i, -1,
+        'Try candidates[' + i + ']=' + c + '. ' +
+        'sum + ' + c + ' = ' + (sum + c) + ' ≤ ' + target + '. Safe to add.',
+        path);
+
+      path.push(c);
+      snap('add', i, -1,
+        'Appended ' + c + ' → path=[' + path.join(', ') + '], sum=' + (sum + c) + '. ' +
+        'Recurse with i+1=' + (i+1) + ' (each candidate used once).',
+        path);
+
+      backtrack(i + 1, path, sum + c);
+
+      path.pop();
+      snap('remove', i, -1,
+        'Back from recursion. Pop ' + c + ' → path=[' + path.join(', ') + '], sum=' + sum + '. ' +
+        'Try next candidate at same depth.',
+        path);
+    }
+
+    callStack.pop();
+  }
+
+  backtrack(0, [], 0);
+
+  var summary = results.length
+    ? results.map(function(r) { return '[' + r.join(',') + ']'; }).join(', ')
+    : 'none';
+  snap('done', -1, -1,
+    'All branches explored. ' + results.length + ' unique combination' +
+    (results.length === 1 ? '' : 's') + ' found: ' + summary + '.',
+    []);
+
+  return steps;
+}
+
+window.addEventListener('DOMContentLoaded', function() {
+  buildCodePanel();
+  nav = VizNav({
+    btnPrev:  document.getElementById('btn-back'),
+    btnNext:  document.getElementById('btn-next'),
+    btnPlay:  document.getElementById('btn-play'),
+    speedSel: document.getElementById('speed-select'),
+    render: function(s, cur, total) { renderStep(s, cur > 0, cur, total); },
+  });
+  buildAndRun();
+});
+
+function buildCodePanel() {
+  var body = document.getElementById('code-body');
+  body.innerHTML = CODE.map(function(e) {
+    return '<div class="code-line" id="cl-' + e[0] + '"><span class="ln">' + e[0] + '</span><span>' + e[1] + '</span></div>';
+  }).join('');
+}
+
+function buildAndRun() {
+  var raw    = document.getElementById('inp-cands').value;
+  var target = parseInt(document.getElementById('inp-target').value, 10);
+  if (isNaN(target) || target < 1 || target > 40) return;
+
+  var cands = raw.split(',')
+    .map(function(s) { return parseInt(s.trim(), 10); })
+    .filter(function(n) { return !isNaN(n) && n > 0; });
+  if (cands.length === 0) return;
+
+  cands.sort(function(a, b) { return a - b; });
+  currentCands  = cands;
+  currentTarget = target;
+
+  document.getElementById('target-sub').textContent = '— target = ' + target;
+  var row = document.getElementById('cands-row');
+  row.innerHTML = cands.map(function(c, idx) {
+    var dupMark = (idx > 0 && cands[idx] === cands[idx - 1])
+      ? '<span class="dup-badge">dup</span>' : '';
+    return '<div class="cand-chip" id="cand-' + idx + '">' +
+           '<span class="cand-idx">' + idx + '</span>' + c + dupMark + '</div>';
+  }).join('');
+
+  simSteps = simulate(cands, target);
+  nav.load(simSteps);
+}
+
+function renderStep(s, animate, cur, total) {
+  var phaseEl = document.getElementById('phase-label');
+  if (phaseEl) phaseEl.textContent = 'Step ' + (cur + 1) + ' / ' + total + '  \xb7  ' + s.phase;
+
+  var descEl = document.getElementById('step-desc');
+  if (descEl) {
+    if (animate) gsap.fromTo(descEl, { opacity: 0 }, { opacity: 1, duration: 0.15 });
+    descEl.textContent = s.desc;
+  }
+
+  renderCands(s, animate);
+  renderPath(s, animate);
+  renderStack(s, animate);
+  renderVars(s, animate);
+  renderResults(s, animate);
+  setCodeLines(s.lines, s.phase === 'skip-dup');
+}
+
+function renderCands(s, animate) {
+  currentCands.forEach(function(c, idx) {
+    var el = document.getElementById('cand-' + idx);
+    if (!el) return;
+    el.className = 'cand-chip';
+
+    // Re-attach dup badge if stripped by className reset
+    if (idx > 0 && currentCands[idx] === currentCands[idx - 1] && !el.querySelector('.dup-badge')) {
+      var badge = document.createElement('span');
+      badge.className = 'dup-badge';
+      badge.textContent = 'dup';
+      el.appendChild(badge);
+    }
+
+    if (idx === s.skipIdx) {
+      el.classList.add('skipped-dup');
+      if (animate) gsap.fromTo(el, { scale: 1 }, { scale: 0.92, duration: 0.12, yoyo: true, repeat: 1 });
+    } else if (idx === s.candIdx) {
+      if (s.phase === 'prune') {
+        el.classList.add('pruned');
+      } else {
+        el.classList.add('active');
+        if (animate) gsap.fromTo(el, { scale: 1 }, { scale: 1.18, duration: 0.1, yoyo: true, repeat: 1 });
+      }
+    } else {
+      var topFrame = s.stack.length ? s.stack[s.stack.length - 1] : null;
+      if (topFrame && idx < topFrame.start) el.classList.add('skipped');
+    }
+  });
+}
+
+function renderPath(s, animate) {
+  var row = document.getElementById('path-row');
+  if (!row) return;
+
+  if (s.path.length === 0) {
+    row.innerHTML = '<span class="path-empty">empty</span>';
+    return;
+  }
+
+  var isFound = s.phase === 'found';
+  var isPrune = s.phase === 'prune';
+  var isSkip  = s.phase === 'skip-dup';
+  var cls     = 'path-item' + (isFound ? ' found' : '');
+
+  var html = s.path.map(function(v) {
+    return '<div class="' + cls + '">' + v + '</div>';
+  }).join('');
+  html += '<span class="path-sum">= ' + s.sum + '</span>';
+
+  if (isFound) html += '<span class="path-tag found">&nbsp;✓ found!</span>';
+  else if (isPrune) html += '<span class="path-tag prune">&nbsp;✗ pruned</span>';
+  else if (isSkip)  html += '<span class="path-tag skip">&nbsp;↷ skip dup</span>';
+
+  row.innerHTML = html;
+
+  if (animate && s.phase === 'add') {
+    var items = row.querySelectorAll('.path-item');
+    var last  = items[items.length - 1];
+    if (last) gsap.fromTo(last, { scale: 0, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.22, ease: 'back.out(2)' });
+  }
+  if (animate && isFound) gsap.fromTo(row, { backgroundColor: 'rgba(158,206,106,0.12)' }, { backgroundColor: 'transparent', duration: 0.6 });
+  if (animate && isSkip)  gsap.fromTo(row, { backgroundColor: 'rgba(110,76,126,0.15)' },  { backgroundColor: 'transparent', duration: 0.5 });
+}
+
+function renderStack(s, animate) {
+  var body = document.getElementById('stack-body');
+  if (!body) return;
+
+  if (s.stack.length === 0) {
+    body.innerHTML = '<div style="color:var(--text-ghost);font-size:0.78rem">No active recursion.</div>';
+    return;
+  }
+
+  var isWin = s.phase === 'found';
+  body.innerHTML = s.stack.map(function(f, depth) {
+    var isTop = depth === s.stack.length - 1;
+    var cls   = isTop ? (isWin ? 'stack-frame win' : 'stack-frame top') : 'stack-frame';
+    var indent = '  '.repeat(depth * 2);
+    var pathStr = f.path.length ? '[' + f.path.join(', ') + ']' : '[]';
+    return '<div class="' + cls + '">' + indent +
+           '► backtrack(start=' + f.start + ', sum=' + f.sum + ', path=' + pathStr + ')</div>';
+  }).join('');
+
+  body.scrollTop = body.scrollHeight;
+}
+
+function renderVars(s, animate) {
+  function setVal(id, val) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    var text = (val === null || val === undefined) ? '—' : String(val);
+    if (animate && el.textContent !== text) {
+      gsap.fromTo(el, { scale: 0.8, opacity: 0.4 }, { scale: 1, opacity: 1, duration: 0.22, ease: 'back.out(1.7)' });
+    }
+    el.textContent = text;
+  }
+  var top = s.stack.length ? s.stack[s.stack.length - 1] : null;
+  setVal('vv-start', top ? top.start : null);
+  setVal('vv-sum',   s.phase !== 'done' ? s.sum : null);
+  setVal('vv-rem',   s.phase !== 'done' ? (currentTarget - s.sum) : null);
+}
+
+function renderResults(s, animate) {
+  var list    = document.getElementById('results-list');
+  var countEl = document.getElementById('result-count');
+  if (!list) return;
+
+  if (countEl) countEl.textContent = s.results.length ? '(' + s.results.length + ' found)' : '';
+
+  if (s.results.length === 0) {
+    list.innerHTML = '<span class="result-empty">No combinations found yet.</span>';
+    return;
+  }
+
+  list.innerHTML = s.results.map(function(combo) {
+    var total = combo.reduce(function(a, b) { return a + b; }, 0);
+    return '<div class="result-combo">[' + combo.join(', ') + ']&nbsp;= ' + total + '</div>';
+  }).join('');
+
+  if (animate && s.phase === 'found') {
+    var last = list.querySelector('.result-combo:last-child');
+    if (last) gsap.fromTo(last, { x: -8, opacity: 0 }, { x: 0, opacity: 1, duration: 0.28, ease: 'power2.out' });
+  }
+}
+
+function setCodeLines(lines, isSkip) {
+  CODE.forEach(function(e) {
+    var ln = e[0];
+    var el = document.getElementById('cl-' + ln);
+    if (!el) return;
+    el.classList.remove('hl', 'hl-skip');
+    if (lines.indexOf(ln) >= 0) el.classList.add(isSkip ? 'hl-skip' : 'hl');
+  });
+}
+</script>
+
+<script>
+  if (window.self !== window.top) {
+    var bl = document.querySelector('.back-link');
+    if (bl) bl.style.display = 'none';
+  }
+</script>
+</body>
+</html>
