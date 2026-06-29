@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cheapest Flights Within K Stops</title>
+  <link rel="stylesheet" href="../shared/style.css" />
+  <script src="../shared/viz.js"></script>
+  <style>
+    .viz-area { width: 100%; max-width: 95%; }
+    .main-row { display: grid; grid-template-columns: 1fr 380px; gap: 20px; align-items: start; }
+    @media (max-width: 800px) { .main-row { grid-template-columns: 1fr; } }
+
+    .graph-panel {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 16px;
+      display: flex; flex-direction: column; gap: 10px;
+    }
+    .graph-svg-wrap {
+      width: 100%; aspect-ratio: 1.4;
+      background: var(--bg); border-radius: var(--radius-sm);
+      overflow: hidden;
+    }
+    #graph-svg { width: 100%; height: 100%; }
+
+    .node-circle { stroke-width: 2.5; transition: fill 0.3s, stroke 0.3s; }
+    .node-circle.state-unvisited { fill: #1a1b2e; stroke: #414868; }
+    .node-circle.state-relaxed   { fill: #3d3524; stroke: #e0af68; }
+    .node-circle.state-active    { fill: #1a1f3a; stroke: #7dcfff; }
+    .node-circle.state-reached   { fill: #1a2a1a; stroke: #9ece6a; }
+    .node-circle.state-src       { fill: #2a1a2e; stroke: #bb9af7; }
+    .node-circle.state-dst       { fill: #2e1a1a; stroke: #f7768e; }
+
+    .node-label {
+      fill: var(--text-bright); font-size: 13px; font-weight: 700;
+      font-family: monospace; text-anchor: middle; dominant-baseline: central;
+      pointer-events: none;
+    }
+
+    .src-ring {
+      fill: none; stroke: #bb9af7; stroke-width: 2; stroke-dasharray: 4 3; opacity: 0.7;
+    }
+    .dst-ring {
+      fill: none; stroke: #f7768e; stroke-width: 2; stroke-dasharray: 4 3; opacity: 0.7;
+    }
+
+    .edge-line {
+      stroke-width: 2; fill: none; stroke: #3b4261; transition: stroke 0.3s;
+    }
+    .edge-line.active   { stroke: #7dcfff; stroke-width: 2.5; }
+    .edge-line.relaxed  { stroke: #e0af68; stroke-width: 2.5; }
+    .edge-line.improved { stroke: #9ece6a; stroke-width: 2.5; }
+    .edge-line.skipped  { stroke: #3b4261; }
+
+    .edge-weight-bg { fill: var(--bg); }
+    .edge-weight {
+      fill: var(--text-dim); font-size: 11px; font-weight: 700;
+      font-family: monospace; text-anchor: middle; dominant-baseline: central;
+    }
+    .edge-weight.active  { fill: #7dcfff; }
+    .edge-weight.relaxed { fill: #e0af68; }
+    .edge-weight.improved { fill: #9ece6a; }
+
+    .right-col { display: flex; flex-direction: column; gap: 12px; }
+
+    .panel-box {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 14px 16px;
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .panel-title {
+      font-size: 0.72rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim);
+    }
+
+    .nav-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .btn-play {
+      background: #15803d; border: none; border-radius: var(--radius-sm);
+      color: #fff; cursor: pointer; font-size: 0.88rem; font-weight: 600;
+      padding: 9px 16px; transition: background 0.2s;
+    }
+    .btn-play:hover { background: #166534; }
+    .btn-play.playing { background: #c2410c; }
+    .btn-play.playing:hover { background: #9a3412; }
+    .btn-play:disabled { opacity: 0.4; cursor: not-allowed; }
+    .speed-select {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); color: var(--text);
+      font-size: 0.85rem; padding: 8px 10px; outline: none; width: 80px;
+    }
+
+    .result-badge {
+      font-size: 0.88rem; font-weight: 700;
+      padding: 5px 14px; border-radius: 6px;
+      display: none; width: fit-content;
+    }
+    .result-badge.success { background: #1a2a1a; color: #9ece6a; border: 1px solid #9ece6a; display: block; }
+    .result-badge.failure { background: #3d1515; color: #f7768e; border: 1px solid #f7768e; display: block; }
+
+    .dp-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: flex-start; }
+    .dp-col { display: flex; flex-direction: column; gap: 4px; align-items: center; }
+    .dp-node-label {
+      font-size: 0.68rem; color: var(--text-dim); font-weight: 600;
+      font-family: monospace;
+    }
+    .dp-cell {
+      border: 1px solid var(--border); border-radius: 6px;
+      padding: 5px 10px; min-width: 48px; text-align: center;
+      font-size: 0.88rem; font-weight: 700; font-family: monospace;
+      color: var(--text-bright);
+      transition: border-color 0.2s, background 0.2s;
+    }
+    .dp-cell.prev { background: #1a1b2e; color: var(--text-dim); border-color: #414868; }
+    .dp-cell.curr { background: #1a1b2e; color: var(--text-bright); border-color: #414868; }
+    .dp-cell.relaxed { border-color: #e0af68; background: #3d3524; color: #e0af68; }
+    .dp-cell.improved { border-color: #9ece6a; background: #1a2a1a; color: #9ece6a; }
+    .dp-cell.active { border-color: #7dcfff; background: #1a1f3a; color: #7dcfff; }
+
+    .dp-header {
+      font-size: 0.68rem; color: var(--text-muted); font-weight: 600; margin-bottom: 2px;
+    }
+
+    .round-badge {
+      display: inline-block; padding: 3px 10px; border-radius: 4px;
+      font-size: 0.82rem; font-weight: 700; font-family: monospace;
+      background: #1a1f3a; border: 1px solid #7dcfff; color: #7dcfff;
+    }
+
+    .legend-row { display: flex; align-items: center; gap: 8px; font-size: 0.78rem; color: var(--text-muted); }
+    .legend-dot { width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; border: 2px solid; }
+
+    .code-panel {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); overflow: hidden;
+    }
+    .code-header {
+      padding: 8px 14px; font-size: 0.72rem; font-weight: 600;
+      color: var(--text-dim); border-bottom: 1px solid var(--border); background: var(--bg);
+    }
+    .code-body { padding: 10px 0; font-size: 0.78rem; line-height: 1.75; white-space: pre; }
+    .code-line { display: flex; align-items: center; padding: 0 14px; }
+    .code-line.hl { background: var(--border-soft); border-left: 2px solid var(--accent); }
+    .ln { min-width: 24px; color: var(--text-ghost); user-select: none; font-size: 0.7rem; }
+    .kw { color: var(--purple); }
+    .fn { color: var(--blue); }
+    .bi { color: var(--orange); }
+    .cm { color: var(--text-ghost); }
+    .nb { color: var(--green); }
+    .st { color: #9ece6a; }
+
+    .preset-row { display: flex; gap: 8px; flex-wrap: wrap; }
+    .btn-preset {
+      padding: 6px 12px; border-radius: var(--radius-sm);
+      background: var(--bg); border: 1px solid var(--border);
+      color: var(--text-dim); font-size: 0.8rem; cursor: pointer;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .btn-preset:hover, .btn-preset.active { border-color: var(--accent); color: var(--accent-pale); }
+  </style>
+</head>
+<body class="page">
+
+<div class="page-header">
+  <a class="back-link" href="../index.html">&larr; All Algorithms</a>
+  <div class="page-title">Cheapest Flights Within K Stops</div>
+  <div class="page-sub">LeetCode 787 &middot; Bellman-Ford (k+1 rounds) &middot; dp[node] = min cost within i stops &middot; O(k &times; E)</div>
+</div>
+
+<div class="controls">
+  <div class="field">
+    <label>Preset</label>
+    <div class="preset-row">
+      <button class="btn-preset active" id="preset-default"   onclick="loadPreset('default')">Default (k=1, ans=700)</button>
+      <button class="btn-preset"        id="preset-k2"        onclick="loadPreset('k2')">More Stops (k=2, ans=200)</button>
+      <button class="btn-preset"        id="preset-unreachable" onclick="loadPreset('unreachable')">Unreachable (ans=-1)</button>
+    </div>
+  </div>
+  <button class="btn-primary" onclick="buildAndRun()">Build &amp; Run</button>
+</div>
+
+<div class="viz-area">
+  <div class="main-row">
+
+    <div class="graph-panel">
+      <div class="panel-title" id="graph-title">Weighted Directed Graph</div>
+      <div class="graph-svg-wrap">
+        <svg id="graph-svg" viewBox="0 0 560 400" preserveAspectRatio="xMidYMid meet">
+          <defs>
+            <marker id="arrow-default" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+              <path d="M0,0 L0,6 L8,3 z" fill="#3b4261"/>
+            </marker>
+            <marker id="arrow-active" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+              <path d="M0,0 L0,6 L8,3 z" fill="#7dcfff"/>
+            </marker>
+            <marker id="arrow-relaxed" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+              <path d="M0,0 L0,6 L8,3 z" fill="#e0af68"/>
+            </marker>
+            <marker id="arrow-improved" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+              <path d="M0,0 L0,6 L8,3 z" fill="#9ece6a"/>
+            </marker>
+          </defs>
+          <g id="edges-g"></g>
+          <g id="nodes-g"></g>
+        </svg>
+      </div>
+    </div>
+
+    <div class="right-col">
+
+      <div class="panel-box">
+        <div class="nav-row">
+          <button class="btn-step" id="btn-back" disabled>&larr;</button>
+          <button class="btn-step" id="btn-next" disabled>&rarr;</button>
+          <button class="btn-play" id="btn-play" disabled>&#9654; Play</button>
+          <select class="speed-select" id="speed-select">
+            <option value="800">Slow</option>
+            <option value="400" selected>Medium</option>
+            <option value="120">Fast</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="panel-box">
+        <div class="panel-title" id="phase-label">&mdash;</div>
+        <div style="font-size:0.82rem;color:var(--text-muted);margin-top:2px;min-height:36px" id="step-desc">Select a preset and click Build &amp; Run.</div>
+        <div class="result-badge" id="result-badge"></div>
+      </div>
+
+      <div class="panel-box">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div class="panel-title">dp[] — Cost to Reach Node</div>
+          <div id="round-info" style="font-size:0.78rem;color:var(--text-muted)"></div>
+        </div>
+        <div style="font-size:0.72rem;color:var(--text-ghost);margin-bottom:4px">prev (last round) → curr (being built)</div>
+        <div class="dp-row" id="dp-cells">
+          <span style="color:var(--text-ghost);font-size:0.78rem">—</span>
+        </div>
+      </div>
+
+      <div class="panel-box">
+        <div class="panel-title">Legend</div>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <div class="legend-row">
+            <div class="legend-dot" style="background:#2a1a2e;border-color:#bb9af7"></div>
+            <span>Source node (src)</span>
+          </div>
+          <div class="legend-row">
+            <div class="legend-dot" style="background:#2e1a1a;border-color:#f7768e"></div>
+            <span>Destination node (dst)</span>
+          </div>
+          <div class="legend-row">
+            <div class="legend-dot" style="background:#3d3524;border-color:#e0af68"></div>
+            <span>Edge being examined</span>
+          </div>
+          <div class="legend-row">
+            <div class="legend-dot" style="background:#1a2a1a;border-color:#9ece6a"></div>
+            <span>Cost improved</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="code-panel">
+        <div class="code-header">Python</div>
+        <div class="code-body" id="code-body"></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+var CODE = [
+  [1,  '<span class="kw">def</span> <span class="fn">find_cheapest_price</span>(n, flights, src, dst, k):'],
+  [2,  '    prices = [<span class="bi">float</span>(<span class="st">\'inf\'</span>)] * n'],
+  [3,  '    prices[src] = <span class="nb">0</span>'],
+  [4,  '    <span class="kw">for</span> i <span class="kw">in</span> <span class="bi">range</span>(k + <span class="nb">1</span>):  <span class="cm"># k+1 rounds</span>'],
+  [5,  '        tmp = prices.copy()  <span class="cm"># snapshot prev round</span>'],
+  [6,  '        <span class="kw">for</span> s, d, p <span class="kw">in</span> flights:'],
+  [7,  '            <span class="kw">if</span> prices[s] == <span class="bi">float</span>(<span class="st">\'inf\'</span>): <span class="kw">continue</span>'],
+  [8,  '            <span class="kw">if</span> prices[s] + p < tmp[d]:'],
+  [9,  '                tmp[d] = prices[s] + p'],
+  [10, '        prices = tmp'],
+  [11, '    <span class="kw">return</span> -<span class="nb">1</span> <span class="kw">if</span> prices[dst] == <span class="bi">float</span>(<span class="st">\'inf\'</span>) <span class="kw">else</span> prices[dst]'],
+];
+
+var PRESETS = {
+  default: {
+    label: 'Default — n=4, src=0, dst=3, k=1 → 700',
+    n: 4, src: 0, dst: 3, k: 1,
+    nodes: [
+      {id:0, x:100, y:200, label:'0'},
+      {id:1, x:280, y:80,  label:'1'},
+      {id:2, x:280, y:320, label:'2'},
+      {id:3, x:460, y:200, label:'3'},
+    ],
+    flights: [
+      {s:0, d:1, p:100},
+      {s:1, d:2, p:100},
+      {s:2, d:0, p:100},
+      {s:1, d:3, p:600},
+      {s:2, d:3, p:200},
+    ]
+  },
+  k2: {
+    label: 'More Stops — n=4, src=0, dst=3, k=2 → 200',
+    n: 4, src: 0, dst: 3, k: 2,
+    nodes: [
+      {id:0, x:100, y:200, label:'0'},
+      {id:1, x:280, y:80,  label:'1'},
+      {id:2, x:280, y:320, label:'2'},
+      {id:3, x:460, y:200, label:'3'},
+    ],
+    flights: [
+      {s:0, d:1, p:100},
+      {s:1, d:2, p:100},
+      {s:2, d:0, p:100},
+      {s:1, d:3, p:600},
+      {s:2, d:3, p:200},
+    ]
+  },
+  unreachable: {
+    label: 'Unreachable — dst not reachable within k stops → -1',
+    n: 4, src: 0, dst: 3, k: 1,
+    nodes: [
+      {id:0, x:100, y:200, label:'0'},
+      {id:1, x:280, y:100, label:'1'},
+      {id:2, x:460, y:100, label:'2'},
+      {id:3, x:460, y:300, label:'3'},
+    ],
+    flights: [
+      {s:0, d:1, p:200},
+      {s:1, d:2, p:150},
+      {s:2, d:3, p:300},
+    ]
+  }
+};
+
+var currentPreset = 'default';
+var simSteps = [];
+var nav;
+var gNodes = [], gFlights = [], gSrc = 0, gDst = 3, gK = 1, gN = 4;
+
+function loadPreset(name) {
+  currentPreset = name;
+  ['default','k2','unreachable'].forEach(function(p) {
+    document.getElementById('preset-' + p).classList.toggle('active', p === name);
+  });
+}
+
+function buildAndRun() {
+  var preset = PRESETS[currentPreset];
+  gNodes = preset.nodes;
+  gFlights = preset.flights;
+  gSrc = preset.src;
+  gDst = preset.dst;
+  gK = preset.k;
+  gN = preset.n;
+  document.getElementById('graph-title').textContent = preset.label;
+  renderGraph(null, null, null);
+  simSteps = simulate(gN, gFlights, gSrc, gDst, gK);
+  nav.load(simSteps);
+}
+
+// ---- SVG ----
+var NODE_R = 22;
+
+function nodeById(id) {
+  for (var i = 0; i < gNodes.length; i++) {
+    if (gNodes[i].id === id) return gNodes[i];
+  }
+  return null;
+}
+
+function edgeKey(s, d) { return s + '->' + d; }
+
+function getEdgePts(s, d) {
+  var ns = nodeById(s), nd = nodeById(d);
+  var dx = nd.x - ns.x, dy = nd.y - ns.y;
+  var len = Math.sqrt(dx*dx + dy*dy);
+  if (len === 0) return null;
+  var ux = dx/len, uy = dy/len;
+  var x1 = ns.x + ux * NODE_R;
+  var y1 = ns.y + uy * NODE_R;
+  var x2 = nd.x - ux * (NODE_R + 6);
+  var y2 = nd.y - uy * (NODE_R + 6);
+  var mx = (x1 + x2) / 2;
+  var my = (y1 + y2) / 2;
+  var wx = mx + uy * 14;
+  var wy = my - ux * 14;
+  return {x1:x1, y1:y1, x2:x2, y2:y2, wx:wx, wy:wy};
+}
+
+function renderGraph(edgeStates, activeNode, nodeStates) {
+  var edgesG = document.getElementById('edges-g');
+  var nodesG = document.getElementById('nodes-g');
+  edgesG.innerHTML = '';
+  nodesG.innerHTML = '';
+
+  var eSt = edgeStates || {};
+  var nSt = nodeStates || {};
+
+  // Src ring
+  var srcNode = nodeById(gSrc);
+  if (srcNode) {
+    var srcRing = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    srcRing.setAttribute('cx', srcNode.x); srcRing.setAttribute('cy', srcNode.y);
+    srcRing.setAttribute('r', NODE_R + 7);
+    srcRing.setAttribute('class', 'src-ring');
+    nodesG.appendChild(srcRing);
+  }
+
+  // Dst ring
+  var dstNode = nodeById(gDst);
+  if (dstNode) {
+    var dstRing = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    dstRing.setAttribute('cx', dstNode.x); dstRing.setAttribute('cy', dstNode.y);
+    dstRing.setAttribute('r', NODE_R + 7);
+    dstRing.setAttribute('class', 'dst-ring');
+    nodesG.appendChild(dstRing);
+  }
+
+  // Edges
+  gFlights.forEach(function(f) {
+    var pts = getEdgePts(f.s, f.d);
+    if (!pts) return;
+    var key = edgeKey(f.s, f.d);
+    var st = eSt[key] || 'default';
+    var markerName = (st === 'default' || st === 'skipped') ? 'default' : st;
+
+    var line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    line.setAttribute('x1', pts.x1); line.setAttribute('y1', pts.y1);
+    line.setAttribute('x2', pts.x2); line.setAttribute('y2', pts.y2);
+    var cls = 'edge-line';
+    if (st === 'active' || st === 'relaxed' || st === 'improved') cls += ' ' + st;
+    line.setAttribute('class', cls);
+    line.setAttribute('marker-end', 'url(#arrow-' + markerName + ')');
+    edgesG.appendChild(line);
+
+    var rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    rect.setAttribute('x', pts.wx - 12); rect.setAttribute('y', pts.wy - 8);
+    rect.setAttribute('width', 26); rect.setAttribute('height', 16);
+    rect.setAttribute('rx', 3);
+    rect.setAttribute('class', 'edge-weight-bg');
+    edgesG.appendChild(rect);
+
+    var wt = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    wt.setAttribute('x', pts.wx); wt.setAttribute('y', pts.wy);
+    var wtCls = 'edge-weight';
+    if (st === 'active' || st === 'relaxed' || st === 'improved') wtCls += ' ' + st;
+    wt.setAttribute('class', wtCls);
+    wt.textContent = f.p;
+    edgesG.appendChild(wt);
+  });
+
+  // Nodes
+  gNodes.forEach(function(n) {
+    var g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    var circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    circle.setAttribute('cx', n.x); circle.setAttribute('cy', n.y);
+    circle.setAttribute('r', NODE_R);
+
+    var nodeSt = nSt[n.id] || 'unvisited';
+    if (n.id === gSrc && nodeSt === 'unvisited') nodeSt = 'src';
+    if (n.id === gDst && nodeSt === 'unvisited') nodeSt = 'dst';
+
+    circle.setAttribute('class', 'node-circle state-' + nodeSt);
+    var text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    text.setAttribute('x', n.x); text.setAttribute('y', n.y);
+    text.setAttribute('class', 'node-label');
+    text.textContent = n.label;
+    g.appendChild(circle);
+    g.appendChild(text);
+    nodesG.appendChild(g);
+  });
+}
+
+// ---- Simulation (Bellman-Ford with k+1 rounds) ----
+function simulate(n, flights, src, dst, k) {
+  var steps = [];
+  var INF = Infinity;
+
+  function ds(v) { return v === INF ? '∞' : v; }
+
+  function snap(phase, desc, lines, edgeStates, nodeStates, prev, curr, round) {
+    steps.push({
+      phase: phase, desc: desc, lines: lines,
+      edgeStates: Object.assign({}, edgeStates),
+      nodeStates: Object.assign({}, nodeStates),
+      prev: prev.slice(),
+      curr: curr.slice(),
+      round: round,
+    });
+  }
+
+  var prices = [];
+  for (var i = 0; i < n; i++) prices.push(INF);
+  prices[src] = 0;
+
+  var nSt = {};
+  for (var i = 0; i < n; i++) nSt[i] = 'unvisited';
+  nSt[src] = 'src';
+
+  snap('Init',
+    'prices[' + src + '] = 0, all others = ∞. We will run k+1=' + (k+1) + ' relaxation rounds. Each round = one more allowed stop.',
+    [2, 3], {}, Object.assign({}, nSt), prices, prices, -1);
+
+  for (var round = 0; round < k + 1; round++) {
+    var tmp = prices.slice();
+    var roundNSt = Object.assign({}, nSt);
+
+    snap('Round',
+      'Round ' + round + '/' + k + ' — snapshot prices[] as prev. Will relax all flights using prev costs to avoid using edges added this round.',
+      [4, 5], {}, roundNSt, prices, tmp, round);
+
+    for (var fi = 0; fi < flights.length; fi++) {
+      var f = flights[fi];
+      var s = f.s, d = f.d, p = f.p;
+      var eSt = {};
+      eSt[edgeKey(s, d)] = 'active';
+
+      if (prices[s] === INF) {
+        snap('Skip',
+          'Flight ' + s + '→' + d + ' (price ' + p + '): prices[' + s + '] = ∞, source unreachable. Skip.',
+          [6, 7], eSt, roundNSt, prices, tmp, round);
+        continue;
+      }
+
+      var candidate = prices[s] + p;
+      eSt[edgeKey(s, d)] = 'relaxed';
+
+      snap('Examine',
+        'Flight ' + s + '→' + d + ' (price ' + p + '): prices[' + s + '] + ' + p + ' = ' + candidate + ' vs tmp[' + d + '] = ' + ds(tmp[d]) + '.',
+        [6, 7, 8], eSt, roundNSt, prices, tmp, round);
+
+      if (candidate < tmp[d]) {
+        tmp[d] = candidate;
+        var newNSt = Object.assign({}, roundNSt);
+        newNSt[d] = 'reached';
+        eSt[edgeKey(s, d)] = 'improved';
+
+        snap('Improve',
+          'Improved! tmp[' + d + '] ← ' + candidate + '. Cost to reach node ' + d + ' in ≤' + (round + 1) + ' stop' + (round + 1 === 1 ? '' : 's') + '.',
+          [8, 9], eSt, newNSt, prices, tmp, round);
+
+        roundNSt = newNSt;
+      } else {
+        snap('NoImprove',
+          'No improvement — tmp[' + d + '] = ' + ds(tmp[d]) + ' ≤ ' + candidate + '. Keep current.',
+          [8], eSt, roundNSt, prices, tmp, round);
+      }
+    }
+
+    prices = tmp;
+    nSt = Object.assign({}, roundNSt);
+
+    snap('EndRound',
+      'Round ' + round + ' complete. prices = [' + prices.map(ds).join(', ') + ']. These are min costs using at most ' + (round + 1) + ' edge' + (round + 1 === 1 ? '' : 's') + '.',
+      [10], {}, nSt, prices, prices, round);
+  }
+
+  var answer = prices[dst] === INF ? -1 : prices[dst];
+  var doneDesc = answer === -1
+    ? 'Done. prices[' + dst + '] = ∞ — destination not reachable within ' + k + ' stop' + (k===1?'':'s') + '. Return -1.'
+    : 'Done. prices[' + dst + '] = ' + answer + '. Cheapest flight from ' + src + ' to ' + dst + ' with at most ' + k + ' stop' + (k===1?'':'s') + '. Return ' + answer + '.';
+
+  snap('Done', doneDesc, [11], {}, nSt, prices, prices, k);
+
+  return steps;
+}
+
+// ---- Rendering ----
+function applyStep(step) {
+  renderGraph(step.edgeStates, null, step.nodeStates);
+  updateDP(step.prev, step.curr, step.edgeStates, step.nodeStates);
+  updateRound(step.round);
+  setCodeLines(step.lines);
+
+  var badge = document.getElementById('result-badge');
+  badge.className = 'result-badge';
+  badge.textContent = '';
+  if (step.phase === 'Done') {
+    var cost = step.curr[gDst];
+    if (cost === Infinity) {
+      badge.className = 'result-badge failure';
+      badge.textContent = 'Return -1 (unreachable within ' + gK + ' stops)';
+    } else {
+      badge.className = 'result-badge success';
+      badge.textContent = 'Return ' + cost + ' (cheapest in ≤' + gK + ' stops)';
+    }
+  }
+}
+
+function updateDP(prev, curr, edgeStates, nodeStates) {
+  var el = document.getElementById('dp-cells');
+  if (!prev) { el.innerHTML = '<span style="color:var(--text-ghost);font-size:0.78rem">—</span>'; return; }
+
+  // Find which nodes were improved this step (curr[i] < prev[i])
+  var improved = {};
+  for (var i = 0; i < curr.length; i++) {
+    if (curr[i] < prev[i]) improved[i] = true;
+  }
+
+  // Find active destination from edgeStates
+  var activeDst = -1;
+  if (edgeStates) {
+    Object.keys(edgeStates).forEach(function(key) {
+      if (edgeStates[key] === 'active' || edgeStates[key] === 'relaxed') {
+        var parts = key.split('->');
+        if (parts.length === 2) activeDst = parseInt(parts[1]);
+      }
+    });
+  }
+
+  el.innerHTML = '';
+  for (var i = 0; i < gN; i++) {
+    var col = document.createElement('div');
+    col.className = 'dp-col';
+
+    var lbl = document.createElement('div');
+    lbl.className = 'dp-node-label';
+    lbl.textContent = 'node ' + i;
+    col.appendChild(lbl);
+
+    var prevCell = document.createElement('div');
+    prevCell.className = 'dp-cell prev';
+    prevCell.textContent = prev[i] === Infinity ? '∞' : prev[i];
+
+    var currCell = document.createElement('div');
+    currCell.className = 'dp-cell curr';
+    currCell.textContent = curr[i] === Infinity ? '∞' : curr[i];
+    if (improved[i]) {
+      currCell.className = 'dp-cell improved';
+    } else if (i === activeDst) {
+      currCell.className = 'dp-cell relaxed';
+    }
+
+    col.appendChild(prevCell);
+    col.appendChild(currCell);
+    el.appendChild(col);
+  }
+}
+
+function updateRound(round) {
+  var el = document.getElementById('round-info');
+  if (round < 0) { el.textContent = ''; return; }
+  el.innerHTML = '<span class="round-badge">Round ' + round + '/' + gK + '</span>';
+}
+
+function setCodeLines(lines) {
+  CODE.forEach(function(e) {
+    var el = document.getElementById('cl-' + e[0]);
+    if (!el) return;
+    el.classList.toggle('hl', !!(lines && lines.indexOf(e[0]) >= 0));
+  });
+}
+
+function buildCodePanel() {
+  var body = document.getElementById('code-body');
+  body.innerHTML = CODE.map(function(e) {
+    return '<div class="code-line" id="cl-' + e[0] + '"><span class="ln">' + e[0] + '</span><span>' + e[1] + '</span></div>';
+  }).join('');
+}
+
+window.addEventListener('DOMContentLoaded', function() {
+  buildCodePanel();
+  loadPreset('default');
+  nav = VizNav({
+    btnPrev: document.getElementById('btn-back'),
+    btnNext: document.getElementById('btn-next'),
+    btnPlay: document.getElementById('btn-play'),
+    speedSel: document.getElementById('speed-select'),
+    render: function(step, cur, total) {
+      applyStep(step);
+      var phaseEl = document.getElementById('phase-label');
+      var descEl  = document.getElementById('step-desc');
+      if (phaseEl) phaseEl.textContent = 'Step ' + (cur + 1) + ' / ' + total + '  ·  ' + step.phase;
+      if (descEl)  descEl.textContent = step.desc;
+    }
+  });
+});
+</script>
+
+<script>
+  if (window.self !== window.top) {
+    var bl = document.querySelector('.back-link');
+    if (bl) bl.style.display = 'none';
+  }
+</script>
+</body>
+</html>
