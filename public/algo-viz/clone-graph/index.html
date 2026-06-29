@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Clone Graph</title>
+  <link rel="stylesheet" href="../shared/style.css" />
+  <script src="../shared/viz.js"></script>
+  <style>
+    .viz-area { width: 100%; max-width: 98%; }
+    .main-row { display: grid; grid-template-columns: 1fr 300px; gap: 20px; align-items: start; }
+    @media (max-width: 900px) { .main-row { grid-template-columns: 1fr; } }
+
+    .graphs-section { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    @media (max-width: 700px) { .graphs-section { grid-template-columns: 1fr; } }
+
+    .graph-panel {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 14px;
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .graph-svg-wrap {
+      width: 100%; aspect-ratio: 1.15;
+      background: var(--bg); border-radius: var(--radius-sm); overflow: hidden;
+    }
+    .graph-svg-wrap svg { width: 100%; height: 100%; }
+
+    /* original node states */
+    .nc-unvisited { fill: #1a1b2e; stroke: #3b4261; }
+    .nc-queued    { fill: #3d3524; stroke: #e0af68; }
+    .nc-current   { fill: #2d1a3d; stroke: #bb9af7; }
+    .nc-done      { fill: #1a2a1a; stroke: #9ece6a; }
+    .nc-neighbor  { fill: #2a1a10; stroke: #ff9e64; }
+
+    /* clone node states */
+    .nc-ghost          { fill: #0e1015; stroke: #252830; stroke-dasharray: 3 3; }
+    .nc-cloned         { fill: #1a2035; stroke: #7aa2f7; }
+    .nc-clone-current  { fill: #2d1a3d; stroke: #bb9af7; }
+    .nc-clone-neighbor { fill: #2a1a10; stroke: #ff9e64; }
+    .nc-clone-done     { fill: #1a2a1a; stroke: #9ece6a; }
+
+    .node-circle { stroke-width: 2.5; transition: fill 0.25s, stroke 0.25s; }
+    .node-label  {
+      fill: var(--text-bright); font-size: 12px; font-weight: 700;
+      font-family: monospace; text-anchor: middle; dominant-baseline: central;
+      pointer-events: none;
+    }
+    .node-label-ghost { fill: #3a3f55; }
+
+    .edge-orig      { stroke: #3b4261; stroke-width: 2; }
+    .edge-orig-hi   { stroke: #ff9e64; stroke-width: 2.5; }
+    .edge-clone     { stroke: #9ece6a; stroke-width: 2.5; }
+    .edge-clone-new { stroke: #e0af68; stroke-width: 2.5; }
+
+    /* right column */
+    .right-col { display: flex; flex-direction: column; gap: 12px; }
+
+    .panel-box {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 14px 16px;
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .panel-title {
+      font-size: 0.72rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim);
+    }
+
+    .nav-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .btn-play {
+      background: #15803d; border: none; border-radius: var(--radius-sm);
+      color: #fff; cursor: pointer; font-size: 0.88rem; font-weight: 600;
+      padding: 9px 16px; transition: background 0.2s;
+    }
+    .btn-play:hover { background: #166534; }
+    .btn-play.playing { background: #c2410c; }
+    .btn-play.playing:hover { background: #9a3412; }
+    .btn-play:disabled { opacity: 0.4; cursor: not-allowed; }
+    .speed-select {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); color: var(--text);
+      font-size: 0.85rem; padding: 8px 10px; outline: none; width: 80px;
+    }
+
+    .queue-list { display: flex; gap: 5px; flex-wrap: wrap; min-height: 26px; }
+    .queue-chip {
+      padding: 2px 9px; border-radius: 4px; font-size: 0.78rem;
+      font-family: monospace; font-weight: 700;
+      background: #3d3524; border: 1px solid #e0af68; color: #e0af68;
+    }
+
+    .hashmap-list { display: flex; flex-direction: column; gap: 4px; }
+    .hm-row { display: flex; align-items: center; gap: 7px; font-size: 0.78rem; }
+    .hm-key {
+      font-family: monospace; font-weight: 700; color: #7aa2f7;
+      background: #1a2035; border: 1px solid #3b4f8a;
+      padding: 2px 8px; border-radius: 4px; min-width: 24px; text-align: center;
+    }
+    .hm-arrow { color: var(--text-dim); }
+    .hm-val {
+      font-family: monospace; font-weight: 700; color: #9ece6a;
+      background: #1a2a1a; border: 1px solid #3a5a2a;
+      padding: 2px 8px; border-radius: 4px; min-width: 24px; text-align: center;
+    }
+
+    .legend-row { display: flex; align-items: center; gap: 8px; font-size: 0.75rem; color: var(--text-muted); }
+    .legend-dot { width: 13px; height: 13px; border-radius: 50%; flex-shrink: 0; border: 2px solid; }
+
+    .code-panel {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); overflow: hidden;
+    }
+    .code-header {
+      padding: 8px 14px; font-size: 0.72rem; font-weight: 600;
+      color: var(--text-dim); border-bottom: 1px solid var(--border); background: var(--bg);
+    }
+    .code-body { padding: 10px 0; font-size: 0.75rem; line-height: 1.75; white-space: pre; }
+    .code-line { display: flex; align-items: center; padding: 0 14px; }
+    .code-line.hl { background: var(--border-soft); border-left: 2px solid var(--accent); }
+    .ln { min-width: 22px; color: var(--text-ghost); user-select: none; font-size: 0.68rem; }
+    .kw { color: var(--purple); }
+    .fn { color: var(--blue); }
+    .bi { color: var(--orange); }
+    .cm { color: var(--text-ghost); }
+    .nb { color: var(--green); }
+
+    .preset-row { display: flex; gap: 8px; flex-wrap: wrap; }
+    .btn-preset {
+      padding: 6px 12px; border-radius: var(--radius-sm);
+      background: var(--bg); border: 1px solid var(--border);
+      color: var(--text-dim); font-size: 0.8rem; cursor: pointer;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .btn-preset:hover, .btn-preset.active { border-color: var(--accent); color: var(--accent-pale); }
+  </style>
+</head>
+<body class="page">
+
+<div class="page-header">
+  <a class="back-link" href="../index.html">&larr; All Algorithms</a>
+  <div class="page-title">Clone Graph</div>
+  <div class="page-sub">LeetCode 133 &middot; BFS with a hash map (original &rarr; clone) &middot; Each node cloned exactly once &middot; O(V+E)</div>
+</div>
+
+<div class="controls">
+  <div class="field">
+    <label>Preset</label>
+    <div class="preset-row">
+      <button class="btn-preset active" id="preset-p1" onclick="loadPreset('p1')">4-node cycle</button>
+      <button class="btn-preset" id="preset-p2" onclick="loadPreset('p2')">5-node star</button>
+      <button class="btn-preset" id="preset-p3" onclick="loadPreset('p3')">6-node hex</button>
+    </div>
+  </div>
+  <button class="btn-primary" onclick="buildAndRun()">Build &amp; Run</button>
+</div>
+
+<div class="viz-area">
+  <div class="main-row">
+
+    <!-- Two graph panels -->
+    <div class="graphs-section">
+      <div class="graph-panel">
+        <div class="panel-title">Original Graph</div>
+        <div class="graph-svg-wrap">
+          <svg id="orig-svg" viewBox="0 0 300 270" preserveAspectRatio="xMidYMid meet">
+            <g id="orig-edges-g"></g>
+            <g id="orig-nodes-g"></g>
+          </svg>
+        </div>
+      </div>
+      <div class="graph-panel">
+        <div class="panel-title">Clone Graph (building&hellip;)</div>
+        <div class="graph-svg-wrap">
+          <svg id="clone-svg" viewBox="0 0 300 270" preserveAspectRatio="xMidYMid meet">
+            <g id="clone-edges-g"></g>
+            <g id="clone-nodes-g"></g>
+          </svg>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right column -->
+    <div class="right-col">
+
+      <div class="panel-box">
+        <div class="nav-row">
+          <button class="btn-step" id="btn-back" disabled>&larr;</button>
+          <button class="btn-step" id="btn-next" disabled>&rarr;</button>
+          <button class="btn-play" id="btn-play" disabled>&#9654; Play</button>
+          <select class="speed-select" id="speed-select">
+            <option value="800">Slow</option>
+            <option value="400" selected>Medium</option>
+            <option value="120">Fast</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="panel-box">
+        <div class="panel-title" id="phase-label">&mdash;</div>
+        <div style="font-size:0.82rem;color:var(--text-muted);margin-top:2px;min-height:36px" id="step-desc">Select a preset and click Build &amp; Run.</div>
+      </div>
+
+      <div class="panel-box">
+        <div class="panel-title">BFS Queue</div>
+        <div class="queue-list" id="queue-list">
+          <span style="color:var(--text-ghost);font-size:0.78rem">empty</span>
+        </div>
+      </div>
+
+      <div class="panel-box">
+        <div class="panel-title">Hash Map &mdash; original &rarr; clone</div>
+        <div class="hashmap-list" id="hashmap-list">
+          <span style="color:var(--text-ghost);font-size:0.78rem">empty</span>
+        </div>
+      </div>
+
+      <div class="panel-box">
+        <div class="panel-title">Legend</div>
+        <div style="display:flex;flex-direction:column;gap:5px">
+          <div class="legend-row">
+            <div class="legend-dot" style="background:#1a1b2e;border-color:#3b4261"></div>
+            <span>Unvisited</span>
+          </div>
+          <div class="legend-row">
+            <div class="legend-dot" style="background:#3d3524;border-color:#e0af68"></div>
+            <span>Queued</span>
+          </div>
+          <div class="legend-row">
+            <div class="legend-dot" style="background:#2d1a3d;border-color:#bb9af7"></div>
+            <span>Current (dequeued)</span>
+          </div>
+          <div class="legend-row">
+            <div class="legend-dot" style="background:#2a1a10;border-color:#ff9e64"></div>
+            <span>Current neighbor</span>
+          </div>
+          <div class="legend-row">
+            <div class="legend-dot" style="background:#1a2a1a;border-color:#9ece6a"></div>
+            <span>Done</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="code-panel">
+        <div class="code-header">Python</div>
+        <div class="code-body" id="code-body"></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+var CODE = [
+  [1,  '<span class="kw">def</span> <span class="fn">cloneGraph</span>(node):'],
+  [2,  '    <span class="kw">if not</span> node: <span class="kw">return None</span>'],
+  [3,  '    clones = {node: <span class="bi">Node</span>(node.val)}'],
+  [4,  '    queue = <span class="bi">deque</span>([node])'],
+  [5,  '    <span class="kw">while</span> queue:'],
+  [6,  '        curr = queue.popleft()'],
+  [7,  '        <span class="kw">for</span> nb <span class="kw">in</span> curr.neighbors:'],
+  [8,  '            <span class="kw">if</span> nb <span class="kw">not in</span> clones:'],
+  [9,  '                clones[nb] = <span class="bi">Node</span>(nb.val)'],
+  [10, '                queue.append(nb)'],
+  [11, '            clones[curr].neighbors.append(clones[nb])'],
+  [12, '    <span class="kw">return</span> clones[node]'],
+];
+
+var PRESETS = {
+  p1: {
+    label: '4-node cycle + chord',
+    nodes: [
+      {id:1, x:150, y:55,  label:'1'},
+      {id:2, x:245, y:148, label:'2'},
+      {id:3, x:150, y:232, label:'3'},
+      {id:4, x:55,  y:148, label:'4'},
+    ],
+    edges: [[1,2],[2,3],[3,4],[4,1],[2,4]]
+  },
+  p2: {
+    label: '5-node star',
+    nodes: [
+      {id:1, x:150, y:135, label:'1'},
+      {id:2, x:150, y:45,  label:'2'},
+      {id:3, x:232, y:103, label:'3'},
+      {id:4, x:200, y:215, label:'4'},
+      {id:5, x:75,  y:193, label:'5'},
+    ],
+    edges: [[1,2],[1,3],[1,4],[1,5],[2,3]]
+  },
+  p3: {
+    label: '6-node hexagon',
+    nodes: [
+      {id:1, x:150, y:44,  label:'1'},
+      {id:2, x:244, y:100, label:'2'},
+      {id:3, x:244, y:200, label:'3'},
+      {id:4, x:150, y:256, label:'4'},
+      {id:5, x:56,  y:200, label:'5'},
+      {id:6, x:56,  y:100, label:'6'},
+    ],
+    edges: [[1,2],[2,3],[3,4],[4,5],[5,6],[6,1],[1,4]]
+  }
+};
+
+var currentPreset = 'p1';
+var simSteps = [];
+var nav;
+var gNodes = [];
+var gEdges = [];
+var nodeById = {};
+
+var NODE_R = 20;
+
+function loadPreset(name) {
+  currentPreset = name;
+  ['p1','p2','p3'].forEach(function(p) {
+    document.getElementById('preset-' + p).classList.toggle('active', p === name);
+  });
+}
+
+function buildAndRun() {
+  var preset = PRESETS[currentPreset];
+  gNodes = preset.nodes;
+  gEdges = preset.edges;
+  nodeById = {};
+  gNodes.forEach(function(n) { nodeById[n.id] = n; });
+  renderOrigGraph(null);
+  renderCloneGraph(null);
+  simSteps = simulate(gNodes, gEdges);
+  nav.load(simSteps);
+}
+
+// ---- Original graph ----
+function renderOrigGraph(snap) {
+  var edgesG = document.getElementById('orig-edges-g');
+  var nodesG = document.getElementById('orig-nodes-g');
+  edgesG.innerHTML = '';
+  nodesG.innerHTML = '';
+
+  var nodeState = {};
+  gNodes.forEach(function(n) {
+    nodeState[n.id] = snap ? (snap.nodeState[n.id] || 'unvisited') : 'unvisited';
+  });
+
+  var hiU = snap ? snap.currentNode : -1;
+  var hiV = snap ? snap.currentNeighbor : -1;
+
+  gEdges.forEach(function(e) {
+    var u = e[0], v = e[1];
+    var nu = nodeById[u], nv = nodeById[v];
+    var isHi = (u === hiU && v === hiV) || (v === hiU && u === hiV);
+    var line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    line.setAttribute('x1', nu.x); line.setAttribute('y1', nu.y);
+    line.setAttribute('x2', nv.x); line.setAttribute('y2', nv.y);
+    line.setAttribute('class', isHi ? 'edge-orig-hi' : 'edge-orig');
+    edgesG.appendChild(line);
+  });
+
+  gNodes.forEach(function(n) {
+    var g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    var circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    circle.setAttribute('cx', n.x); circle.setAttribute('cy', n.y);
+    circle.setAttribute('r', NODE_R);
+    var st = nodeState[n.id];
+    if (snap && n.id === snap.currentNeighbor) st = 'neighbor';
+    circle.setAttribute('class', 'node-circle nc-' + st);
+    var text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    text.setAttribute('x', n.x); text.setAttribute('y', n.y);
+    text.setAttribute('class', 'node-label');
+    text.textContent = n.label;
+    g.appendChild(circle); g.appendChild(text);
+    nodesG.appendChild(g);
+  });
+}
+
+// ---- Clone graph ----
+function renderCloneGraph(snap) {
+  var edgesG = document.getElementById('clone-edges-g');
+  var nodesG = document.getElementById('clone-nodes-g');
+  edgesG.innerHTML = '';
+  nodesG.innerHTML = '';
+
+  var clonesSet = {};
+  if (snap) snap.clonesArr.forEach(function(id) { clonesSet[id] = true; });
+
+  var cloneEdges = snap ? snap.cloneEdges : [];
+  var newEdgeKey = snap ? snap.newEdgeKey : null;
+
+  cloneEdges.forEach(function(e) {
+    var u = e[0], v = e[1];
+    var nu = nodeById[u], nv = nodeById[v];
+    var key = Math.min(u,v) + '-' + Math.max(u,v);
+    var line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    line.setAttribute('x1', nu.x); line.setAttribute('y1', nu.y);
+    line.setAttribute('x2', nv.x); line.setAttribute('y2', nv.y);
+    line.setAttribute('class', key === newEdgeKey ? 'edge-clone-new' : 'edge-clone');
+    edgesG.appendChild(line);
+  });
+
+  gNodes.forEach(function(n) {
+    var g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    var circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    circle.setAttribute('cx', n.x); circle.setAttribute('cy', n.y);
+    circle.setAttribute('r', NODE_R);
+
+    var clsName = 'nc-ghost';
+    if (clonesSet[n.id]) {
+      if (snap && n.id === snap.currentNode) clsName = 'nc-clone-current';
+      else if (snap && n.id === snap.currentNeighbor) clsName = 'nc-clone-neighbor';
+      else if (snap && snap.nodeState[n.id] === 'done') clsName = 'nc-clone-done';
+      else clsName = 'nc-cloned';
+    }
+    circle.setAttribute('class', 'node-circle ' + clsName);
+
+    var text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    text.setAttribute('x', n.x); text.setAttribute('y', n.y);
+    text.setAttribute('class', clonesSet[n.id] ? 'node-label' : 'node-label node-label-ghost');
+    text.textContent = n.label;
+    g.appendChild(circle); g.appendChild(text);
+    nodesG.appendChild(g);
+  });
+}
+
+// ---- Simulation ----
+function simulate(nodes, edges) {
+  var steps = [];
+  var adj = {};
+  nodes.forEach(function(n) { adj[n.id] = []; });
+  edges.forEach(function(e) {
+    adj[e[0]].push(e[1]);
+    adj[e[1]].push(e[0]);
+  });
+
+  var startId = nodes[0].id;
+  var nodeState = {};
+  nodes.forEach(function(n) { nodeState[n.id] = 'unvisited'; });
+
+  var clonesArr = [];
+  var cloneEdgesMap = {};
+  var cloneEdgesList = [];
+  var queue = [];
+  var currentNode = -1;
+  var currentNeighbor = -1;
+
+  function edgeKey(u, v) { return Math.min(u,v) + '-' + Math.max(u,v); }
+
+  function addCloneEdge(u, v) {
+    var k = edgeKey(u, v);
+    if (!cloneEdgesMap[k]) {
+      cloneEdgesMap[k] = true;
+      cloneEdgesList.push([u, v]);
+      return k;
+    }
+    return null;
+  }
+
+  function snap(phase, desc, lines, newEdgeKey) {
+    steps.push({
+      phase: phase,
+      desc: desc,
+      lines: lines,
+      queue: queue.slice(),
+      clonesArr: clonesArr.slice(),
+      cloneEdges: cloneEdgesList.map(function(e) { return e.slice(); }),
+      newEdgeKey: newEdgeKey || null,
+      currentNode: currentNode,
+      currentNeighbor: currentNeighbor,
+      nodeState: Object.assign({}, nodeState),
+    });
+  }
+
+  // Init: clone start node
+  clonesArr.push(startId);
+  queue.push(startId);
+  nodeState[startId] = 'queued';
+  snap('Init', 'Create clone of node ' + startId + ', add to map, enqueue. BFS begins.', [3, 4]);
+
+  while (queue.length > 0) {
+    var curr = queue.shift();
+    currentNode = curr;
+    nodeState[curr] = 'current';
+    snap('Dequeue', 'Dequeue node ' + curr + '. Process its ' + adj[curr].length + ' neighbor(s).', [5, 6]);
+
+    var neighbors = adj[curr];
+    for (var i = 0; i < neighbors.length; i++) {
+      var nb = neighbors[i];
+      currentNeighbor = nb;
+
+      if (clonesArr.indexOf(nb) === -1) {
+        clonesArr.push(nb);
+        queue.push(nb);
+        nodeState[nb] = 'queued';
+        snap('NewNeighbor', 'Neighbor ' + nb + ' not in map — create clone, enqueue.', [8, 9, 10]);
+      } else {
+        snap('SeenNeighbor', 'Neighbor ' + nb + ' already cloned — skip creation, just link.', [8]);
+      }
+
+      var newKey = addCloneEdge(curr, nb);
+      var linkDesc = newKey
+        ? 'clone[' + curr + '].neighbors ← clone[' + nb + '] — new edge added to clone.'
+        : 'clone[' + curr + '].neighbors ← clone[' + nb + '] — reverse edge (undirected graph, already linked).';
+      snap('LinkEdge', linkDesc, [11], newKey);
+    }
+
+    currentNeighbor = -1;
+    nodeState[curr] = 'done';
+    snap('NodeDone', 'All neighbors of node ' + curr + ' linked. Mark done.', [7]);
+  }
+
+  currentNode = -1;
+  snap('Done',
+    'BFS complete. Clone has ' + nodes.length + ' nodes and ' + cloneEdgesList.length + ' edges. Return clone[' + startId + '].',
+    [12]);
+
+  return steps;
+}
+
+// ---- Apply step ----
+function applyStep(snap) {
+  renderOrigGraph(snap);
+  renderCloneGraph(snap);
+  updateQueue(snap.queue);
+  updateHashMap(snap.clonesArr);
+  setCodeLines(snap.lines);
+}
+
+function updateQueue(ids) {
+  var el = document.getElementById('queue-list');
+  if (!ids || ids.length === 0) {
+    el.innerHTML = '<span style="color:var(--text-ghost);font-size:0.78rem">empty</span>';
+    return;
+  }
+  el.innerHTML = ids.map(function(id) {
+    return '<div class="queue-chip">' + id + '</div>';
+  }).join('');
+}
+
+function updateHashMap(clonesArr) {
+  var el = document.getElementById('hashmap-list');
+  if (!clonesArr || clonesArr.length === 0) {
+    el.innerHTML = '<span style="color:var(--text-ghost);font-size:0.78rem">empty</span>';
+    return;
+  }
+  el.innerHTML = clonesArr.map(function(id) {
+    return '<div class="hm-row">' +
+      '<div class="hm-key">' + id + '</div>' +
+      '<span class="hm-arrow">→</span>' +
+      '<div class="hm-val">' + id + '′</div>' +
+    '</div>';
+  }).join('');
+}
+
+function setCodeLines(lines) {
+  CODE.forEach(function(e) {
+    var el = document.getElementById('cl-' + e[0]);
+    if (!el) return;
+    if (lines && lines.indexOf(e[0]) >= 0) el.classList.add('hl');
+    else el.classList.remove('hl');
+  });
+}
+
+function buildCodePanel() {
+  var body = document.getElementById('code-body');
+  body.innerHTML = CODE.map(function(e) {
+    return '<div class="code-line" id="cl-' + e[0] + '"><span class="ln">' + e[0] + '</span><span>' + e[1] + '</span></div>';
+  }).join('');
+}
+
+window.addEventListener('DOMContentLoaded', function() {
+  buildCodePanel();
+  loadPreset('p1');
+  nav = VizNav({
+    btnPrev: document.getElementById('btn-back'),
+    btnNext: document.getElementById('btn-next'),
+    btnPlay: document.getElementById('btn-play'),
+    speedSel: document.getElementById('speed-select'),
+    render: function(snap, cur, total) {
+      applyStep(snap);
+      document.getElementById('phase-label').textContent =
+        'Step ' + (cur + 1) + ' / ' + total + '  ·  ' + snap.phase;
+      document.getElementById('step-desc').textContent = snap.desc;
+    }
+  });
+});
+</script>
+
+<script>
+  if (window.self !== window.top) {
+    var bl = document.querySelector('.back-link');
+    if (bl) bl.style.display = 'none';
+  }
+</script>
+</body>
+</html>
