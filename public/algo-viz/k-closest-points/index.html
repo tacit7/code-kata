@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>K Closest Points to Origin</title>
+  <link rel="stylesheet" href="../shared/style.css" />
+  <script src="../shared/gsap.min.js"></script>
+  <script src="../shared/viz.js"></script>
+  <style>
+    body { display:flex; flex-direction:column; height:100vh; overflow:hidden; }
+
+    .top-area { flex: 0 0 auto; }
+    .mid-area  { flex:1; display:grid; grid-template-columns:1fr 1fr; gap:16px; padding:0 16px 8px; overflow:hidden; min-height:0; }
+    .bot-area  { flex: 0 0 auto; padding:0 16px 10px; }
+
+    /* ── panels ── */
+    .panel {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 14px 16px;
+      display: flex; flex-direction: column; gap: 10px;
+      overflow: hidden; min-height: 0;
+    }
+    .panel-title {
+      font-size: 0.72rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim);
+      flex-shrink: 0;
+    }
+
+    /* ── 2D canvas panel ── */
+    #plot-canvas {
+      flex: 1; width: 100%; min-height: 0;
+      border-radius: 6px;
+      background: #0a0a0f;
+    }
+
+    /* ── heap panel (right) ── */
+    .heap-meta {
+      display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;
+    }
+    #heap-badge {
+      font-size: 0.72rem; font-weight: 700; font-family: monospace;
+      padding: 2px 10px; border-radius: 20px;
+      background: var(--bg); border: 1px solid var(--border);
+      color: var(--text-dim);
+    }
+    #heap-svg { display:block; width:100%; flex:1; min-height:0; }
+    #heap-empty { color:var(--text-ghost); font-size:0.82rem; text-align:center; padding:24px 0; flex:1; }
+
+    /* heap list rows */
+    .heap-rows { display:flex; flex-direction:column; gap:4px; overflow-y:auto; flex:1; }
+    .heap-row {
+      display:flex; align-items:center; gap:10px;
+      padding:7px 10px; border-radius:6px;
+      background: var(--bg); border: 1px solid var(--border);
+      font-family: monospace; font-size: 0.82rem;
+      transition: border-color 0.2s, background 0.2s;
+    }
+    .heap-row.is-max  { border-color: #b45309; background: #1c1200; }
+    .heap-row.is-new  { border-color: var(--accent); background: #1e1a3a; }
+    .heap-row.is-kept { border-color: #16a34a; background: #052e16; }
+    .heap-rank  { width: 18px; color: var(--text-ghost); font-size: 0.7rem; text-align:right; }
+    .heap-pt    { color: var(--text-bright); flex:1; }
+    .heap-dist  { color: var(--text-dim); }
+
+    /* ── bottom nav row ── */
+    .nav-strip {
+      display:flex; gap:10px; align-items:center;
+    }
+    .step-info {
+      flex:1; min-width:0;
+      display:flex; flex-direction:column; gap:2px;
+    }
+    #phase-label { font-size:0.72rem; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:var(--text-dim); }
+    #step-desc   { font-size:0.82rem; color:var(--text-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
+    .btn-play {
+      background:#15803d; border:none; border-radius:var(--radius-sm);
+      color:#fff; cursor:pointer; font-size:0.88rem; font-weight:600;
+      padding:9px 16px; transition:background 0.2s; white-space:nowrap;
+    }
+    .btn-play:hover { background:#166534; }
+    .btn-play.playing { background:#c2410c; }
+    .btn-play.playing:hover { background:#9a3412; }
+    .btn-play:disabled { opacity:0.4; cursor:not-allowed; }
+    .speed-select {
+      background:var(--bg); border:1px solid var(--border);
+      border-radius:var(--radius-sm); color:var(--text);
+      font-size:0.85rem; padding:8px 10px; outline:none; width:80px;
+    }
+
+    /* ── legend ── */
+    .legend {
+      display:flex; gap:14px; flex-wrap:wrap; font-size:0.73rem; color:var(--text-dim);
+      padding: 4px 0; flex-shrink: 0;
+    }
+    .legend-item { display:flex; align-items:center; gap:5px; }
+    .dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+  </style>
+</head>
+<body class="page">
+
+<div class="page-header top-area">
+  <a class="back-link" href="../index.html">&larr; All Algorithms</a>
+  <div class="page-title">K Closest Points to Origin</div>
+  <div class="page-sub">LeetCode 973 &middot; Max-heap of size k &middot; O(n log k) time &middot; O(k) space</div>
+</div>
+
+<div class="controls top-area">
+  <div class="field">
+    <label>Points (one per line: x,y)</label>
+    <textarea id="inp-pts" rows="3" style="width:200px;resize:vertical;font-family:monospace;font-size:0.82rem;background:var(--bg);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:6px">1,3
+-2,2
+5,8
+0,1
+-1,-1</textarea>
+  </div>
+  <div class="field">
+    <label>k</label>
+    <input id="inp-k" type="number" value="2" min="1" max="20" style="width:60px" />
+  </div>
+  <div class="field">
+    <label>Preset</label>
+    <select id="preset-sel" onchange="applyPreset()">
+      <option value="0">Custom</option>
+      <option value="1" selected>Default (5 pts, k=2)</option>
+      <option value="2">Tight cluster (k=3)</option>
+      <option value="3">All same dist</option>
+    </select>
+  </div>
+  <button class="btn-primary" onclick="buildAndRun()">Build &amp; Run</button>
+</div>
+
+<!-- ── middle: two panels ── -->
+<div class="mid-area">
+
+  <div class="panel" id="plot-panel">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
+      <div class="panel-title">2D Coordinate Plane</div>
+      <div class="legend">
+        <span class="legend-item"><span class="dot" style="background:#16a34a"></span>Kept</span>
+        <span class="legend-item"><span class="dot" style="background:#b45309"></span>Current</span>
+        <span class="legend-item"><span class="dot" style="background:#4f4f5a"></span>Rejected / pending</span>
+      </div>
+    </div>
+    <canvas id="plot-canvas"></canvas>
+  </div>
+
+  <div class="panel">
+    <div class="heap-meta">
+      <div class="panel-title">Max-Heap (size k)</div>
+      <span id="heap-badge">size: 0 / k: —</span>
+    </div>
+    <div class="heap-rows" id="heap-rows">
+      <div id="heap-empty">Heap is empty</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ── bottom nav ── -->
+<div class="bot-area">
+  <div class="nav-strip">
+    <button class="btn-step" id="btn-back" disabled>&larr;</button>
+    <button class="btn-step" id="btn-next" disabled>&rarr;</button>
+    <button class="btn-play" id="btn-play" disabled>&#9654; Play</button>
+    <select class="speed-select" id="speed-select">
+      <option value="900">Slow</option>
+      <option value="450" selected>Medium</option>
+      <option value="140">Fast</option>
+    </select>
+    <div class="step-info">
+      <div id="phase-label">&mdash;</div>
+      <div id="step-desc">Enter points &amp; k, then click Build &amp; Run.</div>
+    </div>
+  </div>
+</div>
+
+<script>
+var simSteps = [], nav;
+var currentPts = [], currentK = 0;
+var prevHeapLen = -1;
+
+var PRESETS = [
+  null,
+  { pts: [[1,3],[-2,2],[5,8],[0,1],[-1,-1]], k: 2 },
+  { pts: [[1,1],[2,2],[3,3],[-1,1],[0,2],[4,0]], k: 3 },
+  { pts: [[1,0],[-1,0],[0,1],[0,-1]], k: 2 },
+];
+
+// ── helpers ──────────────────────────────────────────────────────────────────
+function dist2(p) { return p[0]*p[0] + p[1]*p[1]; }
+function fmtPt(p) { return '(' + p[0] + ',' + p[1] + ')'; }
+function fmtD(d)  { return 'd²=' + d; }
+
+// ── max-heap ops (on array of {d2,pt} objects) ───────────────────────────────
+function heapPush(heap, item) {
+  heap.push(item);
+  var i = heap.length - 1;
+  while (i > 0) {
+    var pi = (i - 1) >> 1;
+    if (heap[i].d2 > heap[pi].d2) { var t=heap[i]; heap[i]=heap[pi]; heap[pi]=t; i=pi; }
+    else break;
+  }
+}
+function heapPop(heap) {
+  var top = heap[0];
+  var last = heap.pop();
+  if (heap.length > 0) {
+    heap[0] = last;
+    var i = 0;
+    while (true) {
+      var l=2*i+1, r=2*i+2, biggest=i;
+      if (l<heap.length && heap[l].d2>heap[biggest].d2) biggest=l;
+      if (r<heap.length && heap[r].d2>heap[biggest].d2) biggest=r;
+      if (biggest!==i) { var t=heap[i]; heap[i]=heap[biggest]; heap[biggest]=t; i=biggest; }
+      else break;
+    }
+  }
+  return top;
+}
+
+// ── simulation ────────────────────────────────────────────────────────────────
+function simulate(pts, k) {
+  var steps = [];
+  var heap = [];  // array of {d2, pt, idx}
+
+  function snap(phase, desc, ptIdx, heapSnap, activeHeapIdx, keptSet) {
+    steps.push({
+      phase:         phase,
+      desc:          desc,
+      ptIdx:         (ptIdx !== null && ptIdx !== undefined) ? ptIdx : -1,
+      heap:          heapSnap.map(function(h) { return {d2:h.d2, pt:h.pt.slice(), idx:h.idx}; }),
+      activeHeapIdx: (activeHeapIdx !== null && activeHeapIdx !== undefined) ? activeHeapIdx : -1,
+      keptSet:       keptSet ? keptSet.slice() : [],
+    });
+  }
+
+  function keptIndices() {
+    return heap.map(function(h) { return h.idx; });
+  }
+
+  snap('Init', 'Initialize empty max-heap. We keep at most k=' + k + ' points — the root is always the farthest of the k closest seen so far.', null, heap, -1, []);
+
+  for (var i = 0; i < pts.length; i++) {
+    var pt = pts[i];
+    var d2 = dist2(pt);
+
+    snap('Consider', 'Point ' + fmtPt(pt) + ': compute distance squared → ' + fmtD(d2) + '.', i, heap, -1, keptIndices());
+
+    if (heap.length < k) {
+      // Just push
+      heapPush(heap, {d2:d2, pt:pt, idx:i});
+      snap('Push', 'Heap size ' + heap.length + ' ≤ k=' + k + ' → push ' + fmtPt(pt) + ' unconditionally. Max-heap root = ' + fmtD(heap[0].d2) + '.', i, heap, 0, keptIndices());
+    } else {
+      // Compare to heap root (max dist²)
+      var maxD2 = heap[0].d2;
+      if (d2 < maxD2) {
+        snap('Compare', fmtD(d2) + ' < heap max ' + fmtD(maxD2) + ' → ' + fmtPt(pt) + ' is closer than the farthest kept point. Evict root and push.', i, heap, 0, keptIndices());
+        var evicted = heap[0];
+        heapPop(heap);
+        snap('Evict', 'Popped root ' + fmtPt(evicted.pt) + ' (' + fmtD(evicted.d2) + '). Now push ' + fmtPt(pt) + '.', i, heap, -1, keptIndices());
+        heapPush(heap, {d2:d2, pt:pt, idx:i});
+        snap('Push', 'Pushed ' + fmtPt(pt) + '. New heap max = ' + fmtD(heap[0].d2) + '.', i, heap, 0, keptIndices());
+      } else {
+        snap('Compare', fmtD(d2) + ' ≥ heap max ' + fmtD(maxD2) + ' → ' + fmtPt(pt) + ' is farther — skip it.', i, heap, 0, keptIndices());
+      }
+    }
+  }
+
+  var resultPts = heap.map(function(h) { return fmtPt(h.pt); }).join(', ');
+  snap('Done', 'All ' + pts.length + ' points processed. The ' + k + ' closest: ' + resultPts + '.', null, heap, -1, keptIndices());
+  return steps;
+}
+
+// ── canvas drawing ─────────────────────────────────────────────────────────
+var PLOT_MARGIN = 36;
+
+function getPlotBounds(pts) {
+  var xs = pts.map(function(p){return p[0];}), ys = pts.map(function(p){return p[1];});
+  var mx = Math.max.apply(null, xs.map(Math.abs).concat([1]));
+  var my = Math.max.apply(null, ys.map(Math.abs).concat([1]));
+  var r = Math.max(mx, my) * 1.25;
+  return r;
+}
+
+function worldToCanvas(wx, wy, range, cw, ch) {
+  var cx = PLOT_MARGIN + (wx + range) / (2 * range) * (cw - 2 * PLOT_MARGIN);
+  var cy = PLOT_MARGIN + (range - wy) / (2 * range) * (ch - 2 * PLOT_MARGIN);
+  return [cx, cy];
+}
+
+function drawPlot(canvas, pts, s) {
+  var dpr = window.devicePixelRatio || 1;
+  var rect = canvas.parentElement.getBoundingClientRect();
+  var cw = rect.width - 32;   // panel padding
+  var ch = rect.height - 32 - 24 - 24;  // title + legend
+  if (cw < 40 || ch < 40) return;
+
+  canvas.width  = cw * dpr;
+  canvas.height = ch * dpr;
+  canvas.style.width  = cw + 'px';
+  canvas.style.height = ch + 'px';
+
+  var ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+
+  var range = getPlotBounds(pts);
+
+  // background
+  ctx.fillStyle = '#0a0a0f';
+  ctx.fillRect(0, 0, cw, ch);
+
+  // grid
+  ctx.strokeStyle = '#1a1a2a';
+  ctx.lineWidth = 1;
+  var step = Math.ceil(range / 3);
+  for (var gv = -Math.ceil(range); gv <= Math.ceil(range); gv += step) {
+    var gc = worldToCanvas(gv, 0, range, cw, ch);
+    var gc2 = worldToCanvas(0, gv, range, cw, ch);
+    ctx.beginPath(); ctx.moveTo(gc[0], PLOT_MARGIN); ctx.lineTo(gc[0], ch - PLOT_MARGIN); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(PLOT_MARGIN, gc2[1]); ctx.lineTo(cw - PLOT_MARGIN, gc2[1]); ctx.stroke();
+  }
+
+  // axes
+  var ox = worldToCanvas(0, 0, range, cw, ch);
+  ctx.strokeStyle = '#2d3148';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(PLOT_MARGIN, ox[1]); ctx.lineTo(cw - PLOT_MARGIN, ox[1]); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(ox[0], PLOT_MARGIN); ctx.lineTo(ox[0], ch - PLOT_MARGIN); ctx.stroke();
+
+  // distance circle for current point
+  if (s.ptIdx >= 0) {
+    var curPt = pts[s.ptIdx];
+    var curD2 = dist2(curPt);
+    var radiusW = Math.sqrt(curD2);
+    var p0 = worldToCanvas(0, 0, range, cw, ch);
+    var p1 = worldToCanvas(radiusW, 0, range, cw, ch);
+    var radiusPx = Math.abs(p1[0] - p0[0]);
+    ctx.beginPath();
+    ctx.arc(ox[0], ox[1], radiusPx, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(180,83,9,0.3)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([4, 4]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // heap-max circle
+  if (s.heap.length > 0) {
+    var maxD2 = s.heap[0].d2;
+    var maxR = Math.sqrt(maxD2);
+    var p0 = worldToCanvas(0, 0, range, cw, ch);
+    var p1 = worldToCanvas(maxR, 0, range, cw, ch);
+    var rPx = Math.abs(p1[0] - p0[0]);
+    ctx.beginPath();
+    ctx.arc(ox[0], ox[1], rPx, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(99,102,241,0.3)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([6, 3]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // points
+  var keptSet = {};
+  for (var ki = 0; ki < s.keptSet.length; ki++) keptSet[s.keptSet[ki]] = true;
+
+  for (var i = 0; i < pts.length; i++) {
+    var p = worldToCanvas(pts[i][0], pts[i][1], range, cw, ch);
+    var isCurrent = (i === s.ptIdx);
+    var isKept    = keptSet[i];
+
+    var fill, stroke, r;
+    if (isCurrent) { fill = '#1c1200'; stroke = '#f59e0b'; r = 9; }
+    else if (isKept) { fill = '#052e16'; stroke = '#16a34a'; r = 8; }
+    else { fill = '#12121e'; stroke = '#4f4f5a'; r = 7; }
+
+    ctx.beginPath();
+    ctx.arc(p[0], p[1], r, 0, Math.PI * 2);
+    ctx.fillStyle = fill;
+    ctx.fill();
+    ctx.strokeStyle = stroke;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // label
+    ctx.fillStyle = isCurrent ? '#f59e0b' : (isKept ? '#4ade80' : '#5a5a6a');
+    ctx.font = 'bold 9px monospace';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'bottom';
+    ctx.fillText(fmtPt(pts[i]), p[0] + 10, p[1] - 4);
+  }
+
+  // origin dot
+  ctx.beginPath();
+  ctx.arc(ox[0], ox[1], 4, 0, Math.PI * 2);
+  ctx.fillStyle = '#2d3148';
+  ctx.fill();
+  ctx.strokeStyle = '#6366f1';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+
+  // origin label
+  ctx.fillStyle = '#6366f1';
+  ctx.font = '10px monospace';
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'top';
+  ctx.fillText('O', ox[0] + 5, ox[1] + 3);
+}
+
+// ── heap list render ──────────────────────────────────────────────────────────
+function renderHeapList(s) {
+  var container = document.getElementById('heap-rows');
+  var badge     = document.getElementById('heap-badge');
+  var heap      = s.heap;
+
+  badge.textContent = 'size: ' + heap.length + ' / k: ' + currentK;
+
+  if (heap.length === 0) {
+    container.innerHTML = '<div id="heap-empty">Heap is empty</div>';
+    return;
+  }
+
+  // Sort display by d2 descending (root first = max)
+  var display = heap.slice().sort(function(a,b){return b.d2 - a.d2;});
+
+  container.innerHTML = display.map(function(item, rank) {
+    var isMax = (rank === 0);
+    var isActive = (s.activeHeapIdx === 0 && isMax);
+    var isNew = (item.idx === s.ptIdx && s.phase === 'Push');
+    var cls = 'heap-row' + (isActive || isMax && s.phase==='Compare' ? ' is-max' : '') + (isNew ? ' is-new' : '');
+    if (!isMax && !isNew) cls = 'heap-row' + (heap.length === currentK ? ' is-kept' : '');
+    return '<div class="' + cls + '">'
+      + '<span class="heap-rank">' + (rank + 1) + '</span>'
+      + '<span class="heap-pt">' + fmtPt(item.pt) + '</span>'
+      + '<span class="heap-dist">' + fmtD(item.d2) + '</span>'
+      + '</div>';
+  }).join('');
+}
+
+// ── apply step ────────────────────────────────────────────────────────────────
+function applyStep(s, animate) {
+  var canvas = document.getElementById('plot-canvas');
+  drawPlot(canvas, currentPts, s);
+  renderHeapList(s);
+
+  var phaseEl = document.getElementById('phase-label');
+  var descEl  = document.getElementById('step-desc');
+  if (phaseEl) phaseEl.textContent = s.phase;
+  if (descEl) {
+    if (animate) gsap.fromTo(descEl, {opacity:0}, {opacity:1, duration:0.15});
+    descEl.textContent = s.desc;
+  }
+}
+
+// ── setup ─────────────────────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', function() {
+  nav = VizNav({
+    btnPrev:  document.getElementById('btn-back'),
+    btnNext:  document.getElementById('btn-next'),
+    btnPlay:  document.getElementById('btn-play'),
+    speedSel: document.getElementById('speed-select'),
+    render: function(snap, cur, total) {
+      applyStep(snap, cur > 0);
+      var phaseEl = document.getElementById('phase-label');
+      if (phaseEl) phaseEl.textContent = 'Step ' + (cur+1) + ' / ' + total + '  ·  ' + snap.phase;
+    }
+  });
+  applyPreset();
+  buildAndRun();
+
+  window.addEventListener('resize', function() {
+    if (!simSteps.length) return;
+    var cur = nav.current ? nav.current() : 0;
+    if (simSteps[cur]) applyStep(simSteps[cur], false);
+  });
+});
+
+function applyPreset() {
+  var sel = document.getElementById('preset-sel');
+  var v = parseInt(sel.value, 10);
+  if (!v || !PRESETS[v]) return;
+  document.getElementById('inp-pts').value = PRESETS[v].pts.map(function(p){return p.join(',');}).join('\n');
+  document.getElementById('inp-k').value = PRESETS[v].k;
+}
+
+function parsePts(raw) {
+  var pts = [];
+  raw.split(/[\n;]/).forEach(function(line) {
+    var parts = line.trim().split(',').map(function(s){return parseFloat(s.trim());});
+    if (parts.length >= 2 && !isNaN(parts[0]) && !isNaN(parts[1])) pts.push([parts[0], parts[1]]);
+  });
+  return pts;
+}
+
+function buildAndRun() {
+  var raw = document.getElementById('inp-pts').value;
+  var k   = parseInt(document.getElementById('inp-k').value, 10);
+  if (isNaN(k) || k < 1) return;
+  var pts = parsePts(raw);
+  if (!pts.length || k > pts.length) return;
+
+  currentPts = pts;
+  currentK   = k;
+
+  simSteps = simulate(pts, k);
+  nav.load(simSteps);
+}
+</script>
+<script>
+  if (window.self !== window.top) {
+    var bl = document.querySelector('.back-link');
+    if (bl) bl.style.display = 'none';
+  }
+</script>
+</body>
+</html>
