@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Task Scheduler</title>
+  <link rel="stylesheet" href="../shared/style.css" />
+  <script src="../shared/gsap.min.js"></script>
+  <script src="../shared/viz.js"></script>
+  <style>
+    .main-row { display: grid; grid-template-columns: 240px 1fr; gap: 16px; flex: 1; min-height: 0; }
+    @media (max-width: 700px) { .main-row { grid-template-columns: 1fr; } }
+
+    /* Left panel — freq table */
+    .freq-panel {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 14px; display: flex; flex-direction: column; gap: 10px;
+      overflow-y: auto;
+    }
+    .panel-title {
+      font-size: 0.72rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim);
+    }
+
+    .freq-table { display: flex; flex-direction: column; gap: 6px; }
+    .freq-row {
+      display: flex; align-items: center; gap: 8px;
+      padding: 6px 8px; border-radius: var(--radius-sm);
+      border: 1px solid var(--border); background: var(--bg);
+      transition: border-color 0.18s, background 0.18s;
+    }
+    .freq-row.chosen  { border-color: var(--accent); background: var(--surface-dark); }
+    .freq-row.cooling { border-color: #c2410c; background: #431407; }
+    .freq-row.done    { border-color: #166534; background: #052e16; opacity: 0.6; }
+    .freq-letter {
+      font-size: 1.05rem; font-weight: 700; font-family: monospace;
+      width: 22px; text-align: center; color: var(--text-bright);
+    }
+    .freq-bar-wrap { flex: 1; height: 8px; background: var(--border-soft); border-radius: 4px; overflow: hidden; }
+    .freq-bar { height: 100%; border-radius: 4px; background: var(--accent); transition: width 0.25s; }
+    .freq-count { font-size: 0.8rem; font-family: monospace; color: var(--text-muted); min-width: 20px; text-align: right; }
+    .cooldown-badge {
+      font-size: 0.65rem; font-weight: 700; background: #c2410c;
+      color: #fff; border-radius: 3px; padding: 1px 5px; white-space: nowrap;
+    }
+
+    /* Right panel — timeline */
+    .timeline-panel {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 14px; display: flex; flex-direction: column; gap: 10px;
+      overflow-y: auto;
+    }
+    .timeline-header { display: flex; align-items: center; justify-content: space-between; }
+    .total-time-badge {
+      font-size: 0.78rem; font-weight: 700; font-family: monospace;
+      padding: 3px 10px; border-radius: 20px;
+      border: 1px solid var(--accent); color: var(--accent);
+    }
+
+    .timeline-slots { display: flex; flex-wrap: wrap; gap: 6px; }
+    .slot {
+      width: 48px; height: 48px;
+      display: flex; align-items: center; justify-content: center;
+      border-radius: var(--radius-sm); border: 2px solid var(--border-soft);
+      font-size: 1.1rem; font-weight: 700; font-family: monospace;
+      color: var(--text-ghost); background: #0f0f0f;
+      transition: background 0.18s, border-color 0.18s, color 0.18s;
+      position: relative;
+    }
+    .slot-idx {
+      position: absolute; bottom: 2px; right: 4px;
+      font-size: 0.55rem; color: var(--text-ghost); font-family: monospace;
+    }
+    .slot[data-state="pending"] { color: var(--text-ghost); border-color: var(--border-soft); background: #0f0f0f; }
+    .slot[data-state="idle"]    { color: var(--text-dim); border-color: #374151; background: #111827; }
+    .slot[data-state="task"]    { color: var(--text-bright); border-color: var(--accent); background: var(--surface-dark); }
+    .slot[data-state="current-task"] { color: #fef08a; border-color: #ca8a04; background: #422006; }
+    .slot[data-state="current-idle"] { color: var(--text-dim); border-color: #6b7280; background: #1f2937; }
+    .slot[data-state="done"]    { color: #bbf7d0; border-color: #15803d; background: #14532d; }
+
+    /* Bottom summary */
+    .summary-row {
+      display: flex; gap: 12px; align-items: stretch; flex-shrink: 0;
+    }
+    .nav-box {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 10px 14px;
+      display: flex; gap: 8px; align-items: center; flex-shrink: 0;
+    }
+    .desc-box {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 10px 14px;
+      flex: 1; display: flex; flex-direction: column; gap: 4px;
+    }
+    .desc-phase { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); }
+    .desc-text  { font-size: 0.82rem; color: var(--text-muted); line-height: 1.4; }
+    .total-box {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 10px 18px;
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; flex-shrink: 0;
+    }
+    .total-label { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); }
+    .total-val   { font-size: 1.6rem; font-weight: 700; color: var(--text-bright); font-family: monospace; }
+
+    .btn-play {
+      background: #15803d; border: none; border-radius: var(--radius-sm);
+      color: #fff; cursor: pointer; font-size: 0.88rem; font-weight: 600;
+      padding: 9px 14px; transition: background 0.2s;
+    }
+    .btn-play:hover { background: #166534; }
+    .btn-play.playing { background: #c2410c; }
+    .btn-play.playing:hover { background: #9a3412; }
+    .btn-play:disabled { opacity: 0.4; cursor: not-allowed; }
+    .speed-select {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); color: var(--text);
+      font-size: 0.85rem; padding: 8px 10px; outline: none;
+    }
+
+    .formula-box {
+      background: var(--bg); border: 1px solid var(--border-soft);
+      border-radius: var(--radius-sm); padding: 8px 12px;
+      font-size: 0.75rem; font-family: monospace; color: var(--text-dim); line-height: 1.6;
+    }
+    .formula-box strong { color: var(--accent); }
+
+    .legend-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 4px; }
+    .legend-item { display: flex; align-items: center; gap: 5px; font-size: 0.66rem; color: var(--text-faint); }
+    .legend-dot  { width: 10px; height: 10px; border-radius: 2px; border: 1px solid; }
+
+    .inputs-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+    .inputs-row label { font-size: 0.8rem; color: var(--text-dim); white-space: nowrap; }
+    .inputs-row input { width: 180px; }
+    .inp-n { width: 60px !important; }
+  </style>
+</head>
+<body class="page" style="display:flex;flex-direction:column;height:100vh;overflow:hidden">
+
+<div class="page-header">
+  <a class="back-link" href="../index.html">&larr; All Algorithms</a>
+  <div class="page-title">Task Scheduler</div>
+  <div class="page-sub">LeetCode 621 &middot; Greedy / Heap &middot; O(n) time &middot; O(1) space</div>
+</div>
+
+<div class="controls">
+  <div class="field inputs-row">
+    <label>tasks</label>
+    <input id="inp-tasks" type="text" value="AAABBB" />
+    <label>n (cooldown)</label>
+    <input id="inp-n" class="inp-n" type="number" value="2" min="0" max="20" />
+  </div>
+  <button class="btn-primary" onclick="buildAndRun()">Build &amp; Run</button>
+  <button class="btn-primary" onclick="loadPreset('default')" style="background:var(--surface)">Default</button>
+  <button class="btn-primary" onclick="loadPreset('heavy')" style="background:var(--surface)">Heavy A</button>
+  <button class="btn-primary" onclick="loadPreset('nocool')" style="background:var(--surface)">n=0</button>
+</div>
+
+<div style="flex:1;min-height:0;padding:0 16px 0 16px;display:flex;flex-direction:column;gap:12px;overflow:hidden">
+  <div class="main-row">
+    <!-- Left: freq table -->
+    <div class="freq-panel">
+      <div class="panel-title">Frequency Counts</div>
+      <div class="freq-table" id="freq-table">
+        <span style="color:var(--text-dim);font-size:0.82rem">Click Build &amp; Run.</span>
+      </div>
+      <div class="formula-box" id="formula-box" style="display:none"></div>
+      <div class="legend-row">
+        <div class="legend-item"><div class="legend-dot" style="background:var(--surface-dark);border-color:var(--accent)"></div>chosen</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#431407;border-color:#c2410c"></div>in cooldown</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#052e16;border-color:#166534"></div>done</div>
+      </div>
+    </div>
+
+    <!-- Right: timeline -->
+    <div class="timeline-panel">
+      <div class="timeline-header">
+        <div class="panel-title">Timeline Slots</div>
+        <div class="total-time-badge" id="timeline-badge">— slots</div>
+      </div>
+      <div class="timeline-slots" id="timeline-slots">
+        <span style="color:var(--text-dim);font-size:0.82rem">Build to see timeline.</span>
+      </div>
+      <div class="legend-row">
+        <div class="legend-item"><div class="legend-dot" style="background:#422006;border-color:#ca8a04"></div>current slot</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--surface-dark);border-color:var(--accent)"></div>task filled</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#1f2937;border-color:#6b7280"></div>idle</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#14532d;border-color:#15803d"></div>complete</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom summary bar -->
+  <div class="summary-row">
+    <div class="nav-box">
+      <button class="btn-step" id="btn-back" disabled>&larr;</button>
+      <button class="btn-step" id="btn-next" disabled>&rarr;</button>
+      <button class="btn-play" id="btn-play" disabled>&#9654; Play</button>
+      <select class="speed-select" id="speed-select">
+        <option value="900">Slow</option>
+        <option value="420" selected>Medium</option>
+        <option value="140">Fast</option>
+      </select>
+    </div>
+    <div class="desc-box">
+      <div class="desc-phase" id="phase-label">&mdash;</div>
+      <div class="desc-text" id="step-desc">Enter tasks and cooldown n, then click Build &amp; Run.</div>
+    </div>
+    <div class="total-box">
+      <div class="total-label">Total Time</div>
+      <div class="total-val" id="total-val">&mdash;</div>
+    </div>
+  </div>
+</div>
+
+<script>
+var simSteps = [], nav = null;
+var totalSlots = 0;
+
+var PRESETS = {
+  'default': { tasks: 'AAABBB', n: 2 },
+  'heavy':   { tasks: 'AAAABBC', n: 3 },
+  'nocool':  { tasks: 'AABBCC', n: 0 },
+};
+
+window.addEventListener('DOMContentLoaded', function() {
+  nav = VizNav({
+    btnPrev: document.getElementById('btn-back'),
+    btnNext: document.getElementById('btn-next'),
+    btnPlay: document.getElementById('btn-play'),
+    speedSel: document.getElementById('speed-select'),
+    render: function(snap, cur, total) {
+      applyStep(snap);
+      var phaseEl = document.getElementById('phase-label');
+      var descEl  = document.getElementById('step-desc');
+      if (phaseEl) phaseEl.textContent = 'Step ' + (cur + 1) + ' / ' + total + '  ·  ' + snap.phase;
+      if (descEl)  descEl.textContent  = snap.desc;
+    }
+  });
+  buildAndRun();
+});
+
+function loadPreset(key) {
+  var p = PRESETS[key];
+  document.getElementById('inp-tasks').value = p.tasks;
+  document.getElementById('inp-n').value = p.n;
+  buildAndRun();
+}
+
+function buildAndRun() {
+  var raw = document.getElementById('inp-tasks').value.trim().toUpperCase();
+  var n   = parseInt(document.getElementById('inp-n').value, 10);
+  if (!raw || isNaN(n) || n < 0) return;
+
+  var tasks = raw.replace(/[^A-Z]/g, '').split('');
+  if (tasks.length === 0) return;
+
+  simSteps = simulate(tasks, n);
+  totalSlots = simSteps.length > 0 ? simSteps[simSteps.length - 1].slotsUsed : 0;
+
+  buildFreqTable(simSteps[0]);
+  buildTimelineSlots(totalSlots);
+  updateFormula(tasks, n);
+  nav.load(simSteps);
+}
+
+function computeFreq(tasks) {
+  var freq = {};
+  tasks.forEach(function(t) { freq[t] = (freq[t] || 0) + 1; });
+  return freq;
+}
+
+function simulate(tasks, n) {
+  var steps = [];
+  var freq = computeFreq(tasks);
+  var maxFreq = Math.max.apply(null, Object.values(freq));
+  var countMax = Object.values(freq).filter(function(v) { return v === maxFreq; }).length;
+  var expected = Math.max(tasks.length, (maxFreq - 1) * (n + 1) + countMax);
+
+  // initial snapshot
+  var freqCopy = Object.assign({}, freq);
+  var cooldowns = {}; // letter -> remaining cooldown
+  var timeline = []; // array of {letter, type} where type='task'|'idle'
+
+  steps.push({
+    phase: 'Init',
+    desc: 'tasks=' + tasks.join('') + ', n=' + n + '. Formula: max(' + tasks.length + ', (' + maxFreq + '-1)×(' + n + '+1)+' + countMax + ') = ' + expected + '. Starting simulation.',
+    freq: Object.assign({}, freqCopy),
+    cooldowns: Object.assign({}, cooldowns),
+    timeline: timeline.slice(),
+    chosen: null,
+    slotsUsed: 0,
+    totalExpected: expected,
+  });
+
+  var remaining = tasks.length;
+  var slot = 0;
+
+  while (remaining > 0) {
+    // decrement cooldowns
+    var newCooldowns = {};
+    Object.keys(cooldowns).forEach(function(k) {
+      if (cooldowns[k] - 1 > 0) newCooldowns[k] = cooldowns[k] - 1;
+    });
+    cooldowns = newCooldowns;
+
+    // pick best available: highest freq, not in cooldown, count > 0
+    var best = null, bestFreq = -1;
+    Object.keys(freqCopy).forEach(function(k) {
+      if (freqCopy[k] > 0 && !cooldowns[k]) {
+        if (freqCopy[k] > bestFreq) {
+          bestFreq = freqCopy[k];
+          best = k;
+        }
+      }
+    });
+
+    slot++;
+    if (best !== null) {
+      freqCopy[best]--;
+      if (freqCopy[best] > 0) {
+        cooldowns[best] = n; // must wait n more slots
+      }
+      remaining--;
+      timeline.push({ letter: best, type: 'task' });
+
+      var freqLeft = freqCopy[best];
+      var coolDesc = n > 0 ? (' Cooldown ' + best + ' for ' + n + ' slot' + (n !== 1 ? 's' : '') + '.') : '';
+      steps.push({
+        phase: 'Slot ' + slot,
+        desc: 'Slot ' + slot + ': pick task ' + best + ' (freq ' + (freqLeft + 1) + '→' + freqLeft + ').' + coolDesc + ' Tasks left: ' + remaining + '.',
+        freq: Object.assign({}, freqCopy),
+        cooldowns: Object.assign({}, cooldowns),
+        timeline: timeline.slice(),
+        chosen: best,
+        slotsUsed: slot,
+        totalExpected: expected,
+      });
+    } else {
+      timeline.push({ letter: 'idle', type: 'idle' });
+      steps.push({
+        phase: 'Slot ' + slot,
+        desc: 'Slot ' + slot + ': all tasks in cooldown — insert IDLE. Tasks left: ' + remaining + '.',
+        freq: Object.assign({}, freqCopy),
+        cooldowns: Object.assign({}, cooldowns),
+        timeline: timeline.slice(),
+        chosen: null,
+        slotsUsed: slot,
+        totalExpected: expected,
+      });
+    }
+  }
+
+  // mark final step
+  if (steps.length > 0) {
+    var last = steps[steps.length - 1];
+    last.phase = 'Done';
+    last.desc = 'All tasks scheduled! Total time = ' + slot + ' slots. Formula predicted: ' + expected + '.';
+    last.isDone = true;
+  }
+
+  return steps;
+}
+
+function buildFreqTable(firstSnap) {
+  var freq = firstSnap.freq;
+  var maxF = Math.max.apply(null, Object.values(freq).concat([1]));
+  var letters = Object.keys(freq).sort();
+  var html = '';
+  letters.forEach(function(k) {
+    var pct = Math.round((freq[k] / maxF) * 100);
+    html += '<div class="freq-row" id="fr-' + k + '">';
+    html += '<span class="freq-letter">' + k + '</span>';
+    html += '<div class="freq-bar-wrap"><div class="freq-bar" id="fb-' + k + '" style="width:' + pct + '%"></div></div>';
+    html += '<span class="freq-count" id="fc-' + k + '">' + freq[k] + '</span>';
+    html += '<span class="cooldown-badge" id="cd-' + k + '" style="display:none">CD</span>';
+    html += '</div>';
+  });
+  document.getElementById('freq-table').innerHTML = html;
+}
+
+function buildTimelineSlots(total) {
+  var html = '';
+  for (var i = 0; i < total; i++) {
+    html += '<div class="slot" id="ts-' + i + '" data-state="pending">';
+    html += '<span class="slot-idx">' + (i + 1) + '</span>';
+    html += '</div>';
+  }
+  document.getElementById('timeline-slots').innerHTML = html;
+  document.getElementById('timeline-badge').textContent = total + ' slots';
+}
+
+function updateFormula(tasks, n) {
+  var freq = computeFreq(tasks);
+  var maxF = Math.max.apply(null, Object.values(freq));
+  var cntMax = Object.values(freq).filter(function(v) { return v === maxF; }).length;
+  var expected = Math.max(tasks.length, (maxF - 1) * (n + 1) + cntMax);
+  var box = document.getElementById('formula-box');
+  box.style.display = '';
+  box.innerHTML =
+    'formula: max(<strong>' + tasks.length + '</strong>, (<strong>' + maxF + '</strong>-1)×(<strong>' + n + '</strong>+1)+<strong>' + cntMax + '</strong>)\n' +
+    '       = max(' + tasks.length + ', ' + ((maxF - 1) * (n + 1) + cntMax) + ') = <strong>' + expected + '</strong>';
+}
+
+function applyStep(snap) {
+  updateFreqTable(snap);
+  updateTimeline(snap);
+  updateTotalVal(snap);
+}
+
+function updateFreqTable(snap) {
+  var freq = snap.freq;
+  var cooldowns = snap.cooldowns;
+  var chosen = snap.chosen;
+  var maxF = Math.max.apply(null, Object.values(freq).concat([1]));
+
+  Object.keys(freq).forEach(function(k) {
+    var row = document.getElementById('fr-' + k);
+    var bar = document.getElementById('fb-' + k);
+    var cnt = document.getElementById('fc-' + k);
+    var cd  = document.getElementById('cd-' + k);
+    if (!row) return;
+
+    var pct = maxF > 0 ? Math.round((freq[k] / maxF) * 100) : 0;
+    if (bar) bar.style.width = pct + '%';
+    if (cnt) cnt.textContent = freq[k];
+
+    row.className = 'freq-row';
+    if (freq[k] === 0) {
+      row.classList.add('done');
+    } else if (k === chosen) {
+      row.classList.add('chosen');
+      if (bar) gsap.fromTo(bar, { scaleX: 0.7 }, { scaleX: 1, duration: 0.22, ease: 'back.out(2)', transformOrigin: 'left' });
+    } else if (cooldowns[k]) {
+      row.classList.add('cooling');
+    }
+
+    if (cd) {
+      if (cooldowns[k]) {
+        cd.style.display = '';
+        cd.textContent = 'CD:' + cooldowns[k];
+      } else {
+        cd.style.display = 'none';
+      }
+    }
+  });
+}
+
+function updateTimeline(snap) {
+  var timeline = snap.timeline;
+  var currentIdx = timeline.length - 1;
+
+  for (var i = 0; i < totalSlots; i++) {
+    var el = document.getElementById('ts-' + i);
+    if (!el) continue;
+
+    if (i > currentIdx) {
+      el.dataset.state = 'pending';
+      el.textContent = '';
+      el.insertAdjacentHTML('beforeend', '<span class="slot-idx">' + (i + 1) + '</span>');
+    } else {
+      var entry = timeline[i];
+      var isCurrent = (i === currentIdx) && !snap.isDone;
+
+      if (snap.isDone) {
+        el.dataset.state = 'done';
+      } else if (isCurrent) {
+        el.dataset.state = entry.type === 'task' ? 'current-task' : 'current-idle';
+      } else {
+        el.dataset.state = entry.type === 'task' ? 'task' : 'idle';
+      }
+
+      var label = entry.type === 'task' ? entry.letter : '·';
+      el.innerHTML = label + '<span class="slot-idx">' + (i + 1) + '</span>';
+
+      if (isCurrent) {
+        gsap.fromTo(el, { scale: 0.75 }, { scale: 1, duration: 0.25, ease: 'back.out(2)' });
+      }
+    }
+  }
+
+  // scroll current slot into view
+  var curEl = document.getElementById('ts-' + currentIdx);
+  if (curEl) curEl.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+}
+
+function updateTotalVal(snap) {
+  var el = document.getElementById('total-val');
+  if (!el) return;
+  if (snap.isDone) {
+    el.textContent = snap.slotsUsed;
+    el.style.color = '#86efac';
+  } else {
+    el.textContent = snap.slotsUsed || '—';
+    el.style.color = '';
+  }
+}
+</script>
+<script>
+  if (window.self !== window.top) {
+    var bl = document.querySelector('.back-link');
+    if (bl) bl.style.display = 'none';
+  }
+</script>
+</body>
+</html>
