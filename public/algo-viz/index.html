@@ -70,6 +70,8 @@
 
   <a href='interleaving-string/index.html'><div class='card'><span class='card-tag'>2-D DP</span><div class='card-name'>Interleaving String</div><div class='card-desc'>2D boolean DP &mdash; dp[i][j] asks: can s3[i+j] be formed from s1[0..i] and s2[0..j]? Each cell checks two predecessors. Watch true propagate through the grid.</div></div></a>
 
+  <a href='longest-increasing-path/index.html'><div class='card'><span class='card-tag'>2-D DP</span><div class='card-name'>Longest Increasing Path in a Matrix</div><div class='card-desc'>DFS with memoization — from each cell explore 4 neighbors with a strictly larger value. memo[r][c] caches the longest path starting there. Each cell is computed once; result is the global max.</div></div></a>
+
   <a href='binary-tree-max-path/index.html'><div class='card'><span class='card-tag'>Tree</span><div class='card-name'>Binary Tree Maximum Path Sum</div><div class='card-desc'>Post-order DFS — at each node compute the best path through it (left gain + node + right gain) and track the global max. Only the larger child branch is passed upward.</div></div></a>
 
   <a href='word-search/index.html'><div class='card'><span class='card-tag'>Backtracking</span><div class='card-name'>Word Search</div><div class='card-desc'>DFS from every cell — match the word character by character through adjacent cells. Watch the path extend, hit dead ends, and backtrack until the word is found or exhausted.</div></div></a>
@@ -762,6 +764,8 @@
 
 
   <a href='reconstruct-itinerary/index.html'><div class='card'><span class='card-tag'>Advanced Graphs</span><div class='card-name'>Reconstruct Itinerary</div><div class='card-desc'>Hierholzer&#39;s algorithm on a directed graph &mdash; always fly to the lexicographically smallest destination. Nodes are added to the result post-recursion, then reversed for the final route.</div></div></a>
+
+  <a href='cheapest-flights/index.html'><div class='card'><span class='card-tag'>Advanced Graphs</span><div class='card-name'>Cheapest Flights Within K Stops</div><div class='card-desc'>Bellman-Ford with a stop limit &mdash; run k+1 relaxation rounds, each round snapshotting prev costs so only one new edge is added per stop. dp[node] tracks the cheapest cost reachable within the current number of stops.</div></div></a>
 
 </div>
 
