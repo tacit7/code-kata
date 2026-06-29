@@ -10,6 +10,7 @@ import { useKeyboardShortcuts } from "../hooks/use-keyboard-shortcuts";
 import { runTests } from "../lib/test-runner";
 import { saveUserCode, loadUserCode, deleteUserCode, saveKataNotes, loadKataNotes } from "../lib/database";
 import { TestOutput } from "./test-output";
+import { toast } from "../stores/toast-store";
 import type { Kata, TestResult } from "../types/editor";
 
 // Matches "Ref: LeetCode #123 Problem Name" at the end of a description
@@ -305,7 +306,6 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
   const [running, setRunning] = useState(false);
   const [runCount, setRunCount] = useState(0);
   const [kataPassed, setKataPassed] = useState(false);
-  const [maxRunsReached, setMaxRunsReached] = useState(false);
   const [showPanel, setShowPanel] = useState<"description" | "solution" | "notes" | "viz" | null>(
     isSession && hideDescriptionInSession ? null : kata.description ? "description" : null
   );
@@ -328,7 +328,6 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
     setCodeLoaded(false);
     setRunCount(0);
     setKataPassed(false);
-    setMaxRunsReached(false);
     loadUserCode(kata.id).then((code) => {
       setSavedCode(code);
       setCodeLoaded(true);
@@ -385,7 +384,7 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
         const newCount = runCount + 1;
         setRunCount(newCount);
         if (newCount >= maxTestRuns) {
-          setMaxRunsReached(true);
+          toast.error("Max attempts reached — moving to next problem", 1500);
           setTimeout(() => { onAdvance?.(); }, 1500);
         }
       }
@@ -397,7 +396,7 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
         const newCount = runCount + 1;
         setRunCount(newCount);
         if (newCount >= maxTestRuns) {
-          setMaxRunsReached(true);
+          toast.error("Max attempts reached — moving to next problem", 1500);
           setTimeout(() => { onAdvance?.(); }, 1500);
         }
       }
@@ -726,14 +725,6 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
             </button>
           </div>
         </div>
-
-        {/* Max attempts reached banner */}
-        {maxRunsReached && (
-          <div className="px-4 py-2 bg-error/10 text-error text-xs font-medium border-t border-error/20 shrink-0 flex items-center gap-2">
-            <span className="loading loading-spinner loading-xs" />
-            Max attempts reached — moving to next problem...
-          </div>
-        )}
 
         {/* Closable results pane */}
         {(results || running) && (

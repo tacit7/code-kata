@@ -4,6 +4,7 @@ import { useSettingsStore } from "./stores/settings-store";
 import { useKataStore } from "./stores/kata-store";
 import { useKeyboardShortcuts } from "./hooks/use-keyboard-shortcuts";
 import { TopBar } from "./components/top-bar";
+import { Toaster } from "./components/toaster";
 import { EditorPage } from "./routes/editor";
 import { PracticePage } from "./routes/library";
 import { PracticeQueuePage } from "./routes/practice";
@@ -85,6 +86,7 @@ function App() {
           </Routes>
         </main>
       </div>
+      <Toaster />
     </div>
   );
 }
