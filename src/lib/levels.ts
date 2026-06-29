@@ -2,7 +2,7 @@ export const LEVELS = [
   {
     level: 1,
     label: "Arrays & Hashing",
-    categories: ["arrays-and-hashing", "arrays", "string"],
+    categories: ["arrays", "hashing", "string"],
   },
   {
     level: 2,

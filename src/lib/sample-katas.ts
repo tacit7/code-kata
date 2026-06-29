@@ -299,7 +299,7 @@ function test_self_connected() {
   },
   {
     name: "Two Sum",
-    category: "arrays-and-hashing",
+    category: "arrays",
     language: "javascript",
     difficulty: "easy",
     description:
@@ -347,7 +347,7 @@ function test_first_and_last() {
   },
   {
     name: "FizzBuzz",
-    category: "arrays-and-hashing",
+    category: "arrays",
     language: "javascript",
     difficulty: "easy",
     description:
@@ -407,7 +407,7 @@ function test_full_sequence() {
   },
   {
     name: "Frequency Count",
-    category: "arrays-and-hashing",
+    category: "arrays",
     language: "javascript",
     difficulty: "easy",
     description:
@@ -442,7 +442,7 @@ function test_empty() {
   },
   {
     name: "Most Frequent Element",
-    category: "arrays-and-hashing",
+    category: "arrays",
     language: "javascript",
     difficulty: "easy",
     description:
@@ -486,7 +486,7 @@ function test_numbers() {
   },
   {
     name: "Merge Sort",
-    category: "arrays-and-hashing",
+    category: "arrays",
     language: "javascript",
     difficulty: "medium",
     description:
@@ -549,7 +549,7 @@ function merge(left, right) {
   },
   {
     name: "Lomuto Partition",
-    category: "arrays-and-hashing",
+    category: "arrays",
     language: "javascript",
     difficulty: "medium",
     description:
@@ -605,7 +605,7 @@ function test_all_same() {
   },
   {
     name: "Quick Sort",
-    category: "arrays-and-hashing",
+    category: "arrays",
     language: "javascript",
     difficulty: "medium",
     description:
@@ -674,7 +674,7 @@ function quickSort(arr) {
   },
   {
     name: "Build Prefix Sum",
-    category: "arrays-and-hashing",
+    category: "arrays",
     language: "javascript",
     difficulty: "easy",
     description:
@@ -709,7 +709,7 @@ function test_negatives() {
   },
   {
     name: "Range Sum Query",
-    category: "arrays-and-hashing",
+    category: "arrays",
     language: "javascript",
     difficulty: "easy",
     description:

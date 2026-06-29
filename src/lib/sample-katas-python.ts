@@ -451,7 +451,7 @@ def test_self_connected():
   },
   {
     name: "Frequency Count",
-    category: "arrays-and-hashing",
+    category: "arrays",
     language: "python",
     difficulty: "easy",
     description: `Frequency Count
@@ -501,7 +501,7 @@ def test_frequency_count_empty():
   },
   {
     name: "Most Frequent Element",
-    category: "arrays-and-hashing",
+    category: "arrays",
     language: "python",
     difficulty: "easy",
     description: `Most Frequent Element
@@ -549,7 +549,7 @@ def test_most_frequent_single():
   },
   {
     name: "Merge Sort",
-    category: "arrays-and-hashing",
+    category: "arrays",
     language: "python",
     difficulty: "medium",
     description: `Merge Sort
@@ -630,7 +630,7 @@ def _merge(left, right):
   },
   {
     name: "Lomuto Partition",
-    category: "arrays-and-hashing",
+    category: "arrays",
     language: "python",
     difficulty: "medium",
     description: `Lomuto Partition
@@ -696,7 +696,7 @@ def test_partition_two():
   },
   {
     name: "Quick Sort",
-    category: "arrays-and-hashing",
+    category: "arrays",
     language: "python",
     difficulty: "medium",
     description: `Quick Sort
@@ -768,7 +768,7 @@ def _qs(arr, lo, hi):
   },
   {
     name: "Two Sum",
-    category: "arrays-and-hashing",
+    category: "arrays",
     language: "python",
     difficulty: "easy",
     description: `Two Sum
@@ -827,7 +827,7 @@ def test_negative():
   },
   {
     name: "Build Prefix Sum",
-    category: "arrays-and-hashing",
+    category: "arrays",
     language: "python",
     difficulty: "easy",
     description: `Build Prefix Sum
@@ -881,7 +881,7 @@ def test_build_prefix_negatives():
   },
   {
     name: "Range Sum Query",
-    category: "arrays-and-hashing",
+    category: "arrays",
     language: "python",
     difficulty: "easy",
     description: `Range Sum Query

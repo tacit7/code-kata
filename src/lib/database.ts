@@ -64,6 +64,9 @@ async function createSchema(db: Database) {
     // Column already exists
   }
 
+  // Migrate existing DBs: rename arrays-and-hashing → arrays
+  await db.execute(`UPDATE katas SET category = 'arrays' WHERE category = 'arrays-and-hashing'`);
+
   await db.execute(`
     CREATE TABLE IF NOT EXISTS sessions (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
