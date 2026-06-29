@@ -77,7 +77,7 @@ function rowToAttempt(row: AttemptRow): Attempt {
   };
 }
 
-interface KataStats {
+export interface KataStats {
   kata_id: number;
   attempt_count: number;
   pass_count: number;
@@ -97,7 +97,7 @@ interface KataStats {
  *
  *  Recency bonus: +1 per 7 days since last attempt (capped at +4 for 28+ days idle).
  */
-function srWeight(stats: KataStats | undefined, medianTimeMs: number): number {
+export function srWeight(stats: KataStats | undefined, medianTimeMs: number): number {
   if (!stats || stats.attempt_count === 0) return 10;
 
   const daysSince = stats.last_attempt_at
@@ -114,7 +114,7 @@ function srWeight(stats: KataStats | undefined, medianTimeMs: number): number {
   return 0.5 + recencyBonus;
 }
 
-async function fetchKataStats(kataIds: number[]): Promise<Map<number, KataStats>> {
+export async function fetchKataStats(kataIds: number[]): Promise<Map<number, KataStats>> {
   if (kataIds.length === 0) return new Map();
   const db = await getDb();
   const placeholders = kataIds.map((_, i) => `$${i + 1}`).join(", ");
@@ -136,7 +136,7 @@ async function fetchKataStats(kataIds: number[]): Promise<Map<number, KataStats>
   return new Map(rows.map((r) => [r.kata_id, r]));
 }
 
-function medianTime(statsMap: Map<number, KataStats>): number {
+export function medianTime(statsMap: Map<number, KataStats>): number {
   const times: number[] = [];
   for (const r of statsMap.values()) {
     if (r.last_passed === 1 && r.avg_time_ms > 0) times.push(r.avg_time_ms);
