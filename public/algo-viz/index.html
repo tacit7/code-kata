@@ -60,11 +60,15 @@
 </div>
 
 <div class="card-grid">
+  <a href='word-search-2/index.html'><div class='card'><span class='card-tag'>Trie</span><div class='card-name'>Word Search II</div><div class='card-desc'>Build a trie from all target words, then DFS from every board cell — the trie prunes entire branches instantly. When a trie leaf is reached, a word is collected. Watch how one traversal finds all words simultaneously.</div></div></a>
+
   <a href='valid-parenthesis-string/index.html'><div class='card'><span class='card-tag'>Greedy</span><div class='card-name'>Valid Parenthesis String</div><div class='card-desc'>Track a range [min_open, max_open] — star expands both ends, open shifts right, close shifts left. If max ever goes negative it is invalid; min==0 at the end means valid.</div></div></a>
 
   <a href='min-cost-connect/index.html'><div class='card'><span class='card-tag'>Advanced Graphs</span><div class='card-name'>Min Cost to Connect All Points</div><div class='card-desc'>Prim&rsquo;s algorithm with a min-heap on Manhattan distance. Start from node 0, greedily pick the cheapest edge to an unvisited point, and add it to the MST until all points are connected.</div></div></a>
 
   <a href='kth-largest-stream/index.html'><div class='card'><span class='card-tag'>Heap</span><div class='card-name'>Kth Largest Element in a Stream</div><div class='card-desc'>Min-heap of size k &#8212; the top is always the kth largest. Each new element pushes in and the smallest is evicted if the heap exceeds k.</div></div></a>
+
+  <a href='find-median-stream/index.html'><div class='card'><span class='card-tag'>Heap</span><div class='card-name'>Find Median From Data Stream</div><div class='card-desc'>Two heaps keep the stream split in half &#8212; maxHeap holds the lower half, minHeap the upper. addNum rebalances so maxHeap is never smaller; findMedian reads the tops in O(1).</div></div></a>
 
   <a href='serialize-deserialize-tree/index.html'><div class='card'><span class='card-tag'>Tree</span><div class='card-name'>Serialize and Deserialize Binary Tree</div><div class='card-desc'>BFS serialize appends level-order tokens including nulls. Deserialize replays the queue — each token either spawns a node or marks a null child. Watch both directions.</div></div></a>
 

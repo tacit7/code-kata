@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Find Median From Data Stream</title>
+  <link rel="stylesheet" href="../shared/style.css" />
+  <script src="../shared/viz.js"></script>
+  <style>
+    body { display:flex; flex-direction:column; height:100vh; overflow:hidden; }
+
+    .top-area  { flex:0 0 auto; }
+    .mid-area  { flex:1; display:grid; grid-template-columns:1fr auto 1fr; gap:12px; padding:0 16px 8px; overflow:hidden; min-height:0; }
+    .bot-area  { flex:0 0 auto; padding:0 16px 10px; }
+
+    .panel {
+      background:var(--surface); border:1px solid var(--border);
+      border-radius:var(--radius-lg); padding:14px 16px;
+      display:flex; flex-direction:column; gap:10px;
+      overflow:hidden; min-height:0;
+    }
+    .panel-title {
+      font-size:0.72rem; font-weight:700;
+      text-transform:uppercase; letter-spacing:0.08em;
+      flex-shrink:0;
+    }
+    .panel-title.max-title { color:#f472b6; }
+    .panel-title.min-title { color:#60a5fa; }
+
+    .panel-sub {
+      font-size:0.72rem; color:var(--text-dim); flex-shrink:0;
+      font-family:monospace;
+    }
+
+    /* ── heap tree svg ── */
+    .tree-wrap { flex:1; overflow:hidden; min-height:0; display:flex; align-items:center; justify-content:center; }
+    svg.heap-tree { width:100%; height:100%; overflow:visible; }
+
+    .node-circle {
+      transition:fill 0.25s, stroke 0.25s;
+    }
+    .node-text {
+      font-family:monospace; font-size:13px; font-weight:700;
+      dominant-baseline:central; text-anchor:middle;
+      fill:var(--text-bright);
+      pointer-events:none;
+    }
+    .node-label {
+      font-family:monospace; font-size:9px;
+      dominant-baseline:central; text-anchor:middle;
+      pointer-events:none;
+    }
+    .tree-edge { transition:stroke 0.25s; }
+
+    /* ── center column (median) ── */
+    .center-col {
+      display:flex; flex-direction:column; align-items:center;
+      justify-content:center; gap:16px; width:120px; flex-shrink:0;
+    }
+
+    .median-card {
+      background:var(--surface); border:1px solid var(--border);
+      border-radius:var(--radius-lg); padding:14px 12px;
+      display:flex; flex-direction:column; align-items:center; gap:8px;
+      text-align:center; width:100%;
+    }
+    .median-label {
+      font-size:0.68rem; font-weight:700; text-transform:uppercase;
+      letter-spacing:0.08em; color:var(--text-dim);
+    }
+    .median-val {
+      font-family:monospace; font-size:1.6rem; font-weight:700;
+      color:#fbbf24; line-height:1;
+      transition:color 0.3s;
+    }
+    .median-val.pending { color:var(--text-ghost); font-size:1.1rem; }
+    .median-formula {
+      font-family:monospace; font-size:0.7rem; color:var(--text-dim);
+      line-height:1.4;
+    }
+
+    .size-badges {
+      display:flex; flex-direction:column; gap:6px; width:100%;
+    }
+    .size-badge {
+      font-size:0.72rem; font-family:monospace; text-align:center;
+      padding:4px 8px; border-radius:6px; border:1px solid var(--border);
+      background:var(--bg);
+    }
+    .size-badge.max-badge { color:#f472b6; border-color:#be185d; }
+    .size-badge.min-badge { color:#60a5fa; border-color:#1d4ed8; }
+
+    /* ── step log (bottom of each panel) ── */
+    .heap-log { flex-shrink:0; max-height:80px; overflow-y:auto; }
+    .heap-log-row {
+      font-family:monospace; font-size:0.75rem; color:var(--text-dim);
+      padding:2px 0;
+    }
+    .heap-log-row.active { color:var(--text); }
+
+    /* ── nav ── */
+    .nav-strip { display:flex; gap:10px; align-items:center; }
+    .step-info { flex:1; min-width:0; display:flex; flex-direction:column; gap:2px; }
+    #phase-label { font-size:0.72rem; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:var(--text-dim); }
+    #step-desc   { font-size:0.82rem; color:var(--text-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
+    .speed-select {
+      background:var(--bg); border:1px solid var(--border);
+      border-radius:var(--radius-sm); color:var(--text);
+      font-size:0.85rem; padding:8px 10px; outline:none; width:80px;
+    }
+
+    .empty-hint {
+      color:var(--text-ghost); font-size:0.8rem; text-align:center;
+      font-family:monospace; padding:20px 0;
+    }
+  </style>
+</head>
+<body class="page">
+
+<div class="page-header top-area">
+  <a class="back-link" href="../index.html">&larr; All Algorithms</a>
+  <div class="page-title">Find Median From Data Stream</div>
+  <div class="page-sub">LeetCode 295 &middot; Two heaps &middot; O(log n) add, O(1) findMedian &middot; O(n) space</div>
+</div>
+
+<div class="controls top-area">
+  <div class="field">
+    <label>Stream values (comma-separated)</label>
+    <input id="inp-stream" type="text" value="1,2,3" style="width:200px;font-family:monospace" />
+  </div>
+  <button class="btn-primary" onclick="buildAndRun()">Build &amp; Run</button>
+</div>
+
+<div class="mid-area">
+
+  <!-- maxHeap panel -->
+  <div class="panel">
+    <div class="panel-title max-title">maxHeap — lower half</div>
+    <div class="panel-sub" id="max-array">[]</div>
+    <div class="tree-wrap">
+      <svg class="heap-tree" id="max-svg" viewBox="0 0 300 220">
+        <text x="150" y="110" class="empty-hint" font-family="monospace" font-size="13" fill="var(--text-ghost)" text-anchor="middle">empty</text>
+      </svg>
+    </div>
+  </div>
+
+  <!-- center median display -->
+  <div class="center-col">
+    <div class="median-card">
+      <div class="median-label">findMedian</div>
+      <div class="median-val pending" id="median-val">—</div>
+      <div class="median-formula" id="median-formula"></div>
+    </div>
+    <div class="size-badges">
+      <div class="size-badge max-badge" id="max-size-badge">max: 0</div>
+      <div class="size-badge min-badge" id="min-size-badge">min: 0</div>
+    </div>
+  </div>
+
+  <!-- minHeap panel -->
+  <div class="panel">
+    <div class="panel-title min-title">minHeap — upper half</div>
+    <div class="panel-sub" id="min-array">[]</div>
+    <div class="tree-wrap">
+      <svg class="heap-tree" id="min-svg" viewBox="0 0 300 220">
+        <text x="150" y="110" class="empty-hint" font-family="monospace" font-size="13" fill="var(--text-ghost)" text-anchor="middle">empty</text>
+      </svg>
+    </div>
+  </div>
+
+</div>
+
+<div class="bot-area">
+  <div class="nav-strip">
+    <button class="btn-step" id="btn-back" disabled>&larr;</button>
+    <button class="btn-step" id="btn-next" disabled>&rarr;</button>
+    <button class="btn-play" id="btn-play" disabled>&#9654; Play</button>
+    <select class="speed-select" id="speed-select">
+      <option value="900">Slow</option>
+      <option value="500" selected>Medium</option>
+      <option value="160">Fast</option>
+    </select>
+    <div class="step-info">
+      <div id="phase-label">&mdash;</div>
+      <div id="step-desc">Enter stream values then click Build &amp; Run.</div>
+    </div>
+  </div>
+</div>
+
+<script>
+var simSteps = [], nav;
+var currentStream = [];
+
+// ── Max-Heap ─────────────────────────────────────────────────────────────────
+function maxPush(h, v) {
+  h.push(v);
+  var i = h.length - 1;
+  while (i > 0) {
+    var p = (i - 1) >> 1;
+    if (h[i] > h[p]) { var t=h[i]; h[i]=h[p]; h[p]=t; i=p; } else break;
+  }
+}
+function maxPop(h) {
+  var top = h[0], last = h.pop();
+  if (h.length > 0) { h[0] = last; siftDownMax(h, 0); }
+  return top;
+}
+function siftDownMax(h, i) {
+  while (true) {
+    var l=2*i+1, r=2*i+2, lg=i;
+    if (l<h.length && h[l]>h[lg]) lg=l;
+    if (r<h.length && h[r]>h[lg]) lg=r;
+    if (lg!==i) { var t=h[i]; h[i]=h[lg]; h[lg]=t; i=lg; } else break;
+  }
+}
+
+// ── Min-Heap ──────────────────────────────────────────────────────────────────
+function minPush(h, v) {
+  h.push(v);
+  var i = h.length - 1;
+  while (i > 0) {
+    var p = (i - 1) >> 1;
+    if (h[i] < h[p]) { var t=h[i]; h[i]=h[p]; h[p]=t; i=p; } else break;
+  }
+}
+function minPop(h) {
+  var top = h[0], last = h.pop();
+  if (h.length > 0) { h[0] = last; siftDownMin(h, 0); }
+  return top;
+}
+function siftDownMin(h, i) {
+  while (true) {
+    var l=2*i+1, r=2*i+2, sm=i;
+    if (l<h.length && h[l]<h[sm]) sm=l;
+    if (r<h.length && h[r]<h[sm]) sm=r;
+    if (sm!==i) { var t=h[i]; h[i]=h[sm]; h[sm]=t; i=sm; } else break;
+  }
+}
+
+// ── Simulation ────────────────────────────────────────────────────────────────
+function simulate(stream) {
+  var steps = [];
+  var maxH = [], minH = [];
+  var medians = [];
+
+  function snap(phase, desc, opts) {
+    opts = opts || {};
+    steps.push({
+      phase:        phase,
+      desc:         desc,
+      maxH:         maxH.slice(),
+      minH:         minH.slice(),
+      highlight:    opts.highlight || null, // {heap:'max'|'min', idx:0} highlights a node
+      medians:      medians.slice(),
+      showMedian:   opts.showMedian || false,
+      streamIdx:    opts.streamIdx !== undefined ? opts.streamIdx : -1,
+    });
+  }
+
+  snap('Start', 'Two heaps ready. maxHeap holds the lower half, minHeap holds the upper half.', {});
+
+  for (var si = 0; si < stream.length; si++) {
+    var num = stream[si];
+
+    // Step 1: push to maxHeap
+    maxPush(maxH, num);
+    snap('addNum:push-max', 'add(' + num + '): push ' + num + ' → maxHeap. top=' + maxH[0] + '.', {
+      streamIdx: si,
+      highlight: {heap:'max', val:num},
+    });
+
+    // Step 2: move maxHeap.top() to minHeap
+    var moved = maxPop(maxH);
+    minPush(minH, moved);
+    snap('addNum:balance', 'Move maxHeap.top()=' + moved + ' → minHeap. Ensures minHeap always holds values ≥ maxHeap.', {
+      streamIdx: si,
+      highlight: {heap:'min', val:moved},
+    });
+
+    // Step 3: rebalance if minHeap is larger
+    if (minH.length > maxH.length) {
+      var back = minPop(minH);
+      maxPush(maxH, back);
+      snap('addNum:rebalance', 'minHeap.size(' + (minH.length+1) + ') > maxHeap.size(' + (maxH.length-1) + ') → move minHeap.top()=' + back + ' back to maxHeap. maxHeap ≥ minHeap always.', {
+        streamIdx: si,
+        highlight: {heap:'max', val:back},
+      });
+    }
+
+    // Step 4: findMedian
+    var med;
+    if (maxH.length === minH.length) {
+      med = (maxH[0] + minH[0]) / 2;
+      medians = medians.concat([med]);
+      snap('findMedian', 'Equal sizes → median = (maxTop + minTop) / 2 = (' + maxH[0] + ' + ' + minH[0] + ') / 2 = ' + med + '.', {
+        streamIdx: si,
+        showMedian: true,
+        highlight: {heap:'both', maxVal:maxH[0], minVal:minH[0]},
+      });
+    } else {
+      med = maxH[0];
+      medians = medians.concat([med]);
+      snap('findMedian', 'maxHeap larger → median = maxHeap.top() = ' + med + '.', {
+        streamIdx: si,
+        showMedian: true,
+        highlight: {heap:'max', val:maxH[0]},
+      });
+    }
+  }
+
+  snap('Done', 'Stream complete. Medians: [' + medians.join(', ') + '].', { showMedian: true });
+  return steps;
+}
+
+// ── Tree Drawing ──────────────────────────────────────────────────────────────
+function drawHeapTree(svgEl, heap, highlight, isMax) {
+  svgEl.innerHTML = '';
+
+  if (!heap || heap.length === 0) {
+    var t = document.createElementNS('http://www.w3.org/2000/svg','text');
+    t.setAttribute('x','150'); t.setAttribute('y','110');
+    t.setAttribute('font-family','monospace'); t.setAttribute('font-size','13');
+    t.setAttribute('fill','var(--text-ghost)'); t.setAttribute('text-anchor','middle');
+    t.textContent = 'empty';
+    svgEl.appendChild(t);
+    return;
+  }
+
+  var n = heap.length;
+  var W = 300, H = 220;
+  var levels = Math.floor(Math.log2(n)) + 1;
+  var rowH = Math.min(60, Math.floor((H - 20) / levels));
+  var r = Math.min(20, Math.floor(rowH * 0.38));
+
+  var mainColor = isMax ? '#f472b6' : '#60a5fa';
+  var hlColor   = '#fbbf24';
+  var bgBase    = isMax ? '#2a0a1f' : '#0a1a2a';
+  var bgHl      = '#2a2000';
+
+  // compute positions
+  var pos = [];
+  for (var i = 0; i < n; i++) {
+    var lvl = Math.floor(Math.log2(i + 1));
+    var posInLvl = i - (Math.pow(2, lvl) - 1);
+    var nodesInLvl = Math.pow(2, lvl);
+    var x = W * (posInLvl + 0.5) / nodesInLvl;
+    var y = 20 + rowH * lvl;
+    pos.push({x:x, y:y});
+  }
+
+  // edges first
+  for (var i = 1; i < n; i++) {
+    var pi = (i - 1) >> 1;
+    var line = document.createElementNS('http://www.w3.org/2000/svg','line');
+    line.setAttribute('x1', pos[pi].x); line.setAttribute('y1', pos[pi].y);
+    line.setAttribute('x2', pos[i].x);  line.setAttribute('y2', pos[i].y);
+    line.setAttribute('stroke','var(--border)'); line.setAttribute('stroke-width','1.5');
+    line.classList.add('tree-edge');
+    svgEl.appendChild(line);
+  }
+
+  // nodes
+  for (var i = 0; i < n; i++) {
+    var val = heap[i];
+    var isHl = false;
+    if (highlight) {
+      if (highlight.heap === 'both') {
+        isHl = isMax ? (val === highlight.maxVal && i === 0) : (val === highlight.minVal && i === 0);
+      } else {
+        var heapMatch = (isMax && highlight.heap === 'max') || (!isMax && highlight.heap === 'min');
+        isHl = heapMatch && (val === highlight.val) && (i === 0 || highlight.heap !== 'max' || !isMax);
+        // highlight first occurrence of the value
+        if (heapMatch && highlight.val !== undefined) {
+          isHl = (val === highlight.val);
+          // only first occurrence
+          var found = false;
+          for (var j = 0; j < i; j++) { if (heap[j] === highlight.val) { found=true; break; } }
+          if (found) isHl = false;
+        }
+      }
+    }
+    var isRoot = (i === 0);
+
+    var g = document.createElementNS('http://www.w3.org/2000/svg','g');
+
+    var circ = document.createElementNS('http://www.w3.org/2000/svg','circle');
+    circ.setAttribute('cx', pos[i].x); circ.setAttribute('cy', pos[i].y);
+    circ.setAttribute('r', r);
+    circ.setAttribute('fill', isHl ? bgHl : bgBase);
+    circ.setAttribute('stroke', isHl ? hlColor : (isRoot ? mainColor : 'var(--border)'));
+    circ.setAttribute('stroke-width', isRoot ? '2' : '1.5');
+    circ.classList.add('node-circle');
+    g.appendChild(circ);
+
+    var txt = document.createElementNS('http://www.w3.org/2000/svg','text');
+    txt.setAttribute('x', pos[i].x); txt.setAttribute('y', pos[i].y);
+    txt.setAttribute('font-size', r < 16 ? '10' : '13');
+    txt.classList.add('node-text');
+    txt.setAttribute('fill', isHl ? hlColor : (isRoot ? mainColor : 'var(--text-bright)'));
+    txt.textContent = val;
+    g.appendChild(txt);
+
+    if (isRoot) {
+      var lbl = document.createElementNS('http://www.w3.org/2000/svg','text');
+      lbl.setAttribute('x', pos[i].x); lbl.setAttribute('y', pos[i].y + r + 10);
+      lbl.setAttribute('font-size','9'); lbl.classList.add('node-label');
+      lbl.setAttribute('fill', mainColor);
+      lbl.textContent = isMax ? 'top (max)' : 'top (min)';
+      g.appendChild(lbl);
+    }
+
+    svgEl.appendChild(g);
+  }
+}
+
+// ── Render step ───────────────────────────────────────────────────────────────
+function applyStep(s) {
+  var maxSvg = document.getElementById('max-svg');
+  var minSvg = document.getElementById('min-svg');
+
+  // draw trees
+  var hl = s.highlight;
+  var maxHl = null, minHl = null;
+  if (hl) {
+    if (hl.heap === 'max')  maxHl = hl;
+    if (hl.heap === 'min')  minHl = hl;
+    if (hl.heap === 'both') { maxHl = hl; minHl = hl; }
+  }
+  drawHeapTree(maxSvg, s.maxH, maxHl, true);
+  drawHeapTree(minSvg, s.minH, minHl, false);
+
+  // array labels
+  document.getElementById('max-array').textContent = '[' + s.maxH.join(', ') + ']';
+  document.getElementById('min-array').textContent = '[' + s.minH.join(', ') + ']';
+
+  // size badges
+  document.getElementById('max-size-badge').textContent = 'max: ' + s.maxH.length;
+  document.getElementById('min-size-badge').textContent = 'min: ' + s.minH.length;
+
+  // median
+  var medEl = document.getElementById('median-val');
+  var fmEl  = document.getElementById('median-formula');
+  if (s.medians.length > 0) {
+    var latest = s.medians[s.medians.length - 1];
+    medEl.textContent = latest;
+    medEl.className = 'median-val';
+    if (s.showMedian) {
+      medEl.style.color = '#fbbf24';
+      if (s.maxH.length === s.minH.length && s.maxH.length > 0) {
+        fmEl.textContent = '(' + s.maxH[0] + ' + ' + s.minH[0] + ') / 2';
+      } else {
+        fmEl.textContent = 'maxHeap.top() = ' + (s.maxH[0] !== undefined ? s.maxH[0] : '?');
+      }
+    } else {
+      medEl.style.color = 'var(--text-dim)';
+      fmEl.textContent = '';
+    }
+  } else {
+    medEl.textContent = '—';
+    medEl.className = 'median-val pending';
+    fmEl.textContent = '';
+  }
+
+  // nav info
+  document.getElementById('phase-label').textContent = s.phase;
+  document.getElementById('step-desc').textContent = s.desc;
+}
+
+// ── Wire-up ───────────────────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', function() {
+  nav = VizNav({
+    btnPrev:  document.getElementById('btn-back'),
+    btnNext:  document.getElementById('btn-next'),
+    btnPlay:  document.getElementById('btn-play'),
+    speedSel: document.getElementById('speed-select'),
+    render: function(snap, cur, total) {
+      applyStep(snap);
+      document.getElementById('phase-label').textContent = 'Step ' + (cur+1) + ' / ' + total + '  ·  ' + snap.phase;
+    }
+  });
+  buildAndRun();
+});
+
+function parseCSV(raw) {
+  return raw.split(',').map(function(s){ return parseFloat(s.trim()); }).filter(function(n){ return !isNaN(n); });
+}
+
+function buildAndRun() {
+  var stream = parseCSV(document.getElementById('inp-stream').value);
+  if (!stream.length) return;
+  currentStream = stream;
+  simSteps = simulate(stream);
+  nav.load(simSteps);
+}
+</script>
+<script>
+  if (window.self !== window.top) {
+    var bl = document.querySelector('.back-link');
+    if (bl) bl.style.display = 'none';
+  }
+</script>
+</body>
+</html>
