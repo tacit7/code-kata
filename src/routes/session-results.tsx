@@ -19,7 +19,7 @@ export function SessionResultsPage() {
   }, [activeSession, sessionId, allKatas, loadSession]);
 
   if (!activeSession) {
-    if (!sessionId) return <Navigate to="/practice" replace />;
+    if (!sessionId) return <Navigate to="/problems" replace />;
     return (
       <div className="flex items-center justify-center h-full text-base-content/30 text-sm">
         <div className="flex items-center gap-2">
@@ -38,11 +38,11 @@ export function SessionResultsPage() {
 
   const handleBackToLibrary = () => {
     clearSession();
-    navigate("/practice");
+    navigate("/problems");
   };
 
   const handlePracticeAgain = () => {
-    navigate("/practice");
+    navigate("/problems");
   };
 
   const toggleDiff = (index: number) => {

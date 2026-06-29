@@ -73,7 +73,7 @@ function App() {
           <Routes>
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="/dashboard" element={<DashboardPage />} />
-            <Route path="/practice" element={<PracticePage />} />
+            <Route path="/problems" element={<PracticePage />} />
             <Route path="/kata/new" element={<KataFormPage />} />
             <Route path="/kata/:kataId/edit" element={<KataFormPage />} />
             <Route path="/editor/:kataId" element={<EditorPage />} />

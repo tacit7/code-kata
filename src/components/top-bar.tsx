@@ -7,7 +7,7 @@ import { useTimerStore } from "../stores/timer-store";
 
 const NAV_ITEMS = [
   { path: "/dashboard", label: "Dashboard" },
-  { path: "/practice", label: "Practice", matchPrefix: "/session" },
+  { path: "/problems", label: "Problems", matchPrefix: "/session" },
   { path: "/settings", label: "Settings" },
 ];
 
@@ -32,7 +32,7 @@ export function TopBar() {
 
   const handleStartPractice = useCallback(async () => {
     if (dailyCount === 0) {
-      navigate("/practice");
+      navigate("/problems");
       return;
     }
     if (launching) return;
@@ -41,7 +41,7 @@ export function TopBar() {
     const resolved = dailyKataIds.map((id) => kataMap.get(id)).filter(Boolean) as typeof katas;
     if (resolved.length === 0) {
       setLaunching(false);
-      navigate("/practice");
+      navigate("/problems");
       return;
     }
     resetKataTimer();

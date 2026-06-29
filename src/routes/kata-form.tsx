@@ -30,7 +30,7 @@ export function KataFormPage() {
     if (!isEdit || !kataId) return;
     const kata = katas.find((k) => k.id === Number(kataId));
     if (!kata || !kata.isCustom) {
-      navigate("/practice");
+      navigate("/problems");
       return;
     }
     setName(kata.name);
@@ -73,7 +73,7 @@ export function KataFormPage() {
       } else {
         await createKata(kataData);
       }
-      navigate("/practice");
+      navigate("/problems");
     } catch (err) {
       setError(String(err));
     } finally {
@@ -85,7 +85,7 @@ export function KataFormPage() {
     if (!kataId) return;
     if (!confirm("Delete this kata? This cannot be undone.")) return;
     await deleteKata(Number(kataId));
-    navigate("/practice");
+    navigate("/problems");
   };
 
   const monacoLang = language === "python" ? "python" : language === "ruby" ? "ruby" : "javascript";
@@ -108,7 +108,7 @@ export function KataFormPage() {
             </button>
           )}
           <button
-            onClick={() => navigate("/practice")}
+            onClick={() => navigate("/problems")}
             className="btn btn-ghost btn-sm"
           >
             Cancel

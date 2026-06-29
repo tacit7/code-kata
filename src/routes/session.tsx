@@ -95,7 +95,7 @@ export function SessionPage() {
   }, [stopSessionTimer, finishSession, navigate, sessionId]);
 
   if (!activeSession || !currentKata) {
-    if (!sessionId) return <Navigate to="/practice" replace />;
+    if (!sessionId) return <Navigate to="/problems" replace />;
     return (
       <div className="flex items-center justify-center h-full text-base-content/30 text-sm">
         <div className="flex items-center gap-2">

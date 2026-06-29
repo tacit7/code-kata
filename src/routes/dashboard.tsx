@@ -37,7 +37,7 @@ function PracticeDailyCard() {
 
   const handleClick = useCallback(async () => {
     if (!hasDaily) {
-      navigate("/practice");
+      navigate("/problems");
       return;
     }
     if (launching) return;
@@ -46,7 +46,7 @@ function PracticeDailyCard() {
     const resolved = dailyKataIds.map((id) => kataMap.get(id)).filter(Boolean) as typeof katas;
     if (resolved.length === 0) {
       setLaunching(false);
-      navigate("/practice");
+      navigate("/problems");
       return;
     }
     resetKataTimer();

@@ -16,7 +16,7 @@ export function EditorPage() {
     resetKataTimer();
   }, [kataId, resetKataTimer]);
 
-  if (!kata) return <Navigate to="/practice" replace />;
+  if (!kata) return <Navigate to="/problems" replace />;
 
   return <KataEditor kata={kata} />;
 }
