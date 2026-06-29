@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Reconstruct Itinerary</title>
+  <link rel="stylesheet" href="../shared/style.css" />
+  <script src="../shared/viz.js"></script>
+  <style>
+    body {
+      display: flex; flex-direction: column;
+      height: 100vh; overflow: hidden; margin: 0;
+    }
+
+    /* ── Top bar ──────────────────────────────────────── */
+    .top-bar {
+      display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+      padding: 9px 14px; border-bottom: 1px solid var(--border);
+      background: var(--surface); flex-shrink: 0;
+    }
+    .page-title { font-size: 0.95rem; font-weight: 700; color: var(--text-bright); }
+    .back-link  { font-size: 0.75rem; color: var(--text-dim); text-decoration: none; }
+    .back-link:hover { color: var(--accent); }
+    .tickets-input {
+      flex: 1; min-width: 180px;
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); color: var(--text);
+      font-family: monospace; font-size: 0.78rem; padding: 6px 10px; outline: none;
+    }
+    .tickets-input:focus { border-color: var(--accent); }
+    .btn-build {
+      background: var(--accent); border: none; border-radius: var(--radius-sm);
+      color: #fff; cursor: pointer; font-size: 0.82rem; font-weight: 600;
+      padding: 7px 14px; transition: opacity 0.2s; flex-shrink: 0;
+    }
+    .btn-build:hover { opacity: 0.85; }
+
+    /* ── Middle ───────────────────────────────────────── */
+    .middle {
+      flex: 1; display: flex; flex-direction: column; min-height: 0;
+    }
+    .content-row {
+      flex: 1; display: flex; min-height: 0; overflow: hidden;
+    }
+
+    /* ── Graph panel ──────────────────────────────────── */
+    .graph-panel {
+      flex: 1; display: flex; flex-direction: column;
+      padding: 10px; min-width: 0; border-right: 1px solid var(--border);
+    }
+    .graph-svg-wrap {
+      flex: 1; background: var(--bg); border-radius: var(--radius-sm); overflow: hidden;
+    }
+    #graph-svg { width: 100%; height: 100%; }
+
+    /* ── Right panel ──────────────────────────────────── */
+    .right-panel {
+      width: 240px; flex-shrink: 0; display: flex; flex-direction: column;
+      overflow-y: auto; border-left: 1px solid var(--border);
+    }
+    .panel-box {
+      padding: 10px 12px; border-bottom: 1px solid var(--border);
+    }
+    .panel-title {
+      font-size: 0.64rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--text-dim); margin-bottom: 7px;
+    }
+
+    /* adj list */
+    .adj-row {
+      display: flex; align-items: flex-start; gap: 5px;
+      margin-bottom: 4px; font-size: 0.75rem;
+    }
+    .adj-node {
+      font-family: monospace; font-weight: 700; min-width: 28px;
+      padding: 1px 5px; border-radius: 3px; flex-shrink: 0;
+      border: 1.5px solid var(--border); color: var(--text-dim);
+      font-size: 0.72rem; line-height: 1.5;
+    }
+    .adj-node.hl { border-color: var(--accent); color: var(--accent); }
+    .adj-arrow { color: var(--text-ghost); margin-top: 1px; }
+    .adj-neigh { display: flex; flex-wrap: wrap; gap: 3px; }
+    .adj-tag {
+      font-family: monospace; font-size: 0.7rem; font-weight: 600;
+      padding: 1px 5px; border-radius: 3px;
+      background: #1a1f2e; border: 1px solid #3b4261; color: var(--text);
+    }
+    .adj-empty { color: var(--text-ghost); font-size: 0.7rem; }
+
+    /* call stack */
+    .stack-list { display: flex; flex-direction: column-reverse; gap: 3px; min-height: 24px; }
+    .stack-frame {
+      font-family: monospace; font-size: 0.74rem; font-weight: 600;
+      padding: 2px 8px; border-radius: 3px;
+      background: var(--bg); border: 1px solid var(--border); color: var(--text-dim);
+    }
+    .stack-frame.top { background: #1a1f3a; border-color: #7dcfff; color: #7dcfff; }
+
+    /* ── Itinerary row ────────────────────────────────── */
+    .itin-row {
+      display: flex; align-items: center; gap: 5px; flex-wrap: wrap;
+      padding: 8px 12px; border-top: 1px solid var(--border);
+      background: var(--surface); flex-shrink: 0; min-height: 40px;
+    }
+    .itin-label {
+      font-size: 0.64rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--text-dim); white-space: nowrap;
+      margin-right: 4px;
+    }
+    .itin-chip {
+      font-family: monospace; font-size: 0.8rem; font-weight: 700;
+      padding: 2px 9px; border-radius: 4px;
+    }
+    .itin-chip.post  { background: #1a1f3a; border: 1px solid #7dcfff; color: #7dcfff; }
+    .itin-chip.final { background: #1a2a1a; border: 1px solid #9ece6a; color: #9ece6a; }
+    .itin-sep  { color: var(--text-ghost); font-size: 0.75rem; }
+    .itin-hint { color: var(--text-ghost); font-size: 0.72rem; font-style: italic; }
+
+    /* ── Bottom nav ───────────────────────────────────── */
+    .nav-bar {
+      display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+      padding: 8px 12px; border-top: 1px solid var(--border);
+      background: var(--bg); flex-shrink: 0;
+    }
+    .btn-step {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); color: var(--text);
+      cursor: pointer; font-size: 0.88rem; padding: 6px 12px;
+    }
+    .btn-step:hover:not(:disabled) { border-color: var(--accent); }
+    .btn-step:disabled { opacity: 0.3; cursor: not-allowed; }
+    .btn-play {
+      background: #15803d; border: none; border-radius: var(--radius-sm);
+      color: #fff; cursor: pointer; font-size: 0.82rem; font-weight: 600;
+      padding: 7px 13px; transition: background 0.2s;
+    }
+    .btn-play:hover { background: #166534; }
+    .btn-play.playing { background: #c2410c; }
+    .btn-play:disabled { opacity: 0.4; cursor: not-allowed; }
+    .speed-sel {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); color: var(--text);
+      font-size: 0.8rem; padding: 6px 8px; outline: none;
+    }
+    .step-ctr  { font-size: 0.74rem; color: var(--text-dim); white-space: nowrap; }
+    .step-desc { flex: 1; font-size: 0.78rem; color: var(--text-muted); line-height: 1.4; }
+
+    /* ── SVG elements ─────────────────────────────────── */
+    .node-circle { stroke-width: 2.5; transition: fill 0.25s, stroke 0.25s; }
+    .n-default { fill: #1a1b2e; stroke: #414868; }
+    .n-stack   { fill: #1a1f3a; stroke: #7dcfff; }
+    .n-active  { fill: #2a1f10; stroke: #e0af68; }
+    .n-done    { fill: #1a2a1a; stroke: #9ece6a; }
+
+    .node-label {
+      fill: var(--text-bright); font-size: 10px; font-weight: 700;
+      font-family: monospace; text-anchor: middle; dominant-baseline: central;
+      pointer-events: none;
+    }
+
+    .edge-path { fill: none; stroke-width: 2; transition: stroke 0.25s, opacity 0.25s; }
+    .e-default { stroke: #3b4261; }
+    .e-active  { stroke: #e0af68; stroke-width: 2.5; }
+    .e-used    { stroke: #9ece6a; opacity: 0.35; }
+  </style>
+</head>
+<body>
+
+<div class="top-bar">
+  <span class="page-title">Reconstruct Itinerary</span>
+  <a class="back-link" href="../index.html">&larr; All</a>
+  <input class="tickets-input" id="tickets-input"
+    value="JFK,MUC;MUC,LHR;LHR,SFO;SFO,JFK;JFK,SFO;SFO,SJC"
+    placeholder="src,dst;src,dst;...">
+  <button class="btn-build" onclick="loadAndBuild()">Build</button>
+</div>
+
+<div class="middle">
+  <div class="content-row">
+
+    <div class="graph-panel">
+      <div class="graph-svg-wrap">
+        <svg id="graph-svg" viewBox="0 0 510 310" preserveAspectRatio="xMidYMid meet">
+          <defs>
+            <marker id="arr-def" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto">
+              <path d="M0,0 L0,6 L8,3 z" fill="#3b4261"/>
+            </marker>
+            <marker id="arr-act" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto">
+              <path d="M0,0 L0,6 L8,3 z" fill="#e0af68"/>
+            </marker>
+            <marker id="arr-used" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto">
+              <path d="M0,0 L0,6 L8,3 z" fill="#9ece6a" opacity="0.4"/>
+            </marker>
+          </defs>
+          <g id="edges-g"></g>
+          <g id="nodes-g"></g>
+        </svg>
+      </div>
+    </div>
+
+    <div class="right-panel">
+      <div class="panel-box">
+        <div class="panel-title">Adjacency List (sorted)</div>
+        <div id="adj-body"></div>
+      </div>
+      <div class="panel-box">
+        <div class="panel-title">DFS Call Stack</div>
+        <div class="stack-list" id="stack-body"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="itin-row">
+    <span class="itin-label">Result</span>
+    <div id="itin-body" style="display:flex;align-items:center;gap:4px;flex-wrap:wrap">
+      <span class="itin-hint">—</span>
+    </div>
+  </div>
+</div>
+
+<div class="nav-bar">
+  <button class="btn-step" id="btn-prev" disabled>&#8592;</button>
+  <button class="btn-play" id="btn-play" disabled>&#9654; Play</button>
+  <button class="btn-step" id="btn-next" disabled>&#8594;</button>
+  <select class="speed-sel" id="speed-sel">
+    <option value="900">Slow</option>
+    <option value="450" selected>Medium</option>
+    <option value="150">Fast</option>
+  </select>
+  <span class="step-ctr" id="step-ctr"></span>
+  <span class="step-desc" id="step-desc">Enter tickets and click Build.</span>
+</div>
+
+<script>
+// ── Constants ────────────────────────────────────────────────────────────
+var R = 22;  // node radius
+
+// Fixed positions for common airport codes
+var FIXED_POS = {
+  'JFK': {x: 75,  y: 155},
+  'MUC': {x: 195, y: 55 },
+  'LHR': {x: 340, y: 55 },
+  'SFO': {x: 435, y: 155},
+  'SJC': {x: 340, y: 270},
+  'ATL': {x: 195, y: 270},
+  'LAX': {x: 255, y: 155},
+};
+
+// State
+var allNodes = [];
+var nodePos  = {};
+var edgeDefs = [];   // [{src, dst, id, d}] — unique (src,dst) visual edges
+var edgeTotals = {}; // "src→dst" → count of tickets
+var steps    = [];
+
+// ── Layout helpers ────────────────────────────────────────────────────────
+function computePositions(nodeList) {
+  var pos = {}, free = [];
+  nodeList.forEach(function(n) {
+    if (FIXED_POS[n]) pos[n] = FIXED_POS[n];
+    else free.push(n);
+  });
+  var n = free.length, cx = 255, cy = 155, r = 110;
+  free.forEach(function(node, i) {
+    var a = -Math.PI/2 + 2*Math.PI*i/n;
+    pos[node] = { x: Math.round(cx + r*Math.cos(a)), y: Math.round(cy + r*Math.sin(a)) };
+  });
+  return pos;
+}
+
+function computeEdgeDefs(uniqueEdges, pos) {
+  // detect bidirectional pairs for offset
+  var pairSet = new Set(uniqueEdges.map(function(e){ return e.src+'→'+e.dst; }));
+  return uniqueEdges.map(function(e, idx) {
+    var s = pos[e.src], d = pos[e.dst];
+    var dx = d.x-s.x, dy = d.y-s.y, len = Math.sqrt(dx*dx+dy*dy);
+    var ux = dx/len, uy = dy/len;
+    var hasBidi = pairSet.has(e.dst+'→'+e.src);
+    var off = hasBidi ? 13 : 0;
+    var px = -uy*off, py = ux*off;
+    var x1 = s.x + ux*R + px,     y1 = s.y + uy*R + py;
+    var x2 = d.x - ux*(R+3) + px, y2 = d.y - uy*(R+3) + py;
+    return {
+      src: e.src, dst: e.dst,
+      id: 'e-'+e.src+'-'+e.dst,
+      d: 'M '+x1.toFixed(1)+' '+y1.toFixed(1)+' L '+x2.toFixed(1)+' '+y2.toFixed(1)
+    };
+  });
+}
+
+// ── Copy adj ──────────────────────────────────────────────────────────────
+function copyAdj(adj) {
+  var out = {};
+  Object.keys(adj).forEach(function(k){ out[k] = adj[k].slice(); });
+  return out;
+}
+
+// ── Step builder ──────────────────────────────────────────────────────────
+function buildSteps(tickets) {
+  var adj = {}, allN = new Set();
+  tickets.forEach(function(t){
+    allN.add(t[0]); allN.add(t[1]);
+    if (!adj[t[0]]) adj[t[0]] = [];
+    adj[t[0]].push(t[1]);
+  });
+  allN.forEach(function(n){ if (!adj[n]) adj[n] = []; });
+
+  var sortedNodes = Array.from(allN).sort();
+  var stps = [];
+
+  function snap(extra) {
+    return Object.assign({
+      adj: copyAdj(adj),
+      callStack: [],
+      result: [],
+      edgeUsed: {},
+      activeEdge: null,
+      currentNode: null,
+    }, extra);
+  }
+
+  // initial
+  stps.push(snap({
+    phase: 'init',
+    desc: 'Build adjacency list from tickets. Next: sort each list.'
+  }));
+
+  // sort
+  sortedNodes.forEach(function(n){ if (adj[n]) adj[n].sort(); });
+  stps.push(snap({
+    phase: 'sort',
+    desc: 'Sort adjacency lists lexicographically. Hierholzer\'s DFS always picks the smallest available neighbor first.'
+  }));
+
+  var result = [], callStack = [], edgeUsed = {};
+
+  function dfs(node) {
+    callStack.push(node);
+    stps.push(snap({
+      phase: 'enter',
+      callStack: callStack.slice(),
+      result: result.slice(),
+      edgeUsed: Object.assign({}, edgeUsed),
+      currentNode: node,
+      desc: 'dfs(' + node + '): neighbors remaining = [' + (adj[node]||[]).join(', ') + ']'
+    }));
+
+    while (adj[node] && adj[node].length > 0) {
+      var next = adj[node][0];
+      stps.push(snap({
+        phase: 'pop',
+        callStack: callStack.slice(),
+        result: result.slice(),
+        edgeUsed: Object.assign({}, edgeUsed),
+        activeEdge: {src: node, dst: next},
+        currentNode: node,
+        desc: 'Pop \'' + next + '\' from ' + node + '\'s list → fly ' + node + ' → ' + next
+      }));
+
+      adj[node].shift();
+      var ek = node+'→'+next;
+      edgeUsed[ek] = (edgeUsed[ek]||0) + 1;
+
+      dfs(next);
+    }
+
+    callStack.pop();
+    result.push(node);
+    var caller = callStack.length ? callStack[callStack.length-1] : null;
+    stps.push(snap({
+      phase: 'exit',
+      callStack: callStack.slice(),
+      result: result.slice(),
+      edgeUsed: Object.assign({}, edgeUsed),
+      currentNode: caller,
+      desc: node + ' has no neighbors left. Append \'' + node + '\' post-order. result = [' + result.join(', ') + ']'
+    }));
+  }
+
+  dfs('JFK');
+
+  var final = result.slice().reverse();
+  stps.push(snap({
+    phase: 'reverse',
+    result: final,
+    edgeUsed: Object.assign({}, edgeUsed),
+    desc: 'Reverse the post-order list → final itinerary: ' + final.join(' → ')
+  }));
+
+  return stps;
+}
+
+// ── Parse input ───────────────────────────────────────────────────────────
+function parseTickets(str) {
+  var out = [];
+  str.split(';').forEach(function(p){
+    var parts = p.trim().split(',');
+    if (parts.length === 2 && parts[0].trim() && parts[1].trim())
+      out.push([parts[0].trim().toUpperCase(), parts[1].trim().toUpperCase()]);
+  });
+  return out;
+}
+
+// ── Build SVG ─────────────────────────────────────────────────────────────
+function buildSVG() {
+  var eg = document.getElementById('edges-g');
+  var ng = document.getElementById('nodes-g');
+  eg.innerHTML = ''; ng.innerHTML = '';
+
+  edgeDefs.forEach(function(e){
+    var el = document.createElementNS('http://www.w3.org/2000/svg','path');
+    el.setAttribute('id', e.id);
+    el.setAttribute('d', e.d);
+    el.setAttribute('class', 'edge-path e-default');
+    el.setAttribute('marker-end', 'url(#arr-def)');
+    eg.appendChild(el);
+  });
+
+  allNodes.forEach(function(node){
+    var p = nodePos[node];
+    var g = document.createElementNS('http://www.w3.org/2000/svg','g');
+
+    var c = document.createElementNS('http://www.w3.org/2000/svg','circle');
+    c.setAttribute('id','node-'+node);
+    c.setAttribute('cx', p.x); c.setAttribute('cy', p.y); c.setAttribute('r', R);
+    c.setAttribute('class','node-circle n-default');
+    g.appendChild(c);
+
+    var t = document.createElementNS('http://www.w3.org/2000/svg','text');
+    t.setAttribute('x', p.x); t.setAttribute('y', p.y);
+    t.setAttribute('class','node-label');
+    t.textContent = node;
+    g.appendChild(t);
+
+    ng.appendChild(g);
+  });
+}
+
+// ── Render ────────────────────────────────────────────────────────────────
+function render(snap, cursor, total) {
+  document.getElementById('step-ctr').textContent = 'Step '+(cursor+1)+'/'+total;
+  document.getElementById('step-desc').textContent = snap.desc;
+
+  var done = new Set(snap.result || []);
+  var stackSet = new Set(snap.callStack || []);
+  var topNode = (snap.callStack && snap.callStack.length)
+    ? snap.callStack[snap.callStack.length-1] : null;
+
+  // Nodes
+  allNodes.forEach(function(node){
+    var el = document.getElementById('node-'+node);
+    if (!el) return;
+    var cl = 'node-circle ';
+    if (snap.phase === 'reverse') cl += done.has(node) ? 'n-done' : 'n-default';
+    else if (done.has(node)) cl += 'n-done';
+    else if (node === topNode) cl += 'n-active';
+    else if (stackSet.has(node)) cl += 'n-stack';
+    else cl += 'n-default';
+    el.setAttribute('class', cl);
+  });
+
+  // Edges
+  edgeDefs.forEach(function(e){
+    var el = document.getElementById(e.id);
+    if (!el) return;
+    var ek = e.src+'→'+e.dst;
+    var usedCount = (snap.edgeUsed && snap.edgeUsed[ek]) || 0;
+    var total_tickets = edgeTotals[ek] || 1;
+    var cl, marker;
+    if (snap.activeEdge && snap.activeEdge.src === e.src && snap.activeEdge.dst === e.dst) {
+      cl = 'edge-path e-active'; marker = 'url(#arr-act)';
+    } else if (usedCount >= total_tickets) {
+      cl = 'edge-path e-used'; marker = 'url(#arr-used)';
+    } else {
+      cl = 'edge-path e-default'; marker = 'url(#arr-def)';
+    }
+    el.setAttribute('class', cl);
+    el.setAttribute('marker-end', marker);
+  });
+
+  // Adj list
+  var adjBody = document.getElementById('adj-body');
+  adjBody.innerHTML = '';
+  allNodes.forEach(function(node){
+    var rem = (snap.adj && snap.adj[node]) || [];
+    var row = document.createElement('div'); row.className = 'adj-row';
+
+    var lbl = document.createElement('div');
+    lbl.className = 'adj-node' + (node === topNode ? ' hl' : '');
+    lbl.textContent = node;
+    row.appendChild(lbl);
+
+    var arr = document.createElement('div');
+    arr.className = 'adj-arrow'; arr.textContent = '→';
+    row.appendChild(arr);
+
+    var neigh = document.createElement('div');
+    neigh.className = 'adj-neigh';
+    if (rem.length === 0) {
+      var emp = document.createElement('span');
+      emp.className = 'adj-empty'; emp.textContent = '∅';
+      neigh.appendChild(emp);
+    } else {
+      rem.forEach(function(n, i){
+        if (i > 0) {
+          var c = document.createElement('span');
+          c.className = 'adj-empty'; c.textContent = ',';
+          neigh.appendChild(c);
+        }
+        var tag = document.createElement('span');
+        tag.className = 'adj-tag'; tag.textContent = n;
+        neigh.appendChild(tag);
+      });
+    }
+    row.appendChild(neigh);
+    adjBody.appendChild(row);
+  });
+
+  // Call stack
+  var stackBody = document.getElementById('stack-body');
+  stackBody.innerHTML = '';
+  if (!snap.callStack || snap.callStack.length === 0) {
+    var e = document.createElement('span'); e.className = 'adj-empty'; e.textContent = 'empty';
+    stackBody.appendChild(e);
+  } else {
+    snap.callStack.forEach(function(n, i){
+      var f = document.createElement('div');
+      f.className = 'stack-frame' + (i === snap.callStack.length-1 ? ' top' : '');
+      f.textContent = 'dfs(' + n + ')';
+      stackBody.appendChild(f);
+    });
+  }
+
+  // Itinerary
+  var itinBody = document.getElementById('itin-body');
+  itinBody.innerHTML = '';
+  var isReversed = snap.phase === 'reverse';
+  if (!snap.result || snap.result.length === 0) {
+    var h = document.createElement('span'); h.className = 'itin-hint'; h.textContent = '—';
+    itinBody.appendChild(h);
+  } else {
+    snap.result.forEach(function(airport, i){
+      if (i > 0) {
+        var sep = document.createElement('span');
+        sep.className = 'itin-sep';
+        sep.textContent = isReversed ? '→' : '←';
+        itinBody.appendChild(sep);
+      }
+      var chip = document.createElement('span');
+      chip.className = isReversed ? 'itin-chip final' : 'itin-chip post';
+      chip.textContent = airport;
+      itinBody.appendChild(chip);
+    });
+    if (!isReversed) {
+      var hint = document.createElement('span');
+      hint.className = 'itin-hint'; hint.textContent = '(post-order — will reverse)';
+      itinBody.appendChild(hint);
+    }
+  }
+}
+
+// ── Load & build ──────────────────────────────────────────────────────────
+function loadAndBuild() {
+  var tickets = parseTickets(document.getElementById('tickets-input').value);
+  if (!tickets.length) {
+    document.getElementById('step-desc').textContent = 'No valid tickets found.';
+    return;
+  }
+  if (!tickets.find(function(t){ return t[0] === 'JFK'; })) {
+    document.getElementById('step-desc').textContent = 'No ticket departing from JFK.';
+    return;
+  }
+
+  // Build structures
+  var nodeSet = new Set(), uEdgeMap = {}, uEdges = [];
+  edgeTotals = {};
+  tickets.forEach(function(t){
+    nodeSet.add(t[0]); nodeSet.add(t[1]);
+    var ek = t[0]+'→'+t[1];
+    edgeTotals[ek] = (edgeTotals[ek]||0) + 1;
+    if (!uEdgeMap[ek]) { uEdgeMap[ek] = true; uEdges.push({src:t[0], dst:t[1]}); }
+  });
+
+  allNodes = Array.from(nodeSet).sort();
+  nodePos  = computePositions(allNodes);
+  edgeDefs = computeEdgeDefs(uEdges, nodePos);
+
+  buildSVG();
+  steps = buildSteps(tickets);
+  nav.load(steps);
+}
+
+// ── VizNav ────────────────────────────────────────────────────────────────
+var nav = VizNav({
+  btnPrev:  document.getElementById('btn-prev'),
+  btnNext:  document.getElementById('btn-next'),
+  btnPlay:  document.getElementById('btn-play'),
+  speedSel: document.getElementById('speed-sel'),
+  render:   render
+});
+
+// Auto-load default
+loadAndBuild();
+</script>
+</body>
+</html>

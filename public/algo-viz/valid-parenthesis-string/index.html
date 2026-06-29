@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Valid Parenthesis String</title>
+  <link rel="stylesheet" href="../shared/style.css" />
+  <script src="../shared/gsap.min.js"></script>
+  <script src="../shared/viz.js"></script>
+  <style>
+    .viz-area { width: 100%; max-width: 90%; }
+    .main-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
+    .left-col, .right-col { display: flex; flex-direction: column; gap: 12px; }
+    @media (max-width: 700px) { .main-row { grid-template-columns: 1fr; } }
+
+    .string-section {
+      padding: 16px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      display: flex; flex-direction: column; gap: 10px;
+    }
+    .char-row { display: flex; gap: 6px; flex-wrap: wrap; }
+    .char-cell {
+      width: 44px; height: 52px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      border: 2px solid var(--border-soft); border-radius: 5px;
+      background: #0f0f0f;
+      font-size: 1.2rem; font-weight: 700; font-family: monospace;
+      color: var(--text-ghost);
+      transition: background 0.18s, border-color 0.18s, color 0.18s;
+    }
+    .char-cell[data-state="idle"]    { color: var(--text-ghost); border-color: var(--border-soft); }
+    .char-cell[data-state="current"] { color: var(--accent-pale); border-color: var(--accent); background: var(--surface-dark); }
+    .char-cell[data-state="done"]    { color: var(--text-dim); border-color: #166534; background: #052e16; }
+    .char-cell[data-state="invalid"] { color: #fecaca; border-color: #b91c1c; background: #450a0a; }
+
+    .char-indices { display: flex; gap: 6px; flex-wrap: wrap; }
+    .char-idx {
+      width: 44px; flex-shrink: 0;
+      text-align: center; font-size: 0.6rem;
+      color: var(--text-ghost); font-family: monospace;
+    }
+
+    .range-section {
+      padding: 14px 16px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      display: flex; flex-direction: column; gap: 10px;
+    }
+    .range-label-row {
+      display: flex; justify-content: space-between;
+      font-size: 0.7rem; color: var(--text-dim); font-family: monospace;
+    }
+    .range-track {
+      position: relative; height: 22px;
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: 6px; overflow: hidden;
+    }
+    .range-fill {
+      position: absolute; top: 0; bottom: 0;
+      background: linear-gradient(90deg, #0d4429, #15803d);
+      border-radius: 6px;
+      transition: left 0.3s ease, width 0.3s ease;
+    }
+    .range-pin-min {
+      position: absolute; top: 0; bottom: 0; width: 3px;
+      background: #22d3ee; border-radius: 2px;
+      transition: left 0.3s ease;
+    }
+    .range-pin-max {
+      position: absolute; top: 0; bottom: 0; width: 3px;
+      background: #bbf7d0; border-radius: 2px;
+      transition: left 0.3s ease;
+    }
+    .range-numbers {
+      display: flex; justify-content: space-between;
+      font-size: 0.65rem; color: var(--text-faint); font-family: monospace;
+    }
+    .type-legend { display: flex; gap: 16px; flex-wrap: wrap; }
+    .legend-item { display: flex; align-items: center; gap: 5px; font-size: 0.68rem; color: var(--text-faint); }
+    .legend-char {
+      width: 22px; height: 22px; border-radius: 3px; border: 1px solid var(--border-soft);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.75rem; font-weight: 700; font-family: monospace;
+    }
+
+    .panel-box {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 14px 16px;
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .panel-title {
+      font-size: 0.72rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim);
+    }
+    .var-main { display: flex; gap: 10px; }
+    .var-box {
+      flex: 1; padding: 10px 8px;
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      display: flex; flex-direction: column; align-items: center; gap: 3px;
+    }
+    .var-box.accent-min { border-color: #0e7490; }
+    .var-box.accent-max { border-color: #166534; }
+    .var-label  { font-size: 0.65rem; font-family: monospace; color: var(--text-faint); }
+    .var-val    { font-size: 1.4rem; font-weight: 700; color: var(--text-bright); }
+    .var-sub { display: flex; gap: 8px; }
+    .var-box-sm {
+      flex: 1; padding: 6px 4px;
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      display: flex; flex-direction: column; align-items: center; gap: 2px;
+    }
+    .var-label-sm { font-size: 0.6rem; font-family: monospace; color: var(--text-ghost); text-align: center; }
+    .var-val-sm   { font-size: 0.95rem; font-weight: 700; color: var(--text-muted); }
+
+    .result-card {
+      padding: 10px 12px;
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-size: 0.85rem; font-family: monospace; color: var(--text-muted);
+    }
+    .result-card.success { border-color: #15803d; background: #052e16; color: #bbf7d0; }
+    .result-card.fail    { border-color: #b91c1c; background: #450a0a; color: #fecaca; }
+    .result-card strong  { color: var(--text-bright); }
+
+    .code-panel {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); overflow: hidden;
+    }
+    .code-header {
+      padding: 8px 14px; font-size: 0.72rem; font-weight: 600;
+      color: var(--text-dim); border-bottom: 1px solid var(--border); background: var(--bg);
+    }
+    .code-body { padding: 10px 0; font-size: 0.78rem; line-height: 1.75; flex: 1; white-space: pre; }
+    .code-line { display: flex; align-items: center; padding: 0 14px; }
+    .code-line.hl { background: var(--border-soft); border-left: 2px solid var(--accent); }
+    .ln { min-width: 24px; color: var(--text-ghost); user-select: none; font-size: 0.7rem; }
+
+    .nav-row { display: flex; gap: 8px; align-items: center; }
+    .speed-select {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); color: var(--text);
+      font-size: 0.85rem; padding: 8px 10px; outline: none; width: 80px;
+    }
+    .char-type-badge {
+      display: inline-block;
+      font-size: 0.7rem; font-weight: 700;
+      padding: 1px 7px; border-radius: 4px; font-family: monospace;
+    }
+    .badge-open  { background: rgba(21,128,61,0.15); color: #bbf7d0; border: 1px solid #166534; }
+    .badge-close { background: rgba(185,28,28,0.15); color: #fca5a5; border: 1px solid #991b1b; }
+    .badge-star  { background: rgba(124,58,237,0.15); color: #c4b5fd; border: 1px solid #7c3aed; }
+
+    .kw { color: var(--purple); }
+    .fn { color: var(--blue); }
+    .bi { color: var(--orange); }
+    .op { color: var(--text); }
+    .nb { color: var(--green); }
+    .str { color: var(--yellow); }
+  </style>
+</head>
+<body class="page">
+
+<div class="page-header">
+  <a class="back-link" href="../index.html">&larr; All Algorithms</a>
+  <div class="page-title">Valid Parenthesis String</div>
+  <div class="page-sub">LeetCode 678 &middot; Greedy range tracking &middot; O(n) time &middot; O(1) space</div>
+</div>
+
+<div class="controls">
+  <div class="field">
+    <label>string</label>
+    <input id="inp-str" type="text" value="(*))"/>
+  </div>
+  <button class="btn-primary" onclick="buildAndRun()">Build</button>
+  <button class="btn-primary" onclick="loadEx('(*))' )" style="background:var(--surface)">(*)) &rarr; T</button>
+  <button class="btn-primary" onclick="loadEx('(*)'  )" style="background:var(--surface)">(*)  &rarr; T</button>
+  <button class="btn-primary" onclick="loadEx('(**'  )" style="background:var(--surface)">(** &rarr; T</button>
+  <button class="btn-primary" onclick="loadEx('(*)((')" style="background:var(--surface)">(*)(( &rarr; F</button>
+</div>
+
+<div class="viz-area">
+  <div class="main-row">
+    <div class="left-col">
+
+      <div class="string-section" id="string-section">
+        <span style="color:var(--text-dim);font-size:0.82rem">Enter a string and click Build.</span>
+      </div>
+
+      <div class="range-section" id="range-section" style="display:none">
+        <div class="range-label-row">
+          <span>open-count range</span>
+          <span id="range-label-vals">min=0, max=0</span>
+        </div>
+        <div class="range-track" id="range-track">
+          <div class="range-fill"    id="range-fill"    style="left:0%;width:0%"></div>
+          <div class="range-pin-min" id="range-pin-min" style="left:0%"></div>
+          <div class="range-pin-max" id="range-pin-max" style="left:0%"></div>
+        </div>
+        <div class="range-numbers" id="range-numbers"></div>
+        <div class="type-legend">
+          <div class="legend-item">
+            <div class="legend-char" style="background:#052e16;border-color:#166534;color:#bbf7d0">(</div>
+            min++, max++
+          </div>
+          <div class="legend-item">
+            <div class="legend-char" style="background:#450a0a;border-color:#991b1b;color:#fca5a5">)</div>
+            min--, max--
+          </div>
+          <div class="legend-item">
+            <div class="legend-char" style="background:rgba(124,58,237,0.15);border-color:#7c3aed;color:#c4b5fd">*</div>
+            min--, max++ (clamp min&ge;0)
+          </div>
+        </div>
+      </div>
+
+      <div class="code-panel">
+        <div class="code-header">Python</div>
+        <div class="code-body" id="code-body"></div>
+      </div>
+
+    </div>
+
+    <div class="right-col">
+
+      <div style="display:flex;gap:12px">
+        <div class="panel-box" style="flex:0 0 auto">
+          <div class="nav-row">
+            <button class="btn-step" id="btn-back" disabled>&larr;</button>
+            <button class="btn-step" id="btn-next" disabled>&rarr;</button>
+            <button class="btn-play" id="btn-play" disabled>&#9654; Play</button>
+            <select class="speed-select" id="speed-select">
+              <option value="700">Slow</option>
+              <option value="350" selected>Medium</option>
+              <option value="120">Fast</option>
+            </select>
+          </div>
+        </div>
+        <div class="panel-box" style="flex:1;min-width:0">
+          <div class="panel-title" id="phase-label">&mdash;</div>
+          <div style="font-size:0.82rem;color:var(--text-muted);margin-top:2px" id="step-desc">Enter a string and click Build.</div>
+        </div>
+      </div>
+
+      <div class="panel-box">
+        <div class="panel-title">Variables</div>
+        <div class="var-main">
+          <div class="var-box accent-min">
+            <div class="var-label">min_open</div>
+            <div class="var-val" id="vv-min">&mdash;</div>
+          </div>
+          <div class="var-box accent-max">
+            <div class="var-label">max_open</div>
+            <div class="var-val" id="vv-max">&mdash;</div>
+          </div>
+        </div>
+        <div class="var-sub">
+          <div class="var-box-sm">
+            <div class="var-label-sm">i</div>
+            <div class="var-val-sm" id="vv-i">&mdash;</div>
+          </div>
+          <div class="var-box-sm">
+            <div class="var-label-sm">char</div>
+            <div class="var-val-sm" id="vv-char">&mdash;</div>
+          </div>
+          <div class="var-box-sm">
+            <div class="var-label-sm">type</div>
+            <div class="var-val-sm" id="vv-type">&mdash;</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel-box">
+        <div class="panel-title">Verdict</div>
+        <div class="result-card" id="result-card">&mdash;</div>
+        <div style="font-size:0.72rem;color:var(--text-faint);margin-top:2px">
+          Valid when max_open never goes negative AND min_open == 0 at the end.
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+var simSteps = [], nav;
+var strLen = 0;
+
+var CODE = [
+  [1,  '<span class="kw">def</span> <span class="fn">checkValidString</span><span class="op">(</span>s<span class="op">):</span>'],
+  [2,  '    min_open <span class="op">=</span> max_open <span class="op">=</span> <span class="nb">0</span>'],
+  [0,  ''],
+  [4,  '    <span class="kw">for</span> c <span class="kw">in</span> s<span class="op">:</span>'],
+  [5,  '        <span class="kw">if</span>   c <span class="op">==</span> <span class="str">"("</span><span class="op">:</span>   min_open<span class="op">++</span><span class="op">;</span> max_open<span class="op">++</span>'],
+  [6,  '        <span class="kw">elif</span> c <span class="op">==</span> <span class="str">")"</span><span class="op">:</span>   min_open<span class="op">--</span><span class="op">;</span> max_open<span class="op">--</span>'],
+  [7,  '        <span class="kw">else</span><span class="op">:</span>             min_open<span class="op">--</span><span class="op">;</span> max_open<span class="op">++</span>'],
+  [8,  '        min_open <span class="op">=</span> <span class="bi">max</span><span class="op">(</span><span class="nb">0</span><span class="op">,</span> min_open<span class="op">)</span>'],
+  [9,  '        <span class="kw">if</span> max_open <span class="op">&lt;</span> <span class="nb">0</span><span class="op">:</span> <span class="kw">return</span> <span class="kw">False</span>'],
+  [0,  ''],
+  [11, '    <span class="kw">return</span> min_open <span class="op">==</span> <span class="nb">0</span>'],
+];
+
+window.addEventListener('DOMContentLoaded', function() {
+  buildCodePanel();
+  nav = VizNav({
+    btnPrev:  document.getElementById('btn-back'),
+    btnNext:  document.getElementById('btn-next'),
+    btnPlay:  document.getElementById('btn-play'),
+    speedSel: document.getElementById('speed-select'),
+    render: function(snap, cur, total) {
+      applyStep(snap, cur > 0);
+      document.getElementById('phase-label').textContent = 'Step ' + (cur + 1) + ' / ' + total + '  .  ' + snap.phase;
+      document.getElementById('step-desc').textContent   = snap.desc;
+    }
+  });
+  buildAndRun();
+});
+
+function buildCodePanel() {
+  var body = document.getElementById('code-body');
+  body.innerHTML = CODE.map(function(e) {
+    var ln = e[0], html = e[1];
+    var id = ln > 0 ? ' id="cl-' + ln + '"' : '';
+    return '<div class="code-line"' + id + '><span class="ln">' + (ln || '') + '</span><span>' + html + '</span></div>';
+  }).join('');
+}
+
+function loadEx(s) {
+  document.getElementById('inp-str').value = s;
+  buildAndRun();
+}
+
+function buildAndRun() {
+  var s = document.getElementById('inp-str').value.trim();
+  if (!s) return;
+  strLen = s.length;
+  buildStringSection(s);
+  document.getElementById('range-section').style.display = '';
+  simSteps = simulate(s);
+  nav.load(simSteps);
+}
+
+function buildStringSection(s) {
+  var sec = document.getElementById('string-section');
+  sec.innerHTML = '<div class="char-row" id="char-row"></div><div class="char-indices" id="char-indices"></div>';
+  var row  = document.getElementById('char-row');
+  var irow = document.getElementById('char-indices');
+  for (var i = 0; i < s.length; i++) {
+    var c = s[i];
+    var cell = document.createElement('div');
+    cell.className = 'char-cell';
+    cell.id = 'cc-' + i;
+    cell.dataset.state = 'idle';
+    cell.dataset.type  = c === '(' ? 'open' : c === ')' ? 'close' : 'star';
+    cell.textContent   = c;
+    row.appendChild(cell);
+    var idx = document.createElement('div');
+    idx.className = 'char-idx';
+    idx.textContent = i;
+    irow.appendChild(idx);
+  }
+}
+
+function simulate(s) {
+  var n = s.length;
+  var steps = [];
+  var minOpen = 0, maxOpen = 0;
+  var cellStates = Array.from({length: n}, function() { return 'idle'; });
+
+  function snap(phase, desc, lines, i, charType, result) {
+    steps.push({
+      phase: phase, desc: desc, lines: lines,
+      cellStates: cellStates.slice(),
+      minOpen: minOpen, maxOpen: maxOpen,
+      i: i,
+      charVal:  (i >= 0 && i < n) ? s[i] : null,
+      charType: charType,
+      result:   result,
+      n:        n,
+    });
+  }
+
+  snap('Init', 'min_open = max_open = 0. They track the range of possible unclosed open-parens.', [2], -1, null, null);
+
+  for (var i = 0; i < n; i++) {
+    var c    = s[i];
+    var type = c === '(' ? 'open' : c === ')' ? 'close' : 'star';
+    cellStates[i] = 'current';
+    snap('Scan', 'Visiting [' + i + '] = "' + c + '" (' + type + '). Current range: [' + minOpen + ', ' + maxOpen + '].', [4], i, type, null);
+
+    var prevMin = minOpen, prevMax = maxOpen;
+
+    if (c === '(') {
+      minOpen++; maxOpen++;
+      snap('Update', '"(" shifts range right: min_open ' + prevMin + '→' + minOpen + ', max_open ' + prevMax + '→' + maxOpen + '.', [5, 8], i, type, null);
+    } else if (c === ')') {
+      minOpen--; maxOpen--;
+      var clamped = false;
+      if (minOpen < 0) { minOpen = 0; clamped = true; }
+      if (maxOpen < 0) {
+        cellStates[i] = 'invalid';
+        snap('Invalid', '")" caused max_open = ' + maxOpen + ' < 0. No valid interpretation possible. Return False.', [6, 9], i, type, false);
+        return steps;
+      }
+      var note = clamped ? ' (min clamped to 0)' : '';
+      snap('Update', '")" shifts range left: min_open ' + prevMin + '→' + minOpen + note + ', max_open ' + prevMax + '→' + maxOpen + '.', [6, 8, 9], i, type, null);
+    } else {
+      minOpen--; maxOpen++;
+      var clamped2 = false;
+      if (minOpen < 0) { minOpen = 0; clamped2 = true; }
+      var note2 = clamped2 ? ' (min clamped to 0)' : '';
+      snap('Update', '"*" expands range: min_open ' + prevMin + '→' + minOpen + note2 + ', max_open ' + prevMax + '→' + maxOpen + '.', [7, 8, 9], i, type, null);
+    }
+
+    cellStates[i] = 'done';
+  }
+
+  var valid = (minOpen === 0);
+  snap('Done',
+    valid
+      ? 'Loop complete. min_open = 0 — all opens can be matched. Return True.'
+      : 'Loop complete. min_open = ' + minOpen + ' ≠ 0 — unclosed opens remain. Return False.',
+    [11], -1, null, valid);
+  return steps;
+}
+
+function applyStep(s, animate) {
+  applyChars(s.cellStates, s.i, animate);
+  applyRangeBar(s.minOpen, s.maxOpen, s.n);
+  applyVars(s, animate);
+  applyResult(s.result);
+  setCodeLines(s.lines);
+}
+
+function applyChars(states, curI, animate) {
+  states.forEach(function(state, i) {
+    var el = document.getElementById('cc-' + i);
+    if (!el) return;
+    var prev = el.dataset.state;
+    el.dataset.state = state;
+    if (animate && i === curI && state === 'current' && prev !== 'current')
+      gsap.fromTo(el, { scale: 0.8 }, { scale: 1, duration: 0.22, ease: 'back.out(2)' });
+    if (animate && state === 'invalid' && prev !== 'invalid')
+      gsap.fromTo(el, { x: -6 }, { x: 0, duration: 0.35, ease: 'elastic.out(1, 0.4)' });
+  });
+}
+
+function applyRangeBar(minOpen, maxOpen, n) {
+  var scale  = n > 0 ? n : 1;
+  var minPct = Math.max(0, Math.min(100, (minOpen / scale) * 100));
+  var maxPct = Math.max(0, Math.min(100, (maxOpen / scale) * 100));
+  var w      = Math.max(0, maxPct - minPct);
+  document.getElementById('range-fill').style.left    = minPct + '%';
+  document.getElementById('range-fill').style.width   = w + '%';
+  document.getElementById('range-pin-min').style.left = minPct + '%';
+  document.getElementById('range-pin-max').style.left = maxPct + '%';
+  document.getElementById('range-label-vals').textContent = 'min_open=' + minOpen + ', max_open=' + maxOpen;
+  var nums = [];
+  for (var t = 0; t <= n; t++) nums.push(t);
+  document.getElementById('range-numbers').innerHTML = nums.map(function(t) { return '<span>' + t + '</span>'; }).join('');
+}
+
+function applyVars(s, animate) {
+  function set(id, val) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    var text = (val === null || val === undefined) ? '—' : String(val);
+    if (animate && el.textContent !== text)
+      gsap.fromTo(el, { scale: 0.8, opacity: 0.4 }, { scale: 1, opacity: 1, duration: 0.22, ease: 'back.out(1.7)' });
+    el.textContent = text;
+  }
+  set('vv-min', s.minOpen);
+  set('vv-max', s.maxOpen);
+  set('vv-i',   s.i >= 0 ? s.i : null);
+  set('vv-char', s.charVal);
+  var typeEl = document.getElementById('vv-type');
+  if (typeEl) {
+    if (!s.charType) { typeEl.innerHTML = '—'; }
+    else {
+      var cls = s.charType === 'open' ? 'badge-open' : s.charType === 'close' ? 'badge-close' : 'badge-star';
+      typeEl.innerHTML = '<span class="char-type-badge ' + cls + '">' + s.charType + '</span>';
+    }
+  }
+}
+
+function applyResult(result) {
+  var card = document.getElementById('result-card');
+  if (!card) return;
+  if (result === true) {
+    card.className = 'result-card success';
+    card.innerHTML = '<strong>True</strong> — string is valid';
+  } else if (result === false) {
+    card.className = 'result-card fail';
+    card.innerHTML = '<strong>False</strong> — string is invalid';
+  } else {
+    card.className = 'result-card';
+    card.textContent = '—';
+  }
+}
+
+function setCodeLines(lines) {
+  CODE.forEach(function(e) {
+    var ln = e[0]; if (!ln) return;
+    var el = document.getElementById('cl-' + ln);
+    if (!el) return;
+    if (lines && lines.indexOf(ln) >= 0) el.classList.add('hl');
+    else el.classList.remove('hl');
+  });
+}
+</script>
+<script>
+  if (window.self !== window.top) {
+    var bl = document.querySelector('.back-link');
+    if (bl) bl.style.display = 'none';
+  }
+</script>
+</body>
+</html>
