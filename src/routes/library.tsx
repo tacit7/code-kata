@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router";
 import { useKataStore } from "../stores/kata-store";
+import type { LibrarySortMode } from "../stores/kata-store";
 import { useSettingsStore } from "../stores/settings-store";
 import { useSessionStore, selectRandomKatas, sortBySpacedRepetition } from "../stores/session-store";
 import { useTimerStore } from "../stores/timer-store";
@@ -26,6 +27,7 @@ export function PracticePage() {
   const libraryTab = useKataStore((s) => s.libraryTab);
   const libraryCategoryFilter = useKataStore((s) => s.libraryCategoryFilter);
   const libraryDiffSort = useKataStore((s) => s.libraryDiffSort);
+  const librarySortMode = useKataStore((s) => s.librarySortMode);
   const setLibraryUI = useKataStore((s) => s.setLibraryUI);
 
   const tab = libraryTab;
@@ -34,6 +36,8 @@ export function PracticePage() {
   const setSearch = (v: string) => setLibraryUI({ librarySearch: v });
   const diffSort = libraryDiffSort;
   const setDiffSort = (v: "asc" | "desc" | null) => setLibraryUI({ libraryDiffSort: v });
+  const sortMode = librarySortMode;
+  const setSortMode = (v: LibrarySortMode) => setLibraryUI({ librarySortMode: v });
   const [starting, setStarting] = useState(false);
 
   // Daily state
@@ -65,13 +69,49 @@ export function PracticePage() {
         (k.difficulty?.toLowerCase().includes(q) ?? false) ||
         k.tags.some((t) => t.toLowerCase().includes(q))
     );
-    if (!diffSort) return filtered;
+    // diffSort column header takes priority when active
+    if (diffSort) {
+      return [...filtered].sort((a, b) => {
+        const ra = diffRank[a.difficulty ?? ""] ?? 3;
+        const rb = diffRank[b.difficulty ?? ""] ?? 3;
+        return diffSort === "asc" ? ra - rb : rb - ra;
+      });
+    }
+    if (sortMode === "default") return filtered;
     return [...filtered].sort((a, b) => {
-      const ra = diffRank[a.difficulty ?? ""] ?? 3;
-      const rb = diffRank[b.difficulty ?? ""] ?? 3;
-      return diffSort === "asc" ? ra - rb : rb - ra;
+      switch (sortMode) {
+        case "starred": {
+          const aS = dailyKataIds.includes(a.id) ? 0 : 1;
+          const bS = dailyKataIds.includes(b.id) ? 0 : 1;
+          return aS - bS;
+        }
+        case "category":
+          return a.category.localeCompare(b.category);
+        case "best-time": {
+          const aT = bestTimes[a.id] ?? Infinity;
+          const bT = bestTimes[b.id] ?? Infinity;
+          return aT - bT;
+        }
+        case "streak": {
+          const aSt = streaks[a.id] ?? 0;
+          const bSt = streaks[b.id] ?? 0;
+          return bSt - aSt;
+        }
+        case "difficulty-asc": {
+          const ra = diffRank[a.difficulty ?? ""] ?? 3;
+          const rb = diffRank[b.difficulty ?? ""] ?? 3;
+          return ra - rb;
+        }
+        case "difficulty-desc": {
+          const ra = diffRank[a.difficulty ?? ""] ?? 3;
+          const rb = diffRank[b.difficulty ?? ""] ?? 3;
+          return rb - ra;
+        }
+        default:
+          return 0;
+      }
     });
-  }, [katas, search, diffSort]);
+  }, [katas, search, diffSort, sortMode, dailyKataIds, bestTimes, streaks]);
 
   useEffect(() => {
     loadPresets();
@@ -213,6 +253,28 @@ export function PracticePage() {
           onChange={(e) => setSearch(e.target.value)}
           className="input input-bordered input-sm flex-1 max-w-sm bg-base-100"
         />
+        {/* Sort dropdown — browse tab only */}
+        {tab === "browse" && (
+          <select
+            value={diffSort ? `difficulty-${diffSort}` : sortMode}
+            onChange={(e) => {
+              const v = e.target.value as LibrarySortMode | "difficulty-asc" | "difficulty-desc";
+              if (v === "difficulty-asc") { setSortMode("default"); setDiffSort("asc"); }
+              else if (v === "difficulty-desc") { setSortMode("default"); setDiffSort("desc"); }
+              else { setDiffSort(null); setSortMode(v as LibrarySortMode); }
+            }}
+            className="select select-bordered select-sm bg-base-100 text-xs"
+          >
+            <option value="default">Sort: Default</option>
+            <option value="starred">Sort: Starred first</option>
+            <option value="category">Sort: Category A→Z</option>
+            <option value="best-time">Sort: Best time</option>
+            <option value="streak">Sort: Streak</option>
+            <option value="difficulty-asc">Sort: Difficulty ↑</option>
+            <option value="difficulty-desc">Sort: Difficulty ↓</option>
+          </select>
+        )}
+
         {/* Tab switcher */}
         <div className="flex items-center gap-1 bg-base-300/40 rounded-lg p-1">
           <button onClick={() => setTab("browse")} className={tabClass("browse")}>Browse</button>

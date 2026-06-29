@@ -27,11 +27,21 @@ interface AttemptRow {
   passed: number;
 }
 
+export type LibrarySortMode =
+  | "default"
+  | "starred"
+  | "category"
+  | "best-time"
+  | "streak"
+  | "difficulty-asc"
+  | "difficulty-desc";
+
 interface LibraryUIState {
   librarySearch: string;
   libraryTab: "browse" | "daily" | "random" | "custom";
   libraryCategoryFilter: string;
   libraryDiffSort: "asc" | "desc" | null;
+  librarySortMode: LibrarySortMode;
   setLibraryUI: (patch: Partial<LibraryUIState>) => void;
 }
 
@@ -57,6 +67,7 @@ export const useKataStore = create<KataState>((set) => ({
   libraryTab: "browse",
   libraryCategoryFilter: "",
   libraryDiffSort: null,
+  librarySortMode: "default",
   setLibraryUI: (patch) => set(patch),
 
   loadKatas: async (language = "javascript") => {
