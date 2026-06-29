@@ -49,6 +49,7 @@ export function TopBar() {
     startSessionTimer();
     const sessionId = await startSession("daily", resolved);
     navigate(`/session/${sessionId}`);
+    setLaunching(false);
   }, [dailyKataIds, dailyCount, launching, katas, resetKataTimer, startSessionTimer, startSession, navigate]);
 
   return (

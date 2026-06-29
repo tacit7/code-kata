@@ -510,7 +510,7 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
 
   if (!codeLoaded) return null;
 
-  const initialCode = savedCode ?? kata.code;
+  const initialCode = isSession ? kata.code : (savedCode ?? kata.code);
 
   if (showPanel === "viz" && vizFolder) {
     return (
