@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pow(x, n)</title>
+  <link rel="stylesheet" href="../shared/style.css" />
+  <script src="../shared/gsap.min.js"></script>
+  <script src="../shared/viz.js"></script>
+  <style>
+    body { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+
+    .top-bar {
+      display: flex; align-items: center; gap: 12px;
+      padding: 12px 20px; border-bottom: 1px solid var(--border);
+      background: var(--bg); flex-shrink: 0; flex-wrap: wrap;
+    }
+    .top-bar label { font-size: 0.85rem; color: var(--text-dim); }
+    .top-bar input[type=number] {
+      width: 90px; padding: 5px 8px; border-radius: 6px;
+      border: 1px solid var(--border); background: var(--surface-dark);
+      color: var(--text-bright); font-size: 0.9rem; font-family: monospace;
+    }
+    .top-bar button {
+      padding: 6px 14px; border-radius: 6px; border: 1px solid var(--accent);
+      background: transparent; color: var(--accent); font-size: 0.85rem;
+      cursor: pointer; font-weight: 600;
+    }
+    .top-bar button:hover { background: rgba(var(--accent-ch), 0.1); }
+    .result-badge {
+      margin-left: auto; padding: 4px 14px; border-radius: 20px;
+      font-size: 0.82rem; font-weight: 700; font-family: monospace;
+      background: rgba(125,211,252,0.12); border: 1px solid rgba(125,211,252,0.35);
+      color: #7dd3fc; display: none;
+    }
+
+    .middle {
+      flex: 1; display: grid; grid-template-columns: 1fr 1fr;
+      gap: 16px; padding: 16px; overflow: hidden;
+    }
+    @media (max-width: 680px) { .middle { grid-template-columns: 1fr; } }
+
+    .panel-box {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 16px;
+      display: flex; flex-direction: column; gap: 12px; overflow: hidden;
+    }
+    .panel-title {
+      font-size: 0.72rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--text-dim); flex-shrink: 0;
+    }
+
+    /* ── state boxes ── */
+    .state-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr);
+      gap: 10px; flex-shrink: 0;
+    }
+    .state-box {
+      background: var(--surface-dark); border: 1px solid var(--border-soft);
+      border-radius: var(--radius); padding: 10px 12px;
+      display: flex; flex-direction: column; gap: 4px;
+    }
+    .state-box.highlight { border-color: var(--accent); }
+    .state-key {
+      font-size: 0.68rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.07em; color: var(--text-ghost);
+    }
+    .state-val {
+      font-size: 1.05rem; font-weight: 700; font-family: monospace;
+      color: var(--text-bright);
+    }
+    .state-val.accent { color: var(--accent-pale); }
+    .state-val.green  { color: #86efac; }
+    .state-val.yellow { color: #fde68a; }
+
+    /* ── bit strip ── */
+    .bit-area {
+      flex: 1; display: flex; flex-direction: column;
+      gap: 10px; overflow-y: auto;
+    }
+    .bit-row {
+      display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    }
+    .bit-label {
+      font-size: 0.7rem; font-weight: 700; color: var(--text-dim);
+      width: 52px; flex-shrink: 0;
+    }
+    .bit-cells { display: flex; gap: 5px; flex-wrap: wrap; }
+    .bcel {
+      min-width: 32px; height: 32px; display: flex; align-items: center;
+      justify-content: center; border-radius: 6px; font-size: 0.88rem;
+      font-weight: 700; font-family: monospace; border: 2px solid var(--border);
+      background: #0f0f0f; color: var(--text-ghost); transition: all 0.22s;
+      padding: 0 4px;
+    }
+    .bcel.active   { border-color: var(--accent); color: var(--accent-pale); background: var(--surface-dark); }
+    .bcel.consumed { border-color: #2d3148; color: var(--text-ghost); background: #0a0a0f; opacity: 0.4; }
+    .bcel.odd      { border-color: #f59e0b; color: #fde68a; background: rgba(245,158,11,0.1); }
+
+    /* ── op log ── */
+    .op-scroll { flex: 1; overflow-y: auto; }
+    .op-list   { display: flex; flex-direction: column; gap: 6px; }
+    .op-row {
+      background: var(--surface-dark); border: 1px solid var(--border-soft);
+      border-radius: var(--radius); padding: 8px 12px;
+      font-size: 0.82rem; font-family: monospace;
+      display: flex; flex-direction: column; gap: 3px; transition: border-color 0.2s;
+    }
+    .op-row.current { border-color: var(--accent); }
+    .op-top { display: flex; gap: 10px; align-items: center; }
+    .op-iter   { font-size: 0.68rem; color: var(--text-ghost); min-width: 40px; }
+    .op-action { color: var(--text-bright); font-weight: 600; flex: 1; }
+    .op-detail { color: var(--text-dim); font-size: 0.78rem; padding-left: 50px; }
+
+    /* ── bottom ── */
+    .bottom-bar {
+      border-top: 1px solid var(--border); padding: 10px 20px;
+      background: var(--bg); flex-shrink: 0;
+      display: flex; flex-direction: column; gap: 6px;
+    }
+    .step-info { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .phase-label { font-size: 0.78rem; color: var(--text-dim); min-width: 90px; }
+    .step-desc   { font-size: 0.88rem; color: var(--text-bright); flex: 1; }
+    .nav-row { display: flex; align-items: center; gap: 8px; }
+    .nav-row button {
+      padding: 5px 14px; border-radius: 6px;
+      border: 1px solid var(--border); background: var(--surface);
+      color: var(--text-bright); cursor: pointer; font-size: 0.85rem;
+    }
+    .nav-row button:hover { border-color: var(--accent); color: var(--accent); }
+    #btn-play { border-color: var(--accent); color: var(--accent); font-weight: 600; }
+    #speed-select {
+      padding: 4px 8px; border-radius: 6px; border: 1px solid var(--border);
+      background: var(--surface-dark); color: var(--text-dim); font-size: 0.82rem;
+    }
+  </style>
+</head>
+<body>
+
+<!-- TOP -->
+<div class="top-bar">
+  <label>x =</label>
+  <input type="number" id="x-input" value="2" step="0.1" />
+  <label>n =</label>
+  <input type="number" id="n-input" value="10" />
+  <button id="btn-build">Build</button>
+  <span class="result-badge" id="result-badge"></span>
+</div>
+
+<!-- MIDDLE -->
+<div class="middle">
+
+  <!-- LEFT: state + bit strip -->
+  <div class="panel-box">
+    <div class="panel-title">State</div>
+    <div class="state-grid">
+      <div class="state-box" id="box-x">
+        <span class="state-key">x</span>
+        <span class="state-val accent" id="val-x">—</span>
+      </div>
+      <div class="state-box" id="box-n">
+        <span class="state-key">n</span>
+        <span class="state-val yellow" id="val-n">—</span>
+      </div>
+      <div class="state-box" id="box-result">
+        <span class="state-key">result</span>
+        <span class="state-val green" id="val-result">—</span>
+      </div>
+    </div>
+
+    <div class="panel-title" style="margin-top:4px">n in Binary (LSB→MSB)</div>
+    <div class="bit-area">
+      <div class="bit-row">
+        <span class="bit-label">bits</span>
+        <div class="bit-cells" id="bit-cells"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT: op log -->
+  <div class="panel-box">
+    <div class="panel-title">Operation Log</div>
+    <div class="op-scroll">
+      <div class="op-list" id="op-list"></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- BOTTOM -->
+<div class="bottom-bar">
+  <div class="step-info">
+    <span class="phase-label" id="phase-label">Step 0 / 0</span>
+    <span class="step-desc" id="step-desc">Press Build to start.</span>
+  </div>
+  <div class="nav-row">
+    <button id="btn-back">&#8592; Prev</button>
+    <button id="btn-play">&#9654; Play</button>
+    <button id="btn-next">Next &#8594;</button>
+    <select id="speed-select">
+      <option value="1200">0.5×</option>
+      <option value="700" selected>1×</option>
+      <option value="350">2×</option>
+      <option value="150">4×</option>
+    </select>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+var nav = null;
+var steps = [];
+
+function fmt(v) {
+  // show up to 6 significant digits, strip trailing zeros
+  var s = parseFloat(v.toPrecision(10)).toString();
+  return s;
+}
+
+// ── simulate ─────────────────────────────────────────────────────────────────
+
+function simulate(xOrig, nOrig) {
+  var out = [];
+  var ops = [];
+
+  // normalise negative exponent
+  var x = xOrig;
+  var n = nOrig;
+  var negExp = n < 0;
+  if (negExp) { x = 1 / x; n = -n; }
+
+  // binary representation (LSB first)
+  var bits = [];
+  var tmp = n;
+  if (tmp === 0) { bits = [0]; }
+  else { while (tmp > 0) { bits.push(tmp & 1); tmp = Math.floor(tmp / 2); } }
+
+  out.push({
+    phase: 'Init',
+    desc: 'x = ' + xOrig + ', n = ' + nOrig + (negExp ? '. n < 0 → x = 1/x = ' + fmt(x) + ', n = ' + n : '') + '. result = 1. Iterate while n > 0.',
+    x: x,
+    n: n,
+    result: 1,
+    iterIdx: -1,
+    bits: bits.slice(),
+    consumedBits: 0,
+    ops: [],
+    opIdx: -1,
+    done: false,
+    finalResult: null
+  });
+
+  var result = 1;
+  var iterIdx = 0;
+
+  while (n > 0) {
+    var isOdd = (n & 1) === 1;
+    var prevResult = result;
+    var prevX = x;
+    var prevN = n;
+
+    var actionParts = [];
+    var detailParts = [];
+
+    if (isOdd) {
+      result *= x;
+      actionParts.push('n is ODD → result × x = ' + fmt(prevResult) + ' × ' + fmt(prevX) + ' = ' + fmt(result));
+      detailParts.push('n & 1 == 1');
+    } else {
+      actionParts.push('n is EVEN → result unchanged = ' + fmt(result));
+    }
+
+    var xSq = x * x;
+    n = Math.floor(n / 2);
+    actionParts.push('x² = ' + fmt(prevX) + '² = ' + fmt(xSq) + ',  n >>= 1 → ' + n);
+    x = xSq;
+
+    ops.push({
+      iter: iterIdx + 1,
+      action: actionParts.join('  |  '),
+      detail: detailParts.join(''),
+      isOdd: isOdd
+    });
+
+    out.push({
+      phase: 'Iter ' + (iterIdx + 1),
+      desc: (isOdd ? 'n is odd → multiply result by x. ' : 'n is even → skip multiply. ') + 'Square x, halve n.',
+      x: x,
+      n: n,
+      result: result,
+      iterIdx: iterIdx,
+      bits: bits.slice(),
+      consumedBits: iterIdx + 1,
+      ops: ops.slice(),
+      opIdx: ops.length - 1,
+      done: false,
+      finalResult: null
+    });
+
+    iterIdx++;
+  }
+
+  out.push({
+    phase: 'Result',
+    desc: 'n = 0 → done. ' + xOrig + '^' + nOrig + ' = ' + fmt(result),
+    x: x,
+    n: 0,
+    result: result,
+    iterIdx: iterIdx,
+    bits: bits.slice(),
+    consumedBits: bits.length,
+    ops: ops.slice(),
+    opIdx: ops.length,
+    done: true,
+    finalResult: result
+  });
+
+  return out;
+}
+
+// ── render ────────────────────────────────────────────────────────────────────
+
+function buildBitCells(bits, consumed, iterIdx) {
+  var container = document.getElementById('bit-cells');
+  container.innerHTML = '';
+  bits.forEach(function(b, i) {
+    var el = document.createElement('div');
+    var isActive = i === consumed;
+    var isOdd = b === 1;
+    if (i < consumed) {
+      el.className = 'bcel consumed';
+    } else if (isActive) {
+      el.className = 'bcel active' + (isOdd ? ' odd' : '');
+    } else {
+      el.className = 'bcel';
+    }
+    el.textContent = b;
+    container.appendChild(el);
+  });
+}
+
+function buildOpList(ops, currentOpIdx) {
+  var list = document.getElementById('op-list');
+  list.innerHTML = '';
+  ops.forEach(function(op, i) {
+    var row = document.createElement('div');
+    row.className = 'op-row' + (i === currentOpIdx ? ' current' : '');
+
+    var top = document.createElement('div');
+    top.className = 'op-top';
+
+    var iter = document.createElement('span');
+    iter.className = 'op-iter';
+    iter.textContent = '#' + op.iter;
+
+    var action = document.createElement('span');
+    action.className = 'op-action';
+    if (op.isOdd) action.style.color = '#fde68a';
+    action.textContent = op.action;
+
+    top.appendChild(iter);
+    top.appendChild(action);
+    row.appendChild(top);
+
+    if (op.detail) {
+      var detail = document.createElement('div');
+      detail.className = 'op-detail';
+      detail.textContent = op.detail;
+      row.appendChild(detail);
+    }
+
+    list.appendChild(row);
+  });
+
+  var cur = list.children[currentOpIdx];
+  if (cur) cur.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+}
+
+function applyStep(snap) {
+  document.getElementById('val-x').textContent = fmt(snap.x);
+  document.getElementById('val-n').textContent = snap.n;
+  document.getElementById('val-result').textContent = fmt(snap.result);
+
+  buildBitCells(snap.bits, snap.consumedBits, snap.iterIdx);
+  buildOpList(snap.ops, snap.opIdx);
+
+  var badge = document.getElementById('result-badge');
+  if (snap.done && snap.finalResult !== null) {
+    badge.textContent = '= ' + fmt(snap.finalResult);
+    badge.style.display = '';
+  } else {
+    badge.style.display = 'none';
+  }
+}
+
+// ── init ──────────────────────────────────────────────────────────────────────
+
+function buildAndRun() {
+  var xVal = parseFloat(document.getElementById('x-input').value);
+  var nVal = parseInt(document.getElementById('n-input').value, 10);
+  if (isNaN(xVal) || isNaN(nVal)) return;
+
+  document.getElementById('result-badge').style.display = 'none';
+  document.getElementById('op-list').innerHTML = '';
+
+  steps = simulate(xVal, nVal);
+
+  nav = VizNav({
+    btnPrev:  document.getElementById('btn-back'),
+    btnNext:  document.getElementById('btn-next'),
+    btnPlay:  document.getElementById('btn-play'),
+    speedSel: document.getElementById('speed-select'),
+    render: function(snap, cur, total) {
+      applyStep(snap);
+      document.getElementById('phase-label').textContent = 'Step ' + (cur + 1) + ' / ' + total + '  ·  ' + snap.phase;
+      var descEl = document.getElementById('step-desc');
+      gsap.fromTo(descEl, { opacity: 0 }, { opacity: 1, duration: 0.15 });
+      descEl.textContent = snap.desc;
+    }
+  });
+
+  nav.load(steps);
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  document.getElementById('btn-build').addEventListener('click', buildAndRun);
+  document.getElementById('x-input').addEventListener('keydown', function(e) { if (e.key === 'Enter') buildAndRun(); });
+  document.getElementById('n-input').addEventListener('keydown', function(e) { if (e.key === 'Enter') buildAndRun(); });
+  buildAndRun();
+});
+</script>
+</body>
+</html>
