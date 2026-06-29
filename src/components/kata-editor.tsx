@@ -467,7 +467,8 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
     }`;
 
   const renderTabBar = (toggleMode: boolean) => (
-    <div className="flex border-b border-base-300/60 shrink-0">
+    <div className="flex items-stretch border-b border-base-300/60 shrink-0 bg-base-200 relative">
+      {/* Tabs */}
       {kata.description && (
         <button
           onClick={() => toggleMode
@@ -506,6 +507,74 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
           Viz ↗
         </button>
       )}
+
+      {/* Spacer */}
+      <div className="flex-1" />
+
+      {/* Controls */}
+      <div className="flex items-center gap-1.5 px-2">
+        <span className={`text-xs ${saved ? "text-success/60" : "text-base-content/30"}`}>
+          {saved ? "•" : "○"}
+        </span>
+        <div
+          ref={statusBarRef}
+          className={`text-xs font-mono text-base-content/40 max-w-[120px] truncate ${vimMode ? "" : "invisible w-0"}`}
+        />
+        <button
+          onClick={handleReset}
+          title="Reset to original"
+          className="btn btn-ghost btn-xs text-base-content/35 hover:text-base-content/70 px-1.5"
+        >
+          ↻
+        </button>
+        <button
+          onClick={() => setShowConfig((v) => !v)}
+          title="Editor settings"
+          className={`btn btn-xs px-1.5 ${showConfig ? "btn-primary" : "btn-ghost text-base-content/35 hover:text-base-content/70"}`}
+        >
+          ⚙
+        </button>
+        {showConfig && (
+          <div className="absolute top-full right-0 mt-1 z-50 w-56 rounded-lg border border-base-300/50 bg-base-100 shadow-lg py-2 px-3 flex flex-col gap-2.5">
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-base-content/45">font size</span>
+              <div className="flex items-center gap-1.5">
+                <button onClick={() => setSetting("fontSize", Math.max(10, fontSize - 1))} className="btn btn-ghost btn-xs btn-square">−</button>
+                <span className="text-xs font-mono w-5 text-center tabular-nums">{fontSize}</span>
+                <button onClick={() => setSetting("fontSize", Math.min(28, fontSize + 1))} className="btn btn-ghost btn-xs btn-square">+</button>
+              </div>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-base-content/45">vim mode</span>
+              <input type="checkbox" className="toggle toggle-sm toggle-success" checked={vimMode} onChange={toggleVimMode} />
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-base-content/45">dark mode</span>
+              <input type="checkbox" className="toggle toggle-sm toggle-success" checked={theme === "dark"} onChange={toggleTheme} />
+            </div>
+          </div>
+        )}
+        {maxTestRuns !== null && (
+          <span className={`text-xs font-mono tabular-nums ${
+            !kataPassed && maxTestRuns - runCount === 1 ? "text-warning" : "text-base-content/35"
+          }`}>
+            {runCount}/{maxTestRuns}
+          </span>
+        )}
+        <button
+          onClick={toggleVimMode}
+          className={`btn btn-xs ${vimMode ? "btn-success" : "btn-ghost text-base-content/40"}`}
+        >
+          VIM
+        </button>
+        <button
+          onClick={handleRun}
+          disabled={running || (maxTestRuns !== null && runCount >= maxTestRuns && !kataPassed)}
+          className="btn btn-xs btn-primary"
+        >
+          {running ? "..." : "▷ run"}
+        </button>
+      </div>
     </div>
   );
 
@@ -529,232 +598,132 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
   }
 
   return (
-    <div className="flex h-full">
-      {/* Side panel: tabs + content (full height) */}
-      {hasTabs && (
-        <div
-          className="shrink-0 flex flex-col border-r border-base-300/60 bg-base-200"
-          style={showPanel ? { width: panelWidth } : undefined}
-        >
-          {/* Tab bar */}
-          {renderTabBar(true)}
+    <div className="flex flex-col h-full">
+      {/* Full-width bar: tabs left, controls right */}
+      {renderTabBar(true)}
 
-          {/* Tab content */}
-          {showPanel === "description" && (
-            <div className="flex-1 overflow-y-auto px-4 py-3 text-sm text-base-content/70">
-              <DescriptionWithLink text={kata.description || "No description available."} />
-            </div>
-          )}
-          {showPanel === "solution" && kata.solution && (
-            <div className="flex-1 min-h-0">
-              <Editor
-                value={kata.solution}
-                language={kata.language}
-                theme={monacoTheme}
-                options={{
-                  fontSize,
-                  fontFamily,
-                  tabSize,
-                  minimap: { enabled: false },
-                  automaticLayout: true,
-                  scrollBeyondLastLine: false,
-                  readOnly: true,
-                  lineNumbers: "off",
-                }}
-              />
-            </div>
-          )}
-          {showPanel === "notes" && (
-            <div className="flex-1 flex flex-col min-h-0">
-              <textarea
-                className="flex-1 resize-none bg-transparent px-4 py-3 text-sm text-base-content/80 placeholder:text-base-content/25 outline-none font-mono leading-relaxed"
-                placeholder="Add notes, hints, patterns to remember..."
-                value={notes}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  setNotes(val);
-                  setNotesSaved(false);
-                  if (notesAutosaveTimer.current) clearTimeout(notesAutosaveTimer.current);
-                  notesAutosaveTimer.current = setTimeout(() => {
-                    saveKataNotes(kata.id, val).then(() => setNotesSaved(true));
-                  }, 1000);
-                }}
-              />
-              <div className="px-4 pb-2 text-xs text-base-content/25">
-                {notesSaved ? "saved" : "saving..."}
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Gutter (drag handle) */}
-      {hasTabs && showPanel && (
-        <div
-          onMouseDown={onGutterMouseDown}
-          className="w-1 shrink-0 cursor-col-resize bg-base-300/60 hover:bg-primary transition-colors"
-        />
-      )}
-
-      {/* Editor + results column */}
-      <div className="flex flex-col flex-1 min-w-0">
-        {/* Editor header */}
-        <div className="flex items-center px-3 py-1.5 border-b border-base-300/60 bg-base-200 shrink-0">
-          <span className="text-xs text-base-content/45 truncate flex-1">
-            {kata.name}
-          </span>
-          <div className="flex items-center gap-1.5 ml-2 relative">
-            <button
-              onClick={handleReset}
-              title="Reset to original"
-              className="btn btn-ghost btn-xs text-base-content/45 hover:text-base-content"
-            >
-              ↻
-            </button>
-            <button
-              onClick={() => setShowConfig((v) => !v)}
-              title="Editor settings"
-              className={`btn btn-xs ${
-                showConfig
-                  ? "btn-primary"
-                  : "btn-ghost text-base-content/45 hover:text-base-content"
-              }`}
-            >
-              ⚙
-            </button>
-            {showConfig && (
-              <div className="absolute top-full right-0 mt-1 z-50 w-56 rounded-lg border border-base-300/50 bg-base-100 shadow-lg py-2 px-3 flex flex-col gap-2.5">
-                {/* Font size */}
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-base-content/45">font size</span>
-                  <div className="flex items-center gap-1.5">
-                    <button onClick={() => setSetting("fontSize", Math.max(10, fontSize - 1))} className="btn btn-ghost btn-xs btn-square">−</button>
-                    <span className="text-xs font-mono w-5 text-center tabular-nums">{fontSize}</span>
-                    <button onClick={() => setSetting("fontSize", Math.min(28, fontSize + 1))} className="btn btn-ghost btn-xs btn-square">+</button>
-                  </div>
-                </div>
-                {/* Vim mode */}
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-base-content/45">vim mode</span>
-                  <input
-                    type="checkbox"
-                    className="toggle toggle-sm toggle-success"
-                    checked={vimMode}
-                    onChange={toggleVimMode}
-                  />
-                </div>
-                {/* Dark mode */}
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-base-content/45">dark mode</span>
-                  <input
-                    type="checkbox"
-                    className="toggle toggle-sm toggle-success"
-                    checked={theme === "dark"}
-                    onChange={toggleTheme}
-                  />
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Monaco editor */}
-        <div className={`${results ? "flex-[2]" : "flex-1"} min-h-0`}>
-          <Editor
-            key={kata.id}
-            defaultValue={initialCode}
-            language={kata.language}
-            theme={monacoTheme}
-            options={{
-              fontSize,
-              fontFamily,
-              tabSize,
-              minimap: { enabled: false },
-              automaticLayout: true,
-              scrollBeyondLastLine: false,
-            }}
-            onMount={handleEditorMount}
-            onChange={() => {
-              setSaved(false);
-              if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
-              autosaveTimer.current = setTimeout(() => {
-                const code = editorRef.current?.getValue();
-                if (code != null) {
-                  saveUserCode(kata.id, code).then(() => setSaved(true));
-                }
-              }, 1500);
-            }}
-          />
-        </div>
-
-        {/* Status bar: saved indicator + vim + run buttons */}
-        <div className="flex items-center px-3 h-7 border-t border-base-300/60 bg-base-200 shrink-0">
-          <span className={`text-xs ${saved ? "text-success" : "text-base-content/40"}`}>
-            {saved ? "• saved" : "• unsaved"}
-          </span>
+      {/* Content row: side panel + editor */}
+      <div className="flex flex-1 min-h-0">
+        {/* Side panel: tab content only */}
+        {hasTabs && showPanel && (
           <div
-            ref={statusBarRef}
-            className={`flex-1 px-4 text-xs font-mono text-base-content/40 ${
-              vimMode ? "" : "invisible"
-            }`}
-          />
-          <div className="flex items-center gap-1.5">
-            {maxTestRuns !== null && (
-              <span className={`text-xs font-mono tabular-nums ${
-                !kataPassed && maxTestRuns - runCount === 1
-                  ? "text-warning"
-                  : "text-base-content/35"
-              }`}>
-                {runCount}/{maxTestRuns}
-              </span>
+            className="shrink-0 flex flex-col border-r border-base-300/60 bg-base-200"
+            style={{ width: panelWidth }}
+          >
+            {showPanel === "description" && (
+              <div className="flex-1 overflow-y-auto px-4 py-3 text-sm text-base-content/70">
+                <DescriptionWithLink text={kata.description || "No description available."} />
+              </div>
             )}
-            <button
-              onClick={toggleVimMode}
-              className={`btn btn-xs ${
-                vimMode
-                  ? "btn-success"
-                  : "btn-ghost text-base-content/40"
-              }`}
-            >
-              VIM
-            </button>
-            <button
-              onClick={handleRun}
-              disabled={running || (maxTestRuns !== null && runCount >= maxTestRuns && !kataPassed)}
-              className="btn btn-xs btn-primary"
-            >
-              {running ? "..." : "▷ run"}
-            </button>
-          </div>
-        </div>
-
-        {/* Closable results pane */}
-        {(results || running) && (
-          <div className="flex-1 min-h-0 flex flex-col border-t border-base-300/60">
-            {/* Results header */}
-            <div className="flex items-center px-3 py-1 border-b border-base-300/60 bg-base-200 shrink-0">
-              <button
-                onClick={() => { if (!running) setResults(null); }}
-                className="text-xs text-base-content/30 hover:text-base-content/60 transition-colors mr-2"
-              >
-                ✕
-              </button>
-              <span className="text-xs text-base-content/45">
-                {running ? "running..." : "results"}
-              </span>
-            </div>
-            <div className="flex-1 min-h-0 overflow-y-auto">
-              {running ? (
-                <div className="flex items-center justify-center h-full text-base-content/30 text-sm">
-                  <span className="loading loading-spinner loading-sm text-primary mr-2" />
-                  Running tests...
+            {showPanel === "solution" && kata.solution && (
+              <div className="flex-1 min-h-0">
+                <Editor
+                  value={kata.solution}
+                  language={kata.language}
+                  theme={monacoTheme}
+                  options={{
+                    fontSize,
+                    fontFamily,
+                    tabSize,
+                    minimap: { enabled: false },
+                    automaticLayout: true,
+                    scrollBeyondLastLine: false,
+                    readOnly: true,
+                    lineNumbers: "off",
+                  }}
+                />
+              </div>
+            )}
+            {showPanel === "notes" && (
+              <div className="flex-1 flex flex-col min-h-0">
+                <textarea
+                  className="flex-1 resize-none bg-transparent px-4 py-3 text-sm text-base-content/80 placeholder:text-base-content/25 outline-none font-mono leading-relaxed"
+                  placeholder="Add notes, hints, patterns to remember..."
+                  value={notes}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setNotes(val);
+                    setNotesSaved(false);
+                    if (notesAutosaveTimer.current) clearTimeout(notesAutosaveTimer.current);
+                    notesAutosaveTimer.current = setTimeout(() => {
+                      saveKataNotes(kata.id, val).then(() => setNotesSaved(true));
+                    }, 1000);
+                  }}
+                />
+                <div className="px-4 pb-2 text-xs text-base-content/25">
+                  {notesSaved ? "saved" : "saving..."}
                 </div>
-              ) : results ? (
-                <TestOutput results={results} ranAt={ranAt} />
-              ) : null}
-            </div>
+              </div>
+            )}
           </div>
         )}
+
+        {/* Gutter (drag handle) */}
+        {hasTabs && showPanel && (
+          <div
+            onMouseDown={onGutterMouseDown}
+            className="w-1 shrink-0 cursor-col-resize bg-base-300/60 hover:bg-primary transition-colors"
+          />
+        )}
+
+        {/* Editor + results column */}
+        <div className="flex flex-col flex-1 min-w-0">
+          {/* Monaco editor */}
+          <div className={`${results ? "flex-[2]" : "flex-1"} min-h-0`}>
+            <Editor
+              key={kata.id}
+              defaultValue={initialCode}
+              language={kata.language}
+              theme={monacoTheme}
+              options={{
+                fontSize,
+                fontFamily,
+                tabSize,
+                minimap: { enabled: false },
+                automaticLayout: true,
+                scrollBeyondLastLine: false,
+              }}
+              onMount={handleEditorMount}
+              onChange={() => {
+                setSaved(false);
+                if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
+                autosaveTimer.current = setTimeout(() => {
+                  const code = editorRef.current?.getValue();
+                  if (code != null) {
+                    saveUserCode(kata.id, code).then(() => setSaved(true));
+                  }
+                }, 1500);
+              }}
+            />
+          </div>
+
+          {/* Closable results pane */}
+          {(results || running) && (
+            <div className="flex-1 min-h-0 flex flex-col border-t border-base-300/60">
+              <div className="flex items-center px-3 py-1 border-b border-base-300/60 bg-base-200 shrink-0">
+                <button
+                  onClick={() => { if (!running) setResults(null); }}
+                  className="text-xs text-base-content/30 hover:text-base-content/60 transition-colors mr-2"
+                >
+                  ✕
+                </button>
+                <span className="text-xs text-base-content/45">
+                  {running ? "running..." : "results"}
+                </span>
+              </div>
+              <div className="flex-1 min-h-0 overflow-y-auto">
+                {running ? (
+                  <div className="flex items-center justify-center h-full text-base-content/30 text-sm">
+                    <span className="loading loading-spinner loading-sm text-primary mr-2" />
+                    Running tests...
+                  </div>
+                ) : results ? (
+                  <TestOutput results={results} ranAt={ranAt} />
+                ) : null}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
