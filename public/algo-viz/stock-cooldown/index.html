@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Buy and Sell Stock with Cooldown</title>
+  <link rel="stylesheet" href="../shared/style.css" />
+  <script src="../shared/viz.js"></script>
+  <style>
+    body {
+      display: flex; flex-direction: column; height: 100vh; overflow: hidden;
+    }
+
+    /* ── Top bar ── */
+    .top-bar {
+      display: flex; align-items: center; gap: 10px; flex-shrink: 0;
+      padding: 10px 16px;
+      background: var(--surface); border-bottom: 1px solid var(--border);
+    }
+    .top-bar label { font-size: 0.8rem; color: var(--text-dim); white-space: nowrap; }
+    .top-bar input {
+      flex: 1; max-width: 320px;
+      background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius);
+      color: var(--text); padding: 5px 10px; font-family: monospace; font-size: 0.85rem;
+    }
+    .top-bar input:focus { outline: none; border-color: var(--accent); }
+    .btn-build {
+      padding: 5px 14px;
+      background: var(--accent); color: #000; font-weight: 700; font-size: 0.8rem;
+      border: none; border-radius: var(--radius); cursor: pointer;
+    }
+    .btn-build:hover { opacity: 0.85; }
+
+    /* ── Middle ── */
+    .middle { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-height: 0; }
+
+    /* Price chart */
+    .price-section {
+      flex: 0 0 auto;
+      padding: 12px 16px 8px;
+      display: flex; flex-direction: column; gap: 6px;
+    }
+    .section-label {
+      font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.1em;
+      color: var(--text-ghost); font-weight: 700;
+    }
+    .bar-chart {
+      display: flex; align-items: flex-end; gap: 6px; height: 90px;
+    }
+    .bar-col {
+      display: flex; flex-direction: column; align-items: center; gap: 3px; flex: 1;
+    }
+    .bar-val {
+      font-size: 0.7rem; font-family: monospace; color: var(--text-dim);
+      transition: color 0.2s;
+    }
+    .bar {
+      width: 100%; border-radius: 3px 3px 0 0;
+      background: var(--surface-dark); border: 1px solid var(--border-soft);
+      transition: background 0.2s, border-color 0.2s, height 0.3s;
+      min-height: 4px;
+    }
+    .bar.active   { background: var(--accent); border-color: var(--accent); }
+    .bar.past     { background: #2a3a2a; border-color: #3a4e3a; }
+    .bar-day {
+      font-size: 0.6rem; color: var(--text-ghost);
+    }
+    .bar-col.active-col .bar-val { color: var(--accent-pale); font-weight: 700; }
+    .bar-col.active-col .bar-day { color: var(--text-dim); }
+
+    /* State machine */
+    .sm-section {
+      flex: 1; display: flex; flex-direction: column; overflow: hidden; min-height: 0;
+      padding: 0 16px 8px;
+    }
+    .sm-canvas-wrap {
+      flex: 1; position: relative; min-height: 0;
+    }
+    #sm-svg {
+      width: 100%; height: 100%;
+    }
+
+    /* ── Bottom nav ── */
+    .bottom-bar {
+      flex-shrink: 0;
+      padding: 8px 16px;
+      background: var(--surface); border-top: 1px solid var(--border);
+      display: flex; flex-direction: column; gap: 6px;
+    }
+    .nav-row {
+      display: flex; align-items: center; gap: 8px;
+    }
+    .nav-btn {
+      padding: 4px 12px;
+      background: var(--surface-dark); border: 1px solid var(--border);
+      color: var(--text); border-radius: var(--radius); cursor: pointer; font-size: 0.8rem;
+    }
+    .nav-btn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent-pale); }
+    .nav-btn:disabled { opacity: 0.35; cursor: default; }
+    #step-counter { font-size: 0.75rem; color: var(--text-ghost); margin-left: auto; }
+    select.speed-sel {
+      background: var(--surface-dark); border: 1px solid var(--border);
+      color: var(--text-dim); border-radius: var(--radius); font-size: 0.75rem; padding: 3px 6px;
+    }
+    .desc-row {
+      display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;
+    }
+    #step-desc {
+      font-size: 0.82rem; color: var(--text-dim); flex: 1;
+    }
+    #profit-badge {
+      font-size: 0.75rem; font-weight: 700; font-family: monospace;
+      padding: 2px 9px; border-radius: 99px;
+      background: rgba(var(--accent-ch), 0.12);
+      border: 1px solid rgba(var(--accent-ch), 0.28);
+      color: var(--accent-pale); white-space: nowrap;
+    }
+
+    /* SVG state node styles */
+    .sm-node rect {
+      rx: 10; ry: 10;
+    }
+  </style>
+</head>
+<body>
+
+<!-- Top bar -->
+<div class="top-bar">
+  <label for="prices-input">Prices:</label>
+  <input id="prices-input" type="text" value="1,2,3,0,2" placeholder="e.g. 1,2,3,0,2" />
+  <button class="btn-build" id="btn-build">Build</button>
+</div>
+
+<!-- Middle -->
+<div class="middle">
+  <!-- Price bar chart -->
+  <div class="price-section">
+    <div class="section-label">Price Timeline</div>
+    <div class="bar-chart" id="bar-chart"></div>
+  </div>
+
+  <!-- State machine -->
+  <div class="sm-section">
+    <div class="section-label">State Machine DP</div>
+    <div class="sm-canvas-wrap">
+      <svg id="sm-svg" viewBox="0 0 700 220" preserveAspectRatio="xMidYMid meet"></svg>
+    </div>
+  </div>
+</div>
+
+<!-- Bottom nav -->
+<div class="bottom-bar">
+  <div class="nav-row">
+    <button class="nav-btn" id="btn-prev">&#8592; Prev</button>
+    <button class="nav-btn" id="btn-play">Play</button>
+    <button class="nav-btn" id="btn-next">Next &#8594;</button>
+    <select class="speed-sel" id="speed-sel">
+      <option value="1200">Slow</option>
+      <option value="700" selected>Normal</option>
+      <option value="350">Fast</option>
+    </select>
+    <span id="step-counter">—</span>
+  </div>
+  <div class="desc-row">
+    <span id="step-desc">Enter prices and click Build.</span>
+    <span id="profit-badge">max profit: —</span>
+  </div>
+</div>
+
+<script>
+// ── State machine SVG layout constants ──────────────────────────────────────
+// Three nodes: HOLDING (left), SOLD (center), IDLE (right)
+// viewBox: 0 0 700 220
+
+var NODE = {
+  holding: { x: 100, y: 110, label: 'HOLDING',  sub: 'own stock' },
+  sold:    { x: 350, y: 110, label: 'SOLD',      sub: 'cooldown' },
+  idle:    { x: 600, y: 110, label: 'IDLE',      sub: 'can buy'  },
+};
+var NW = 130, NH = 60;
+
+var SVG_NS = 'http://www.w3.org/2000/svg';
+
+function mkEl(tag, attrs) {
+  var el = document.createElementNS(SVG_NS, tag);
+  Object.keys(attrs).forEach(function(k) { el.setAttribute(k, attrs[k]); });
+  return el;
+}
+
+// ── Build SVG once ──────────────────────────────────────────────────────────
+var svg = document.getElementById('sm-svg');
+
+// defs for arrowheads
+var defs = mkEl('defs', {});
+
+function makeMarker(id, color) {
+  var m = mkEl('marker', { id: id, markerWidth: '8', markerHeight: '6',
+    refX: '8', refY: '3', orient: 'auto' });
+  var p = mkEl('polygon', { points: '0 0, 8 3, 0 6', fill: color });
+  m.appendChild(p); defs.appendChild(m);
+}
+makeMarker('arr-dim',    '#3a4060');
+makeMarker('arr-active', '#7aa2f7');
+makeMarker('arr-buy',    '#9ece6a');
+makeMarker('arr-sell',   '#f7768e');
+makeMarker('arr-cool',   '#e0af68');
+svg.appendChild(defs);
+
+// ── Arrows ──────────────────────────────────────────────────────────────────
+// Each arrow: { id, x1,y1,x2,y2, label, type, curve? }
+// Types: hold-h, buy, sell, cool, hold-i, rest
+
+function curvedPath(x1,y1,x2,y2, dy) {
+  var mx = (x1+x2)/2, my = (y1+y2)/2 + dy;
+  return 'M '+x1+' '+y1+' Q '+mx+' '+my+' '+x2+' '+y2;
+}
+
+// Arrow definitions (from-edge to to-edge of each node box)
+var ARROWS = [
+  // HOLDING → HOLDING (self-loop top)
+  { id: 'hold-h', type: 'hold-h', color: '#3a4060', label: 'hold',
+    path: function() {
+      var x = NODE.holding.x; var y = NODE.holding.y - NH/2;
+      return 'M '+(x-20)+' '+y+' C '+(x-40)+' '+(y-50)+' '+(x+40)+' '+(y-50)+' '+(x+20)+' '+y;
+    }
+  },
+  // IDLE → HOLDING (buy arc, below)
+  { id: 'buy', type: 'buy', color: '#9ece6a', label: 'buy (idle − price)',
+    path: function() {
+      var x1 = NODE.idle.x - NW/2, y1 = NODE.idle.y + 8;
+      var x2 = NODE.holding.x + NW/2, y2 = NODE.holding.y + 8;
+      return curvedPath(x1,y1,x2,y2, 55);
+    }
+  },
+  // HOLDING → SOLD (sell arc, above)
+  { id: 'sell', type: 'sell', color: '#f7768e', label: 'sell (holding + price)',
+    path: function() {
+      var x1 = NODE.holding.x + NW/2, y1 = NODE.holding.y - 8;
+      var x2 = NODE.sold.x - NW/2,    y2 = NODE.sold.y - 8;
+      return curvedPath(x1,y1,x2,y2, -45);
+    }
+  },
+  // SOLD → IDLE (cooldown ends, above)
+  { id: 'cool', type: 'cool', color: '#e0af68', label: 'cooldown ends',
+    path: function() {
+      var x1 = NODE.sold.x + NW/2, y1 = NODE.sold.y - 8;
+      var x2 = NODE.idle.x - NW/2, y2 = NODE.idle.y - 8;
+      return curvedPath(x1,y1,x2,y2, -45);
+    }
+  },
+  // IDLE → IDLE (rest self-loop)
+  { id: 'rest', type: 'rest', color: '#3a4060', label: 'rest',
+    path: function() {
+      var x = NODE.idle.x; var y = NODE.idle.y - NH/2;
+      return 'M '+(x-20)+' '+y+' C '+(x-40)+' '+(y-50)+' '+(x+40)+' '+(y-50)+' '+(x+20)+' '+y;
+    }
+  },
+];
+
+// Render arrows
+var arrowEls = {};
+ARROWS.forEach(function(a) {
+  var p = mkEl('path', {
+    'd': a.path(),
+    'fill': 'none',
+    'stroke': '#3a4060',
+    'stroke-width': '2',
+    'marker-end': 'url(#arr-dim)',
+  });
+  svg.appendChild(p);
+
+  // label
+  var pathId = 'path-'+a.id;
+  var pathForText = mkEl('path', { id: pathId, d: a.path(), fill: 'none', stroke: 'none' });
+  svg.appendChild(pathForText);
+  var txt = mkEl('text', { 'font-size': '10', 'fill': '#3a4060', 'text-anchor': 'middle' });
+  var tp = mkEl('textPath', { href: '#'+pathId, startOffset: '50%' });
+  tp.textContent = a.label;
+  txt.appendChild(tp);
+  svg.appendChild(txt);
+
+  arrowEls[a.id] = { path: p, text: txt, textPath: tp, def: a };
+});
+
+// ── Node boxes ──────────────────────────────────────────────────────────────
+var nodeEls = {};
+['holding','sold','idle'].forEach(function(key) {
+  var n = NODE[key];
+  var g = mkEl('g', {});
+
+  var rect = mkEl('rect', {
+    x: n.x - NW/2, y: n.y - NH/2,
+    width: NW, height: NH,
+    rx: 10, ry: 10,
+    fill: '#0d0d1a', stroke: '#3a4060', 'stroke-width': '2',
+  });
+
+  var lbl = mkEl('text', {
+    x: n.x, y: n.y - 6,
+    'text-anchor': 'middle',
+    'font-size': '13', 'font-weight': '700',
+    fill: '#565f89',
+    'font-family': 'monospace',
+  });
+  lbl.textContent = n.label;
+
+  var sub = mkEl('text', {
+    x: n.x, y: n.y + 10,
+    'text-anchor': 'middle',
+    'font-size': '9.5',
+    fill: '#3b4261',
+  });
+  sub.textContent = n.sub;
+
+  var val = mkEl('text', {
+    x: n.x, y: n.y + 26,
+    'text-anchor': 'middle',
+    'font-size': '12', 'font-weight': '700',
+    fill: '#3b4261',
+    'font-family': 'monospace',
+  });
+  val.textContent = '—';
+
+  g.appendChild(rect);
+  g.appendChild(lbl);
+  g.appendChild(sub);
+  g.appendChild(val);
+  svg.appendChild(g);
+
+  nodeEls[key] = { g, rect, lbl, sub, val };
+});
+
+// ── Build steps ──────────────────────────────────────────────────────────────
+function buildSteps(prices) {
+  var steps = [];
+  var n = prices.length;
+
+  // Initial state (before any day)
+  steps.push({
+    day: -1,
+    prices: prices,
+    holding: -Infinity,
+    sold: -Infinity,
+    idle: 0,
+    activeArrows: [],
+    desc: 'Initial state: holding = −∞, sold = −∞, idle = 0. Not holding any stock.',
+    profit: null,
+  });
+
+  var holding = -Infinity, sold = -Infinity, idle = 0;
+
+  for (var i = 0; i < n; i++) {
+    var price = prices[i];
+    var prevH = holding, prevS = sold, prevI = idle;
+
+    var newH = Math.max(prevH, prevI - price);
+    var newS = prevH === -Infinity ? -Infinity : prevH + price;
+    var newI = Math.max(prevI, prevS === -Infinity ? -Infinity : prevS);
+
+    var arrows = [];
+    var parts = [];
+
+    // Determine winning transition for holding
+    if (newH === prevI - price && newH >= prevH) {
+      // bought (or tie-bought)
+      if (newH === prevH) {
+        arrows.push('hold-h'); // tie
+        parts.push('holding = max(hold, buy) = ' + fmt(newH));
+      } else {
+        arrows.push('buy');
+        parts.push('BUY: idle(' + fmt(prevI) + ') − price(' + price + ') = ' + fmt(newH));
+      }
+    } else {
+      arrows.push('hold-h');
+      parts.push('HOLD: keeping position (' + fmt(newH) + ')');
+    }
+
+    // sold always from holding
+    if (newS !== -Infinity) {
+      arrows.push('sell');
+      parts.push('SELL: holding(' + fmt(prevH) + ') + price(' + price + ') = ' + fmt(newS));
+    } else {
+      parts.push('SELL: −∞ (no position to sell)');
+    }
+
+    // idle: rest or come off cooldown
+    if (prevS !== -Infinity && prevS >= prevI) {
+      arrows.push('cool');
+      parts.push('COOLDOWN ends: idle = sold(' + fmt(prevS) + ')');
+    } else {
+      arrows.push('rest');
+      parts.push('REST: idle stays ' + fmt(newI));
+    }
+
+    holding = newH; sold = newS; idle = newI = Math.max(prevI, prevS === -Infinity ? -Infinity : prevS);
+
+    // recalculate idle correctly
+    idle = Math.max(prevI, prevS === -Infinity ? prevI : prevS);
+    newI = idle;
+    holding = newH;
+    sold = newS;
+
+    var profit = Math.max(sold === -Infinity ? 0 : sold, idle);
+
+    steps.push({
+      day: i,
+      prices: prices,
+      holding: holding,
+      sold: sold,
+      idle: idle,
+      activeArrows: arrows,
+      desc: 'Day ' + i + ' (price=' + price + '): ' + parts.join(' | '),
+      profit: profit,
+    });
+  }
+
+  return steps;
+}
+
+function fmt(v) {
+  if (v === -Infinity || v === -Infinity) return '−∞';
+  return v;
+}
+
+// ── Render ────────────────────────────────────────────────────────────────────
+function render(snap, cursor, total) {
+  var prices = snap.prices;
+  var n = prices.length;
+
+  // Update step counter
+  document.getElementById('step-counter').textContent =
+    'Step ' + (cursor + 1) + ' / ' + total;
+
+  // Update description
+  document.getElementById('step-desc').textContent = snap.desc;
+
+  // Update profit badge
+  document.getElementById('profit-badge').textContent =
+    snap.profit !== null ? 'max profit: ' + snap.profit : 'max profit: —';
+
+  // Update bar chart
+  renderBarChart(prices, snap.day);
+
+  // Update state machine
+  renderSM(snap);
+}
+
+function renderBarChart(prices, activeDay) {
+  var chart = document.getElementById('bar-chart');
+  var maxP = Math.max.apply(null, prices);
+  chart.innerHTML = '';
+  prices.forEach(function(p, i) {
+    var col = document.createElement('div');
+    col.className = 'bar-col' + (i === activeDay ? ' active-col' : '');
+
+    var val = document.createElement('div');
+    val.className = 'bar-val';
+    val.textContent = p;
+
+    var bar = document.createElement('div');
+    bar.className = 'bar' + (i === activeDay ? ' active' : (i < activeDay ? ' past' : ''));
+    bar.style.height = Math.round((p / maxP) * 64 + 4) + 'px';
+
+    var day = document.createElement('div');
+    day.className = 'bar-day';
+    day.textContent = 'd' + i;
+
+    col.appendChild(val);
+    col.appendChild(bar);
+    col.appendChild(day);
+    chart.appendChild(col);
+  });
+}
+
+var COLOR_MAP = {
+  'hold-h': { stroke: '#7aa2f7', marker: 'arr-active', text: '#7aa2f7' },
+  'buy':    { stroke: '#9ece6a', marker: 'arr-buy',    text: '#9ece6a' },
+  'sell':   { stroke: '#f7768e', marker: 'arr-sell',   text: '#f7768e' },
+  'cool':   { stroke: '#e0af68', marker: 'arr-cool',   text: '#e0af68' },
+  'rest':   { stroke: '#7aa2f7', marker: 'arr-active', text: '#7aa2f7' },
+};
+
+var NODE_COLOR = {
+  holding: { active: '#7aa2f7', dim: '#565f89' },
+  sold:    { active: '#f7768e', dim: '#565f89' },
+  idle:    { active: '#9ece6a', dim: '#565f89' },
+};
+
+function renderSM(snap) {
+  var active = snap.activeArrows;
+
+  // Reset arrows
+  ARROWS.forEach(function(a) {
+    var el = arrowEls[a.id];
+    el.path.setAttribute('stroke', '#3a4060');
+    el.path.setAttribute('stroke-width', '2');
+    el.path.setAttribute('marker-end', 'url(#arr-dim)');
+    el.path.setAttribute('opacity', '0.4');
+    el.text.setAttribute('fill', '#3a4060');
+    el.text.setAttribute('opacity', '0.4');
+  });
+
+  // Activate arrows
+  active.forEach(function(id) {
+    var c = COLOR_MAP[id];
+    if (!c) return;
+    var el = arrowEls[id];
+    el.path.setAttribute('stroke', c.stroke);
+    el.path.setAttribute('stroke-width', '2.5');
+    el.path.setAttribute('marker-end', 'url(#'+c.marker+')');
+    el.path.setAttribute('opacity', '1');
+    el.text.setAttribute('fill', c.text);
+    el.text.setAttribute('opacity', '1');
+  });
+
+  // Determine active nodes
+  var activeNodes = {};
+  active.forEach(function(id) {
+    if (id === 'hold-h') activeNodes.holding = true;
+    if (id === 'buy')    { activeNodes.idle = true; activeNodes.holding = true; }
+    if (id === 'sell')   { activeNodes.holding = true; activeNodes.sold = true; }
+    if (id === 'cool')   { activeNodes.sold = true; activeNodes.idle = true; }
+    if (id === 'rest')   activeNodes.idle = true;
+  });
+
+  // Update node boxes
+  ['holding','sold','idle'].forEach(function(key) {
+    var el = nodeEls[key];
+    var isActive = !!activeNodes[key];
+    var c = NODE_COLOR[key];
+
+    el.rect.setAttribute('stroke', isActive ? c.active : '#3a4060');
+    el.rect.setAttribute('stroke-width', isActive ? '2.5' : '2');
+    el.rect.setAttribute('fill', isActive ? 'rgba('+hexToRgb(c.active)+',0.07)' : '#0d0d1a');
+    el.lbl.setAttribute('fill', isActive ? c.active : '#565f89');
+
+    var val = snap[key];
+    el.val.textContent = val === -Infinity ? '−∞' : (val === null ? '—' : val);
+    el.val.setAttribute('fill', isActive ? c.active : '#565f89');
+    el.sub.setAttribute('fill', isActive ? c.active : '#3b4261');
+    el.sub.setAttribute('opacity', isActive ? '0.8' : '1');
+  });
+}
+
+function hexToRgb(hex) {
+  var r = parseInt(hex.slice(1,3),16);
+  var g = parseInt(hex.slice(3,5),16);
+  var b = parseInt(hex.slice(5,7),16);
+  return r+','+g+','+b;
+}
+
+// ── VizNav wiring ─────────────────────────────────────────────────────────────
+var nav = VizNav({
+  btnPrev:  document.getElementById('btn-prev'),
+  btnNext:  document.getElementById('btn-next'),
+  btnPlay:  document.getElementById('btn-play'),
+  speedSel: document.getElementById('speed-sel'),
+  render:   render,
+});
+
+function loadPrices() {
+  var raw = document.getElementById('prices-input').value;
+  var prices = raw.split(',').map(function(s) { return parseInt(s.trim(), 10); })
+    .filter(function(n) { return !isNaN(n) && n >= 0; });
+  if (prices.length < 2) {
+    document.getElementById('step-desc').textContent = 'Need at least 2 prices.';
+    return;
+  }
+  var steps = buildSteps(prices);
+  nav.load(steps);
+}
+
+document.getElementById('btn-build').addEventListener('click', loadPrices);
+document.getElementById('prices-input').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') loadPrices();
+});
+
+// Boot with default
+loadPrices();
+</script>
+</body>
+</html>
