@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Binary Tree Maximum Path Sum</title>
+  <link rel="stylesheet" href="../shared/style.css" />
+  <script src="../shared/gsap.min.js"></script>
+  <script src="../shared/viz.js"></script>
+  <style>
+    .viz-area {
+      width: 100%; max-width: 90%;
+      display: flex; flex-direction: column; gap: 12px;
+    }
+    .tree-wrap {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+    }
+    #tree-svg { display: block; width: 100%; }
+    .bottom-row {
+      display: grid;
+      grid-template-columns: 50% 1fr;
+      gap: 12px;
+      align-items: start;
+    }
+    .right-col { display: flex; flex-direction: column; gap: 12px; }
+    @media (max-width: 680px) { .bottom-row { grid-template-columns: 1fr; } }
+    .code-panel {
+      background: #0a0d14;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      display: flex; flex-direction: column;
+    }
+    .code-header {
+      padding: 9px 14px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      font-size: 0.67rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.11em;
+      color: var(--text-dim);
+    }
+    .code-body {
+      padding: 10px 0;
+      flex: 1;
+      font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+      font-size: 0.78rem;
+      line-height: 1.7;
+      overflow-x: auto;
+    }
+    .cl {
+      display: flex; align-items: stretch;
+      border-left: 3px solid transparent;
+      padding: 0 14px 0 0;
+      transition: background-color 0.01s;
+      white-space: pre;
+    }
+    .cl .ln {
+      width: 28px; min-width: 28px;
+      text-align: right; color: #3d4468;
+      user-select: none; padding-right: 14px;
+      font-size: 0.72rem; line-height: 1.7;
+    }
+    .cl .code { color: var(--text-muted); }
+    .kw  { color: var(--purple); }
+    .fn  { color: var(--blue); }
+    .bi  { color: var(--orange); }
+    .str { color: var(--green); }
+    .cm  { color: #3d4468; font-style: italic; }
+    .op  { color: var(--text); }
+    .panel-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 13px 18px;
+    }
+    .panel-title {
+      font-size: 0.67rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.11em;
+      color: var(--text-dim); margin-bottom: 10px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .maxsum-panel { text-align: center; padding: 16px 18px 14px; }
+    .maxsum-label {
+      font-size: 0.67rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.11em;
+      color: var(--text-dim); margin-bottom: 8px;
+    }
+    #maxsum-val {
+      font-size: 3.5rem; font-weight: 800;
+      color: var(--orange);
+      font-family: 'JetBrains Mono', monospace;
+      line-height: 1; display: block;
+    }
+    #path-eq {
+      font-size: 0.82rem; color: var(--text-muted);
+      margin-top: 6px; font-family: 'JetBrains Mono', monospace;
+      min-height: 1.3em;
+    }
+    .depth-row { display: flex; gap: 10px; }
+    .depth-slot {
+      flex: 1;
+      background: #0a0d14;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 8px 12px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.82rem;
+    }
+    .depth-slot .ds-label { color: var(--text-dim); font-size: 0.7rem; margin-bottom: 4px; }
+    .depth-slot .ds-val { color: var(--text-bright); font-size: 1.1rem; font-weight: 700; }
+    .depth-slot.active-slot { border-color: var(--accent); }
+    .depth-slot .ds-val.unknown { color: var(--text-faint); }
+    #call-stack {
+      display: flex; flex-direction: column-reverse; gap: 5px;
+      min-height: 40px;
+    }
+    .cs-frame {
+      background: #1e1a3a; color: var(--accent-pale);
+      border: 1px solid var(--accent); border-radius: 6px;
+      padding: 5px 11px; font-size: 0.84rem; font-weight: 600;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .cs-frame.top { background: #4338ca; color: #fff; }
+    .cs-empty { color: var(--text-faint); font-size: 0.82rem; font-style: italic; }
+  </style>
+</head>
+<body class="page">
+
+<div class="page-header">
+  <a class="back-link" href="../index.html">&#8592; All Algorithms</a>
+  <h1 class="page-title">Binary Tree Maximum Path Sum</h1>
+</div>
+
+<div class="controls">
+  <div class="field">
+    <label>Level-order (use null for empty)</label>
+    <input id="inp-tree" type="text" value="-10,9,20,null,null,15,7" style="width:300px" />
+  </div>
+  <button class="btn-primary" onclick="build()">Build</button>
+</div>
+
+<div class="viz-area">
+
+  <div class="tree-wrap">
+    <svg id="tree-svg" viewBox="0 0 800 320"
+         preserveAspectRatio="xMidYMid meet"></svg>
+  </div>
+
+  <div class="status-bar" style="max-width:100%">
+    <span class="phase-label" id="phase-label">&#8212;</span>
+    <span class="step-desc"   id="step-desc">Click Build to start.</span>
+  </div>
+
+  <div class="bottom-row">
+
+    <div class="code-panel">
+      <div class="code-header">Python</div>
+      <div class="code-body" id="code-body"></div>
+    </div>
+
+    <div class="right-col">
+
+      <div class="panel-box maxsum-panel">
+        <div class="maxsum-label">Max Path Sum</div>
+        <span id="maxsum-val">&#8212;</span>
+        <div id="path-eq"></div>
+      </div>
+
+      <div class="panel-box">
+        <div class="panel-title">Active Frame &#8212; Gains</div>
+        <div class="depth-row">
+          <div class="depth-slot" id="slot-left">
+            <div class="ds-label">left_gain</div>
+            <div class="ds-val unknown" id="ds-left">&#8212;</div>
+          </div>
+          <div class="depth-slot" id="slot-right">
+            <div class="ds-label">right_gain</div>
+            <div class="ds-val unknown" id="ds-right">&#8212;</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel-box">
+        <div class="panel-title">Call Stack <span style="font-size:0.65rem;font-weight:400;color:var(--text-faint)">(top = active)</span></div>
+        <div id="call-stack"><span class="cs-empty">empty</span></div>
+      </div>
+
+    </div>
+
+  </div>
+
+</div>
+
+<div class="legend">
+  <div class="leg-item">
+    <svg width="14" height="14"><circle cx="7" cy="7" r="6" fill="#1e2130" stroke="#2d3148" stroke-width="2"/></svg>
+    Unvisited
+  </div>
+  <div class="leg-item">
+    <svg width="14" height="14"><circle cx="7" cy="7" r="6" fill="#4338ca" stroke="var(--accent)" stroke-width="2"/></svg>
+    Active
+  </div>
+  <div class="leg-item">
+    <svg width="14" height="14"><circle cx="7" cy="7" r="6" fill="#052e16" stroke="#16a34a" stroke-width="2"/></svg>
+    Computed
+  </div>
+  <div class="leg-item">
+    <svg width="14" height="14"><circle cx="7" cy="7" r="6" fill="#3d2800" stroke="#ff9e64" stroke-width="2"/></svg>
+    Best Path
+  </div>
+</div>
+
+<div class="step-nav">
+  <button class="btn-step" id="btn-back" disabled>&#8592; Back</button>
+  <button class="btn-step" id="btn-next" disabled>Next &#8594;</button>
+  <button id="btn-play" style="background:#15803d;color:#fff;border:none;border-radius:4px;padding:6px 14px;font-weight:600;cursor:pointer">&#9654; Play</button>
+  <select id="speed-select" style="background:var(--bg);border:1px solid var(--border);color:var(--text);border-radius:4px;padding:6px 8px;font-size:0.85rem">
+    <option value="700">Slow</option>
+    <option value="350" selected>Medium</option>
+    <option value="120">Fast</option>
+  </select>
+</div>
+
+<script>
+var CODE_LINES = [
+  [1,  '<span class="kw">def</span> <span class="fn">maxPathSum</span><span class="op">(</span>root<span class="op">):</span>'],
+  [2,  '    max_sum <span class="op">=</span> <span class="op">-</span><span class="bi">float</span><span class="op">(</span><span class="str">\'inf\'</span><span class="op">)</span>'],
+  [0,  ''],
+  [4,  '    <span class="kw">def</span> <span class="fn">dfs</span><span class="op">(</span>node<span class="op">):</span>'],
+  [5,  '        <span class="kw">if</span> node <span class="kw">is</span> <span class="bi">None</span><span class="op">:</span>'],
+  [6,  '            <span class="kw">return</span> <span class="bi">0</span>'],
+  [0,  ''],
+  [8,  '        left_gain  <span class="op">=</span> <span class="fn">max</span><span class="op">(</span><span class="bi">0</span><span class="op">,</span> <span class="fn">dfs</span><span class="op">(</span>node.left<span class="op">))</span>'],
+  [9,  '        right_gain <span class="op">=</span> <span class="fn">max</span><span class="op">(</span><span class="bi">0</span><span class="op">,</span> <span class="fn">dfs</span><span class="op">(</span>node.right<span class="op">))</span>'],
+  [0,  ''],
+  [11, '        path <span class="op">=</span> left_gain <span class="op">+</span> node.val <span class="op">+</span> right_gain'],
+  [12, '        max_sum <span class="op">=</span> <span class="fn">max</span><span class="op">(</span>max_sum<span class="op">,</span> path<span class="op">)</span>'],
+  [0,  ''],
+  [14, '        <span class="kw">return</span> node.val <span class="op">+</span> <span class="fn">max</span><span class="op">(</span>left_gain<span class="op">,</span> right_gain<span class="op">)</span>'],
+];
+
+function buildCodePanel() {
+  var body = document.getElementById('code-body');
+  body.innerHTML = '';
+  CODE_LINES.forEach(function(item) {
+    var ln = item[0], html = item[1];
+    var row = document.createElement('div');
+    row.className = 'cl';
+    if (ln > 0) row.id = 'cl-' + ln;
+    row.innerHTML = '<span class="ln">' + (ln > 0 ? ln : '') + '</span><span class="code">' + html + '</span>';
+    body.appendChild(row);
+  });
+}
+
+var COLORS = {
+  idle:   { fill: '#1e2130', stroke: '#2d3148',       text: 'var(--text-muted)' },
+  active: { fill: '#4338ca', stroke: 'var(--accent)',  text: 'var(--accent-pale)' },
+  done:   { fill: '#052e16', stroke: '#16a34a',        text: 'var(--green)' },
+  path:   { fill: '#3d2800', stroke: '#ff9e64',        text: '#ff9e64' },
+};
+var EDGE_DEFAULT = '#2d3148';
+var EDGE_PATH    = '#ff9e64';
+
+var nodeMap = {};
+var R = 22;
+var VW = 800, VH = 320;
+
+function parseLevelOrder(s) {
+  return s.split(',').map(function(t) { return t.trim(); }).map(function(t) {
+    return (t === '' || t.toLowerCase() === 'null' || t === 'n') ? null : Number(t);
+  });
+}
+
+var nextId = 0;
+function buildTree(vals) {
+  nodeMap = {}; nextId = 0;
+  if (!vals.length || vals[0] === null) return null;
+  var makeNode = function(val) {
+    var n = { id: nextId++, val: val, left: null, right: null, x: 0, y: 0, depth: 0 };
+    nodeMap[n.id] = n; return n;
+  };
+  var root = makeNode(vals[0]);
+  var queue = [root]; var i = 1;
+  while (queue.length && i < vals.length) {
+    var cur = queue.shift();
+    if (i < vals.length) {
+      if (vals[i] !== null) { cur.left = makeNode(vals[i]); cur.left.depth = cur.depth + 1; queue.push(cur.left); }
+      i++;
+    }
+    if (i < vals.length) {
+      if (vals[i] !== null) { cur.right = makeNode(vals[i]); cur.right.depth = cur.depth + 1; queue.push(cur.right); }
+      i++;
+    }
+  }
+  return root;
+}
+
+function layout(root) {
+  var idx = 0, maxD = 0;
+  function inorder(node) {
+    if (!node) return;
+    inorder(node.left); node._inIdx = idx++;
+    if (node.depth > maxD) maxD = node.depth;
+    inorder(node.right);
+  }
+  inorder(root);
+  var count = idx;
+  var xSpace = Math.max(60, Math.min(110, 700 / Math.max(1, count)));
+  var ySpace = 70; var padX = 40, padY = 30;
+  VW = padX * 2 + (count - 1) * xSpace;
+  VH = padY * 2 + maxD * ySpace + R * 2 + 24;
+  if (VW < 400) VW = 400;
+  for (var id in nodeMap) {
+    var n = nodeMap[id];
+    n.x = padX + n._inIdx * xSpace;
+    n.y = padY + 22 + n.depth * ySpace + R;
+  }
+}
+
+function svgEl(tag, attrs) {
+  var el = document.createElementNS('http://www.w3.org/2000/svg', tag);
+  Object.entries(attrs).forEach(function(kv) { el.setAttribute(kv[0], kv[1]); });
+  return el;
+}
+function svgG(id) {
+  var g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  if (id) g.id = id; return g;
+}
+
+function renderSVG(root) {
+  var svg = document.getElementById('tree-svg');
+  svg.innerHTML = '';
+  svg.setAttribute('viewBox', '0 0 ' + VW + ' ' + VH);
+  R = VW > 700 ? 22 : 18;
+  var edgeG = svgG('edges'); var nodeG = svgG('nodes');
+  svg.appendChild(edgeG); svg.appendChild(nodeG);
+  (function drawEdges(n) {
+    if (!n) return;
+    [n.left, n.right].forEach(function(c) {
+      if (!c) return;
+      edgeG.appendChild(svgEl('line', {
+        id: 'edge-' + n.id + '-' + c.id,
+        x1: n.x, y1: n.y, x2: c.x, y2: c.y,
+        stroke: EDGE_DEFAULT, 'stroke-width': 2, 'stroke-linecap': 'round',
+      }));
+    });
+    drawEdges(n.left); drawEdges(n.right);
+  })(root);
+  for (var id in nodeMap) {
+    var n = nodeMap[id]; var g = svgG('node-g-' + n.id);
+    var badge = svgEl('text', {
+      id: 'nb-' + n.id, x: n.x, y: n.y - R - 6,
+      'text-anchor': 'middle', 'dominant-baseline': 'auto',
+      fill: '#16a34a', 'font-size': 12, 'font-weight': '800',
+      'font-family': 'JetBrains Mono, monospace', opacity: 0,
+    });
+    badge.textContent = ''; g.appendChild(badge);
+    g.appendChild(svgEl('circle', {
+      id: 'nc-' + n.id, cx: n.x, cy: n.y, r: R,
+      fill: COLORS.idle.fill, stroke: COLORS.idle.stroke, 'stroke-width': 2.5,
+    }));
+    var t = svgEl('text', {
+      id: 'nt-' + n.id, x: n.x, y: n.y,
+      'text-anchor': 'middle', 'dominant-baseline': 'middle',
+      fill: COLORS.idle.text,
+      'font-size': Math.round(R * 0.75), 'font-weight': 'bold',
+      'font-family': 'Segoe UI, system-ui, sans-serif',
+    });
+    t.textContent = n.val; g.appendChild(t); nodeG.appendChild(g);
+  }
+}
+
+function getPathDown(node, gainMap) {
+  var path = [node.id]; var cur = node;
+  while (true) {
+    var lg = (cur.left  && gainMap[cur.left.id]  != null) ? gainMap[cur.left.id]  : -Infinity;
+    var rg = (cur.right && gainMap[cur.right.id] != null) ? gainMap[cur.right.id] : -Infinity;
+    var bestGain = Math.max(lg, rg);
+    if (bestGain <= 0) break;
+    var next = (lg >= rg && cur.left && gainMap[cur.left.id] > 0) ? cur.left
+             : (cur.right && gainMap[cur.right.id] > 0 ? cur.right : null);
+    if (!next) break;
+    path.push(next.id); cur = next;
+  }
+  return path;
+}
+
+function buildPathEdges(pathNodes) {
+  var edges = [];
+  for (var i = 0; i < pathNodes.length - 1; i++) {
+    var a = nodeMap[pathNodes[i]]; var b = nodeMap[pathNodes[i + 1]];
+    if (!a || !b) continue;
+    if ((a.left && a.left.id === b.id) || (a.right && a.right.id === b.id)) {
+      edges.push([a.id, b.id]);
+    } else {
+      edges.push([b.id, a.id]);
+    }
+  }
+  return edges;
+}
+
+function simulate(root) {
+  var stateMap = {}; var gainMap = {};
+  for (var id in nodeMap) { stateMap[id] = 'idle'; gainMap[id] = null; }
+  var maxSum = -Infinity;
+  var pathNodes = []; var pathEdges = [];
+  var callStack = []; var out = [];
+
+  function snap(phase, desc, lines, activeLeft, activeRight) {
+    out.push({
+      phase: phase, desc: desc, lines: lines || [],
+      stateMap: Object.assign({}, stateMap),
+      gainMap:  Object.assign({}, gainMap),
+      maxSum: maxSum,
+      pathNodes: pathNodes.slice(),
+      pathEdges: pathEdges.map(function(e) { return e.slice(); }),
+      callStack: callStack.slice(),
+      activeLeft:  activeLeft  !== undefined ? activeLeft  : null,
+      activeRight: activeRight !== undefined ? activeRight : null,
+    });
+  }
+
+  function dfs(node) {
+    if (!node) {
+      callStack.push('dfs(None)');
+      snap('Base', 'node is None, return 0.', [5, 6]);
+      callStack.pop(); return 0;
+    }
+    callStack.push('dfs(' + node.val + ')');
+    stateMap[node.id] = 'active';
+    snap('Visit', 'Enter dfs(' + node.val + ').', [4, 5]);
+    snap('Left', 'Recurse into left child from ' + node.val + '.', [8]);
+    var rawLeft = dfs(node.left);
+    var leftGain = Math.max(0, rawLeft);
+    snap('Right', 'left_gain = max(0, ' + rawLeft + ') = ' + leftGain + '. Recurse right.', [9], leftGain, null);
+    var rawRight = dfs(node.right);
+    var rightGain = Math.max(0, rawRight);
+    var path = leftGain + node.val + rightGain;
+    snap('Path', 'path = ' + leftGain + ' + ' + node.val + ' + ' + rightGain + ' = ' + path + '.', [11], leftGain, rightGain);
+    var updatedMax = false;
+    if (path > maxSum) {
+      maxSum = path; updatedMax = true;
+      var leftArm  = (node.left  && leftGain  > 0) ? getPathDown(node.left,  gainMap).slice().reverse() : [];
+      var rightArm = (node.right && rightGain > 0) ? getPathDown(node.right, gainMap).slice()           : [];
+      pathNodes = leftArm.concat([node.id]).concat(rightArm);
+      pathEdges = buildPathEdges(pathNodes);
+    }
+    var gainUp = node.val + Math.max(leftGain, rightGain);
+    gainMap[node.id] = gainUp;
+    stateMap[node.id] = 'done';
+    snap('Return',
+      (updatedMax ? 'New max_sum = ' + maxSum + '! ' : '') +
+      'path = ' + path + '. Return gain ' + node.val + ' + max(' + leftGain + ',' + rightGain + ') = ' + gainUp + '.',
+      [12, 14], leftGain, rightGain);
+    callStack.pop(); return gainUp;
+  }
+
+  snap('Start', 'Call dfs(root). max_sum starts at -inf.', []);
+  dfs(root);
+  snap('Done', 'Maximum path sum = ' + maxSum + '.', []);
+  return out;
+}
+
+var prevLines = []; var prevMaxSum = null;
+
+function applyStep(s, animate) {
+  var pathSet = {};
+  s.pathNodes.forEach(function(id) { pathSet[id] = true; });
+  Object.keys(s.stateMap).forEach(function(id) {
+    var st = s.stateMap[id];
+    var effective = (pathSet[+id] && st === 'done') ? 'path' : st;
+    setNodeColor(+id, effective, animate);
+  });
+  Object.keys(s.gainMap).forEach(function(id) {
+    var badge = document.getElementById('nb-' + id);
+    if (!badge) return;
+    var val = s.gainMap[id];
+    if (val !== null) {
+      badge.textContent = val;
+      badge.setAttribute('fill', pathSet[+id] ? '#ff9e64' : '#16a34a');
+      if (animate) { gsap.to(badge, { opacity: 1, duration: 0.3 }); }
+      else { badge.setAttribute('opacity', 1); }
+    } else {
+      badge.textContent = ''; badge.setAttribute('opacity', 0);
+    }
+  });
+  document.querySelectorAll('#edges line').forEach(function(el) {
+    if (animate) { gsap.to(el, { attr: { stroke: EDGE_DEFAULT, 'stroke-width': 2 }, duration: 0.2 }); }
+    else { el.setAttribute('stroke', EDGE_DEFAULT); el.setAttribute('stroke-width', 2); }
+  });
+  s.pathEdges.forEach(function(pair) {
+    var el = document.getElementById('edge-' + pair[0] + '-' + pair[1]);
+    if (!el) return;
+    if (animate) { gsap.to(el, { attr: { stroke: EDGE_PATH, 'stroke-width': 3.5 }, duration: 0.3 }); }
+    else { el.setAttribute('stroke', EDGE_PATH); el.setAttribute('stroke-width', 3.5); }
+  });
+  var msEl = document.getElementById('maxsum-val');
+  if (msEl) {
+    var displayVal = isFinite(s.maxSum) ? s.maxSum : '—';
+    if (s.maxSum !== prevMaxSum && animate && isFinite(s.maxSum)) {
+      gsap.from(msEl, { scale: 1.5, duration: 0.35, ease: 'back.out(2)' });
+    }
+    msEl.textContent = displayVal;
+  }
+  prevMaxSum = s.maxSum;
+  var pEq = document.getElementById('path-eq');
+  if (pEq) {
+    if (s.activeLeft !== null && s.activeRight !== null) {
+      pEq.textContent = s.activeLeft + ' + node + ' + s.activeRight;
+    } else { pEq.textContent = ''; }
+  }
+  var slotL = document.getElementById('slot-left');
+  var slotR = document.getElementById('slot-right');
+  var dsL   = document.getElementById('ds-left');
+  var dsR   = document.getElementById('ds-right');
+  if (s.activeLeft !== null) {
+    dsL.textContent = s.activeLeft; dsL.className = 'ds-val';
+    slotL.className = 'depth-slot active-slot';
+  } else { dsL.textContent = '—'; dsL.className = 'ds-val unknown'; slotL.className = 'depth-slot'; }
+  if (s.activeRight !== null) {
+    dsR.textContent = s.activeRight; dsR.className = 'ds-val';
+    slotR.className = 'depth-slot active-slot';
+  } else { dsR.textContent = '—'; dsR.className = 'ds-val unknown'; slotR.className = 'depth-slot'; }
+  renderCallStack(s.callStack, animate);
+  setCodeLines(prevLines, s.lines, animate);
+  prevLines = s.lines || [];
+}
+
+var HL_BG   = 'rgba(var(--orange-ch),0.13)';
+var HL_NONE = 'rgba(var(--orange-ch),0)';
+var HL_BORD = 'var(--orange)';
+var NO_BORD = 'transparent';
+
+function setCodeLines(oldLines, newLines, animate) {
+  var DUR = 0.22;
+  (oldLines || []).filter(function(n) { return !(newLines || []).includes(n); }).forEach(function(n) {
+    var el = document.getElementById('cl-' + n); if (!el) return;
+    if (animate) {
+      gsap.to(el, { backgroundColor: HL_NONE, borderLeftColor: NO_BORD, duration: DUR });
+      gsap.to(el.querySelector('.ln'), { color: '#3d4468', duration: DUR });
+    } else { el.style.backgroundColor = ''; el.style.borderLeftColor = ''; var ln = el.querySelector('.ln'); if (ln) ln.style.color = ''; }
+  });
+  (newLines || []).filter(function(n) { return !(oldLines || []).includes(n); }).forEach(function(n) {
+    var el = document.getElementById('cl-' + n); if (!el) return;
+    if (animate) {
+      gsap.to(el, { backgroundColor: HL_BG, borderLeftColor: HL_BORD, duration: DUR, delay: 0.08 });
+      gsap.to(el.querySelector('.ln'), { color: 'var(--orange)', duration: DUR, delay: 0.08 });
+    } else { el.style.backgroundColor = HL_BG; el.style.borderLeftColor = HL_BORD; var ln = el.querySelector('.ln'); if (ln) ln.style.color = 'var(--orange)'; }
+  });
+  if (newLines && newLines.length) {
+    var el = document.getElementById('cl-' + newLines[0]);
+    if (el) el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }
+}
+
+function setNodeColor(id, state, animate, dur) {
+  dur = dur || 0.3;
+  var c = COLORS[state] || COLORS.idle;
+  var nc = document.getElementById('nc-' + id);
+  var nt = document.getElementById('nt-' + id);
+  if (!nc) return;
+  if (animate) {
+    gsap.to(nc, { duration: dur, ease: 'power2.out', attr: { fill: c.fill, stroke: c.stroke } });
+    gsap.to(nt, { duration: dur, attr: { fill: c.text } });
+  } else {
+    nc.setAttribute('fill', c.fill); nc.setAttribute('stroke', c.stroke);
+    if (nt) nt.setAttribute('fill', c.text);
+  }
+}
+
+function renderCallStack(stack, animate) {
+  var c = document.getElementById('call-stack');
+  c.innerHTML = '';
+  if (!stack.length) { c.innerHTML = '<span class="cs-empty">empty</span>'; return; }
+  stack.forEach(function(label, i) {
+    var el = document.createElement('div');
+    el.className = 'cs-frame' + (i === stack.length - 1 ? ' top' : '');
+    el.textContent = label; c.appendChild(el);
+    if (animate && i === stack.length - 1) { gsap.from(el, { opacity: 0, x: -10, duration: 0.2 }); }
+  });
+}
+
+function build() {
+  var txt = document.getElementById('inp-tree').value.trim();
+  var vals = parseLevelOrder(txt);
+  buildCodePanel();
+  var root = buildTree(vals);
+  if (!root) {
+    document.getElementById('tree-svg').innerHTML = '';
+    document.getElementById('step-desc').textContent = 'Empty tree.';
+    return;
+  }
+  layout(root); renderSVG(root);
+  prevLines = []; prevMaxSum = null;
+  var msEl = document.getElementById('maxsum-val');
+  if (msEl) msEl.textContent = '—';
+  var pEq = document.getElementById('path-eq');
+  if (pEq) pEq.textContent = '';
+  nav.load(simulate(root));
+}
+
+var nav = VizNav({
+  btnPrev:  document.getElementById('btn-back'),
+  btnNext:  document.getElementById('btn-next'),
+  btnPlay:  document.getElementById('btn-play'),
+  speedSel: document.getElementById('speed-select'),
+  render: function(snap, cur, total) {
+    applyStep(snap, cur > 0);
+    var el = document.getElementById('phase-label');
+    if (el) el.textContent = 'Step ' + (cur + 1) + ' / ' + total + '  ·  ' + snap.phase;
+    var d = document.getElementById('step-desc');
+    if (d) d.textContent = snap.desc;
+  }
+});
+
+build();
+</script>
+<script>
+  if (window.self !== window.top) {
+    var bl = document.querySelector('.back-link');
+    if (bl) bl.style.display = 'none';
+  }
+</script>
+</body>
+</html>
