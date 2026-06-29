@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Word Ladder</title>
+  <link rel="stylesheet" href="../shared/style.css" />
+  <script src="../shared/viz.js"></script>
+  <style>
+    body { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+
+    .viz-area {
+      flex: 1; overflow-y: auto;
+      display: flex; flex-direction: column; align-items: center;
+      padding: 12px 16px; gap: 10px;
+    }
+
+    /* BFS levels */
+    .levels-wrap {
+      width: 100%; max-width: 860px;
+      display: flex; flex-direction: column; gap: 8px;
+    }
+
+    .level-row {
+      display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    }
+    .level-label {
+      font-size: 0.68rem; font-weight: 700; font-family: monospace;
+      color: var(--text-ghost); width: 52px; text-align: right; flex-shrink: 0;
+    }
+    .level-words { display: flex; gap: 6px; flex-wrap: wrap; }
+
+    .word-chip {
+      display: flex; gap: 0;
+      border: 2px solid var(--border); border-radius: 8px; overflow: hidden;
+      font-family: monospace; font-weight: 700; font-size: 1rem;
+      transition: border-color 0.15s;
+    }
+    .word-chip.begin  { border-color: var(--purple); }
+    .word-chip.end    { border-color: var(--green); }
+    .word-chip.active { border-color: var(--yellow); }
+    .word-chip.done   { border-color: var(--accent); opacity: 0.7; }
+
+    .wc-letter {
+      width: 30px; height: 36px;
+      display: flex; align-items: center; justify-content: center;
+      background: var(--bg); color: var(--text-dim);
+      border-right: 1px solid var(--border);
+      transition: background 0.12s, color 0.12s;
+    }
+    .wc-letter:last-child { border-right: none; }
+    .wc-letter.changed {
+      background: #201700; color: var(--yellow-light);
+    }
+    .word-chip.end .wc-letter.changed {
+      background: var(--green-bg); color: var(--green-light);
+    }
+    .word-chip.begin .wc-letter { background: #1a1030; color: var(--purple); }
+
+    /* Queue panel */
+    .info-row {
+      display: flex; gap: 10px; width: 100%; max-width: 860px; flex-wrap: wrap;
+    }
+    .sect {
+      flex: 1; min-width: 180px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 10px 14px;
+      display: flex; flex-direction: column; gap: 6px;
+    }
+
+    .queue-wrap {
+      display: flex; gap: 5px; flex-wrap: wrap; min-height: 30px; align-items: center;
+    }
+    .q-chip {
+      padding: 2px 8px; border: 1px solid var(--accent);
+      border-radius: 4px; font-family: monospace; font-size: 0.78rem;
+      color: var(--accent-pale); background: #0d1a3e;
+    }
+    .q-chip.head {
+      border-color: var(--yellow); color: var(--yellow-light); background: #201700;
+    }
+
+    /* Var boxes */
+    .var-grid { display: flex; gap: 8px; flex-wrap: wrap; }
+    .var-box {
+      padding: 8px 10px; background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); display: flex; flex-direction: column;
+      align-items: center; gap: 2px; min-width: 80px;
+    }
+    .var-box.ab { border-color: var(--accent); }
+    .var-box.yb { border-color: #b45309; }
+    .var-box.gb { border-color: var(--green-border); }
+    .var-label { font-size: 0.6rem; font-family: monospace; color: var(--text-faint); text-align: center; }
+    .var-val   { font-size: 1.1rem; font-weight: 700; color: var(--text-bright); font-family: monospace; }
+
+    /* Result */
+    .result-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 6px 12px; border-radius: var(--radius-sm);
+      font-size: 0.88rem; font-weight: 700; font-family: monospace;
+      border: 1px solid var(--border); color: var(--text-dim);
+    }
+    .result-badge.found     { border-color: var(--green); color: var(--green); background: var(--green-bg); }
+    .result-badge.not-found { border-color: var(--red);   color: var(--red);   background: #200a0a; }
+
+    /* Code panel */
+    .code-panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; width: 100%; max-width: 860px; }
+    .code-header { padding: 7px 14px; font-size: 0.72rem; font-weight: 600; color: var(--text-dim); border-bottom: 1px solid var(--border); background: var(--bg); }
+    .code-body { padding: 8px 0; font-size: 0.76rem; line-height: 1.7; white-space: pre; }
+    .code-line { display: flex; align-items: center; padding: 0 12px; }
+    .code-line.hl { background: var(--border-soft); border-left: 2px solid var(--accent); }
+    .ln { min-width: 22px; color: var(--text-ghost); user-select: none; font-size: 0.68rem; }
+
+    .kw { color: var(--purple); }
+    .fn { color: var(--blue); }
+    .bi { color: var(--orange); }
+    .nb { color: var(--green); }
+    .cm { color: var(--text-ghost); }
+    .st { color: var(--yellow-light); }
+
+    /* Speed select */
+    .speed-select {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); color: var(--text);
+      font-size: 0.85rem; padding: 8px 10px; outline: none; width: 80px;
+    }
+    .nav-row { display: flex; gap: 8px; align-items: center; }
+
+    .btn-play {
+      background: #15803d; border: none; border-radius: var(--radius-sm);
+      color: #fff; cursor: pointer; font-size: 0.88rem; font-weight: 600;
+      padding: 9px 16px; transition: background 0.2s;
+    }
+    .btn-play:hover { background: #166534; }
+    .btn-play.playing { background: #c2410c; }
+    .btn-play.playing:hover { background: #9a3412; }
+  </style>
+</head>
+<body class="page">
+
+<div class="page-header">
+  <a class="back-link" href="../index.html">&larr; All Algorithms</a>
+  <div class="page-title">Word Ladder</div>
+  <div class="page-sub">LeetCode 127 &middot; Graph &middot; BFS on implicit word graph</div>
+</div>
+
+<div class="controls">
+  <div class="field">
+    <label>Begin Word</label>
+    <input id="inp-begin" type="text" value="hit" style="width:80px;font-family:monospace" />
+  </div>
+  <div class="field">
+    <label>End Word</label>
+    <input id="inp-end" type="text" value="cog" style="width:80px;font-family:monospace" />
+  </div>
+  <div class="field">
+    <label>Word List (comma-separated)</label>
+    <input id="inp-list" type="text" value="hot,dot,dog,lot,log,cog" style="width:260px;font-family:monospace;font-size:0.85rem" />
+  </div>
+  <button class="btn-primary" onclick="buildAndRun()">Build</button>
+</div>
+
+<div class="viz-area">
+
+  <!-- BFS level display -->
+  <div class="levels-wrap" id="levels-wrap">
+    <span style="color:var(--text-ghost);font-size:0.82rem">Click Build to start.</span>
+  </div>
+
+  <!-- Queue + Variables -->
+  <div class="info-row">
+    <div class="sect">
+      <div class="panel-title">BFS Queue <span class="panel-sub" id="queue-sub"></span></div>
+      <div class="queue-wrap" id="queue-wrap">
+        <span style="color:var(--text-ghost);font-size:0.82rem">—</span>
+      </div>
+    </div>
+
+    <div class="sect">
+      <div class="panel-title">Variables</div>
+      <div class="var-grid">
+        <div class="var-box ab">
+          <div class="var-label">level</div>
+          <div class="var-val" id="vv-level">—</div>
+        </div>
+        <div class="var-box yb">
+          <div class="var-label">current word</div>
+          <div class="var-val" id="vv-word">—</div>
+        </div>
+        <div class="var-box gb">
+          <div class="var-label">result</div>
+          <div class="var-val" id="vv-result">—</div>
+        </div>
+      </div>
+      <div id="result-badge-wrap" style="margin-top:4px"></div>
+    </div>
+  </div>
+
+  <!-- Code -->
+  <div class="code-panel">
+    <div class="code-header">Python &middot; BFS word graph</div>
+    <div class="code-body" id="code-body"></div>
+  </div>
+
+</div>
+
+<!-- Bottom nav -->
+<div class="nav-bar">
+  <div class="nav-row">
+    <button class="btn-secondary" id="btn-prev">&larr; Prev</button>
+    <button class="btn-play" id="btn-play">Play</button>
+    <button class="btn-secondary" id="btn-next">Next &rarr;</button>
+    <select class="speed-select" id="speed-sel">
+      <option value="800">0.8s</option>
+      <option value="500" selected>0.5s</option>
+      <option value="300">0.3s</option>
+      <option value="150">0.15s</option>
+      <option value="80">0.08s</option>
+    </select>
+  </div>
+  <div class="step-counter" id="step-counter">—</div>
+  <div class="step-desc" id="step-desc">Click Build to start.</div>
+</div>
+
+<script>
+// ── Code lines ────────────────────────────────────────────────────────────────
+var CODE = [
+  { t: '<span class="kw">def</span> <span class="fn">ladderLength</span>(beginWord, endWord, wordList):' },
+  { t: '  wordSet = <span class="bi">set</span>(wordList)' },
+  { t: '  <span class="kw">if</span> endWord <span class="kw">not in</span> wordSet: <span class="kw">return</span> <span class="nb">0</span>' },
+  { t: '' },
+  { t: '  queue = <span class="bi">deque</span>([beginWord])' },
+  { t: '  visited = {beginWord}' },
+  { t: '  level = <span class="nb">1</span>' },
+  { t: '' },
+  { t: '  <span class="kw">while</span> queue:' },
+  { t: '    <span class="kw">for</span> _ <span class="kw">in</span> <span class="bi">range</span>(<span class="bi">len</span>(queue)):  <span class="cm"># process one BFS level</span>' },
+  { t: '      word = queue.popleft()' },
+  { t: '      <span class="kw">if</span> word == endWord: <span class="kw">return</span> level' },
+  { t: '      <span class="kw">for</span> i <span class="kw">in</span> <span class="bi">range</span>(<span class="bi">len</span>(word)):' },
+  { t: '        <span class="kw">for</span> c <span class="kw">in</span> <span class="st">"abcdefghijklmnopqrstuvwxyz"</span>:' },
+  { t: '          nw = word[:i] + c + word[i+1:]' },
+  { t: '          <span class="kw">if</span> nw <span class="kw">in</span> wordSet <span class="kw">and</span> nw <span class="kw">not in</span> visited:' },
+  { t: '            visited.add(nw)' },
+  { t: '            queue.append(nw)' },
+  { t: '    level += <span class="nb">1</span>' },
+  { t: '  <span class="kw">return</span> <span class="nb">0</span>  <span class="cm"># no path found</span>' },
+];
+
+function renderCode(hlLines) {
+  var html = '';
+  CODE.forEach(function(line, i) {
+    var cls = (hlLines && hlLines.indexOf(i) !== -1) ? ' hl' : '';
+    html += '<div class="code-line' + cls + '"><span class="ln">' + (i + 1) + '</span>' + line.t + '</div>';
+  });
+  document.getElementById('code-body').innerHTML = html;
+}
+
+// ── BFS step builder ──────────────────────────────────────────────────────────
+var BEGIN = '', END = '', WORD_SET = new Set();
+
+function buildSteps() {
+  var steps = [];
+  var queue = [BEGIN];
+  var visited = new Set([BEGIN]);
+  var level = 1;
+
+  // Track what's been revealed per level for rendering
+  // levels: array of { words: [word, ...], parentWord: word|null }
+  var levelMap = []; // levelMap[i] = list of words at BFS level i
+  var wordLevel = {}; // word -> level index
+  var wordParent = {}; // word -> parent word (for changed-letter detection)
+
+  levelMap[0] = [BEGIN];
+  wordLevel[BEGIN] = 0;
+
+  steps.push({
+    type: 'init',
+    queue: [BEGIN],
+    level: level,
+    curWord: null,
+    changedIdx: -1,
+    levelMap: clone2D(levelMap),
+    wordLevel: Object.assign({}, wordLevel),
+    wordParent: Object.assign({}, wordParent),
+    activeWord: null,
+    desc: 'Initialize: add beginWord "' + BEGIN + '" to queue. visited = {' + BEGIN + '}. level = 1.',
+    codeHl: [0, 1, 4, 5, 6],
+  });
+
+  if (!WORD_SET.has(END)) {
+    steps.push({
+      type: 'no-end',
+      queue: [],
+      level: 0,
+      curWord: null,
+      changedIdx: -1,
+      levelMap: clone2D(levelMap),
+      wordLevel: Object.assign({}, wordLevel),
+      wordParent: Object.assign({}, wordParent),
+      activeWord: null,
+      desc: '"' + END + '" not in wordList — return 0 immediately.',
+      codeHl: [2],
+      result: 0,
+    });
+    return steps;
+  }
+
+  var found = false;
+  while (queue.length > 0 && !found) {
+    var levelSize = queue.length;
+    var nextQueue = [];
+
+    steps.push({
+      type: 'level-start',
+      queue: queue.slice(),
+      level: level,
+      curWord: null,
+      changedIdx: -1,
+      levelMap: clone2D(levelMap),
+      wordLevel: Object.assign({}, wordLevel),
+      wordParent: Object.assign({}, wordParent),
+      activeWord: null,
+      desc: 'BFS level ' + level + ': processing ' + levelSize + ' word' + (levelSize !== 1 ? 's' : '') + ' in queue.',
+      codeHl: [8, 9],
+    });
+
+    for (var qi = 0; qi < levelSize && !found; qi++) {
+      var word = queue[qi];
+
+      steps.push({
+        type: 'dequeue',
+        queue: queue.slice(qi),
+        level: level,
+        curWord: word,
+        changedIdx: -1,
+        levelMap: clone2D(levelMap),
+        wordLevel: Object.assign({}, wordLevel),
+        wordParent: Object.assign({}, wordParent),
+        activeWord: word,
+        desc: 'Dequeue "' + word + '". Check if it equals endWord "' + END + '".',
+        codeHl: [10, 11],
+      });
+
+      if (word === END) {
+        steps.push({
+          type: 'found',
+          queue: [],
+          level: level,
+          curWord: word,
+          changedIdx: -1,
+          levelMap: clone2D(levelMap),
+          wordLevel: Object.assign({}, wordLevel),
+          wordParent: Object.assign({}, wordParent),
+          activeWord: word,
+          desc: '"' + word + '" == endWord! Return level = ' + level + '.',
+          codeHl: [11],
+          result: level,
+        });
+        found = true;
+        break;
+      }
+
+      // Try each position × each letter
+      for (var i = 0; i < word.length && !found; i++) {
+        for (var ci = 0; ci < 26 && !found; ci++) {
+          var ch = String.fromCharCode(97 + ci);
+          if (ch === word[i]) continue;
+          var nw = word.substring(0, i) + ch + word.substring(i + 1);
+
+          if (WORD_SET.has(nw) && !visited.has(nw)) {
+            visited.add(nw);
+            nextQueue.push(nw);
+
+            var newLevel = level + 1;
+            if (!levelMap[newLevel - 1]) levelMap[newLevel - 1] = [];
+            // Level index is 0-based, so BFS level N goes to levelMap[N-1]
+            // But beginWord is at levelMap[0], level 1 words at levelMap[1], etc.
+            if (!levelMap[level]) levelMap[level] = [];
+            levelMap[level].push(nw);
+            wordLevel[nw] = level;
+            wordParent[nw] = word;
+
+            steps.push({
+              type: 'neighbor',
+              queue: queue.slice(qi + 1).concat(nextQueue),
+              level: level,
+              curWord: word,
+              changedIdx: i,
+              newWord: nw,
+              levelMap: clone2D(levelMap),
+              wordLevel: Object.assign({}, wordLevel),
+              wordParent: Object.assign({}, wordParent),
+              activeWord: nw,
+              desc: 'word[' + i + '] ' + word[i] + '→' + ch + ' = "' + nw + '" ∈ wordSet, not visited → enqueue.',
+              codeHl: [12, 13, 14, 15, 16, 17],
+            });
+          }
+        }
+      }
+    }
+
+    queue = nextQueue;
+    if (!found) {
+      if (queue.length === 0) {
+        steps.push({
+          type: 'done-false',
+          queue: [],
+          level: level,
+          curWord: null,
+          changedIdx: -1,
+          levelMap: clone2D(levelMap),
+          wordLevel: Object.assign({}, wordLevel),
+          wordParent: Object.assign({}, wordParent),
+          activeWord: null,
+          desc: 'Queue empty — no path from "' + BEGIN + '" to "' + END + '". Return 0.',
+          codeHl: [19],
+          result: 0,
+        });
+      } else {
+        level++;
+        steps.push({
+          type: 'level-inc',
+          queue: queue.slice(),
+          level: level,
+          curWord: null,
+          changedIdx: -1,
+          levelMap: clone2D(levelMap),
+          wordLevel: Object.assign({}, wordLevel),
+          wordParent: Object.assign({}, wordParent),
+          activeWord: null,
+          desc: 'Level complete. level++ → ' + level + '. ' + queue.length + ' word' + (queue.length !== 1 ? 's' : '') + ' in next frontier.',
+          codeHl: [18],
+        });
+      }
+    }
+  }
+
+  return steps;
+}
+
+function clone2D(arr) {
+  return arr.map(function(row) { return row ? row.slice() : []; });
+}
+
+// ── Render ────────────────────────────────────────────────────────────────────
+var STEPS = [];
+
+function renderSnap(snap, cursor, total) {
+  document.getElementById('step-counter').textContent = 'Step ' + (cursor + 1) + ' / ' + total;
+  document.getElementById('step-desc').textContent = snap.desc;
+
+  // BFS levels
+  var wrap = document.getElementById('levels-wrap');
+  var html = '';
+  var lm = snap.levelMap || [];
+  for (var li = 0; li < lm.length; li++) {
+    if (!lm[li] || lm[li].length === 0) continue;
+    var levelNum = li + 1; // BFS level number (beginWord = level 1)
+    html += '<div class="level-row">';
+    html += '<div class="level-label">L' + levelNum + '</div>';
+    html += '<div class="level-words">';
+    for (var wi = 0; wi < lm[li].length; wi++) {
+      var w = lm[li][wi];
+      var parent = snap.wordParent ? snap.wordParent[w] : null;
+      var changedPos = -1;
+      if (parent) {
+        for (var pi = 0; pi < w.length; pi++) {
+          if (w[pi] !== parent[pi]) { changedPos = pi; break; }
+        }
+      }
+
+      var chipCls = 'word-chip';
+      if (w === BEGIN) chipCls += ' begin';
+      else if (w === END && snap.type === 'found') chipCls += ' end';
+      else if (w === snap.activeWord) chipCls += ' active';
+      else if (snap.wordLevel && snap.wordLevel[w] < snap.level - 1) chipCls += ' done';
+
+      html += '<div class="' + chipCls + '">';
+      for (var ci2 = 0; ci2 < w.length; ci2++) {
+        var lCls = 'wc-letter';
+        if (ci2 === changedPos && w !== BEGIN) lCls += ' changed';
+        html += '<div class="' + lCls + '">' + w[ci2] + '</div>';
+      }
+      html += '</div>';
+    }
+    html += '</div></div>';
+  }
+  wrap.innerHTML = html || '<span style="color:var(--text-ghost);font-size:0.82rem">—</span>';
+
+  // Queue
+  var queueWrap = document.getElementById('queue-wrap');
+  var qHtml = '';
+  if (snap.queue && snap.queue.length > 0) {
+    snap.queue.forEach(function(w, qi) {
+      var cls = 'q-chip' + (qi === 0 ? ' head' : '');
+      qHtml += '<div class="' + cls + '">' + w + '</div>';
+    });
+    document.getElementById('queue-sub').textContent = '(' + snap.queue.length + ')';
+  } else {
+    qHtml = '<span style="color:var(--text-ghost);font-size:0.82rem">empty</span>';
+    document.getElementById('queue-sub').textContent = '';
+  }
+  queueWrap.innerHTML = qHtml;
+
+  // Var boxes
+  document.getElementById('vv-level').textContent = snap.level !== null ? snap.level : '—';
+  document.getElementById('vv-word').textContent = snap.curWord ? '"' + snap.curWord + '"' : '—';
+
+  var resVal = document.getElementById('vv-result');
+  var resBadge = document.getElementById('result-badge-wrap');
+  if (snap.result !== undefined) {
+    resVal.textContent = snap.result;
+    resVal.style.color = snap.result > 0 ? 'var(--green)' : 'var(--red)';
+    if (snap.result > 0) {
+      resBadge.innerHTML = '<div class="result-badge found">✓ ' + snap.result + ' steps</div>';
+    } else {
+      resBadge.innerHTML = '<div class="result-badge not-found">✗ No path</div>';
+    }
+  } else {
+    resVal.textContent = '…';
+    resVal.style.color = '';
+    resBadge.innerHTML = '';
+  }
+
+  // Code
+  renderCode(snap.codeHl);
+}
+
+// ── Build & run ───────────────────────────────────────────────────────────────
+var nav;
+
+function buildAndRun() {
+  BEGIN = document.getElementById('inp-begin').value.trim().toLowerCase();
+  END   = document.getElementById('inp-end').value.trim().toLowerCase();
+  var raw = document.getElementById('inp-list').value.trim();
+  if (!BEGIN || !END || !raw) return;
+
+  WORD_SET = new Set(raw.split(',').map(function(w) { return w.trim().toLowerCase(); }).filter(Boolean));
+
+  STEPS = buildSteps();
+
+  if (!nav) {
+    nav = VizNav({
+      btnPrev:  document.getElementById('btn-prev'),
+      btnNext:  document.getElementById('btn-next'),
+      btnPlay:  document.getElementById('btn-play'),
+      speedSel: document.getElementById('speed-sel'),
+      render:   renderSnap,
+    });
+  }
+  nav.load(STEPS);
+}
+
+renderCode([]);
+window.addEventListener('DOMContentLoaded', buildAndRun);
+</script>
+</body>
+</html>
