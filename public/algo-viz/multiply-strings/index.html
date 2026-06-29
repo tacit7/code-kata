@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Multiply Strings</title>
+  <link rel="stylesheet" href="../shared/style.css" />
+  <script src="../shared/gsap.min.js"></script>
+  <script src="../shared/viz.js"></script>
+  <style>
+    body { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+
+    /* ── top bar ── */
+    .top-bar {
+      display: flex; align-items: center; gap: 12px;
+      padding: 10px 20px; border-bottom: 1px solid var(--border);
+      background: var(--bg); flex-shrink: 0; flex-wrap: wrap;
+    }
+    .top-bar label { font-size: 0.82rem; color: var(--text-dim); }
+    .top-bar input[type=text] {
+      width: 90px; padding: 5px 8px; border-radius: 6px;
+      border: 1px solid var(--border); background: var(--surface-dark);
+      color: var(--text-bright); font-size: 0.95rem; font-family: monospace;
+      text-align: center;
+    }
+    .top-bar input[type=text]:focus { outline: none; border-color: var(--accent); }
+    .mul-sym { font-size: 1rem; color: var(--text-dim); font-weight: 700; }
+    .top-bar button {
+      padding: 5px 14px; border-radius: 6px; border: 1px solid var(--accent);
+      background: transparent; color: var(--accent); font-size: 0.85rem;
+      cursor: pointer; font-weight: 600;
+    }
+    .top-bar button:hover { background: rgba(var(--accent-ch), 0.1); }
+    .result-badge {
+      margin-left: auto; padding: 4px 14px; border-radius: 20px;
+      font-size: 0.85rem; font-weight: 700; display: none;
+      background: rgba(var(--accent-ch), 0.12);
+      border: 1px solid rgba(var(--accent-ch), 0.4);
+      color: var(--accent-pale); font-family: monospace;
+    }
+
+    /* ── middle ── */
+    .middle {
+      flex: 1; display: grid; grid-template-columns: 1fr 1fr;
+      gap: 16px; padding: 16px; overflow: hidden;
+    }
+    @media (max-width: 720px) { .middle { grid-template-columns: 1fr; } }
+
+    .panel-box {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 14px;
+      display: flex; flex-direction: column; gap: 10px; overflow: hidden;
+    }
+    .panel-title {
+      font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--text-dim); flex-shrink: 0;
+    }
+
+    /* ── grid panel ── */
+    .grid-scroll { overflow: auto; flex: 1; }
+    .mul-table {
+      border-collapse: separate; border-spacing: 4px;
+      font-family: monospace; font-size: 0.9rem;
+    }
+    .mul-table th, .mul-table td {
+      width: 44px; height: 38px; text-align: center;
+      border-radius: 6px;
+    }
+    /* header row (num1 digits) */
+    .mul-table .hdr-cell {
+      font-weight: 700; font-size: 0.88rem; color: var(--text-dim);
+      background: var(--surface-dark); border: 1px solid var(--border);
+    }
+    .mul-table .hdr-cell.hl-col {
+      color: var(--accent-pale); border-color: var(--accent);
+      background: rgba(var(--accent-ch), 0.1);
+    }
+    /* row header (num2 digits) */
+    .mul-table .row-hdr {
+      font-weight: 700; font-size: 0.88rem; color: var(--text-dim);
+      background: var(--surface-dark); border: 1px solid var(--border);
+    }
+    .mul-table .row-hdr.hl-row {
+      color: #fb923c; border-color: #fb923c;
+      background: rgba(251,146,60,0.1);
+    }
+    /* product cells */
+    .mul-table .prod-cell {
+      color: var(--text-ghost); background: #0f0f0f;
+      border: 1px solid #1e1e2e;
+      transition: background 0.18s, border-color 0.18s, color 0.18s;
+    }
+    .mul-table .prod-cell.done {
+      color: var(--text-dim); border-color: #2d3148;
+      background: #111420;
+    }
+    .mul-table .prod-cell.active {
+      color: var(--yellow); border-color: var(--yellow);
+      background: rgba(234,179,8,0.12);
+      font-weight: 700;
+    }
+    /* index label row */
+    .mul-table .idx-cell {
+      font-size: 0.65rem; color: var(--text-ghost);
+      border: none; background: transparent;
+    }
+
+    /* ── result array panel ── */
+    .result-scroll { flex: 1; overflow: auto; }
+    .arr-wrap { display: flex; flex-direction: column; gap: 10px; }
+
+    /* index labels above boxes */
+    .arr-indices { display: flex; gap: 4px; }
+    .arr-idx { width: 44px; text-align: center; font-size: 0.62rem; color: var(--text-ghost); font-family: monospace; }
+
+    /* the boxes */
+    .arr-row { display: flex; gap: 4px; }
+    .arr-cell {
+      width: 44px; height: 42px;
+      display: flex; align-items: center; justify-content: center;
+      border: 1px solid #1e1e2e; border-radius: 6px;
+      font-family: monospace; font-size: 1rem; font-weight: 700;
+      color: var(--text-ghost); background: #0f0f0f;
+      transition: border-color 0.18s, color 0.18s, background 0.18s;
+      position: relative;
+    }
+    .arr-cell.p1 {
+      border-color: #c084fc; color: #e9d5ff; background: rgba(192,132,252,0.1);
+    }
+    .arr-cell.p2 {
+      border-color: var(--yellow); color: #fef08a; background: rgba(234,179,8,0.1);
+    }
+    .arr-cell.nonzero {
+      border-color: #2d3148; color: var(--text-bright); background: #111420;
+    }
+    .arr-cell.final-ok {
+      border-color: var(--accent); color: var(--accent-pale); background: rgba(var(--accent-ch),0.08);
+    }
+    .arr-cell.final-zero {
+      border-color: #1e1e2e; color: var(--text-ghost); background: #0a0a10;
+      text-decoration: line-through; opacity: 0.5;
+    }
+
+    /* pointer labels under cells */
+    .arr-ptrs { display: flex; gap: 4px; }
+    .arr-ptr { width: 44px; text-align: center; font-size: 0.62rem; font-family: monospace; font-weight: 700; min-height: 14px; }
+    .arr-ptr.p1-lbl { color: #c084fc; }
+    .arr-ptr.p2-lbl { color: var(--yellow); }
+
+    /* mul info box */
+    .mul-info {
+      background: var(--surface-dark); border: 1px solid var(--border-soft);
+      border-radius: var(--radius); padding: 10px 14px;
+      font-family: monospace; font-size: 0.82rem;
+      display: flex; flex-direction: column; gap: 5px; flex-shrink: 0;
+    }
+    .mul-info-row { display: flex; gap: 8px; align-items: baseline; }
+    .mil { color: var(--text-dim); width: 70px; font-size: 0.72rem; }
+    .miv { color: var(--text-bright); font-weight: 700; }
+    .miv.accent { color: var(--accent-pale); }
+    .miv.yellow { color: var(--yellow); }
+    .miv.purple { color: #c084fc; }
+
+    /* ── bottom ── */
+    .bottom-bar {
+      border-top: 1px solid var(--border); padding: 10px 20px;
+      background: var(--bg); flex-shrink: 0;
+      display: flex; flex-direction: column; gap: 6px;
+    }
+    .step-info { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .phase-label { font-size: 0.75rem; color: var(--text-dim); min-width: 90px; }
+    .step-desc { font-size: 0.87rem; color: var(--text-bright); flex: 1; }
+    .nav-row { display: flex; align-items: center; gap: 8px; }
+    .nav-row button {
+      padding: 5px 14px; border-radius: 6px;
+      border: 1px solid var(--border); background: var(--surface);
+      color: var(--text-bright); cursor: pointer; font-size: 0.85rem;
+    }
+    .nav-row button:hover { border-color: var(--accent); color: var(--accent); }
+    #btn-play { border-color: var(--accent); color: var(--accent); font-weight: 600; }
+    #speed-select {
+      padding: 4px 8px; border-radius: 6px; border: 1px solid var(--border);
+      background: var(--surface-dark); color: var(--text-dim); font-size: 0.82rem;
+    }
+  </style>
+</head>
+<body>
+
+<!-- TOP -->
+<div class="top-bar">
+  <label>num1</label>
+  <input type="text" id="num1-input" value="123" maxlength="6" />
+  <span class="mul-sym">×</span>
+  <label>num2</label>
+  <input type="text" id="num2-input" value="456" maxlength="6" />
+  <button id="btn-build">Build</button>
+  <span class="result-badge" id="result-badge"></span>
+</div>
+
+<!-- MIDDLE -->
+<div class="middle">
+
+  <!-- LEFT: multiplication grid -->
+  <div class="panel-box">
+    <div class="panel-title">Partial Products Grid</div>
+    <div class="grid-scroll">
+      <table class="mul-table" id="mul-table"></table>
+    </div>
+  </div>
+
+  <!-- RIGHT: result array -->
+  <div class="panel-box">
+    <div class="panel-title">Result Array  <span style="font-size:0.6rem;color:var(--text-ghost);font-weight:400;text-transform:none;letter-spacing:0">(length = m + n)</span></div>
+    <div class="result-scroll">
+      <div class="arr-wrap" id="arr-wrap"></div>
+    </div>
+    <div class="mul-info" id="mul-info">
+      <div class="mul-info-row">
+        <span class="mil">digit1</span><span class="miv" id="mi-d1">—</span>
+        <span class="mil">digit2</span><span class="miv" id="mi-d2">—</span>
+      </div>
+      <div class="mul-info-row">
+        <span class="mil">mul</span><span class="miv yellow" id="mi-mul">—</span>
+        <span class="mil">total</span><span class="miv" id="mi-total">—</span>
+      </div>
+      <div class="mul-info-row">
+        <span class="mil">result[p2]</span><span class="miv yellow" id="mi-p2v">—</span>
+        <span class="mil">carry→p1</span><span class="miv purple" id="mi-p1v">—</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- BOTTOM -->
+<div class="bottom-bar">
+  <div class="step-info">
+    <span class="phase-label" id="phase-label">Step 0 / 0</span>
+    <span class="step-desc" id="step-desc">Press Build to start.</span>
+  </div>
+  <div class="nav-row">
+    <button id="btn-back">&#8592; Prev</button>
+    <button id="btn-play">&#9654; Play</button>
+    <button id="btn-next">Next &#8594;</button>
+    <select id="speed-select">
+      <option value="1200">0.5×</option>
+      <option value="700" selected>1×</option>
+      <option value="350">2×</option>
+      <option value="150">4×</option>
+    </select>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+var nav = null;
+var steps = [];
+var NUM1 = '', NUM2 = '';
+
+// ── simulate ──────────────────────────────────────────────────────────────────
+
+function simulate(num1, num2) {
+  var m = num1.length, n = num2.length;
+  var result = new Array(m + n).fill(0);
+  var out = [];
+
+  // Init step
+  out.push({
+    phase: 'Init',
+    desc: 'num1 = "' + num1 + '"  ×  num2 = "' + num2 + '". Allocate result array of size ' + (m + n) + ' (= ' + m + ' + ' + n + ').',
+    result: result.slice(),
+    activeI: -1, activeJ: -1,
+    p1: -1, p2: -1,
+    d1: null, d2: null, mul: null, total: null, newP2: null, carry: null,
+    done: false, finalStr: null
+  });
+
+  for (var i = m - 1; i >= 0; i--) {
+    for (var j = n - 1; j >= 0; j--) {
+      var d1 = parseInt(num1[i], 10);
+      var d2 = parseInt(num2[j], 10);
+      var mul = d1 * d2;
+      var p1 = i + j, p2 = i + j + 1;
+      var total = mul + result[p2];
+      var newP2 = total % 10;
+      var carry = Math.floor(total / 10);
+      result[p2] = newP2;
+      result[p1] += carry;
+
+      out.push({
+        phase: 'i=' + i + ', j=' + j,
+        desc: 'num1[' + i + '](' + d1 + ') × num2[' + j + '](' + d2 + ') = ' + mul
+            + '   total = ' + mul + ' + result[' + p2 + '](' + (total - carry*10 === newP2 ? (total - mul) : (total - mul)) + ') = ' + total
+            + '   → result[' + p2 + '] = ' + newP2 + ',  carry ' + carry + ' → result[' + p1 + ']',
+        result: result.slice(),
+        activeI: i, activeJ: j,
+        p1: p1, p2: p2,
+        d1: d1, d2: d2, mul: mul, total: total, newP2: newP2, carry: carry,
+        done: false, finalStr: null
+      });
+    }
+  }
+
+  // Finalize
+  var resStr = result.join('').replace(/^0+/, '') || '0';
+  out.push({
+    phase: 'Result',
+    desc: 'Result array → "' + result.join('') + '" → strip leading zeros → "' + resStr + '"',
+    result: result.slice(),
+    activeI: -1, activeJ: -1,
+    p1: -1, p2: -1,
+    d1: null, d2: null, mul: null, total: null, newP2: null, carry: null,
+    done: true, finalStr: resStr
+  });
+
+  return out;
+}
+
+// ── build table ───────────────────────────────────────────────────────────────
+
+function buildTable(num1, num2) {
+  var m = num1.length, n = num2.length;
+  var tbl = document.getElementById('mul-table');
+  tbl.innerHTML = '';
+
+  // Header row: empty corner + num1 digit headers
+  var hdrRow = document.createElement('tr');
+  var corner = document.createElement('th');
+  corner.className = 'hdr-cell';
+  corner.style.background = 'transparent';
+  corner.style.border = 'none';
+  hdrRow.appendChild(corner);
+
+  // num1 column headers (left to right = index 0 to m-1)
+  for (var j2 = 0; j2 < m; j2++) {
+    var th = document.createElement('th');
+    th.className = 'hdr-cell';
+    th.id = 'col-hdr-' + j2;
+    th.textContent = num1[j2];
+    hdrRow.appendChild(th);
+  }
+  tbl.appendChild(hdrRow);
+
+  // Index label row
+  var idxRow = document.createElement('tr');
+  var idxCorner = document.createElement('td');
+  idxCorner.className = 'idx-cell';
+  idxRow.appendChild(idxCorner);
+  for (var j3 = 0; j3 < m; j3++) {
+    var idxTd = document.createElement('td');
+    idxTd.className = 'idx-cell';
+    idxTd.textContent = 'i=' + j3;
+    idxRow.appendChild(idxTd);
+  }
+  tbl.appendChild(idxRow);
+
+  // Data rows: one per num2 digit
+  for (var i2 = 0; i2 < n; i2++) {
+    var row = document.createElement('tr');
+
+    // row header: num2 digit + index
+    var rowHdr = document.createElement('td');
+    rowHdr.className = 'row-hdr';
+    rowHdr.id = 'row-hdr-' + i2;
+    rowHdr.innerHTML = num2[i2] + '<div style="font-size:0.58rem;font-weight:400;color:var(--text-ghost)">j=' + i2 + '</div>';
+    row.appendChild(rowHdr);
+
+    for (var j4 = 0; j4 < m; j4++) {
+      var td = document.createElement('td');
+      td.className = 'prod-cell';
+      td.id = 'cell-' + j4 + '-' + i2;  // id = cell-<num1_idx>-<num2_idx>
+      td.textContent = '—';
+      row.appendChild(td);
+    }
+    tbl.appendChild(row);
+  }
+}
+
+// ── build result array DOM ─────────────────────────────────────────────────────
+
+function buildArrDOM(len) {
+  var wrap = document.getElementById('arr-wrap');
+  wrap.innerHTML = '';
+
+  // index labels
+  var idxDiv = document.createElement('div');
+  idxDiv.className = 'arr-indices';
+  for (var k = 0; k < len; k++) {
+    var span = document.createElement('div');
+    span.className = 'arr-idx';
+    span.textContent = '[' + k + ']';
+    idxDiv.appendChild(span);
+  }
+  wrap.appendChild(idxDiv);
+
+  // cells
+  var rowDiv = document.createElement('div');
+  rowDiv.className = 'arr-row';
+  for (var k2 = 0; k2 < len; k2++) {
+    var cell = document.createElement('div');
+    cell.className = 'arr-cell';
+    cell.id = 'ac-' + k2;
+    cell.textContent = '0';
+    rowDiv.appendChild(cell);
+  }
+  wrap.appendChild(rowDiv);
+
+  // pointer labels
+  var ptrDiv = document.createElement('div');
+  ptrDiv.className = 'arr-ptrs';
+  for (var k3 = 0; k3 < len; k3++) {
+    var lbl = document.createElement('div');
+    lbl.className = 'arr-ptr';
+    lbl.id = 'ap-' + k3;
+    ptrDiv.appendChild(lbl);
+  }
+  wrap.appendChild(ptrDiv);
+}
+
+// ── apply step ────────────────────────────────────────────────────────────────
+
+function applyStep(snap) {
+  var m = NUM1.length, n = NUM2.length;
+  var len = m + n;
+
+  // --- grid ---
+  // clear all highlights
+  for (var ci = 0; ci < m; ci++) {
+    var colHdr = document.getElementById('col-hdr-' + ci);
+    if (colHdr) colHdr.className = 'hdr-cell';
+  }
+  for (var cj = 0; cj < n; cj++) {
+    var rowHdr = document.getElementById('row-hdr-' + cj);
+    if (rowHdr) rowHdr.className = 'row-hdr';
+  }
+
+  // fill in all cells that have been computed (activeI, activeJ marks current)
+  for (var gi = 0; gi < m; gi++) {
+    for (var gj = 0; gj < n; gj++) {
+      var cellEl = document.getElementById('cell-' + gi + '-' + gj);
+      if (!cellEl) continue;
+      // determine if this cell has been computed yet
+      // processing order: i from m-1 down to 0, j from n-1 down to 0
+      var computedOrder = (m - 1 - gi) * n + (n - 1 - gj);
+      var currentOrder = snap.activeI < 0 ? -1 : (m - 1 - snap.activeI) * n + (n - 1 - snap.activeJ);
+
+      if (snap.done) {
+        cellEl.className = 'prod-cell done';
+        cellEl.textContent = parseInt(NUM1[gi], 10) * parseInt(NUM2[gj], 10);
+      } else if (computedOrder < currentOrder) {
+        cellEl.className = 'prod-cell done';
+        cellEl.textContent = parseInt(NUM1[gi], 10) * parseInt(NUM2[gj], 10);
+      } else if (computedOrder === currentOrder) {
+        cellEl.className = 'prod-cell active';
+        cellEl.textContent = snap.mul !== null ? snap.mul : '?';
+      } else {
+        cellEl.className = 'prod-cell';
+        cellEl.textContent = '—';
+      }
+    }
+  }
+
+  // highlight active col/row headers
+  if (snap.activeI >= 0) {
+    var colH = document.getElementById('col-hdr-' + snap.activeI);
+    if (colH) colH.className = 'hdr-cell hl-col';
+    var rowH = document.getElementById('row-hdr-' + snap.activeJ);
+    if (rowH) rowH.className = 'row-hdr hl-row';
+  }
+
+  // --- result array ---
+  for (var k = 0; k < len; k++) {
+    var cell2 = document.getElementById('ac-' + k);
+    var ptrEl = document.getElementById('ap-' + k);
+    if (!cell2) continue;
+    cell2.textContent = snap.result[k];
+
+    var cls = 'arr-cell';
+    var ptrTxt = '';
+    var ptrCls = 'arr-ptr';
+
+    if (!snap.done) {
+      if (k === snap.p1) {
+        cls += ' p1';
+        ptrTxt = 'p1';
+        ptrCls += ' p1-lbl';
+      } else if (k === snap.p2) {
+        cls += ' p2';
+        ptrTxt = 'p2';
+        ptrCls += ' p2-lbl';
+      } else if (snap.result[k] !== 0) {
+        cls += ' nonzero';
+      }
+    } else {
+      // final: determine leading zeros
+      var firstNonZero = snap.result.findIndex(function(v) { return v !== 0; });
+      if (firstNonZero < 0) firstNonZero = len - 1;
+      if (k < firstNonZero) {
+        cls += ' final-zero';
+      } else {
+        cls += ' final-ok';
+      }
+    }
+
+    cell2.className = cls;
+    if (ptrEl) {
+      ptrEl.textContent = ptrTxt;
+      ptrEl.className = ptrCls;
+    }
+  }
+
+  // --- info box ---
+  if (snap.d1 !== null) {
+    document.getElementById('mi-d1').textContent = snap.d1 + '  (num1[' + snap.activeI + '])';
+    document.getElementById('mi-d2').textContent = snap.d2 + '  (num2[' + snap.activeJ + '])';
+    document.getElementById('mi-mul').textContent = snap.mul;
+    document.getElementById('mi-total').textContent = 'mul(' + snap.mul + ') + result[p2](' + (snap.total - snap.mul) + ') = ' + snap.total;
+    document.getElementById('mi-p2v').textContent = snap.total + ' % 10 = ' + snap.newP2;
+    document.getElementById('mi-p1v').textContent = '⌊' + snap.total + ' / 10⌋ = ' + snap.carry + '  → result[p1] += ' + snap.carry;
+  } else {
+    document.getElementById('mi-d1').textContent = '—';
+    document.getElementById('mi-d2').textContent = '—';
+    document.getElementById('mi-mul').textContent = '—';
+    document.getElementById('mi-total').textContent = '—';
+    document.getElementById('mi-p2v').textContent = '—';
+    document.getElementById('mi-p1v').textContent = '—';
+  }
+
+  // --- result badge ---
+  var badge = document.getElementById('result-badge');
+  if (snap.done) {
+    badge.textContent = '"' + NUM1 + '" × "' + NUM2 + '" = "' + snap.finalStr + '"';
+    badge.style.display = '';
+  } else {
+    badge.style.display = 'none';
+  }
+}
+
+// ── init ──────────────────────────────────────────────────────────────────────
+
+function validate(s) {
+  return /^\d+$/.test(s) && s.length >= 1 && s.length <= 6;
+}
+
+function buildAndRun() {
+  var n1 = document.getElementById('num1-input').value.trim();
+  var n2 = document.getElementById('num2-input').value.trim();
+  if (!validate(n1) || !validate(n2)) return;
+
+  NUM1 = n1; NUM2 = n2;
+  document.getElementById('result-badge').style.display = 'none';
+
+  steps = simulate(NUM1, NUM2);
+  buildTable(NUM1, NUM2);
+  buildArrDOM(NUM1.length + NUM2.length);
+
+  nav = VizNav({
+    btnPrev:  document.getElementById('btn-back'),
+    btnNext:  document.getElementById('btn-next'),
+    btnPlay:  document.getElementById('btn-play'),
+    speedSel: document.getElementById('speed-select'),
+    render: function(snap, cur, total) {
+      applyStep(snap);
+      document.getElementById('phase-label').textContent = 'Step ' + (cur + 1) + ' / ' + total + '  ·  ' + snap.phase;
+      var descEl = document.getElementById('step-desc');
+      gsap.fromTo(descEl, { opacity: 0 }, { opacity: 1, duration: 0.15 });
+      descEl.textContent = snap.desc;
+    }
+  });
+
+  nav.load(steps);
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  document.getElementById('btn-build').addEventListener('click', buildAndRun);
+  document.getElementById('num1-input').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') buildAndRun();
+  });
+  document.getElementById('num2-input').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') buildAndRun();
+  });
+  buildAndRun();
+});
+</script>
+</body>
+</html>
