@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Subsets II</title>
+  <link rel="stylesheet" href="../shared/style.css" />
+  <script src="../shared/gsap.min.js"></script>
+  <script src="../shared/viz.js"></script>
+  <style>
+    .viz-area { width: 100%; max-width: 90%; }
+    .main-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
+    .left-col, .right-col { display: flex; flex-direction: column; gap: 12px; }
+    @media (max-width: 700px) { .main-row { grid-template-columns: 1fr; } }
+
+    .page-sub { font-size: 0.8rem; color: var(--text-dim); margin-left: auto; white-space: nowrap; }
+
+    .sect {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 14px 16px;
+      display: flex; flex-direction: column; gap: 8px;
+    }
+
+    /* Sorted array */
+    .nums-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 4px; }
+    .num-chip {
+      width: 44px; height: 44px;
+      display: flex; align-items: center; justify-content: center;
+      border: 2px solid var(--border); border-radius: 8px;
+      background: var(--bg);
+      font-size: 1rem; font-weight: 700; font-family: monospace;
+      color: var(--text-dim);
+      transition: border-color 0.15s, color 0.15s, background 0.15s, opacity 0.15s;
+      position: relative;
+    }
+    .num-chip .chip-idx {
+      position: absolute; top: -9px; left: 50%;
+      transform: translateX(-50%);
+      font-size: 0.55rem; color: var(--text-ghost); font-family: monospace;
+      pointer-events: none;
+    }
+    .num-chip.active  { border-color: var(--yellow); color: var(--yellow-light); background: #1e1600; }
+    .num-chip.skipped { border-color: var(--red); color: var(--red); background: #200a0a; opacity: 0.7; }
+    .num-chip.past    { opacity: 0.3; }
+
+    /* Path */
+    .path-row {
+      display: flex; align-items: center; gap: 6px;
+      flex-wrap: wrap; min-height: 42px; margin-top: 4px;
+    }
+    .path-item {
+      width: 38px; height: 38px;
+      display: flex; align-items: center; justify-content: center;
+      border: 2px solid var(--accent); border-radius: 6px;
+      background: var(--surface-dark);
+      font-size: 0.95rem; font-weight: 700; font-family: monospace;
+      color: var(--accent-pale);
+    }
+    .path-item.added { border-color: var(--green); color: var(--green-light); background: var(--green-bg); }
+    .path-empty { color: var(--text-ghost); font-size: 0.82rem; font-style: italic; }
+
+    /* Call stack */
+    .stack-body {
+      font-family: monospace; font-size: 0.74rem;
+      max-height: 180px; overflow-y: auto; margin-top: 4px;
+    }
+    .stack-frame { padding: 1px 0; color: var(--text-muted); white-space: nowrap; }
+    .stack-frame.top { color: var(--accent-pale); font-weight: 700; }
+    .stack-frame.emit { color: var(--green); font-weight: 700; }
+
+    /* Code */
+    .code-panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
+    .code-header { padding: 8px 14px; font-size: 0.72rem; font-weight: 600; color: var(--text-dim); border-bottom: 1px solid var(--border); background: var(--bg); }
+    .code-body { padding: 10px 0; font-size: 0.78rem; line-height: 1.75; white-space: pre; }
+    .code-line { display: flex; align-items: center; padding: 0 14px; }
+    .code-line.hl { background: var(--border-soft); border-left: 2px solid var(--accent); }
+    .ln { min-width: 24px; color: var(--text-ghost); user-select: none; font-size: 0.7rem; }
+
+    /* Nav */
+    .btn-play {
+      background: #15803d; border: none; border-radius: var(--radius-sm);
+      color: #fff; cursor: pointer; font-size: 0.88rem; font-weight: 600;
+      padding: 9px 16px; transition: background 0.2s;
+    }
+    .btn-play:hover { background: #166534; }
+    .btn-play.playing { background: #c2410c; }
+    .btn-play.playing:hover { background: #9a3412; }
+    .btn-play:disabled { opacity: 0.4; cursor: not-allowed; }
+    .speed-select {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); color: var(--text);
+      font-size: 0.85rem; padding: 8px 10px; outline: none; width: 80px;
+    }
+    .nav-row { display: flex; gap: 8px; align-items: center; }
+
+    /* Variables */
+    .var-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .var-box {
+      padding: 10px 8px; background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); display: flex; flex-direction: column;
+      align-items: center; gap: 3px;
+    }
+    .var-box.ab { border-color: var(--accent); }
+    .var-box.gb { border-color: var(--green-border); }
+    .var-label { font-size: 0.62rem; font-family: monospace; color: var(--text-faint); text-align: center; }
+    .var-val   { font-size: 1.2rem; font-weight: 700; color: var(--text-bright); font-family: monospace; }
+
+    /* Results */
+    .results-list { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; min-height: 38px; max-height: 260px; overflow-y: auto; }
+    .result-subset {
+      display: flex; align-items: center; gap: 6px;
+      padding: 6px 10px;
+      background: var(--green-bg); border: 1px solid var(--green-border);
+      border-radius: 6px; font-family: monospace; font-size: 0.82rem; color: var(--green);
+    }
+    .result-subset.new { border-color: var(--yellow); background: #1e1600; color: var(--yellow-light); }
+    .result-empty { color: var(--text-ghost); font-size: 0.82rem; font-style: italic; }
+
+    .kw { color: var(--purple); }
+    .fn { color: var(--blue); }
+    .bi { color: var(--orange); }
+    .nb { color: var(--green); }
+    .cm { color: var(--text-ghost); }
+  </style>
+</head>
+<body class="page">
+
+<div class="page-header">
+  <a class="back-link" href="../index.html">&larr; All Algorithms</a>
+  <div class="page-title">Subsets II</div>
+  <div class="page-sub">LeetCode 90 &middot; Backtracking &middot; sort first &middot; skip same-level duplicates</div>
+</div>
+
+<div class="controls">
+  <div class="field">
+    <label>nums (comma-sep, duplicates ok)</label>
+    <input id="inp-nums" type="text" value="1,2,2" style="width:180px" />
+  </div>
+  <button class="btn-primary" onclick="buildAndRun()">Build &amp; Run</button>
+</div>
+
+<div class="viz-area">
+  <div class="main-row">
+
+    <!-- ── Left column ── -->
+    <div class="left-col">
+
+      <!-- Sorted array -->
+      <div class="sect">
+        <div class="panel-title">Sorted nums</div>
+        <div class="nums-row" id="nums-row">
+          <span style="color:var(--text-ghost);font-size:0.82rem">Click Build &amp; Run.</span>
+        </div>
+      </div>
+
+      <!-- Current path -->
+      <div class="sect">
+        <div class="panel-title">Current Path</div>
+        <div class="path-row" id="path-row">
+          <span class="path-empty">empty</span>
+        </div>
+      </div>
+
+      <!-- Call stack -->
+      <div class="sect" style="gap:4px">
+        <div class="panel-title">Call Stack <span class="panel-sub">(deepest = active frame)</span></div>
+        <div class="stack-body" id="stack-body">
+          <div style="color:var(--text-ghost);font-size:0.78rem">No active recursion.</div>
+        </div>
+      </div>
+
+      <!-- Code -->
+      <div class="code-panel">
+        <div class="code-header">Python</div>
+        <div class="code-body" id="code-body"></div>
+      </div>
+
+    </div>
+
+    <!-- ── Right column ── -->
+    <div class="right-col">
+
+      <!-- Nav + description -->
+      <div style="display:flex;gap:12px">
+        <div class="panel-box" style="flex:0 0 auto;display:flex;flex-direction:column;gap:8px">
+          <div class="nav-row">
+            <button class="btn-step" id="btn-back" disabled>&larr;</button>
+            <button class="btn-step" id="btn-next" disabled>&rarr;</button>
+            <button class="btn-play" id="btn-play" disabled>&#9654; Play</button>
+            <select class="speed-select" id="speed-select">
+              <option value="900">Slow</option>
+              <option value="450" selected>Medium</option>
+              <option value="150">Fast</option>
+            </select>
+          </div>
+        </div>
+        <div class="panel-box" style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px">
+          <div class="panel-title" id="phase-label">&mdash;</div>
+          <div style="font-size:0.82rem;color:var(--text-muted)" id="step-desc">
+            Enter nums and click Build &amp; Run.
+          </div>
+        </div>
+      </div>
+
+      <!-- Variables -->
+      <div class="panel-box" style="display:flex;flex-direction:column;gap:8px">
+        <div class="panel-title">Variables</div>
+        <div class="var-grid">
+          <div class="var-box ab">
+            <div class="var-label">start index (i)</div>
+            <div class="var-val" id="vv-start">&mdash;</div>
+          </div>
+          <div class="var-box gb">
+            <div class="var-label">depth</div>
+            <div class="var-val" id="vv-depth">&mdash;</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Results -->
+      <div class="sect">
+        <div class="panel-title">Valid Subsets <span class="panel-sub" id="result-count"></span></div>
+        <div class="results-list" id="results-list">
+          <span class="result-empty">No subsets emitted yet.</span>
+        </div>
+      </div>
+
+      <!-- Legend -->
+      <div class="panel-box" style="display:flex;flex-direction:column;gap:8px">
+        <div class="panel-title">Legend</div>
+        <div style="display:flex;flex-direction:column;gap:7px;font-size:0.78rem;color:var(--text-muted)">
+          <div style="display:flex;align-items:center;gap:8px">
+            <div style="width:16px;height:16px;border-radius:3px;border:2px solid var(--yellow);background:#1e1600"></div>
+            <span>Element currently being considered</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <div style="width:16px;height:16px;border-radius:3px;border:2px solid var(--red);background:#200a0a"></div>
+            <span>Duplicate — skipped at this level</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <div style="width:16px;height:16px;border-radius:3px;border:2px solid var(--accent);background:var(--surface-dark)"></div>
+            <span>Element in current path</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <div style="width:16px;height:16px;border-radius:3px;background:var(--green-bg);border:1px solid var(--green-border)"></div>
+            <span>Emitted valid subset</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+var simSteps = [], nav;
+var currentNums = [];
+
+// ── Code ──
+var CODE = [
+  [1,  '<span class="kw">def</span> <span class="fn">subsets_with_dup</span>(nums):'],
+  [2,  '    nums.<span class="bi">sort</span>()'],
+  [3,  '    results = []'],
+  [4,  '    <span class="kw">def</span> <span class="fn">backtrack</span>(i, path):'],
+  [5,  '        results.<span class="bi">append</span>(path[:])  <span class="cm"># emit every entry</span>'],
+  [6,  '        <span class="kw">for</span> j <span class="kw">in</span> <span class="bi">range</span>(i, <span class="bi">len</span>(nums)):'],
+  [7,  '            <span class="kw">if</span> j > i <span class="kw">and</span> nums[j] == nums[j-<span class="nb">1</span>]:'],
+  [8,  '                <span class="kw">continue</span>  <span class="cm"># skip same-level duplicate</span>'],
+  [9,  '            path.<span class="bi">append</span>(nums[j])'],
+  [10, '            <span class="fn">backtrack</span>(j + <span class="nb">1</span>, path)'],
+  [11, '            path.<span class="bi">pop</span>()'],
+  [12, '    <span class="fn">backtrack</span>(<span class="nb">0</span>, [])'],
+  [13, '    <span class="kw">return</span> results'],
+];
+
+var PHASE_LINES = {
+  'enter':   [4, 5],
+  'emit':    [5],
+  'loop':    [6],
+  'skip':    [7, 8],
+  'choose':  [9, 10],
+  'unchoose':[11],
+  'done':    [12, 13],
+};
+
+// ── Simulate ──
+function simulate(nums) {
+  var steps = [];
+  var results = [];
+  var callStack = [];
+
+  function snap(phase, desc, candIdx, path, isNewResult) {
+    steps.push({
+      phase: phase,
+      desc: desc,
+      stack: callStack.map(function(f) {
+        return { start: f.start, depth: f.depth, path: f.path.slice() };
+      }),
+      path: path.slice(),
+      candIdx: candIdx,
+      results: results.slice(),
+      isNewResult: !!isNewResult,
+      lines: PHASE_LINES[phase] || [],
+    });
+  }
+
+  function backtrack(i, path, depth) {
+    callStack.push({ start: i, depth: depth, path: path.slice() });
+
+    // Emit current path as a valid subset
+    results.push(path.slice());
+    var label = '[' + path.join(', ') + ']';
+    snap('enter',
+      'Enter backtrack(i=' + i + '). Emit current path ' + label + ' as a valid subset.',
+      -1, path, true);
+
+    for (var j = i; j < nums.length; j++) {
+      // Skip same-level duplicates
+      if (j > i && nums[j] === nums[j - 1]) {
+        snap('skip',
+          'j=' + j + ': nums[' + j + ']=' + nums[j] + ' == nums[' + (j-1) + ']=' + nums[j-1] + ' and j>i. Skip duplicate to avoid repeat subsets.',
+          j, path, false);
+        continue;
+      }
+
+      snap('choose',
+        'j=' + j + ': try nums[' + j + ']=' + nums[j] + '. Append to path → [' + path.concat([nums[j]]).join(', ') + ']. Recurse with i=' + (j+1) + '.',
+        j, path, false);
+
+      path.push(nums[j]);
+      backtrack(j + 1, path, depth + 1);
+      path.pop();
+
+      snap('unchoose',
+        'Back from recursion. Pop nums[' + j + ']=' + nums[j] + ' → path=[' + path.join(', ') + ']. Continue loop.',
+        j, path, false);
+    }
+
+    callStack.pop();
+  }
+
+  backtrack(0, [], 0);
+
+  var summary = results.map(function(r) { return '[' + r.join(',') + ']'; }).join(', ');
+  snap('done',
+    'All branches explored. ' + results.length + ' subset' + (results.length === 1 ? '' : 's') + ' found: ' + summary + '.',
+    -1, [], false);
+
+  return steps;
+}
+
+// ── Build ──
+window.addEventListener('DOMContentLoaded', function() {
+  buildCodePanel();
+  nav = VizNav({
+    btnPrev:  document.getElementById('btn-back'),
+    btnNext:  document.getElementById('btn-next'),
+    btnPlay:  document.getElementById('btn-play'),
+    speedSel: document.getElementById('speed-select'),
+    render: function(s, cur, total) { renderStep(s, cur > 0, cur, total); },
+  });
+  buildAndRun();
+});
+
+function buildCodePanel() {
+  var body = document.getElementById('code-body');
+  body.innerHTML = CODE.map(function(e) {
+    return '<div class="code-line" id="cl-' + e[0] + '"><span class="ln">' + e[0] + '</span><span>' + e[1] + '</span></div>';
+  }).join('');
+}
+
+function buildAndRun() {
+  var raw = document.getElementById('inp-nums').value;
+  var nums = raw.split(',')
+    .map(function(s) { return parseInt(s.trim(), 10); })
+    .filter(function(n) { return !isNaN(n); });
+  if (nums.length === 0) return;
+
+  nums.sort(function(a, b) { return a - b; });
+  currentNums = nums;
+
+  var row = document.getElementById('nums-row');
+  row.innerHTML = nums.map(function(n, idx) {
+    return '<div class="num-chip" id="num-' + idx + '">' +
+           '<span class="chip-idx">' + idx + '</span>' + n + '</div>';
+  }).join('');
+
+  simSteps = simulate(nums);
+  nav.load(simSteps);
+}
+
+// ── Render ──
+function renderStep(s, animate, cur, total) {
+  var phaseEl = document.getElementById('phase-label');
+  if (phaseEl) phaseEl.textContent = 'Step ' + (cur + 1) + ' / ' + total + '  \xb7  ' + s.phase;
+
+  var descEl = document.getElementById('step-desc');
+  if (descEl) {
+    if (animate) gsap.fromTo(descEl, { opacity: 0 }, { opacity: 1, duration: 0.15 });
+    descEl.textContent = s.desc;
+  }
+
+  renderNums(s, animate);
+  renderPath(s, animate);
+  renderStack(s, animate);
+  renderVars(s, animate);
+  renderResults(s, animate);
+  setCodeLines(s.lines);
+}
+
+function renderNums(s, animate) {
+  var topFrame = s.stack.length ? s.stack[s.stack.length - 1] : null;
+  currentNums.forEach(function(n, idx) {
+    var el = document.getElementById('num-' + idx);
+    if (!el) return;
+    el.className = 'num-chip';
+
+    if (idx === s.candIdx) {
+      if (s.phase === 'skip') {
+        el.classList.add('skipped');
+      } else {
+        el.classList.add('active');
+        if (animate) {
+          gsap.fromTo(el, { scale: 1 }, { scale: 1.18, duration: 0.1, yoyo: true, repeat: 1 });
+        }
+      }
+    } else if (topFrame && idx < topFrame.start) {
+      el.classList.add('past');
+    }
+  });
+}
+
+function renderPath(s, animate) {
+  var row = document.getElementById('path-row');
+  if (!row) return;
+
+  if (s.path.length === 0) {
+    row.innerHTML = '<span class="path-empty">empty ([ ] = valid subset)</span>';
+    return;
+  }
+
+  var isEmit = s.phase === 'enter' || s.phase === 'emit';
+  var itemClass = 'path-item' + (isEmit ? ' added' : '');
+  var html = s.path.map(function(v) {
+    return '<div class="' + itemClass + '">' + v + '</div>';
+  }).join('');
+  row.innerHTML = html;
+
+  if (animate && s.phase === 'choose') {
+    var items = row.querySelectorAll('.path-item');
+    var last = items[items.length - 1];
+    if (last) {
+      gsap.fromTo(last, { scale: 0, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.22, ease: 'back.out(2)' });
+    }
+  }
+  if (animate && isEmit) {
+    gsap.fromTo(row, { backgroundColor: 'rgba(158,206,106,0.12)' }, { backgroundColor: 'transparent', duration: 0.5 });
+  }
+}
+
+function renderStack(s, animate) {
+  var body = document.getElementById('stack-body');
+  if (!body) return;
+
+  if (s.stack.length === 0) {
+    body.innerHTML = '<div style="color:var(--text-ghost);font-size:0.78rem">No active recursion.</div>';
+    return;
+  }
+
+  body.innerHTML = s.stack.map(function(f, depth) {
+    var isTop = depth === s.stack.length - 1;
+    var isEmit = isTop && (s.phase === 'enter' || s.phase === 'emit');
+    var cls = isEmit ? 'stack-frame emit' : (isTop ? 'stack-frame top' : 'stack-frame');
+    var indent = '  '.repeat(depth * 2);
+    var pathStr = f.path.length ? '[' + f.path.join(', ') + ']' : '[]';
+    return '<div class="' + cls + '">' + indent + '► backtrack(i=' + f.start + ', path=' + pathStr + ')</div>';
+  }).join('');
+
+  body.scrollTop = body.scrollHeight;
+}
+
+function renderVars(s, animate) {
+  function setVal(id, val) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    var text = (val === null || val === undefined) ? '—' : String(val);
+    if (animate && el.textContent !== text) {
+      gsap.fromTo(el, { scale: 0.8, opacity: 0.4 }, { scale: 1, opacity: 1, duration: 0.22, ease: 'back.out(1.7)' });
+    }
+    el.textContent = text;
+  }
+  var top = s.stack.length ? s.stack[s.stack.length - 1] : null;
+  setVal('vv-start', top ? top.start : null);
+  setVal('vv-depth', top ? top.depth : null);
+}
+
+function renderResults(s, animate) {
+  var list    = document.getElementById('results-list');
+  var countEl = document.getElementById('result-count');
+  if (!list) return;
+
+  if (countEl) countEl.textContent = s.results.length ? '(' + s.results.length + ' found)' : '';
+
+  if (s.results.length === 0) {
+    list.innerHTML = '<span class="result-empty">No subsets emitted yet.</span>';
+    return;
+  }
+
+  list.innerHTML = s.results.map(function(subset, idx) {
+    var isNew = s.isNewResult && idx === s.results.length - 1;
+    return '<div class="result-subset' + (isNew ? ' new' : '') + '">[' + (subset.length ? subset.join(', ') : '') + ']</div>';
+  }).join('');
+
+  if (animate && s.isNewResult) {
+    var last = list.querySelector('.result-subset:last-child');
+    if (last) {
+      gsap.fromTo(last, { x: -8, opacity: 0 }, { x: 0, opacity: 1, duration: 0.28, ease: 'power2.out' });
+    }
+  }
+
+  list.scrollTop = list.scrollHeight;
+}
+
+function setCodeLines(lines) {
+  CODE.forEach(function(e) {
+    var ln = e[0];
+    var el = document.getElementById('cl-' + ln);
+    if (!el) return;
+    if (lines.indexOf(ln) >= 0) el.classList.add('hl');
+    else el.classList.remove('hl');
+  });
+}
+</script>
+
+<script>
+  if (window.self !== window.top) {
+    var bl = document.querySelector('.back-link');
+    if (bl) bl.style.display = 'none';
+  }
+</script>
+</body>
+</html>
