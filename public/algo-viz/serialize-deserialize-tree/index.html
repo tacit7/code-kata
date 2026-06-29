@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Serialize and Deserialize Binary Tree</title>
+  <link rel="stylesheet" href="../shared/style.css" />
+  <script src="../shared/viz.js"></script>
+  <style>
+    .controls {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+      padding: 12px 16px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      width: 100%;
+      box-sizing: border-box;
+    }
+    .controls label {
+      font-size: 0.78rem;
+      color: var(--text-dim);
+      white-space: nowrap;
+    }
+    .controls input {
+      flex: 1;
+      min-width: 200px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text-bright);
+      padding: 6px 10px;
+      font-size: 0.82rem;
+      font-family: monospace;
+    }
+    .controls input:focus { outline: 1px solid var(--accent); }
+    .btn-build {
+      background: var(--accent);
+      color: var(--bg);
+      border: none;
+      border-radius: var(--radius-sm);
+      padding: 6px 16px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .btn-build:hover { opacity: 0.85; }
+
+    .main-row {
+      display: grid;
+      grid-template-columns: 1fr 340px;
+      gap: 14px;
+      flex: 1;
+      min-height: 0;
+    }
+    @media (max-width: 860px) { .main-row { grid-template-columns: 1fr; } }
+
+    /* Tree panel */
+    .tree-panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .panel-header {
+      padding: 8px 14px;
+      background: var(--bg);
+      border-bottom: 1px solid var(--border);
+      font-size: 0.67rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-dim);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .phase-badge {
+      font-size: 0.6rem;
+      padding: 2px 7px;
+      border-radius: 4px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+    }
+    .phase-serialize { background: rgba(122,162,247,0.12); color: var(--blue); border: 1px solid rgba(122,162,247,0.25); }
+    .phase-deserialize { background: rgba(158,206,106,0.12); color: var(--green); border: 1px solid rgba(158,206,106,0.25); }
+
+    #tree-svg {
+      flex: 1;
+      width: 100%;
+      min-height: 280px;
+    }
+
+    /* Right panel */
+    .right-col {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .panel-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 13px 16px;
+      flex-shrink: 0;
+    }
+    .panel-title {
+      font-size: 0.67rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-dim);
+      margin-bottom: 10px;
+    }
+
+    /* Serialized string display */
+    .serial-display {
+      font-family: monospace;
+      font-size: 0.88rem;
+      line-height: 1.6;
+      word-break: break-all;
+      min-height: 48px;
+      color: var(--text-muted);
+    }
+    .token-done {
+      color: var(--green);
+    }
+    .token-active {
+      color: var(--yellow);
+      background: rgba(224,175,104,0.12);
+      border-radius: 3px;
+      padding: 0 2px;
+      text-decoration: underline;
+      text-underline-offset: 2px;
+    }
+    .token-pending {
+      color: var(--text-dim);
+      opacity: 0.45;
+    }
+
+    /* Queue display */
+    .queue-row {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      min-height: 32px;
+      align-items: center;
+    }
+    .q-cell {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 4px 10px;
+      font-family: monospace;
+      font-size: 0.8rem;
+      color: var(--text-bright);
+      transition: background 0.2s, border-color 0.2s;
+    }
+    .q-cell.q-head {
+      background: rgba(122,162,247,0.12);
+      border-color: var(--blue);
+      color: var(--blue);
+      font-weight: 700;
+    }
+
+    /* Stats */
+    .stat-row {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .stat-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 0.78rem;
+    }
+    .stat-label { color: var(--text-dim); }
+    .stat-val { color: var(--text-bright); font-family: monospace; font-weight: 600; }
+    .stat-val.blue { color: var(--blue); }
+    .stat-val.green { color: var(--green); }
+    .stat-val.yellow { color: var(--yellow); }
+
+    /* Tree nodes */
+    .tree-node-circle {
+      stroke-width: 2.5;
+      transition: fill 0.2s, stroke 0.2s;
+    }
+    .tree-node-label {
+      fill: var(--text-bright);
+      font-size: 13px;
+      font-weight: 700;
+      font-family: monospace;
+      text-anchor: middle;
+      dominant-baseline: central;
+      pointer-events: none;
+    }
+    .tree-edge {
+      stroke: var(--border);
+      stroke-width: 1.5;
+      fill: none;
+      transition: stroke 0.2s;
+    }
+
+    /* node color states */
+    .ns-default   { fill: #1a1b2e; stroke: #3b4261; }
+    .ns-active    { fill: #1a2035; stroke: var(--blue); stroke-width: 3; }
+    .ns-done      { fill: #1a2a1a; stroke: var(--green); }
+    .ns-null-slot { fill: #1c1c28; stroke: #3b4261; stroke-dasharray: 4 3; }
+    .ns-creating  { fill: #2d2a14; stroke: var(--yellow); stroke-width: 3; }
+  </style>
+</head>
+<body>
+
+<div class="viz-header">
+  <div class="viz-title">Serialize and Deserialize Binary Tree</div>
+  <div class="viz-subtitle">BFS serialize builds a level-order token string. Deserialize replays the queue to reconstruct the tree.</div>
+</div>
+
+<div class="controls">
+  <label>Level-order input:</label>
+  <input type="text" id="tree-input" value="1,2,3,null,null,4,5" placeholder="e.g. 1,2,3,null,null,4,5" />
+  <button class="btn-build" id="btn-build">Build</button>
+</div>
+
+<div class="main-row">
+  <!-- Left: tree diagram -->
+  <div class="tree-panel">
+    <div class="panel-header">
+      Binary Tree
+      <span class="phase-badge" id="phase-badge">—</span>
+    </div>
+    <svg id="tree-svg" viewBox="0 0 600 300" preserveAspectRatio="xMidYMid meet"></svg>
+  </div>
+
+  <!-- Right: serial string + queue + stats -->
+  <div class="right-col">
+    <div class="panel-box">
+      <div class="panel-title">Serialized String</div>
+      <div class="serial-display" id="serial-display">—</div>
+    </div>
+
+    <div class="panel-box">
+      <div class="panel-title">BFS Queue</div>
+      <div class="queue-row" id="queue-display"></div>
+    </div>
+
+    <div class="panel-box">
+      <div class="stat-row">
+        <div class="stat-item">
+          <span class="stat-label">Phase</span>
+          <span class="stat-val blue" id="stat-phase">—</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">Token index (i)</span>
+          <span class="stat-val yellow" id="stat-i">—</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">Nodes visited</span>
+          <span class="stat-val green" id="stat-visited">0</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">Tokens total</span>
+          <span class="stat-val" id="stat-tokens">—</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="viz-nav" id="viz-nav"></div>
+<div class="step-desc" id="step-desc">Press Build to generate steps.</div>
+
+<script>
+// ─── Tree building from level-order ──────────────────────────────────────────
+function buildTree(vals) {
+  if (!vals.length || vals[0] === 'null') return null;
+  const root = { val: vals[0], left: null, right: null, id: 0 };
+  const queue = [root];
+  let i = 1, id = 1;
+  while (queue.length && i < vals.length) {
+    const node = queue.shift();
+    if (i < vals.length && vals[i] !== 'null') {
+      node.left = { val: vals[i], left: null, right: null, id: id++ };
+      queue.push(node.left);
+    }
+    i++;
+    if (i < vals.length && vals[i] !== 'null') {
+      node.right = { val: vals[i], left: null, right: null, id: id++ };
+      queue.push(node.right);
+    }
+    i++;
+  }
+  return root;
+}
+
+// ─── Layout ──────────────────────────────────────────────────────────────────
+function layoutTree(root) {
+  if (!root) return [];
+  // Assign positions using level-order + x offsets
+  const nodes = [];
+  const W = 600, H = 280, R = 22;
+  function assign(node, depth, left, right) {
+    if (!node) return;
+    const x = (left + right) / 2;
+    const y = 40 + depth * 65;
+    node.x = x; node.y = y;
+    nodes.push(node);
+    assign(node.left,  depth + 1, left,  x);
+    assign(node.right, depth + 1, x,     right);
+  }
+  assign(root, 0, 0, W);
+  return nodes;
+}
+
+// ─── SVG rendering ───────────────────────────────────────────────────────────
+const svg = document.getElementById('tree-svg');
+const R = 22;
+
+function clearSVG() { svg.innerHTML = ''; }
+
+function renderTree(nodes, activeId, doneIds, creatingId) {
+  clearSVG();
+  const doneSet = new Set(doneIds || []);
+
+  // Draw edges first
+  for (const node of nodes) {
+    for (const child of [node.left, node.right]) {
+      if (!child) continue;
+      const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      line.setAttribute('class', 'tree-edge');
+      line.setAttribute('x1', node.x);
+      line.setAttribute('y1', node.y + R);
+      line.setAttribute('x2', child.x);
+      line.setAttribute('y2', child.y - R);
+      svg.appendChild(line);
+    }
+  }
+
+  // Draw nodes
+  for (const node of nodes) {
+    const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+
+    const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    circle.setAttribute('cx', node.x);
+    circle.setAttribute('cy', node.y);
+    circle.setAttribute('r', R);
+    circle.setAttribute('class', 'tree-node-circle');
+
+    let state = 'ns-default';
+    if (node.id === activeId) state = 'ns-active';
+    else if (node.id === creatingId) state = 'ns-creating';
+    else if (doneSet.has(node.id)) state = 'ns-done';
+
+    circle.classList.add(state);
+    g.appendChild(circle);
+
+    const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    text.setAttribute('x', node.x);
+    text.setAttribute('y', node.y);
+    text.setAttribute('class', 'tree-node-label');
+    text.textContent = node.val;
+    g.appendChild(text);
+
+    svg.appendChild(g);
+  }
+}
+
+// ─── Serial string display ────────────────────────────────────────────────────
+function renderSerial(tokens, currentIdx) {
+  const el = document.getElementById('serial-display');
+  if (!tokens.length) { el.textContent = '—'; return; }
+  el.innerHTML = tokens.map((t, i) => {
+    if (i < currentIdx) return `<span class="token-done">${t}</span>`;
+    if (i === currentIdx) return `<span class="token-active">${t}</span>`;
+    return `<span class="token-pending">${t}</span>`;
+  }).join('<span style="color:var(--text-dim);">,</span>');
+}
+
+function renderQueue(items, headCount) {
+  const el = document.getElementById('queue-display');
+  if (!items.length) { el.innerHTML = '<span style="color:var(--text-dim);font-size:0.78rem;">empty</span>'; return; }
+  el.innerHTML = items.map((v, i) =>
+    `<div class="q-cell${i < headCount ? ' q-head' : ''}">${v}</div>`
+  ).join('');
+}
+
+// ─── Step generation ──────────────────────────────────────────────────────────
+let steps = [];
+let allNodes = [];
+
+function generateSteps(inputStr) {
+  const raw = inputStr.split(',').map(s => s.trim());
+  const root = buildTree(raw);
+  allNodes = layoutTree(root);
+  steps = [];
+
+  if (!root) {
+    steps.push({
+      desc: 'Empty tree — serialized string is empty.',
+      phase: 'serialize',
+      tokens: [],
+      tokenIdx: -1,
+      activeId: -1,
+      doneIds: [],
+      creatingId: -1,
+      queue: [],
+      visited: 0,
+    });
+    return;
+  }
+
+  // ── Phase 1: Serialize ────────────────────────────────────────────────────
+  // BFS — produce tokens
+  const serTokens = [];
+  const bfsQ = [root];
+  const serOrder = []; // node ids in BFS order
+
+  while (bfsQ.length) {
+    const node = bfsQ.shift();
+    serTokens.push(String(node.val));
+    serOrder.push(node.id);
+    if (node.left)  bfsQ.push(node.left);
+    else            serTokens.push('null');
+    if (node.right) bfsQ.push(node.right);
+    else            serTokens.push('null');
+  }
+  // trim trailing nulls from serialized output (standard codec)
+  // Actually for clarity we keep them all — simpler to follow
+  // Remove trailing nulls for cleaner display
+  while (serTokens[serTokens.length - 1] === 'null') serTokens.pop();
+
+  // Re-simulate with the clean token list for step generation
+  // We'll walk BFS again, emitting one step per BFS node pop
+  {
+    const bfsQ2 = [root];
+    const doneIds = [];
+    const displayTokens = [];
+    let tokenIdx = 0;
+
+    // initial step
+    steps.push({
+      desc: `Serialize — Start BFS from root (${root.val}). Queue: [root].`,
+      phase: 'serialize',
+      tokens: [...serTokens],
+      tokenIdx: -1,
+      activeId: -1,
+      doneIds: [],
+      creatingId: -1,
+      queue: [root.val],
+      visited: 0,
+    });
+
+    while (bfsQ2.length) {
+      const node = bfsQ2.shift();
+      const queueSnapshot = bfsQ2.map(n => n.val);
+
+      // step: process this node
+      steps.push({
+        desc: `Serialize — Visit node ${node.val} → append "${node.val}" to string. Enqueue children${node.left || node.right ? ': ' + [node.left ? node.left.val : 'null', node.right ? node.right.val : 'null'].join(', ') : ' (none)'}.`,
+        phase: 'serialize',
+        tokens: [...serTokens],
+        tokenIdx: doneIds.length,
+        activeId: node.id,
+        doneIds: [...doneIds],
+        creatingId: -1,
+        queue: [node.val, ...queueSnapshot],
+        visited: doneIds.length + 1,
+      });
+
+      doneIds.push(node.id);
+      if (node.left)  bfsQ2.push(node.left);
+      if (node.right) bfsQ2.push(node.right);
+    }
+
+    // final serialize step
+    steps.push({
+      desc: `Serialize complete. Result: "${serTokens.join(',')}"`,
+      phase: 'serialize',
+      tokens: [...serTokens],
+      tokenIdx: serTokens.length,
+      activeId: -1,
+      doneIds: allNodes.map(n => n.id),
+      creatingId: -1,
+      queue: [],
+      visited: allNodes.length,
+    });
+  }
+
+  // ── Phase 2: Deserialize ──────────────────────────────────────────────────
+  // We'll simulate deserializing serTokens back and show steps
+  {
+    const vals = serTokens;
+    // We need a fresh tree structure for visualization
+    // Build it incrementally showing each token consumed
+    const dsNodes = []; // {id, val, x, y, left:id|null, right:id|null}
+
+    if (!vals.length || vals[0] === 'null') {
+      steps.push({ desc: 'Deserialize — token[0] is null, result is empty tree.', phase: 'deserialize', tokens: vals, tokenIdx: 0, activeId: -1, doneIds: [], creatingId: -1, queue: [], visited: 0 });
+      return;
+    }
+
+    let dsIdCounter = 0;
+
+    // Pre-compute positions for deserialize tree
+    // We'll use the same layout from the original tree
+    // Map original val+id to positions
+    const posMap = {};
+    for (const n of allNodes) posMap[n.id] = { x: n.x, y: n.y };
+
+    // We'll reuse allNodes positions since same tree
+    // Simulate the BFS deserialize tracking which token we're on
+    let i = 0;
+    const dsQ = []; // queue of { id, parentId, side }
+
+    // Step: start
+    steps.push({
+      desc: `Deserialize — Split "${vals.join(',')}" into ${vals.length} tokens. Take token[0]="${vals[0]}" as root.`,
+      phase: 'deserialize',
+      tokens: vals,
+      tokenIdx: 0,
+      activeId: -1,
+      doneIds: [],
+      creatingId: 0, // root being created
+      queue: [vals[0]],
+      visited: 0,
+      dsPartialIds: [],
+    });
+
+    // Re-walk original tree to map by position in BFS order
+    const origBFSOrder = [];
+    {
+      const q = [root];
+      while (q.length) {
+        const n = q.shift();
+        origBFSOrder.push(n);
+        if (n.left) q.push(n.left);
+        if (n.right) q.push(n.right);
+      }
+    }
+
+    // Now simulate deserialize step by step
+    i = 0;
+    const dsCreatedIds = []; // node ids (from origBFSOrder) created so far
+    const rootOrigId = origBFSOrder[0].id;
+
+    // root creation
+    const dsNodeQ = [origBFSOrder[0]]; // queue of orig nodes
+    let origIdx = 0;
+    dsCreatedIds.push(origBFSOrder[0].id);
+    i = 1;
+
+    while (dsNodeQ.length && i < vals.length) {
+      const curOrigNode = dsNodeQ.shift();
+      const parentVal = curOrigNode.val;
+      const queueAfterPop = dsNodeQ.map(n => n.val);
+
+      // Left child
+      const leftTok = vals[i] || 'null';
+      const leftMsg = leftTok === 'null'
+        ? `null → left child of ${parentVal} is null`
+        : `"${leftTok}" → create left child node(${leftTok}) of ${parentVal}`;
+
+      if (leftTok !== 'null' && curOrigNode.left) {
+        dsCreatedIds.push(curOrigNode.left.id);
+        dsNodeQ.push(curOrigNode.left);
+      }
+
+      steps.push({
+        desc: `Deserialize — token[${i}]="${leftTok}". ${leftMsg}. Enqueue if not null.`,
+        phase: 'deserialize',
+        tokens: vals,
+        tokenIdx: i,
+        activeId: curOrigNode.id,
+        doneIds: [...dsCreatedIds],
+        creatingId: (leftTok !== 'null' && curOrigNode.left) ? curOrigNode.left.id : -1,
+        queue: [curOrigNode.val, ...queueAfterPop],
+        visited: dsCreatedIds.length,
+      });
+      i++;
+
+      if (i >= vals.length) break;
+
+      // Right child
+      const rightTok = vals[i] || 'null';
+      const rightMsg = rightTok === 'null'
+        ? `null → right child of ${parentVal} is null`
+        : `"${rightTok}" → create right child node(${rightTok}) of ${parentVal}`;
+
+      if (rightTok !== 'null' && curOrigNode.right) {
+        dsCreatedIds.push(curOrigNode.right.id);
+        dsNodeQ.push(curOrigNode.right);
+      }
+
+      steps.push({
+        desc: `Deserialize — token[${i}]="${rightTok}". ${rightMsg}. Enqueue if not null.`,
+        phase: 'deserialize',
+        tokens: vals,
+        tokenIdx: i,
+        activeId: curOrigNode.id,
+        doneIds: [...dsCreatedIds],
+        creatingId: (rightTok !== 'null' && curOrigNode.right) ? curOrigNode.right.id : -1,
+        queue: [curOrigNode.val, ...queueAfterPop],
+        visited: dsCreatedIds.length,
+      });
+      i++;
+    }
+
+    steps.push({
+      desc: `Deserialize complete. All ${allNodes.length} nodes reconstructed. Tree is identical to the original.`,
+      phase: 'deserialize',
+      tokens: vals,
+      tokenIdx: vals.length,
+      activeId: -1,
+      doneIds: allNodes.map(n => n.id),
+      creatingId: -1,
+      queue: [],
+      visited: allNodes.length,
+    });
+  }
+}
+
+// ─── Nav ──────────────────────────────────────────────────────────────────────
+let currentStep = 0;
+
+function applyStep(idx) {
+  const step = steps[idx];
+  if (!step) return;
+
+  renderTree(allNodes, step.activeId, step.doneIds, step.creatingId);
+  renderSerial(step.tokens || [], step.tokenIdx);
+
+  // Queue
+  renderQueue(step.queue || [], step.activeId !== -1 ? 1 : 0);
+
+  // Stats
+  document.getElementById('stat-phase').textContent = step.phase === 'serialize' ? 'Serialize' : 'Deserialize';
+  document.getElementById('stat-i').textContent = step.tokenIdx >= 0 ? step.tokenIdx : '—';
+  document.getElementById('stat-visited').textContent = step.visited || 0;
+  document.getElementById('stat-tokens').textContent = step.tokens ? step.tokens.length : '—';
+
+  // Phase badge
+  const badge = document.getElementById('phase-badge');
+  badge.textContent = step.phase === 'serialize' ? 'Serialize' : 'Deserialize';
+  badge.className = 'phase-badge ' + (step.phase === 'serialize' ? 'phase-serialize' : 'phase-deserialize');
+
+  document.getElementById('step-desc').textContent = step.desc;
+}
+
+function rebuild() {
+  const input = document.getElementById('tree-input').value.trim();
+  generateSteps(input);
+  currentStep = 0;
+  applyStep(0);
+  nav.setSteps(steps.length);
+  nav.setStep(0);
+}
+
+// VizNav integration
+const nav = VizNav({
+  containerId: 'viz-nav',
+  onStep: (idx) => {
+    currentStep = idx;
+    applyStep(idx);
+  },
+});
+
+document.getElementById('btn-build').addEventListener('click', rebuild);
+document.getElementById('tree-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') rebuild();
+});
+
+// Init
+rebuild();
+</script>
+
+</body>
+</html>
