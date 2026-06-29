@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Count Good Nodes in Binary Tree</title>
+  <link rel="stylesheet" href="../shared/style.css" />
+  <script src="../shared/gsap.min.js"></script>
+  <script src="../shared/viz.js"></script>
+  <style>
+    .viz-area {
+      width: 100%; max-width: 90%;
+      display: flex; flex-direction: column; gap: 12px;
+    }
+
+    .tree-wrap {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+    }
+    #tree-svg { display: block; width: 100%; }
+
+    .bottom-row {
+      display: grid;
+      grid-template-columns: 55% 1fr;
+      gap: 12px;
+      align-items: start;
+    }
+    .right-col { display: flex; flex-direction: column; gap: 10px; }
+    @media (max-width: 700px) { .bottom-row { grid-template-columns: 1fr; } }
+
+    .code-panel {
+      background: #0a0d14;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+    }
+    .code-header {
+      padding: 9px 14px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      font-size: 0.67rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.11em;
+      color: var(--text-dim);
+    }
+    .code-body {
+      padding: 10px 0;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.78rem;
+      line-height: 1.75;
+      overflow-x: auto;
+    }
+    .cl {
+      display: flex; align-items: stretch;
+      border-left: 3px solid transparent;
+      padding: 0 14px 0 0;
+      white-space: pre;
+    }
+    .cl .ln {
+      width: 28px; min-width: 28px;
+      text-align: right; color: #3d4468;
+      user-select: none; padding-right: 14px;
+      font-size: 0.72rem; line-height: 1.75;
+    }
+    .cl .code { color: var(--text-muted); }
+
+    .panel-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 13px 16px;
+    }
+    .panel-title {
+      font-size: 0.67rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.11em;
+      color: var(--text-dim); margin-bottom: 10px;
+    }
+
+    /* Path max panel */
+    .path-row {
+      display: flex; align-items: center; gap: 8px;
+    }
+    .path-slot {
+      flex: 1;
+      background: #0a0d14;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 8px;
+      font-family: 'JetBrains Mono', monospace;
+      text-align: center;
+    }
+    .path-slot.node-slot { border-color: var(--accent); }
+    .ps-label { color: var(--text-dim); font-size: 0.65rem; margin-bottom: 4px; white-space: nowrap; }
+    .ps-val { color: var(--text-bright); font-size: 1.05rem; font-weight: 700; }
+    .ps-val.faint { color: var(--text-faint, #444); }
+    .path-op { color: var(--text-dim); font-size: 0.85rem; font-weight: 600; flex-shrink: 0; white-space: nowrap; }
+
+    .good-badge {
+      margin-top: 9px;
+      font-size: 0.82rem; font-weight: 700;
+      padding: 5px 12px; border-radius: 6px;
+      display: none;
+    }
+    .good-badge.is-good {
+      display: block;
+      background: #052e16; color: #4ade80; border: 1px solid #16a34a;
+    }
+    .good-badge.not-good {
+      display: block;
+      background: #1a1a2e; color: #7c7c8a; border: 1px solid #3a3a5c;
+    }
+
+    /* Good count */
+    .count-display {
+      display: flex; align-items: center; justify-content: center;
+      gap: 12px; padding: 14px 0;
+    }
+    .count-num {
+      font-size: 2.5rem; font-weight: 800; font-family: 'JetBrains Mono', monospace;
+      color: #4ade80; line-height: 1;
+      text-shadow: 0 0 20px rgba(74, 222, 128, 0.4);
+    }
+    .count-label {
+      font-size: 0.8rem; color: var(--text-dim); line-height: 1.4;
+    }
+    .count-label strong { color: var(--text-bright); display: block; }
+
+    /* Result badge */
+    .result-badge {
+      font-size: 0.95rem; font-weight: 700;
+      padding: 10px 16px; border-radius: 8px;
+      text-align: center;
+      background: #052e16; color: #4ade80; border: 1px solid #16a34a;
+    }
+
+    /* Syntax highlighting */
+    .kw  { color: var(--purple); }
+    .fn  { color: var(--blue); }
+    .bi  { color: var(--orange); }
+    .cm  { color: #3d4468; font-style: italic; }
+    .op  { color: var(--text); }
+    .nm  { color: #f7768e; }
+  </style>
+</head>
+<body class="page">
+
+<div class="page-header">
+  <a class="back-link" href="../index.html">&larr; All Visualizations</a>
+  <h1 class="page-title">Count Good Nodes in Binary Tree</h1>
+  <div class="page-sub">LeetCode 1448 &middot; DFS tracking max value on path from root &middot; O(n) time &middot; O(h) space</div>
+</div>
+
+<div class="controls">
+  <div class="field">
+    <label>Preset</label>
+    <select id="preset-sel" onchange="applyPreset()">
+      <option value="3,1,4,3,null,1,5">Example 1: [3,1,4,3,null,1,5] → 4</option>
+      <option value="3,3,null,4,2">Example 2: [3,3,null,4,2] → 3</option>
+      <option value="1">Single node → 1</option>
+      <option value="5,3,7,1,4,6,8">All good (sorted values)</option>
+      <option value="5,4,8,11,null,13,4,7,2,null,null,null,1">Deep tree</option>
+    </select>
+  </div>
+  <div class="field">
+    <label>Tree (level-order, null for empty)</label>
+    <input id="inp-tree" type="text" value="3,1,4,3,null,1,5" style="width:280px" />
+  </div>
+  <button class="btn-primary" onclick="build()">Build &amp; Run</button>
+</div>
+
+<div class="viz-area">
+
+  <div class="tree-wrap">
+    <svg id="tree-svg" viewBox="0 0 800 300" preserveAspectRatio="xMidYMid meet"></svg>
+  </div>
+
+  <div class="status-bar" style="max-width:100%">
+    <span class="phase-label" id="phase-label">&mdash;</span>
+    <span class="step-desc" id="step-desc">Choose a preset and click Build &amp; Run.</span>
+  </div>
+
+  <div class="bottom-row">
+
+    <div class="code-panel">
+      <div class="code-header">Python</div>
+      <div class="code-body" id="code-body"></div>
+    </div>
+
+    <div class="right-col">
+
+      <div class="panel-box">
+        <div class="panel-title">Path Check</div>
+        <div class="path-row">
+          <div class="path-slot">
+            <div class="ps-label">max_so_far</div>
+            <div class="ps-val faint" id="rv-max">&mdash;</div>
+          </div>
+          <div class="path-op">&le; node.val?</div>
+          <div class="path-slot node-slot">
+            <div class="ps-label">node.val</div>
+            <div class="ps-val" id="rv-val">&mdash;</div>
+          </div>
+        </div>
+        <div class="good-badge" id="good-badge"></div>
+      </div>
+
+      <div class="panel-box">
+        <div class="panel-title">Good Nodes Found</div>
+        <div class="count-display">
+          <div class="count-num" id="good-count">0</div>
+          <div class="count-label">
+            <strong id="count-strong">good nodes</strong>
+            node.val &ge; max ancestor
+          </div>
+        </div>
+      </div>
+
+      <div class="result-badge" id="result-badge" style="display:none"></div>
+
+    </div>
+  </div>
+
+</div>
+
+<div class="legend">
+  <div class="leg-item">
+    <svg width="14" height="14"><circle cx="7" cy="7" r="6" fill="#1e2130" stroke="#2d3148" stroke-width="2"/></svg>
+    Unvisited
+  </div>
+  <div class="leg-item">
+    <svg width="14" height="14"><circle cx="7" cy="7" r="6" fill="#1a1a3a" stroke="#818cf8" stroke-width="3"/></svg>
+    Active (checking now)
+  </div>
+  <div class="leg-item">
+    <svg width="14" height="14"><circle cx="7" cy="7" r="6" fill="#052e16" stroke="#16a34a" stroke-width="2.5"/></svg>
+    Good node (val &ge; path max)
+  </div>
+  <div class="leg-item">
+    <svg width="14" height="14"><circle cx="7" cy="7" r="6" fill="#1a1a2e" stroke="#3a3a5c" stroke-width="2"/></svg>
+    Not good (val &lt; path max)
+  </div>
+</div>
+
+<div class="step-nav">
+  <button class="btn-step" id="btn-back" disabled>&larr; Back</button>
+  <button class="btn-step" id="btn-next" disabled>Next &rarr;</button>
+  <button id="btn-play" style="background:#15803d;color:#fff;border:none;border-radius:4px;padding:6px 14px;font-weight:600;cursor:pointer">&#9654; Play</button>
+  <select id="speed-select" style="background:var(--bg);border:1px solid var(--border);color:var(--text);border-radius:4px;padding:6px 8px;font-size:0.85rem">
+    <option value="700">Slow</option>
+    <option value="350" selected>Medium</option>
+    <option value="120">Fast</option>
+  </select>
+</div>
+
+<script>
+// ─── Code lines ───────────────────────────────────────────────────────────────
+const CODE_LINES = [
+  [1,  `<span class="kw">def</span> <span class="fn">goodNodes</span><span class="op">(</span>root<span class="op">):</span>`],
+  [2,  `    <span class="kw">def</span> <span class="fn">dfs</span><span class="op">(</span>node<span class="op">,</span> max_so_far<span class="op">):</span>`],
+  [3,  `        <span class="kw">if not</span> node<span class="op">:</span>`],
+  [4,  `            <span class="kw">return</span> <span class="nm">0</span>              <span class="cm"># null → 0 good nodes</span>`],
+  [0,  ``],
+  [5,  `        is_good <span class="op">=</span> node.val <span class="op">&gt;=</span> max_so_far`],
+  [6,  `        count   <span class="op">=</span> <span class="nm">1</span> <span class="kw">if</span> is_good <span class="kw">else</span> <span class="nm">0</span>`],
+  [0,  ``],
+  [7,  `        new_max <span class="op">=</span> <span class="bi">max</span><span class="op">(</span>max_so_far<span class="op">,</span> node.val<span class="op">)</span>`],
+  [8,  `        count  <span class="op">+=</span> <span class="fn">dfs</span><span class="op">(</span>node.left<span class="op">,</span>  new_max<span class="op">)</span>`],
+  [9,  `        count  <span class="op">+=</span> <span class="fn">dfs</span><span class="op">(</span>node.right<span class="op">,</span> new_max<span class="op">)</span>`],
+  [10, `        <span class="kw">return</span> count`],
+  [0,  ``],
+  [11, `    <span class="kw">return</span> <span class="fn">dfs</span><span class="op">(</span>root<span class="op">,</span> <span class="bi">float</span><span class="op">(</span><span class="nm">'-inf'</span><span class="op">))</span>`],
+];
+
+// ─── Colors ───────────────────────────────────────────────────────────────────
+const COLORS = {
+  idle:     { fill: '#1e2130', stroke: '#2d3148', text: '#565f89', sw: 2 },
+  active:   { fill: '#1a1a3a', stroke: '#818cf8', text: '#c4b5fd', sw: 3.5 },
+  good:     { fill: '#052e16', stroke: '#16a34a', text: '#4ade80', sw: 2.5 },
+  not_good: { fill: '#1a1a2e', stroke: '#3a3a5c', text: '#7c7c8a', sw: 2 },
+};
+
+// ─── Globals ─────────────────────────────────────────────────────────────────
+let nodeMap = {};
+let R = 22;
+let VW = 800, VH = 300;
+let prevLines = [];
+
+// ─── Parse level-order ────────────────────────────────────────────────────────
+function parseLevelOrder(s) {
+  return s.split(',').map(t => t.trim()).map(t =>
+    (t === '' || t.toLowerCase() === 'null' || t === 'n') ? null : Number(t)
+  );
+}
+
+// ─── Build tree ───────────────────────────────────────────────────────────────
+let nextId = 0;
+function buildTree(vals) {
+  nodeMap = {};
+  nextId = 0;
+  if (!vals.length || vals[0] === null) return null;
+  const make = val => {
+    const n = { id: nextId++, val, left: null, right: null, x: 0, y: 0, depth: 0 };
+    nodeMap[n.id] = n;
+    return n;
+  };
+  const root = make(vals[0]);
+  const queue = [root];
+  let i = 1;
+  while (queue.length && i < vals.length) {
+    const cur = queue.shift();
+    if (i < vals.length) {
+      if (vals[i] !== null) { cur.left = make(vals[i]); cur.left.depth = cur.depth + 1; queue.push(cur.left); }
+      i++;
+    }
+    if (i < vals.length) {
+      if (vals[i] !== null) { cur.right = make(vals[i]); cur.right.depth = cur.depth + 1; queue.push(cur.right); }
+      i++;
+    }
+  }
+  return root;
+}
+
+// ─── Layout ───────────────────────────────────────────────────────────────────
+function layout(root) {
+  let idx = 0, maxD = 0;
+  function inorder(n) {
+    if (!n) return;
+    inorder(n.left);
+    n._inIdx = idx++;
+    if (n.depth > maxD) maxD = n.depth;
+    inorder(n.right);
+  }
+  inorder(root);
+  const count = idx;
+  const xSpace = Math.max(60, Math.min(110, 680 / Math.max(1, count)));
+  const ySpace = 76;
+  const padX = 50, padY = 36;
+  VW = Math.max(480, padX * 2 + (count - 1) * xSpace);
+  VH = padY * 2 + maxD * ySpace + R * 2 + 44;
+  for (const id in nodeMap) {
+    const n = nodeMap[id];
+    n.x = padX + n._inIdx * xSpace;
+    n.y = padY + 26 + n.depth * ySpace + R;
+  }
+}
+
+// ─── SVG helpers ─────────────────────────────────────────────────────────────
+function svgEl(tag, attrs) {
+  const el = document.createElementNS('http://www.w3.org/2000/svg', tag);
+  Object.entries(attrs).forEach(([k, v]) => el.setAttribute(k, v));
+  return el;
+}
+function svgG(id) {
+  const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  if (id) g.id = id;
+  return g;
+}
+
+// ─── Render SVG ───────────────────────────────────────────────────────────────
+function renderSVG(root) {
+  const svg = document.getElementById('tree-svg');
+  svg.innerHTML = '';
+  svg.setAttribute('viewBox', `0 0 ${VW} ${VH}`);
+  R = VW > 650 ? 22 : 18;
+
+  const edgeG = svgG('edges');
+  const nodeG = svgG('nodes');
+  svg.appendChild(edgeG);
+  svg.appendChild(nodeG);
+
+  (function drawEdges(n) {
+    if (!n) return;
+    [n.left, n.right].forEach(c => {
+      if (!c) return;
+      edgeG.appendChild(svgEl('line', {
+        id: `edge-${n.id}-${c.id}`,
+        x1: n.x, y1: n.y, x2: c.x, y2: c.y,
+        stroke: '#2d3148', 'stroke-width': 2, 'stroke-linecap': 'round',
+      }));
+    });
+    drawEdges(n.left); drawEdges(n.right);
+  })(root);
+
+  for (const id in nodeMap) {
+    const n = nodeMap[id];
+    const g = svgG(`node-g-${n.id}`);
+
+    g.appendChild(svgEl('circle', {
+      id: `nc-${n.id}`, cx: n.x, cy: n.y, r: R,
+      fill: COLORS.idle.fill, stroke: COLORS.idle.stroke, 'stroke-width': COLORS.idle.sw,
+    }));
+
+    const t = svgEl('text', {
+      id: `nt-${n.id}`, x: n.x, y: n.y,
+      'text-anchor': 'middle', 'dominant-baseline': 'middle',
+      fill: COLORS.idle.text,
+      'font-size': Math.round(R * 0.75), 'font-weight': 'bold',
+      'font-family': 'JetBrains Mono, monospace',
+    });
+    t.textContent = n.val;
+    g.appendChild(t);
+
+    // max_so_far annotation above the active node
+    const at = svgEl('text', {
+      id: `na-${n.id}`, x: n.x, y: n.y - R - 8,
+      'text-anchor': 'middle', 'dominant-baseline': 'auto',
+      fill: '#818cf8', 'font-size': 10, 'font-weight': '600',
+      'font-family': 'JetBrains Mono, monospace',
+      opacity: 0,
+    });
+    at.textContent = '';
+    g.appendChild(at);
+
+    nodeG.appendChild(g);
+  }
+}
+
+// ─── Simulation ───────────────────────────────────────────────────────────────
+function simulate(root) {
+  const stateMap = {};
+  for (const id in nodeMap) stateMap[id] = 'idle';
+  const out = [];
+  let goodCount = 0;
+
+  function snap(phase, desc, lines, activeId, maxSoFar) {
+    out.push({
+      phase, desc, lines: lines || [],
+      stateMap: { ...stateMap },
+      activeId: activeId !== undefined ? activeId : null,
+      maxSoFar: maxSoFar !== undefined ? maxSoFar : null,
+      goodCount,
+    });
+  }
+
+  function dfs(node, maxSoFar) {
+    if (!node) {
+      snap('Base', 'Reached null → return 0.', [3, 4]);
+      return 0;
+    }
+
+    stateMap[node.id] = 'active';
+    snap('Enter', `Visit node ${node.val}. max_so_far from parent = ${maxSoFar === -Infinity ? '-∞' : maxSoFar}.`, [2, 5], node.id, maxSoFar);
+
+    const isGood = node.val >= maxSoFar;
+    snap('Check', `${node.val} ${isGood ? '≥' : '<'} ${maxSoFar === -Infinity ? '-∞' : maxSoFar} → node ${node.val} is ${isGood ? 'GOOD ✓' : 'NOT good ✗'}.`, [5, 6], node.id, maxSoFar);
+
+    if (isGood) {
+      goodCount++;
+      stateMap[node.id] = 'good';
+      snap('Good', `Node ${node.val} is good! Running total: ${goodCount}.`, [6], node.id, maxSoFar);
+    } else {
+      stateMap[node.id] = 'not_good';
+      snap('NotGood', `Node ${node.val} is not good (${node.val} < ${maxSoFar}). Not counted.`, [6], node.id, maxSoFar);
+    }
+
+    const newMax = Math.max(maxSoFar, node.val);
+    snap('NewMax', `new_max = max(${maxSoFar === -Infinity ? '-∞' : maxSoFar}, ${node.val}) = ${newMax}. Recurse left with max=${newMax}.`, [7, 8], node.id, maxSoFar);
+
+    dfs(node.left, newMax);
+
+    snap('Right', `Back at node ${node.val}. Now recurse right with max=${newMax}.`, [9], node.id, maxSoFar);
+    dfs(node.right, newMax);
+
+    snap('Return', `Node ${node.val} done. Subtree contributed to running count.`, [10], node.id, maxSoFar);
+  }
+
+  snap('Start', `Begin DFS from root. Initial max_so_far = -∞ (no ancestors yet).`, [1, 11]);
+  dfs(root, -Infinity);
+  snap('Done', `All nodes visited. Total good nodes = ${goodCount}.`, [], null, null);
+  return out;
+}
+
+// ─── Node color ───────────────────────────────────────────────────────────────
+function setNodeColor(id, colorKey, animate) {
+  const c = COLORS[colorKey] || COLORS.idle;
+  const nc = document.getElementById('nc-' + id);
+  const nt = document.getElementById('nt-' + id);
+  if (!nc) return;
+  if (animate) {
+    gsap.to(nc, { duration: 0.28, ease: 'power2.out', attr: { fill: c.fill, stroke: c.stroke, 'stroke-width': c.sw } });
+    if (nt) gsap.to(nt, { duration: 0.28, attr: { fill: c.text } });
+  } else {
+    nc.setAttribute('fill', c.fill);
+    nc.setAttribute('stroke', c.stroke);
+    nc.setAttribute('stroke-width', c.sw);
+    if (nt) nt.setAttribute('fill', c.text);
+  }
+}
+
+// ─── Code line highlighting ───────────────────────────────────────────────────
+function setCodeLines(oldLines, newLines, animate) {
+  const HL_BG   = 'rgba(99,102,241,0.16)';
+  const NO_BG   = 'rgba(99,102,241,0)';
+  const HL_BORD = '#818cf8';
+  const NO_BORD = 'transparent';
+  (oldLines || []).filter(n => !(newLines || []).includes(n)).forEach(n => {
+    const el = document.getElementById('cl-' + n);
+    if (!el) return;
+    if (animate) gsap.to(el, { backgroundColor: NO_BG, borderLeftColor: NO_BORD, duration: 0.2 });
+    else { el.style.backgroundColor = ''; el.style.borderLeftColor = ''; }
+  });
+  (newLines || []).filter(n => !(oldLines || []).includes(n)).forEach(n => {
+    const el = document.getElementById('cl-' + n);
+    if (!el) return;
+    if (animate) gsap.to(el, { backgroundColor: HL_BG, borderLeftColor: HL_BORD, duration: 0.2, delay: 0.05 });
+    else { el.style.backgroundColor = HL_BG; el.style.borderLeftColor = HL_BORD; }
+  });
+}
+
+// ─── Apply step ───────────────────────────────────────────────────────────────
+function applyStep(s, animate) {
+  // Node colors
+  Object.entries(s.stateMap).forEach(([id, state]) => {
+    const colorKey = (state === 'active' && +id === s.activeId) ? 'active' : state;
+    setNodeColor(+id, colorKey, animate);
+  });
+
+  // max_so_far annotation above active node
+  for (const id in nodeMap) {
+    const at = document.getElementById('na-' + id);
+    if (!at) continue;
+    if (s.activeId !== null && +id === s.activeId && s.maxSoFar !== null) {
+      const maxStr = s.maxSoFar === -Infinity ? 'max=-∞' : `max=${s.maxSoFar}`;
+      at.textContent = maxStr;
+      if (animate) gsap.to(at, { opacity: 1, duration: 0.2 });
+      else at.setAttribute('opacity', '1');
+    } else {
+      at.textContent = '';
+      at.setAttribute('opacity', '0');
+    }
+  }
+
+  // Path check panel
+  const setPS = function(id, val, faint) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = val;
+    el.className = 'ps-val' + (faint ? ' faint' : '');
+    if (animate) gsap.fromTo(el, { opacity: 0.3 }, { opacity: 1, duration: 0.18 });
+  };
+  if (s.activeId !== null) {
+    const node = nodeMap[s.activeId];
+    const maxTxt = s.maxSoFar === -Infinity ? '-∞' : (s.maxSoFar === null ? '—' : String(s.maxSoFar));
+    setPS('rv-max', maxTxt, s.maxSoFar === -Infinity || s.maxSoFar === null);
+    setPS('rv-val', node ? String(node.val) : '—', false);
+  } else {
+    setPS('rv-max', '—', true);
+    setPS('rv-val', '—', true);
+  }
+
+  // Good badge
+  const badge = document.getElementById('good-badge');
+  if (badge) {
+    badge.className = 'good-badge';
+    badge.textContent = '';
+    if (s.phase === 'Good') {
+      badge.className = 'good-badge is-good';
+      badge.textContent = '✓ Good node — val ≥ max path ancestor';
+    } else if (s.phase === 'NotGood') {
+      badge.className = 'good-badge not-good';
+      badge.textContent = '✗ Not good — val < max path ancestor';
+    }
+  }
+
+  // Good count
+  const countEl = document.getElementById('good-count');
+  if (countEl) {
+    const prev = parseInt(countEl.textContent) || 0;
+    if (animate && s.goodCount !== prev) {
+      gsap.fromTo(countEl, { scale: 0.85, color: '#4ade80' }, { scale: 1, color: '#4ade80', duration: 0.3, ease: 'back.out(1.5)' });
+    }
+    countEl.textContent = s.goodCount;
+  }
+
+  // Result badge
+  const rb = document.getElementById('result-badge');
+  if (rb) {
+    if (s.phase === 'Done') {
+      rb.style.display = 'block';
+      rb.textContent = `✓ Answer: ${s.goodCount} good node${s.goodCount !== 1 ? 's' : ''}`;
+      if (animate) gsap.from(rb, { opacity: 0, scale: 0.9, duration: 0.35, ease: 'back.out(1.7)' });
+    } else {
+      rb.style.display = 'none';
+    }
+  }
+
+  // Code lines
+  setCodeLines(prevLines, s.lines, animate);
+  prevLines = s.lines || [];
+}
+
+// ─── Build code panel ─────────────────────────────────────────────────────────
+function buildCodePanel() {
+  const body = document.getElementById('code-body');
+  body.innerHTML = '';
+  CODE_LINES.forEach(([ln, html]) => {
+    const row = document.createElement('div');
+    row.className = 'cl';
+    if (ln > 0) row.id = 'cl-' + ln;
+    row.innerHTML = '<span class="ln">' + (ln > 0 ? ln : '') + '</span><span class="code">' + html + '</span>';
+    body.appendChild(row);
+  });
+}
+
+// ─── Preset selector ─────────────────────────────────────────────────────────
+function applyPreset() {
+  const sel = document.getElementById('preset-sel');
+  document.getElementById('inp-tree').value = sel.value;
+}
+
+// ─── Build & Run ─────────────────────────────────────────────────────────────
+function build() {
+  const txt = document.getElementById('inp-tree').value.trim();
+  const vals = parseLevelOrder(txt);
+  buildCodePanel();
+  const root = buildTree(vals);
+  if (!root) {
+    document.getElementById('tree-svg').innerHTML = '';
+    document.getElementById('step-desc').textContent = 'Empty tree — nothing to traverse.';
+    return;
+  }
+  layout(root);
+  renderSVG(root);
+  prevLines = [];
+  document.getElementById('good-badge').className = 'good-badge';
+  document.getElementById('good-count').textContent = '0';
+  document.getElementById('result-badge').style.display = 'none';
+  nav.load(simulate(root));
+}
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
+var nav = VizNav({
+  btnPrev: document.getElementById('btn-back'),
+  btnNext: document.getElementById('btn-next'),
+  btnPlay: document.getElementById('btn-play'),
+  speedSel: document.getElementById('speed-select'),
+  render: function(snap, cur, total) {
+    applyStep(snap, cur > 0);
+    var pl = document.getElementById('phase-label');
+    if (pl) pl.textContent = 'Step ' + (cur + 1) + ' / ' + total + '  ·  ' + snap.phase;
+    var sd = document.getElementById('step-desc');
+    if (sd) {
+      if (cur > 0) gsap.fromTo(sd, { opacity: 0.5 }, { opacity: 1, duration: 0.15 });
+      sd.textContent = snap.desc;
+    }
+  }
+});
+
+build();
+</script>
+<script>
+  if (window.self !== window.top) {
+    var bl = document.querySelector('.back-link');
+    if (bl) bl.style.display = 'none';
+  }
+</script>
+</body>
+</html>
