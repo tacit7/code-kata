@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kth Largest Element in a Stream</title>
+  <link rel="stylesheet" href="../shared/style.css" />
+  <script src="../shared/viz.js"></script>
+  <style>
+    body { display:flex; flex-direction:column; height:100vh; overflow:hidden; }
+
+    .top-area { flex:0 0 auto; }
+    .mid-area  { flex:1; display:grid; grid-template-columns:1fr 1fr; gap:14px; padding:0 16px 8px; overflow:hidden; min-height:0; }
+    .bot-area  { flex:0 0 auto; padding:0 16px 10px; }
+
+    .panel {
+      background:var(--surface); border:1px solid var(--border);
+      border-radius:var(--radius-lg); padding:14px 16px;
+      display:flex; flex-direction:column; gap:10px;
+      overflow:hidden; min-height:0;
+    }
+    .panel-title {
+      font-size:0.72rem; font-weight:700;
+      text-transform:uppercase; letter-spacing:0.08em; color:var(--text-dim);
+      flex-shrink:0;
+    }
+    .panel-meta {
+      display:flex; align-items:center; justify-content:space-between; flex-shrink:0;
+    }
+    #heap-badge {
+      font-size:0.72rem; font-weight:700; font-family:monospace;
+      padding:2px 10px; border-radius:20px;
+      background:var(--bg); border:1px solid var(--border);
+      color:var(--text-dim);
+    }
+
+    /* ── heap list ── */
+    .heap-rows { display:flex; flex-direction:column; gap:4px; overflow-y:auto; flex:1; }
+    .heap-row {
+      display:flex; align-items:center; gap:10px;
+      padding:7px 12px; border-radius:6px;
+      background:var(--bg); border:1px solid var(--border);
+      font-family:monospace; font-size:0.82rem;
+      transition:border-color 0.2s, background 0.2s;
+    }
+    .heap-row.is-min   { border-color:#7c3aed; background:#1a0e2e; }
+    .heap-row.is-new   { border-color:var(--accent); background:#1e1a3a; }
+    .heap-row.is-evict { border-color:#dc2626; background:#1f0a0a; }
+    .heap-rank { width:18px; color:var(--text-ghost); font-size:0.7rem; text-align:right; }
+    .heap-val  { color:var(--text-bright); flex:1; font-size:0.9rem; font-weight:600; }
+    .heap-note { color:var(--text-dim); font-size:0.73rem; }
+
+    /* ── stream log ── */
+    .stream-log { display:flex; flex-direction:column; gap:5px; overflow-y:auto; flex:1; }
+    .log-row {
+      display:flex; align-items:center; gap:10px;
+      padding:8px 12px; border-radius:6px;
+      background:var(--bg); border:1px solid var(--border);
+      font-family:monospace; font-size:0.82rem;
+      transition:border-color 0.2s, background 0.2s;
+    }
+    .log-row.current  { border-color:var(--accent); background:#1e1a3a; }
+    .log-row.answered { border-color:#166534; background:#052e16; }
+    .log-num   { color:var(--text-bright); font-weight:600; min-width:28px; }
+    .log-arrow { color:var(--text-ghost); }
+    .log-ans   { color:#4ade80; font-weight:700; }
+    .log-phase { color:var(--text-dim); font-size:0.75rem; margin-left:auto; }
+    .log-pending { color:var(--text-ghost); font-style:italic; }
+
+    /* init log */
+    .init-row {
+      display:flex; align-items:center; gap:8px;
+      padding:6px 12px; border-radius:6px;
+      background:var(--bg); border:1px solid var(--border-soft);
+      font-family:monospace; font-size:0.78rem;
+      color:var(--text-muted);
+      transition:border-color 0.15s;
+    }
+    .init-row.current { border-color:#7c3aed; }
+    .init-sep {
+      font-size:0.7rem; font-weight:700; text-transform:uppercase;
+      letter-spacing:0.08em; color:var(--text-ghost); padding:2px 0;
+    }
+
+    /* ── bottom nav ── */
+    .nav-strip { display:flex; gap:10px; align-items:center; }
+    .step-info { flex:1; min-width:0; display:flex; flex-direction:column; gap:2px; }
+    #phase-label { font-size:0.72rem; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:var(--text-dim); }
+    #step-desc   { font-size:0.82rem; color:var(--text-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
+    .speed-select {
+      background:var(--bg); border:1px solid var(--border);
+      border-radius:var(--radius-sm); color:var(--text);
+      font-size:0.85rem; padding:8px 10px; outline:none; width:80px;
+    }
+
+    /* answer badge */
+    .kth-badge {
+      display:inline-flex; align-items:center; gap:6px;
+      font-size:0.78rem; font-family:monospace;
+      padding:3px 10px; border-radius:20px;
+      background:#1a0e2e; border:1px solid #7c3aed;
+      color:#a78bfa;
+    }
+    .kth-badge .kth-val { font-weight:700; font-size:0.9rem; color:#c4b5fd; }
+  </style>
+</head>
+<body class="page">
+
+<div class="page-header top-area">
+  <a class="back-link" href="../index.html">&larr; All Algorithms</a>
+  <div class="page-title">Kth Largest Element in a Stream</div>
+  <div class="page-sub">LeetCode 703 &middot; Min-heap of size k &middot; O(n log k) time &middot; O(k) space</div>
+</div>
+
+<div class="controls top-area">
+  <div class="field">
+    <label>k</label>
+    <input id="inp-k" type="number" value="3" min="1" max="20" style="width:60px" />
+  </div>
+  <div class="field">
+    <label>Initial nums (comma-separated)</label>
+    <input id="inp-nums" type="text" value="4,5,8,2" style="width:180px;font-family:monospace" />
+  </div>
+  <div class="field">
+    <label>Stream values (comma-separated)</label>
+    <input id="inp-stream" type="text" value="3,5,10,9,4" style="width:180px;font-family:monospace" />
+  </div>
+  <button class="btn-primary" onclick="buildAndRun()">Build &amp; Run</button>
+</div>
+
+<div class="mid-area">
+
+  <div class="panel">
+    <div class="panel-meta">
+      <div class="panel-title">Min-Heap (size k)</div>
+      <span id="heap-badge">size: 0 / k: —</span>
+    </div>
+    <div style="flex-shrink:0" id="kth-answer-wrap"></div>
+    <div class="heap-rows" id="heap-rows">
+      <div style="color:var(--text-ghost);font-size:0.82rem;text-align:center;padding:24px 0">Heap is empty</div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">Stream Log</div>
+    <div class="stream-log" id="stream-log">
+      <div style="color:var(--text-ghost);font-size:0.82rem;text-align:center;padding:24px 0">No stream values yet</div>
+    </div>
+  </div>
+
+</div>
+
+<div class="bot-area">
+  <div class="nav-strip">
+    <button class="btn-step" id="btn-back" disabled>&larr;</button>
+    <button class="btn-step" id="btn-next" disabled>&rarr;</button>
+    <button class="btn-play" id="btn-play" disabled>&#9654; Play</button>
+    <select class="speed-select" id="speed-select">
+      <option value="900">Slow</option>
+      <option value="450" selected>Medium</option>
+      <option value="140">Fast</option>
+    </select>
+    <div class="step-info">
+      <div id="phase-label">&mdash;</div>
+      <div id="step-desc">Enter k, initial nums, and stream values, then click Build &amp; Run.</div>
+    </div>
+  </div>
+</div>
+
+<script>
+var simSteps = [], nav;
+var currentK = 0, currentNums = [], currentStream = [];
+
+// ── min-heap ─────────────────────────────────────────────────────────────────
+function minHeapPush(heap, val) {
+  heap.push(val);
+  var i = heap.length - 1;
+  while (i > 0) {
+    var pi = (i - 1) >> 1;
+    if (heap[i] < heap[pi]) { var t=heap[i]; heap[i]=heap[pi]; heap[pi]=t; i=pi; }
+    else break;
+  }
+}
+function minHeapPop(heap) {
+  var top = heap[0];
+  var last = heap.pop();
+  if (heap.length > 0) {
+    heap[0] = last;
+    var i = 0;
+    while (true) {
+      var l=2*i+1, r=2*i+2, smallest=i;
+      if (l<heap.length && heap[l]<heap[smallest]) smallest=l;
+      if (r<heap.length && heap[r]<heap[smallest]) smallest=r;
+      if (smallest!==i) { var t=heap[i]; heap[i]=heap[smallest]; heap[smallest]=t; i=smallest; }
+      else break;
+    }
+  }
+  return top;
+}
+
+// ── simulation ────────────────────────────────────────────────────────────────
+function simulate(k, nums, stream) {
+  var steps = [];
+  var heap = [];
+
+  function snap(phase, desc, opts) {
+    opts = opts || {};
+    steps.push({
+      phase:        phase,
+      desc:         desc,
+      heap:         heap.slice(),
+      newVal:       opts.newVal !== undefined ? opts.newVal : null,
+      evictVal:     opts.evictVal !== undefined ? opts.evictVal : null,
+      streamIdx:    opts.streamIdx !== undefined ? opts.streamIdx : -1,
+      streamAnswers: opts.streamAnswers ? opts.streamAnswers.slice() : [],
+      initIdx:      opts.initIdx !== undefined ? opts.initIdx : -1,
+      isInit:       !!opts.isInit,
+    });
+  }
+
+  var streamAnswers = [];
+
+  snap('Start', 'Initialize: push each num into the min-heap, evict the minimum whenever size exceeds k=' + k + '.', { isInit:true, initIdx:-1 });
+
+  // Build from nums
+  for (var i = 0; i < nums.length; i++) {
+    var v = nums[i];
+    minHeapPush(heap, v);
+    snap('Init:push', 'Push ' + v + ' → heap size ' + heap.length + '.', { isInit:true, initIdx:i, newVal:v });
+    if (heap.length > k) {
+      var evicted = minHeapPop(heap);
+      snap('Init:evict', 'Heap size ' + (heap.length+1) + ' > k=' + k + ' → evict min (' + evicted + '). Heap now has ' + heap.length + ' elements.', { isInit:true, initIdx:i, evictVal:evicted });
+    }
+  }
+
+  var initAns = heap.length >= k ? heap[0] : null;
+  snap('Init:done', 'Init complete. Heap: [' + heap.slice().sort(function(a,b){return a-b;}).join(', ') + ']. ' + (initAns !== null ? 'Kth largest = ' + initAns + '.' : 'Heap has fewer than k elements — need more values.'), { isInit:true, initIdx:-1 });
+
+  // Stream
+  for (var si = 0; si < stream.length; si++) {
+    var sv = stream[si];
+    snap('Stream:consider', 'add(' + sv + '): push ' + sv + ' into the heap.', { streamIdx:si, streamAnswers:streamAnswers, newVal:sv });
+
+    minHeapPush(heap, sv);
+    snap('Stream:push', 'Pushed ' + sv + '. Heap size = ' + heap.length + '.', { streamIdx:si, streamAnswers:streamAnswers, newVal:sv });
+
+    if (heap.length > k) {
+      var ev2 = minHeapPop(heap);
+      snap('Stream:evict', 'Size ' + (heap.length+1) + ' > k=' + k + ' → evict min (' + ev2 + '). Heap size back to k.', { streamIdx:si, streamAnswers:streamAnswers, evictVal:ev2 });
+    }
+
+    var ans = heap[0];
+    streamAnswers = streamAnswers.concat([ans]);
+    snap('Stream:answer', 'Heap min = ' + ans + ' → kth largest is ' + ans + '.', { streamIdx:si, streamAnswers:streamAnswers });
+  }
+
+  snap('Done', 'All ' + stream.length + ' stream values processed. Answers: [' + streamAnswers.join(', ') + '].', { streamIdx:-1, streamAnswers:streamAnswers });
+  return steps;
+}
+
+// ── render ────────────────────────────────────────────────────────────────────
+function applyStep(s, animate) {
+  renderHeap(s);
+  renderStreamLog(s);
+
+  var phaseEl = document.getElementById('phase-label');
+  var descEl  = document.getElementById('step-desc');
+  if (phaseEl) phaseEl.textContent = s.phase;
+  if (descEl) descEl.textContent = s.desc;
+}
+
+function renderHeap(s) {
+  var badge   = document.getElementById('heap-badge');
+  var rows    = document.getElementById('heap-rows');
+  var ansWrap = document.getElementById('kth-answer-wrap');
+
+  badge.textContent = 'size: ' + s.heap.length + ' / k: ' + currentK;
+
+  // answer badge
+  var heapMin = s.heap.length >= currentK ? s.heap[0] : null;
+  if (heapMin !== null) {
+    ansWrap.innerHTML = '<span class="kth-badge">kth largest = <span class="kth-val">' + heapMin + '</span></span>';
+  } else {
+    ansWrap.innerHTML = '<span style="color:var(--text-ghost);font-size:0.78rem">waiting for k values…</span>';
+  }
+
+  if (s.heap.length === 0) {
+    rows.innerHTML = '<div style="color:var(--text-ghost);font-size:0.82rem;text-align:center;padding:24px 0">Heap is empty</div>';
+    return;
+  }
+
+  // Display sorted ascending so min (index 0) is at top — shows structure clearly
+  var sorted = s.heap.slice().sort(function(a,b){return a-b;});
+  rows.innerHTML = sorted.map(function(val, rank) {
+    var isMin    = (rank === 0);
+    var isNew    = (s.newVal !== null && val === s.newVal && (s.phase === 'Stream:push' || s.phase === 'Init:push'));
+    var isEvict  = (s.evictVal !== null && val === s.evictVal);
+    var cls = 'heap-row' + (isEvict ? ' is-evict' : isNew ? ' is-new' : isMin ? ' is-min' : '');
+    var note = isMin ? '← min (kth largest)' : '';
+    return '<div class="' + cls + '">'
+      + '<span class="heap-rank">' + (rank+1) + '</span>'
+      + '<span class="heap-val">' + val + '</span>'
+      + (note ? '<span class="heap-note">' + note + '</span>' : '')
+      + '</div>';
+  }).join('');
+}
+
+function renderStreamLog(s) {
+  var log = document.getElementById('stream-log');
+
+  if (!currentStream.length) {
+    log.innerHTML = '<div style="color:var(--text-ghost);font-size:0.82rem;text-align:center;padding:24px 0">No stream values</div>';
+    return;
+  }
+
+  var html = '';
+  for (var i = 0; i < currentStream.length; i++) {
+    var answered = i < s.streamAnswers.length;
+    var isCurrent = (i === s.streamIdx);
+    var cls = 'log-row' + (isCurrent ? ' current' : answered ? ' answered' : '');
+    html += '<div class="' + cls + '">'
+      + '<span class="log-num">add(' + currentStream[i] + ')</span>'
+      + '<span class="log-arrow">→</span>';
+    if (answered) {
+      html += '<span class="log-ans">' + s.streamAnswers[i] + '</span>';
+    } else {
+      html += '<span class="log-pending">…</span>';
+    }
+    html += '</div>';
+  }
+
+  log.innerHTML = html;
+
+  // Scroll current into view
+  var currentEl = log.querySelector('.log-row.current');
+  if (currentEl) currentEl.scrollIntoView({block:'nearest'});
+}
+
+// ── wire-up ───────────────────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', function() {
+  nav = VizNav({
+    btnPrev:  document.getElementById('btn-back'),
+    btnNext:  document.getElementById('btn-next'),
+    btnPlay:  document.getElementById('btn-play'),
+    speedSel: document.getElementById('speed-select'),
+    render: function(snap, cur, total) {
+      applyStep(snap, cur > 0);
+      var phaseEl = document.getElementById('phase-label');
+      if (phaseEl) phaseEl.textContent = 'Step ' + (cur+1) + ' / ' + total + '  ·  ' + snap.phase;
+    }
+  });
+  buildAndRun();
+});
+
+function parseCSV(raw) {
+  return raw.split(',').map(function(s){return parseInt(s.trim(),10);}).filter(function(n){return !isNaN(n);});
+}
+
+function buildAndRun() {
+  var k      = parseInt(document.getElementById('inp-k').value, 10);
+  var nums   = parseCSV(document.getElementById('inp-nums').value);
+  var stream = parseCSV(document.getElementById('inp-stream').value);
+
+  if (isNaN(k) || k < 1) return;
+
+  currentK      = k;
+  currentNums   = nums;
+  currentStream = stream;
+
+  simSteps = simulate(k, nums, stream);
+  nav.load(simSteps);
+}
+</script>
+<script>
+  if (window.self !== window.top) {
+    var bl = document.querySelector('.back-link');
+    if (bl) bl.style.display = 'none';
+  }
+</script>
+</body>
+</html>
