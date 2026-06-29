@@ -7,125 +7,57 @@
   <link rel="stylesheet" href="../shared/style.css" />
   <script src="../shared/viz.js"></script>
   <style>
-    body { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+    .viz-area { width: 100%; max-width: 95%; }
+    .main-row { display: grid; grid-template-columns: 1fr 340px; gap: 20px; align-items: start; }
+    @media (max-width: 800px) { .main-row { grid-template-columns: 1fr; } }
 
-    .viz-area {
-      flex: 1; overflow-y: auto;
-      display: flex; flex-direction: column; align-items: center;
-      padding: 12px 16px; gap: 10px;
+    .graph-panel {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 16px;
+      display: flex; flex-direction: column; gap: 10px;
+    }
+    .graph-svg-wrap {
+      width: 100%; aspect-ratio: 1.6;
+      background: var(--bg); border-radius: var(--radius-sm); overflow: hidden;
+    }
+    #graph-svg { width: 100%; height: 100%; }
+
+    .node-circle { stroke-width: 2; transition: fill 0.22s, stroke 0.22s, opacity 0.22s; }
+    .node-circle.state-unvisited { fill: var(--surface-dark); stroke: var(--border-soft); opacity: 0.35; }
+    .node-circle.state-start     { fill: #1a2540; stroke: #7aa2f7; stroke-width: 3; }
+    .node-circle.state-active    { fill: #3d2010; stroke: #ff9e64; stroke-width: 3; }
+    .node-circle.state-frontier  { fill: #2d2010; stroke: #e0af68; }
+    .node-circle.state-found     { fill: #0d2535; stroke: #7dcfff; stroke-width: 3; }
+    .node-circle.state-visited   { fill: #1a2b14; stroke: #9ece6a; }
+    .node-circle.state-end-found { fill: #2a0a3a; stroke: #bb9af7; stroke-width: 3; }
+    .node-circle.state-no-path   { fill: var(--surface-dark); stroke: #f7768e; stroke-dasharray: 4 3; opacity: 0.55; }
+
+    .node-label {
+      fill: var(--text-bright); font-size: 11px; font-weight: 700;
+      font-family: monospace; text-anchor: middle; dominant-baseline: central;
+      pointer-events: none; transition: opacity 0.22s;
+    }
+    .node-label.faint { opacity: 0.3; }
+
+    .edge-line { stroke-width: 1.5; fill: none; stroke: #414868; transition: stroke 0.22s; }
+    .edge-line.faint  { opacity: 0.18; }
+    .edge-line.active { stroke: #7dcfff; }
+    .edge-line.done   { stroke: #9ece6a; }
+
+    .depth-label {
+      fill: var(--text-ghost); font-size: 10px; font-family: monospace;
+      text-anchor: end; dominant-baseline: central;
     }
 
-    /* BFS levels */
-    .levels-wrap {
-      width: 100%; max-width: 860px;
+    .right-col { display: flex; flex-direction: column; gap: 10px; }
+    .panel-box {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 12px 14px;
       display: flex; flex-direction: column; gap: 8px;
     }
+    .panel-title { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); }
 
-    .level-row {
-      display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
-    }
-    .level-label {
-      font-size: 0.68rem; font-weight: 700; font-family: monospace;
-      color: var(--text-ghost); width: 52px; text-align: right; flex-shrink: 0;
-    }
-    .level-words { display: flex; gap: 6px; flex-wrap: wrap; }
-
-    .word-chip {
-      display: flex; gap: 0;
-      border: 2px solid var(--border); border-radius: 8px; overflow: hidden;
-      font-family: monospace; font-weight: 700; font-size: 1rem;
-      transition: border-color 0.15s;
-    }
-    .word-chip.begin  { border-color: var(--purple); }
-    .word-chip.end    { border-color: var(--green); }
-    .word-chip.active { border-color: var(--yellow); }
-    .word-chip.done   { border-color: var(--accent); opacity: 0.7; }
-
-    .wc-letter {
-      width: 30px; height: 36px;
-      display: flex; align-items: center; justify-content: center;
-      background: var(--bg); color: var(--text-dim);
-      border-right: 1px solid var(--border);
-      transition: background 0.12s, color 0.12s;
-    }
-    .wc-letter:last-child { border-right: none; }
-    .wc-letter.changed {
-      background: #201700; color: var(--yellow-light);
-    }
-    .word-chip.end .wc-letter.changed {
-      background: var(--green-bg); color: var(--green-light);
-    }
-    .word-chip.begin .wc-letter { background: #1a1030; color: var(--purple); }
-
-    /* Queue panel */
-    .info-row {
-      display: flex; gap: 10px; width: 100%; max-width: 860px; flex-wrap: wrap;
-    }
-    .sect {
-      flex: 1; min-width: 180px;
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--radius-lg); padding: 10px 14px;
-      display: flex; flex-direction: column; gap: 6px;
-    }
-
-    .queue-wrap {
-      display: flex; gap: 5px; flex-wrap: wrap; min-height: 30px; align-items: center;
-    }
-    .q-chip {
-      padding: 2px 8px; border: 1px solid var(--accent);
-      border-radius: 4px; font-family: monospace; font-size: 0.78rem;
-      color: var(--accent-pale); background: #0d1a3e;
-    }
-    .q-chip.head {
-      border-color: var(--yellow); color: var(--yellow-light); background: #201700;
-    }
-
-    /* Var boxes */
-    .var-grid { display: flex; gap: 8px; flex-wrap: wrap; }
-    .var-box {
-      padding: 8px 10px; background: var(--bg); border: 1px solid var(--border);
-      border-radius: var(--radius-sm); display: flex; flex-direction: column;
-      align-items: center; gap: 2px; min-width: 80px;
-    }
-    .var-box.ab { border-color: var(--accent); }
-    .var-box.yb { border-color: #b45309; }
-    .var-box.gb { border-color: var(--green-border); }
-    .var-label { font-size: 0.6rem; font-family: monospace; color: var(--text-faint); text-align: center; }
-    .var-val   { font-size: 1.1rem; font-weight: 700; color: var(--text-bright); font-family: monospace; }
-
-    /* Result */
-    .result-badge {
-      display: inline-flex; align-items: center; gap: 6px;
-      padding: 6px 12px; border-radius: var(--radius-sm);
-      font-size: 0.88rem; font-weight: 700; font-family: monospace;
-      border: 1px solid var(--border); color: var(--text-dim);
-    }
-    .result-badge.found     { border-color: var(--green); color: var(--green); background: var(--green-bg); }
-    .result-badge.not-found { border-color: var(--red);   color: var(--red);   background: #200a0a; }
-
-    /* Code panel */
-    .code-panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; width: 100%; max-width: 860px; }
-    .code-header { padding: 7px 14px; font-size: 0.72rem; font-weight: 600; color: var(--text-dim); border-bottom: 1px solid var(--border); background: var(--bg); }
-    .code-body { padding: 8px 0; font-size: 0.76rem; line-height: 1.7; white-space: pre; }
-    .code-line { display: flex; align-items: center; padding: 0 12px; }
-    .code-line.hl { background: var(--border-soft); border-left: 2px solid var(--accent); }
-    .ln { min-width: 22px; color: var(--text-ghost); user-select: none; font-size: 0.68rem; }
-
-    .kw { color: var(--purple); }
-    .fn { color: var(--blue); }
-    .bi { color: var(--orange); }
-    .nb { color: var(--green); }
-    .cm { color: var(--text-ghost); }
-    .st { color: var(--yellow-light); }
-
-    /* Speed select */
-    .speed-select {
-      background: var(--bg); border: 1px solid var(--border);
-      border-radius: var(--radius-sm); color: var(--text);
-      font-size: 0.85rem; padding: 8px 10px; outline: none; width: 80px;
-    }
-    .nav-row { display: flex; gap: 8px; align-items: center; }
-
+    .nav-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
     .btn-play {
       background: #15803d; border: none; border-radius: var(--radius-sm);
       color: #fff; cursor: pointer; font-size: 0.88rem; font-weight: 600;
@@ -134,6 +66,53 @@
     .btn-play:hover { background: #166534; }
     .btn-play.playing { background: #c2410c; }
     .btn-play.playing:hover { background: #9a3412; }
+    .btn-play:disabled { opacity: 0.4; cursor: not-allowed; }
+    .speed-select {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); color: var(--text);
+      font-size: 0.85rem; padding: 8px 10px; outline: none;
+    }
+
+    .lvl-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .level-badge {
+      font-size: 0.8rem; font-weight: 700; font-family: monospace;
+      padding: 3px 10px; border-radius: 4px;
+      background: #1a2540; border: 1px solid #7aa2f7; color: #7aa2f7;
+    }
+    .result-badge {
+      font-size: 0.8rem; font-weight: 700; font-family: monospace;
+      padding: 3px 10px; border-radius: 4px; display: none;
+    }
+    .result-badge.found { display: inline-block; background: #1a2b14; border: 1px solid #9ece6a; color: #9ece6a; }
+    .result-badge.nope  { display: inline-block; background: #3d1515; border: 1px solid #f7768e; color: #f7768e; }
+
+    .chip-list { display: flex; gap: 5px; flex-wrap: wrap; min-height: 22px; align-items: center; }
+    .chip { padding: 2px 9px; border-radius: 4px; font-size: 0.76rem; font-family: monospace; font-weight: 700; }
+    .chip-frontier { background: #2d2010; border: 1px solid #e0af68; color: #e0af68; }
+    .chip-found    { background: #0d2535; border: 1px solid #7dcfff; color: #7dcfff; }
+    .chip-visited  { background: #1a2b14; border: 1px solid #9ece6a; color: #9ece6a; }
+
+    .legend-row { display: flex; align-items: center; gap: 7px; font-size: 0.74rem; color: var(--text-muted); }
+    .legend-dot { width: 11px; height: 11px; border-radius: 50%; flex-shrink: 0; border: 2px solid; }
+
+    .code-panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
+    .code-header { padding: 7px 12px; font-size: 0.7rem; font-weight: 600; color: var(--text-dim); border-bottom: 1px solid var(--border); background: var(--bg); }
+    .code-body { padding: 8px 0; font-size: 0.74rem; line-height: 1.7; white-space: pre; }
+    .code-line { display: flex; align-items: center; padding: 0 12px; }
+    .code-line.hl { background: var(--border-soft); border-left: 2px solid var(--accent); }
+    .ln { min-width: 22px; color: var(--text-ghost); user-select: none; font-size: 0.67rem; }
+    .kw { color: var(--purple); } .fn { color: var(--blue); }
+    .bi { color: var(--orange); } .cm { color: var(--text-ghost); }
+    .nb { color: var(--green); }  .st { color: #e0af68; }
+
+    .preset-row { display: flex; gap: 8px; flex-wrap: wrap; }
+    .btn-preset {
+      padding: 5px 11px; border-radius: var(--radius-sm); background: var(--bg);
+      border: 1px solid var(--border); color: var(--text-dim); font-size: 0.78rem; cursor: pointer;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .btn-preset:hover, .btn-preset.active { border-color: var(--accent); color: var(--accent-pale); }
+    .section-label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); }
   </style>
 </head>
 <body class="page">
@@ -141,419 +120,530 @@
 <div class="page-header">
   <a class="back-link" href="../index.html">&larr; All Algorithms</a>
   <div class="page-title">Word Ladder</div>
-  <div class="page-sub">LeetCode 127 &middot; Graph &middot; BFS on implicit word graph</div>
+  <div class="page-sub">LeetCode 127 &middot; BFS shortest transformation sequence, one letter at a time &middot; O(N &middot; M&sup2; &middot; 26)</div>
 </div>
 
 <div class="controls">
   <div class="field">
-    <label>Begin Word</label>
-    <input id="inp-begin" type="text" value="hit" style="width:80px;font-family:monospace" />
+    <label>Preset</label>
+    <div class="preset-row">
+      <button class="btn-preset active" id="preset-default" onclick="loadPreset('default')">hit &rarr; cog (5 steps)</button>
+      <button class="btn-preset" id="preset-short" onclick="loadPreset('short')">hot &rarr; dog (3 steps)</button>
+      <button class="btn-preset" id="preset-nope" onclick="loadPreset('nope')">No path</button>
+    </div>
   </div>
-  <div class="field">
-    <label>End Word</label>
-    <input id="inp-end" type="text" value="cog" style="width:80px;font-family:monospace" />
-  </div>
-  <div class="field">
-    <label>Word List (comma-separated)</label>
-    <input id="inp-list" type="text" value="hot,dot,dog,lot,log,cog" style="width:260px;font-family:monospace;font-size:0.85rem" />
-  </div>
-  <button class="btn-primary" onclick="buildAndRun()">Build</button>
+  <button class="btn-primary" onclick="buildAndRun()">Build &amp; Run</button>
 </div>
 
 <div class="viz-area">
+  <div class="main-row">
 
-  <!-- BFS level display -->
-  <div class="levels-wrap" id="levels-wrap">
-    <span style="color:var(--text-ghost);font-size:0.82rem">Click Build to start.</span>
-  </div>
-
-  <!-- Queue + Variables -->
-  <div class="info-row">
-    <div class="sect">
-      <div class="panel-title">BFS Queue <span class="panel-sub" id="queue-sub"></span></div>
-      <div class="queue-wrap" id="queue-wrap">
-        <span style="color:var(--text-ghost);font-size:0.82rem">—</span>
+    <!-- Left: word ladder graph -->
+    <div class="graph-panel">
+      <div class="section-label" id="graph-label">Word Ladder &mdash; BFS Frontier Expansion</div>
+      <div class="graph-svg-wrap">
+        <svg id="graph-svg" viewBox="0 0 580 340" preserveAspectRatio="xMidYMid meet">
+          <defs>
+            <marker id="arr-default" markerWidth="7" markerHeight="7" refX="5" refY="3" orient="auto">
+              <path d="M0,0 L0,6 L7,3 z" fill="#414868"/>
+            </marker>
+            <marker id="arr-active" markerWidth="7" markerHeight="7" refX="5" refY="3" orient="auto">
+              <path d="M0,0 L0,6 L7,3 z" fill="#7dcfff"/>
+            </marker>
+            <marker id="arr-done" markerWidth="7" markerHeight="7" refX="5" refY="3" orient="auto">
+              <path d="M0,0 L0,6 L7,3 z" fill="#9ece6a"/>
+            </marker>
+          </defs>
+          <g id="depth-labels-g"></g>
+          <g id="edges-g"></g>
+          <g id="nodes-g"></g>
+        </svg>
       </div>
     </div>
 
-    <div class="sect">
-      <div class="panel-title">Variables</div>
-      <div class="var-grid">
-        <div class="var-box ab">
-          <div class="var-label">level</div>
-          <div class="var-val" id="vv-level">—</div>
-        </div>
-        <div class="var-box yb">
-          <div class="var-label">current word</div>
-          <div class="var-val" id="vv-word">—</div>
-        </div>
-        <div class="var-box gb">
-          <div class="var-label">result</div>
-          <div class="var-val" id="vv-result">—</div>
+    <!-- Right panel -->
+    <div class="right-col">
+
+      <div class="panel-box">
+        <div class="nav-row">
+          <button class="btn-step" id="btn-back" disabled>&larr;</button>
+          <button class="btn-step" id="btn-next" disabled>&rarr;</button>
+          <button class="btn-play" id="btn-play" disabled>&#9654; Play</button>
+          <select class="speed-select" id="speed-select">
+            <option value="900">Slow</option>
+            <option value="450" selected>Med</option>
+            <option value="130">Fast</option>
+          </select>
         </div>
       </div>
-      <div id="result-badge-wrap" style="margin-top:4px"></div>
+
+      <div class="panel-box">
+        <div class="panel-title" id="phase-label">&mdash;</div>
+        <div style="font-size:0.82rem;color:var(--text-muted);min-height:38px" id="step-desc">Select a preset and click Build &amp; Run.</div>
+        <div class="lvl-row">
+          <div class="level-badge" id="level-badge">Level &mdash;</div>
+          <div class="result-badge" id="result-badge"></div>
+        </div>
+      </div>
+
+      <div class="panel-box">
+        <div class="panel-title">BFS Queue</div>
+        <div class="chip-list" id="queue-list">
+          <span style="color:var(--text-ghost);font-size:0.76rem">empty</span>
+        </div>
+      </div>
+
+      <div class="panel-box">
+        <div class="panel-title">Visited</div>
+        <div class="chip-list" id="visited-list">
+          <span style="color:var(--text-ghost);font-size:0.76rem">none</span>
+        </div>
+      </div>
+
+      <div class="panel-box">
+        <div class="panel-title">Legend</div>
+        <div style="display:flex;flex-direction:column;gap:5px">
+          <div class="legend-row"><div class="legend-dot" style="background:#1a2540;border-color:#7aa2f7"></div>beginWord</div>
+          <div class="legend-row"><div class="legend-dot" style="background:#3d2010;border-color:#ff9e64"></div>processing (dequeued)</div>
+          <div class="legend-row"><div class="legend-dot" style="background:#2d2010;border-color:#e0af68"></div>frontier (current level)</div>
+          <div class="legend-row"><div class="legend-dot" style="background:#0d2535;border-color:#7dcfff"></div>just discovered</div>
+          <div class="legend-row"><div class="legend-dot" style="background:#1a2b14;border-color:#9ece6a"></div>visited (prev levels)</div>
+          <div class="legend-row"><div class="legend-dot" style="background:#2a0a3a;border-color:#bb9af7"></div>endWord reached!</div>
+        </div>
+      </div>
+
+      <div class="code-panel">
+        <div class="code-header">Python</div>
+        <div class="code-body" id="code-body"></div>
+      </div>
+
     </div>
   </div>
-
-  <!-- Code -->
-  <div class="code-panel">
-    <div class="code-header">Python &middot; BFS word graph</div>
-    <div class="code-body" id="code-body"></div>
-  </div>
-
-</div>
-
-<!-- Bottom nav -->
-<div class="nav-bar">
-  <div class="nav-row">
-    <button class="btn-secondary" id="btn-prev">&larr; Prev</button>
-    <button class="btn-play" id="btn-play">Play</button>
-    <button class="btn-secondary" id="btn-next">Next &rarr;</button>
-    <select class="speed-select" id="speed-sel">
-      <option value="800">0.8s</option>
-      <option value="500" selected>0.5s</option>
-      <option value="300">0.3s</option>
-      <option value="150">0.15s</option>
-      <option value="80">0.08s</option>
-    </select>
-  </div>
-  <div class="step-counter" id="step-counter">—</div>
-  <div class="step-desc" id="step-desc">Click Build to start.</div>
 </div>
 
 <script>
-// ── Code lines ────────────────────────────────────────────────────────────────
 var CODE = [
-  { t: '<span class="kw">def</span> <span class="fn">ladderLength</span>(beginWord, endWord, wordList):' },
-  { t: '  wordSet = <span class="bi">set</span>(wordList)' },
-  { t: '  <span class="kw">if</span> endWord <span class="kw">not in</span> wordSet: <span class="kw">return</span> <span class="nb">0</span>' },
-  { t: '' },
-  { t: '  queue = <span class="bi">deque</span>([beginWord])' },
-  { t: '  visited = {beginWord}' },
-  { t: '  level = <span class="nb">1</span>' },
-  { t: '' },
-  { t: '  <span class="kw">while</span> queue:' },
-  { t: '    <span class="kw">for</span> _ <span class="kw">in</span> <span class="bi">range</span>(<span class="bi">len</span>(queue)):  <span class="cm"># process one BFS level</span>' },
-  { t: '      word = queue.popleft()' },
-  { t: '      <span class="kw">if</span> word == endWord: <span class="kw">return</span> level' },
-  { t: '      <span class="kw">for</span> i <span class="kw">in</span> <span class="bi">range</span>(<span class="bi">len</span>(word)):' },
-  { t: '        <span class="kw">for</span> c <span class="kw">in</span> <span class="st">"abcdefghijklmnopqrstuvwxyz"</span>:' },
-  { t: '          nw = word[:i] + c + word[i+1:]' },
-  { t: '          <span class="kw">if</span> nw <span class="kw">in</span> wordSet <span class="kw">and</span> nw <span class="kw">not in</span> visited:' },
-  { t: '            visited.add(nw)' },
-  { t: '            queue.append(nw)' },
-  { t: '    level += <span class="nb">1</span>' },
-  { t: '  <span class="kw">return</span> <span class="nb">0</span>  <span class="cm"># no path found</span>' },
+  [1,  '<span class="kw">def</span> <span class="fn">ladderLength</span>(beginWord, endWord, wordList):'],
+  [2,  '    wordSet = <span class="bi">set</span>(wordList)'],
+  [3,  '    <span class="kw">if</span> endWord <span class="kw">not in</span> wordSet: <span class="kw">return</span> <span class="nb">0</span>'],
+  [4,  '    queue = <span class="fn">deque</span>([beginWord])'],
+  [5,  '    visited, level = {beginWord}, <span class="nb">1</span>'],
+  [6,  '    <span class="kw">while</span> queue:'],
+  [7,  '        <span class="kw">for</span> _ <span class="kw">in</span> <span class="bi">range</span>(<span class="bi">len</span>(queue)):'],
+  [8,  '            word = queue.popleft()'],
+  [9,  '            <span class="kw">if</span> word == endWord: <span class="kw">return</span> level'],
+  [10, '            <span class="kw">for</span> i <span class="kw">in</span> <span class="bi">range</span>(<span class="bi">len</span>(word)):'],
+  [11, '                <span class="kw">for</span> c <span class="kw">in</span> <span class="st">\'abcdefghijklmnopqrstuvwxyz\'</span>:'],
+  [12, '                    nw = word[:i] + c + word[i+<span class="nb">1</span>:]'],
+  [13, '                    <span class="kw">if</span> nw <span class="kw">in</span> wordSet <span class="kw">and</span> nw <span class="kw">not in</span> visited:'],
+  [14, '                        visited.add(nw); queue.append(nw)'],
+  [15, '        level += <span class="nb">1</span>'],
+  [16, '    <span class="kw">return</span> <span class="nb">0</span>'],
 ];
 
-function renderCode(hlLines) {
-  var html = '';
-  CODE.forEach(function(line, i) {
-    var cls = (hlLines && hlLines.indexOf(i) !== -1) ? ' hl' : '';
-    html += '<div class="code-line' + cls + '"><span class="ln">' + (i + 1) + '</span>' + line.t + '</div>';
+var PRESETS = {
+  'default': {beginWord: 'hit', endWord: 'cog', wordList: ['hot','dot','dog','lot','log','cog']},
+  'short':   {beginWord: 'hot', endWord: 'dog', wordList: ['hot','dot','dog','lot','log']},
+  'nope':    {beginWord: 'hit', endWord: 'cog', wordList: ['hot','dot','lot']},
+};
+
+var currentPreset = 'default';
+var currentData = null;
+var simSteps = [];
+var nav;
+
+function loadPreset(name) {
+  currentPreset = name;
+  Object.keys(PRESETS).forEach(function(p) {
+    document.getElementById('preset-' + p).classList.toggle('active', p === name);
   });
-  document.getElementById('code-body').innerHTML = html;
 }
 
-// ── BFS step builder ──────────────────────────────────────────────────────────
-var BEGIN = '', END = '', WORD_SET = new Set();
+// ── Full BFS: discover all reachable nodes for layout ─────────────────────
+function fullBFS(beginWord, wordList) {
+  var wordSet = {};
+  wordList.forEach(function(w) { wordSet[w] = true; });
 
-function buildSteps() {
-  var steps = [];
-  var queue = [BEGIN];
-  var visited = new Set([BEGIN]);
-  var level = 1;
+  var nodes = [{word: beginWord, depth: 0, parent: null}];
+  var edges = [];
+  var visited = {};
+  visited[beginWord] = true;
+  var queue = [beginWord];
+  var depth = 0;
 
-  // Track what's been revealed per level for rendering
-  // levels: array of { words: [word, ...], parentWord: word|null }
-  var levelMap = []; // levelMap[i] = list of words at BFS level i
-  var wordLevel = {}; // word -> level index
-  var wordParent = {}; // word -> parent word (for changed-letter detection)
-
-  levelMap[0] = [BEGIN];
-  wordLevel[BEGIN] = 0;
-
-  steps.push({
-    type: 'init',
-    queue: [BEGIN],
-    level: level,
-    curWord: null,
-    changedIdx: -1,
-    levelMap: clone2D(levelMap),
-    wordLevel: Object.assign({}, wordLevel),
-    wordParent: Object.assign({}, wordParent),
-    activeWord: null,
-    desc: 'Initialize: add beginWord "' + BEGIN + '" to queue. visited = {' + BEGIN + '}. level = 1.',
-    codeHl: [0, 1, 4, 5, 6],
-  });
-
-  if (!WORD_SET.has(END)) {
-    steps.push({
-      type: 'no-end',
-      queue: [],
-      level: 0,
-      curWord: null,
-      changedIdx: -1,
-      levelMap: clone2D(levelMap),
-      wordLevel: Object.assign({}, wordLevel),
-      wordParent: Object.assign({}, wordParent),
-      activeWord: null,
-      desc: '"' + END + '" not in wordList — return 0 immediately.',
-      codeHl: [2],
-      result: 0,
-    });
-    return steps;
-  }
-
-  var found = false;
-  while (queue.length > 0 && !found) {
-    var levelSize = queue.length;
-    var nextQueue = [];
-
-    steps.push({
-      type: 'level-start',
-      queue: queue.slice(),
-      level: level,
-      curWord: null,
-      changedIdx: -1,
-      levelMap: clone2D(levelMap),
-      wordLevel: Object.assign({}, wordLevel),
-      wordParent: Object.assign({}, wordParent),
-      activeWord: null,
-      desc: 'BFS level ' + level + ': processing ' + levelSize + ' word' + (levelSize !== 1 ? 's' : '') + ' in queue.',
-      codeHl: [8, 9],
-    });
-
-    for (var qi = 0; qi < levelSize && !found; qi++) {
+  while (queue.length > 0) {
+    var nextQ = [];
+    for (var qi = 0; qi < queue.length; qi++) {
       var word = queue[qi];
-
-      steps.push({
-        type: 'dequeue',
-        queue: queue.slice(qi),
-        level: level,
-        curWord: word,
-        changedIdx: -1,
-        levelMap: clone2D(levelMap),
-        wordLevel: Object.assign({}, wordLevel),
-        wordParent: Object.assign({}, wordParent),
-        activeWord: word,
-        desc: 'Dequeue "' + word + '". Check if it equals endWord "' + END + '".',
-        codeHl: [10, 11],
-      });
-
-      if (word === END) {
-        steps.push({
-          type: 'found',
-          queue: [],
-          level: level,
-          curWord: word,
-          changedIdx: -1,
-          levelMap: clone2D(levelMap),
-          wordLevel: Object.assign({}, wordLevel),
-          wordParent: Object.assign({}, wordParent),
-          activeWord: word,
-          desc: '"' + word + '" == endWord! Return level = ' + level + '.',
-          codeHl: [11],
-          result: level,
-        });
-        found = true;
-        break;
-      }
-
-      // Try each position × each letter
-      for (var i = 0; i < word.length && !found; i++) {
-        for (var ci = 0; ci < 26 && !found; ci++) {
-          var ch = String.fromCharCode(97 + ci);
+      for (var i = 0; i < word.length; i++) {
+        for (var cc = 0; cc < 26; cc++) {
+          var ch = String.fromCharCode(97 + cc);
           if (ch === word[i]) continue;
-          var nw = word.substring(0, i) + ch + word.substring(i + 1);
-
-          if (WORD_SET.has(nw) && !visited.has(nw)) {
-            visited.add(nw);
-            nextQueue.push(nw);
-
-            var newLevel = level + 1;
-            if (!levelMap[newLevel - 1]) levelMap[newLevel - 1] = [];
-            // Level index is 0-based, so BFS level N goes to levelMap[N-1]
-            // But beginWord is at levelMap[0], level 1 words at levelMap[1], etc.
-            if (!levelMap[level]) levelMap[level] = [];
-            levelMap[level].push(nw);
-            wordLevel[nw] = level;
-            wordParent[nw] = word;
-
-            steps.push({
-              type: 'neighbor',
-              queue: queue.slice(qi + 1).concat(nextQueue),
-              level: level,
-              curWord: word,
-              changedIdx: i,
-              newWord: nw,
-              levelMap: clone2D(levelMap),
-              wordLevel: Object.assign({}, wordLevel),
-              wordParent: Object.assign({}, wordParent),
-              activeWord: nw,
-              desc: 'word[' + i + '] ' + word[i] + '→' + ch + ' = "' + nw + '" ∈ wordSet, not visited → enqueue.',
-              codeHl: [12, 13, 14, 15, 16, 17],
-            });
+          var nw = word.slice(0, i) + ch + word.slice(i + 1);
+          if (wordSet[nw] && !visited[nw]) {
+            visited[nw] = true;
+            nextQ.push(nw);
+            nodes.push({word: nw, depth: depth + 1, parent: word});
+            edges.push({from: word, to: nw});
           }
         }
       }
     }
+    depth++;
+    queue = nextQ;
+  }
+
+  return {nodes: nodes, edges: edges};
+}
+
+// ── Layout: group by BFS depth, spread horizontally ───────────────────────
+function computeLayout(nodes, W, H) {
+  var byDepth = {};
+  var maxDepth = 0;
+  nodes.forEach(function(n) {
+    if (!byDepth[n.depth]) byDepth[n.depth] = [];
+    byDepth[n.depth].push(n.word);
+    if (n.depth > maxDepth) maxDepth = n.depth;
+  });
+
+  var padX = 70, padY = 50;
+  var usableW = W - 2 * padX;
+  var usableH = H - 2 * padY;
+
+  var positions = {};
+  for (var d = 0; d <= maxDepth; d++) {
+    var row = byDepth[d] || [];
+    var y = padY + (maxDepth > 0 ? d * usableH / maxDepth : usableH / 2);
+    row.forEach(function(word, i) {
+      var x = padX + (row.length > 1 ? i * usableW / (row.length - 1) : usableW / 2);
+      positions[word] = {x: x, y: y};
+    });
+  }
+
+  return {positions: positions, byDepth: byDepth, maxDepth: maxDepth};
+}
+
+// ── Simulation: generate animation steps ──────────────────────────────────
+function simulate(beginWord, endWord, wordList) {
+  var steps = [];
+  var wordSet = {};
+  wordList.forEach(function(w) { wordSet[w] = true; });
+
+  var visited = {};
+  visited[beginWord] = true;
+
+  function getStates(opts) {
+    opts = opts || {};
+    var proc     = opts.processing || null;
+    var frontier = opts.frontier || [];
+    var found    = opts.foundThisStep || [];
+    var done     = !!opts.done;
+    var noPath   = !!opts.noPath;
+
+    var states = {};
+    currentData.nodes.forEach(function(n) {
+      var w = n.word;
+      if (done && w === endWord)            { states[w] = 'end-found'; return; }
+      if (noPath && w === endWord)          { states[w] = 'no-path'; return; }
+      if (w === proc)                       { states[w] = 'active'; return; }
+      if (found.indexOf(w) >= 0)            { states[w] = 'found'; return; }
+      if (visited[w]) {
+        if (frontier.indexOf(w) >= 0 && w !== proc) { states[w] = 'frontier'; return; }
+        states[w] = w === beginWord ? 'start' : 'visited';
+        return;
+      }
+      states[w] = 'unvisited';
+    });
+    return states;
+  }
+
+  function snap(phase, desc, lines, extra) {
+    extra = extra || {};
+    steps.push({
+      phase: phase, desc: desc, lines: lines || [],
+      queue:          (extra.queue || []).slice(),
+      level:          extra.level || 1,
+      result:         extra.result || 0,
+      done:           !!extra.done,
+      noPath:         !!extra.noPath,
+      processing:     extra.processing || null,
+      frontier:       (extra.frontier || []).slice(),
+      foundThisStep:  (extra.foundThisStep || []).slice(),
+      highlightEdges: (extra.highlightEdges || []).slice(),
+      visitedSnap:    Object.keys(visited).slice(),
+      states:         getStates(extra),
+    });
+  }
+
+  if (!wordSet[endWord]) {
+    snap('NoPath',
+      '"' + endWord + '" is not in wordList — transformation impossible. Return 0.',
+      [2, 3], {queue: [], level: 0, result: 0, noPath: true});
+    return steps;
+  }
+
+  snap('Init',
+    'Build wordSet from wordList. Push "' + beginWord + '" onto queue, mark visited. Target: "' + endWord + '". Level = 1.',
+    [1, 2, 4, 5], {queue: [beginWord], level: 1, frontier: [beginWord]});
+
+  var queue = [beginWord];
+  var level = 1;
+
+  while (queue.length > 0) {
+    var frontier = queue.slice();
+    var nextQueue = [];
+
+    snap('LevelStart',
+      'BFS level ' + level + ': process ' + frontier.length + ' word(s) — [' + frontier.join(', ') + '].',
+      [6, 7], {queue: frontier.slice(), level: level, frontier: frontier.slice()});
+
+    for (var fi = 0; fi < frontier.length; fi++) {
+      var word = frontier[fi];
+      var remaining = frontier.slice(fi + 1).concat(nextQueue);
+
+      snap('Dequeue',
+        'Dequeue "' + word + '". Check if it equals endWord "' + endWord + '", then scan one-letter mutations.',
+        [8], {queue: remaining, level: level, frontier: frontier.slice(), processing: word});
+
+      if (word === endWord) {
+        snap('Found',
+          '"' + word + '" === endWord! Sequence length = ' + level + '. Return ' + level + '.',
+          [9], {queue: [], level: level, result: level, done: true,
+                frontier: frontier.slice(), processing: word});
+        return steps;
+      }
+
+      var foundNeighbors = [];
+      var newEdges = [];
+      for (var i = 0; i < word.length; i++) {
+        for (var cc = 0; cc < 26; cc++) {
+          var ch = String.fromCharCode(97 + cc);
+          if (ch === word[i]) continue;
+          var nw = word.slice(0, i) + ch + word.slice(i + 1);
+          if (wordSet[nw] && !visited[nw]) {
+            visited[nw] = true;
+            nextQueue.push(nw);
+            foundNeighbors.push(nw);
+            newEdges.push({from: word, to: nw});
+          }
+        }
+      }
+
+      var desc2 = foundNeighbors.length > 0
+        ? 'Try 26\xd7' + word.length + ' mutations of "' + word + '" — new: [' + foundNeighbors.join(', ') + ']. Enqueue them.'
+        : 'Try 26\xd7' + word.length + ' mutations of "' + word + '" — all neighbors already visited or not in wordSet.';
+
+      snap(foundNeighbors.length > 0 ? 'Neighbors' : 'NoNeighbors', desc2,
+        [10, 11, 12, 13, 14], {
+          queue: frontier.slice(fi + 1).concat(nextQueue),
+          level: level, frontier: frontier.slice(), processing: word,
+          foundThisStep: foundNeighbors.slice(), highlightEdges: newEdges.slice()
+        });
+    }
 
     queue = nextQueue;
-    if (!found) {
-      if (queue.length === 0) {
-        steps.push({
-          type: 'done-false',
-          queue: [],
-          level: level,
-          curWord: null,
-          changedIdx: -1,
-          levelMap: clone2D(levelMap),
-          wordLevel: Object.assign({}, wordLevel),
-          wordParent: Object.assign({}, wordParent),
-          activeWord: null,
-          desc: 'Queue empty — no path from "' + BEGIN + '" to "' + END + '". Return 0.',
-          codeHl: [19],
-          result: 0,
-        });
-      } else {
-        level++;
-        steps.push({
-          type: 'level-inc',
-          queue: queue.slice(),
-          level: level,
-          curWord: null,
-          changedIdx: -1,
-          levelMap: clone2D(levelMap),
-          wordLevel: Object.assign({}, wordLevel),
-          wordParent: Object.assign({}, wordParent),
-          activeWord: null,
-          desc: 'Level complete. level++ → ' + level + '. ' + queue.length + ' word' + (queue.length !== 1 ? 's' : '') + ' in next frontier.',
-          codeHl: [18],
-        });
-      }
+    level++;
+
+    if (queue.length === 0) {
+      snap('NoPath',
+        'Queue exhausted — "' + endWord + '" not reachable from "' + beginWord + '". Return 0.',
+        [15, 16], {queue: [], level: level, result: 0, noPath: true});
+      break;
     }
+
+    snap('NextLevel',
+      'Level ' + (level - 1) + ' done. Advance to level ' + level + ' — new frontier: [' + queue.join(', ') + '].',
+      [15], {queue: queue.slice(), level: level, frontier: queue.slice()});
   }
 
   return steps;
 }
 
-function clone2D(arr) {
-  return arr.map(function(row) { return row ? row.slice() : []; });
+// ── SVG rendering ─────────────────────────────────────────────────────────
+var NODE_R = 22;
+var SVG_W = 580, SVG_H = 340;
+
+function renderDepthLabels(layout) {
+  var g = document.getElementById('depth-labels-g');
+  g.innerHTML = '';
+  for (var d = 0; d <= layout.maxDepth; d++) {
+    var row = layout.byDepth[d];
+    if (!row || !row.length) continue;
+    var pos = currentData.positions[row[0]];
+    if (!pos) continue;
+    var text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    text.setAttribute('x', 54);
+    text.setAttribute('y', pos.y);
+    text.setAttribute('class', 'depth-label');
+    text.textContent = 'L' + (d + 1);
+    g.appendChild(text);
+  }
 }
 
-// ── Render ────────────────────────────────────────────────────────────────────
-var STEPS = [];
+function renderGraph(snap) {
+  var edgesG = document.getElementById('edges-g');
+  var nodesG = document.getElementById('nodes-g');
+  edgesG.innerHTML = '';
+  nodesG.innerHTML = '';
+  if (!currentData) return;
 
-function renderSnap(snap, cursor, total) {
-  document.getElementById('step-counter').textContent = 'Step ' + (cursor + 1) + ' / ' + total;
-  document.getElementById('step-desc').textContent = snap.desc;
-
-  // BFS levels
-  var wrap = document.getElementById('levels-wrap');
-  var html = '';
-  var lm = snap.levelMap || [];
-  for (var li = 0; li < lm.length; li++) {
-    if (!lm[li] || lm[li].length === 0) continue;
-    var levelNum = li + 1; // BFS level number (beginWord = level 1)
-    html += '<div class="level-row">';
-    html += '<div class="level-label">L' + levelNum + '</div>';
-    html += '<div class="level-words">';
-    for (var wi = 0; wi < lm[li].length; wi++) {
-      var w = lm[li][wi];
-      var parent = snap.wordParent ? snap.wordParent[w] : null;
-      var changedPos = -1;
-      if (parent) {
-        for (var pi = 0; pi < w.length; pi++) {
-          if (w[pi] !== parent[pi]) { changedPos = pi; break; }
-        }
-      }
-
-      var chipCls = 'word-chip';
-      if (w === BEGIN) chipCls += ' begin';
-      else if (w === END && snap.type === 'found') chipCls += ' end';
-      else if (w === snap.activeWord) chipCls += ' active';
-      else if (snap.wordLevel && snap.wordLevel[w] < snap.level - 1) chipCls += ' done';
-
-      html += '<div class="' + chipCls + '">';
-      for (var ci2 = 0; ci2 < w.length; ci2++) {
-        var lCls = 'wc-letter';
-        if (ci2 === changedPos && w !== BEGIN) lCls += ' changed';
-        html += '<div class="' + lCls + '">' + w[ci2] + '</div>';
-      }
-      html += '</div>';
-    }
-    html += '</div></div>';
+  var states = snap ? snap.states : {};
+  var hlEdgeSet = {};
+  if (snap && snap.highlightEdges) {
+    snap.highlightEdges.forEach(function(e) { hlEdgeSet[e.from + '->' + e.to] = true; });
   }
-  wrap.innerHTML = html || '<span style="color:var(--text-ghost);font-size:0.82rem">—</span>';
 
-  // Queue
-  var queueWrap = document.getElementById('queue-wrap');
-  var qHtml = '';
+  currentData.edges.forEach(function(e) {
+    var pa = currentData.positions[e.from];
+    var pb = currentData.positions[e.to];
+    if (!pa || !pb) return;
+    var dx = pb.x - pa.x, dy = pb.y - pa.y;
+    var dist = Math.sqrt(dx * dx + dy * dy);
+    if (dist < 1) return;
+    var ux = dx / dist, uy = dy / dist;
+
+    var toState = states[e.to] || 'unvisited';
+    var isActive = !!hlEdgeSet[e.from + '->' + e.to];
+    var isDone = toState === 'visited' || toState === 'end-found' || toState === 'start';
+
+    var x1 = pa.x + ux * NODE_R;
+    var y1 = pa.y + uy * NODE_R;
+    var x2 = pb.x - ux * (NODE_R + 5);
+    var y2 = pb.y - uy * (NODE_R + 5);
+
+    var cls = 'edge-line';
+    var marker = 'arr-default';
+    if (isActive)    { cls += ' active'; marker = 'arr-active'; }
+    else if (isDone) { cls += ' done';   marker = 'arr-done'; }
+    else             { cls += ' faint'; }
+
+    var line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    line.setAttribute('x1', x1); line.setAttribute('y1', y1);
+    line.setAttribute('x2', x2); line.setAttribute('y2', y2);
+    line.setAttribute('class', cls);
+    line.setAttribute('marker-end', 'url(#' + marker + ')');
+    edgesG.appendChild(line);
+  });
+
+  currentData.nodes.forEach(function(n) {
+    var pos = currentData.positions[n.word];
+    if (!pos) return;
+    var state = states[n.word] || 'unvisited';
+
+    var g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+
+    var circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    circle.setAttribute('cx', pos.x); circle.setAttribute('cy', pos.y);
+    circle.setAttribute('r', NODE_R);
+    circle.setAttribute('class', 'node-circle state-' + state);
+
+    var text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    text.setAttribute('x', pos.x); text.setAttribute('y', pos.y);
+    text.setAttribute('class', 'node-label' + (state === 'unvisited' ? ' faint' : ''));
+    text.textContent = n.word;
+
+    g.appendChild(circle);
+    g.appendChild(text);
+    nodesG.appendChild(g);
+  });
+}
+
+// ── Apply step ────────────────────────────────────────────────────────────
+function applyStep(snap) {
+  renderGraph(snap);
+
+  var qEl = document.getElementById('queue-list');
   if (snap.queue && snap.queue.length > 0) {
-    snap.queue.forEach(function(w, qi) {
-      var cls = 'q-chip' + (qi === 0 ? ' head' : '');
-      qHtml += '<div class="' + cls + '">' + w + '</div>';
-    });
-    document.getElementById('queue-sub').textContent = '(' + snap.queue.length + ')';
+    qEl.innerHTML = snap.queue.map(function(w) {
+      var isNew = snap.foundThisStep && snap.foundThisStep.indexOf(w) >= 0;
+      return '<span class="chip ' + (isNew ? 'chip-found' : 'chip-frontier') + '">' + w + '</span>';
+    }).join('');
   } else {
-    qHtml = '<span style="color:var(--text-ghost);font-size:0.82rem">empty</span>';
-    document.getElementById('queue-sub').textContent = '';
-  }
-  queueWrap.innerHTML = qHtml;
-
-  // Var boxes
-  document.getElementById('vv-level').textContent = snap.level !== null ? snap.level : '—';
-  document.getElementById('vv-word').textContent = snap.curWord ? '"' + snap.curWord + '"' : '—';
-
-  var resVal = document.getElementById('vv-result');
-  var resBadge = document.getElementById('result-badge-wrap');
-  if (snap.result !== undefined) {
-    resVal.textContent = snap.result;
-    resVal.style.color = snap.result > 0 ? 'var(--green)' : 'var(--red)';
-    if (snap.result > 0) {
-      resBadge.innerHTML = '<div class="result-badge found">✓ ' + snap.result + ' steps</div>';
-    } else {
-      resBadge.innerHTML = '<div class="result-badge not-found">✗ No path</div>';
-    }
-  } else {
-    resVal.textContent = '…';
-    resVal.style.color = '';
-    resBadge.innerHTML = '';
+    qEl.innerHTML = '<span style="color:var(--text-ghost);font-size:0.76rem">empty</span>';
   }
 
-  // Code
-  renderCode(snap.codeHl);
+  var vEl = document.getElementById('visited-list');
+  if (snap.visitedSnap && snap.visitedSnap.length > 0) {
+    vEl.innerHTML = snap.visitedSnap.map(function(w) {
+      return '<span class="chip chip-visited">' + w + '</span>';
+    }).join('');
+  } else {
+    vEl.innerHTML = '<span style="color:var(--text-ghost);font-size:0.76rem">none</span>';
+  }
+
+  document.getElementById('level-badge').textContent = snap.level ? 'Level ' + snap.level : 'Level —';
+
+  var rb = document.getElementById('result-badge');
+  rb.className = 'result-badge';
+  if (snap.done) {
+    rb.className = 'result-badge found';
+    rb.textContent = '→ ' + snap.result + ' steps';
+  } else if (snap.noPath) {
+    rb.className = 'result-badge nope';
+    rb.textContent = '→ 0 (no path)';
+  }
+
+  CODE.forEach(function(e) {
+    var el = document.getElementById('cl-' + e[0]);
+    if (el) el.classList.toggle('hl', !!(snap.lines && snap.lines.indexOf(e[0]) >= 0));
+  });
 }
 
-// ── Build & run ───────────────────────────────────────────────────────────────
-var nav;
-
+// ── Build & Run ───────────────────────────────────────────────────────────
 function buildAndRun() {
-  BEGIN = document.getElementById('inp-begin').value.trim().toLowerCase();
-  END   = document.getElementById('inp-end').value.trim().toLowerCase();
-  var raw = document.getElementById('inp-list').value.trim();
-  if (!BEGIN || !END || !raw) return;
+  var p = PRESETS[currentPreset];
 
-  WORD_SET = new Set(raw.split(',').map(function(w) { return w.trim().toLowerCase(); }).filter(Boolean));
+  var bfsResult    = fullBFS(p.beginWord, p.wordList);
+  var layoutResult = computeLayout(bfsResult.nodes, SVG_W, SVG_H);
 
-  STEPS = buildSteps();
+  currentData = {
+    nodes:     bfsResult.nodes,
+    edges:     bfsResult.edges,
+    positions: layoutResult.positions,
+    beginWord: p.beginWord,
+    endWord:   p.endWord,
+  };
 
-  if (!nav) {
-    nav = VizNav({
-      btnPrev:  document.getElementById('btn-prev'),
-      btnNext:  document.getElementById('btn-next'),
-      btnPlay:  document.getElementById('btn-play'),
-      speedSel: document.getElementById('speed-sel'),
-      render:   renderSnap,
-    });
-  }
-  nav.load(STEPS);
+  renderDepthLabels(layoutResult);
+  renderGraph(null);
+
+  simSteps = simulate(p.beginWord, p.endWord, p.wordList);
+  nav.load(simSteps);
+
+  document.getElementById('graph-label').textContent =
+    p.beginWord + ' → ' + p.endWord + '  —  wordList: [' + p.wordList.join(', ') + ']';
 }
 
-renderCode([]);
-window.addEventListener('DOMContentLoaded', buildAndRun);
+function buildCodePanel() {
+  var body = document.getElementById('code-body');
+  body.innerHTML = CODE.map(function(e) {
+    return '<div class="code-line" id="cl-' + e[0] + '"><span class="ln">' + e[0] + '</span><span>' + e[1] + '</span></div>';
+  }).join('');
+}
+
+window.addEventListener('DOMContentLoaded', function() {
+  buildCodePanel();
+  loadPreset('default');
+  nav = VizNav({
+    btnPrev:  document.getElementById('btn-back'),
+    btnNext:  document.getElementById('btn-next'),
+    btnPlay:  document.getElementById('btn-play'),
+    speedSel: document.getElementById('speed-select'),
+    render: function(snap, cur, total) {
+      applyStep(snap);
+      document.getElementById('phase-label').textContent =
+        'Step ' + (cur + 1) + ' / ' + total + '  \xb7  ' + snap.phase;
+      document.getElementById('step-desc').textContent = snap.desc;
+    }
+  });
+});
+</script>
+
+<script>
+  if (window.self !== window.top) {
+    var bl = document.querySelector('.back-link');
+    if (bl) bl.style.display = 'none';
+  }
 </script>
 </body>
 </html>
