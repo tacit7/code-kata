@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Regular Expression Matching</title>
+  <link rel="stylesheet" href="../shared/style.css" />
+  <script src="../shared/gsap.min.js"></script>
+  <script src="../shared/viz.js"></script>
+  <style>
+    .viz-area { width: 100%; max-width: 98%; }
+    .main-row { display: grid; grid-template-columns: 1fr 340px; gap: 20px; align-items: start; }
+    @media (max-width: 820px) { .main-row { grid-template-columns: 1fr; } }
+
+    /* DP Table */
+    .table-section {
+      padding: 16px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); overflow-x: auto;
+    }
+    .dp-table { border-collapse: separate; border-spacing: 4px; font-family: monospace; }
+    .dp-table td {
+      width: 44px; height: 44px; text-align: center; vertical-align: middle;
+      font-size: 0.88rem; font-weight: 700;
+    }
+    .dp-table .hdr-empty { width: 44px; height: 44px; }
+
+    .hdr-char {
+      width: 44px; height: 44px;
+      font-size: 0.95rem; font-weight: 700; text-align: center; vertical-align: middle;
+      color: var(--accent);
+      background: rgba(122,162,247,0.08);
+      border: 1px solid rgba(122,162,247,0.2);
+      border-radius: 5px;
+      transition: background 0.12s, color 0.12s, border-color 0.12s;
+    }
+    .hdr-char.eps { color: var(--text-dim); background: transparent; border-color: transparent; font-style: italic; }
+    .hdr-char.star { color: var(--purple); background: rgba(187,154,247,0.1); border-color: rgba(187,154,247,0.25); }
+    .hdr-char.hl-cur { color: var(--green-light); background: rgba(158,206,106,0.12); border-color: var(--green-border); }
+    .hdr-char.hl-miss { color: #f87171; background: rgba(248,113,113,0.08); border-color: rgba(248,113,113,0.3); }
+
+    /* DP cells */
+    .dp-cell {
+      border: 2px dashed var(--border-soft);
+      border-radius: 5px;
+      background: #0f0f0f;
+      color: var(--text-ghost);
+      transition: border-color 0.1s, background 0.1s, color 0.1s;
+    }
+    .dp-cell[data-state="empty"] {
+      border-style: dashed; border-color: var(--border-soft);
+      background: #0f0f0f; color: var(--text-ghost);
+    }
+    .dp-cell[data-state="base"] {
+      border-style: solid; border-color: #2d3148;
+      background: #0a0a12; color: var(--text-ghost);
+    }
+    .dp-cell[data-state="true"] {
+      border-style: solid; border-color: #2d5a3d;
+      background: #0d1f16; color: var(--green);
+    }
+    .dp-cell[data-state="false"] {
+      border-style: solid; border-color: #1e1e2e;
+      background: #0a0a0f; color: var(--text-faint);
+    }
+    .dp-cell[data-state="current-true"] {
+      border-style: solid; border-color: var(--green-border);
+      background: var(--green-bg); color: var(--green-light);
+    }
+    .dp-cell[data-state="current-false"] {
+      border-style: solid; border-color: rgba(248,113,113,0.5);
+      background: rgba(248,113,113,0.06); color: #f87171;
+    }
+    .dp-cell[data-state="src-zero"] {
+      border-style: solid; border-color: #9333ea;
+      background: #170d28; color: #d8b4fe;
+    }
+    .dp-cell[data-state="src-more"] {
+      border-style: solid; border-color: #b45309;
+      background: #1c1200; color: #fbbf24;
+    }
+    .dp-cell[data-state="src-diag"] {
+      border-style: solid; border-color: #0891b2;
+      background: #061520; color: #67e8f9;
+    }
+    .dp-cell[data-state="result-true"] {
+      border-style: solid; border-color: var(--green-border);
+      background: var(--green-bg); color: var(--green-light);
+      box-shadow: 0 0 8px rgba(158,206,106,0.35);
+    }
+    .dp-cell[data-state="result-false"] {
+      border-style: solid; border-color: rgba(248,113,113,0.5);
+      background: rgba(248,113,113,0.08); color: #f87171;
+      box-shadow: 0 0 8px rgba(248,113,113,0.2);
+    }
+
+    /* Panels */
+    .panel-box {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 14px 16px;
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .panel-title {
+      font-size: 0.72rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim);
+    }
+
+    /* Variables */
+    .var-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .var-box {
+      padding: 9px 8px;
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      display: flex; flex-direction: column; align-items: center; gap: 3px;
+    }
+    .var-box.accent-border { border-color: var(--accent); }
+    .var-box.purple-border { border-color: var(--purple); }
+    .var-box.green-border  { border-color: var(--green-border); }
+    .var-box.red-border    { border-color: rgba(248,113,113,0.5); }
+    .var-label { font-size: 0.62rem; font-family: monospace; color: var(--text-faint); text-align: center; }
+    .var-val   { font-size: 1.1rem; font-weight: 700; color: var(--text-bright); font-family: monospace; }
+    .var-val.green { color: var(--green-light); }
+    .var-val.red   { color: #f87171; }
+
+    /* Result display */
+    .result-display {
+      font-size: 1.3rem; font-weight: 700; font-family: monospace;
+      letter-spacing: 0.05em; min-height: 2.2rem;
+      padding: 8px 12px; border-radius: var(--radius-sm);
+      text-align: center;
+      transition: background 0.2s, color 0.2s;
+    }
+    .result-display.true  { color: var(--green-light); background: var(--green-bg); border: 1px solid var(--green-border); }
+    .result-display.false { color: #f87171; background: rgba(248,113,113,0.06); border: 1px solid rgba(248,113,113,0.3); }
+    .result-display.empty { color: var(--text-ghost); background: var(--bg); border: 1px solid var(--border); }
+
+    /* Rule badge */
+    .rule-badge {
+      display: inline-block; font-family: monospace; font-size: 0.76rem; font-weight: 600;
+      padding: 3px 8px; border-radius: var(--radius-sm);
+      border: 1px solid var(--border); color: var(--text-dim); background: var(--bg);
+      transition: all 0.15s;
+    }
+    .rule-badge.star   { color: var(--purple); background: rgba(187,154,247,0.08); border-color: rgba(187,154,247,0.3); }
+    .rule-badge.dot    { color: #67e8f9; background: rgba(8,145,178,0.08); border-color: rgba(8,145,178,0.3); }
+    .rule-badge.match  { color: var(--green-light); background: var(--green-bg); border-color: var(--green-border); }
+    .rule-badge.miss   { color: #f87171; background: rgba(248,113,113,0.06); border-color: rgba(248,113,113,0.3); }
+    .rule-badge.base   { color: var(--accent); background: rgba(122,162,247,0.08); border-color: rgba(122,162,247,0.2); }
+
+    /* Presets */
+    .preset-row { display: flex; gap: 6px; flex-wrap: wrap; }
+    .preset-btn {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); color: var(--text-dim);
+      cursor: pointer; font-size: 0.75rem; padding: 5px 9px;
+      font-family: monospace; transition: border-color 0.15s, color 0.15s;
+    }
+    .preset-btn:hover { border-color: var(--accent); color: var(--accent-pale); }
+    .preset-btn.active { border-color: var(--accent); color: var(--accent-pale); background: var(--surface-dark); }
+
+    /* Nav */
+    .btn-play {
+      background: #15803d; border: none; border-radius: var(--radius-sm);
+      color: #fff; cursor: pointer; font-size: 0.88rem; font-weight: 600;
+      padding: 9px 16px; transition: background 0.2s;
+    }
+    .btn-play:hover { background: #166534; }
+    .btn-play.playing { background: #c2410c; }
+    .btn-play.playing:hover { background: #9a3412; }
+    .btn-play:disabled { opacity: 0.4; cursor: not-allowed; }
+    .speed-select {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); color: var(--text);
+      font-size: 0.85rem; padding: 8px 10px; outline: none; width: 80px;
+    }
+    .nav-row { display: flex; gap: 8px; align-items: center; }
+
+    /* Code */
+    .code-panel {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); overflow: hidden;
+    }
+    .code-header {
+      padding: 8px 14px; font-size: 0.72rem; font-weight: 600;
+      color: var(--text-dim); border-bottom: 1px solid var(--border); background: var(--bg);
+    }
+    .code-body { padding: 10px 0; font-size: 0.78rem; line-height: 1.75; white-space: pre; }
+    .code-line { display: flex; align-items: center; padding: 0 14px; }
+    .code-line.hl { background: var(--border-soft); border-left: 2px solid var(--accent); }
+    .ln { min-width: 24px; color: var(--text-ghost); user-select: none; font-size: 0.7rem; }
+
+    .kw  { color: var(--purple); }
+    .fn  { color: var(--blue); }
+    .bi  { color: var(--orange); }
+    .op  { color: var(--text); }
+    .nb  { color: var(--green); }
+    .cm  { color: var(--text-ghost); }
+    .str { color: var(--yellow); }
+  </style>
+</head>
+<body class="page">
+
+<div class="page-header">
+  <a class="back-link" href="../index.html">&larr; All Algorithms</a>
+  <div class="page-title">Regular Expression Matching</div>
+  <div class="page-sub">LeetCode 10 &middot; 2-D boolean DP &middot; dp[i][j] = p[0..j-1] matches s[0..i-1] &middot; &lsquo;*&rsquo; enables zero-or-more, &lsquo;.&rsquo; matches any &middot; O(m&times;n) time &amp; space</div>
+</div>
+
+<div class="controls">
+  <div class="field">
+    <label>String s</label>
+    <input id="inp-s" type="text" value="aab" maxlength="7" style="width:100px;font-family:monospace" />
+  </div>
+  <div class="field">
+    <label>Pattern p</label>
+    <input id="inp-p" type="text" value="c*a*b" maxlength="10" style="width:120px;font-family:monospace" />
+  </div>
+  <button class="btn-primary" onclick="buildAndRun()">Build &amp; Run</button>
+</div>
+
+<div class="viz-area">
+  <div class="main-row">
+
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div class="panel-box">
+        <div class="panel-title">Presets</div>
+        <div class="preset-row" id="preset-row"></div>
+      </div>
+      <div class="table-section" id="table-section">
+        <span style="color:var(--text-dim);font-size:0.82rem">Enter s and p, then click Build &amp; Run.</span>
+      </div>
+      <div class="code-panel">
+        <div class="code-header">Python</div>
+        <div class="code-body" id="code-body"></div>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div style="display:flex;gap:10px">
+        <div class="panel-box" style="flex:0 0 auto">
+          <div class="nav-row">
+            <button class="btn-step" id="btn-back" disabled>&larr;</button>
+            <button class="btn-step" id="btn-next" disabled>&rarr;</button>
+            <button class="btn-play" id="btn-play" disabled>&#9654; Play</button>
+            <select class="speed-select" id="speed-select">
+              <option value="700">Slow</option>
+              <option value="350" selected>Medium</option>
+              <option value="100">Fast</option>
+            </select>
+          </div>
+        </div>
+        <div class="panel-box" style="flex:1;min-width:0">
+          <div class="panel-title" id="phase-label">&mdash;</div>
+          <div style="font-size:0.8rem;color:var(--text-muted);margin-top:2px;line-height:1.45" id="step-desc">Enter inputs and click Build &amp; Run.</div>
+        </div>
+      </div>
+
+      <div class="panel-box">
+        <div class="panel-title">Variables</div>
+        <div class="var-grid">
+          <div class="var-box accent-border">
+            <div class="var-label">i (s row)</div>
+            <div class="var-val" id="vv-i">&mdash;</div>
+          </div>
+          <div class="var-box purple-border">
+            <div class="var-label">j (p col)</div>
+            <div class="var-val" id="vv-j">&mdash;</div>
+          </div>
+          <div class="var-box">
+            <div class="var-label">s[i-1]</div>
+            <div class="var-val" id="vv-si">&mdash;</div>
+          </div>
+          <div class="var-box">
+            <div class="var-label">p[j-1]</div>
+            <div class="var-val" id="vv-pj">&mdash;</div>
+          </div>
+          <div class="var-box" style="grid-column:span 2">
+            <div class="var-label">Rule</div>
+            <div id="vv-rule" class="rule-badge">&mdash;</div>
+          </div>
+          <div class="var-box green-border" style="grid-column:span 2">
+            <div class="var-label">dp[i][j]</div>
+            <div class="var-val" id="vv-dp">&mdash;</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel-box">
+        <div class="panel-title">Result</div>
+        <div class="result-display empty" id="result-display">&mdash;</div>
+      </div>
+
+      <div class="panel-box">
+        <div class="panel-title">Legend</div>
+        <div style="display:flex;flex-direction:column;gap:6px;font-size:0.77rem;color:var(--text-muted)">
+          <div style="display:flex;align-items:center;gap:8px">
+            <div style="width:15px;height:15px;border-radius:3px;border:2px solid var(--green-border);background:var(--green-bg);flex-shrink:0"></div>
+            <span>dp[i][j] = <strong>true</strong></span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <div style="width:15px;height:15px;border-radius:3px;border:2px solid #1e1e2e;background:#0a0a0f;flex-shrink:0"></div>
+            <span>dp[i][j] = <strong>false</strong></span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <div style="width:15px;height:15px;border-radius:3px;border:2px solid #9333ea;background:#170d28;flex-shrink:0"></div>
+            <span>* zero-occ source: dp[i][j-2]</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <div style="width:15px;height:15px;border-radius:3px;border:2px solid #b45309;background:#1c1200;flex-shrink:0"></div>
+            <span>* one-or-more source: dp[i-1][j]</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <div style="width:15px;height:15px;border-radius:3px;border:2px solid #0891b2;background:#061520;flex-shrink:0"></div>
+            <span>Diagonal source: dp[i-1][j-1]</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+var simSteps = [], nav;
+var curS = '', curP = '';
+
+var PRESETS = [
+  { s: 'aab',  p: 'c*a*b',   label: 'Default' },
+  { s: 'aa',   p: 'a*',      label: 'a* match' },
+  { s: 'aa',   p: 'a',       label: 'too short' },
+  { s: 'ab',   p: '.*',      label: '.* wildcard' },
+  { s: 'mississippi', p: 'mis*is*p*.', label: 'Classic' },
+];
+
+var CODE = [
+  [1,  '<span class="kw">def</span> <span class="fn">isMatch</span><span class="op">(</span>s<span class="op">,</span> p<span class="op">):</span>'],
+  [2,  '    m<span class="op">,</span> n <span class="op">=</span> <span class="bi">len</span><span class="op">(</span>s<span class="op">),</span> <span class="bi">len</span><span class="op">(</span>p<span class="op">)</span>'],
+  [3,  '    dp <span class="op">=</span> <span class="op">[[</span><span class="kw">False</span><span class="op">]*(</span>n<span class="op">+</span><span class="nb">1</span><span class="op">)</span> <span class="kw">for</span> _ <span class="kw">in</span> <span class="bi">range</span><span class="op">(</span>m<span class="op">+</span><span class="nb">1</span><span class="op">)]</span>'],
+  [4,  '    dp<span class="op">[</span><span class="nb">0</span><span class="op">][</span><span class="nb">0</span><span class="op">]</span> <span class="op">=</span> <span class="kw">True</span>  <span class="cm"># empty matches empty</span>'],
+  [5,  '    <span class="kw">for</span> j <span class="kw">in</span> <span class="bi">range</span><span class="op">(</span><span class="nb">1</span><span class="op">,</span> n<span class="op">+</span><span class="nb">1</span><span class="op">):</span>  <span class="cm"># base row: empty s</span>'],
+  [6,  '        <span class="kw">if</span> p<span class="op">[</span>j<span class="op">-</span><span class="nb">1</span><span class="op">]</span> <span class="op">==</span> <span class="str">\'*\'</span><span class="op">:</span>'],
+  [7,  '            dp<span class="op">[</span><span class="nb">0</span><span class="op">][</span>j<span class="op">]</span> <span class="op">=</span> dp<span class="op">[</span><span class="nb">0</span><span class="op">][</span>j<span class="op">-</span><span class="nb">2</span><span class="op">]</span>  <span class="cm"># zero occurrences</span>'],
+  [8,  '    <span class="kw">for</span> i <span class="kw">in</span> <span class="bi">range</span><span class="op">(</span><span class="nb">1</span><span class="op">,</span> m<span class="op">+</span><span class="nb">1</span><span class="op">):</span>'],
+  [9,  '        <span class="kw">for</span> j <span class="kw">in</span> <span class="bi">range</span><span class="op">(</span><span class="nb">1</span><span class="op">,</span> n<span class="op">+</span><span class="nb">1</span><span class="op">):</span>'],
+  [10, '            <span class="kw">if</span> p<span class="op">[</span>j<span class="op">-</span><span class="nb">1</span><span class="op">]</span> <span class="op">==</span> <span class="str">\'*\'</span><span class="op">:</span>'],
+  [11, '                dp<span class="op">[</span>i<span class="op">][</span>j<span class="op">]</span> <span class="op">=</span> dp<span class="op">[</span>i<span class="op">][</span>j<span class="op">-</span><span class="nb">2</span><span class="op">]</span>  <span class="cm"># zero occurrences</span>'],
+  [12, '                <span class="kw">if</span> p<span class="op">[</span>j<span class="op">-</span><span class="nb">2</span><span class="op">]</span> <span class="op">==</span> <span class="str">\'.\' </span><span class="op">or</span> p<span class="op">[</span>j<span class="op">-</span><span class="nb">2</span><span class="op">]</span> <span class="op">==</span> s<span class="op">[</span>i<span class="op">-</span><span class="nb">1</span><span class="op">]:</span>'],
+  [13, '                    dp<span class="op">[</span>i<span class="op">][</span>j<span class="op">]</span> <span class="op">=</span> dp<span class="op">[</span>i<span class="op">][</span>j<span class="op">]</span> <span class="op">or</span> dp<span class="op">[</span>i<span class="op">-</span><span class="nb">1</span><span class="op">][</span>j<span class="op">]</span>  <span class="cm"># one or more</span>'],
+  [14, '            <span class="kw">elif</span> p<span class="op">[</span>j<span class="op">-</span><span class="nb">1</span><span class="op">]</span> <span class="op">==</span> <span class="str">\'.\' </span><span class="op">or</span> p<span class="op">[</span>j<span class="op">-</span><span class="nb">1</span><span class="op">]</span> <span class="op">==</span> s<span class="op">[</span>i<span class="op">-</span><span class="nb">1</span><span class="op">]:</span>'],
+  [15, '                dp<span class="op">[</span>i<span class="op">][</span>j<span class="op">]</span> <span class="op">=</span> dp<span class="op">[</span>i<span class="op">-</span><span class="nb">1</span><span class="op">][</span>j<span class="op">-</span><span class="nb">1</span><span class="op">]</span>  <span class="cm"># match &rarr; inherit diagonal</span>'],
+  [16, '            <span class="kw">else</span><span class="op">:</span>'],
+  [17, '                dp<span class="op">[</span>i<span class="op">][</span>j<span class="op">]</span> <span class="op">=</span> <span class="kw">False</span>  <span class="cm"># mismatch</span>'],
+  [18, '    <span class="kw">return</span> dp<span class="op">[</span>m<span class="op">][</span>n<span class="op">]</span>'],
+];
+
+window.addEventListener('DOMContentLoaded', function() {
+  buildCodePanel();
+  buildPresets();
+  nav = VizNav({
+    btnPrev: document.getElementById('btn-back'),
+    btnNext: document.getElementById('btn-next'),
+    btnPlay: document.getElementById('btn-play'),
+    speedSel: document.getElementById('speed-select'),
+    render: function(snap, cur, total) {
+      applyStep(snap, cur > 0);
+      var phaseEl = document.getElementById('phase-label');
+      var descEl  = document.getElementById('step-desc');
+      if (phaseEl) phaseEl.textContent = 'Step ' + (cur + 1) + ' / ' + total + '  ·  ' + snap.phase;
+      if (descEl) {
+        gsap.fromTo(descEl, { opacity: 0 }, { opacity: 1, duration: 0.15 });
+        descEl.textContent = snap.desc;
+      }
+    }
+  });
+  setPreset(0);
+});
+
+function buildPresets() {
+  var row = document.getElementById('preset-row');
+  row.innerHTML = PRESETS.map(function(p, idx) {
+    return '<button class="preset-btn" id="preset-' + idx + '" onclick="setPreset(' + idx + ')">'
+      + p.label + ': s=\'' + p.s + '\' p=\'' + p.p + '\'</button>';
+  }).join('');
+}
+
+function setPreset(idx) {
+  PRESETS.forEach(function(_, i) {
+    var el = document.getElementById('preset-' + i);
+    if (el) el.classList.toggle('active', i === idx);
+  });
+  document.getElementById('inp-s').value = PRESETS[idx].s;
+  document.getElementById('inp-p').value = PRESETS[idx].p;
+  buildAndRun();
+}
+
+function buildAndRun() {
+  var s = document.getElementById('inp-s').value.trim().toLowerCase().slice(0, 7);
+  var p = document.getElementById('inp-p').value.trim().slice(0, 10);
+  if (!s && !p) return;
+  curS = s; curP = p;
+  buildTable(s, p);
+  simSteps = simulate(s, p);
+  nav.load(simSteps);
+}
+
+function buildTable(s, p) {
+  var m = s.length, n = p.length;
+  var html = '<table class="dp-table"><tbody>';
+
+  // Header row: corner + ε col + pattern chars
+  html += '<tr>';
+  html += '<td class="hdr-empty"></td>';
+  html += '<td class="hdr-char eps" id="ch-0">&epsilon;</td>';
+  for (var j = 1; j <= n; j++) {
+    var cls = p[j-1] === '*' ? 'hdr-char star' : 'hdr-char';
+    html += '<td class="' + cls + '" id="ch-' + j + '">' + esc(p[j-1]) + '</td>';
+  }
+  html += '</tr>';
+
+  // Row 0: empty string
+  html += '<tr>';
+  html += '<td class="hdr-char eps" id="rh-0">&epsilon;</td>';
+  for (var j = 0; j <= n; j++) {
+    html += '<td class="dp-cell" id="cell-0-' + j + '" data-state="empty">?</td>';
+  }
+  html += '</tr>';
+
+  // Rows i=1..m
+  for (var i = 1; i <= m; i++) {
+    html += '<tr>';
+    html += '<td class="hdr-char" id="rh-' + i + '">' + esc(s[i-1]) + '</td>';
+    for (var j = 0; j <= n; j++) {
+      html += '<td class="dp-cell" id="cell-' + i + '-' + j + '" data-state="empty">?</td>';
+    }
+    html += '</tr>';
+  }
+
+  html += '</tbody></table>';
+  document.getElementById('table-section').innerHTML = html;
+}
+
+function esc(c) {
+  if (c === '<') return '&lt;';
+  if (c === '>') return '&gt;';
+  if (c === '&') return '&amp;';
+  return c;
+}
+
+function deepCopy2D(arr) {
+  return arr.map(function(row) { return row.slice(); });
+}
+
+function simulate(s, p) {
+  var m = s.length, n = p.length;
+  var steps = [];
+
+  // dp[i][j] = true means p[0..j-1] matches s[0..i-1]; null = not yet computed
+  var dp = [];
+  for (var i = 0; i <= m; i++) {
+    var row = [];
+    for (var j = 0; j <= n; j++) row.push(null);
+    dp.push(row);
+  }
+
+  function snap(phase, desc, lines, cur, rule, sources, result) {
+    steps.push({
+      phase: phase,
+      desc: desc,
+      lines: lines || [],
+      cur: cur || null,         // [i,j]
+      rule: rule || '',
+      sources: sources || [],   // [{pos:[i,j], type:'zero'|'more'|'diag'}]
+      result: (result === undefined ? null : result),
+      dp: deepCopy2D(dp),
+    });
+  }
+
+  // Step 0: Init
+  dp[0][0] = true;
+  snap('Init',
+    'dp[0][0] = True: empty pattern matches empty string. All other cells start null.',
+    [2, 3, 4], [0, 0], 'base', [], null);
+
+  // Base row: dp[0][j] for j=1..n
+  for (var j = 1; j <= n; j++) {
+    if (p[j-1] === '*') {
+      var prev = j >= 2 ? dp[0][j-2] : false;
+      dp[0][j] = prev === true;
+      snap('Base Row',
+        'j=' + j + ': p[' + (j-1) + ']=\'*\'. Empty string matches "' + p.slice(0,j) + '" iff it matched "' + p.slice(0,j-2) + '" (zero occurrences). dp[0][' + j + '] = dp[0][' + (j-2) + '] = ' + dp[0][j] + '.',
+        [5, 6, 7], [0, j], 'star',
+        [{pos:[0, j-2], type:'zero'}],
+        null);
+    } else {
+      dp[0][j] = false;
+      snap('Base Row',
+        'j=' + j + ': p[' + (j-1) + ']=\'' + p[j-1] + '\' is not \'*\'. Empty string cannot match a non-star pattern. dp[0][' + j + '] = False.',
+        [5, 6], [0, j], 'miss',
+        [],
+        null);
+    }
+  }
+
+  // Fill dp[i][j] for i=1..m, j=1..n
+  for (var i = 1; i <= m; i++) {
+    for (var j = 1; j <= n; j++) {
+      var si = s[i-1];
+      var pj = p[j-1];
+
+      if (pj === '*') {
+        // p[j-2] is the character that '*' quantifies
+        var pc = p[j-2];  // always exists since '*' can't be first valid char
+        var zeroOcc = (j >= 2 && dp[i][j-2] === true);
+        var charMatches = (pc === '.' || pc === si);
+        var prevRowMatch = (dp[i-1][j] === true);
+        dp[i][j] = zeroOcc || (charMatches && prevRowMatch);
+
+        var srcs = [];
+        if (j >= 2) srcs.push({pos:[i, j-2], type:'zero'});
+        if (charMatches) srcs.push({pos:[i-1, j], type:'more'});
+
+        var desc;
+        if (dp[i][j]) {
+          if (zeroOcc && !(charMatches && prevRowMatch)) {
+            desc = 'i=' + i + ',j=' + j + ': p[' + (j-1) + ']=\'*\' quantifies \'' + pc + '\'. Zero occurrences: dp[' + i + '][' + (j-2) + ']=' + dp[i][j-2] + ' → True. dp[' + i + '][' + j + '] = True.';
+          } else if (!zeroOcc && charMatches && prevRowMatch) {
+            desc = 'i=' + i + ',j=' + j + ': p[' + (j-1) + ']=\'*\' quantifies \'' + pc + '\'. Zero occ=False, but \'' + pc + '\' matches s[' + (i-1) + ']=\'' + si + '\' and dp[' + (i-1) + '][' + j + ']=' + dp[i-1][j] + ' → one-or-more applies. dp[' + i + '][' + j + '] = True.';
+          } else {
+            desc = 'i=' + i + ',j=' + j + ': p[' + (j-1) + ']=\'*\' quantifies \'' + pc + '\'. Both zero-occ and one-or-more contribute True. dp[' + i + '][' + j + '] = True.';
+          }
+        } else {
+          desc = 'i=' + i + ',j=' + j + ': p[' + (j-1) + ']=\'*\' quantifies \'' + pc + '\'. Zero-occ dp[' + i + '][' + (j-2) + ']=' + dp[i][j-2] + '. \'' + pc + '\' ' + (charMatches ? 'matches' : 'does not match') + ' s[' + (i-1) + ']=\'' + si + '\'.' + (charMatches ? ' dp[' + (i-1) + '][' + j + ']=' + dp[i-1][j] + '.' : '') + ' Both paths False. dp[' + i + '][' + j + '] = False.';
+        }
+
+        var codeLines = [8, 9, 10, 11, 12];
+        if (charMatches) codeLines.push(13);
+
+        snap('Fill (*)',
+          desc,
+          codeLines,
+          [i, j], 'star', srcs, null);
+
+      } else if (pj === '.' || pj === si) {
+        // '.' matches any, or exact char match
+        dp[i][j] = (dp[i-1][j-1] === true);
+        var ruleType = pj === '.' ? 'dot' : 'match';
+        var matchDesc = pj === '.' ? '\'.\'  matches any char → ' : '\'' + pj + '\' == \'' + si + '\' → ';
+        snap('Fill (' + (pj === '.' ? '.' : 'char') + ')',
+          'i=' + i + ',j=' + j + ': p[' + (j-1) + ']=\'' + pj + '\', s[' + (i-1) + ']=\'' + si + '\'. ' + matchDesc + 'dp[' + i + '][' + j + '] = dp[' + (i-1) + '][' + (j-1) + '] = ' + dp[i][j] + '.',
+          [8, 9, 14, 15],
+          [i, j], ruleType,
+          [{pos:[i-1, j-1], type:'diag'}],
+          null);
+
+      } else {
+        // Mismatch
+        dp[i][j] = false;
+        snap('Fill (miss)',
+          'i=' + i + ',j=' + j + ': p[' + (j-1) + ']=\'' + pj + '\' ≠ s[' + (i-1) + ']=\'' + si + '\'. Mismatch — dp[' + i + '][' + j + '] = False.',
+          [8, 9, 16, 17],
+          [i, j], 'miss',
+          [],
+          null);
+      }
+    }
+  }
+
+  // Final step
+  var finalResult = dp[m][n] === true;
+  snap('Done',
+    'Fill complete. dp[' + m + '][' + n + '] = ' + finalResult + '. Pattern \'' + p + '\' ' + (finalResult ? 'matches' : 'does NOT match') + ' string \'' + s + '\'.',
+    [18],
+    [m, n], finalResult ? 'match' : 'miss',
+    [],
+    finalResult);
+
+  return steps;
+}
+
+function buildCodePanel() {
+  var body = document.getElementById('code-body');
+  body.innerHTML = CODE.map(function(e) {
+    return '<div class="code-line" id="cl-' + e[0] + '"><span class="ln">' + e[0] + '</span><span>' + e[1] + '</span></div>';
+  }).join('');
+}
+
+function applyStep(s, animate) {
+  applyTable(s, animate);
+  applyVars(s, animate);
+  applyResult(s, animate);
+  setCodeLines(s.lines);
+}
+
+function applyTable(s, animate) {
+  var m = curS.length, n = curP.length;
+  var curKey = s.cur ? (s.cur[0] + ',' + s.cur[1]) : null;
+
+  // Build source map
+  var srcMap = {};
+  s.sources.forEach(function(src) {
+    srcMap[src.pos[0] + ',' + src.pos[1]] = src.type;
+  });
+
+  // Reset header classes
+  for (var i = 0; i <= m; i++) {
+    var el = document.getElementById('rh-' + i);
+    if (el) el.className = i === 0 ? 'hdr-char eps' : 'hdr-char';
+  }
+  for (var j = 0; j <= n; j++) {
+    var el = document.getElementById('ch-' + j);
+    if (el) {
+      if (j === 0) el.className = 'hdr-char eps';
+      else if (curP[j-1] === '*') el.className = 'hdr-char star';
+      else el.className = 'hdr-char';
+    }
+  }
+
+  // Highlight headers for current cell
+  if (s.cur && s.cur[0] >= 1 && s.cur[1] >= 1) {
+    var ci = s.cur[0], cj = s.cur[1];
+    var isTrue = s.dp[ci] && s.dp[ci][cj] === true;
+    var hlCls = isTrue ? 'hdr-char hl-cur' : 'hdr-char hl-miss';
+    if (curP[cj-1] === '*') hlCls += ' star';
+    var rh = document.getElementById('rh-' + ci);
+    var ch = document.getElementById('ch-' + cj);
+    if (rh) rh.className = hlCls.replace('star', '').trim();
+    if (ch) ch.className = hlCls;
+  } else if (s.cur && s.cur[0] === 0 && s.cur[1] >= 1) {
+    var cj = s.cur[1];
+    var ch = document.getElementById('ch-' + cj);
+    if (ch) {
+      var baseCls = curP[cj-1] === '*' ? 'hdr-char star hl-cur' : 'hdr-char hl-cur';
+      ch.className = baseCls;
+    }
+  }
+
+  for (var i = 0; i <= m; i++) {
+    for (var j = 0; j <= n; j++) {
+      var cell = document.getElementById('cell-' + i + '-' + j);
+      if (!cell) continue;
+      var key = i + ',' + j;
+      var val = s.dp[i][j];
+
+      cell.textContent = val === null ? '?' : (val ? 'T' : 'F');
+
+      var state;
+      var isDone = s.phase === 'Done';
+
+      if (key === curKey && isDone) {
+        state = val ? 'result-true' : 'result-false';
+      } else if (key === curKey) {
+        state = val ? 'current-true' : 'current-false';
+      } else if (srcMap[key] !== undefined) {
+        var srcType = srcMap[key];
+        if (srcType === 'zero') state = 'src-zero';
+        else if (srcType === 'more') state = 'src-more';
+        else state = 'src-diag';
+      } else if (val === null) {
+        state = 'empty';
+      } else if (val === true) {
+        state = 'true';
+      } else {
+        state = 'false';
+      }
+
+      cell.dataset.state = state;
+
+      if (animate && key === curKey && s.phase !== 'Init' && s.phase !== 'Done') {
+        gsap.fromTo(cell, { scale: 0.65 }, {
+          scale: val ? 1.18 : 1.0,
+          duration: 0.18, ease: 'power2.out',
+          onComplete: function(el) { gsap.to(el, { scale: 1, duration: 0.12 }); }.bind(null, cell)
+        });
+      }
+    }
+  }
+}
+
+function applyVars(s, animate) {
+  function setVal(id, val) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    var text = (val === null || val === undefined) ? '—' : String(val);
+    if (animate && el.textContent !== text) {
+      gsap.fromTo(el, { scale: 0.8, opacity: 0.4 }, { scale: 1, opacity: 1, duration: 0.2, ease: 'back.out(1.7)' });
+    }
+    el.textContent = text;
+  }
+
+  var ci = s.cur ? s.cur[0] : null;
+  var cj = s.cur ? s.cur[1] : null;
+  setVal('vv-i', ci !== null ? ci : null);
+  setVal('vv-j', cj !== null ? cj : null);
+  setVal('vv-si', (ci !== null && ci >= 1 && ci <= curS.length) ? curS[ci-1] : null);
+  setVal('vv-pj', (cj !== null && cj >= 1 && cj <= curP.length) ? curP[cj-1] : null);
+
+  var dpVal = (ci !== null && cj !== null && s.dp[ci] && s.dp[ci][cj] !== null) ? s.dp[ci][cj] : null;
+  var dpEl = document.getElementById('vv-dp');
+  if (dpEl) {
+    dpEl.textContent = dpVal === null ? '—' : (dpVal ? 'True' : 'False');
+    dpEl.className = 'var-val' + (dpVal === true ? ' green' : dpVal === false ? ' red' : '');
+  }
+
+  var ruleEl = document.getElementById('vv-rule');
+  if (ruleEl) {
+    var rule = s.rule || '';
+    var cls = 'rule-badge';
+    var text = '—';
+    if (rule === 'star')  { cls += ' star'; text = "* (zero/more)"; }
+    else if (rule === 'dot')   { cls += ' dot';  text = ". (any char)"; }
+    else if (rule === 'match') { cls += ' match'; text = "char match ✓"; }
+    else if (rule === 'miss')  { cls += ' miss'; text = "mismatch ✗"; }
+    else if (rule === 'base')  { cls += ' base'; text = "base case"; }
+    ruleEl.className = cls;
+    ruleEl.textContent = text;
+  }
+}
+
+function applyResult(s, animate) {
+  var el = document.getElementById('result-display');
+  if (!el) return;
+  if (s.result !== null && s.result !== undefined) {
+    var text = s.result ? 'true — match!' : 'false — no match';
+    if (animate && el.textContent !== text) {
+      gsap.fromTo(el, { opacity: 0.3 }, { opacity: 1, duration: 0.3 });
+    }
+    el.textContent = text;
+    el.className = 'result-display ' + (s.result ? 'true' : 'false');
+  } else if (s.phase === 'Done') {
+    var finalVal = s.dp[curS.length] && s.dp[curS.length][curP.length];
+    el.textContent = finalVal ? 'true — match!' : 'false — no match';
+    el.className = 'result-display ' + (finalVal ? 'true' : 'false');
+  } else {
+    el.textContent = '—';
+    el.className = 'result-display empty';
+  }
+}
+
+function setCodeLines(lines) {
+  CODE.forEach(function(e) {
+    var el = document.getElementById('cl-' + e[0]);
+    if (!el) return;
+    if (lines && lines.indexOf(e[0]) >= 0) el.classList.add('hl');
+    else el.classList.remove('hl');
+  });
+}
+</script>
+<script>
+  if (window.self !== window.top) {
+    var bl = document.querySelector('.back-link');
+    if (bl) bl.style.display = 'none';
+  }
+</script>
+</body>
+</html>
