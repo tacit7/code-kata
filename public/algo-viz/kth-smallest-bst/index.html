@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kth Smallest in BST</title>
+  <link rel="stylesheet" href="../shared/style.css" />
+  <script src="../shared/gsap.min.js"></script>
+  <script src="../shared/viz.js"></script>
+  <style>
+    .viz-area {
+      width: 100%; max-width: 90%;
+      display: flex; flex-direction: column; gap: 12px;
+    }
+    .tree-wrap {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+    }
+    #tree-svg { display: block; width: 100%; }
+
+    .bottom-row {
+      display: grid;
+      grid-template-columns: 50% 1fr;
+      gap: 12px;
+      align-items: start;
+    }
+    .right-col { display: flex; flex-direction: column; gap: 10px; }
+    @media (max-width: 700px) { .bottom-row { grid-template-columns: 1fr; } }
+
+    .code-panel {
+      background: #0a0d14;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+    }
+    .code-header {
+      padding: 9px 14px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      font-size: 0.67rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.11em;
+      color: var(--text-dim);
+    }
+    .code-body {
+      padding: 10px 0;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.78rem;
+      line-height: 1.75;
+      overflow-x: auto;
+    }
+    .cl {
+      display: flex; align-items: stretch;
+      border-left: 3px solid transparent;
+      padding: 0 14px 0 0;
+      white-space: pre;
+    }
+    .cl .ln {
+      width: 28px; min-width: 28px;
+      text-align: right; color: #3d4468;
+      user-select: none; padding-right: 14px;
+      font-size: 0.72rem; line-height: 1.75;
+    }
+    .cl .code { color: var(--text-muted); }
+
+    .panel-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 13px 16px;
+    }
+    .panel-title {
+      font-size: 0.67rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.11em;
+      color: var(--text-dim); margin-bottom: 10px;
+    }
+
+    /* Counter */
+    .counter-display {
+      display: flex; align-items: center; justify-content: center; gap: 14px;
+    }
+    .counter-block { text-align: center; }
+    .counter-num {
+      font-size: 2rem; font-weight: 700;
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--text-bright); line-height: 1;
+    }
+    .counter-num.answer { color: #fcd34d; }
+    .counter-lbl {
+      font-size: 0.65rem; color: var(--text-faint);
+      text-transform: uppercase; letter-spacing: 0.08em;
+      margin-top: 3px;
+    }
+    .counter-sep { font-size: 1.4rem; color: var(--text-dim); line-height: 1; }
+    .counter-prog {
+      margin-top: 10px; height: 5px;
+      background: #1e2130; border-radius: 3px; overflow: hidden;
+    }
+    .counter-fill {
+      height: 100%; width: 0%;
+      background: #4f46e5; border-radius: 3px;
+      transition: width 0.3s ease, background 0.3s ease;
+    }
+    .counter-fill.done { background: #f59e0b; }
+
+    /* Sequence */
+    .seq-row {
+      display: flex; flex-wrap: wrap; gap: 6px; min-height: 32px; align-items: center;
+    }
+    .seq-chip {
+      background: #052e16; color: #4ade80;
+      border: 1px solid #16a34a;
+      border-radius: 5px; padding: 3px 10px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.82rem; font-weight: 700;
+    }
+    .seq-chip.answer {
+      background: #713f12; color: #fcd34d; border-color: #f59e0b;
+    }
+    .seq-empty { color: var(--text-faint); font-size: 0.82rem; font-style: italic; }
+
+    /* Call stack */
+    #call-stack {
+      display: flex; flex-direction: column-reverse; gap: 4px;
+      min-height: 36px; max-height: 160px; overflow-y: auto;
+    }
+    .cs-frame {
+      background: #1e1a3a; color: #a5b4fc;
+      border: 1px solid #4f46e5; border-radius: 5px;
+      padding: 4px 10px; font-size: 0.76rem; font-weight: 600;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .cs-frame.top { background: #312e81; color: #e0e7ff; }
+    .cs-frame.null-frame { background: #0f172a; color: #4b5563; border-color: #1e293b; font-weight: 400; }
+    .cs-empty { color: var(--text-faint); font-size: 0.82rem; font-style: italic; }
+
+    /* Result */
+    .result-badge {
+      font-size: 0.95rem; font-weight: 700;
+      padding: 10px 16px; border-radius: 8px; text-align: center;
+    }
+    .result-badge.found { background: #713f12; color: #fcd34d; border: 1px solid #f59e0b; }
+
+    /* Syntax */
+    .kw { color: var(--purple); }
+    .fn { color: var(--blue); }
+    .bi { color: var(--orange); }
+    .cm { color: #3d4468; font-style: italic; }
+    .op { color: var(--text); }
+  </style>
+</head>
+<body class="page">
+
+<div class="page-header">
+  <a class="back-link" href="../index.html">&larr; All Visualizations</a>
+  <h1 class="page-title">Kth Smallest in BST</h1>
+  <div class="page-sub">LeetCode 230 &middot; In-order traversal visits BST nodes in sorted ascending order &middot; O(H + k) time &middot; O(H) space</div>
+</div>
+
+<div class="controls">
+  <div class="field">
+    <label>Preset</label>
+    <select id="preset-sel" onchange="applyPreset()">
+      <option value="5,3,7,2,4,6,8:3">Balanced 7-node — k=3, answer: 4</option>
+      <option value="10,5,15,3,7,null,20:4">Right-skewed — k=4, answer: 10 (root)</option>
+      <option value="6,2,8,0,4,7,9,null,null,3,5:6">11-node BST — k=6, answer: 6 (root)</option>
+    </select>
+  </div>
+  <div class="field">
+    <label>Tree (level-order, null for empty)</label>
+    <input id="inp-tree" type="text" value="5,3,7,2,4,6,8" style="width:260px" />
+  </div>
+  <div class="field">
+    <label>k</label>
+    <input id="inp-k" type="number" value="3" min="1" style="width:60px" />
+  </div>
+  <button class="btn-primary" onclick="build()">Build &amp; Run</button>
+</div>
+
+<div class="viz-area">
+
+  <div class="tree-wrap">
+    <svg id="tree-svg" viewBox="0 0 800 300" preserveAspectRatio="xMidYMid meet"></svg>
+  </div>
+
+  <div class="status-bar" style="max-width:100%">
+    <span class="phase-label" id="phase-label">&mdash;</span>
+    <span class="step-desc" id="step-desc">Choose a preset and click Build &amp; Run.</span>
+  </div>
+
+  <div class="bottom-row">
+
+    <div class="code-panel">
+      <div class="code-header">Python</div>
+      <div class="code-body" id="code-body"></div>
+    </div>
+
+    <div class="right-col">
+
+      <div class="panel-box">
+        <div class="panel-title">Counter</div>
+        <div class="counter-display">
+          <div class="counter-block">
+            <div class="counter-num" id="counter-val">0</div>
+            <div class="counter-lbl">visited</div>
+          </div>
+          <div class="counter-sep">/</div>
+          <div class="counter-block">
+            <div class="counter-num" id="counter-k" style="color:var(--text-dim)">—</div>
+            <div class="counter-lbl">k</div>
+          </div>
+        </div>
+        <div class="counter-prog">
+          <div class="counter-fill" id="counter-fill"></div>
+        </div>
+      </div>
+
+      <div class="panel-box">
+        <div class="panel-title">In-Order Sequence</div>
+        <div class="seq-row" id="seq-row"><span class="seq-empty">none yet</span></div>
+      </div>
+
+      <div class="panel-box">
+        <div class="panel-title">
+          Call Stack
+          <span style="font-size:0.65rem;font-weight:400;color:var(--text-faint);margin-left:6px">(top = active)</span>
+        </div>
+        <div id="call-stack"><span class="cs-empty">empty</span></div>
+      </div>
+
+      <div class="result-badge" id="result-badge" style="display:none"></div>
+
+    </div>
+  </div>
+
+</div>
+
+<div class="legend">
+  <div class="leg-item">
+    <svg width="14" height="14"><circle cx="7" cy="7" r="6" fill="#1e2130" stroke="#2d3148" stroke-width="2"/></svg>
+    Unvisited
+  </div>
+  <div class="leg-item">
+    <svg width="14" height="14"><circle cx="7" cy="7" r="6" fill="#312e81" stroke="#818cf8" stroke-width="3"/></svg>
+    Active (current call)
+  </div>
+  <div class="leg-item">
+    <svg width="14" height="14"><circle cx="7" cy="7" r="6" fill="#1e1a3a" stroke="#4f46e5" stroke-width="2"/></svg>
+    On call stack
+  </div>
+  <div class="leg-item">
+    <svg width="14" height="14"><circle cx="7" cy="7" r="6" fill="#052e16" stroke="#16a34a" stroke-width="2"/></svg>
+    Counted
+  </div>
+  <div class="leg-item">
+    <svg width="14" height="14"><circle cx="7" cy="7" r="6" fill="#713f12" stroke="#f59e0b" stroke-width="3"/></svg>
+    Answer (kth smallest)
+  </div>
+</div>
+
+<div class="step-nav">
+  <button class="btn-step" id="btn-back" disabled>&larr; Back</button>
+  <button class="btn-step" id="btn-next" disabled>Next &rarr;</button>
+  <button id="btn-play" style="background:#15803d;color:#fff;border:none;border-radius:4px;padding:6px 14px;font-weight:600;cursor:pointer">&#9654; Play</button>
+  <select id="speed-select" style="background:var(--bg);border:1px solid var(--border);color:var(--text);border-radius:4px;padding:6px 8px;font-size:0.85rem">
+    <option value="700">Slow</option>
+    <option value="350" selected>Medium</option>
+    <option value="120">Fast</option>
+  </select>
+</div>
+
+<script>
+// ─── Code lines ───────────────────────────────────────────────────────────────
+const CODE_LINES = [
+  [1,  `<span class="kw">def</span> <span class="fn">kthSmallest</span><span class="op">(</span>root<span class="op">,</span> k<span class="op">):</span>`],
+  [2,  `    count<span class="op">,</span> ans <span class="op">=</span> <span class="bi">0</span><span class="op">,</span> <span class="bi">None</span>`],
+  [0,  ``],
+  [4,  `    <span class="kw">def</span> <span class="fn">inorder</span><span class="op">(</span>node<span class="op">):</span>`],
+  [5,  `        <span class="kw">nonlocal</span> count<span class="op">,</span> ans`],
+  [6,  `        <span class="kw">if not</span> node<span class="op">:</span>                <span class="cm"># base case</span>`],
+  [7,  `            <span class="kw">return</span>`],
+  [8,  `        <span class="fn">inorder</span><span class="op">(</span>node.left<span class="op">)</span>          <span class="cm"># left first</span>`],
+  [9,  `        count <span class="op">+=</span> <span class="bi">1</span>                  <span class="cm"># count this node</span>`],
+  [10, `        <span class="kw">if</span> count <span class="op">==</span> k<span class="op">:</span>             <span class="cm"># k-th visited?</span>`],
+  [11, `            ans <span class="op">=</span> node.val           <span class="cm"># yes — save answer</span>`],
+  [12, `            <span class="kw">return</span>`],
+  [13, `        <span class="fn">inorder</span><span class="op">(</span>node.right<span class="op">)</span>         <span class="cm"># right last</span>`],
+  [0,  ``],
+  [15, `    <span class="fn">inorder</span><span class="op">(</span>root<span class="op">)</span>`],
+  [16, `    <span class="kw">return</span> ans`],
+];
+
+// ─── Colors ───────────────────────────────────────────────────────────────────
+const COLORS = {
+  idle:     { fill: '#1e2130', stroke: '#2d3148', text: '#565f89', sw: 2 },
+  active:   { fill: '#312e81', stroke: '#818cf8', text: '#e0e7ff', sw: 3.5 },
+  on_stack: { fill: '#1e1a3a', stroke: '#4f46e5', text: '#a5b4fc', sw: 2 },
+  counted:  { fill: '#052e16', stroke: '#16a34a', text: '#4ade80', sw: 2 },
+  answer:   { fill: '#713f12', stroke: '#f59e0b', text: '#fcd34d', sw: 3.5 },
+};
+
+// ─── Globals ──────────────────────────────────────────────────────────────────
+let nodeMap = {};
+let R = 22;
+let VW = 800, VH = 300;
+let prevLines = [];
+
+// ─── Parse level-order ────────────────────────────────────────────────────────
+function parseLevelOrder(s) {
+  return s.split(',').map(t => t.trim()).map(t =>
+    (t === '' || t.toLowerCase() === 'null' || t === 'n') ? null : Number(t)
+  );
+}
+
+// ─── Build tree ───────────────────────────────────────────────────────────────
+let nextId = 0;
+function buildTree(vals) {
+  nodeMap = {};
+  nextId = 0;
+  if (!vals.length || vals[0] === null) return null;
+  const make = val => {
+    const n = { id: nextId++, val, left: null, right: null, x: 0, y: 0, depth: 0 };
+    nodeMap[n.id] = n;
+    return n;
+  };
+  const root = make(vals[0]);
+  const queue = [root];
+  let i = 1;
+  while (queue.length && i < vals.length) {
+    const cur = queue.shift();
+    if (i < vals.length) {
+      if (vals[i] !== null) { cur.left = make(vals[i]); cur.left.depth = cur.depth + 1; queue.push(cur.left); }
+      i++;
+    }
+    if (i < vals.length) {
+      if (vals[i] !== null) { cur.right = make(vals[i]); cur.right.depth = cur.depth + 1; queue.push(cur.right); }
+      i++;
+    }
+  }
+  return root;
+}
+
+// ─── Layout (inorder x position, depth y position) ───────────────────────────
+function layout(root) {
+  let idx = 0, maxD = 0;
+  function inorder(n) {
+    if (!n) return;
+    inorder(n.left);
+    n._inIdx = idx++;
+    if (n.depth > maxD) maxD = n.depth;
+    inorder(n.right);
+  }
+  inorder(root);
+  const count = idx;
+  const xSpace = Math.max(60, Math.min(110, 680 / Math.max(1, count)));
+  const ySpace = 76;
+  const padX = 50, padY = 36;
+  VW = Math.max(480, padX * 2 + (count - 1) * xSpace);
+  VH = padY * 2 + maxD * ySpace + R * 2 + 20;
+  for (const id in nodeMap) {
+    const n = nodeMap[id];
+    n.x = padX + n._inIdx * xSpace;
+    n.y = padY + 20 + n.depth * ySpace + R;
+  }
+}
+
+// ─── SVG helpers ──────────────────────────────────────────────────────────────
+function svgEl(tag, attrs) {
+  const el = document.createElementNS('http://www.w3.org/2000/svg', tag);
+  Object.entries(attrs).forEach(([k, v]) => el.setAttribute(k, v));
+  return el;
+}
+function svgG(id) {
+  const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  if (id) g.id = id;
+  return g;
+}
+
+// ─── Render SVG ───────────────────────────────────────────────────────────────
+function renderSVG(root) {
+  const svg = document.getElementById('tree-svg');
+  svg.innerHTML = '';
+  svg.setAttribute('viewBox', `0 0 ${VW} ${VH}`);
+  R = VW > 650 ? 22 : 18;
+
+  const edgeG = svgG('edges');
+  const nodeG = svgG('nodes');
+  svg.appendChild(edgeG);
+  svg.appendChild(nodeG);
+
+  (function drawEdges(n) {
+    if (!n) return;
+    [n.left, n.right].forEach(c => {
+      if (!c) return;
+      edgeG.appendChild(svgEl('line', {
+        id: `edge-${n.id}-${c.id}`,
+        x1: n.x, y1: n.y, x2: c.x, y2: c.y,
+        stroke: '#2d3148', 'stroke-width': 2, 'stroke-linecap': 'round',
+      }));
+    });
+    drawEdges(n.left); drawEdges(n.right);
+  })(root);
+
+  for (const id in nodeMap) {
+    const n = nodeMap[id];
+    const g = svgG(`node-g-${n.id}`);
+
+    g.appendChild(svgEl('circle', {
+      id: `nc-${n.id}`, cx: n.x, cy: n.y, r: R,
+      fill: COLORS.idle.fill, stroke: COLORS.idle.stroke, 'stroke-width': COLORS.idle.sw,
+    }));
+
+    const t = svgEl('text', {
+      id: `nt-${n.id}`, x: n.x, y: n.y,
+      'text-anchor': 'middle', 'dominant-baseline': 'middle',
+      fill: COLORS.idle.text,
+      'font-size': Math.round(R * 0.75), 'font-weight': 'bold',
+      'font-family': 'JetBrains Mono, monospace',
+    });
+    t.textContent = n.val;
+    g.appendChild(t);
+
+    nodeG.appendChild(g);
+  }
+}
+
+// ─── Ordinal suffix ───────────────────────────────────────────────────────────
+function ordinal(n) {
+  if (n % 100 >= 11 && n % 100 <= 13) return 'th';
+  switch (n % 10) {
+    case 1: return 'st';
+    case 2: return 'nd';
+    case 3: return 'rd';
+    default: return 'th';
+  }
+}
+
+// ─── Simulation ───────────────────────────────────────────────────────────────
+function simulate(root, k) {
+  const steps = [];
+  const stateMap = {};
+  for (const id in nodeMap) stateMap[id] = 'idle';
+  const callStack = [];
+  let count = 0;
+  const sequence = [];
+  let answerFound = false;
+  let answerId = null;
+  let answerSeqIdx = -1;
+
+  function snap(phase, desc, lines) {
+    steps.push({
+      phase, desc, lines: lines || [],
+      stateMap: { ...stateMap },
+      callStack: callStack.map(f => ({ ...f })),
+      count,
+      k,
+      sequence: [...sequence],
+      answerId,
+      answerSeqIdx,
+    });
+  }
+
+  function inorder(node) {
+    if (!node) {
+      callStack.push({ label: 'inorder(None)', isNull: true });
+      snap('Null', 'Node is null — base case, return.', [6, 7]);
+      callStack.pop();
+      return;
+    }
+
+    if (answerFound) return;
+
+    callStack.push({ label: 'inorder(' + node.val + ')', isNull: false, nodeId: node.id });
+    stateMap[node.id] = 'active';
+    snap('Enter', 'Enter inorder(' + node.val + '). In-order goes left first.', [4, 6]);
+
+    stateMap[node.id] = 'on_stack';
+    snap('GoLeft', 'Recurse into left subtree — all values < ' + node.val + '.', [8]);
+    inorder(node.left);
+
+    if (answerFound) {
+      stateMap[node.id] = 'idle';
+      callStack.pop();
+      return;
+    }
+
+    stateMap[node.id] = 'active';
+    count++;
+    sequence.push(node.val);
+    snap('Count', 'Back from left. Count node ' + node.val + ' → count = ' + count + '.', [9]);
+
+    if (count === k) {
+      answerFound = true;
+      answerId = node.id;
+      answerSeqIdx = sequence.length - 1;
+      stateMap[node.id] = 'answer';
+      snap('Found',
+        'count (' + count + ') == k (' + k + ') — ' + node.val + ' is the ' + k + ordinal(k) + ' smallest!',
+        [10, 11, 12]);
+      callStack.pop();
+      return;
+    }
+
+    stateMap[node.id] = 'counted';
+    snap('GoRight', 'count (' + count + ') ≠ k (' + k + '). Recurse into right subtree — all values > ' + node.val + '.', [13]);
+    inorder(node.right);
+
+    callStack.pop();
+  }
+
+  snap('Start',
+    'Find the ' + k + ordinal(k) + ' smallest element. In-order traversal (left → node → right) visits BST nodes in sorted order.',
+    [1, 2, 15]);
+  inorder(root);
+
+  if (answerFound && answerId !== null) {
+    snap('Done',
+      '✓ The ' + k + ordinal(k) + ' smallest element is ' + nodeMap[answerId].val + '.',
+      [15, 16]);
+  }
+
+  return steps;
+}
+
+// ─── Set node color ───────────────────────────────────────────────────────────
+function setNodeColor(id, colorKey, animate) {
+  const c = COLORS[colorKey] || COLORS.idle;
+  const nc = document.getElementById('nc-' + id);
+  const nt = document.getElementById('nt-' + id);
+  if (!nc) return;
+  if (animate) {
+    gsap.to(nc, { duration: 0.25, ease: 'power2.out', attr: { fill: c.fill, stroke: c.stroke, 'stroke-width': c.sw } });
+    if (nt) gsap.to(nt, { duration: 0.25, attr: { fill: c.text } });
+  } else {
+    nc.setAttribute('fill', c.fill);
+    nc.setAttribute('stroke', c.stroke);
+    nc.setAttribute('stroke-width', c.sw);
+    if (nt) nt.setAttribute('fill', c.text);
+  }
+}
+
+// ─── Code line highlighting ───────────────────────────────────────────────────
+function setCodeLines(oldLines, newLines, animate) {
+  const HL_BG   = 'rgba(99,102,241,0.16)';
+  const NO_BG   = 'rgba(99,102,241,0)';
+  const HL_BORD = '#818cf8';
+  const NO_BORD = 'transparent';
+  (oldLines || []).filter(n => !(newLines || []).includes(n)).forEach(n => {
+    const el = document.getElementById('cl-' + n);
+    if (!el) return;
+    if (animate) gsap.to(el, { backgroundColor: NO_BG, borderLeftColor: NO_BORD, duration: 0.2 });
+    else { el.style.backgroundColor = ''; el.style.borderLeftColor = ''; }
+  });
+  (newLines || []).filter(n => !(oldLines || []).includes(n)).forEach(n => {
+    const el = document.getElementById('cl-' + n);
+    if (!el) return;
+    if (animate) gsap.to(el, { backgroundColor: HL_BG, borderLeftColor: HL_BORD, duration: 0.2, delay: 0.05 });
+    else { el.style.backgroundColor = HL_BG; el.style.borderLeftColor = HL_BORD; }
+  });
+}
+
+// ─── Render call stack ────────────────────────────────────────────────────────
+function renderCallStack(stack, animate) {
+  const c = document.getElementById('call-stack');
+  c.innerHTML = '';
+  if (!stack.length) {
+    c.innerHTML = '<span class="cs-empty">empty</span>';
+    return;
+  }
+  stack.forEach((frame, i) => {
+    const el = document.createElement('div');
+    const isTop = i === stack.length - 1;
+    el.className = 'cs-frame' + (frame.isNull ? ' null-frame' : (isTop ? ' top' : ''));
+    el.textContent = frame.label;
+    c.appendChild(el);
+    if (animate && isTop && !frame.isNull) gsap.from(el, { opacity: 0, x: -8, duration: 0.18 });
+  });
+}
+
+// ─── Render sequence ──────────────────────────────────────────────────────────
+function renderSequence(sequence, answerSeqIdx, animate) {
+  const row = document.getElementById('seq-row');
+  const prevLen = row.querySelectorAll('.seq-chip').length;
+  row.innerHTML = '';
+  if (!sequence.length) {
+    row.innerHTML = '<span class="seq-empty">none yet</span>';
+    return;
+  }
+  sequence.forEach((val, i) => {
+    const chip = document.createElement('span');
+    chip.className = 'seq-chip' + (i === answerSeqIdx ? ' answer' : '');
+    chip.textContent = val;
+    row.appendChild(chip);
+    if (animate && i >= prevLen) {
+      gsap.from(chip, { opacity: 0, y: -6, duration: 0.2 });
+    }
+  });
+}
+
+// ─── Apply step ───────────────────────────────────────────────────────────────
+function applyStep(s, animate) {
+  // Node colors
+  Object.entries(s.stateMap).forEach(([id, state]) => {
+    setNodeColor(+id, state, animate);
+  });
+
+  // Counter
+  const cv = document.getElementById('counter-val');
+  const ck = document.getElementById('counter-k');
+  const cf = document.getElementById('counter-fill');
+  if (cv) {
+    cv.textContent = s.count;
+    cv.className = 'counter-num' + (s.phase === 'Found' || s.phase === 'Done' ? ' answer' : '');
+    if (animate) gsap.fromTo(cv, { opacity: 0.4 }, { opacity: 1, duration: 0.2 });
+  }
+  if (ck) ck.textContent = s.k;
+  if (cf) {
+    const pct = s.k > 0 ? Math.min(100, (s.count / s.k) * 100) : 0;
+    cf.style.width = pct + '%';
+    cf.className = 'counter-fill' + (s.count === s.k ? ' done' : '');
+  }
+
+  // Sequence
+  renderSequence(s.sequence, s.answerSeqIdx, animate);
+
+  // Call stack
+  renderCallStack(s.callStack, animate);
+
+  // Result badge
+  const rb = document.getElementById('result-badge');
+  if (rb) {
+    if (s.phase === 'Done') {
+      rb.style.display = 'block';
+      rb.className = 'result-badge found';
+      const ans = s.answerId !== null ? nodeMap[s.answerId].val : '?';
+      rb.textContent = '✓ The ' + s.k + ordinal(s.k) + ' smallest is ' + ans;
+      if (animate) gsap.from(rb, { opacity: 0, scale: 0.92, duration: 0.3, ease: 'back.out(1.7)' });
+    } else {
+      rb.style.display = 'none';
+    }
+  }
+
+  // Code lines
+  setCodeLines(prevLines, s.lines, animate);
+  prevLines = s.lines || [];
+}
+
+// ─── Build code panel ─────────────────────────────────────────────────────────
+function buildCodePanel() {
+  const body = document.getElementById('code-body');
+  body.innerHTML = '';
+  CODE_LINES.forEach(([ln, html]) => {
+    const row = document.createElement('div');
+    row.className = 'cl';
+    if (ln > 0) row.id = 'cl-' + ln;
+    row.innerHTML = '<span class="ln">' + (ln > 0 ? ln : '') + '</span><span class="code">' + html + '</span>';
+    body.appendChild(row);
+  });
+}
+
+// ─── Preset selector ──────────────────────────────────────────────────────────
+function applyPreset() {
+  const val = document.getElementById('preset-sel').value;
+  const parts = val.split(':');
+  document.getElementById('inp-tree').value = parts[0];
+  document.getElementById('inp-k').value = parts[1];
+}
+
+// ─── Build & Run ──────────────────────────────────────────────────────────────
+function build() {
+  const txt = document.getElementById('inp-tree').value.trim();
+  const k = Math.max(1, parseInt(document.getElementById('inp-k').value, 10) || 1);
+  const vals = parseLevelOrder(txt);
+
+  buildCodePanel();
+
+  const root = buildTree(vals);
+  if (!root) {
+    document.getElementById('tree-svg').innerHTML = '';
+    document.getElementById('step-desc').textContent = 'Empty tree — nothing to traverse.';
+    return;
+  }
+
+  layout(root);
+  renderSVG(root);
+  prevLines = [];
+
+  const rb = document.getElementById('result-badge');
+  if (rb) rb.style.display = 'none';
+
+  nav.load(simulate(root, k));
+}
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
+var nav = VizNav({
+  btnPrev: document.getElementById('btn-back'),
+  btnNext: document.getElementById('btn-next'),
+  btnPlay: document.getElementById('btn-play'),
+  speedSel: document.getElementById('speed-select'),
+  render: function(snap, cur, total) {
+    applyStep(snap, cur > 0);
+    var pl = document.getElementById('phase-label');
+    if (pl) pl.textContent = 'Step ' + (cur + 1) + ' / ' + total + '  ·  ' + snap.phase;
+    var sd = document.getElementById('step-desc');
+    if (sd) {
+      if (cur > 0) gsap.fromTo(sd, { opacity: 0.5 }, { opacity: 1, duration: 0.15 });
+      sd.textContent = snap.desc;
+    }
+  }
+});
+
+build();
+</script>
+<script>
+  if (window.self !== window.top) {
+    var bl = document.querySelector('.back-link');
+    if (bl) bl.style.display = 'none';
+  }
+</script>
+</body>
+</html>
