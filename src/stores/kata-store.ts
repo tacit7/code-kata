@@ -69,7 +69,7 @@ export const useKataStore = create<KataState>((set) => ({
   libraryTab: "browse",
   libraryCategoryFilter: "",
   libraryDiffSort: null,
-  librarySortMode: "default",
+  librarySortMode: "level-difficulty",
   setLibraryUI: (patch) => set(patch),
 
   loadKatas: async (language = "javascript") => {
