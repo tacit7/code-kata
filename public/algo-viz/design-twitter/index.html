@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Design Twitter</title>
+  <link rel="stylesheet" href="../shared/style.css" />
+  <script src="../shared/viz.js"></script>
+  <style>
+    body { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+
+    .main-area {
+      flex: 1; min-height: 0;
+      display: grid;
+      grid-template-columns: 230px 190px 1fr;
+      gap: 10px;
+      padding: 10px 14px;
+      overflow: hidden;
+    }
+    @media (max-width: 820px) { .main-area { grid-template-columns: 1fr; overflow-y: auto; } }
+
+    .panel {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 12px 14px;
+      display: flex; flex-direction: column; gap: 8px;
+      overflow: hidden;
+    }
+    .panel-title {
+      font-size: 0.67rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--text-dim); flex-shrink: 0;
+    }
+
+    /* ── Users panel ── */
+    .user-section { display: flex; flex-direction: column; gap: 8px; overflow-y: auto; flex: 1; }
+    .user-box {
+      background: var(--bg); border: 1px solid var(--border-soft);
+      border-radius: var(--radius-sm); padding: 9px 10px;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .user-box.hl-u1 { border-color: var(--accent); box-shadow: 0 0 0 1px rgba(122,162,247,0.15); }
+    .user-box.hl-u2 { border-color: var(--green); box-shadow: 0 0 0 1px rgba(158,206,106,0.15); }
+    .user-header {
+      display: flex; align-items: center; gap: 7px; margin-bottom: 7px;
+    }
+    .user-avatar {
+      width: 26px; height: 26px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.72rem; font-weight: 800; font-family: monospace;
+      flex-shrink: 0;
+    }
+    .av-u1 { background: rgba(122,162,247,0.15); border: 1.5px solid var(--accent); color: var(--accent); }
+    .av-u2 { background: rgba(158,206,106,0.15); border: 1.5px solid var(--green); color: var(--green); }
+    .user-name { font-size: 0.8rem; font-weight: 700; color: var(--text); }
+
+    .tweet-list { display: flex; flex-direction: column; gap: 4px; }
+    .tweet-chip {
+      display: flex; align-items: center; gap: 5px;
+      padding: 4px 8px; border-radius: 5px;
+      background: #0f0f0f; border: 1px solid var(--border-soft);
+      font-size: 0.77rem; font-family: monospace;
+      transition: border-color 0.2s, background 0.2s;
+    }
+    .tweet-chip.tc-in-heap {
+      border-color: var(--accent); background: rgba(122,162,247,0.07);
+    }
+    .tweet-chip.tc-popped {
+      border-color: var(--orange); background: rgba(255,158,100,0.08);
+    }
+    .tweet-chip.tc-done {
+      opacity: 0.45;
+    }
+    .tc-ptr { color: var(--orange); font-size: 0.65rem; width: 12px; text-align: center; }
+    .tc-id  { font-weight: 700; color: var(--text-bright); }
+    .tc-tag {
+      font-size: 0.6rem; padding: 1px 5px; border-radius: 8px;
+      margin-left: auto; white-space: nowrap;
+    }
+    .tag-heap { background: rgba(122,162,247,0.12); color: var(--accent); }
+    .tag-pop  { background: rgba(255,158,100,0.15); color: var(--orange); }
+    .tweet-empty { font-size: 0.72rem; color: var(--text-ghost); font-family: monospace; }
+
+    /* ── Follow panel ── */
+    .follow-list { display: flex; flex-direction: column; gap: 8px; overflow-y: auto; flex: 1; }
+    .follow-entry {
+      background: var(--bg); border: 1px solid var(--border-soft);
+      border-radius: var(--radius-sm); padding: 8px 10px;
+      transition: border-color 0.2s;
+    }
+    .follow-entry.hl-follow { border-color: var(--green); }
+    .follow-entry.hl-unfollow { border-color: var(--red); }
+    .follow-label {
+      font-size: 0.64rem; color: var(--text-dim); text-transform: uppercase;
+      letter-spacing: 0.06em; margin-bottom: 5px;
+    }
+    .follow-chips { display: flex; flex-wrap: wrap; gap: 4px; }
+    .followee-chip {
+      padding: 2px 8px; border-radius: 10px;
+      font-size: 0.73rem; font-weight: 700; font-family: monospace;
+      background: rgba(158,206,106,0.1); border: 1px solid var(--green);
+      color: var(--green);
+    }
+    .follow-none { font-size: 0.72rem; color: var(--text-ghost); font-family: monospace; }
+
+    /* ── Right column ── */
+    .right-col {
+      display: flex; flex-direction: column; gap: 10px; overflow: hidden;
+    }
+
+    /* Heap panel */
+    .heap-panel { flex: 1; min-height: 0; }
+    .heap-body  { display: flex; flex-direction: column; gap: 5px; overflow-y: auto; flex: 1; }
+    .heap-item {
+      display: flex; align-items: center; gap: 8px;
+      padding: 6px 10px; border-radius: var(--radius-sm);
+      background: var(--bg); border: 2px solid var(--border-soft);
+      font-size: 0.8rem; font-family: monospace;
+      transition: border-color 0.2s, background 0.2s;
+    }
+    .hi-top { border-color: var(--orange); background: rgba(255,158,100,0.08); }
+    .hi-u1  { border-color: rgba(122,162,247,0.45); }
+    .hi-u2  { border-color: rgba(158,206,106,0.45); }
+    .hi-rank { font-size: 0.6rem; color: var(--text-ghost); min-width: 16px; }
+    .hi-id   { font-size: 0.95rem; font-weight: 800; color: var(--text-bright); min-width: 22px; }
+    .hi-user {
+      font-size: 0.67rem; font-weight: 700; padding: 1px 7px; border-radius: 9px;
+    }
+    .hu-u1 { background: rgba(122,162,247,0.12); color: var(--accent); }
+    .hu-u2 { background: rgba(158,206,106,0.12); color: var(--green); }
+    .hi-ptr { font-size: 0.65rem; color: var(--text-dim); margin-left: auto; }
+    .heap-popped {
+      font-size: 0.72rem; font-family: monospace; color: var(--orange);
+      padding: 4px 8px; border-radius: 5px;
+      background: rgba(255,158,100,0.06); border: 1px dashed rgba(255,158,100,0.3);
+      flex-shrink: 0;
+    }
+    .heap-empty {
+      font-size: 0.78rem; color: var(--text-ghost); font-family: monospace;
+      padding: 10px 0; text-align: center;
+    }
+
+    /* Feed panel */
+    .feed-panel { flex-shrink: 0; }
+    .feed-body  { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; min-height: 44px; }
+    .feed-chip {
+      width: 38px; height: 38px; border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.88rem; font-weight: 800; font-family: monospace;
+      border: 2px solid var(--border-soft); background: #0f0f0f;
+      color: var(--text-ghost);
+      transition: border-color 0.2s, background 0.2s, color 0.2s;
+      position: relative;
+    }
+    .feed-chip.fc-filled {
+      background: rgba(122,162,247,0.1); border-color: var(--accent);
+      color: var(--accent);
+    }
+    .feed-chip.fc-new {
+      background: rgba(255,158,100,0.15); border-color: var(--orange);
+      color: var(--orange);
+    }
+    .feed-chip-idx {
+      position: absolute; bottom: 2px; right: 3px;
+      font-size: 0.52rem; color: var(--text-ghost); font-family: monospace;
+    }
+    .feed-empty {
+      font-size: 0.78rem; color: var(--text-ghost); font-family: monospace;
+    }
+
+    /* ── Nav bar ── */
+    .nav-bar {
+      flex-shrink: 0;
+      display: flex; align-items: center; gap: 10px;
+      padding: 8px 14px;
+      background: var(--surface); border-top: 1px solid var(--border);
+    }
+    .nav-btn {
+      padding: 4px 14px;
+      background: var(--surface-dark); border: 1px solid var(--border);
+      color: var(--text); border-radius: var(--radius-sm);
+      font-size: 0.82rem; cursor: pointer; white-space: nowrap;
+    }
+    .nav-btn:disabled { opacity: 0.35; cursor: default; }
+    .nav-btn:not(:disabled):hover { border-color: var(--accent); color: var(--accent); }
+    select.speed-sel {
+      background: var(--surface-dark); border: 1px solid var(--border);
+      color: var(--text-dim); border-radius: var(--radius-sm);
+      padding: 4px 6px; font-size: 0.78rem;
+    }
+    .step-desc {
+      flex: 1; font-size: 0.8rem; color: var(--text-muted);
+      text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .step-info {
+      font-size: 0.78rem; color: var(--text-dim); font-family: monospace;
+      white-space: nowrap;
+    }
+    .op-badge {
+      font-size: 0.7rem; font-weight: 700; font-family: monospace;
+      padding: 2px 10px; border-radius: 12px; white-space: nowrap; flex-shrink: 0;
+    }
+    .op-init     { background: rgba(86,95,137,0.2); border: 1px solid var(--text-dim); color: var(--text-dim); }
+    .op-post     { background: rgba(122,162,247,0.15); border: 1px solid var(--accent); color: var(--accent); }
+    .op-follow   { background: rgba(158,206,106,0.15); border: 1px solid var(--green); color: var(--green); }
+    .op-unfollow { background: rgba(247,118,142,0.15); border: 1px solid var(--red); color: var(--red); }
+    .op-feed     { background: rgba(224,175,104,0.15); border: 1px solid var(--yellow); color: var(--yellow); }
+    .op-heap     { background: rgba(255,158,100,0.12); border: 1px dashed var(--orange); color: var(--orange); }
+  </style>
+</head>
+<body>
+
+<div class="main-area">
+
+  <!-- Users panel -->
+  <div class="panel">
+    <div class="panel-title">User Tweet Lists</div>
+    <div class="user-section" id="userSection"></div>
+  </div>
+
+  <!-- Follow panel -->
+  <div class="panel">
+    <div class="panel-title">Follow Map</div>
+    <div class="follow-list" id="followList"></div>
+  </div>
+
+  <!-- Right column -->
+  <div class="right-col">
+
+    <!-- Heap panel -->
+    <div class="panel heap-panel">
+      <div class="panel-title">Max-Heap (tweet id as timestamp key)</div>
+      <div class="heap-popped" id="heapPopped" style="display:none"></div>
+      <div class="heap-body" id="heapBody"></div>
+    </div>
+
+    <!-- Feed panel -->
+    <div class="panel feed-panel">
+      <div class="panel-title">News Feed — top 10, newest first</div>
+      <div class="feed-body" id="feedBody"></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Nav bar -->
+<div class="nav-bar">
+  <button class="nav-btn" id="btnPrev">&#8592; Prev</button>
+  <button class="nav-btn" id="btnPlay">Play</button>
+  <button class="nav-btn" id="btnNext">Next &#8594;</button>
+  <select class="speed-sel" id="speedSel">
+    <option value="1400">0.8×</option>
+    <option value="900" selected>1×</option>
+    <option value="450">2×</option>
+    <option value="220">4×</option>
+  </select>
+  <div class="step-desc" id="stepDesc">—</div>
+  <div class="step-info" id="stepInfo">—</div>
+  <span class="op-badge op-init" id="opBadge">init</span>
+</div>
+
+<script>
+// ── Simulation ───────────────────────────────────────────────────────────────
+
+function buildSteps() {
+  var steps = [];
+  // tweets[uid] = array of tweetIds sorted desc (highest = newest key)
+  var tweets = { 1: [], 2: [] };
+  // fmap[uid] = sorted array of followee uids
+  var fmap = { 1: [], 2: [] };
+
+  function addTweet(uid, tid) {
+    var arr = tweets[uid];
+    // insert maintaining desc order
+    var placed = false;
+    for (var i = 0; i < arr.length; i++) {
+      if (arr[i] < tid) { arr.splice(i, 0, tid); placed = true; break; }
+    }
+    if (!placed) arr.push(tid);
+  }
+
+  function addFollow(from, to) {
+    if (fmap[from].indexOf(to) < 0) fmap[from].push(to);
+  }
+  function removeFollow(from, to) {
+    var idx = fmap[from].indexOf(to);
+    if (idx >= 0) fmap[from].splice(idx, 1);
+  }
+
+  function cloneTweets() { return { 1: tweets[1].slice(), 2: tweets[2].slice() }; }
+  function cloneFmap()   { return { 1: fmap[1].slice(), 2: fmap[2].slice() }; }
+
+  function snap(desc, op, extra) {
+    return Object.assign({
+      tweets: cloneTweets(),
+      fmap: cloneFmap(),
+      heap: [],
+      feed: [],
+      poppedId: null,
+      poppedUser: null,
+      activeUsers: [],
+      highlightUser: null,
+      highlightFollow: null,
+      feedPhase: null,
+      desc: desc,
+      op: op,
+    }, extra || {});
+  }
+
+  // ── Step 0: init
+  steps.push(snap('Initial state — empty tweet lists, no follows, no feed.', 'init'));
+
+  // ── postTweet(1, 5)
+  addTweet(1, 5);
+  steps.push(snap('postTweet(1, 5) — Tweet #5 stored in User 1\'s list (tweetId = sort key).', 'post',
+    { highlightUser: 1 }));
+
+  // ── postTweet(1, 3)
+  addTweet(1, 3);
+  steps.push(snap('postTweet(1, 3) — Tweet #3 added. List sorted desc: [5, 3]. Tweet #5 ranks higher by id.', 'post',
+    { highlightUser: 1 }));
+
+  // ── follow(1, 2)
+  addFollow(1, 2);
+  steps.push(snap('follow(1, 2) — User 1\'s followee set gains User 2.', 'follow',
+    { highlightUser: 1, highlightFollow: { from: 1, to: 2 } }));
+
+  // ── postTweet(2, 6)
+  addTweet(2, 6);
+  steps.push(snap('postTweet(2, 6) — Tweet #6 stored for User 2. Largest tweetId so far.', 'post',
+    { highlightUser: 2 }));
+
+  // ── getNewsFeed(1) — heap merge
+  var sources = [1, 2];
+  var heap = [];   // [{tweetId, userId, ptr}] sorted desc by tweetId
+  var feed = [];
+
+  function hpush(item) {
+    heap.push(item);
+    heap.sort(function(a, b) { return b.tweetId - a.tweetId; });
+  }
+  function hpop() { return heap.shift(); }
+
+  // Seed heap: head of each source
+  sources.forEach(function(uid) {
+    if (tweets[uid].length > 0) {
+      hpush({ tweetId: tweets[uid][0], userId: uid, ptr: 0 });
+    }
+  });
+
+  steps.push(snap(
+    'getNewsFeed(1) — Sources: User 1 (self) + User 2 (followee). ' +
+    'Seed heap with each user\'s head tweet. Max-heap by tweetId.',
+    'feed',
+    { heap: heap.slice(), feed: feed.slice(), activeUsers: sources.slice(), feedPhase: 'init' }
+  ));
+
+  // Pop loop
+  while (heap.length > 0 && feed.length < 10) {
+    var item = hpop();
+    feed.push(item.tweetId);
+    var nextPtr = item.ptr + 1;
+    var nextItem = null;
+    if (nextPtr < tweets[item.userId].length) {
+      nextItem = { tweetId: tweets[item.userId][nextPtr], userId: item.userId, ptr: nextPtr };
+      hpush(nextItem);
+    }
+    steps.push(snap(
+      'Pop max: tweet #' + item.tweetId + ' (User ' + item.userId + ') → feed[' + (feed.length - 1) + ']. ' +
+      (nextItem
+        ? 'Push next from User ' + item.userId + ': #' + nextItem.tweetId + '.'
+        : 'User ' + item.userId + ' has no more tweets.'),
+      'heap-pop',
+      {
+        heap: heap.slice(),
+        feed: feed.slice(),
+        poppedId: item.tweetId,
+        poppedUser: item.userId,
+        activeUsers: sources.slice(),
+        feedPhase: 'pop',
+      }
+    ));
+  }
+
+  steps.push(snap(
+    'getNewsFeed(1) done. Feed = [' + feed.join(', ') + '].  Heap empty, top-10 satisfied.',
+    'feed',
+    { heap: [], feed: feed.slice(), activeUsers: [], feedPhase: 'done' }
+  ));
+
+  // ── unfollow(1, 2)
+  removeFollow(1, 2);
+  heap = []; feed = [];
+  steps.push(snap('unfollow(1, 2) — User 2 removed from User 1\'s followee set.', 'unfollow',
+    { highlightUser: 1, highlightFollow: { from: 1, to: 2 } }));
+
+  // ── getNewsFeed(1) — second time, only user 1
+  sources = [1];
+  heap = []; feed = [];
+
+  sources.forEach(function(uid) {
+    if (tweets[uid].length > 0) {
+      hpush({ tweetId: tweets[uid][0], userId: uid, ptr: 0 });
+    }
+  });
+
+  steps.push(snap(
+    'getNewsFeed(1) again — Only User 1 (no followees). Heap seeded with User 1\'s head.',
+    'feed',
+    { heap: heap.slice(), feed: feed.slice(), activeUsers: sources.slice(), feedPhase: 'init' }
+  ));
+
+  while (heap.length > 0 && feed.length < 10) {
+    var item2 = hpop();
+    feed.push(item2.tweetId);
+    var nextPtr2 = item2.ptr + 1;
+    var nextItem2 = null;
+    if (nextPtr2 < tweets[item2.userId].length) {
+      nextItem2 = { tweetId: tweets[item2.userId][nextPtr2], userId: item2.userId, ptr: nextPtr2 };
+      hpush(nextItem2);
+    }
+    steps.push(snap(
+      'Pop max: tweet #' + item2.tweetId + ' (User ' + item2.userId + ') → feed[' + (feed.length - 1) + ']. ' +
+      (nextItem2
+        ? 'Push next: #' + nextItem2.tweetId + '.'
+        : 'No more tweets from User ' + item2.userId + '.'),
+      'heap-pop',
+      {
+        heap: heap.slice(),
+        feed: feed.slice(),
+        poppedId: item2.tweetId,
+        poppedUser: item2.userId,
+        activeUsers: sources.slice(),
+        feedPhase: 'pop',
+      }
+    ));
+  }
+
+  steps.push(snap(
+    'getNewsFeed(1) done. Feed = [' + feed.join(', ') + ']. Only User 1\'s tweets remain.',
+    'feed',
+    { heap: [], feed: feed.slice(), activeUsers: [], feedPhase: 'done' }
+  ));
+
+  return steps;
+}
+
+// ── Render ───────────────────────────────────────────────────────────────────
+
+var userSection = document.getElementById('userSection');
+var followList  = document.getElementById('followList');
+var heapPopped  = document.getElementById('heapPopped');
+var heapBody    = document.getElementById('heapBody');
+var feedBody    = document.getElementById('feedBody');
+var stepDesc    = document.getElementById('stepDesc');
+var stepInfo    = document.getElementById('stepInfo');
+var opBadge     = document.getElementById('opBadge');
+
+function renderUsers(snap) {
+  // Build ptr lookup from heap: userId → ptr (which tweet idx is in heap)
+  var ptrMap = {};
+  snap.heap.forEach(function(h) { ptrMap[h.userId] = h.ptr; });
+  // Popped user/id
+  var poppedUid = snap.poppedUser;
+  var poppedTid = snap.poppedId;
+
+  userSection.innerHTML = '';
+  [1, 2].forEach(function(uid) {
+    var isHl  = snap.highlightUser === uid || (snap.activeUsers.indexOf(uid) >= 0);
+    var hlCls = isHl ? (uid === 1 ? ' hl-u1' : ' hl-u2') : '';
+    var avCls = uid === 1 ? 'av-u1' : 'av-u2';
+
+    var html = '<div class="user-box' + hlCls + '">' +
+      '<div class="user-header">' +
+        '<div class="user-avatar ' + avCls + '">U' + uid + '</div>' +
+        '<span class="user-name">User ' + uid + '</span>' +
+      '</div>';
+
+    var tList = snap.tweets[uid];
+    if (tList.length === 0) {
+      html += '<div class="tweet-empty">— no tweets —</div>';
+    } else {
+      html += '<div class="tweet-list">';
+      tList.forEach(function(tid, i) {
+        var inHeap  = (ptrMap[uid] === i);
+        var isPopped = (poppedUid === uid && poppedTid === tid);
+        var isPast  = (typeof ptrMap[uid] === 'number' && i < ptrMap[uid]);
+        var cls = 'tweet-chip';
+        if (isPopped)   cls += ' tc-popped';
+        else if (inHeap) cls += ' tc-in-heap';
+        else if (isPast) cls += ' tc-done';
+
+        var ptrIcon = inHeap ? '▶' : (isPast ? '·' : '');
+        var tag = '';
+        if (isPopped) tag = '<span class="tc-tag tag-pop">popped</span>';
+        else if (inHeap) tag = '<span class="tc-tag tag-heap">in heap</span>';
+
+        html += '<div class="' + cls + '">' +
+          '<span class="tc-ptr">' + ptrIcon + '</span>' +
+          '<span class="tc-id">#' + tid + '</span>' +
+          tag +
+        '</div>';
+      });
+      html += '</div>';
+    }
+    html += '</div>';
+    userSection.insertAdjacentHTML('beforeend', html);
+  });
+}
+
+function renderFollowMap(snap) {
+  var hlFollow   = snap.highlightFollow;
+  var hlUnfollow = snap.op === 'unfollow';
+
+  followList.innerHTML = '';
+  [1, 2].forEach(function(uid) {
+    var followees = snap.fmap[uid];
+    var isHlEntry = hlFollow && hlFollow.from === uid;
+    var hlCls = '';
+    if (isHlEntry) hlCls = hlUnfollow ? ' hl-unfollow' : ' hl-follow';
+
+    var chipsHtml = '';
+    if (followees.length === 0) {
+      chipsHtml = '<span class="follow-none">— no followees —</span>';
+    } else {
+      chipsHtml = '<div class="follow-chips">';
+      followees.forEach(function(fid) {
+        chipsHtml += '<span class="followee-chip">U' + fid + '</span>';
+      });
+      chipsHtml += '</div>';
+    }
+
+    followList.insertAdjacentHTML('beforeend',
+      '<div class="follow-entry' + hlCls + '">' +
+        '<div class="follow-label">User ' + uid + ' follows</div>' +
+        chipsHtml +
+      '</div>'
+    );
+  });
+}
+
+function renderHeap(snap) {
+  // Popped label
+  if (snap.poppedId !== null) {
+    heapPopped.style.display = '';
+    var puCls = snap.poppedUser === 1 ? 'hu-u1' : 'hu-u2';
+    heapPopped.innerHTML = '&#8593; Popped: <strong>#' + snap.poppedId + '</strong>' +
+      '&nbsp;<span class="hi-user ' + puCls + '">U' + snap.poppedUser + '</span>' +
+      ' &rarr; feed';
+  } else {
+    heapPopped.style.display = 'none';
+  }
+
+  heapBody.innerHTML = '';
+  if (snap.heap.length === 0 && snap.feedPhase !== null) {
+    heapBody.innerHTML = '<div class="heap-empty">— heap empty —</div>';
+    return;
+  }
+  if (snap.heap.length === 0) {
+    heapBody.innerHTML = '<div class="heap-empty">heap not active</div>';
+    return;
+  }
+
+  snap.heap.forEach(function(item, i) {
+    var isTop  = i === 0;
+    var uCls   = item.userId === 1 ? 'hi-u1' : 'hi-u2';
+    var uBadge = item.userId === 1 ? 'hu-u1' : 'hu-u2';
+    var cls = 'heap-item ' + (isTop ? 'hi-top' : uCls);
+
+    heapBody.insertAdjacentHTML('beforeend',
+      '<div class="' + cls + '">' +
+        '<span class="hi-rank">' + (isTop ? '▶' : '#' + (i + 1)) + '</span>' +
+        '<span class="hi-id">' + item.tweetId + '</span>' +
+        '<span class="hi-user ' + uBadge + '">U' + item.userId + '</span>' +
+        '<span class="hi-ptr">ptr=' + item.ptr + '</span>' +
+      '</div>'
+    );
+  });
+}
+
+function renderFeed(snap) {
+  feedBody.innerHTML = '';
+  if (snap.feed.length === 0 && snap.feedPhase === null) {
+    feedBody.innerHTML = '<span class="feed-empty">no active feed</span>';
+    return;
+  }
+  if (snap.feed.length === 0 && snap.feedPhase !== null) {
+    feedBody.innerHTML = '<span class="feed-empty">— building feed —</span>';
+    return;
+  }
+
+  snap.feed.forEach(function(tid, i) {
+    var isNew = (snap.poppedId === tid && i === snap.feed.length - 1 && snap.feedPhase === 'pop');
+    var cls = 'feed-chip ' + (isNew ? 'fc-new' : 'fc-filled');
+    feedBody.insertAdjacentHTML('beforeend',
+      '<div class="' + cls + '">' +
+        tid +
+        '<span class="feed-chip-idx">' + i + '</span>' +
+      '</div>'
+    );
+  });
+}
+
+var OP_MAP = {
+  'init':      ['init',         'op-init'],
+  'post':      ['postTweet',    'op-post'],
+  'follow':    ['follow',       'op-follow'],
+  'unfollow':  ['unfollow',     'op-unfollow'],
+  'feed':      ['getNewsFeed',  'op-feed'],
+  'heap-pop':  ['heap pop',     'op-heap'],
+};
+
+function render(snap, cursor, total) {
+  renderUsers(snap);
+  renderFollowMap(snap);
+  renderHeap(snap);
+  renderFeed(snap);
+
+  stepDesc.textContent = snap.desc;
+  stepInfo.textContent = 'Step ' + (cursor + 1) + ' / ' + total;
+
+  var info = OP_MAP[snap.op] || ['—', 'op-init'];
+  opBadge.className = 'op-badge ' + info[1];
+  opBadge.textContent = info[0];
+}
+
+// ── Boot ─────────────────────────────────────────────────────────────────────
+
+var nav = VizNav({
+  btnPrev:  document.getElementById('btnPrev'),
+  btnNext:  document.getElementById('btnNext'),
+  btnPlay:  document.getElementById('btnPlay'),
+  speedSel: document.getElementById('speedSel'),
+  render:   render,
+});
+
+nav.load(buildSteps());
+</script>
+</body>
+</html>
