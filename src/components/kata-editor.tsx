@@ -303,6 +303,8 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
   const vimModeRef = useRef<VimAdapterInstance | null>(null);
   const statusBarRef = useRef<HTMLDivElement | null>(null);
+  const iframeRef = useRef<HTMLIFrameElement | null>(null);
+  const [vizSpeed, setVizSpeed] = useState<"900" | "500" | "200">("500");
   const [results, setResults] = useState<TestResult[] | null>(null);
   const [ranAt, setRanAt] = useState<string>("");
   const [running, setRunning] = useState(false);
@@ -459,6 +461,30 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
 
   const hasTabs = true;
 
+  const sendVizMsg = useCallback((msg: unknown) => {
+    iframeRef.current?.contentWindow?.postMessage(msg, "*");
+  }, []);
+
+  const handleIframeLoad = useCallback(() => {
+    try {
+      (iframeRef.current?.contentWindow as Window & { eval: (s: string) => void } | null)?.eval(`
+        if (!window.__vizBridge) {
+          window.__vizBridge = true;
+          window.addEventListener('message', function(e) {
+            var d = e.data;
+            if (d === 'play') document.getElementById('playBtn')?.click();
+            else if (d === 'step') document.getElementById('stepBtn')?.click();
+            else if (d === 'reset') document.getElementById('resetBtn')?.click();
+            else if (d && d.type === 'speed') {
+              var sel = document.getElementById('speedSel');
+              if (sel) { sel.value = d.value; }
+            }
+          });
+        }
+      `);
+    } catch (_) { /* cross-origin guard, no-op */ }
+  }, []);
+
   const tabClass = (tab: typeof showPanel) =>
     `px-3 py-1.5 text-xs font-medium border-b-2 transition-colors ${
       showPanel === tab
@@ -511,7 +537,28 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
       {/* Spacer */}
       <div className="flex-1" />
 
-      {/* Controls */}
+      {/* Viz controls (viz tab only) */}
+      {showPanel === "viz" && (
+        <div className="flex items-center gap-1 px-2">
+          <button onClick={() => sendVizMsg('step')} className="btn btn-ghost btn-xs text-base-content/50 hover:text-base-content/80 px-2">Step →</button>
+          <button onClick={() => sendVizMsg('play')} className="btn btn-ghost btn-xs text-base-content/50 hover:text-base-content/80 px-2">▷ Play</button>
+          <button onClick={() => sendVizMsg('reset')} className="btn btn-ghost btn-xs text-base-content/50 hover:text-base-content/80 px-2">↺ Reset</button>
+          <div className="flex items-center gap-0.5 ml-1">
+            {(["900", "500", "200"] as const).map((s, i) => (
+              <button
+                key={s}
+                onClick={() => { setVizSpeed(s); sendVizMsg({ type: 'speed', value: s }); }}
+                className={`btn btn-xs px-2 ${vizSpeed === s ? "btn-primary" : "btn-ghost text-base-content/35"}`}
+              >
+                {["Slow", "Norm", "Fast"][i]}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Editor controls (all other tabs) */}
+      {showPanel !== "viz" && (
       <div className="flex items-center gap-1.5 px-2">
         <span className={`text-xs ${saved ? "text-success/60" : "text-base-content/30"}`}>
           {saved ? "•" : "○"}
@@ -575,6 +622,7 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
           {running ? "..." : "▷ run"}
         </button>
       </div>
+      )}
     </div>
   );
 
@@ -588,9 +636,11 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
         {renderTabBar(false)}
         <div className="flex-1 min-h-0">
           <iframe
+            ref={iframeRef}
             src={`/algo-viz/${vizFolder}/index.html`}
             className="w-full h-full border-0"
             title={`${kata.name} visualization`}
+            onLoad={handleIframeLoad}
           />
         </div>
       </div>
