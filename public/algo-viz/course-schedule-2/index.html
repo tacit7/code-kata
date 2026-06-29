@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Course Schedule II</title>
+  <link rel="stylesheet" href="../shared/style.css" />
+  <script src="../shared/viz.js"></script>
+  <style>
+    .viz-area { width: 100%; max-width: 95%; }
+    .main-row { display: grid; grid-template-columns: 1fr 360px; gap: 20px; align-items: start; }
+    @media (max-width: 800px) { .main-row { grid-template-columns: 1fr; } }
+
+    .graph-panel {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 16px;
+      display: flex; flex-direction: column; gap: 10px;
+    }
+    .graph-svg-wrap {
+      width: 100%; aspect-ratio: 1.4;
+      background: var(--bg); border-radius: var(--radius-sm);
+      overflow: hidden; position: relative;
+    }
+    #graph-svg { width: 100%; height: 100%; }
+
+    .node-circle {
+      stroke-width: 2.5;
+      transition: fill 0.3s, stroke 0.3s;
+    }
+    .node-circle.state-unvisited { fill: #1a1b2e; stroke: #7aa2f7; }
+    .node-circle.state-visiting  { fill: #3d3524; stroke: #e0af68; }
+    .node-circle.state-visited   { fill: #1a2a1a; stroke: #9ece6a; }
+    .node-circle.state-cycle     { fill: #3d1515; stroke: #f7768e; }
+    .node-circle.state-active    { stroke-width: 3.5; }
+
+    .node-label {
+      fill: var(--text-bright); font-size: 13px; font-weight: 700;
+      font-family: monospace; text-anchor: middle; dominant-baseline: central;
+      pointer-events: none;
+    }
+
+    .edge-line {
+      stroke-width: 2; fill: none;
+      stroke: #3b4261; transition: stroke 0.3s;
+    }
+    .edge-line.active { stroke: #e0af68; }
+    .edge-line.cycle  { stroke: #f7768e; }
+    .edge-line.done   { stroke: #9ece6a; }
+
+    .right-col { display: flex; flex-direction: column; gap: 12px; }
+
+    .panel-box {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 14px 16px;
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .panel-title {
+      font-size: 0.72rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim);
+    }
+
+    .nav-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .btn-play {
+      background: #15803d; border: none; border-radius: var(--radius-sm);
+      color: #fff; cursor: pointer; font-size: 0.88rem; font-weight: 600;
+      padding: 9px 16px; transition: background 0.2s;
+    }
+    .btn-play:hover { background: #166534; }
+    .btn-play.playing { background: #c2410c; }
+    .btn-play.playing:hover { background: #9a3412; }
+    .btn-play:disabled { opacity: 0.4; cursor: not-allowed; }
+    .speed-select {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); color: var(--text);
+      font-size: 0.85rem; padding: 8px 10px; outline: none; width: 80px;
+    }
+
+    .result-badge {
+      font-size: 0.88rem; font-weight: 700;
+      padding: 5px 14px; border-radius: 6px;
+      display: none; width: fit-content;
+    }
+    .result-badge.valid   { background: #1a2a1a; color: #9ece6a; border: 1px solid #9ece6a; display: block; }
+    .result-badge.invalid { background: #3d1515; color: #f7768e; border: 1px solid #f7768e; display: block; }
+
+    .stack-list {
+      display: flex; gap: 6px; flex-wrap: wrap; min-height: 28px;
+    }
+    .stack-chip {
+      padding: 3px 10px; border-radius: 4px;
+      font-size: 0.8rem; font-family: monospace; font-weight: 700;
+      background: #3d3524; border: 1px solid #e0af68; color: #e0af68;
+    }
+
+    .order-list {
+      display: flex; gap: 6px; flex-wrap: wrap; min-height: 28px;
+      align-items: center;
+    }
+    .order-chip {
+      padding: 3px 10px; border-radius: 4px;
+      font-size: 0.8rem; font-family: monospace; font-weight: 700;
+      background: #1a2a1a; border: 1px solid #9ece6a; color: #9ece6a;
+    }
+    .order-arrow {
+      color: var(--text-ghost); font-size: 0.75rem;
+    }
+
+    .legend-row { display: flex; align-items: center; gap: 8px; font-size: 0.78rem; color: var(--text-muted); }
+    .legend-dot {
+      width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; border: 2px solid;
+    }
+
+    .code-panel {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); overflow: hidden;
+    }
+    .code-header {
+      padding: 8px 14px; font-size: 0.72rem; font-weight: 600;
+      color: var(--text-dim); border-bottom: 1px solid var(--border); background: var(--bg);
+    }
+    .code-body { padding: 10px 0; font-size: 0.78rem; line-height: 1.75; white-space: pre; }
+    .code-line { display: flex; align-items: center; padding: 0 14px; }
+    .code-line.hl { background: var(--border-soft); border-left: 2px solid var(--accent); }
+    .ln { min-width: 24px; color: var(--text-ghost); user-select: none; font-size: 0.7rem; }
+    .kw { color: var(--purple); }
+    .fn { color: var(--blue); }
+    .bi { color: var(--orange); }
+    .cm { color: var(--text-ghost); }
+    .nb { color: var(--green); }
+    .st { color: #ff9e64; }
+
+    .input-row { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
+    .input-field { display: flex; flex-direction: column; gap: 4px; }
+    .input-field label { font-size: 0.75rem; color: var(--text-dim); font-weight: 600; }
+    .input-field input {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); color: var(--text);
+      font-size: 0.85rem; padding: 7px 10px; outline: none; min-width: 60px;
+    }
+    .input-field input:focus { border-color: var(--accent); }
+    .input-field input.wide { min-width: 260px; }
+  </style>
+</head>
+<body class="page">
+
+<div class="page-header">
+  <a class="back-link" href="../index.html">&larr; All Algorithms</a>
+  <div class="page-title">Course Schedule II</div>
+  <div class="page-sub">LeetCode 210 &middot; DFS topological sort &middot; UNVISITED → VISITING → VISITED &middot; O(V+E)</div>
+</div>
+
+<div class="controls">
+  <div class="input-row">
+    <div class="input-field">
+      <label>Courses</label>
+      <input type="number" id="inp-courses" value="4" min="1" max="10" style="width:72px" />
+    </div>
+    <div class="input-field">
+      <label>Prerequisites (e.g. 1,0;2,0;3,1;3,2)</label>
+      <input type="text" id="inp-prereqs" value="1,0;2,0;3,1;3,2" class="wide" />
+    </div>
+    <button class="btn-primary" onclick="buildAndRun()">Build &amp; Run</button>
+  </div>
+</div>
+
+<div class="viz-area">
+  <div class="main-row">
+    <!-- Graph -->
+    <div class="graph-panel">
+      <div class="panel-title">Directed Graph — edge a→b means "a requires b"</div>
+      <div class="graph-svg-wrap">
+        <svg id="graph-svg" viewBox="0 0 560 400" preserveAspectRatio="xMidYMid meet">
+          <defs>
+            <marker id="arrow-default" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+              <path d="M0,0 L0,6 L8,3 z" fill="#3b4261"/>
+            </marker>
+            <marker id="arrow-active" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+              <path d="M0,0 L0,6 L8,3 z" fill="#e0af68"/>
+            </marker>
+            <marker id="arrow-cycle" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+              <path d="M0,0 L0,6 L8,3 z" fill="#f7768e"/>
+            </marker>
+            <marker id="arrow-done" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+              <path d="M0,0 L0,6 L8,3 z" fill="#9ece6a"/>
+            </marker>
+          </defs>
+          <g id="edges-g"></g>
+          <g id="nodes-g"></g>
+        </svg>
+      </div>
+    </div>
+
+    <!-- Right panel -->
+    <div class="right-col">
+
+      <div class="panel-box">
+        <div class="nav-row">
+          <button class="btn-step" id="btn-back" disabled>&larr;</button>
+          <button class="btn-step" id="btn-next" disabled>&rarr;</button>
+          <button class="btn-play" id="btn-play" disabled>&#9654; Play</button>
+          <select class="speed-select" id="speed-select">
+            <option value="800">Slow</option>
+            <option value="400" selected>Medium</option>
+            <option value="120">Fast</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="panel-box">
+        <div class="panel-title" id="phase-label">&mdash;</div>
+        <div style="font-size:0.82rem;color:var(--text-muted);margin-top:2px;min-height:36px" id="step-desc">Enter prerequisites and click Build &amp; Run.</div>
+        <div class="result-badge" id="result-badge"></div>
+      </div>
+
+      <div class="panel-box">
+        <div class="panel-title">DFS Path (VISITING nodes)</div>
+        <div class="stack-list" id="stack-list">
+          <span style="color:var(--text-ghost);font-size:0.78rem">empty</span>
+        </div>
+      </div>
+
+      <div class="panel-box">
+        <div class="panel-title">Post-Order Result (build order)</div>
+        <div class="order-list" id="order-list">
+          <span style="color:var(--text-ghost);font-size:0.78rem">none yet</span>
+        </div>
+      </div>
+
+      <div class="panel-box">
+        <div class="panel-title">Legend</div>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <div class="legend-row">
+            <div class="legend-dot" style="background:#1a1b2e;border-color:#7aa2f7"></div>
+            <span>UNVISITED — not yet reached</span>
+          </div>
+          <div class="legend-row">
+            <div class="legend-dot" style="background:#3d3524;border-color:#e0af68"></div>
+            <span>VISITING — in current DFS path</span>
+          </div>
+          <div class="legend-row">
+            <div class="legend-dot" style="background:#1a2a1a;border-color:#9ece6a"></div>
+            <span>VISITED — done, appended to result</span>
+          </div>
+          <div class="legend-row">
+            <div class="legend-dot" style="background:#3d1515;border-color:#f7768e"></div>
+            <span>CYCLE — back edge detected</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="code-panel">
+        <div class="code-header">Python</div>
+        <div class="code-body" id="code-body"></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+var CODE = [
+  [1,  '<span class="kw">def</span> <span class="fn">findOrder</span>(n, prereqs):'],
+  [2,  '    adj = <span class="bi">defaultdict</span>(<span class="bi">list</span>)'],
+  [3,  '    <span class="kw">for</span> a, b <span class="kw">in</span> prereqs: adj[a].append(b)'],
+  [4,  '    state = [<span class="st">UNVISITED</span>] * n  <span class="cm"># 0/1/2</span>'],
+  [5,  '    result = []'],
+  [6,  '    <span class="kw">def</span> <span class="fn">dfs</span>(node):'],
+  [7,  '        <span class="kw">if</span> state[node] == <span class="st">VISITING</span>:  <span class="cm"># cycle!</span>'],
+  [8,  '            <span class="kw">return</span> <span class="nb">False</span>'],
+  [9,  '        <span class="kw">if</span> state[node] == <span class="st">VISITED</span>:   <span class="cm"># done</span>'],
+  [10, '            <span class="kw">return</span> <span class="nb">True</span>'],
+  [11, '        state[node] = <span class="st">VISITING</span>'],
+  [12, '        <span class="kw">for</span> prereq <span class="kw">in</span> adj[node]:'],
+  [13, '            <span class="kw">if not</span> <span class="fn">dfs</span>(prereq):'],
+  [14, '                <span class="kw">return</span> <span class="nb">False</span>'],
+  [15, '        state[node] = <span class="st">VISITED</span>'],
+  [16, '        result.append(node)  <span class="cm"># post-order</span>'],
+  [17, '        <span class="kw">return</span> <span class="nb">True</span>'],
+  [18, '    <span class="kw">for</span> i <span class="kw">in</span> <span class="bi">range</span>(n):'],
+  [19, '        <span class="kw">if not</span> <span class="fn">dfs</span>(i): <span class="kw">return</span> []'],
+  [20, '    <span class="kw">return</span> result'],
+];
+
+var gNodes = [];
+var gEdges = [];
+var simSteps = [];
+var nav;
+var NODE_R = 24;
+
+// ---- Input parsing ----
+function parseInputs() {
+  var n = parseInt(document.getElementById('inp-courses').value, 10);
+  if (isNaN(n) || n < 1) n = 4;
+  var raw = document.getElementById('inp-prereqs').value.trim();
+  var edges = [];
+  if (raw) {
+    raw.split(';').forEach(function(pair) {
+      pair = pair.trim();
+      if (!pair) return;
+      var parts = pair.split(',');
+      if (parts.length === 2) {
+        var a = parseInt(parts[0].trim(), 10);
+        var b = parseInt(parts[1].trim(), 10);
+        if (!isNaN(a) && !isNaN(b) && a < n && b < n) {
+          edges.push([a, b]);
+        }
+      }
+    });
+  }
+  return { n: n, edges: edges };
+}
+
+// ---- Layout nodes in a circle (or two rows for many) ----
+function layoutNodes(n) {
+  var nodes = [];
+  var cx = 280, cy = 200, r = Math.min(160, 40 + n * 18);
+  for (var i = 0; i < n; i++) {
+    var angle = (2 * Math.PI * i / n) - Math.PI / 2;
+    nodes.push({ id: i, x: Math.round(cx + r * Math.cos(angle)), y: Math.round(cy + r * Math.sin(angle)), label: String(i) });
+  }
+  return nodes;
+}
+
+// ---- Edge key ----
+function edgeKey(u, v) { return u + '-' + v; }
+
+function getEdgeEndpoints(u, v) {
+  var nu = gNodes[u], nv = gNodes[v];
+  if (!nu || !nv) return null;
+  var dx = nv.x - nu.x, dy = nv.y - nu.y;
+  var dist = Math.sqrt(dx * dx + dy * dy);
+  if (dist < 1) return null;
+  var ux = dx / dist, uy = dy / dist;
+  return {
+    x1: nu.x + ux * NODE_R,
+    y1: nu.y + uy * NODE_R,
+    x2: nv.x - ux * (NODE_R + 6),
+    y2: nv.y - uy * (NODE_R + 6)
+  };
+}
+
+// ---- SVG rendering ----
+function renderGraph(snap) {
+  var edgesG = document.getElementById('edges-g');
+  var nodesG = document.getElementById('nodes-g');
+  edgesG.innerHTML = '';
+  nodesG.innerHTML = '';
+
+  var edgeStates = {};
+  if (snap) {
+    (snap.activeEdges || []).forEach(function(e) { edgeStates[edgeKey(e[0], e[1])] = 'active'; });
+    (snap.cycleEdges  || []).forEach(function(e) { edgeStates[edgeKey(e[0], e[1])] = 'cycle'; });
+    (snap.doneEdges   || []).forEach(function(e) { edgeStates[edgeKey(e[0], e[1])] = 'done'; });
+  }
+
+  var nodeStates = {};
+  gNodes.forEach(function(n) { nodeStates[n.id] = snap ? (snap.states[n.id] || 'unvisited') : 'unvisited'; });
+
+  // Edges
+  gEdges.forEach(function(e) {
+    var u = e[0], v = e[1];
+    var pts = getEdgeEndpoints(u, v);
+    if (!pts) return;
+    var key = edgeKey(u, v);
+    var state = edgeStates[key] || 'default';
+    var line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    line.setAttribute('x1', pts.x1); line.setAttribute('y1', pts.y1);
+    line.setAttribute('x2', pts.x2); line.setAttribute('y2', pts.y2);
+    line.setAttribute('class', 'edge-line' + (state !== 'default' ? ' ' + state : ''));
+    line.setAttribute('marker-end', 'url(#arrow-' + (state === 'default' ? 'default' : state) + ')');
+    edgesG.appendChild(line);
+  });
+
+  // Nodes
+  gNodes.forEach(function(n) {
+    var g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    var circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    circle.setAttribute('cx', n.x); circle.setAttribute('cy', n.y);
+    circle.setAttribute('r', NODE_R);
+    var st = nodeStates[n.id];
+    var cls = 'node-circle state-' + st;
+    if (snap && snap.currentNode === n.id) cls += ' state-active';
+    circle.setAttribute('class', cls);
+    var text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    text.setAttribute('x', n.x); text.setAttribute('y', n.y);
+    text.setAttribute('class', 'node-label');
+    text.textContent = n.label;
+    g.appendChild(circle); g.appendChild(text);
+    nodesG.appendChild(g);
+  });
+}
+
+// ---- Simulation ----
+function simulate(nodes, edges) {
+  var steps = [];
+  var n = nodes.length;
+
+  // adj[a] = list of prerequisites of a
+  var adj = {};
+  nodes.forEach(function(nd) { adj[nd.id] = []; });
+  edges.forEach(function(e) { adj[e[0]].push(e[1]); });
+
+  var UNVISITED = 'unvisited', VISITING = 'visiting', VISITED = 'visited', CYCLE = 'cycle';
+  var states = {};
+  nodes.forEach(function(nd) { states[nd.id] = UNVISITED; });
+
+  var stack = [];
+  var result = [];
+  var activeEdges = [];
+  var cycleEdges = [];
+  var doneEdges = [];
+  var foundCycle = false;
+
+  function snap(phase, desc, lines, currentNode) {
+    var stSnap = Object.assign({}, states);
+    steps.push({
+      phase: phase,
+      desc: desc,
+      lines: lines,
+      states: stSnap,
+      stack: stack.slice(),
+      result: result.slice(),
+      activeEdges: activeEdges.map(function(e) { return e.slice(); }),
+      cycleEdges: cycleEdges.map(function(e) { return e.slice(); }),
+      doneEdges: doneEdges.map(function(e) { return e.slice(); }),
+      foundCycle: foundCycle,
+      currentNode: currentNode !== undefined ? currentNode : -1,
+    });
+  }
+
+  snap('Init', 'All nodes UNVISITED. DFS will run from each unvisited node and build the post-order result.', [4, 5], -1);
+
+  function dfs(u) {
+    if (foundCycle) return;
+
+    if (states[u] === VISITING) {
+      // This shouldn't happen in our outer loop but guard anyway
+      foundCycle = true;
+      return;
+    }
+    if (states[u] === VISITED) return;
+
+    states[u] = VISITING;
+    stack.push(u);
+    snap('Enter', 'Enter node ' + u + ' → mark VISITING (in current DFS path).', [11], u);
+
+    var prereqs = adj[u];
+    for (var i = 0; i < prereqs.length; i++) {
+      if (foundCycle) break;
+      var v = prereqs[i];
+      activeEdges = [[u, v]];
+
+      if (states[v] === VISITING) {
+        // Back edge — cycle
+        cycleEdges.push([u, v]);
+        foundCycle = true;
+        var old = states[v];
+        states[v] = CYCLE;
+        states[u] = CYCLE;
+        snap('Cycle', 'Edge ' + u + '→' + v + ': node ' + v + ' is VISITING (on current path). Back edge — cycle detected! Return [].', [7, 8], u);
+        states[v] = old;
+        states[u] = VISITING;
+        activeEdges = [];
+        return;
+      }
+
+      if (states[v] === VISITED) {
+        doneEdges.push([u, v]);
+        snap('SkipVisited', 'Edge ' + u + '→' + v + ': node ' + v + ' already VISITED — skip, safe.', [9, 10], u);
+        activeEdges = [];
+      } else {
+        // UNVISITED — recurse
+        snap('Recurse', 'Edge ' + u + '→' + v + ': node ' + v + ' is UNVISITED — recurse DFS(' + v + ').', [12, 13], u);
+        activeEdges = [];
+        dfs(v);
+        if (foundCycle) return;
+        doneEdges.push([u, v]);
+      }
+    }
+
+    if (!foundCycle) {
+      states[u] = VISITED;
+      stack.pop();
+      result.push(u);
+      snap('Append', 'All prerequisites of node ' + u + ' done → mark VISITED, append ' + u + ' to result.', [15, 16], u);
+    }
+  }
+
+  for (var i = 0; i < nodes.length; i++) {
+    if (foundCycle) break;
+    var u = nodes[i].id;
+    if (states[u] === UNVISITED) {
+      snap('StartDFS', 'Node ' + u + ' is UNVISITED — start DFS(' + u + ').', [18, 19], u);
+      dfs(u);
+    }
+  }
+
+  if (foundCycle) {
+    snap('Done', 'Cycle detected — no valid ordering exists. Return [].', [19], -1);
+  } else {
+    snap('Done', 'All nodes processed. Result = [' + result.join(', ') + '] — a valid topological ordering.', [20], -1);
+  }
+
+  return steps;
+}
+
+// ---- Apply step ----
+function applyStep(snap) {
+  renderGraph(snap);
+  updateStack(snap.stack);
+  updateOrder(snap.result);
+  setCodeLines(snap.lines);
+
+  var badge = document.getElementById('result-badge');
+  badge.className = 'result-badge';
+  badge.textContent = '';
+  if (snap.phase === 'Done') {
+    if (snap.foundCycle) {
+      badge.className = 'result-badge invalid';
+      badge.textContent = 'Impossible — cycle detected → []';
+    } else {
+      badge.className = 'result-badge valid';
+      badge.textContent = 'Order: [' + snap.result.join(', ') + ']';
+    }
+  }
+}
+
+function updateStack(stack) {
+  var el = document.getElementById('stack-list');
+  if (!stack || stack.length === 0) {
+    el.innerHTML = '<span style="color:var(--text-ghost);font-size:0.78rem">empty</span>';
+    return;
+  }
+  el.innerHTML = stack.map(function(n) {
+    return '<div class="stack-chip">' + n + '</div>';
+  }).join('');
+}
+
+function updateOrder(result) {
+  var el = document.getElementById('order-list');
+  if (!result || result.length === 0) {
+    el.innerHTML = '<span style="color:var(--text-ghost);font-size:0.78rem">none yet</span>';
+    return;
+  }
+  el.innerHTML = result.map(function(n, i) {
+    return (i > 0 ? '<span class="order-arrow">→</span>' : '') + '<div class="order-chip">' + n + '</div>';
+  }).join('');
+}
+
+function setCodeLines(lines) {
+  CODE.forEach(function(e) {
+    var el = document.getElementById('cl-' + e[0]);
+    if (!el) return;
+    if (lines && lines.indexOf(e[0]) >= 0) el.classList.add('hl');
+    else el.classList.remove('hl');
+  });
+}
+
+function buildCodePanel() {
+  var body = document.getElementById('code-body');
+  body.innerHTML = CODE.map(function(e) {
+    return '<div class="code-line" id="cl-' + e[0] + '"><span class="ln">' + e[0] + '</span><span>' + e[1] + '</span></div>';
+  }).join('');
+}
+
+function buildAndRun() {
+  var parsed = parseInputs();
+  gNodes = layoutNodes(parsed.n);
+  gEdges = parsed.edges;
+  renderGraph(null);
+  simSteps = simulate(gNodes, gEdges);
+  nav.load(simSteps);
+}
+
+window.addEventListener('DOMContentLoaded', function() {
+  buildCodePanel();
+  nav = VizNav({
+    btnPrev: document.getElementById('btn-back'),
+    btnNext: document.getElementById('btn-next'),
+    btnPlay: document.getElementById('btn-play'),
+    speedSel: document.getElementById('speed-select'),
+    render: function(snap, cur, total) {
+      applyStep(snap);
+      var phaseEl = document.getElementById('phase-label');
+      var descEl  = document.getElementById('step-desc');
+      if (phaseEl) phaseEl.textContent = 'Step ' + (cur + 1) + ' / ' + total + '  ·  ' + snap.phase;
+      if (descEl)  descEl.textContent = snap.desc;
+    }
+  });
+  buildAndRun();
+});
+</script>
+
+<script>
+  if (window.self !== window.top) {
+    var bl = document.querySelector('.back-link');
+    if (bl) bl.style.display = 'none';
+  }
+</script>
+</body>
+</html>
