@@ -63,14 +63,21 @@ export function PracticePage() {
   const diffRank: Record<string, number> = { easy: 0, medium: 1, hard: 2 };
 
   const searchedKatas = useMemo(() => {
-    const q = search.toLowerCase();
-    const filtered = katas.filter(
-      (k) =>
+    const q = search.toLowerCase().trim();
+    // Detect level search: l1, lv1, lv.1, level1, level 1, etc.
+    const levelMatch = q.match(/^(?:l|lv\.?|level\s*)(\d+)$/);
+    const levelFilter = levelMatch ? parseInt(levelMatch[1], 10) : null;
+    const filtered = katas.filter((k) => {
+      if (levelFilter !== null) {
+        return (CATEGORY_LEVEL[k.category] ?? -1) === levelFilter;
+      }
+      return (
         k.name.toLowerCase().includes(q) ||
         k.category.toLowerCase().includes(q) ||
         (k.difficulty?.toLowerCase().includes(q) ?? false) ||
         k.tags.some((t) => t.toLowerCase().includes(q))
-    );
+      );
+    });
     // diffSort column header takes priority when active
     if (diffSort) {
       return [...filtered].sort((a, b) => {
