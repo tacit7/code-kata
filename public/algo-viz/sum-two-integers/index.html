@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sum of Two Integers</title>
+  <link rel="stylesheet" href="../shared/style.css" />
+  <script src="../shared/gsap.min.js"></script>
+  <script src="../shared/viz.js"></script>
+  <style>
+    .viz-area { width: 100%; max-width: 96%; }
+    .main-col  { display: flex; flex-direction: column; gap: 14px; }
+
+    /* register rows */
+    .reg-section {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 14px 16px;
+      display: flex; flex-direction: column; gap: 10px;
+    }
+    .reg-row-wrap { display: flex; flex-direction: column; gap: 4px; }
+    .reg-label {
+      font-size: 0.65rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.1em; color: var(--text-dim); display: flex; gap: 10px; align-items: center;
+    }
+    .reg-label-name { min-width: 52px; }
+    .reg-bits { display: flex; gap: 3px; align-items: center; }
+    .nibble-sep { width: 8px; flex-shrink: 0; }
+    .bit-cell {
+      width: 22px; height: 30px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      border: 1.5px solid var(--border-soft); border-radius: 3px;
+      background: #0f0f0f;
+      font-size: 0.8rem; font-weight: 700; font-family: monospace;
+      color: var(--text-ghost); transition: border-color 0.15s, background 0.15s, color 0.15s;
+    }
+    .bit-cell[data-val="1"] { color: var(--accent-pale); }
+
+    /* highlight states */
+    .bit-and  { border-color: #d97706; background: rgba(217,119,6,0.18); color: #fde68a !important; }
+    .bit-xor  { border-color: #16a34a; background: rgba(22,163,74,0.18);  color: #86efac !important; }
+    .bit-carry{ border-color: #7c3aed; background: rgba(124,58,237,0.18); color: #c4b5fd !important; }
+    .bit-active { border-color: var(--accent); background: var(--surface-dark); }
+
+    .reg-divider { height: 1px; background: var(--border); margin: 2px 0; }
+
+    /* bit indices */
+    .bit-indices { display: flex; gap: 3px; padding-left: 62px; }
+    .bit-idx { width: 22px; flex-shrink: 0; text-align: center; font-size: 0.48rem; color: var(--text-ghost); font-family: monospace; }
+    .nibble-idx-sep { width: 8px; flex-shrink: 0; }
+
+    /* legend */
+    .legend-row { display: flex; gap: 14px; flex-wrap: wrap; }
+    .legend-item { display: flex; align-items: center; gap: 5px; font-size: 0.68rem; color: var(--text-faint); }
+    .legend-dot { width: 11px; height: 11px; border-radius: 2px; border: 1.5px solid; }
+
+    /* bottom row: nav + vars + desc */
+    .bottom-row { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-start; }
+    .nav-box {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 12px 14px;
+      display: flex; gap: 8px; align-items: center; flex-shrink: 0;
+    }
+    .vars-box {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 12px 14px;
+      display: flex; gap: 10px; flex-shrink: 0;
+    }
+    .var-box {
+      display: flex; flex-direction: column; align-items: center; gap: 2px;
+      padding: 8px 12px; background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); min-width: 60px;
+    }
+    .var-box.accent-a  { border-color: #1d4ed8; }
+    .var-box.accent-b  { border-color: #854d0e; }
+    .var-box.accent-c  { border-color: #581c87; }
+    .var-label { font-size: 0.62rem; font-family: monospace; color: var(--text-faint); }
+    .var-val   { font-size: 1.3rem; font-weight: 700; color: var(--text-bright); font-family: monospace; }
+    .desc-box {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 12px 14px; flex: 1; min-width: 200px;
+    }
+    .desc-phase { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); margin-bottom: 4px; }
+    .desc-text  { font-size: 0.83rem; color: var(--text-muted); line-height: 1.45; }
+
+    /* code panel */
+    .code-panel {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); overflow: hidden;
+    }
+    .code-header {
+      padding: 7px 14px; font-size: 0.72rem; font-weight: 600;
+      color: var(--text-dim); border-bottom: 1px solid var(--border); background: var(--bg);
+    }
+    .code-body { padding: 8px 0; font-size: 0.78rem; line-height: 1.75; white-space: pre; }
+    .code-line { display: flex; align-items: center; padding: 0 14px; }
+    .code-line.hl { background: var(--border-soft); border-left: 2px solid var(--accent); }
+    .ln { min-width: 22px; color: var(--text-ghost); user-select: none; font-size: 0.68rem; }
+
+    /* preset chips */
+    .preset-row { display: flex; gap: 6px; flex-wrap: wrap; }
+    .preset-chip {
+      font-size: 0.72rem; font-family: monospace; background: var(--bg);
+      border: 1px solid var(--border); border-radius: 4px; padding: 3px 8px;
+      cursor: pointer; color: var(--text-dim);
+    }
+    .preset-chip:hover { border-color: var(--accent); color: var(--accent-pale); }
+
+    .kw { color: var(--purple); }
+    .fn { color: var(--blue); }
+    .op { color: var(--text); }
+    .nb { color: var(--green); }
+    .cm { color: var(--text-ghost); font-style: italic; }
+  </style>
+</head>
+<body class="page">
+
+<div class="page-header">
+  <a class="back-link" href="../index.html">&larr; All Algorithms</a>
+  <div class="page-title">Sum of Two Integers</div>
+  <div class="page-sub">LeetCode 371 &middot; Bit Manipulation &middot; O(1) time &middot; O(1) space</div>
+</div>
+
+<div class="controls">
+  <div class="field">
+    <label>a</label>
+    <input id="inp-a" type="number" value="1" style="width:80px" />
+  </div>
+  <div class="field">
+    <label>b</label>
+    <input id="inp-b" type="number" value="2" style="width:80px" />
+  </div>
+  <button class="btn-primary" onclick="loadAndRun()">Build</button>
+</div>
+
+<div class="controls" style="padding-top:0;gap:8px">
+  <span style="font-size:0.72rem;color:var(--text-ghost)">Presets:</span>
+  <div class="preset-row" id="preset-row"></div>
+</div>
+
+<div class="viz-area">
+  <div class="main-col">
+
+    <!-- registers -->
+    <div class="reg-section">
+      <div class="bit-indices" id="bit-indices"></div>
+
+      <div class="reg-row-wrap">
+        <div class="reg-label">
+          <span class="reg-label-name" style="color:#93c5fd">A</span>
+          <span id="reg-a-dec" style="color:var(--text-faint);font-size:0.72rem"></span>
+        </div>
+        <div class="reg-bits" id="reg-a"></div>
+      </div>
+
+      <div class="reg-divider"></div>
+
+      <div class="reg-row-wrap">
+        <div class="reg-label">
+          <span class="reg-label-name" style="color:#fde68a">B</span>
+          <span id="reg-b-dec" style="color:var(--text-faint);font-size:0.72rem"></span>
+        </div>
+        <div class="reg-bits" id="reg-b"></div>
+      </div>
+
+      <div class="reg-divider"></div>
+
+      <div class="reg-row-wrap">
+        <div class="reg-label">
+          <span class="reg-label-name" style="color:#c4b5fd">Carry</span>
+          <span id="reg-c-dec" style="color:var(--text-faint);font-size:0.72rem"></span>
+        </div>
+        <div class="reg-bits" id="reg-c"></div>
+      </div>
+
+      <div class="legend-row">
+        <div class="legend-item">
+          <div class="legend-dot" style="border-color:#d97706;background:rgba(217,119,6,0.18)"></div>
+          A&amp;B carry source
+        </div>
+        <div class="legend-item">
+          <div class="legend-dot" style="border-color:#16a34a;background:rgba(22,163,74,0.18)"></div>
+          A^B new sum
+        </div>
+        <div class="legend-item">
+          <div class="legend-dot" style="border-color:#7c3aed;background:rgba(124,58,237,0.18)"></div>
+          Carry shifted left
+        </div>
+      </div>
+    </div>
+
+    <!-- bottom row -->
+    <div class="bottom-row">
+      <div class="nav-box">
+        <button class="btn-step" id="btn-back" disabled>&larr;</button>
+        <button class="btn-step" id="btn-next" disabled>&rarr;</button>
+        <button class="btn-play" id="btn-play" disabled>&#9654; Play</button>
+        <select class="speed-select" id="speed-select">
+          <option value="900">Slow</option>
+          <option value="400" selected>Med</option>
+          <option value="120">Fast</option>
+        </select>
+      </div>
+
+      <div class="vars-box">
+        <div class="var-box accent-a">
+          <div class="var-label">a</div>
+          <div class="var-val" id="vv-a">&mdash;</div>
+        </div>
+        <div class="var-box accent-b">
+          <div class="var-label">b</div>
+          <div class="var-val" id="vv-b">&mdash;</div>
+        </div>
+        <div class="var-box accent-c">
+          <div class="var-label">carry</div>
+          <div class="var-val" id="vv-c">&mdash;</div>
+        </div>
+      </div>
+
+      <div class="desc-box">
+        <div class="desc-phase" id="step-phase">&mdash;</div>
+        <div class="desc-text" id="step-desc">Enter values and click Build.</div>
+      </div>
+    </div>
+
+    <!-- code -->
+    <div class="code-panel">
+      <div class="code-header">Python</div>
+      <div class="code-body" id="code-body"></div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+var N_BITS = 16;
+var simSteps = [], nav;
+
+var PRESETS = [
+  { label: 'a=1, b=2',   a: 1,  b: 2  },
+  { label: 'a=11, b=5',  a: 11, b: 5  },
+  { label: 'a=7, b=7',   a: 7,  b: 7  },
+  { label: 'a=0, b=5',   a: 0,  b: 5  },
+  { label: 'a=-1, b=1',  a: -1, b: 1  },
+];
+
+var CODE = [
+  [0, ''],
+  [1, '<span class="kw">def</span> <span class="fn">getSum</span><span class="op">(</span>a<span class="op">,</span> b<span class="op">):</span>'],
+  [2, '    <span class="kw">while</span> b <span class="op">!=</span> <span class="nb">0</span><span class="op">:</span>'],
+  [3, '        carry <span class="op">=</span> <span class="op">(</span>a <span class="op">&amp;</span> b<span class="op">)</span> <span class="op">&lt;&lt;</span> <span class="nb">1</span>'],
+  [4, '        a <span class="op">=</span> a <span class="op">^</span> b'],
+  [5, '        b <span class="op">=</span> carry'],
+  [0, ''],
+  [6, '    <span class="kw">return</span> a'],
+  [0, ''],
+];
+
+function toBits(n, len) {
+  var bits = [];
+  for (var i = len - 1; i >= 0; i--) bits.push((n >> i) & 1);
+  return bits;
+}
+
+function toSigned16(n) {
+  n = n & 0xFFFF;
+  if (n >= 0x8000) n -= 0x10000;
+  return n;
+}
+
+function mask16(n) { return n & 0xFFFF; }
+
+function decStr(n) {
+  return String(toSigned16(n));
+}
+
+window.addEventListener('DOMContentLoaded', function() {
+  buildPresets();
+  buildCodePanel();
+  buildBitIndices();
+  buildRegisterRows();
+
+  nav = VizNav({
+    btnPrev:  document.getElementById('btn-back'),
+    btnNext:  document.getElementById('btn-next'),
+    btnPlay:  document.getElementById('btn-play'),
+    speedSel: document.getElementById('speed-select'),
+    render: function(snap, cur, total) {
+      applyStep(snap, cur > 0);
+      document.getElementById('step-phase').textContent =
+        'Step ' + (cur + 1) + ' / ' + total + '  ·  ' + snap.phase;
+      document.getElementById('step-desc').textContent = snap.desc;
+    }
+  });
+
+  loadAndRun();
+});
+
+function buildPresets() {
+  var row = document.getElementById('preset-row');
+  PRESETS.forEach(function(p) {
+    var chip = document.createElement('span');
+    chip.className = 'preset-chip';
+    chip.textContent = p.label;
+    chip.addEventListener('click', function() {
+      document.getElementById('inp-a').value = p.a;
+      document.getElementById('inp-b').value = p.b;
+      loadAndRun();
+    });
+    row.appendChild(chip);
+  });
+}
+
+function buildCodePanel() {
+  var body = document.getElementById('code-body');
+  body.innerHTML = CODE.map(function(e) {
+    var ln = e[0], html = e[1];
+    var id = ln > 0 ? ' id="cl-' + ln + '"' : '';
+    return '<div class="code-line"' + id + '><span class="ln">' + (ln || '') + '</span><span>' + html + '</span></div>';
+  }).join('');
+}
+
+function buildBitIndices() {
+  var cont = document.getElementById('bit-indices');
+  cont.innerHTML = '';
+  for (var g = 0; g < N_BITS / 4; g++) {
+    if (g > 0) {
+      var sep = document.createElement('div');
+      sep.className = 'nibble-idx-sep';
+      cont.appendChild(sep);
+    }
+    for (var b = 0; b < 4; b++) {
+      var bitNum = N_BITS - 1 - (g * 4 + b);
+      var idx = document.createElement('div');
+      idx.className = 'bit-idx';
+      var show = (bitNum === N_BITS - 1) || (bitNum === 7) || (bitNum === 0);
+      idx.textContent = show ? String(bitNum) : '';
+      cont.appendChild(idx);
+    }
+  }
+}
+
+function buildRegisterRows() {
+  ['reg-a', 'reg-b', 'reg-c'].forEach(function(id) {
+    var cont = document.getElementById(id);
+    cont.innerHTML = '';
+    for (var g = 0; g < N_BITS / 4; g++) {
+      if (g > 0) {
+        var sep = document.createElement('div');
+        sep.className = 'nibble-sep';
+        cont.appendChild(sep);
+      }
+      for (var b = 0; b < 4; b++) {
+        var displayIdx = g * 4 + b;
+        var cell = document.createElement('div');
+        cell.className = 'bit-cell';
+        cell.id = id + '-bit-' + displayIdx;
+        cell.textContent = '0';
+        cell.dataset.val = '0';
+        cont.appendChild(cell);
+      }
+    }
+  });
+}
+
+function setRegBits(regId, n, highlights) {
+  var bits = toBits(mask16(n), N_BITS);
+  for (var i = 0; i < N_BITS; i++) {
+    var cell = document.getElementById(regId + '-bit-' + i);
+    if (!cell) continue;
+    cell.textContent = String(bits[i]);
+    cell.dataset.val = String(bits[i]);
+    cell.className = 'bit-cell';
+    if (highlights && highlights[i]) cell.classList.add(highlights[i]);
+  }
+}
+
+function loadAndRun() {
+  var a = parseInt(document.getElementById('inp-a').value, 10);
+  var b = parseInt(document.getElementById('inp-b').value, 10);
+  if (isNaN(a) || isNaN(b)) return;
+  simSteps = simulate(a, b);
+  nav.load(simSteps);
+}
+
+// ── Simulate ────────────────────────────────────────────────────────────────
+function simulate(a0, b0) {
+  var steps = [];
+  var a = mask16(a0), b = mask16(b0);
+
+  function push(phase, desc, line, aCur, bCur, cCur, hlA, hlB, hlC) {
+    steps.push({
+      phase: phase, desc: desc, line: line,
+      a: aCur, b: bCur, carry: cCur,
+      hlA: hlA || null, hlB: hlB || null, hlC: hlC || null
+    });
+  }
+
+  push('init',
+    'a = ' + toSigned16(a) + ', b = ' + toSigned16(b) + '. We\'ll XOR for sum bits, AND+shift for carry. Loop until b = 0.',
+    1, a, b, null, null, null, null);
+
+  var iter = 0;
+  var MAX_ITER = 40;
+
+  while (b !== 0 && iter < MAX_ITER) {
+    iter++;
+
+    // step: while b != 0
+    push('while b ≠ 0',
+      'b = ' + toSigned16(b) + ' ≠ 0 → enter loop (iteration ' + iter + ').',
+      2, a, b, 0, null, null, null);
+
+    // step: carry = (a & b) << 1 — show AND bits
+    var andResult = mask16(a & b);
+    var andBits = toBits(andResult, N_BITS);
+    var aBits   = toBits(a, N_BITS);
+    var bBits   = toBits(b, N_BITS);
+
+    var hlA_and = {}, hlB_and = {};
+    for (var i = 0; i < N_BITS; i++) {
+      if (andBits[i] === 1) { hlA_and[i] = 'bit-and'; hlB_and[i] = 'bit-and'; }
+    }
+
+    push('a & b',
+      'a & b = ' + toSigned16(andResult) + '. Highlighted bits are 1 in both a and b — these positions generate a carry.',
+      3, a, b, andResult, hlA_and, hlB_and, null);
+
+    // carry = andResult << 1
+    var carry = mask16(andResult << 1);
+    var carryBits = toBits(carry, N_BITS);
+    var hlC_carry = {};
+    for (var i = 0; i < N_BITS; i++) {
+      if (carryBits[i] === 1) hlC_carry[i] = 'bit-carry';
+    }
+
+    push('carry = (a & b) << 1',
+      'carry = ' + toSigned16(carry) + '. AND result shifted left by 1 — carry propagates to the next bit position.',
+      3, a, b, carry, hlA_and, hlB_and, hlC_carry);
+
+    // step: a = a ^ b — show XOR bits
+    var newA = mask16(a ^ b);
+    var newABits = toBits(newA, N_BITS);
+    var hlA_xor = {};
+    for (var i = 0; i < N_BITS; i++) {
+      if (newABits[i] !== aBits[i]) hlA_xor[i] = 'bit-xor';
+      else if (newABits[i] === 1) hlA_xor[i] = 'bit-active';
+    }
+
+    push('a = a ^ b',
+      'a = a ⊕ b = ' + toSigned16(newA) + '. XOR gives the sum without carry — green bits changed.',
+      4, newA, b, carry, hlA_xor, null, hlC_carry);
+
+    // step: b = carry
+    a = newA;
+    push('b = carry',
+      'b = carry = ' + toSigned16(carry) + '. The old carry becomes the new b. Next iteration adds the carry in.',
+      5, a, carry, 0, null, hlC_carry, null);
+
+    b = carry;
+  }
+
+  // b = 0: exit loop
+  push('b = 0 → done',
+    'b = 0 → exit loop. a = ' + toSigned16(a) + ' is the final sum.',
+    2, a, 0, 0, null, null, null);
+
+  push('return a',
+    'return a = ' + toSigned16(a) + '. Original: ' + a0 + ' + ' + b0 + ' = ' + (a0 + b0) + '.',
+    6, a, 0, 0, null, null, null);
+
+  return steps;
+}
+
+// ── Render ──────────────────────────────────────────────────────────────────
+function applyStep(s, animate) {
+  var aCur = s.a, bCur = s.b, cCur = s.carry;
+
+  setRegBits('reg-a', aCur, s.hlA);
+  setRegBits('reg-b', bCur, s.hlB);
+  if (cCur === null || cCur === undefined) {
+    setRegBits('reg-c', 0, null);
+  } else {
+    setRegBits('reg-c', cCur, s.hlC);
+  }
+
+  document.getElementById('reg-a-dec').textContent = '= ' + toSigned16(aCur);
+  document.getElementById('reg-b-dec').textContent = '= ' + toSigned16(bCur);
+  document.getElementById('reg-c-dec').textContent =
+    (cCur === null || cCur === undefined) ? '' : '= ' + toSigned16(cCur);
+
+  setVar('vv-a', toSigned16(aCur), animate);
+  setVar('vv-b', toSigned16(bCur), animate);
+  setVar('vv-c', (cCur === null || cCur === undefined) ? '—' : toSigned16(cCur), animate);
+
+  setCodeLine(s.line);
+
+  if (!animate) return;
+
+  if (s.phase === 'a & b') {
+    var andCells = [];
+    for (var i = 0; i < N_BITS; i++) {
+      if (s.hlA && s.hlA[i] === 'bit-and') {
+        var ca = document.getElementById('reg-a-bit-' + i);
+        var cb = document.getElementById('reg-b-bit-' + i);
+        if (ca) andCells.push(ca);
+        if (cb) andCells.push(cb);
+      }
+    }
+    if (andCells.length)
+      gsap.fromTo(andCells, { scale: 1 }, { scale: 1.25, duration: 0.15, yoyo: true, repeat: 1, ease: 'power2.out', stagger: 0.02 });
+  }
+
+  if (s.phase === 'carry = (a & b) << 1') {
+    var cc = [];
+    for (var i = 0; i < N_BITS; i++) {
+      if (s.hlC && s.hlC[i] === 'bit-carry') {
+        var el = document.getElementById('reg-c-bit-' + i);
+        if (el) cc.push(el);
+      }
+    }
+    if (cc.length)
+      gsap.fromTo(cc, { opacity: 0, y: -6 }, { opacity: 1, y: 0, duration: 0.22, stagger: 0.015, ease: 'power2.out' });
+  }
+
+  if (s.phase === 'a = a ^ b') {
+    var xc = [];
+    for (var i = 0; i < N_BITS; i++) {
+      if (s.hlA && s.hlA[i] === 'bit-xor') {
+        var el = document.getElementById('reg-a-bit-' + i);
+        if (el) xc.push(el);
+      }
+    }
+    if (xc.length)
+      gsap.fromTo(xc, { scale: 0.8, opacity: 0.3 }, { scale: 1, opacity: 1, duration: 0.25, stagger: 0.015, ease: 'back.out(2)' });
+  }
+
+  if (s.phase === 'return a') {
+    var aEl = document.getElementById('vv-a');
+    if (aEl) gsap.fromTo(aEl, { scale: 1.5, color: '#4ade80' }, { scale: 1, color: '#ffffff', duration: 0.55, ease: 'elastic.out(1,0.5)' });
+  }
+}
+
+function setVar(id, val, animate) {
+  var el = document.getElementById(id);
+  if (!el) return;
+  var text = (val === null || val === undefined) ? '—' : String(val);
+  if (animate && el.textContent !== text)
+    gsap.fromTo(el, { scale: 0.8, opacity: 0.4 }, { scale: 1, opacity: 1, duration: 0.2, ease: 'back.out(1.7)' });
+  el.textContent = text;
+}
+
+function setCodeLine(line) {
+  CODE.forEach(function(e) {
+    var ln = e[0]; if (!ln) return;
+    var el = document.getElementById('cl-' + ln);
+    if (!el) return;
+    if (ln === line) el.classList.add('hl');
+    else el.classList.remove('hl');
+  });
+}
+</script>
+
+<script>
+  if (window.self !== window.top) {
+    var bl = document.querySelector('.back-link');
+    if (bl) bl.style.display = 'none';
+  }
+</script>
+</body>
+</html>
