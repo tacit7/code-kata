@@ -95,7 +95,39 @@ type VizKataName =
   | "Redundant Connection"
   | "Best Time to Buy and Sell Stock With Cooldown"
   | "Target Sum"
-  | "Meeting Rooms II";
+  | "Meeting Rooms II"
+  | "Word Search"
+  | "Binary Tree Maximum Path Sum"
+  | "Serialize and Deserialize Binary Tree"
+  | "Construct Binary Tree from Preorder and Inorder Traversal"
+  | "Add and Search Word"
+  | "Word Search II"
+  | "Valid Parenthesis String"
+  | "Reconstruct Itinerary"
+  | "Interleaving String"
+  | "Min Cost to Connect All Points"
+  | "Swim In Rising Water"
+  | "Alien Dictionary"
+  | "Cheapest Flights Within K Stops"
+  | "Kth Largest Element In a Stream"
+  | "Minimum Interval to Include Each Query"
+  | "Hand of Straights"
+  | "Merge Triplets to Form Target Triplet"
+  | "Burst Balloons"
+  | "Distinct Subsequences"
+  | "Longest Increasing Path In a Matrix"
+  | "Reverse Integer"
+  | "Surrounded Regions"
+  | "N Queens"
+  | "Graph Valid Tree"
+  | "Word Ladder"
+  | "Design Twitter"
+  | "Find Median from Data Stream"
+  | "Regular Expression Matching"
+  | "Set Matrix Zeroes"
+  | "Pow(x, n)"
+  | "Multiply Strings"
+  | "Detect Squares";
 
 // Kata name → algo-viz subfolder served from /algo-viz/<folder>/index.html
 const VIZ_MAP: Partial<Record<VizKataName, string>> = {
@@ -180,6 +212,38 @@ const VIZ_MAP: Partial<Record<VizKataName, string>> = {
   "Best Time to Buy and Sell Stock With Cooldown": "stock-cooldown",
   "Target Sum":                   "target-sum",
   "Meeting Rooms II":             "meeting-rooms-2",
+  "Word Search":                  "word-search",
+  "Binary Tree Maximum Path Sum": "binary-tree-max-path",
+  "Serialize and Deserialize Binary Tree": "serialize-deserialize-tree",
+  "Construct Binary Tree from Preorder and Inorder Traversal": "construct-binary-tree",
+  "Add and Search Word":          "add-search-words",
+  "Word Search II":               "word-search-2",
+  "Valid Parenthesis String":     "valid-parenthesis-string",
+  "Reconstruct Itinerary":        "reconstruct-itinerary",
+  "Interleaving String":          "interleaving-string",
+  "Min Cost to Connect All Points": "min-cost-connect",
+  "Swim In Rising Water":         "swim-rising-water",
+  "Alien Dictionary":             "alien-dictionary",
+  "Cheapest Flights Within K Stops": "cheapest-flights",
+  "Kth Largest Element In a Stream": "kth-largest-stream",
+  "Minimum Interval to Include Each Query": "min-interval-query",
+  "Hand of Straights":            "hand-of-straights",
+  "Merge Triplets to Form Target Triplet": "merge-triplets",
+  "Burst Balloons":               "burst-balloons",
+  "Distinct Subsequences":        "distinct-subsequences",
+  "Longest Increasing Path In a Matrix": "longest-increasing-path",
+  "Reverse Integer":              "reverse-integer",
+  "Surrounded Regions":           "surrounded-regions",
+  "N Queens":                     "n-queens",
+  "Graph Valid Tree":             "graph-valid-tree",
+  "Word Ladder":                  "word-ladder",
+  "Design Twitter":               "design-twitter",
+  "Find Median from Data Stream": "find-median-stream",
+  "Regular Expression Matching":  "regex-matching",
+  "Set Matrix Zeroes":            "set-matrix-zeroes",
+  "Pow(x, n)":                    "pow-xn",
+  "Multiply Strings":             "multiply-strings",
+  "Detect Squares":               "detect-squares",
 };
 
 // Overrides for slugs that can't be reliably derived from the display name
