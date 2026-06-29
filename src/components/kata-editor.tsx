@@ -65,7 +65,17 @@ type VizKataName =
   | "Edit Distance"
   | "Rotate Image"
   | "Spiral Matrix"
-  | "Combination Sum";
+  | "Combination Sum"
+  | "Permutations"
+  | "Letter Combinations of a Phone Number"
+  | "Lowest Common Ancestor of a Binary Search Tree"
+  | "Kth Smallest Element in a BST"
+  | "Non-overlapping Intervals"
+  | "Gas Station"
+  | "Clone Graph"
+  | "Maximum Product Subarray"
+  | "Coin Change II"
+  | "Network Delay Time";
 
 // Kata name → algo-viz subfolder served from /algo-viz/<folder>/index.html
 const VIZ_MAP: Partial<Record<VizKataName, string>> = {
@@ -120,6 +130,16 @@ const VIZ_MAP: Partial<Record<VizKataName, string>> = {
   "Rotate Image":                 "rotate-image",
   "Spiral Matrix":                "spiral-matrix",
   "Combination Sum":              "combination-sum",
+  "Permutations":                 "permutations",
+  "Letter Combinations of a Phone Number": "letter-combinations",
+  "Lowest Common Ancestor of a Binary Search Tree": "lca-bst",
+  "Kth Smallest Element in a BST": "kth-smallest-bst",
+  "Non-overlapping Intervals":    "non-overlapping-intervals",
+  "Gas Station":                  "gas-station",
+  "Clone Graph":                  "clone-graph",
+  "Maximum Product Subarray":     "max-product-subarray",
+  "Coin Change II":               "coin-change-2",
+  "Network Delay Time":           "network-delay",
 };
 
 // Overrides for slugs that can't be reliably derived from the display name
