@@ -305,6 +305,7 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
   const [running, setRunning] = useState(false);
   const [runCount, setRunCount] = useState(0);
   const [kataPassed, setKataPassed] = useState(false);
+  const [maxRunsReached, setMaxRunsReached] = useState(false);
   const [showPanel, setShowPanel] = useState<"description" | "solution" | "notes" | "viz" | null>(
     isSession && hideDescriptionInSession ? null : kata.description ? "description" : null
   );
@@ -327,6 +328,7 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
     setCodeLoaded(false);
     setRunCount(0);
     setKataPassed(false);
+    setMaxRunsReached(false);
     loadUserCode(kata.id).then((code) => {
       setSavedCode(code);
       setCodeLoaded(true);
@@ -383,7 +385,8 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
         const newCount = runCount + 1;
         setRunCount(newCount);
         if (newCount >= maxTestRuns) {
-          onAdvance?.();
+          setMaxRunsReached(true);
+          setTimeout(() => { onAdvance?.(); }, 1500);
         }
       }
     } catch (err) {
@@ -394,7 +397,8 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
         const newCount = runCount + 1;
         setRunCount(newCount);
         if (newCount >= maxTestRuns) {
-          onAdvance?.();
+          setMaxRunsReached(true);
+          setTimeout(() => { onAdvance?.(); }, 1500);
         }
       }
     } finally {
@@ -473,7 +477,7 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
           Problem
         </button>
       )}
-      {kata.solution && (
+      {kata.solution && !isSession && (
         <button
           onClick={() => toggleMode
             ? setShowPanel((v) => v === "solution" ? null : "solution")
@@ -483,15 +487,17 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
           Solution
         </button>
       )}
-      <button
-        onClick={() => toggleMode
-          ? setShowPanel((v) => v === "notes" ? null : "notes")
-          : setShowPanel("notes")}
-        className={tabClass("notes")}
-      >
-        Notes{!notesSaved && " •"}
-      </button>
-      {vizFolder && (
+      {!isSession && (
+        <button
+          onClick={() => toggleMode
+            ? setShowPanel((v) => v === "notes" ? null : "notes")
+            : setShowPanel("notes")}
+          className={tabClass("notes")}
+        >
+          Notes{!notesSaved && " •"}
+        </button>
+      )}
+      {vizFolder && !isSession && (
         <button
           onClick={() => setShowPanel((v) => v === "viz" ? null : "viz")}
           className={tabClass("viz")}
@@ -720,6 +726,14 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
             </button>
           </div>
         </div>
+
+        {/* Max attempts reached banner */}
+        {maxRunsReached && (
+          <div className="px-4 py-2 bg-error/10 text-error text-xs font-medium border-t border-error/20 shrink-0 flex items-center gap-2">
+            <span className="loading loading-spinner loading-xs" />
+            Max attempts reached — moving to next problem...
+          </div>
+        )}
 
         {/* Closable results pane */}
         {(results || running) && (
