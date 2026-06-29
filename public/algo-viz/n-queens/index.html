@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>N-Queens</title>
+  <link rel="stylesheet" href="../shared/style.css" />
+  <script src="../shared/gsap.min.js"></script>
+  <script src="../shared/viz.js"></script>
+  <style>
+    body.page { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+
+    .page-sub { font-size: 0.8rem; color: var(--text-dim); margin-left: auto; white-space: nowrap; }
+
+    /* Board area */
+    .board-wrap {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 12px 20px;
+      min-height: 0;
+      gap: 24px;
+    }
+
+    .board-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+
+    #board {
+      display: grid;
+      border: 2px solid var(--border);
+      border-radius: 6px;
+      overflow: hidden;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+    }
+
+    .cell {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.4rem;
+      position: relative;
+      transition: background 0.15s, border 0.15s;
+    }
+    .cell.light { background: #2a2d3e; }
+    .cell.dark  { background: #1e2030; }
+
+    .cell.trying {
+      background: #2a2000 !important;
+      outline: 2px solid var(--yellow);
+      outline-offset: -2px;
+      z-index: 1;
+    }
+    .cell.safe {
+      background: #0d2016 !important;
+      outline: 2px solid var(--green);
+      outline-offset: -2px;
+      z-index: 1;
+    }
+    .cell.conflict {
+      background: #200a0a !important;
+      outline: 2px solid var(--red);
+      outline-offset: -2px;
+      z-index: 1;
+    }
+    .cell.queen {
+      background: #0d2016 !important;
+    }
+    .cell.threat {
+      background: rgba(247,118,142,0.07) !important;
+    }
+
+    .queen-icon {
+      font-size: 1.6rem;
+      line-height: 1;
+      filter: drop-shadow(0 0 4px rgba(158,206,106,0.6));
+      user-select: none;
+    }
+
+    /* Side panel */
+    .side-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      min-width: 200px;
+      max-width: 240px;
+    }
+
+    .sect {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 12px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .sets-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      font-family: monospace;
+      font-size: 0.75rem;
+    }
+    .set-row {
+      display: flex;
+      align-items: baseline;
+      gap: 6px;
+    }
+    .set-label {
+      color: var(--text-dim);
+      min-width: 54px;
+      font-size: 0.7rem;
+    }
+    .set-val {
+      color: var(--text-bright);
+      word-break: break-all;
+    }
+    .set-val.empty { color: var(--text-ghost); font-style: italic; }
+
+    /* Solutions list */
+    .sol-list {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      max-height: 130px;
+      overflow-y: auto;
+    }
+    .sol-item {
+      font-family: monospace;
+      font-size: 0.72rem;
+      color: var(--green);
+      background: var(--green-bg);
+      border: 1px solid var(--green-border);
+      border-radius: 4px;
+      padding: 4px 8px;
+    }
+    .sol-empty { color: var(--text-ghost); font-size: 0.78rem; font-style: italic; }
+
+    /* Bottom nav bar */
+    .bottom-bar {
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 20px;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+    }
+
+    .btn-play {
+      background: #15803d; border: none; border-radius: var(--radius-sm);
+      color: #fff; cursor: pointer; font-size: 0.88rem; font-weight: 600;
+      padding: 8px 14px; transition: background 0.2s; white-space: nowrap;
+    }
+    .btn-play:hover { background: #166534; }
+    .btn-play.playing { background: #c2410c; }
+    .btn-play.playing:hover { background: #9a3412; }
+    .btn-play:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .speed-select {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); color: var(--text);
+      font-size: 0.82rem; padding: 6px 8px; outline: none;
+    }
+
+    .step-info {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      min-width: 0;
+    }
+    .step-label {
+      font-size: 0.72rem;
+      color: var(--text-dim);
+      font-family: monospace;
+    }
+    .step-desc {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .sol-counter {
+      font-family: monospace;
+      font-size: 0.9rem;
+      color: var(--green);
+      white-space: nowrap;
+      padding: 6px 12px;
+      background: var(--green-bg);
+      border: 1px solid var(--green-border);
+      border-radius: var(--radius-sm);
+    }
+    .sol-counter .sol-num {
+      font-size: 1.2rem;
+      font-weight: 700;
+    }
+
+    .legend-row {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      font-size: 0.72rem;
+      color: var(--text-muted);
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+    .legend-swatch {
+      width: 14px; height: 14px;
+      border-radius: 3px;
+      flex-shrink: 0;
+    }
+
+    .row-indicator {
+      font-family: monospace;
+      font-size: 0.78rem;
+      color: var(--text-dim);
+      text-align: center;
+    }
+
+    @media (max-width: 640px) {
+      .side-panel { display: none; }
+      .step-desc { font-size: 0.75rem; }
+    }
+  </style>
+</head>
+<body class="page">
+
+<div class="page-header">
+  <a class="back-link" href="../index.html">&larr; All Algorithms</a>
+  <div class="page-title">N-Queens</div>
+  <div class="page-sub">LeetCode 51 &middot; Backtracking &middot; col + diag sets &middot; row-by-row placement</div>
+</div>
+
+<div class="controls">
+  <div class="field">
+    <label>Board size (n)</label>
+    <input id="inp-n" type="number" value="4" min="4" max="8" style="width:70px" />
+  </div>
+  <button class="btn-primary" onclick="buildAndRun()">Build &amp; Run</button>
+</div>
+
+<div class="board-wrap">
+  <!-- Chess board -->
+  <div class="board-container">
+    <div id="board"></div>
+    <div class="row-indicator" id="row-indicator"></div>
+  </div>
+
+  <!-- Side panel -->
+  <div class="side-panel">
+    <!-- Sets -->
+    <div class="sect">
+      <div class="panel-title">Constraint Sets</div>
+      <div class="sets-grid">
+        <div class="set-row">
+          <span class="set-label">col_set</span>
+          <span class="set-val" id="set-col"><em class="sol-empty">{ }</em></span>
+        </div>
+        <div class="set-row">
+          <span class="set-label">diag1 (r-c)</span>
+          <span class="set-val" id="set-d1"><em class="sol-empty">{ }</em></span>
+        </div>
+        <div class="set-row">
+          <span class="set-label">diag2 (r+c)</span>
+          <span class="set-val" id="set-d2"><em class="sol-empty">{ }</em></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Solutions -->
+    <div class="sect">
+      <div class="panel-title">Solutions <span class="panel-sub" id="sol-count-label"></span></div>
+      <div class="sol-list" id="sol-list">
+        <span class="sol-empty">None yet.</span>
+      </div>
+    </div>
+
+    <!-- Legend -->
+    <div class="sect">
+      <div class="panel-title">Legend</div>
+      <div class="legend-row">
+        <div class="legend-item">
+          <div class="legend-swatch" style="background:#2a2000;outline:2px solid var(--yellow);outline-offset:-2px"></div>
+          <span>Cell being tried</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-swatch" style="background:#0d2016;outline:2px solid var(--green);outline-offset:-2px"></div>
+          <span>Safe — queen placed</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-swatch" style="background:#200a0a;outline:2px solid var(--red);outline-offset:-2px"></div>
+          <span>Conflict — rejected</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-swatch" style="background:rgba(247,118,142,0.15);border:1px solid rgba(247,118,142,0.3)"></div>
+          <span>Threatened by queen</span>
+        </div>
+        <div class="legend-item">
+          <span style="font-size:1rem">♛</span>
+          <span>Placed queen</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Bottom nav bar -->
+<div class="bottom-bar">
+  <button class="btn-step" id="btn-back" disabled>&larr;</button>
+  <button class="btn-step" id="btn-next" disabled>&rarr;</button>
+  <button class="btn-play" id="btn-play" disabled>&#9654; Play</button>
+  <select class="speed-select" id="speed-select">
+    <option value="900">Slow</option>
+    <option value="450" selected>Medium</option>
+    <option value="150">Fast</option>
+  </select>
+
+  <div class="step-info">
+    <div class="step-label" id="step-label">&mdash;</div>
+    <div class="step-desc" id="step-desc">Set n and click Build &amp; Run.</div>
+  </div>
+
+  <div class="sol-counter">
+    <span class="sol-num" id="sol-num">0</span> solution<span id="sol-plural">s</span>
+  </div>
+</div>
+
+<script>
+var simSteps = [], nav;
+var currentN = 4;
+
+// ── Simulate ──────────────────────────────────────────────────────────────────
+function simulate(n) {
+  var steps = [];
+  var solutions = [];
+  var queens = [];   // queens[row] = col
+  var colSet  = {};
+  var diag1   = {};  // row - col
+  var diag2   = {};  // row + col
+
+  function snap(phase, desc, row, col) {
+    steps.push({
+      phase: phase,
+      desc: desc,
+      row: row,
+      col: col,
+      queens: queens.slice(),
+      colSet:  Object.keys(colSet).map(Number).sort(function(a,b){return a-b;}),
+      diag1:   Object.keys(diag1).map(Number).sort(function(a,b){return a-b;}),
+      diag2:   Object.keys(diag2).map(Number).sort(function(a,b){return a-b;}),
+      solutions: solutions.map(function(s){return s.slice();}),
+    });
+  }
+
+  function backtrack(row) {
+    if (row === n) {
+      solutions.push(queens.slice());
+      snap('solution',
+        'All ' + n + ' queens placed! Solution #' + solutions.length + ': [' + queens.join(', ') + ']',
+        -1, -1);
+      return;
+    }
+
+    for (var col = 0; col < n; col++) {
+      var d1 = row - col;
+      var d2 = row + col;
+      var safe = !colSet[col] && !diag1[d1] && !diag2[d2];
+
+      snap('try',
+        'Row ' + row + ', col ' + col + ': ' +
+        (safe
+          ? 'col ' + col + ' free, diag1=' + d1 + ' free, diag2=' + d2 + ' free. Safe!'
+          : 'Conflict — ' +
+            (colSet[col] ? 'col ' + col + ' occupied' :
+             diag1[d1]   ? 'diag1=' + d1 + ' blocked' :
+                           'diag2=' + d2 + ' blocked') + '.'),
+        row, col);
+
+      if (!safe) {
+        snap('conflict',
+          'Reject (' + row + ',' + col + '). Try next column.',
+          row, col);
+        continue;
+      }
+
+      // Place
+      queens[row] = col;
+      colSet[col] = true;
+      diag1[d1]   = true;
+      diag2[d2]   = true;
+
+      snap('place',
+        'Place queen at (' + row + ',' + col + '). Recurse to row ' + (row + 1) + '.',
+        row, col);
+
+      backtrack(row + 1);
+
+      // Remove
+      delete queens[row];
+      delete colSet[col];
+      delete diag1[d1];
+      delete diag2[d2];
+
+      snap('remove',
+        'Backtrack — remove queen from (' + row + ',' + col + '). Try next column.',
+        row, col);
+    }
+  }
+
+  backtrack(0);
+
+  snap('done',
+    solutions.length + ' solution' + (solutions.length === 1 ? '' : 's') +
+    ' found for n=' + n + '.',
+    -1, -1);
+
+  return steps;
+}
+
+// ── Board rendering ───────────────────────────────────────────────────────────
+function buildBoard(n) {
+  var board = document.getElementById('board');
+  var cellSize = Math.min(Math.floor((window.innerHeight * 0.55) / n), 72);
+  board.style.gridTemplateColumns = 'repeat(' + n + ', ' + cellSize + 'px)';
+  board.style.gridTemplateRows    = 'repeat(' + n + ', ' + cellSize + 'px)';
+
+  board.innerHTML = '';
+  for (var r = 0; r < n; r++) {
+    for (var c = 0; c < n; c++) {
+      var cell = document.createElement('div');
+      cell.id = 'cell-' + r + '-' + c;
+      cell.className = 'cell ' + ((r + c) % 2 === 0 ? 'light' : 'dark');
+      cell.style.width  = cellSize + 'px';
+      cell.style.height = cellSize + 'px';
+      board.appendChild(cell);
+    }
+  }
+}
+
+function renderBoard(s, animate) {
+  var n = currentN;
+
+  // Compute threatened cells from placed queens
+  var threatened = {};
+  for (var qr = 0; qr < s.queens.length; qr++) {
+    var qc = s.queens[qr];
+    if (qc === undefined || qc === null) continue;
+    // same col
+    for (var r2 = 0; r2 < n; r2++) {
+      if (r2 !== qr) threatened[r2 + ',' + qc] = true;
+    }
+    // diagonals
+    for (var d = 1; d < n; d++) {
+      [[-1,-1],[-1,1],[1,-1],[1,1]].forEach(function(delta) {
+        var nr = qr + delta[0]*d, nc = qc + delta[1]*d;
+        if (nr >= 0 && nr < n && nc >= 0 && nc < n) {
+          threatened[nr + ',' + nc] = true;
+        }
+      });
+    }
+  }
+
+  for (var row = 0; row < n; row++) {
+    for (var col = 0; col < n; col++) {
+      var cell = document.getElementById('cell-' + row + '-' + col);
+      if (!cell) continue;
+
+      var base = (row + col) % 2 === 0 ? 'light' : 'dark';
+      cell.className = 'cell ' + base;
+      cell.innerHTML = '';
+
+      var hasQueen = (s.queens[row] === col);
+      var isTrying = (s.phase === 'try' || s.phase === 'conflict') && s.row === row && s.col === col;
+      var isConflict = s.phase === 'conflict' && s.row === row && s.col === col;
+      var isPlace = s.phase === 'place' && s.row === row && s.col === col;
+
+      if (isConflict) {
+        cell.classList.add('conflict');
+      } else if (isTrying) {
+        cell.classList.add(hasQueen ? 'queen' : 'trying');
+      } else if (isPlace) {
+        cell.classList.add('safe');
+      } else if (hasQueen) {
+        cell.classList.add('queen');
+      } else if (threatened[row + ',' + col] && !isTrying) {
+        cell.classList.add('threat');
+      }
+
+      if (hasQueen) {
+        var icon = document.createElement('span');
+        icon.className = 'queen-icon';
+        icon.textContent = '♛';
+        cell.appendChild(icon);
+
+        if (animate && isPlace) {
+          gsap.fromTo(icon, { scale: 0, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.25, ease: 'back.out(2)' });
+        }
+        if (animate && s.phase === 'solution') {
+          gsap.fromTo(icon, { scale: 1 }, { scale: 1.3, duration: 0.15, yoyo: true, repeat: 1 });
+        }
+      }
+    }
+  }
+
+  // Row indicator
+  var ri = document.getElementById('row-indicator');
+  if (ri) {
+    if (s.row >= 0) {
+      ri.textContent = 'Current row: ' + s.row;
+    } else if (s.phase === 'solution') {
+      ri.textContent = 'Solution found!';
+    } else if (s.phase === 'done') {
+      ri.textContent = 'Done';
+    } else {
+      ri.textContent = '';
+    }
+  }
+}
+
+function renderSets(s, animate) {
+  function fmt(arr) {
+    if (!arr || arr.length === 0) return '<em class="sol-empty">{ }</em>';
+    return '{ ' + arr.join(', ') + ' }';
+  }
+  document.getElementById('set-col').innerHTML = fmt(s.colSet);
+  document.getElementById('set-d1').innerHTML  = fmt(s.diag1);
+  document.getElementById('set-d2').innerHTML  = fmt(s.diag2);
+}
+
+function renderSolutions(s, animate) {
+  var list  = document.getElementById('sol-list');
+  var label = document.getElementById('sol-count-label');
+  var numEl = document.getElementById('sol-num');
+  var plural = document.getElementById('sol-plural');
+
+  var count = s.solutions.length;
+  if (numEl) numEl.textContent = count;
+  if (plural) plural.textContent = count === 1 ? '' : 's';
+  if (label) label.textContent = count ? '(' + count + ')' : '';
+
+  if (!list) return;
+  if (count === 0) {
+    list.innerHTML = '<span class="sol-empty">None yet.</span>';
+    return;
+  }
+
+  list.innerHTML = s.solutions.map(function(sol, idx) {
+    return '<div class="sol-item">#' + (idx+1) + ': [' + sol.join(', ') + ']</div>';
+  }).join('');
+
+  if (animate && s.phase === 'solution') {
+    var last = list.querySelector('.sol-item:last-child');
+    if (last) gsap.fromTo(last, { x: -8, opacity: 0 }, { x: 0, opacity: 1, duration: 0.25, ease: 'power2.out' });
+  }
+}
+
+// ── Main render ───────────────────────────────────────────────────────────────
+function renderStep(s, animate, cur, total) {
+  var label = document.getElementById('step-label');
+  var desc  = document.getElementById('step-desc');
+
+  if (label) label.textContent = 'Step ' + (cur+1) + ' / ' + total + '  ·  ' + s.phase;
+  if (desc) {
+    if (animate) gsap.fromTo(desc, { opacity: 0 }, { opacity: 1, duration: 0.12 });
+    desc.textContent = s.desc;
+  }
+
+  renderBoard(s, animate);
+  renderSets(s, animate);
+  renderSolutions(s, animate);
+}
+
+// ── Build & run ───────────────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', function() {
+  nav = VizNav({
+    btnPrev:  document.getElementById('btn-back'),
+    btnNext:  document.getElementById('btn-next'),
+    btnPlay:  document.getElementById('btn-play'),
+    speedSel: document.getElementById('speed-select'),
+    render: function(s, cur, total) { renderStep(s, true, cur, total); },
+  });
+  buildAndRun();
+});
+
+function buildAndRun() {
+  var n = parseInt(document.getElementById('inp-n').value, 10);
+  if (isNaN(n) || n < 4 || n > 8) return;
+  currentN = n;
+
+  buildBoard(n);
+  simSteps = simulate(n);
+  nav.load(simSteps);
+
+  // Show step 0 immediately (no animation)
+  if (simSteps.length > 0) renderStep(simSteps[0], false, 0, simSteps.length);
+}
+</script>
+
+<script>
+  if (window.self !== window.top) {
+    var bl = document.querySelector('.back-link');
+    if (bl) bl.style.display = 'none';
+  }
+</script>
+</body>
+</html>
