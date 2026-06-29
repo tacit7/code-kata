@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Meeting Rooms II — Visualization</title>
+  <link rel="stylesheet" href="../shared/style.css" />
+  <style>
+    body {
+      display: flex; flex-direction: column; height: 100vh; overflow: hidden;
+      font-family: var(--font); background: var(--bg); color: var(--text);
+    }
+
+    /* ── top bar ── */
+    #top-bar {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 16px; border-bottom: 1px solid var(--border);
+      background: var(--surface); flex-shrink: 0;
+    }
+    #top-bar label { font-size: 0.82rem; color: var(--text-dim); }
+    #intervals-input {
+      flex: 1; font-size: 0.88rem; padding: 5px 10px;
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius); color: var(--text);
+    }
+    #btn-build {
+      padding: 5px 14px; font-size: 0.85rem; font-weight: 600;
+      background: var(--accent); color: #1a1b26;
+      border: none; border-radius: var(--radius); cursor: pointer;
+    }
+    #btn-build:hover { opacity: 0.85; }
+
+    /* ── middle ── */
+    #middle {
+      display: flex; flex: 1; overflow: hidden; gap: 0;
+    }
+
+    /* ── gantt panel ── */
+    #gantt-panel {
+      flex: 1; overflow: auto; padding: 16px;
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    #gantt-title {
+      font-size: 0.75rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--text-dim); margin-bottom: 4px;
+    }
+
+    #gantt-container {
+      position: relative; flex: 1;
+    }
+
+    /* timeline ruler */
+    #gantt-ruler {
+      display: flex; margin-bottom: 6px; margin-left: 68px;
+      font-size: 0.65rem; color: var(--text-dim);
+    }
+
+    .room-row {
+      display: flex; align-items: center; height: 36px; margin-bottom: 6px;
+    }
+    .room-label {
+      width: 62px; flex-shrink: 0;
+      font-size: 0.72rem; color: var(--text-dim); text-align: right;
+      padding-right: 8px; font-weight: 600;
+    }
+    .room-track {
+      flex: 1; height: 100%; position: relative;
+      background: rgba(255,255,255,0.03); border-radius: 4px;
+      border: 1px solid var(--border);
+    }
+    .meeting-bar {
+      position: absolute; top: 4px; height: calc(100% - 8px);
+      border-radius: 4px; display: flex; align-items: center;
+      justify-content: center; font-size: 0.68rem; font-weight: 600;
+      color: #1a1b26; transition: opacity 0.2s;
+      overflow: hidden; white-space: nowrap;
+    }
+    .meeting-bar.active-highlight {
+      outline: 2px solid #fff;
+      outline-offset: 1px;
+    }
+
+    /* ── right panel: heap ── */
+    #heap-panel {
+      width: 200px; flex-shrink: 0;
+      border-left: 1px solid var(--border);
+      background: var(--surface);
+      padding: 14px 12px;
+      display: flex; flex-direction: column; gap: 10px;
+      overflow-y: auto;
+    }
+    #heap-title {
+      font-size: 0.75rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--text-dim);
+    }
+    #heap-list {
+      display: flex; flex-direction: column; gap: 5px;
+    }
+    .heap-item {
+      display: flex; align-items: center; gap: 8px;
+      padding: 6px 10px; border-radius: var(--radius);
+      background: rgba(255,255,255,0.04); border: 1px solid var(--border);
+      font-size: 0.82rem; font-weight: 600; color: var(--text);
+    }
+    .heap-item.heap-min {
+      border-color: var(--accent);
+      background: rgba(var(--accent-ch), 0.1);
+      color: var(--accent);
+    }
+    .heap-item .heap-room-dot {
+      width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
+    }
+
+    /* ── bottom nav ── */
+    #nav-bar {
+      flex-shrink: 0; border-top: 1px solid var(--border);
+      background: var(--surface); padding: 10px 16px;
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    #nav-controls {
+      display: flex; align-items: center; gap: 8px;
+    }
+    .nav-btn {
+      padding: 5px 14px; font-size: 0.82rem; font-weight: 600;
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: var(--radius); color: var(--text); cursor: pointer;
+    }
+    .nav-btn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+    .nav-btn:disabled { opacity: 0.35; cursor: default; }
+    #speed-sel {
+      font-size: 0.8rem; padding: 4px 8px;
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius); color: var(--text);
+    }
+    #step-counter {
+      font-size: 0.75rem; color: var(--text-dim); margin-left: auto;
+    }
+    #step-desc {
+      font-size: 0.85rem; color: var(--text-bright); min-height: 1.4em;
+    }
+    #rooms-counter {
+      font-size: 0.82rem; color: var(--text-dim);
+    }
+    #rooms-counter span {
+      font-weight: 700; color: var(--accent);
+    }
+  </style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div id="top-bar">
+  <label for="intervals-input">Intervals (start,end;…):</label>
+  <input id="intervals-input" type="text" value="0,30;5,10;15,20" />
+  <button id="btn-build">Build</button>
+</div>
+
+<!-- MIDDLE -->
+<div id="middle">
+  <div id="gantt-panel">
+    <div id="gantt-title">Gantt — Room Assignments</div>
+    <div id="gantt-ruler"></div>
+    <div id="gantt-rows"></div>
+  </div>
+  <div id="heap-panel">
+    <div id="heap-title">Min-Heap (end times)</div>
+    <div id="heap-list"></div>
+  </div>
+</div>
+
+<!-- BOTTOM NAV -->
+<div id="nav-bar">
+  <div id="nav-controls">
+    <button class="nav-btn" id="btn-prev">&#8592; Prev</button>
+    <button class="nav-btn" id="btn-next">Next &#8594;</button>
+    <button class="nav-btn" id="btn-play">Play</button>
+    <select id="speed-sel">
+      <option value="1200">0.8×</option>
+      <option value="800" selected>1×</option>
+      <option value="500">1.5×</option>
+      <option value="300">2.5×</option>
+    </select>
+    <div id="step-counter">0 / 0</div>
+  </div>
+  <div id="step-desc">Press Build to start.</div>
+  <div id="rooms-counter">Rooms needed: <span id="rooms-val">—</span></div>
+</div>
+
+<script src="../shared/viz.js"></script>
+<script>
+// ── palette for rooms ──────────────────────────────────────────────────────
+var COLORS = [
+  '#7aa2f7', '#9ece6a', '#e0af68', '#f7768e', '#bb9af7',
+  '#2ac3de', '#ff9e64', '#73daca', '#b4f9f8', '#c0caf5',
+];
+
+// ── min-heap (array-backed) ────────────────────────────────────────────────
+function MinHeap() {
+  var h = [];
+  function swap(i, j) { var t = h[i]; h[i] = h[j]; h[j] = t; }
+  function up(i) {
+    while (i > 0) {
+      var p = (i - 1) >> 1;
+      if (h[p].end <= h[i].end) break;
+      swap(p, i); i = p;
+    }
+  }
+  function down(i) {
+    var n = h.length;
+    while (true) {
+      var l = 2*i+1, r = 2*i+2, s = i;
+      if (l < n && h[l].end < h[s].end) s = l;
+      if (r < n && h[r].end < h[s].end) s = r;
+      if (s === i) break;
+      swap(s, i); i = s;
+    }
+  }
+  return {
+    push: function(item) { h.push(item); up(h.length - 1); },
+    pop:  function() {
+      var top = h[0]; h[0] = h[h.length - 1]; h.pop(); down(0); return top;
+    },
+    peek: function() { return h[0]; },
+    size: function() { return h.length; },
+    snapshot: function() { return h.slice(); },
+  };
+}
+
+// ── build steps ───────────────────────────────────────────────────────────
+function buildSteps(intervals) {
+  var steps = [];
+  var sorted = intervals.slice().sort(function(a, b) { return a[0] - b[0]; });
+
+  // calc timeline extent
+  var maxEnd = 0;
+  sorted.forEach(function(iv) { if (iv[1] > maxEnd) maxEnd = iv[1]; });
+
+  // step 0: sorted list
+  steps.push({
+    phase: 'sort',
+    desc: 'Sort intervals by start time: [' + sorted.map(function(iv){ return '['+iv[0]+','+iv[1]+']'; }).join(', ') + ']',
+    assignments: [],   // {meetingIdx, room, start, end}
+    heap: [],
+    activeIdx: -1,
+    reused: false,
+    roomsNeeded: 0,
+    maxEnd: maxEnd,
+    sorted: sorted,
+  });
+
+  var heap = MinHeap();
+  var assignments = [];
+  var nextRoom = 0;
+
+  sorted.forEach(function(iv, i) {
+    var s = iv[0], e = iv[1];
+    var reused = false;
+    var room;
+
+    if (heap.size() > 0 && heap.peek().end <= s) {
+      var freed = heap.pop();
+      room = freed.room;
+      reused = true;
+    } else {
+      room = nextRoom++;
+    }
+    heap.push({ end: e, room: room });
+    assignments.push({ meetingIdx: i, room: room, start: s, end: e });
+
+    steps.push({
+      phase: 'assign',
+      desc: (reused
+        ? 'Meeting ['+s+','+e+']: room '+room+' is free (ends ≤ '+s+'). Reuse it. Push end='+e+'.'
+        : 'Meeting ['+s+','+e+']: no free room (heap min end > '+s+'). Open new room '+room+'. Push end='+e+'.'
+      ),
+      assignments: assignments.slice(),
+      heap: heap.snapshot().slice().sort(function(a,b){ return a.end - b.end; }),
+      activeIdx: i,
+      reused: reused,
+      roomsNeeded: nextRoom,
+      maxEnd: maxEnd,
+      sorted: sorted,
+    });
+  });
+
+  // final step
+  steps.push({
+    phase: 'done',
+    desc: 'Done. Minimum rooms needed: ' + nextRoom + '.',
+    assignments: assignments.slice(),
+    heap: heap.snapshot().slice().sort(function(a,b){ return a.end - b.end; }),
+    activeIdx: -1,
+    reused: false,
+    roomsNeeded: nextRoom,
+    maxEnd: maxEnd,
+    sorted: sorted,
+  });
+
+  return steps;
+}
+
+// ── parse input ───────────────────────────────────────────────────────────
+function parseIntervals(raw) {
+  var parts = raw.trim().split(';');
+  var out = [];
+  for (var i = 0; i < parts.length; i++) {
+    var p = parts[i].trim();
+    if (!p) continue;
+    var nums = p.split(',').map(Number);
+    if (nums.length >= 2 && !isNaN(nums[0]) && !isNaN(nums[1])) {
+      out.push([nums[0], nums[1]]);
+    }
+  }
+  return out;
+}
+
+// ── render ────────────────────────────────────────────────────────────────
+function render(snap, cursor, total) {
+  document.getElementById('step-counter').textContent = (cursor + 1) + ' / ' + total;
+  document.getElementById('step-desc').textContent = snap.desc;
+  document.getElementById('rooms-val').textContent =
+    snap.roomsNeeded > 0 ? snap.roomsNeeded : '—';
+
+  renderGantt(snap);
+  renderHeap(snap);
+}
+
+function renderGantt(snap) {
+  var numRooms = snap.roomsNeeded || 1;
+  var maxEnd = snap.maxEnd || 30;
+  var rowsEl = document.getElementById('gantt-rows');
+  var rulerEl = document.getElementById('gantt-ruler');
+
+  // ruler ticks
+  var ticks = [];
+  var step = Math.ceil(maxEnd / 8);
+  for (var t = 0; t <= maxEnd; t += step) {
+    ticks.push(t);
+  }
+  if (ticks[ticks.length - 1] < maxEnd) ticks.push(maxEnd);
+
+  rulerEl.innerHTML = '';
+  var rulerInner = document.createElement('div');
+  rulerInner.style.cssText = 'position:relative; flex:1; height:16px;';
+  ticks.forEach(function(t) {
+    var pct = (t / maxEnd) * 100;
+    var tick = document.createElement('span');
+    tick.textContent = t;
+    tick.style.cssText = 'position:absolute; left:' + pct + '%; transform:translateX(-50%); font-size:0.6rem; color:var(--text-dim);';
+    rulerInner.appendChild(tick);
+  });
+  rulerEl.appendChild(rulerInner);
+
+  // build room rows — we need at least numRooms rows
+  rowsEl.innerHTML = '';
+  for (var r = 0; r < numRooms; r++) {
+    var row = document.createElement('div');
+    row.className = 'room-row';
+
+    var label = document.createElement('div');
+    label.className = 'room-label';
+    label.textContent = 'Room ' + r;
+    row.appendChild(label);
+
+    var track = document.createElement('div');
+    track.className = 'room-track';
+
+    // place bars for this room
+    snap.assignments.forEach(function(a) {
+      if (a.room !== r) return;
+      var bar = document.createElement('div');
+      bar.className = 'meeting-bar';
+      if (a.meetingIdx === snap.activeIdx) bar.classList.add('active-highlight');
+
+      var left = (a.start / maxEnd) * 100;
+      var width = ((a.end - a.start) / maxEnd) * 100;
+      bar.style.cssText = 'left:' + left + '%; width:' + Math.max(width, 1) + '%; background:' + COLORS[r % COLORS.length] + ';';
+      bar.textContent = a.start + '–' + a.end;
+      track.appendChild(bar);
+    });
+
+    row.appendChild(track);
+    rowsEl.appendChild(row);
+  }
+}
+
+function renderHeap(snap) {
+  var listEl = document.getElementById('heap-list');
+  listEl.innerHTML = '';
+
+  if (snap.heap.length === 0) {
+    var empty = document.createElement('div');
+    empty.style.cssText = 'font-size:0.75rem; color:var(--text-dim); font-style:italic;';
+    empty.textContent = 'empty';
+    listEl.appendChild(empty);
+    return;
+  }
+
+  snap.heap.forEach(function(item, i) {
+    var el = document.createElement('div');
+    el.className = 'heap-item' + (i === 0 ? ' heap-min' : '');
+
+    var dot = document.createElement('div');
+    dot.className = 'heap-room-dot';
+    dot.style.background = COLORS[item.room % COLORS.length];
+    el.appendChild(dot);
+
+    var label = document.createElement('span');
+    label.textContent = 'end=' + item.end + '  (R' + item.room + ')' + (i === 0 ? '  ← min' : '');
+    el.appendChild(label);
+
+    listEl.appendChild(el);
+  });
+}
+
+// ── wire up ───────────────────────────────────────────────────────────────
+var nav = VizNav({
+  btnPrev:  document.getElementById('btn-prev'),
+  btnNext:  document.getElementById('btn-next'),
+  btnPlay:  document.getElementById('btn-play'),
+  speedSel: document.getElementById('speed-sel'),
+  render:   render,
+});
+
+function doLoad() {
+  var raw = document.getElementById('intervals-input').value;
+  var intervals = parseIntervals(raw);
+  if (intervals.length === 0) {
+    alert('Enter at least one interval, e.g. 0,30;5,10;15,20');
+    return;
+  }
+  nav.load(buildSteps(intervals));
+}
+
+document.getElementById('btn-build').addEventListener('click', doLoad);
+document.getElementById('intervals-input').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') doLoad();
+});
+
+// auto-load default
+doLoad();
+</script>
+</body>
+</html>
