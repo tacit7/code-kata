@@ -9,7 +9,7 @@ interface SessionState {
   attempts: Attempt[];
   presets: Preset[];
 
-  startSession: (type: SessionType, katas: Kata[], presetName?: string) => Promise<number>;
+  startSession: (type: SessionType, katas: Kata[], presetName?: string, maxTestRuns?: number | null) => Promise<number>;
   recordAttempt: (kataId: number, timeMs: number, passed: boolean, codeSnapshot: string) => Promise<void>;
   nextKata: () => void;
   prevKata: () => void;
@@ -30,6 +30,7 @@ interface SessionRow {
   kata_count: number;
   pass_count: number;
   preset_name: string | null;
+  max_test_runs: number | null;
 }
 
 interface AttemptRow {
@@ -60,6 +61,7 @@ function rowToSession(row: SessionRow): Session {
     kataCount: row.kata_count,
     passCount: row.pass_count,
     presetName: row.preset_name,
+    maxTestRuns: row.max_test_runs ?? null,
   };
 }
 
@@ -192,13 +194,16 @@ export const useSessionStore = create<SessionState>((set, get) => ({
   attempts: [],
   presets: [],
 
-  startSession: async (type, katas, presetName) => {
+  startSession: async (type, katas, presetName, maxTestRuns) => {
     const db = await getDb();
+    try {
+      await db.execute(`ALTER TABLE sessions ADD COLUMN max_test_runs INTEGER NULL`);
+    } catch (_) { /* column already exists */ }
     const now = new Date().toISOString();
     const result = await db.execute(
-      `INSERT INTO sessions (session_type, started_at, kata_count, pass_count, preset_name)
-       VALUES ($1, $2, $3, 0, $4)`,
-      [type, now, katas.length, presetName ?? null],
+      `INSERT INTO sessions (session_type, started_at, kata_count, pass_count, preset_name, max_test_runs)
+       VALUES ($1, $2, $3, 0, $4, $5)`,
+      [type, now, katas.length, presetName ?? null, maxTestRuns ?? null],
     );
     const sessionId = result.lastInsertId as number;
     const session: Session = {
@@ -210,6 +215,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       kataCount: katas.length,
       passCount: 0,
       presetName: presetName ?? null,
+      maxTestRuns: maxTestRuns ?? null,
     };
     set({ activeSession: session, sessionKatas: katas, currentIndex: 0, attempts: [] });
     return sessionId;

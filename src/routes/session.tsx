@@ -184,6 +184,7 @@ export function SessionPage() {
           kata={currentKata}
           isSession={true}
           onTestComplete={handleTestComplete}
+          onAdvance={handleNext}
         />
       </div>
     </div>

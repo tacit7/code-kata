@@ -5,6 +5,7 @@ import { initVimMode, type VimAdapterInstance } from "monaco-vim";
 import { open } from "@tauri-apps/plugin-shell";
 import { useSettingsStore } from "../stores/settings-store";
 import { useTimerStore } from "../stores/timer-store";
+import { useSessionStore } from "../stores/session-store";
 import { useKeyboardShortcuts } from "../hooks/use-keyboard-shortcuts";
 import { runTests } from "../lib/test-runner";
 import { saveUserCode, loadUserCode, deleteUserCode, saveKataNotes, loadKataNotes } from "../lib/database";
@@ -290,16 +291,20 @@ interface KataEditorProps {
   kata: Kata;
   isSession?: boolean;
   onTestComplete?: (passed: boolean, codeSnapshot: string) => void;
+  onAdvance?: () => void;
 }
 
-export function KataEditor({ kata, isSession, onTestComplete }: KataEditorProps) {
+export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataEditorProps) {
   const { theme, vimMode, toggleVimMode, toggleTheme, fontSize, fontFamily, tabSize, hideDescriptionInSession, setSetting } = useSettingsStore();
+  const maxTestRuns = useSessionStore((s) => s.activeSession?.maxTestRuns ?? null);
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
   const vimModeRef = useRef<VimAdapterInstance | null>(null);
   const statusBarRef = useRef<HTMLDivElement | null>(null);
   const [results, setResults] = useState<TestResult[] | null>(null);
   const [ranAt, setRanAt] = useState<string>("");
   const [running, setRunning] = useState(false);
+  const [runCount, setRunCount] = useState(0);
+  const [kataPassed, setKataPassed] = useState(false);
   const [showPanel, setShowPanel] = useState<"description" | "solution" | "notes" | "viz" | null>(
     isSession && hideDescriptionInSession ? null : kata.description ? "description" : null
   );
@@ -320,6 +325,8 @@ export function KataEditor({ kata, isSession, onTestComplete }: KataEditorProps)
   // Load saved user code and notes on mount; clean up autosave timers on unmount
   useEffect(() => {
     setCodeLoaded(false);
+    setRunCount(0);
+    setKataPassed(false);
     loadUserCode(kata.id).then((code) => {
       setSavedCode(code);
       setCodeLoaded(true);
@@ -367,18 +374,33 @@ export function KataEditor({ kata, isSession, onTestComplete }: KataEditorProps)
       const allPassed = testResults.length > 0 && testResults.every((r) => r.passed);
       if (allPassed) {
         completeKataTimer();
+        setKataPassed(true);
       }
       if (onTestComplete) {
         onTestComplete(allPassed, code);
+      }
+      if (maxTestRuns !== null && !allPassed && !kataPassed) {
+        const newCount = runCount + 1;
+        setRunCount(newCount);
+        if (newCount >= maxTestRuns) {
+          onAdvance?.();
+        }
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       setResults([{ name: "Runner error", passed: false, error: msg }]);
       setRanAt(new Date().toLocaleTimeString());
+      if (maxTestRuns !== null && !kataPassed) {
+        const newCount = runCount + 1;
+        setRunCount(newCount);
+        if (newCount >= maxTestRuns) {
+          onAdvance?.();
+        }
+      }
     } finally {
       setRunning(false);
     }
-  }, [kata.id, kata.testCode, kata.language, kataStatus, running, startKataTimer, completeKataTimer, onTestComplete]);
+  }, [kata.id, kata.testCode, kata.language, kataStatus, running, startKataTimer, completeKataTimer, onTestComplete, maxTestRuns, runCount, kataPassed, onAdvance]);
 
   const handleToggleSolution = useCallback(() => {
     setShowPanel((v) => (v === "solution" ? null : "solution"));
@@ -670,6 +692,15 @@ export function KataEditor({ kata, isSession, onTestComplete }: KataEditorProps)
             }`}
           />
           <div className="flex items-center gap-1.5">
+            {maxTestRuns !== null && (
+              <span className={`text-xs font-mono tabular-nums ${
+                !kataPassed && maxTestRuns - runCount === 1
+                  ? "text-warning"
+                  : "text-base-content/35"
+              }`}>
+                {runCount}/{maxTestRuns}
+              </span>
+            )}
             <button
               onClick={toggleVimMode}
               className={`btn btn-xs ${
@@ -682,7 +713,7 @@ export function KataEditor({ kata, isSession, onTestComplete }: KataEditorProps)
             </button>
             <button
               onClick={handleRun}
-              disabled={running}
+              disabled={running || (maxTestRuns !== null && runCount >= maxTestRuns && !kataPassed)}
               className="btn btn-xs btn-primary"
             >
               {running ? "..." : "▷ run"}

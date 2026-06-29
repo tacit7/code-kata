@@ -135,6 +135,7 @@ export function PracticeQueuePage() {
   const [statsMap, setStatsMap] = useState<Map<number, KataStats>>(new Map());
   const [medianMs, setMedianMs] = useState(Infinity);
   const [launching, setLaunching] = useState(false);
+  const [maxTestRuns, setMaxTestRuns] = useState<number | null>(null);
 
   useEffect(() => {
     if (katas.length === 0) return;
@@ -228,9 +229,9 @@ export function PracticeQueuePage() {
     resetKataTimer();
     startSessionTimer();
     const sessionType = mode === "daily" ? "daily" : "random";
-    const sessionId = await startSession(sessionType, launchKatas);
+    const sessionId = await startSession(sessionType, launchKatas, undefined, maxTestRuns);
     navigate(`/session/${sessionId}`);
-  }, [launchKatas, launching, mode, resetKataTimer, startSessionTimer, startSession, navigate]);
+  }, [launchKatas, launching, mode, maxTestRuns, resetKataTimer, startSessionTimer, startSession, navigate]);
 
   const formatMs = (ms: number): string => {
     const s = Math.round(ms / 1000);
@@ -327,6 +328,28 @@ export function PracticeQueuePage() {
                 }`}
               >
                 {s === "all" ? "All" : s}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Max attempts per kata */}
+        <div>
+          <p className="text-[11px] font-bold uppercase tracking-widest text-base-content/35 mb-2">
+            Max attempts / kata
+          </p>
+          <div className="flex gap-1.5">
+            {([null, 3, 5, 10] as (number | null)[]).map((n) => (
+              <button
+                key={n ?? "none"}
+                onClick={() => setMaxTestRuns(n)}
+                className={`flex-1 py-1.5 rounded-md border text-[12px] font-semibold transition-all ${
+                  maxTestRuns === n
+                    ? "border-primary/50 bg-primary/10 text-primary"
+                    : "border-base-300/60 text-base-content/40 hover:border-base-300 hover:text-base-content/60 bg-transparent"
+                }`}
+              >
+                {n === null ? "∞" : n}
               </button>
             ))}
           </div>

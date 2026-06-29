@@ -44,6 +44,7 @@ export interface Session {
   kataCount: number;
   passCount: number;
   presetName: string | null;
+  maxTestRuns: number | null;
 }
 
 export interface Attempt {

@@ -39,6 +39,7 @@ export function PracticePage() {
   const sortMode = librarySortMode;
   const setSortMode = (v: LibrarySortMode) => setLibraryUI({ librarySortMode: v });
   const [starting, setStarting] = useState(false);
+  const [maxTestRuns, setMaxTestRuns] = useState<number | null>(null);
 
   // Daily state
   const [dailySelectedIds, setDailySelectedIds] = useState<Set<number>>(new Set());
@@ -215,11 +216,11 @@ export function PracticePage() {
 
     resetKataTimer();
     startSessionTimer();
-    const sessionId = await startSession(sessionType, selectedKatas);
+    const sessionId = await startSession(sessionType, selectedKatas, undefined, maxTestRuns);
     navigate(`/session/${sessionId}`);
   }, [
     starting, tab, size, filteredKatas, customOrder, katas, dailySelectedIds,
-    startSession, startSessionTimer, resetKataTimer, navigate,
+    maxTestRuns, startSession, startSessionTimer, resetKataTimer, navigate,
   ]);
 
   const tabClass = (t: Tab) =>
@@ -294,22 +295,38 @@ export function PracticePage() {
           <button onClick={() => setTab("custom")} className={tabClass("custom")}>Custom</button>
         </div>
 
-        {/* Start session button */}
+        {/* Max attempts selector + Start session button */}
         {isSessionMode && (
-          <button
-            onClick={handleStart}
-            disabled={starting || !canStart}
-            className="btn btn-primary btn-sm gap-1.5 text-xs"
-          >
-            {starting ? (
-              <span className="loading loading-spinner loading-xs" />
-            ) : (
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5">
-                <path d="M3 3.732a1.5 1.5 0 0 1 2.305-1.265l6.706 4.267a1.5 1.5 0 0 1 0 2.531l-6.706 4.268A1.5 1.5 0 0 1 3 12.267V3.732Z" />
-              </svg>
-            )}
-            {starting ? "Starting..." : "Start Session"}
-          </button>
+          <>
+            <div className="flex items-center gap-1.5">
+              <span className="text-[11px] font-semibold text-base-content/35 uppercase tracking-wider">Max</span>
+              <div className="join">
+                {([null, 3, 5, 10] as (number | null)[]).map((n) => (
+                  <button
+                    key={n ?? "none"}
+                    onClick={() => setMaxTestRuns(n)}
+                    className={`btn btn-xs join-item ${maxTestRuns === n ? "btn-primary" : "btn-ghost"}`}
+                  >
+                    {n === null ? "∞" : n}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <button
+              onClick={handleStart}
+              disabled={starting || !canStart}
+              className="btn btn-primary btn-sm gap-1.5 text-xs"
+            >
+              {starting ? (
+                <span className="loading loading-spinner loading-xs" />
+              ) : (
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5">
+                  <path d="M3 3.732a1.5 1.5 0 0 1 2.305-1.265l6.706 4.267a1.5 1.5 0 0 1 0 2.531l-6.706 4.268A1.5 1.5 0 0 1 3 12.267V3.732Z" />
+                </svg>
+              )}
+              {starting ? "Starting..." : "Start Session"}
+            </button>
+          </>
         )}
       </div>
 
