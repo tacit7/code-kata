@@ -246,13 +246,24 @@ export function PracticePage() {
     <div className="flex flex-col h-full p-5 gap-4 animate-fade-in">
       {/* Header */}
       <div className="flex items-center gap-3">
-        <input
-          type="text"
-          placeholder="Search katas..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="input input-bordered input-sm flex-1 max-w-sm bg-base-100"
-        />
+        <div className="relative flex-1 max-w-sm">
+          <input
+            type="text"
+            placeholder="Search katas..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="input input-bordered input-sm w-full bg-base-100 pr-7"
+          />
+          {search && (
+            <button
+              onClick={() => setSearch("")}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-base-content/40 hover:text-base-content/80 transition-colors"
+              aria-label="Clear search"
+            >
+              ✕
+            </button>
+          )}
+        </div>
         {/* Sort dropdown — browse tab only */}
         {tab === "browse" && (
           <select
