@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Distinct Subsequences</title>
+  <link rel="stylesheet" href="../shared/style.css" />
+  <script src="../shared/gsap.min.js"></script>
+  <script src="../shared/viz.js"></script>
+  <style>
+    .viz-area { width: 100%; max-width: 98%; }
+    .main-row { display: grid; grid-template-columns: 1fr 320px; gap: 20px; align-items: start; }
+    @media (max-width: 820px) { .main-row { grid-template-columns: 1fr; } }
+
+    /* DP Table */
+    .table-section {
+      padding: 16px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      overflow-x: auto;
+    }
+    .dp-table { border-collapse: separate; border-spacing: 4px; font-family: monospace; }
+    .dp-table td { width: 42px; height: 42px; text-align: center; vertical-align: middle; font-size: 0.88rem; font-weight: 700; }
+    .hdr-char {
+      width: 42px; height: 42px;
+      font-size: 0.95rem; font-weight: 700; text-align: center; vertical-align: middle;
+      color: var(--accent);
+      background: rgba(122,162,247,0.08);
+      border: 1px solid rgba(122,162,247,0.2);
+      border-radius: 5px;
+      transition: background 0.12s, color 0.12s, border-color 0.12s;
+    }
+    .hdr-char.eps { color: var(--text-dim); background: transparent; border-color: transparent; font-style: italic; }
+    .hdr-char.hl-match { color: var(--green-light); background: rgba(158,206,106,0.12); border-color: var(--green-border); }
+    .hdr-char.hl-miss  { color: var(--accent-pale); background: rgba(122,162,247,0.1); border-color: var(--accent); }
+
+    /* DP cells */
+    .dp-cell {
+      border: 2px dashed var(--border-soft);
+      border-radius: 5px;
+      background: #0f0f0f;
+      color: var(--text-ghost);
+      transition: border-color 0.1s, background 0.1s, color 0.1s;
+    }
+    .dp-cell[data-state="filled"] {
+      border-style: solid; border-color: #2d3148;
+      color: var(--text-dim); background: #0f0f0f;
+    }
+    .dp-cell[data-state="current-match"] {
+      border-style: solid; border-color: var(--green-border);
+      color: var(--green-light); background: var(--green-bg);
+    }
+    .dp-cell[data-state="current-miss"] {
+      border-style: solid; border-color: var(--accent);
+      color: var(--accent-pale); background: var(--surface-dark);
+    }
+    .dp-cell[data-state="src-up"] {
+      border-style: solid; border-color: #9333ea;
+      color: #d8b4fe; background: #170d28;
+    }
+    .dp-cell[data-state="src-diag"] {
+      border-style: solid; border-color: #b45309;
+      color: var(--orange); background: #1c1200;
+    }
+    .dp-cell[data-state="base"] {
+      border-style: solid; border-color: #2d3148;
+      color: var(--text-ghost); background: #0a0a12;
+    }
+    .dp-cell[data-state="result"] {
+      border-style: solid; border-color: var(--green-border);
+      color: var(--green-light); background: var(--green-bg);
+      box-shadow: 0 0 8px rgba(158,206,106,0.3);
+    }
+
+    /* Panels */
+    .panel-box {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 14px 16px;
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .panel-title {
+      font-size: 0.72rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim);
+    }
+
+    /* Variables */
+    .var-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .var-box {
+      padding: 9px 8px;
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      display: flex; flex-direction: column; align-items: center; gap: 3px;
+    }
+    .var-box.accent-border { border-color: var(--accent); }
+    .var-box.amber-border  { border-color: #b45309; }
+    .var-box.green-border  { border-color: var(--green-border); }
+    .var-box.purple-border { border-color: #9333ea; }
+    .var-label { font-size: 0.62rem; font-family: monospace; color: var(--text-faint); text-align: center; }
+    .var-val   { font-size: 1.15rem; font-weight: 700; color: var(--text-bright); font-family: monospace; }
+
+    /* Result display */
+    .result-display {
+      font-size: 1.3rem; font-weight: 700; font-family: monospace;
+      letter-spacing: 0.08em; min-height: 2.2rem;
+      padding: 8px 12px; border-radius: var(--radius-sm);
+      text-align: center;
+      transition: background 0.2s, color 0.2s;
+    }
+    .result-display.has-val { color: var(--green-light); background: var(--green-bg); border: 1px solid var(--green-border); }
+    .result-display.empty   { color: var(--text-ghost);  background: var(--bg);       border: 1px solid var(--border); }
+
+    /* Recurrence display */
+    .recurrence-box {
+      font-size: 0.8rem; font-family: monospace; line-height: 1.8;
+      padding: 8px 10px;
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text-dim);
+      min-height: 2.5rem;
+    }
+    .rec-skip   { color: #9b7ade; }
+    .rec-match  { color: var(--green-light); }
+    .rec-total  { color: var(--orange); font-weight: 700; }
+
+    /* Presets */
+    .preset-row { display: flex; gap: 6px; flex-wrap: wrap; }
+    .preset-btn {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); color: var(--text-dim);
+      cursor: pointer; font-size: 0.75rem; padding: 5px 9px;
+      font-family: monospace; transition: border-color 0.15s, color 0.15s;
+    }
+    .preset-btn:hover { border-color: var(--accent); color: var(--accent-pale); }
+    .preset-btn.active { border-color: var(--accent); color: var(--accent-pale); background: var(--surface-dark); }
+
+    /* Nav */
+    .btn-play {
+      background: #15803d; border: none; border-radius: var(--radius-sm);
+      color: #fff; cursor: pointer; font-size: 0.88rem; font-weight: 600;
+      padding: 9px 16px; transition: background 0.2s;
+    }
+    .btn-play:hover { background: #166534; }
+    .btn-play.playing { background: #c2410c; }
+    .btn-play.playing:hover { background: #9a3412; }
+    .btn-play:disabled { opacity: 0.4; cursor: not-allowed; }
+    .speed-select {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); color: var(--text);
+      font-size: 0.85rem; padding: 8px 10px; outline: none; width: 80px;
+    }
+    .nav-row { display: flex; gap: 8px; align-items: center; }
+
+    /* Code */
+    .code-panel {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); overflow: hidden;
+    }
+    .code-header { padding: 8px 14px; font-size: 0.72rem; font-weight: 600; color: var(--text-dim); border-bottom: 1px solid var(--border); background: var(--bg); }
+    .code-body { padding: 10px 0; font-size: 0.78rem; line-height: 1.75; white-space: pre; }
+    .code-line { display: flex; align-items: center; padding: 0 14px; }
+    .code-line.hl { background: var(--border-soft); border-left: 2px solid var(--accent); }
+    .ln { min-width: 24px; color: var(--text-ghost); user-select: none; font-size: 0.7rem; }
+
+    .kw { color: var(--purple); }
+    .fn { color: var(--blue); }
+    .bi { color: var(--orange); }
+    .op { color: var(--text); }
+    .nb { color: var(--green); }
+    .cm { color: var(--text-ghost); }
+    .str { color: var(--yellow); }
+  </style>
+</head>
+<body class="page">
+
+<div class="page-header">
+  <a class="back-link" href="../index.html">&larr; All Algorithms</a>
+  <div class="page-title">Distinct Subsequences</div>
+  <div class="page-sub">LeetCode 115 &middot; 2-D DP: dp[i][j] = ways to form t[0..j-1] in s[0..i-1] &mdash; always take dp[i-1][j] (skip s[i-1]); add dp[i-1][j-1] on match &middot; O(m&times;n)</div>
+</div>
+
+<div class="controls">
+  <div class="field">
+    <label>s (source)</label>
+    <input id="inp-s" type="text" value="rabbbit" maxlength="10" style="width:130px;font-family:monospace" />
+  </div>
+  <div class="field">
+    <label>t (target)</label>
+    <input id="inp-t" type="text" value="rabbit" maxlength="8" style="width:110px;font-family:monospace" />
+  </div>
+  <button class="btn-primary" onclick="buildAndRun()">Build &amp; Run</button>
+</div>
+
+<div class="viz-area">
+  <div class="main-row">
+
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div class="panel-box">
+        <div class="panel-title">Presets</div>
+        <div class="preset-row" id="preset-row"></div>
+      </div>
+      <div class="table-section" id="table-section">
+        <span style="color:var(--text-dim);font-size:0.82rem">Set strings and click Build &amp; Run.</span>
+      </div>
+      <div class="code-panel">
+        <div class="code-header">Python</div>
+        <div class="code-body" id="code-body"></div>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div style="display:flex;gap:10px">
+        <div class="panel-box" style="flex:0 0 auto">
+          <div class="nav-row">
+            <button class="btn-step" id="btn-back" disabled>&larr;</button>
+            <button class="btn-step" id="btn-next" disabled>&rarr;</button>
+            <button class="btn-play" id="btn-play" disabled>&#9654; Play</button>
+            <select class="speed-select" id="speed-select">
+              <option value="700">Slow</option>
+              <option value="350" selected>Medium</option>
+              <option value="100">Fast</option>
+            </select>
+          </div>
+        </div>
+        <div class="panel-box" style="flex:1;min-width:0">
+          <div class="panel-title" id="phase-label">&mdash;</div>
+          <div style="font-size:0.8rem;color:var(--text-muted);margin-top:2px;line-height:1.45" id="step-desc">Set strings and click Build &amp; Run.</div>
+        </div>
+      </div>
+
+      <div class="panel-box">
+        <div class="panel-title">Variables</div>
+        <div class="var-grid">
+          <div class="var-box accent-border">
+            <div class="var-label">i (s row)</div>
+            <div class="var-val" id="vv-i">&mdash;</div>
+          </div>
+          <div class="var-box amber-border">
+            <div class="var-label">j (t col)</div>
+            <div class="var-val" id="vv-j">&mdash;</div>
+          </div>
+          <div class="var-box">
+            <div class="var-label">s[i-1]</div>
+            <div class="var-val" id="vv-ci">&mdash;</div>
+          </div>
+          <div class="var-box">
+            <div class="var-label">t[j-1]</div>
+            <div class="var-val" id="vv-cj">&mdash;</div>
+          </div>
+          <div class="var-box purple-border">
+            <div class="var-label">dp[i-1][j] (skip)</div>
+            <div class="var-val" id="vv-skip">&mdash;</div>
+          </div>
+          <div class="var-box amber-border">
+            <div class="var-label">dp[i-1][j-1] (use)</div>
+            <div class="var-val" id="vv-diag">&mdash;</div>
+          </div>
+          <div class="var-box green-border" style="grid-column:span 2">
+            <div class="var-label">dp[i][j] (ways)</div>
+            <div class="var-val" id="vv-dp">&mdash;</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel-box">
+        <div class="panel-title">Recurrence</div>
+        <div class="recurrence-box" id="rec-box">&mdash;</div>
+      </div>
+
+      <div class="panel-box">
+        <div class="panel-title">Result</div>
+        <div class="result-display empty" id="result-display">&mdash;</div>
+      </div>
+
+      <div class="panel-box">
+        <div class="panel-title">Legend</div>
+        <div style="display:flex;flex-direction:column;gap:6px;font-size:0.77rem;color:var(--text-muted)">
+          <div style="display:flex;align-items:center;gap:8px">
+            <div style="width:15px;height:15px;border-radius:3px;border:2px solid var(--green-border);background:var(--green-bg);flex-shrink:0"></div>
+            <span>Match: dp[i-1][j] + dp[i-1][j-1]</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <div style="width:15px;height:15px;border-radius:3px;border:2px solid var(--accent);background:var(--surface-dark);flex-shrink:0"></div>
+            <span>Skip only: dp[i-1][j] (s[i-1] &ne; t[j-1])</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <div style="width:15px;height:15px;border-radius:3px;border:2px solid #9333ea;background:#170d28;flex-shrink:0"></div>
+            <span>&uarr; dp[i-1][j] — skip s[i-1]</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <div style="width:15px;height:15px;border-radius:3px;border:2px solid #b45309;background:#1c1200;flex-shrink:0"></div>
+            <span>&nwarr; dp[i-1][j-1] — use s[i-1] for t[j-1]</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <div style="width:15px;height:15px;border-radius:3px;border:2px dashed var(--border-soft);background:#0f0f0f;flex-shrink:0"></div>
+            <span>Unfilled cell</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+var simSteps = [], nav;
+var curS = '', curT = '';
+
+var PRESETS = [
+  { s: 'rabbbit', t: 'rabbit', label: 'Default' },
+  { s: 'babgbag', t: 'bag',    label: 'bag' },
+  { s: 'aabb',   t: 'ab',     label: 'Short' },
+];
+
+var CODE = [
+  [1,  '<span class="kw">def</span> <span class="fn">numDistinct</span><span class="op">(</span>s<span class="op">,</span> t<span class="op">):</span>'],
+  [2,  '    m<span class="op">,</span> n <span class="op">=</span> <span class="bi">len</span><span class="op">(</span>s<span class="op">),</span> <span class="bi">len</span><span class="op">(</span>t<span class="op">)</span>'],
+  [3,  '    dp <span class="op">=</span> <span class="op">[[</span><span class="nb">0</span><span class="op">]*(</span>n<span class="op">+</span><span class="nb">1</span><span class="op">)</span> <span class="kw">for</span> _ <span class="kw">in</span> <span class="bi">range</span><span class="op">(</span>m<span class="op">+</span><span class="nb">1</span><span class="op">)]</span>'],
+  [4,  '    <span class="kw">for</span> i <span class="kw">in</span> <span class="bi">range</span><span class="op">(</span>m<span class="op">+</span><span class="nb">1</span><span class="op">):</span>'],
+  [5,  '        dp<span class="op">[</span>i<span class="op">][</span><span class="nb">0</span><span class="op">]</span> <span class="op">=</span> <span class="nb">1</span>  <span class="cm"># empty t matches any prefix of s</span>'],
+  [6,  '    <span class="kw">for</span> i <span class="kw">in</span> <span class="bi">range</span><span class="op">(</span><span class="nb">1</span><span class="op">,</span> m<span class="op">+</span><span class="nb">1</span><span class="op">):</span>'],
+  [7,  '        <span class="kw">for</span> j <span class="kw">in</span> <span class="bi">range</span><span class="op">(</span><span class="nb">1</span><span class="op">,</span> n<span class="op">+</span><span class="nb">1</span><span class="op">):</span>'],
+  [8,  '            dp<span class="op">[</span>i<span class="op">][</span>j<span class="op">]</span> <span class="op">=</span> dp<span class="op">[</span>i<span class="op">-</span><span class="nb">1</span><span class="op">][</span>j<span class="op">]</span>  <span class="cm"># always skip s[i-1]</span>'],
+  [9,  '            <span class="kw">if</span> s<span class="op">[</span>i<span class="op">-</span><span class="nb">1</span><span class="op">]</span> <span class="op">==</span> t<span class="op">[</span>j<span class="op">-</span><span class="nb">1</span><span class="op">]:</span>'],
+  [10, '                dp<span class="op">[</span>i<span class="op">][</span>j<span class="op">]</span> <span class="op">+=</span> dp<span class="op">[</span>i<span class="op">-</span><span class="nb">1</span><span class="op">][</span>j<span class="op">-</span><span class="nb">1</span><span class="op">]</span>  <span class="cm"># use s[i-1] to match t[j-1]</span>'],
+  [11, '    <span class="kw">return</span> dp<span class="op">[</span>m<span class="op">][</span>n<span class="op">]</span>'],
+];
+
+window.addEventListener('DOMContentLoaded', function() {
+  buildCodePanel();
+  buildPresets();
+  nav = VizNav({
+    btnPrev: document.getElementById('btn-back'),
+    btnNext: document.getElementById('btn-next'),
+    btnPlay: document.getElementById('btn-play'),
+    speedSel: document.getElementById('speed-select'),
+    render: function(snap, cur, total) {
+      applyStep(snap, cur > 0);
+      var phaseEl = document.getElementById('phase-label');
+      var descEl  = document.getElementById('step-desc');
+      if (phaseEl) phaseEl.textContent = 'Step ' + (cur + 1) + ' / ' + total + '  \xb7  ' + snap.phase;
+      if (descEl) {
+        gsap.fromTo(descEl, { opacity: 0 }, { opacity: 1, duration: 0.15 });
+        descEl.textContent = snap.desc;
+      }
+    }
+  });
+  setPreset(0);
+});
+
+function buildPresets() {
+  var row = document.getElementById('preset-row');
+  row.innerHTML = PRESETS.map(function(p, idx) {
+    return '<button class="preset-btn" id="preset-' + idx + '" onclick="setPreset(' + idx + ')">'
+      + p.label + ': ' + p.s + ' / ' + p.t + '</button>';
+  }).join('');
+}
+
+function setPreset(idx) {
+  PRESETS.forEach(function(_, i) {
+    var el = document.getElementById('preset-' + i);
+    if (el) el.classList.toggle('active', i === idx);
+  });
+  document.getElementById('inp-s').value = PRESETS[idx].s;
+  document.getElementById('inp-t').value = PRESETS[idx].t;
+  buildAndRun();
+}
+
+function buildAndRun() {
+  var s = document.getElementById('inp-s').value.trim().toLowerCase().slice(0, 10);
+  var t = document.getElementById('inp-t').value.trim().toLowerCase().slice(0, 8);
+  if (!s && !t) return;
+  curS = s;
+  curT = t;
+  buildTable(s, t);
+  simSteps = simulate(s, t);
+  nav.load(simSteps);
+}
+
+function buildTable(s, t) {
+  var m = s.length, n = t.length;
+  var html = '<table class="dp-table"><tbody>';
+
+  // Header row: empty | ε | t chars
+  html += '<tr>';
+  html += '<td class="hdr-empty" style="width:42px;height:42px"></td>';
+  html += '<td class="hdr-char eps" id="ch-0">&epsilon;</td>';
+  for (var j = 1; j <= n; j++) {
+    html += '<td class="hdr-char" id="ch-' + j + '">' + t[j-1] + '</td>';
+  }
+  html += '</tr>';
+
+  // Row 0 (ε row) — dp[0][j] = 0 for j>0, dp[0][0]=1
+  html += '<tr>';
+  html += '<td class="hdr-char eps" id="rh-0">&epsilon;</td>';
+  for (var j = 0; j <= n; j++) {
+    var val = (j === 0) ? 1 : 0;
+    html += '<td class="dp-cell" id="cell-0-' + j + '" data-state="base">' + val + '</td>';
+  }
+  html += '</tr>';
+
+  // Rows 1..m
+  for (var i = 1; i <= m; i++) {
+    html += '<tr>';
+    html += '<td class="hdr-char" id="rh-' + i + '">' + s[i-1] + '</td>';
+    html += '<td class="dp-cell" id="cell-' + i + '-0" data-state="base">1</td>';
+    for (var j = 1; j <= n; j++) {
+      html += '<td class="dp-cell" id="cell-' + i + '-' + j + '" data-state="empty">-</td>';
+    }
+    html += '</tr>';
+  }
+
+  html += '</tbody></table>';
+  document.getElementById('table-section').innerHTML = html;
+}
+
+function deepCopy2D(arr) {
+  return arr.map(function(row) { return row.slice(); });
+}
+
+function simulate(s, t) {
+  var m = s.length, n = t.length;
+  var steps = [];
+
+  // Init dp: dp[i][0]=1 for all i, dp[0][j]=0 for j>0
+  var dp = [];
+  for (var i = 0; i <= m; i++) {
+    var row = [];
+    for (var j = 0; j <= n; j++) {
+      row.push(j === 0 ? 1 : 0);
+    }
+    dp.push(row);
+  }
+
+  function snap(phase, desc, lines, cur, isMatch, srcUp, srcDiag, result) {
+    steps.push({
+      phase: phase, desc: desc, lines: lines || [],
+      cur: cur || null,
+      isMatch: (isMatch === undefined ? null : isMatch),
+      srcUp:   srcUp   || null,   // [i,j]
+      srcDiag: srcDiag || null,   // [i,j]
+      result:  (result === undefined || result === null) ? null : result,
+      dp: deepCopy2D(dp),
+    });
+  }
+
+  snap('Init',
+    'Base cases: dp[i][0] = 1 for all i (empty t is a subsequence of any prefix of s exactly once). dp[0][j] = 0 for j > 0 (cannot form non-empty t from empty s).',
+    [2,3,4,5], null, null, null, null, null);
+
+  for (var i = 1; i <= m; i++) {
+    for (var j = 1; j <= n; j++) {
+      var ci = s[i-1], cj = t[j-1];
+      var skipVal = dp[i-1][j];
+      var diagVal = dp[i-1][j-1];
+
+      if (ci === cj) {
+        dp[i][j] = skipVal + diagVal;
+        snap('Fill',
+          's[' + (i-1) + ']=\'' + ci + '\' == t[' + (j-1) + ']=\'' + cj + '\' ✓ Match! dp[' + i + '][' + j + '] = dp[' + (i-1) + '][' + j + '](' + skipVal + ') + dp[' + (i-1) + '][' + (j-1) + '](' + diagVal + ') = ' + dp[i][j] + '.',
+          [6,7,8,9,10], [i,j], true, [i-1,j], [i-1,j-1], null);
+      } else {
+        dp[i][j] = skipVal;
+        snap('Fill',
+          's[' + (i-1) + ']=\'' + ci + '\' ≠ t[' + (j-1) + ']=\'' + cj + '\'. Skip only: dp[' + i + '][' + j + '] = dp[' + (i-1) + '][' + j + '] = ' + dp[i][j] + '.',
+          [6,7,8,9], [i,j], false, [i-1,j], null, null);
+      }
+    }
+  }
+
+  snap('Done',
+    'Distinct subsequences = dp[' + m + '][' + n + '] = ' + dp[m][n] + '. There are ' + dp[m][n] + ' way(s) to form \'' + t + '\' as a subsequence of \'' + s + '\'.',
+    [11], null, null, null, null, dp[m][n]);
+
+  return steps;
+}
+
+function buildCodePanel() {
+  var body = document.getElementById('code-body');
+  body.innerHTML = CODE.map(function(e) {
+    return '<div class="code-line" id="cl-' + e[0] + '"><span class="ln">' + e[0] + '</span><span>' + e[1] + '</span></div>';
+  }).join('');
+}
+
+function applyStep(s, animate) {
+  applyTable(s, animate);
+  applyVars(s, animate);
+  applyResult(s, animate);
+  applyRec(s, animate);
+  setCodeLines(s.lines);
+}
+
+function applyTable(s, animate) {
+  var m = curS.length, n = curT.length;
+
+  var curKey  = s.cur   ? (s.cur[0]   + ',' + s.cur[1])   : null;
+  var upKey   = s.srcUp ? (s.srcUp[0] + ',' + s.srcUp[1]) : null;
+  var diagKey = s.srcDiag ? (s.srcDiag[0] + ',' + s.srcDiag[1]) : null;
+
+  // Reset headers
+  for (var i = 0; i <= m; i++) {
+    var el = document.getElementById('rh-' + i);
+    if (el) el.className = i === 0 ? 'hdr-char eps' : 'hdr-char';
+  }
+  for (var j = 0; j <= n; j++) {
+    var el = document.getElementById('ch-' + j);
+    if (el) el.className = j === 0 ? 'hdr-char eps' : 'hdr-char';
+  }
+
+  if (s.cur && s.cur[0] >= 1 && s.cur[1] >= 1) {
+    var ci = s.cur[0], cj = s.cur[1];
+    var hlCls = s.isMatch === true ? 'hdr-char hl-match' : 'hdr-char hl-miss';
+    var rh = document.getElementById('rh-' + ci);
+    var ch = document.getElementById('ch-' + cj);
+    if (rh) rh.className = hlCls;
+    if (ch) ch.className = hlCls;
+  }
+
+  for (var i = 0; i <= m; i++) {
+    for (var j = 0; j <= n; j++) {
+      var cell = document.getElementById('cell-' + i + '-' + j);
+      if (!cell) continue;
+      var key = i + ',' + j;
+      var val = s.dp[i][j];
+
+      cell.textContent = (val === null || val === undefined) ? '-' : String(val);
+
+      var state;
+      if (key === curKey) {
+        state = s.isMatch === true ? 'current-match' : 'current-miss';
+      } else if (key === diagKey) {
+        state = 'src-diag';
+      } else if (key === upKey) {
+        state = 'src-up';
+      } else if (s.phase === 'Done' && i === curS.length && j === curT.length) {
+        state = 'result';
+      } else if (i === 0 || j === 0) {
+        state = 'base';
+      } else if (val !== null && val !== undefined && val >= 0 && !(i >= (s.cur ? s.cur[0] : 0) && j > (s.cur ? s.cur[1] : 0))) {
+        state = 'filled';
+      } else {
+        state = 'empty';
+      }
+
+      cell.dataset.state = state;
+
+      if (animate && key === curKey && s.phase === 'Fill') {
+        gsap.fromTo(cell, { scale: 0.6 }, { scale: 1.15, duration: 0.18, ease: 'power2.out',
+          onComplete: function(el) { gsap.to(el, { scale: 1, duration: 0.12 }); }.bind(null, cell)
+        });
+      }
+    }
+  }
+}
+
+function applyVars(s, animate) {
+  function setVal(id, val) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    var text = (val === null || val === undefined) ? '—' : String(val);
+    if (animate && el.textContent !== text) {
+      gsap.fromTo(el, { scale: 0.8, opacity: 0.4 }, { scale: 1, opacity: 1, duration: 0.2, ease: 'back.out(1.7)' });
+    }
+    el.textContent = text;
+  }
+  var ci = s.cur ? s.cur[0] : null;
+  var cj = s.cur ? s.cur[1] : null;
+  setVal('vv-i',  ci !== null ? ci : null);
+  setVal('vv-j',  cj !== null ? cj : null);
+  setVal('vv-ci', (ci !== null && ci >= 1) ? curS[ci-1] : null);
+  setVal('vv-cj', (cj !== null && cj >= 1) ? curT[cj-1] : null);
+
+  if (ci !== null && cj !== null && ci >= 1 && cj >= 1) {
+    setVal('vv-skip', s.dp[ci-1] !== undefined ? s.dp[ci-1][cj] : null);
+    setVal('vv-diag', (s.isMatch && s.dp[ci-1] !== undefined) ? s.dp[ci-1][cj-1] : null);
+  } else {
+    setVal('vv-skip', null);
+    setVal('vv-diag', null);
+  }
+  setVal('vv-dp', (ci !== null && cj !== null && s.dp[ci] !== undefined && s.dp[ci][cj] !== undefined && s.dp[ci][cj] !== null) ? s.dp[ci][cj] : null);
+}
+
+function applyResult(s, animate) {
+  var el = document.getElementById('result-display');
+  if (!el) return;
+  if (s.result !== null && s.result !== undefined) {
+    var text = s.result + ' way' + (s.result !== 1 ? 's' : '');
+    if (animate && el.textContent !== text) {
+      gsap.fromTo(el, { opacity: 0.3 }, { opacity: 1, duration: 0.25 });
+    }
+    el.textContent = text;
+    el.className = 'result-display has-val';
+  } else {
+    el.textContent = '—';
+    el.className = 'result-display empty';
+  }
+}
+
+function applyRec(s, animate) {
+  var el = document.getElementById('rec-box');
+  if (!el) return;
+  if (!s.cur || s.cur[0] < 1 || s.cur[1] < 1) {
+    el.innerHTML = '&mdash;';
+    return;
+  }
+  var ci = s.cur[0], cj = s.cur[1];
+  var skipVal = s.dp[ci-1] !== undefined ? s.dp[ci-1][cj] : '?';
+  var diagVal = (s.isMatch && s.dp[ci-1] !== undefined) ? s.dp[ci-1][cj-1] : null;
+  var dpVal   = (s.dp[ci] !== undefined && s.dp[ci][cj] !== undefined) ? s.dp[ci][cj] : '?';
+
+  var html = '<span class="rec-skip">dp[' + (ci-1) + '][' + cj + '] = ' + skipVal + '</span> (skip)';
+  if (s.isMatch) {
+    html += '\n+ <span class="rec-match">dp[' + (ci-1) + '][' + (cj-1) + '] = ' + diagVal + '</span> (use)';
+  } else {
+    html += '\n  (no match — use only)';
+  }
+  html += '\n= <span class="rec-total">' + dpVal + '</span>';
+
+  if (animate) gsap.fromTo(el, { opacity: 0.3 }, { opacity: 1, duration: 0.2 });
+  el.innerHTML = html;
+}
+
+function setCodeLines(lines) {
+  CODE.forEach(function(e) {
+    var el = document.getElementById('cl-' + e[0]);
+    if (!el) return;
+    if (lines && lines.indexOf(e[0]) >= 0) el.classList.add('hl');
+    else el.classList.remove('hl');
+  });
+}
+</script>
+<script>
+  if (window.self !== window.top) {
+    var bl = document.querySelector('.back-link');
+    if (bl) bl.style.display = 'none';
+  }
+</script>
+</body>
+</html>

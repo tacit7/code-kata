@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Alien Dictionary</title>
+  <link rel="stylesheet" href="../shared/style.css" />
+  <script src="../shared/viz.js"></script>
+  <style>
+    .viz-area { width: 100%; max-width: 95%; }
+    .main-row { display: grid; grid-template-columns: 1fr 380px; gap: 20px; align-items: start; }
+    @media (max-width: 800px) { .main-row { grid-template-columns: 1fr; } }
+
+    .graph-panel {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 16px;
+      display: flex; flex-direction: column; gap: 12px;
+    }
+
+    /* Word comparison table */
+    .words-table {
+      display: flex; flex-direction: column; gap: 4px;
+    }
+    .word-row {
+      display: flex; align-items: center; gap: 6px;
+    }
+    .word-idx {
+      color: var(--text-ghost); font-size: 0.72rem; min-width: 20px;
+      text-align: right; font-family: monospace;
+    }
+    .word-chars {
+      display: flex; gap: 3px;
+    }
+    .char-box {
+      width: 28px; height: 28px; border-radius: 4px;
+      display: flex; align-items: center; justify-content: center;
+      font-family: monospace; font-weight: 700; font-size: 0.9rem;
+      border: 1.5px solid var(--border); color: var(--text);
+      background: var(--bg); transition: background 0.25s, border-color 0.25s, color 0.25s;
+    }
+    .char-box.match  { background: #1a2a1a; border-color: #9ece6a; color: #9ece6a; }
+    .char-box.differ { background: #3d2a10; border-color: #e0af68; color: #e0af68; }
+    .char-box.faded  { opacity: 0.3; }
+    .word-arrow {
+      font-size: 0.72rem; color: var(--text-ghost); min-width: 30px; text-align: center;
+    }
+    .word-edge-label {
+      font-family: monospace; font-size: 0.8rem; color: #e0af68; font-weight: 700;
+    }
+
+    /* Graph SVG */
+    .graph-svg-wrap {
+      width: 100%; aspect-ratio: 1.5;
+      background: var(--bg); border-radius: var(--radius-sm);
+      overflow: hidden;
+    }
+    #graph-svg { width: 100%; height: 100%; }
+
+    .node-circle {
+      stroke-width: 2.5;
+      transition: fill 0.3s, stroke 0.3s;
+    }
+    .node-circle.state-white  { fill: #1a1b2e; stroke: #7aa2f7; }
+    .node-circle.state-gray   { fill: #3d3524; stroke: #e0af68; }
+    .node-circle.state-black  { fill: #1a2a1a; stroke: #9ece6a; }
+    .node-circle.state-cycle  { fill: #3d1515; stroke: #f7768e; }
+
+    .node-label {
+      fill: var(--text-bright); font-size: 14px; font-weight: 700;
+      font-family: monospace; text-anchor: middle; dominant-baseline: central;
+      pointer-events: none;
+    }
+    .edge-line {
+      stroke-width: 2; fill: none;
+      stroke: #3b4261; transition: stroke 0.3s;
+    }
+    .edge-line.active  { stroke: #e0af68; }
+    .edge-line.cycle   { stroke: #f7768e; }
+    .edge-line.done    { stroke: #9ece6a; }
+
+    .edge-arrow { fill: #3b4261; transition: fill 0.3s; }
+
+    /* right column */
+    .right-col { display: flex; flex-direction: column; gap: 12px; }
+
+    .panel-box {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 14px 16px;
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .panel-title {
+      font-size: 0.72rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim);
+    }
+
+    .nav-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .btn-play {
+      background: #15803d; border: none; border-radius: var(--radius-sm);
+      color: #fff; cursor: pointer; font-size: 0.88rem; font-weight: 600;
+      padding: 9px 16px; transition: background 0.2s;
+    }
+    .btn-play:hover { background: #166534; }
+    .btn-play.playing { background: #c2410c; }
+    .btn-play.playing:hover { background: #9a3412; }
+    .btn-play:disabled { opacity: 0.4; cursor: not-allowed; }
+    .speed-select {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); color: var(--text);
+      font-size: 0.85rem; padding: 8px 10px; outline: none; width: 80px;
+    }
+
+    .result-badge {
+      font-size: 0.88rem; font-weight: 700;
+      padding: 6px 14px; border-radius: 6px; letter-spacing: 0.05em;
+      display: none; width: fit-content; font-family: monospace;
+    }
+    .result-badge.valid   { background: #1a2a1a; color: #9ece6a; border: 1px solid #9ece6a; display: block; }
+    .result-badge.invalid { background: #3d1515; color: #f7768e; border: 1px solid #f7768e; display: block; }
+
+    /* topo order chips */
+    .order-list {
+      display: flex; gap: 6px; flex-wrap: wrap; min-height: 28px; align-items: center;
+    }
+    .order-chip {
+      padding: 3px 10px; border-radius: 4px;
+      font-size: 0.8rem; font-family: monospace; font-weight: 700;
+      background: #1a2a1a; border: 1px solid #9ece6a; color: #9ece6a;
+    }
+    .stack-chip {
+      padding: 3px 10px; border-radius: 4px;
+      font-size: 0.8rem; font-family: monospace; font-weight: 700;
+      background: #3d3524; border: 1px solid #e0af68; color: #e0af68;
+    }
+
+    /* legend */
+    .legend-row { display: flex; align-items: center; gap: 8px; font-size: 0.78rem; color: var(--text-muted); }
+    .legend-dot {
+      width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; border: 2px solid;
+    }
+
+    /* code panel */
+    .code-panel {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); overflow: hidden;
+    }
+    .code-header {
+      padding: 8px 14px; font-size: 0.72rem; font-weight: 600;
+      color: var(--text-dim); border-bottom: 1px solid var(--border); background: var(--bg);
+    }
+    .code-body { padding: 10px 0; font-size: 0.78rem; line-height: 1.75; white-space: pre; }
+    .code-line { display: flex; align-items: center; padding: 0 14px; }
+    .code-line.hl { background: var(--border-soft); border-left: 2px solid var(--accent); }
+    .ln { min-width: 24px; color: var(--text-ghost); user-select: none; font-size: 0.7rem; }
+    .kw { color: var(--purple); }
+    .fn { color: var(--blue); }
+    .bi { color: var(--orange); }
+    .cm { color: var(--text-ghost); }
+    .nb { color: var(--green); }
+    .st { color: #e0af68; }
+
+    /* preset buttons */
+    .preset-row { display: flex; gap: 8px; flex-wrap: wrap; }
+    .btn-preset {
+      padding: 6px 12px; border-radius: var(--radius-sm);
+      background: var(--bg); border: 1px solid var(--border);
+      color: var(--text-dim); font-size: 0.8rem; cursor: pointer;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .btn-preset:hover, .btn-preset.active { border-color: var(--accent); color: var(--accent-pale); }
+
+    .section-label {
+      font-size: 0.72rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--text-dim); margin-bottom: 4px;
+    }
+  </style>
+</head>
+<body class="page">
+
+<div class="page-header">
+  <a class="back-link" href="../index.html">&larr; All Algorithms</a>
+  <div class="page-title">Alien Dictionary</div>
+  <div class="page-sub">LeetCode 269 &middot; Topological sort from adjacent-word character ordering &middot; DFS WHITE/GRAY/BLACK &middot; O(N·M + U + E)</div>
+</div>
+
+<div class="controls">
+  <div class="field">
+    <label>Preset</label>
+    <div class="preset-row">
+      <button class="btn-preset active" id="preset-default" onclick="loadPreset('default')">Default (wrt…)</button>
+      <button class="btn-preset" id="preset-two" onclick="loadPreset('two')">Two words</button>
+      <button class="btn-preset" id="preset-cycle" onclick="loadPreset('cycle')">Cycle (invalid)</button>
+    </div>
+  </div>
+  <button class="btn-primary" onclick="buildAndRun()">Build &amp; Run</button>
+</div>
+
+<div class="viz-area">
+  <div class="main-row">
+
+    <!-- Left: word table + graph -->
+    <div class="graph-panel">
+      <div class="section-label">Word List (adjacent pairs yield ordering edges)</div>
+      <div class="words-table" id="words-table"></div>
+
+      <div class="section-label" style="margin-top:6px">Constraint Graph (char → char)</div>
+      <div class="graph-svg-wrap">
+        <svg id="graph-svg" viewBox="0 0 560 320" preserveAspectRatio="xMidYMid meet">
+          <defs>
+            <marker id="arr-default" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+              <path d="M0,0 L0,6 L8,3 z" fill="#3b4261"/>
+            </marker>
+            <marker id="arr-active" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+              <path d="M0,0 L0,6 L8,3 z" fill="#e0af68"/>
+            </marker>
+            <marker id="arr-cycle" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+              <path d="M0,0 L0,6 L8,3 z" fill="#f7768e"/>
+            </marker>
+            <marker id="arr-done" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+              <path d="M0,0 L0,6 L8,3 z" fill="#9ece6a"/>
+            </marker>
+          </defs>
+          <g id="edges-g"></g>
+          <g id="nodes-g"></g>
+        </svg>
+      </div>
+    </div>
+
+    <!-- Right panel -->
+    <div class="right-col">
+
+      <div class="panel-box">
+        <div class="nav-row">
+          <button class="btn-step" id="btn-back" disabled>&larr;</button>
+          <button class="btn-step" id="btn-next" disabled>&rarr;</button>
+          <button class="btn-play" id="btn-play" disabled>&#9654; Play</button>
+          <select class="speed-select" id="speed-select">
+            <option value="800">Slow</option>
+            <option value="400" selected>Medium</option>
+            <option value="120">Fast</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="panel-box">
+        <div class="panel-title" id="phase-label">&mdash;</div>
+        <div style="font-size:0.82rem;color:var(--text-muted);margin-top:2px;min-height:40px" id="step-desc">Select a preset and click Build &amp; Run.</div>
+        <div class="result-badge" id="result-badge"></div>
+      </div>
+
+      <div class="panel-box">
+        <div class="panel-title">DFS Stack (GRAY chars)</div>
+        <div class="order-list" id="stack-list">
+          <span style="color:var(--text-ghost);font-size:0.78rem">empty</span>
+        </div>
+      </div>
+
+      <div class="panel-box">
+        <div class="panel-title">Topo Order (reverse post-order)</div>
+        <div class="order-list" id="order-list">
+          <span style="color:var(--text-ghost);font-size:0.78rem">none yet</span>
+        </div>
+      </div>
+
+      <div class="panel-box">
+        <div class="panel-title">Legend</div>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <div class="legend-row">
+            <div class="legend-dot" style="background:#1a1b2e;border-color:#7aa2f7"></div>
+            <span>WHITE — unvisited</span>
+          </div>
+          <div class="legend-row">
+            <div class="legend-dot" style="background:#3d3524;border-color:#e0af68"></div>
+            <span>GRAY — in current DFS path</span>
+          </div>
+          <div class="legend-row">
+            <div class="legend-dot" style="background:#1a2a1a;border-color:#9ece6a"></div>
+            <span>BLACK — done, appended to order</span>
+          </div>
+          <div class="legend-row">
+            <div class="legend-dot" style="background:#3d1515;border-color:#f7768e"></div>
+            <span>CYCLE — back edge detected (invalid)</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="code-panel">
+        <div class="code-header">Python</div>
+        <div class="code-body" id="code-body"></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+var CODE = [
+  [1,  '<span class="kw">def</span> <span class="fn">alienOrder</span>(words):'],
+  [2,  '    adj = {c: <span class="bi">set</span>() <span class="kw">for</span> w <span class="kw">in</span> words <span class="kw">for</span> c <span class="kw">in</span> w}'],
+  [3,  '    <span class="kw">for</span> i <span class="kw">in</span> <span class="bi">range</span>(<span class="bi">len</span>(words) - <span class="nb">1</span>):'],
+  [4,  '        w1, w2 = words[i], words[i+<span class="nb">1</span>]'],
+  [5,  '        min_len = <span class="bi">min</span>(<span class="bi">len</span>(w1), <span class="bi">len</span>(w2))'],
+  [6,  '        <span class="kw">if</span> <span class="bi">len</span>(w1) > <span class="bi">len</span>(w2) <span class="kw">and</span> w1[:min_len] == w2[:min_len]:'],
+  [7,  '            <span class="kw">return</span> <span class="st">""</span>  <span class="cm"># invalid prefix ordering</span>'],
+  [8,  '        <span class="kw">for</span> j <span class="kw">in</span> <span class="bi">range</span>(min_len):'],
+  [9,  '            <span class="kw">if</span> w1[j] != w2[j]:'],
+  [10, '                adj[w1[j]].add(w2[j])  <span class="cm"># w1[j] < w2[j]</span>'],
+  [11, '                <span class="kw">break</span>'],
+  [12, '    WHITE, GRAY, BLACK = <span class="nb">0</span>, <span class="nb">1</span>, <span class="nb">2</span>'],
+  [13, '    color = {c: WHITE <span class="kw">for</span> c <span class="kw">in</span> adj}'],
+  [14, '    result = []'],
+  [15, '    <span class="kw">def</span> <span class="fn">dfs</span>(c):'],
+  [16, '        color[c] = GRAY'],
+  [17, '        <span class="kw">for</span> nei <span class="kw">in</span> adj[c]:'],
+  [18, '            <span class="kw">if</span> color[nei] == GRAY: <span class="kw">return</span> <span class="nb">False</span>'],
+  [19, '            <span class="kw">if</span> color[nei] == WHITE:'],
+  [20, '                <span class="kw">if not</span> <span class="fn">dfs</span>(nei): <span class="kw">return</span> <span class="nb">False</span>'],
+  [21, '        color[c] = BLACK'],
+  [22, '        result.append(c)'],
+  [23, '        <span class="kw">return</span> <span class="nb">True</span>'],
+  [24, '    <span class="kw">for</span> c <span class="kw">in</span> adj:'],
+  [25, '        <span class="kw">if</span> color[c] == WHITE:'],
+  [26, '            <span class="kw">if not</span> <span class="fn">dfs</span>(c): <span class="kw">return</span> <span class="st">""</span>'],
+  [27, '    <span class="kw">return</span> <span class="st">""</span>.join(<span class="bi">reversed</span>(result))'],
+];
+
+var PRESETS = {
+  default: {
+    words: ['wrt','wrf','er','ett','rftt'],
+    label: "['wrt','wrf','er','ett','rftt'] → 'wertf'"
+  },
+  two: {
+    words: ['abc','ab'],
+    label: "['abc','ab'] → '' (invalid prefix)"
+  },
+  cycle: {
+    words: ['ab','ba'],
+    label: "['ab','ba'] → '' (cycle: a→b→a)"
+  }
+};
+
+var currentPreset = 'default';
+var simSteps = [];
+var nav;
+var gNodes = [];   // {id, char, x, y}
+var gEdges = [];   // {from, to} char pairs
+var gWords = [];
+
+function loadPreset(name) {
+  currentPreset = name;
+  Object.keys(PRESETS).forEach(function(p) {
+    document.getElementById('preset-' + p).classList.toggle('active', p === name);
+  });
+}
+
+// ---- Layout helpers ----
+function layoutNodes(chars) {
+  var list = Array.from(chars).sort();
+  var n = list.length;
+  var cx = 280, cy = 160, r = 120;
+  return list.map(function(c, i) {
+    var angle = (2 * Math.PI * i / n) - Math.PI / 2;
+    return { char: c, x: cx + r * Math.cos(angle), y: cy + r * Math.sin(angle) };
+  });
+}
+
+// ---- Graph SVG ----
+var NODE_R = 20;
+
+function charNode(c) {
+  return gNodes.find(function(n) { return n.char === c; });
+}
+
+function edgeKey(a, b) { return a + '->' + b; }
+
+function getEdgePts(a, b) {
+  var na = charNode(a), nb = charNode(b);
+  if (!na || !nb) return null;
+  var dx = nb.x - na.x, dy = nb.y - na.y;
+  var dist = Math.sqrt(dx*dx + dy*dy);
+  if (dist < 1) return null;
+  var ux = dx/dist, uy = dy/dist;
+  return {
+    x1: na.x + ux * NODE_R, y1: na.y + uy * NODE_R,
+    x2: nb.x - ux * (NODE_R + 6), y2: nb.y - uy * (NODE_R + 6)
+  };
+}
+
+function renderGraph(snap) {
+  var edgesG = document.getElementById('edges-g');
+  var nodesG = document.getElementById('nodes-g');
+  edgesG.innerHTML = '';
+  nodesG.innerHTML = '';
+
+  var edgeStates = {};
+  if (snap) {
+    (snap.activeEdges || []).forEach(function(e) { edgeStates[edgeKey(e[0],e[1])] = 'active'; });
+    (snap.cycleEdges  || []).forEach(function(e) { edgeStates[edgeKey(e[0],e[1])] = 'cycle'; });
+    (snap.doneEdges   || []).forEach(function(e) { edgeStates[edgeKey(e[0],e[1])] = 'done'; });
+  }
+
+  var nodeStates = {};
+  gNodes.forEach(function(n) { nodeStates[n.char] = snap ? (snap.colors[n.char] || 'white') : 'white'; });
+
+  gEdges.forEach(function(e) {
+    var pts = getEdgePts(e.from, e.to);
+    if (!pts) return;
+    var key = edgeKey(e.from, e.to);
+    var state = edgeStates[key] || 'default';
+    var marker = 'url(#arr-' + (state === 'default' ? 'default' : state) + ')';
+    var line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    line.setAttribute('x1', pts.x1); line.setAttribute('y1', pts.y1);
+    line.setAttribute('x2', pts.x2); line.setAttribute('y2', pts.y2);
+    line.setAttribute('class', 'edge-line' + (state !== 'default' ? ' ' + state : ''));
+    line.setAttribute('marker-end', marker);
+    edgesG.appendChild(line);
+  });
+
+  gNodes.forEach(function(n) {
+    var g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    var circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    circle.setAttribute('cx', n.x); circle.setAttribute('cy', n.y);
+    circle.setAttribute('r', NODE_R);
+    circle.setAttribute('class', 'node-circle state-' + (nodeStates[n.char] || 'white'));
+    var text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    text.setAttribute('x', n.x); text.setAttribute('y', n.y);
+    text.setAttribute('class', 'node-label');
+    text.textContent = n.char;
+    g.appendChild(circle); g.appendChild(text);
+    nodesG.appendChild(g);
+  });
+}
+
+// ---- Word comparison table ----
+function renderWordTable(snap) {
+  var el = document.getElementById('words-table');
+  var hl = snap ? (snap.highlightPair || -1) : -1;
+  var hlJ = snap ? (snap.highlightJ || -1) : -1;
+
+  el.innerHTML = gWords.map(function(w, i) {
+    var chars = w.split('').map(function(c, j) {
+      var cls = 'char-box';
+      if (hl === i || hl === i + 1) {
+        // show matching / differing chars when comparing pair (hl, hl+1)
+        if (hl === i && snap && snap.compareJ !== undefined) {
+          if (j < snap.compareJ) cls += ' match';
+          else if (j === snap.compareJ) cls += ' differ';
+          else cls += ' faded';
+        } else if (hl === i + 1 && snap && snap.compareJ !== undefined) {
+          if (j < snap.compareJ) cls += ' match';
+          else if (j === snap.compareJ) cls += ' differ';
+          else cls += ' faded';
+        }
+      }
+      return '<div class="' + cls + '">' + c + '</div>';
+    }).join('');
+
+    var edgeLabel = '';
+    if (snap && snap.wordEdge && snap.wordEdge.wordIdx === i) {
+      edgeLabel = '<span class="word-edge-label">' + snap.wordEdge.from + '→' + snap.wordEdge.to + '</span>';
+    }
+
+    return '<div class="word-row"><span class="word-idx">' + i + '</span><div class="word-chars">' + chars + '</div>' + edgeLabel + '</div>';
+  }).join('');
+}
+
+// ---- Simulation ----
+function simulate(words) {
+  var steps = [];
+
+  // Collect all chars
+  var charSet = {};
+  words.forEach(function(w) { w.split('').forEach(function(c) { charSet[c] = true; }); });
+  var chars = Object.keys(charSet).sort();
+
+  // Build adjacency from word pairs
+  var adj = {};
+  chars.forEach(function(c) { adj[c] = []; });
+  var edgeList = [];
+  var invalidPrefix = false;
+
+  function snap(phase, desc, lines, extra) {
+    var colorSnap = Object.assign({}, colors);
+    if (extra && extra.colors) Object.assign(colorSnap, extra.colors);
+    steps.push(Object.assign({
+      phase: phase, desc: desc, lines: lines,
+      colors: colorSnap,
+      stack: stack.slice(),
+      finished: finished.slice(),
+      activeEdges: activeEdges.map(function(e){return e.slice();}),
+      cycleEdges: cycleEdges.map(function(e){return e.slice();}),
+      doneEdges: doneEdges.map(function(e){return e.slice();}),
+      foundCycle: foundCycle,
+      invalidPrefix: invalidPrefix,
+      result: result.slice(),
+    }, extra || {}));
+  }
+
+  var colors = {};
+  chars.forEach(function(c) { colors[c] = 'white'; });
+  var stack = [], finished = [], activeEdges = [], cycleEdges = [], doneEdges = [];
+  var foundCycle = false;
+  var result = [];
+
+  snap('Init', 'Collect all unique characters from every word. Initialize graph with one node per char.', [2], {});
+
+  // Build edges from adjacent word pairs
+  for (var i = 0; i < words.length - 1; i++) {
+    var w1 = words[i], w2 = words[i+1];
+    var minLen = Math.min(w1.length, w2.length);
+
+    snap('Compare', 'Compare word[' + i + ']="' + w1 + '" vs word[' + (i+1) + ']="' + w2 + '" — scan char by char until they differ.', [3,4,5], {highlightPair: i, compareJ: -1});
+
+    // Check invalid prefix
+    if (w1.length > w2.length && w1.slice(0, minLen) === w2.slice(0, minLen)) {
+      invalidPrefix = true;
+      snap('InvalidPrefix', 'word[' + i + ']="' + w1 + '" is longer and is a prefix of word[' + (i+1) + ']="' + w2 + '" — this is an impossible ordering. Return "".', [6,7], {highlightPair: i, compareJ: minLen - 1});
+      break;
+    }
+
+    var foundDiff = false;
+    for (var j = 0; j < minLen; j++) {
+      snap('ScanChars', 'Position ' + j + ': "' + w1[j] + '" vs "' + w2[j] + '"' + (w1[j] === w2[j] ? ' — same, continue.' : ' — DIFFERENT! Edge ' + w1[j] + '→' + w2[j] + ' ('+w1[j]+' comes before '+w2[j]+').'), [8,9], {highlightPair: i, compareJ: j});
+      if (w1[j] !== w2[j]) {
+        if (adj[w1[j]].indexOf(w2[j]) === -1) {
+          adj[w1[j]].push(w2[j]);
+          edgeList.push({from: w1[j], to: w2[j]});
+        }
+        snap('AddEdge', 'First difference: "' + w1[j] + '" < "' + w2[j] + '" in alien order. Add edge ' + w1[j] + '→' + w2[j] + ' to constraint graph.', [10,11], {highlightPair: i, compareJ: j, wordEdge: {wordIdx: i, from: w1[j], to: w2[j]}});
+        foundDiff = true;
+        break;
+      }
+    }
+    if (!foundDiff && !invalidPrefix) {
+      snap('NoDiff', 'Words "' + w1 + '" and "' + w2 + '" share a common prefix up to their shorter length — no ordering edge extracted from this pair.', [8,9,11], {highlightPair: i, compareJ: minLen});
+    }
+  }
+
+  // Update gEdges for graph rendering
+  gEdges = edgeList;
+
+  if (invalidPrefix) {
+    steps[steps.length - 1].result = [];
+    return steps;
+  }
+
+  snap('StartDFS', 'Graph built. Now run DFS topo sort: visit each char, mark GRAY on entry, BLACK on exit, append to result.', [12,13,14,24,25,26]);
+
+  function dfs(c) {
+    if (foundCycle) return;
+    colors[c] = 'gray';
+    stack.push(c);
+    snap('Enter', 'Enter "' + c + '" → mark GRAY (on DFS stack).', [16], {});
+
+    var neighbors = adj[c];
+    for (var k = 0; k < neighbors.length; k++) {
+      if (foundCycle) break;
+      var nei = neighbors[k];
+      activeEdges = [[c, nei]];
+
+      if (colors[nei] === 'gray') {
+        cycleEdges.push([c, nei]);
+        foundCycle = true;
+        var cycleColors = Object.assign({}, colors);
+        cycleColors[nei] = 'cycle';
+        cycleColors[c] = 'cycle';
+        snap('Cycle', 'Edge "' + c + '"→"' + nei + '": "' + nei + '" is GRAY (on stack). Back edge! Cycle detected — no valid ordering exists. Return "".', [18], {colors: cycleColors});
+        activeEdges = [];
+        return;
+      }
+
+      if (colors[nei] === 'white') {
+        snap('Recurse', 'Edge "' + c + '"→"' + nei + '": "' + nei + '" is WHITE — recurse DFS("' + nei + '").', [17,19,20], {});
+        activeEdges = [];
+        dfs(nei);
+        if (foundCycle) return;
+        doneEdges.push([c, nei]);
+        activeEdges = [];
+      } else {
+        // black — already processed
+        doneEdges.push([c, nei]);
+        snap('SkipBlack', 'Edge "' + c + '"→"' + nei + '": "' + nei + '" is BLACK (done) — safe, skip.', [17,19], {});
+        activeEdges = [];
+      }
+    }
+
+    if (!foundCycle) {
+      colors[c] = 'black';
+      stack.pop();
+      finished.push(c);
+      result.push(c);
+      snap('Exit', 'Exit "' + c + '" → mark BLACK, append to result (reverse post-order = topo order).', [21,22,23], {});
+    }
+  }
+
+  for (var ci = 0; ci < chars.length; ci++) {
+    if (foundCycle) break;
+    var c = chars[ci];
+    if (colors[c] === 'white') {
+      snap('StartNode', 'Char "' + c + '" is WHITE — begin DFS from "' + c + '".', [24,25,26], {});
+      dfs(c);
+    }
+  }
+
+  if (!foundCycle) {
+    var order = result.slice().reverse().join('');
+    snap('Done', 'DFS complete. Reverse of post-order gives the alien alphabet order: "' + order + '".', [27], {});
+  }
+
+  return steps;
+}
+
+// ---- Apply step ----
+function applyStep(snap) {
+  renderGraph(snap);
+  renderWordTable(snap);
+  updateChips('stack-list', snap.stack, 'stack-chip');
+  var topoSoFar = snap.result ? snap.result.slice().reverse() : [];
+  updateChips('order-list', topoSoFar, 'order-chip');
+  setCodeLines(snap.lines);
+
+  var badge = document.getElementById('result-badge');
+  badge.className = 'result-badge';
+  badge.textContent = '';
+
+  if (snap.phase === 'Done') {
+    var order = snap.result.slice().reverse().join('');
+    badge.className = 'result-badge valid';
+    badge.textContent = '"' + order + '"';
+  } else if (snap.phase === 'Cycle' || snap.foundCycle) {
+    if (snap.phase === 'Cycle' || snap.phase === 'Done') {
+      badge.className = 'result-badge invalid';
+      badge.textContent = '"" — cycle detected';
+    }
+  } else if (snap.invalidPrefix) {
+    badge.className = 'result-badge invalid';
+    badge.textContent = '"" — invalid prefix';
+  }
+}
+
+function updateChips(elId, items, cls) {
+  var el = document.getElementById(elId);
+  if (!items || items.length === 0) {
+    el.innerHTML = '<span style="color:var(--text-ghost);font-size:0.78rem">empty</span>';
+    return;
+  }
+  el.innerHTML = items.map(function(c) {
+    return '<div class="' + cls + '">' + c + '</div>';
+  }).join('');
+}
+
+function setCodeLines(lines) {
+  CODE.forEach(function(e) {
+    var el = document.getElementById('cl-' + e[0]);
+    if (!el) return;
+    el.classList.toggle('hl', !!(lines && lines.indexOf(e[0]) >= 0));
+  });
+}
+
+function buildCodePanel() {
+  var body = document.getElementById('code-body');
+  body.innerHTML = CODE.map(function(e) {
+    return '<div class="code-line" id="cl-' + e[0] + '"><span class="ln">' + e[0] + '</span><span>' + e[1] + '</span></div>';
+  }).join('');
+}
+
+function buildAndRun() {
+  var preset = PRESETS[currentPreset];
+  gWords = preset.words;
+
+  // Collect chars + layout nodes
+  var charSet = {};
+  gWords.forEach(function(w) { w.split('').forEach(function(c) { charSet[c] = true; }); });
+  gNodes = layoutNodes(Object.keys(charSet));
+  gEdges = [];
+
+  // Reset word table + graph
+  renderWordTable(null);
+  renderGraph(null);
+
+  simSteps = simulate(gWords);
+
+  // Update gEdges from simulation (built during simulate)
+  renderGraph(null);  // re-render with edges
+
+  nav.load(simSteps);
+}
+
+window.addEventListener('DOMContentLoaded', function() {
+  buildCodePanel();
+  loadPreset('default');
+  nav = VizNav({
+    btnPrev: document.getElementById('btn-back'),
+    btnNext: document.getElementById('btn-next'),
+    btnPlay: document.getElementById('btn-play'),
+    speedSel: document.getElementById('speed-select'),
+    render: function(snap, cur, total) {
+      applyStep(snap);
+      document.getElementById('phase-label').textContent = 'Step ' + (cur+1) + ' / ' + total + '  ·  ' + snap.phase;
+      document.getElementById('step-desc').textContent = snap.desc;
+    }
+  });
+});
+</script>
+
+<script>
+  if (window.self !== window.top) {
+    var bl = document.querySelector('.back-link');
+    if (bl) bl.style.display = 'none';
+  }
+</script>
+</body>
+</html>

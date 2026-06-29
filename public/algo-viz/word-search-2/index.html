@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Word Search II</title>
+  <link rel="stylesheet" href="../shared/style.css" />
+  <script src="../shared/viz.js"></script>
+  <style>
+    .viz-area { width: 100%; max-width: 96%; }
+    .main-row { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; align-items: start; }
+    .left-col, .right-col { display: flex; flex-direction: column; gap: 12px; }
+    @media (max-width: 720px) { .main-row { grid-template-columns: 1fr; } }
+
+    .page-sub { font-size: 0.8rem; color: var(--text-dim); margin-left: auto; white-space: nowrap; }
+
+    .sect {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 14px 16px;
+      display: flex; flex-direction: column; gap: 8px;
+    }
+
+    /* Board grid */
+    .grid-wrap { display: flex; justify-content: center; margin-top: 6px; }
+    .grid-table { display: grid; gap: 5px; }
+    .grid-cell {
+      width: 48px; height: 48px;
+      display: flex; align-items: center; justify-content: center;
+      border: 2px solid var(--border); border-radius: 8px;
+      background: var(--bg);
+      font-size: 1.25rem; font-weight: 700; font-family: monospace;
+      color: var(--text-dim);
+      transition: border-color 0.12s, color 0.12s, background 0.12s;
+      position: relative; user-select: none;
+    }
+    .grid-cell .cell-coord {
+      position: absolute; top: 2px; left: 4px;
+      font-size: 0.44rem; color: var(--text-ghost); font-family: monospace;
+    }
+    .grid-cell.current  { border-color: var(--yellow); color: var(--yellow-light); background: #201700; }
+    .grid-cell.on-path  { border-color: var(--accent); color: var(--accent-pale);  background: #0d1a3e; }
+    .grid-cell.found    { border-color: var(--green);  color: var(--green-light);  background: var(--green-bg); }
+    .grid-cell.fail     { border-color: var(--red);    color: var(--red-light);    background: #280a10; }
+
+    /* Trie panel */
+    .trie-nodes { display: flex; flex-direction: column; gap: 4px; font-family: monospace; font-size: 0.78rem; max-height: 180px; overflow-y: auto; }
+    .trie-row { display: flex; gap: 4px; align-items: center; }
+    .trie-prefix { color: var(--text-dim); letter-spacing: 0.05em; }
+    .trie-active { color: var(--accent-pale); font-weight: 700; }
+    .trie-end    { color: var(--green); font-weight: 700; }
+    .trie-matched { color: var(--green); }
+    .trie-arrow  { color: var(--text-ghost); margin: 0 2px; }
+
+    /* Words list */
+    .words-row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 2px; }
+    .word-chip {
+      padding: 4px 10px; border: 2px solid var(--border); border-radius: 6px;
+      font-family: monospace; font-size: 0.82rem; color: var(--text-dim);
+      background: var(--bg); transition: border-color 0.12s, color 0.12s, background 0.12s;
+      font-weight: 600;
+    }
+    .word-chip.searching { border-color: var(--yellow); color: var(--yellow-light); background: #201700; }
+    .word-chip.found     { border-color: var(--green);  color: var(--green-light);  background: var(--green-bg); }
+
+    /* Path chips */
+    .path-row { display: flex; gap: 4px; flex-wrap: wrap; min-height: 32px; align-items: center; }
+    .path-chip {
+      padding: 2px 7px; border: 1px solid var(--accent); border-radius: 4px;
+      font-family: monospace; font-size: 0.74rem; color: var(--accent-pale); background: #0d1a3e;
+    }
+    .path-chip.won { border-color: var(--green); color: var(--green); background: var(--green-bg); }
+    .path-empty { color: var(--text-ghost); font-size: 0.82rem; font-style: italic; }
+
+    /* Found results */
+    .found-list { display: flex; gap: 6px; flex-wrap: wrap; min-height: 28px; align-items: center; }
+    .found-chip {
+      padding: 3px 10px; border: 1px solid var(--green); border-radius: 5px;
+      font-family: monospace; font-size: 0.82rem; font-weight: 700;
+      color: var(--green); background: var(--green-bg);
+    }
+
+    /* Call stack */
+    .stack-body {
+      font-family: monospace; font-size: 0.73rem;
+      max-height: 160px; overflow-y: auto; margin-top: 2px;
+    }
+    .stack-frame { padding: 1px 0; color: var(--text-muted); white-space: nowrap; }
+    .stack-frame.top { color: var(--accent-pale); font-weight: 700; }
+    .stack-frame.win { color: var(--green); font-weight: 700; }
+
+    /* Code */
+    .code-panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
+    .code-header { padding: 8px 14px; font-size: 0.72rem; font-weight: 600; color: var(--text-dim); border-bottom: 1px solid var(--border); background: var(--bg); }
+    .code-body { padding: 10px 0; font-size: 0.76rem; line-height: 1.75; white-space: pre; }
+    .code-line { display: flex; align-items: center; padding: 0 14px; }
+    .code-line.hl { background: var(--border-soft); border-left: 2px solid var(--accent); }
+    .ln { min-width: 24px; color: var(--text-ghost); user-select: none; font-size: 0.7rem; }
+
+    /* Nav */
+    .btn-play {
+      background: #15803d; border: none; border-radius: var(--radius-sm);
+      color: #fff; cursor: pointer; font-size: 0.88rem; font-weight: 600;
+      padding: 9px 16px; transition: background 0.2s;
+    }
+    .btn-play:hover { background: #166534; }
+    .btn-play.playing { background: #c2410c; }
+    .btn-play.playing:hover { background: #9a3412; }
+    .btn-play:disabled { opacity: 0.4; cursor: not-allowed; }
+    .speed-select {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); color: var(--text);
+      font-size: 0.85rem; padding: 8px 10px; outline: none; width: 80px;
+    }
+    .nav-row { display: flex; gap: 8px; align-items: center; }
+
+    /* Var row */
+    .var-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .var-box {
+      padding: 10px 8px; background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); display: flex; flex-direction: column;
+      align-items: center; gap: 3px;
+    }
+    .var-box.ab { border-color: var(--accent); }
+    .var-box.ob { border-color: #b45309; }
+    .var-label { font-size: 0.6rem; font-family: monospace; color: var(--text-faint); text-align: center; }
+    .var-val   { font-size: 0.95rem; font-weight: 700; color: var(--text-bright); font-family: monospace; }
+
+    .kw { color: var(--purple); }
+    .fn { color: var(--blue); }
+    .bi { color: var(--orange); }
+    .nb { color: var(--green); }
+    .cm { color: var(--text-ghost); }
+    .st { color: var(--yellow-light); }
+  </style>
+</head>
+<body class="page">
+
+<div class="page-header">
+  <a class="back-link" href="../index.html">&larr; All Algorithms</a>
+  <div class="page-title">Word Search II</div>
+  <div class="page-sub">LeetCode 212 &middot; Trie &middot; DFS backtracking over all words at once</div>
+</div>
+
+<div class="controls">
+  <div class="field">
+    <label>Board rows (semicolon-separated)</label>
+    <input id="inp-board" type="text" value="oaan;etae;ihkr;iflv" style="width:200px;font-family:monospace;font-size:0.9rem" />
+  </div>
+  <div class="field">
+    <label>Words (comma-separated)</label>
+    <input id="inp-words" type="text" value="oath,pea,eat,rain" style="width:200px;font-family:monospace;font-size:0.9rem" />
+  </div>
+  <button class="btn-primary" onclick="buildAndRun()">Build</button>
+</div>
+
+<div class="viz-area">
+  <div class="main-row">
+
+    <!-- ── Left ── -->
+    <div class="left-col">
+
+      <!-- Board -->
+      <div class="sect">
+        <div class="panel-title">Board <span class="panel-sub" id="board-sub"></span></div>
+        <div class="grid-wrap">
+          <div class="grid-table" id="grid-table">
+            <span style="color:var(--text-ghost);font-size:0.82rem">Click Build.</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Words status -->
+      <div class="sect">
+        <div class="panel-title">Words to Find</div>
+        <div class="words-row" id="words-row">
+          <span class="path-empty">—</span>
+        </div>
+      </div>
+
+      <!-- Current DFS path -->
+      <div class="sect">
+        <div class="panel-title">Current Path</div>
+        <div class="path-row" id="path-row">
+          <span class="path-empty">none</span>
+        </div>
+      </div>
+
+      <!-- Found words -->
+      <div class="sect">
+        <div class="panel-title">Result &mdash; Found Words</div>
+        <div class="found-list" id="found-list">
+          <span class="path-empty">none yet</span>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ── Right ── -->
+    <div class="right-col">
+
+      <!-- Trie state -->
+      <div class="sect">
+        <div class="panel-title">Trie &mdash; Active Path <span class="panel-sub" id="trie-sub"></span></div>
+        <div class="trie-nodes" id="trie-nodes">
+          <span style="color:var(--text-ghost);font-size:0.82rem">—</span>
+        </div>
+      </div>
+
+      <!-- Variables -->
+      <div class="sect">
+        <div class="panel-title">Variables</div>
+        <div class="var-grid">
+          <div class="var-box ab">
+            <div class="var-label">DFS cell (r, c)</div>
+            <div class="var-val" id="vv-cell">—</div>
+          </div>
+          <div class="var-box ob">
+            <div class="var-label">prefix built</div>
+            <div class="var-val" id="vv-prefix">—</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Call stack -->
+      <div class="sect">
+        <div class="panel-title">Call Stack <span class="panel-sub" id="stack-sub"></span></div>
+        <div class="stack-body" id="stack-body">
+          <span style="color:var(--text-ghost);font-size:0.82rem">—</span>
+        </div>
+      </div>
+
+      <!-- Code -->
+      <div class="code-panel">
+        <div class="code-header">Python &middot; Trie + DFS backtracking</div>
+        <div class="code-body" id="code-body"></div>
+      </div>
+
+    </div>
+
+  </div>
+</div>
+
+<!-- Bottom nav -->
+<div class="nav-bar">
+  <div class="nav-row">
+    <button class="btn-secondary" id="btn-prev">&larr; Prev</button>
+    <button class="btn-play" id="btn-play">Play</button>
+    <button class="btn-secondary" id="btn-next">Next &rarr;</button>
+    <select class="speed-select" id="speed-sel">
+      <option value="800">0.8s</option>
+      <option value="500" selected>0.5s</option>
+      <option value="300">0.3s</option>
+      <option value="150">0.15s</option>
+      <option value="80">0.08s</option>
+    </select>
+  </div>
+  <div class="step-counter" id="step-counter">—</div>
+  <div class="step-desc" id="step-desc">Click Build to start.</div>
+</div>
+
+<script>
+// ── Code lines ───────────────────────────────────────────────────────────────
+var CODE = [
+  { t: '<span class="kw">class</span> <span class="fn">TrieNode</span>:' },
+  { t: '    children = {}; word = <span class="nb">None</span>' },
+  { t: '' },
+  { t: '<span class="kw">def</span> <span class="fn">findWords</span>(board, words):' },
+  { t: '    root = TrieNode()' },
+  { t: '    <span class="kw">for</span> w <span class="kw">in</span> words:  <span class="cm"># build trie</span>' },
+  { t: '        node = root' },
+  { t: '        <span class="kw">for</span> ch <span class="kw">in</span> w:' },
+  { t: '            <span class="kw">if</span> ch <span class="kw">not in</span> node.children:' },
+  { t: '                node.children[ch] = TrieNode()' },
+  { t: '            node = node.children[ch]' },
+  { t: '        node.word = w' },
+  { t: '    res = []' },
+  { t: '' },
+  { t: '    <span class="kw">def</span> <span class="fn">dfs</span>(r, c, node):' },
+  { t: '        ch = board[r][c]' },
+  { t: '        <span class="kw">if</span> ch <span class="kw">not in</span> node.children: <span class="kw">return</span>' },
+  { t: '        nxt = node.children[ch]' },
+  { t: '        <span class="kw">if</span> nxt.word:' },
+  { t: '            res.append(nxt.word); nxt.word = <span class="nb">None</span>' },
+  { t: '        board[r][c] = <span class="st">"#"</span>  <span class="cm"># mark visited</span>' },
+  { t: '        <span class="kw">for</span> dr,dc <span class="kw">in</span> [(1,0),(-1,0),(0,1),(0,-1)]:' },
+  { t: '            nr,nc = r+dr, c+dc' },
+  { t: '            <span class="kw">if</span> 0&lt;=nr&lt;ROWS <span class="kw">and</span> 0&lt;=nc&lt;COLS:' },
+  { t: '                <span class="fn">dfs</span>(nr, nc, nxt)' },
+  { t: '        board[r][c] = ch  <span class="cm"># backtrack</span>' },
+  { t: '' },
+  { t: '    <span class="kw">for</span> r <span class="kw">in</span> <span class="bi">range</span>(ROWS):' },
+  { t: '        <span class="kw">for</span> c <span class="kw">in</span> <span class="bi">range</span>(COLS):' },
+  { t: '            <span class="fn">dfs</span>(r, c, root)' },
+  { t: '    <span class="kw">return</span> res' },
+];
+
+function renderCode(hlLines) {
+  var html = '';
+  CODE.forEach(function(line, i) {
+    var cls = (hlLines && hlLines.indexOf(i) !== -1) ? ' hl' : '';
+    html += '<div class="code-line' + cls + '"><span class="ln">' + (i+1) + '</span>' + line.t + '</div>';
+  });
+  document.getElementById('code-body').innerHTML = html;
+}
+
+// ── Trie data structure ───────────────────────────────────────────────────────
+function buildTrie(words) {
+  var root = { children: {}, word: null, char: '' };
+  words.forEach(function(w) {
+    var node = root;
+    for (var i = 0; i < w.length; i++) {
+      var ch = w[i];
+      if (!node.children[ch]) {
+        node.children[ch] = { children: {}, word: null, char: ch };
+      }
+      node = node.children[ch];
+    }
+    node.word = w;
+  });
+  return root;
+}
+
+// ── Step builder ──────────────────────────────────────────────────────────────
+var BOARD = [], WORDS = [], ROWS = 0, COLS = 0;
+
+function buildSteps() {
+  var steps = [];
+  var board = BOARD.map(function(r) { return r.slice(); });
+  var trieRoot = buildTrie(WORDS);
+  var found = [];
+  var foundSet = {};
+
+  // Step: build trie
+  steps.push({
+    type: 'build-trie',
+    boardState: board.map(function(r) { return r.slice(); }),
+    path: [], stack: ['findWords()'],
+    found: [],
+    prefix: '',
+    triePath: [],
+    desc: 'Build trie from words: [' + WORDS.map(function(w){return '"'+w+'"';}).join(', ') + ']. Each word inserted char-by-char; leaf stores the full word.',
+    codeHl: [3, 4, 5, 6, 7, 8, 9, 10, 11],
+    highlightWords: [],
+  });
+
+  function dfs(r, c, node, path, callStack, prefix) {
+    var ch = board[r][c];
+    var frame = 'dfs(' + r + ',' + c + ',"' + prefix + '")';
+    var stack = callStack.concat([frame]);
+
+    // miss in trie
+    if (!node.children[ch]) {
+      steps.push({
+        type: 'trie-miss',
+        r: r, c: c,
+        boardState: board.map(function(r2){return r2.slice();}),
+        path: path.slice(),
+        stack: stack.slice(),
+        found: found.slice(),
+        prefix: prefix,
+        triePath: prefix.split(''),
+        desc: '"' + ch + '" not in trie children of "' + (prefix||'root') + '" — prune branch.',
+        codeHl: [15, 16],
+        highlightWords: [],
+      });
+      return;
+    }
+
+    var nxt = node.children[ch];
+    var newPrefix = prefix + ch;
+    var newPath = path.concat([[r, c]]);
+
+    // word found
+    if (nxt.word && !foundSet[nxt.word]) {
+      foundSet[nxt.word] = true;
+      found = found.concat([nxt.word]);
+      nxt.word = null; // de-dupe
+      steps.push({
+        type: 'word-found',
+        r: r, c: c,
+        boardState: board.map(function(r2){return r2.slice();}),
+        path: newPath.slice(),
+        stack: stack.slice(),
+        found: found.slice(),
+        prefix: newPrefix,
+        triePath: newPrefix.split(''),
+        desc: 'Found word "' + newPrefix + '" at (' + r + ',' + c + ')! Added to results.',
+        codeHl: [18, 19],
+        highlightWords: [newPrefix],
+      });
+    } else {
+      steps.push({
+        type: 'trie-hit',
+        r: r, c: c,
+        boardState: board.map(function(r2){return r2.slice();}),
+        path: newPath.slice(),
+        stack: stack.slice(),
+        found: found.slice(),
+        prefix: newPrefix,
+        triePath: newPrefix.split(''),
+        desc: '"' + ch + '" matches trie node — prefix "' + newPrefix + '" valid. Mark visited, explore neighbors.',
+        codeHl: [15, 16, 17, 20],
+        highlightWords: [],
+      });
+    }
+
+    // mark visited
+    var tmp = board[r][c];
+    board[r][c] = '#';
+
+    var dirs = [[1,0],[-1,0],[0,1],[0,-1]];
+    dirs.forEach(function(d) {
+      var nr = r + d[0], nc = c + d[1];
+      if (nr >= 0 && nr < ROWS && nc >= 0 && nc < COLS) {
+        dfs(nr, nc, nxt, newPath, stack, newPrefix);
+      }
+    });
+
+    // backtrack
+    board[r][c] = tmp;
+    if (newPath.length > 1) {
+      steps.push({
+        type: 'backtrack',
+        r: r, c: c,
+        boardState: board.map(function(r2){return r2.slice();}),
+        path: path.slice(),
+        stack: callStack.slice(),
+        found: found.slice(),
+        prefix: prefix,
+        triePath: prefix.split(''),
+        desc: 'Backtrack from (' + r + ',' + c + ') — restore "' + tmp + '", pop prefix back to "' + prefix + '".',
+        codeHl: [25],
+        highlightWords: [],
+      });
+    }
+  }
+
+  // outer scan
+  for (var r = 0; r < ROWS; r++) {
+    for (var c = 0; c < COLS; c++) {
+      steps.push({
+        type: 'try-start',
+        r: r, c: c,
+        boardState: board.map(function(r2){return r2.slice();}),
+        path: [],
+        stack: ['findWords()'],
+        found: found.slice(),
+        prefix: '',
+        triePath: [],
+        desc: 'Try DFS from (' + r + ',' + c + ') = "' + board[r][c] + '" against trie root.',
+        codeHl: [27, 28, 29],
+        highlightWords: [],
+      });
+      dfs(r, c, trieRoot, [], ['findWords()'], '');
+    }
+  }
+
+  // done
+  steps.push({
+    type: 'done',
+    r: -1, c: -1,
+    boardState: board.map(function(r2){return r2.slice();}),
+    path: [], stack: [],
+    found: found.slice(),
+    prefix: '',
+    triePath: [],
+    desc: 'Done! Found: [' + found.map(function(w){return '"'+w+'"';}).join(', ') + ']',
+    codeHl: [30],
+    highlightWords: found.slice(),
+  });
+
+  return steps;
+}
+
+// ── Render ────────────────────────────────────────────────────────────────────
+var STEPS = [], GRID_CELLS = [];
+
+function renderSnap(snap, cursor, total) {
+  document.getElementById('step-counter').textContent = 'Step ' + (cursor + 1) + ' / ' + total;
+  document.getElementById('step-desc').textContent = snap.desc;
+
+  // Board
+  var pathSet = {};
+  (snap.path || []).forEach(function(p) { pathSet[p[0] + ',' + p[1]] = true; });
+  var isCurrent = snap.r >= 0 && snap.c >= 0;
+
+  GRID_CELLS.forEach(function(row, r) {
+    row.forEach(function(el, c) {
+      var key = r + ',' + c;
+      var cls = '';
+      if (isCurrent && snap.r === r && snap.c === c) {
+        if (snap.type === 'trie-miss') cls = 'fail';
+        else if (snap.type === 'word-found') cls = 'found';
+        else cls = 'current';
+      } else if (pathSet[key]) {
+        if (snap.type === 'word-found') cls = 'found';
+        else cls = 'on-path';
+      }
+      el.className = 'grid-cell' + (cls ? ' ' + cls : '');
+    });
+  });
+
+  // Words row
+  var wordsHtml = '';
+  WORDS.forEach(function(w) {
+    var cls = 'word-chip';
+    if (snap.found && snap.found.indexOf(w) !== -1) {
+      cls += ' found';
+    } else if (snap.prefix && w.indexOf(snap.prefix) === 0 && snap.prefix.length > 0) {
+      cls += ' searching';
+    }
+    wordsHtml += '<div class="' + cls + '">' + w + '</div>';
+  });
+  document.getElementById('words-row').innerHTML = wordsHtml;
+
+  // Path chips
+  var pathRow = document.getElementById('path-row');
+  var pathHtml = '';
+  var isWon = snap.type === 'word-found';
+  if (snap.path && snap.path.length > 0) {
+    snap.path.forEach(function(p, pi) {
+      pathHtml += '<div class="path-chip' + (isWon ? ' won' : '') + '">(' + p[0] + ',' + p[1] + ')</div>';
+      if (pi < snap.path.length - 1) {
+        pathHtml += '<span style="color:var(--text-ghost);font-size:0.7rem">→</span>';
+      }
+    });
+  } else {
+    pathHtml = '<span class="path-empty">none</span>';
+  }
+  pathRow.innerHTML = pathHtml;
+
+  // Found list
+  var foundHtml = '';
+  if (snap.found && snap.found.length > 0) {
+    snap.found.forEach(function(w) {
+      foundHtml += '<div class="found-chip">' + w + '</div>';
+    });
+  } else {
+    foundHtml = '<span class="path-empty">none yet</span>';
+  }
+  document.getElementById('found-list').innerHTML = foundHtml;
+
+  // Trie path display
+  var trieSub = document.getElementById('trie-sub');
+  var trieNodes = document.getElementById('trie-nodes');
+  var prefix = snap.prefix || '';
+  if (prefix.length > 0) {
+    trieSub.textContent = '(matching "' + prefix + '")';
+    var trieHtml = '';
+    // Show each char of the prefix path
+    for (var i = 0; i < prefix.length; i++) {
+      var indent = '  '.repeat(i);
+      var isLast = i === prefix.length - 1;
+      var cls = isLast
+        ? (snap.type === 'word-found' ? 'trie-end' : 'trie-active')
+        : 'trie-matched';
+      trieHtml += '<div class="trie-row"><span class="trie-prefix">' + indent + '</span>';
+      trieHtml += '<span class="' + cls + '">' + prefix[i] + '</span>';
+      if (isLast && snap.type === 'word-found') {
+        trieHtml += '<span style="color:var(--green);margin-left:6px;font-size:0.7rem">← WORD</span>';
+      }
+      trieHtml += '</div>';
+    }
+    trieNodes.innerHTML = trieHtml;
+  } else {
+    trieSub.textContent = '(at root)';
+    trieNodes.innerHTML = '<div class="trie-row"><span class="trie-prefix">root</span><span class="trie-arrow">→ {' + WORDS.map(function(w){return w[0];}).filter(function(c,i,a){return a.indexOf(c)===i;}).join(',') + ',...}</span></div>';
+  }
+
+  // Variables
+  document.getElementById('vv-cell').textContent = snap.r >= 0 ? '(' + snap.r + ',' + snap.c + ')' : '—';
+  document.getElementById('vv-prefix').textContent = prefix ? '"' + prefix + '"' : '""';
+
+  // Call stack
+  var stackBody = document.getElementById('stack-body');
+  if (snap.stack && snap.stack.length > 0) {
+    var frames = snap.stack.slice().reverse();
+    var stackHtml = '';
+    frames.forEach(function(f, fi) {
+      var cls = fi === 0
+        ? (snap.type === 'word-found' ? 'win' : 'top')
+        : '';
+      stackHtml += '<div class="stack-frame' + (cls ? ' ' + cls : '') + '">' + f + '</div>';
+    });
+    document.getElementById('stack-sub').textContent = '(depth ' + snap.stack.length + ')';
+    stackBody.innerHTML = stackHtml;
+  } else {
+    document.getElementById('stack-sub').textContent = '';
+    stackBody.innerHTML = '<span style="color:var(--text-ghost);font-size:0.82rem">—</span>';
+  }
+
+  // Code
+  renderCode(snap.codeHl);
+}
+
+// ── Build & run ───────────────────────────────────────────────────────────────
+var nav;
+
+function buildAndRun() {
+  var rawBoard = document.getElementById('inp-board').value.trim();
+  var rawWords = document.getElementById('inp-words').value.trim();
+  if (!rawBoard || !rawWords) return;
+
+  BOARD = rawBoard.toLowerCase().split(';').map(function(row) {
+    return row.trim().split('');
+  });
+  WORDS = rawWords.toLowerCase().split(',').map(function(w) { return w.trim(); });
+  ROWS = BOARD.length;
+  COLS = BOARD[0].length;
+
+  // Build DOM grid
+  var table = document.getElementById('grid-table');
+  table.style.gridTemplateColumns = 'repeat(' + COLS + ', 48px)';
+  table.innerHTML = '';
+  GRID_CELLS = [];
+  BOARD.forEach(function(row, r) {
+    GRID_CELLS.push([]);
+    row.forEach(function(ch, c) {
+      var el = document.createElement('div');
+      el.className = 'grid-cell';
+      el.innerHTML = '<span class="cell-coord">' + r + ',' + c + '</span>' + ch;
+      table.appendChild(el);
+      GRID_CELLS[r].push(el);
+    });
+  });
+
+  document.getElementById('board-sub').textContent = '(' + ROWS + '&times;' + COLS + ')';
+
+  STEPS = buildSteps();
+
+  if (!nav) {
+    nav = VizNav({
+      btnPrev:  document.getElementById('btn-prev'),
+      btnNext:  document.getElementById('btn-next'),
+      btnPlay:  document.getElementById('btn-play'),
+      speedSel: document.getElementById('speed-sel'),
+      render:   renderSnap,
+    });
+  }
+  nav.load(STEPS);
+}
+
+renderCode([]);
+window.addEventListener('DOMContentLoaded', buildAndRun);
+</script>
+</body>
+</html>

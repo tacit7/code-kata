@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hand of Straights — Visualization</title>
+  <link rel="stylesheet" href="../shared/style.css" />
+  <style>
+    body {
+      display: flex; flex-direction: column; height: 100vh; overflow: hidden;
+      font-family: var(--font); background: var(--bg); color: var(--text);
+    }
+
+    /* ── top bar ── */
+    #top-bar {
+      display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+      padding: 10px 16px; border-bottom: 1px solid var(--border);
+      background: var(--surface); flex-shrink: 0;
+    }
+    #top-bar label { font-size: 0.82rem; color: var(--text-dim); white-space: nowrap; }
+    #hand-input {
+      flex: 1; min-width: 160px; font-size: 0.88rem; padding: 5px 10px;
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius); color: var(--text);
+    }
+    #group-input {
+      width: 60px; font-size: 0.88rem; padding: 5px 10px;
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius); color: var(--text);
+    }
+    #btn-build {
+      padding: 5px 14px; font-size: 0.85rem; font-weight: 600;
+      background: var(--accent); color: #1a1b26;
+      border: none; border-radius: var(--radius); cursor: pointer;
+    }
+    #btn-build:hover { opacity: 0.85; }
+
+    /* ── middle ── */
+    #middle {
+      display: flex; flex: 1; overflow: hidden; gap: 0;
+    }
+
+    /* ── left panel: freq map ── */
+    #freq-panel {
+      flex: 1; overflow: auto; padding: 16px;
+      display: flex; flex-direction: column; gap: 14px;
+    }
+    .panel-title {
+      font-size: 0.75rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--text-dim);
+    }
+
+    /* freq grid */
+    #freq-grid {
+      display: flex; flex-wrap: wrap; gap: 8px;
+    }
+    .freq-cell {
+      display: flex; flex-direction: column; align-items: center; gap: 4px;
+      padding: 8px 12px; border-radius: var(--radius);
+      background: var(--surface2); border: 2px solid var(--border);
+      min-width: 54px; transition: background 0.15s, border-color 0.15s;
+    }
+    .freq-cell.state-idle    { border-color: var(--border); }
+    .freq-cell.state-active  { border-color: var(--accent); background: rgba(122,162,247,0.12); }
+    .freq-cell.state-zero    { border-color: var(--border); opacity: 0.35; }
+    .freq-cell.state-missing { border-color: #f7768e; background: rgba(247,118,142,0.12); }
+    .freq-cell.state-done    { border-color: #9ece6a; background: rgba(158,206,106,0.08); }
+    .freq-val {
+      font-size: 1.3rem; font-weight: 700; color: var(--text-bright);
+      line-height: 1;
+    }
+    .freq-card {
+      font-size: 0.78rem; font-weight: 600; color: var(--text-dim);
+    }
+
+    /* hand cards display */
+    #hand-display {
+      display: flex; flex-wrap: wrap; gap: 5px;
+    }
+    .hand-card {
+      width: 36px; height: 48px;
+      display: flex; align-items: center; justify-content: center;
+      border-radius: 5px; font-size: 1rem; font-weight: 700;
+      border: 2px solid var(--border); background: var(--surface2);
+      color: var(--text-bright); transition: background 0.15s, border-color 0.15s, opacity 0.15s;
+    }
+    .hand-card.state-idle   { }
+    .hand-card.state-used   { opacity: 0.25; background: var(--bg); }
+    .hand-card.state-active { border-color: var(--accent); background: rgba(122,162,247,0.15); }
+
+    /* ── right panel: groups ── */
+    #groups-panel {
+      width: 220px; flex-shrink: 0;
+      border-left: 1px solid var(--border);
+      background: var(--surface);
+      padding: 14px 12px;
+      display: flex; flex-direction: column; gap: 10px;
+      overflow-y: auto;
+    }
+    #groups-list {
+      display: flex; flex-direction: column; gap: 6px;
+    }
+    .group-row {
+      display: flex; gap: 4px; align-items: center;
+      padding: 6px 8px; border-radius: var(--radius);
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,0.03);
+    }
+    .group-row.group-done  { border-color: #9ece6a; background: rgba(158,206,106,0.08); }
+    .group-row.group-error { border-color: #f7768e; background: rgba(247,118,142,0.1); }
+    .group-card-chip {
+      padding: 3px 8px; border-radius: 3px;
+      font-size: 0.82rem; font-weight: 700;
+      background: rgba(122,162,247,0.15);
+      border: 1px solid var(--accent);
+      color: var(--accent);
+    }
+    #result-box {
+      padding: 10px 12px; border-radius: var(--radius);
+      font-size: 0.9rem; font-weight: 700; text-align: center;
+      display: none;
+    }
+    #result-box.res-true  { background: rgba(158,206,106,0.15); border: 1px solid #9ece6a; color: #9ece6a; }
+    #result-box.res-false { background: rgba(247,118,142,0.15); border: 1px solid #f7768e; color: #f7768e; }
+
+    /* ── bottom nav ── */
+    #nav-bar {
+      flex-shrink: 0; border-top: 1px solid var(--border);
+      background: var(--surface); padding: 10px 16px;
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    #nav-controls {
+      display: flex; align-items: center; gap: 8px;
+    }
+    .nav-btn {
+      padding: 5px 14px; font-size: 0.82rem; font-weight: 600;
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: var(--radius); color: var(--text); cursor: pointer;
+    }
+    .nav-btn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+    .nav-btn:disabled { opacity: 0.35; cursor: default; }
+    #speed-sel {
+      font-size: 0.8rem; padding: 4px 8px;
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius); color: var(--text);
+    }
+    #step-counter {
+      font-size: 0.75rem; color: var(--text-dim); margin-left: auto;
+    }
+    #step-desc {
+      font-size: 0.85rem; color: var(--text-bright); min-height: 1.4em;
+    }
+  </style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div id="top-bar">
+  <label for="hand-input">Hand (comma-separated):</label>
+  <input id="hand-input" type="text" value="1,2,3,6,2,3,4,7,8" />
+  <label for="group-input">Group size:</label>
+  <input id="group-input" type="number" min="1" value="3" />
+  <button id="btn-build">Build</button>
+</div>
+
+<!-- MIDDLE -->
+<div id="middle">
+  <div id="freq-panel">
+    <div>
+      <div class="panel-title" style="margin-bottom:8px">Hand</div>
+      <div id="hand-display"></div>
+    </div>
+    <div>
+      <div class="panel-title" style="margin-bottom:8px">Frequency Map</div>
+      <div id="freq-grid"></div>
+    </div>
+  </div>
+  <div id="groups-panel">
+    <div class="panel-title">Groups Formed</div>
+    <div id="result-box"></div>
+    <div id="groups-list"></div>
+  </div>
+</div>
+
+<!-- BOTTOM NAV -->
+<div id="nav-bar">
+  <div id="nav-controls">
+    <button class="nav-btn" id="btn-prev">&#8592; Prev</button>
+    <button class="nav-btn" id="btn-next">Next &#8594;</button>
+    <button class="nav-btn" id="btn-play">Play</button>
+    <select id="speed-sel">
+      <option value="1200">0.8×</option>
+      <option value="800" selected>1×</option>
+      <option value="500">1.5×</option>
+      <option value="300">2.5×</option>
+    </select>
+    <div id="step-counter">0 / 0</div>
+  </div>
+  <div id="step-desc">Press Build to start.</div>
+</div>
+
+<script src="../shared/viz.js"></script>
+<script>
+// ── simulate ───────────────────────────────────────────────────────────────
+function buildSteps(hand, groupSize) {
+  var steps = [];
+  var n = hand.length;
+
+  function push(desc, extra) {
+    steps.push(Object.assign({
+      desc: desc,
+      freq: null,
+      sortedCards: null,
+      groups: [],
+      freqStates: {},   // card -> 'idle'|'active'|'zero'|'missing'|'done'
+      handStates: [],   // per-index: 'idle'|'used'|'active'
+      result: null,
+    }, extra));
+  }
+
+  var emptyHandStates = hand.map(function() { return 'idle'; });
+
+  // step 0: show initial hand
+  push('Initial hand: [' + hand.join(', ') + ']. Group size = ' + groupSize + '.', {
+    freq: null,
+    sortedCards: null,
+    freqStates: {},
+    handStates: emptyHandStates.slice(),
+    groups: [],
+    result: null,
+  });
+
+  // step 1: count frequencies
+  var freq = {};
+  hand.forEach(function(c) { freq[c] = (freq[c] || 0) + 1; });
+  var sortedCards = Object.keys(freq).map(Number).sort(function(a,b){ return a-b; });
+
+  var freqStates0 = {};
+  sortedCards.forEach(function(c) { freqStates0[c] = 'idle'; });
+
+  push('Count frequency of each card. freq = {' +
+    sortedCards.map(function(c){ return c+':'+freq[c]; }).join(', ') + '}.', {
+    freq: Object.assign({}, freq),
+    sortedCards: sortedCards.slice(),
+    freqStates: Object.assign({}, freqStates0),
+    handStates: emptyHandStates.slice(),
+    groups: [],
+    result: null,
+  });
+
+  // step 2: sort
+  push('Sort unique cards: [' + sortedCards.join(', ') + ']. Process in ascending order.', {
+    freq: Object.assign({}, freq),
+    sortedCards: sortedCards.slice(),
+    freqStates: Object.assign({}, freqStates0),
+    handStates: emptyHandStates.slice(),
+    groups: [],
+    result: null,
+  });
+
+  // track which hand indices have been consumed
+  var handLeft = hand.slice(); // null when consumed
+  var groups = [];
+  var failed = false;
+  var failCard = null;
+
+  var curFreq = Object.assign({}, freq);
+
+  for (var si = 0; si < sortedCards.length; si++) {
+    var card = sortedCards[si];
+
+    if (curFreq[card] === 0) {
+      // mark as zero, skip
+      var skipStates = {};
+      sortedCards.forEach(function(c) {
+        skipStates[c] = curFreq[c] === 0 ? 'zero' : 'idle';
+      });
+      skipStates[card] = 'zero';
+      push('Card ' + card + ': freq=0, already fully used. Skip.', {
+        freq: Object.assign({}, curFreq),
+        sortedCards: sortedCards.slice(),
+        freqStates: skipStates,
+        handStates: buildHandStates(hand, handLeft),
+        groups: groups.map(function(g){ return g.slice(); }),
+        result: null,
+      });
+      continue;
+    }
+
+    // try to form groups starting at card
+    var count = curFreq[card];
+    push('Card ' + card + ': freq=' + count + '. Must form ' + count + ' group(s) of size ' + groupSize + ' starting at ' + card + '.', {
+      freq: Object.assign({}, curFreq),
+      sortedCards: sortedCards.slice(),
+      freqStates: makeFreqStates(sortedCards, curFreq, card),
+      handStates: buildHandStates(hand, handLeft),
+      groups: groups.map(function(g){ return g.slice(); }),
+      result: null,
+    });
+
+    // For each of the `count` groups
+    for (var g = 0; g < count; g++) {
+      var group = [];
+      var groupOk = true;
+
+      for (var offset = 0; offset < groupSize; offset++) {
+        var need = card + offset;
+
+        if (!curFreq[need] || curFreq[need] === 0) {
+          // missing card — fail
+          groupOk = false;
+          failCard = need;
+
+          var failStates = makeFreqStates(sortedCards, curFreq, card);
+          if (failStates[need] !== undefined) failStates[need] = 'missing';
+
+          push('Need card ' + need + ' for group starting at ' + card + ' — freq=' + (curFreq[need] || 0) + '. MISSING! Return false.', {
+            freq: Object.assign({}, curFreq),
+            sortedCards: sortedCards.slice(),
+            freqStates: failStates,
+            handStates: buildHandStates(hand, handLeft),
+            groups: groups.map(function(g){ return g.slice(); }),
+            result: false,
+          });
+          failed = true;
+          break;
+        }
+
+        group.push(need);
+        curFreq[need]--;
+
+        // consume from handLeft
+        consumeFromHand(handLeft, need);
+      }
+
+      if (failed) break;
+
+      groups.push(group);
+
+      var afterStates = makeFreqStates(sortedCards, curFreq, card);
+      push('Formed group [' + group.join(', ') + ']. Decremented each card\'s freq. Groups so far: ' + groups.length + '.', {
+        freq: Object.assign({}, curFreq),
+        sortedCards: sortedCards.slice(),
+        freqStates: afterStates,
+        handStates: buildHandStates(hand, handLeft),
+        groups: groups.map(function(gg){ return gg.slice(); }),
+        result: null,
+      });
+    }
+
+    if (failed) break;
+  }
+
+  if (!failed) {
+    var doneStates = {};
+    sortedCards.forEach(function(c) { doneStates[c] = 'done'; });
+    push('All cards placed into ' + groups.length + ' consecutive group(s) of size ' + groupSize + '. Return true.', {
+      freq: Object.assign({}, curFreq),
+      sortedCards: sortedCards.slice(),
+      freqStates: doneStates,
+      handStates: hand.map(function() { return 'used'; }),
+      groups: groups.map(function(g){ return g.slice(); }),
+      result: true,
+    });
+  }
+
+  return steps;
+}
+
+function makeFreqStates(sortedCards, freq, activeCard) {
+  var s = {};
+  sortedCards.forEach(function(c) {
+    s[c] = freq[c] === 0 ? 'zero' : (c === activeCard ? 'active' : 'idle');
+  });
+  return s;
+}
+
+function buildHandStates(hand, handLeft) {
+  return hand.map(function(c, i) {
+    return handLeft[i] === null ? 'used' : 'idle';
+  });
+}
+
+function consumeFromHand(handLeft, card) {
+  for (var i = 0; i < handLeft.length; i++) {
+    if (handLeft[i] === card) {
+      handLeft[i] = null;
+      return;
+    }
+  }
+}
+
+// ── parse input ────────────────────────────────────────────────────────────
+function parseHand(raw) {
+  return raw.trim().split(',').map(function(s) { return parseInt(s.trim(), 10); }).filter(function(n) { return !isNaN(n); });
+}
+
+// ── render ─────────────────────────────────────────────────────────────────
+var _lastHand = null;
+
+function render(snap, cursor, total) {
+  document.getElementById('step-counter').textContent = (cursor + 1) + ' / ' + total;
+  document.getElementById('step-desc').textContent = snap.desc;
+
+  renderHand(snap);
+  renderFreqGrid(snap);
+  renderGroups(snap);
+  renderResult(snap.result);
+}
+
+function renderHand(snap) {
+  var display = document.getElementById('hand-display');
+  if (!display.children.length || _lastHand !== JSON.stringify(snap.handStates && snap.handStates.length)) {
+    // rebuild if needed — hand display doesn't change length
+    if (!display.children.length) return;
+  }
+  var cells = display.querySelectorAll('.hand-card');
+  cells.forEach(function(el, i) {
+    el.className = 'hand-card state-' + (snap.handStates ? snap.handStates[i] : 'idle');
+  });
+}
+
+function renderFreqGrid(snap) {
+  var grid = document.getElementById('freq-grid');
+  if (!snap.freq || !snap.sortedCards) {
+    grid.innerHTML = '<span style="color:var(--text-dim);font-size:0.82rem">—</span>';
+    return;
+  }
+  grid.innerHTML = snap.sortedCards.map(function(c) {
+    var state = snap.freqStates[c] || 'idle';
+    return '<div class="freq-cell state-' + state + '">' +
+      '<div class="freq-val">' + snap.freq[c] + '</div>' +
+      '<div class="freq-card">' + c + '</div>' +
+      '</div>';
+  }).join('');
+}
+
+function renderGroups(snap) {
+  var list = document.getElementById('groups-list');
+  if (!snap.groups || !snap.groups.length) {
+    list.innerHTML = '<span style="color:var(--text-dim);font-size:0.75rem;font-style:italic">none yet</span>';
+    return;
+  }
+  list.innerHTML = snap.groups.map(function(g, i) {
+    return '<div class="group-row group-done">' +
+      g.map(function(c) { return '<span class="group-card-chip">' + c + '</span>'; }).join('') +
+    '</div>';
+  }).join('');
+
+  if (snap.result === false) {
+    var errRow = document.createElement('div');
+    errRow.className = 'group-row group-error';
+    errRow.innerHTML = '<span style="font-size:0.8rem;color:#f7768e">✕ Missing card</span>';
+    list.appendChild(errRow);
+  }
+}
+
+function renderResult(result) {
+  var box = document.getElementById('result-box');
+  if (result === null || result === undefined) {
+    box.style.display = 'none';
+    return;
+  }
+  box.style.display = 'block';
+  box.className = 'result-box ' + (result ? 'res-true' : 'res-false');
+  box.textContent = result ? 'true' : 'false';
+}
+
+// ── setup hand display ─────────────────────────────────────────────────────
+function setupHandDisplay(hand) {
+  var display = document.getElementById('hand-display');
+  display.innerHTML = hand.map(function(c) {
+    return '<div class="hand-card state-idle">' + c + '</div>';
+  }).join('');
+}
+
+// ── wire up ────────────────────────────────────────────────────────────────
+var nav = VizNav({
+  btnPrev:  document.getElementById('btn-prev'),
+  btnNext:  document.getElementById('btn-next'),
+  btnPlay:  document.getElementById('btn-play'),
+  speedSel: document.getElementById('speed-sel'),
+  render:   render,
+});
+
+function doLoad() {
+  var raw = document.getElementById('hand-input').value;
+  var gs  = parseInt(document.getElementById('group-input').value, 10);
+  var hand = parseHand(raw);
+  if (!hand.length || isNaN(gs) || gs < 1) {
+    alert('Enter a valid hand and group size.');
+    return;
+  }
+  setupHandDisplay(hand);
+  var steps = buildSteps(hand, gs);
+  nav.load(steps);
+}
+
+document.getElementById('btn-build').addEventListener('click', doLoad);
+document.getElementById('hand-input').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') doLoad();
+});
+
+doLoad();
+</script>
+</body>
+</html>

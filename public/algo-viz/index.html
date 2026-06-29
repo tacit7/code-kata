@@ -765,6 +765,8 @@
 
   <a href='reconstruct-itinerary/index.html'><div class='card'><span class='card-tag'>Advanced Graphs</span><div class='card-name'>Reconstruct Itinerary</div><div class='card-desc'>Hierholzer&#39;s algorithm on a directed graph &mdash; always fly to the lexicographically smallest destination. Nodes are added to the result post-recursion, then reversed for the final route.</div></div></a>
 
+  <a href='distinct-subsequences/index.html'><div class='card'><span class='card-tag'>2-D DP</span><div class='card-name'>Distinct Subsequences</div><div class='card-desc'>Count subsequences: dp[i][j] always inherits dp[i-1][j] (skip s[i-1]), then adds dp[i-1][j-1] on a character match. Watch counts accumulate as each repeated letter opens new paths.</div></div></a>
+
   <a href='burst-balloons/index.html'><div class='card'><span class='card-tag'>2-D DP</span><div class='card-name'>Burst Balloons</div><div class='card-desc'>Interval DP &mdash; pad nums with boundary 1s, then try every k as the last balloon to burst in each subinterval. dp[left][right] = max coins from the open range; fill by increasing window size.</div></div></a>
 
   <a href='cheapest-flights/index.html'><div class='card'><span class='card-tag'>Advanced Graphs</span><div class='card-name'>Cheapest Flights Within K Stops</div><div class='card-desc'>Bellman-Ford with a stop limit &mdash; run k+1 relaxation rounds, each round snapshotting prev costs so only one new edge is added per stop. dp[node] tracks the cheapest cost reachable within the current number of stops.</div></div></a>

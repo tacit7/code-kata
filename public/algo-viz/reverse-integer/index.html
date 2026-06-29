@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Reverse Integer</title>
+  <link rel="stylesheet" href="../shared/style.css" />
+  <script src="../shared/gsap.min.js"></script>
+  <script src="../shared/viz.js"></script>
+  <style>
+    body { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+
+    .top-bar {
+      display: flex; align-items: center; gap: 12px;
+      padding: 12px 20px; border-bottom: 1px solid var(--border);
+      background: var(--bg); flex-shrink: 0;
+    }
+    .top-bar label { font-size: 0.85rem; color: var(--text-dim); }
+    .top-bar input[type=number] {
+      width: 120px; padding: 5px 8px; border-radius: 6px;
+      border: 1px solid var(--border); background: var(--surface-dark);
+      color: var(--text-bright); font-size: 0.9rem; font-family: monospace;
+    }
+    .top-bar button {
+      padding: 6px 14px; border-radius: 6px; border: 1px solid var(--accent);
+      background: transparent; color: var(--accent); font-size: 0.85rem;
+      cursor: pointer; font-weight: 600;
+    }
+    .top-bar button:hover { background: rgba(var(--accent-ch), 0.1); }
+    .result-badge {
+      margin-left: auto; padding: 4px 14px; border-radius: 20px;
+      font-size: 0.82rem; font-weight: 700; display: none; font-family: monospace;
+    }
+    .result-badge.ok       { background: rgba(34,197,94,0.15);  border: 1px solid rgba(34,197,94,0.4);  color: #22c55e; }
+    .result-badge.overflow { background: rgba(239,68,68,0.12);  border: 1px solid rgba(239,68,68,0.35); color: #f87171; }
+
+    .middle {
+      flex: 1; display: grid; grid-template-columns: 1fr 1fr;
+      gap: 16px; padding: 16px; overflow: hidden;
+    }
+    @media (max-width: 680px) { .middle { grid-template-columns: 1fr; } }
+
+    .panel-box {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 16px;
+      display: flex; flex-direction: column; gap: 12px; overflow: hidden;
+    }
+    .panel-title {
+      font-size: 0.72rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--text-dim); flex-shrink: 0;
+    }
+
+    /* ── digit strip ── */
+    .digits-area {
+      flex: 1; display: flex; flex-direction: column;
+      gap: 14px; overflow-y: auto; justify-content: center;
+    }
+    .strip-row {
+      display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    }
+    .strip-label {
+      font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
+      color: var(--text-dim); width: 72px; flex-shrink: 0;
+    }
+    .digit-cells { display: flex; gap: 6px; flex-wrap: wrap; }
+    .dcel {
+      width: 40px; height: 40px; display: flex; align-items: center;
+      justify-content: center; border-radius: 8px; font-size: 1.1rem;
+      font-weight: 700; font-family: monospace; border: 2px solid var(--border);
+      background: #0f0f0f; color: var(--text-ghost); transition: all 0.25s;
+    }
+    .dcel.active  { border-color: var(--accent); color: var(--accent-pale); background: var(--surface-dark); }
+    .dcel.popped  { border-color: #f87171; color: #fca5a5; background: rgba(239,68,68,0.08); }
+    .dcel.done    { border-color: #2d3148; color: var(--text-ghost); background: #0a0a0f; opacity: 0.45; }
+    .dcel.rev-new { border-color: #22c55e; color: #86efac; background: rgba(34,197,94,0.08); }
+    .dcel.rev-old { border-color: #2d3148; color: var(--text-dim); background: #111420; }
+    .dcel.neg     { border-color: #facc15; color: #fef08a; background: rgba(234,179,8,0.08); }
+
+    .sign-pill {
+      padding: 4px 10px; border-radius: 6px; font-size: 0.8rem; font-weight: 700;
+      font-family: monospace; border: 1px solid #facc15; color: #fef08a;
+      background: rgba(234,179,8,0.08);
+    }
+
+    /* ── op log ── */
+    .op-scroll { flex: 1; overflow-y: auto; }
+    .op-list { display: flex; flex-direction: column; gap: 6px; }
+    .op-row {
+      background: var(--surface-dark); border: 1px solid var(--border-soft);
+      border-radius: var(--radius); padding: 8px 12px;
+      font-size: 0.82rem; font-family: monospace; display: flex; flex-direction: column; gap: 3px;
+      transition: border-color 0.2s;
+    }
+    .op-row.current { border-color: var(--accent); }
+    .op-row.overflow-row { border-color: #f87171; }
+    .op-top { display: flex; gap: 10px; align-items: center; }
+    .op-iter { font-size: 0.68rem; color: var(--text-ghost); min-width: 36px; }
+    .op-action { color: var(--text-bright); font-weight: 600; }
+    .op-detail { color: var(--text-dim); font-size: 0.78rem; padding-left: 46px; }
+
+    /* overflow warning */
+    .overflow-box {
+      background: rgba(239,68,68,0.07); border: 1px solid rgba(239,68,68,0.3);
+      border-radius: var(--radius); padding: 8px 12px;
+      font-size: 0.8rem; color: #fca5a5; font-family: monospace;
+      display: none; flex-shrink: 0;
+    }
+    .overflow-box.show { display: block; }
+
+    /* running equation */
+    .eq-box {
+      background: var(--surface-dark); border: 1px solid var(--border-soft);
+      border-radius: var(--radius); padding: 10px 14px; flex-shrink: 0;
+    }
+    .eq-line {
+      font-size: 0.82rem; font-family: monospace; color: var(--text-dim);
+      display: flex; gap: 6px; flex-wrap: wrap; align-items: center;
+    }
+    .eq-val { color: var(--accent-pale); font-weight: 700; }
+    .eq-op  { color: var(--text-ghost); }
+
+    /* ── bottom ── */
+    .bottom-bar {
+      border-top: 1px solid var(--border); padding: 10px 20px;
+      background: var(--bg); flex-shrink: 0;
+      display: flex; flex-direction: column; gap: 6px;
+    }
+    .step-info { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .phase-label { font-size: 0.78rem; color: var(--text-dim); min-width: 80px; }
+    .step-desc { font-size: 0.88rem; color: var(--text-bright); flex: 1; }
+    .nav-row { display: flex; align-items: center; gap: 8px; }
+    .nav-row button {
+      padding: 5px 14px; border-radius: 6px;
+      border: 1px solid var(--border); background: var(--surface);
+      color: var(--text-bright); cursor: pointer; font-size: 0.85rem;
+    }
+    .nav-row button:hover { border-color: var(--accent); color: var(--accent); }
+    #btn-play { border-color: var(--accent); color: var(--accent); font-weight: 600; }
+    #speed-select {
+      padding: 4px 8px; border-radius: 6px; border: 1px solid var(--border);
+      background: var(--surface-dark); color: var(--text-dim); font-size: 0.82rem;
+    }
+  </style>
+</head>
+<body>
+
+<!-- TOP -->
+<div class="top-bar">
+  <label>x =</label>
+  <input type="number" id="x-input" value="123" />
+  <button id="btn-build">Build</button>
+  <span class="result-badge" id="result-badge"></span>
+</div>
+
+<!-- MIDDLE -->
+<div class="middle">
+
+  <!-- LEFT: digit strip visualization -->
+  <div class="panel-box">
+    <div class="panel-title">Digit Strip</div>
+    <div class="digits-area" id="digits-area">
+      <div class="strip-row">
+        <span class="strip-label">original</span>
+        <div class="digit-cells" id="orig-cells"></div>
+      </div>
+      <div class="strip-row">
+        <span class="strip-label">reversed</span>
+        <div class="digit-cells" id="rev-cells"></div>
+      </div>
+    </div>
+    <div class="eq-box" id="eq-box">
+      <div class="eq-line" id="eq-line">
+        <span style="color:var(--text-ghost)">rev = 0</span>
+      </div>
+    </div>
+    <div class="overflow-box" id="overflow-box"></div>
+  </div>
+
+  <!-- RIGHT: op log -->
+  <div class="panel-box">
+    <div class="panel-title">Operation Log</div>
+    <div class="op-scroll">
+      <div class="op-list" id="op-list"></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- BOTTOM -->
+<div class="bottom-bar">
+  <div class="step-info">
+    <span class="phase-label" id="phase-label">Step 0 / 0</span>
+    <span class="step-desc" id="step-desc">Press Build to start.</span>
+  </div>
+  <div class="nav-row">
+    <button id="btn-back">&#8592; Prev</button>
+    <button id="btn-play">&#9654; Play</button>
+    <button id="btn-next">Next &#8594;</button>
+    <select id="speed-select">
+      <option value="1200">0.5×</option>
+      <option value="700" selected>1×</option>
+      <option value="350">2×</option>
+      <option value="150">4×</option>
+    </select>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+var INT_MAX = 2147483647;
+var INT_MIN = -2147483648;
+var nav = null;
+var steps = [];
+
+// ── simulate ─────────────────────────────────────────────────────────────────
+
+function simulate(x) {
+  var out = [];
+  var negative = x < 0;
+  var abs = Math.abs(x);
+  var digits = String(abs).split('').map(Number);  // original digits left→right
+  var revDigits = [];                               // reversed digits built up
+
+  out.push({
+    phase: 'Init',
+    desc: 'x = ' + x + '. ' + (negative ? 'Negative: strip sign, reverse magnitude, restore sign.' : 'Positive: pop each digit from the right.'),
+    origStates: digits.map(function() { return 'idle'; }),
+    revDigits: [],
+    rev: 0,
+    poppedIdx: -1,
+    isOverflow: false,
+    overflowMsg: '',
+    opIdx: -1,
+    negative: negative,
+    ops: []
+  });
+
+  var ops = [];
+  var rem = abs;
+  var rev = 0;
+  var iterCount = 0;
+  var overflowAt = -1;
+
+  while (rem > 0) {
+    var digit = rem % 10;
+    rem = Math.floor(rem / 10);
+    var prevRev = rev;
+
+    // overflow guard check (before computing)
+    var overflowMsg = '';
+    var isOverflow = false;
+    if (rev > Math.floor(INT_MAX / 10) || (rev === Math.floor(INT_MAX / 10) && digit > 7)) {
+      isOverflow = true;
+      overflowMsg = 'rev (' + rev + ') × 10 + ' + digit + ' would exceed INT_MAX (' + INT_MAX + '). Return 0.';
+    }
+    if (!isOverflow && negative && (rev > Math.floor((-INT_MIN) / 10) || (rev === Math.floor((-INT_MIN) / 10) && digit > 8))) {
+      isOverflow = true;
+      overflowMsg = 'rev (' + rev + ') × 10 + ' + digit + ' would exceed |INT_MIN| (' + (-INT_MIN) + '). Return 0.';
+    }
+
+    var poppedIdx = digits.length - 1 - iterCount;
+    revDigits = [digit].concat(revDigits);
+
+    var origStates = digits.map(function(_, i) {
+      if (i > poppedIdx) return 'done';
+      if (i === poppedIdx) return 'popped';
+      return 'idle';
+    });
+
+    if (isOverflow) {
+      overflowAt = iterCount;
+      ops.push({
+        iter: iterCount + 1,
+        action: 'OVERFLOW GUARD',
+        detail: overflowMsg,
+        isOverflow: true
+      });
+      out.push({
+        phase: 'Overflow',
+        desc: 'Overflow detected — return 0.',
+        origStates: origStates,
+        revDigits: revDigits.slice(),
+        rev: prevRev,
+        poppedIdx: poppedIdx,
+        isOverflow: true,
+        overflowMsg: overflowMsg,
+        opIdx: ops.length - 1,
+        negative: negative,
+        ops: ops.slice()
+      });
+      break;
+    }
+
+    rev = rev * 10 + digit;
+    revDigits[0] = digit;  // already set, just confirming
+
+    ops.push({
+      iter: iterCount + 1,
+      action: 'pop digit = ' + digit + ',  rev = ' + prevRev + ' × 10 + ' + digit + ' = ' + rev,
+      detail: 'rem = ' + rem + '  (remaining digits to pop)',
+      isOverflow: false
+    });
+
+    var origStates2 = digits.map(function(_, i) {
+      if (i > poppedIdx) return 'done';
+      if (i === poppedIdx) return 'popped';
+      return 'idle';
+    });
+
+    out.push({
+      phase: 'Iter ' + (iterCount + 1),
+      desc: 'Popped digit ' + digit + ' → rev = ' + prevRev + ' × 10 + ' + digit + ' = ' + rev + (rem === 0 ? '. Done!' : '. rem = ' + rem + '.'),
+      origStates: origStates2,
+      revDigits: revDigits.slice(),
+      rev: rev,
+      poppedIdx: poppedIdx,
+      isOverflow: false,
+      overflowMsg: '',
+      opIdx: ops.length - 1,
+      negative: negative,
+      ops: ops.slice()
+    });
+
+    iterCount++;
+  }
+
+  if (overflowAt === -1) {
+    var finalResult = negative ? -rev : rev;
+    out.push({
+      phase: 'Result',
+      desc: (negative ? 'Restore sign: -' + rev + ' = ' : '') + finalResult + '. Answer: ' + finalResult,
+      origStates: digits.map(function() { return 'done'; }),
+      revDigits: revDigits.slice(),
+      rev: rev,
+      poppedIdx: -1,
+      isOverflow: false,
+      overflowMsg: '',
+      opIdx: ops.length,
+      negative: negative,
+      ops: ops.slice(),
+      result: finalResult
+    });
+  }
+
+  return out;
+}
+
+// ── render ────────────────────────────────────────────────────────────────────
+
+function buildOrigCells(digits, states, negative) {
+  var container = document.getElementById('orig-cells');
+  container.innerHTML = '';
+  if (negative) {
+    var neg = document.createElement('div');
+    neg.className = 'sign-pill';
+    neg.textContent = '−';
+    container.appendChild(neg);
+  }
+  digits.forEach(function(d, i) {
+    var el = document.createElement('div');
+    el.className = 'dcel ' + (states[i] || 'idle');
+    el.textContent = d;
+    container.appendChild(el);
+  });
+}
+
+function buildRevCells(revDigits, negative) {
+  var container = document.getElementById('rev-cells');
+  container.innerHTML = '';
+  if (negative && revDigits.length > 0) {
+    var neg = document.createElement('div');
+    neg.className = 'sign-pill';
+    neg.textContent = '−';
+    container.appendChild(neg);
+  }
+  revDigits.forEach(function(d, i) {
+    var el = document.createElement('div');
+    el.className = 'dcel ' + (i === 0 ? 'rev-new' : 'rev-old');
+    el.textContent = d;
+    container.appendChild(el);
+  });
+}
+
+function buildOpList(ops, currentOpIdx) {
+  var list = document.getElementById('op-list');
+  list.innerHTML = '';
+  ops.forEach(function(op, i) {
+    var row = document.createElement('div');
+    row.className = 'op-row' + (i === currentOpIdx ? ' current' : '') + (op.isOverflow ? ' overflow-row' : '');
+
+    var top = document.createElement('div');
+    top.className = 'op-top';
+
+    var iter = document.createElement('span');
+    iter.className = 'op-iter';
+    iter.textContent = '#' + op.iter;
+
+    var action = document.createElement('span');
+    action.className = 'op-action';
+    action.style.color = op.isOverflow ? '#f87171' : '';
+    action.textContent = op.action;
+
+    top.appendChild(iter);
+    top.appendChild(action);
+    row.appendChild(top);
+
+    if (op.detail) {
+      var detail = document.createElement('div');
+      detail.className = 'op-detail';
+      detail.textContent = op.detail;
+      row.appendChild(detail);
+    }
+
+    list.appendChild(row);
+  });
+
+  // scroll current into view
+  var cur = list.children[currentOpIdx];
+  if (cur) cur.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+}
+
+function applyStep(snap) {
+  var digits = String(Math.abs(parseInt(document.getElementById('x-input').value, 10))).split('').map(Number);
+  buildOrigCells(digits, snap.origStates, snap.negative);
+  buildRevCells(snap.revDigits, snap.negative);
+  buildOpList(snap.ops, snap.opIdx);
+
+  // equation box
+  var eq = document.getElementById('eq-line');
+  if (snap.revDigits.length === 0) {
+    eq.innerHTML = '<span style="color:var(--text-ghost)">rev = 0</span>';
+  } else {
+    var revStr = (snap.negative ? '-' : '') + snap.rev;
+    if (snap.result !== undefined) revStr = String(snap.result);
+    eq.innerHTML = '<span style="color:var(--text-dim)">rev =</span> <span class="eq-val">' + revStr + '</span>';
+  }
+
+  // overflow box
+  var ovBox = document.getElementById('overflow-box');
+  if (snap.isOverflow && snap.overflowMsg) {
+    ovBox.className = 'overflow-box show';
+    ovBox.textContent = snap.overflowMsg;
+  } else {
+    ovBox.className = 'overflow-box';
+  }
+
+  // result badge
+  var badge = document.getElementById('result-badge');
+  if (snap.result !== undefined) {
+    badge.className = 'result-badge ok';
+    badge.textContent = '→ ' + snap.result;
+    badge.style.display = '';
+  } else if (snap.isOverflow) {
+    badge.className = 'result-badge overflow';
+    badge.textContent = '→ 0 (overflow)';
+    badge.style.display = '';
+  } else {
+    badge.style.display = 'none';
+  }
+}
+
+// ── init ──────────────────────────────────────────────────────────────────────
+
+function buildAndRun() {
+  var x = parseInt(document.getElementById('x-input').value, 10);
+  if (isNaN(x)) return;
+
+  document.getElementById('result-badge').style.display = 'none';
+  document.getElementById('op-list').innerHTML = '';
+  document.getElementById('overflow-box').className = 'overflow-box';
+
+  steps = simulate(x);
+
+  nav = VizNav({
+    btnPrev:  document.getElementById('btn-back'),
+    btnNext:  document.getElementById('btn-next'),
+    btnPlay:  document.getElementById('btn-play'),
+    speedSel: document.getElementById('speed-select'),
+    render: function(snap, cur, total) {
+      applyStep(snap);
+      document.getElementById('phase-label').textContent = 'Step ' + (cur + 1) + ' / ' + total + '  ·  ' + snap.phase;
+      var descEl = document.getElementById('step-desc');
+      gsap.fromTo(descEl, { opacity: 0 }, { opacity: 1, duration: 0.15 });
+      descEl.textContent = snap.desc;
+    }
+  });
+
+  nav.load(steps);
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  document.getElementById('btn-build').addEventListener('click', buildAndRun);
+  document.getElementById('x-input').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') buildAndRun();
+  });
+  buildAndRun();
+});
+</script>
+</body>
+</html>
