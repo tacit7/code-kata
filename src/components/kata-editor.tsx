@@ -470,9 +470,13 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
       (iframeRef.current?.contentWindow as Window & { eval: (s: string) => void } | null)?.eval(`
         if (!window.__vizBridge) {
           window.__vizBridge = true;
+          var style = document.createElement('style');
+          style.textContent = '.controls, .input-row { display: none !important; }';
+          document.head.appendChild(style);
           window.addEventListener('message', function(e) {
             var d = e.data;
-            if (d === 'play') document.getElementById('playBtn')?.click();
+            if (d === 'prev') document.getElementById('prevBtn')?.click();
+            else if (d === 'play') document.getElementById('playBtn')?.click();
             else if (d === 'step') document.getElementById('stepBtn')?.click();
             else if (d === 'reset') document.getElementById('resetBtn')?.click();
             else if (d && d.type === 'speed') {
@@ -540,6 +544,7 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
       {/* Viz controls (viz tab only) */}
       {showPanel === "viz" && (
         <div className="flex items-center gap-1 px-2">
+          <button onClick={() => sendVizMsg('prev')} className="btn btn-ghost btn-xs text-base-content/50 hover:text-base-content/80 px-2">← Prev</button>
           <button onClick={() => sendVizMsg('step')} className="btn btn-ghost btn-xs text-base-content/50 hover:text-base-content/80 px-2">Step →</button>
           <button onClick={() => sendVizMsg('play')} className="btn btn-ghost btn-xs text-base-content/50 hover:text-base-content/80 px-2">▷ Play</button>
           <button onClick={() => sendVizMsg('reset')} className="btn btn-ghost btn-xs text-base-content/50 hover:text-base-content/80 px-2">↺ Reset</button>
