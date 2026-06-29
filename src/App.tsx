@@ -6,6 +6,7 @@ import { useKeyboardShortcuts } from "./hooks/use-keyboard-shortcuts";
 import { TopBar } from "./components/top-bar";
 import { EditorPage } from "./routes/editor";
 import { PracticePage } from "./routes/library";
+import { PracticeQueuePage } from "./routes/practice";
 import { SessionPage } from "./routes/session";
 import { SessionResultsPage } from "./routes/session-results";
 import { DashboardPage } from "./routes/dashboard";
@@ -73,6 +74,7 @@ function App() {
           <Routes>
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="/dashboard" element={<DashboardPage />} />
+            <Route path="/practice" element={<PracticeQueuePage />} />
             <Route path="/problems" element={<PracticePage />} />
             <Route path="/kata/new" element={<KataFormPage />} />
             <Route path="/kata/:kataId/edit" element={<KataFormPage />} />
