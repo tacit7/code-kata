@@ -32,6 +32,7 @@ export type LibrarySortMode =
   | "starred"
   | "category"
   | "level"
+  | "level-difficulty"
   | "best-time"
   | "streak"
   | "difficulty-asc"

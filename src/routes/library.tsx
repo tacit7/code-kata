@@ -92,6 +92,14 @@ export function PracticePage() {
           const bL = CATEGORY_LEVEL[b.category] ?? 99;
           return aL - bL;
         }
+        case "level-difficulty": {
+          const aL = CATEGORY_LEVEL[a.category] ?? 99;
+          const bL = CATEGORY_LEVEL[b.category] ?? 99;
+          if (aL !== bL) return aL - bL;
+          const ra = diffRank[a.difficulty ?? ""] ?? 3;
+          const rb = diffRank[b.difficulty ?? ""] ?? 3;
+          return ra - rb;
+        }
         case "category":
           return a.category.localeCompare(b.category);
         case "best-time": {
@@ -286,6 +294,7 @@ export function PracticePage() {
             <option value="default">Sort: Default</option>
             <option value="starred">Sort: Starred first</option>
             <option value="level">Sort: Level</option>
+            <option value="level-difficulty">Sort: Level + Difficulty</option>
             <option value="category">Sort: Category A→Z</option>
             <option value="best-time">Sort: Best time</option>
             <option value="streak">Sort: Streak</option>
