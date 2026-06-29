@@ -87,6 +87,11 @@ export function PracticePage() {
           const bS = dailyKataIds.includes(b.id) ? 0 : 1;
           return aS - bS;
         }
+        case "level": {
+          const aL = CATEGORY_LEVEL[a.category] ?? 99;
+          const bL = CATEGORY_LEVEL[b.category] ?? 99;
+          return aL - bL;
+        }
         case "category":
           return a.category.localeCompare(b.category);
         case "best-time": {
@@ -280,6 +285,7 @@ export function PracticePage() {
           >
             <option value="default">Sort: Default</option>
             <option value="starred">Sort: Starred first</option>
+            <option value="level">Sort: Level</option>
             <option value="category">Sort: Category A→Z</option>
             <option value="best-time">Sort: Best time</option>
             <option value="streak">Sort: Streak</option>
@@ -446,6 +452,7 @@ export function PracticePage() {
                 {tab === "custom" && <th className="w-8"></th>}
                 {tab === "browse" && <th className="w-8"></th>}
                 <th className="font-semibold">Name</th>
+                <th className="font-semibold">Level</th>
                 <th className="font-semibold">Category</th>
                 <th
                   className="font-semibold cursor-pointer select-none hover:text-base-content/60 transition-colors"
@@ -528,16 +535,16 @@ export function PracticePage() {
                         </button>
                       </span>
                     </td>
-                    <td className="text-base-content/45 text-sm">
-                      <span className="inline-flex items-center gap-1.5">
-                        {kata.category}
-                        {CATEGORY_LEVEL[kata.category] !== undefined && (
-                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-base-300/60 text-base-content/40 tabular-nums">
-                            Lv.{CATEGORY_LEVEL[kata.category]}
-                          </span>
-                        )}
-                      </span>
+                    <td>
+                      {CATEGORY_LEVEL[kata.category] !== undefined ? (
+                        <span className="text-[11px] font-bold px-2 py-0.5 rounded bg-base-300/60 text-base-content/50 tabular-nums">
+                          Lv.{CATEGORY_LEVEL[kata.category]}
+                        </span>
+                      ) : (
+                        <span className="text-base-content/20 text-xs">—</span>
+                      )}
                     </td>
+                    <td className="text-base-content/45 text-sm">{kata.category}</td>
                     <td>
                       <span className={`badge badge-sm ${diffColor(kata.difficulty)}`}>
                         {kata.difficulty ?? "-"}
