@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Last Stone Weight</title>
+  <link rel="stylesheet" href="../shared/style.css" />
+  <script src="../shared/viz.js"></script>
+  <style>
+    body {
+      display: flex; flex-direction: column; height: 100vh; overflow: hidden;
+    }
+
+    /* ── Top bar ── */
+    .top-bar {
+      flex-shrink: 0;
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 16px;
+      background: var(--surface); border-bottom: 1px solid var(--border);
+    }
+    .top-bar label { font-size: 0.78rem; color: var(--text-dim); white-space: nowrap; }
+    .top-bar input {
+      flex: 1; max-width: 360px;
+      background: var(--bg); border: 1px solid var(--border);
+      color: var(--text); border-radius: var(--radius-sm);
+      padding: 5px 10px; font-size: 0.88rem; font-family: monospace;
+    }
+    .top-bar input:focus { outline: none; border-color: var(--accent); }
+    .btn-build {
+      padding: 5px 14px;
+      background: var(--accent); color: var(--bg);
+      border: none; border-radius: var(--radius-sm);
+      font-size: 0.82rem; font-weight: 700; cursor: pointer;
+    }
+    .btn-build:hover { background: var(--accent-hover); }
+
+    /* ── Middle area ── */
+    .middle {
+      flex: 1; min-height: 0;
+      display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+      padding: 12px 16px;
+      overflow: hidden;
+    }
+
+    .panel-box {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 14px 16px;
+      display: flex; flex-direction: column; gap: 10px;
+      overflow: hidden;
+    }
+    .panel-title {
+      font-size: 0.72rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim);
+      flex-shrink: 0;
+    }
+
+    /* ── Heap visual ── */
+    .heap-list {
+      flex: 1; overflow-y: auto;
+      display: flex; flex-direction: column; gap: 6px;
+    }
+    .heap-row {
+      display: flex; align-items: center; gap: 8px;
+    }
+    .heap-bar-wrap {
+      flex: 1; height: 26px;
+      background: var(--bg); border-radius: 4px;
+      overflow: hidden;
+    }
+    .heap-bar {
+      height: 100%;
+      background: var(--accent);
+      border-radius: 4px;
+      transition: width 0.25s ease;
+    }
+    .heap-bar.stone-y { background: var(--orange); }
+    .heap-bar.stone-x { background: var(--red); }
+    .heap-val {
+      font-size: 0.82rem; font-weight: 700; font-family: monospace;
+      color: var(--text-bright); min-width: 30px; text-align: right;
+    }
+    .heap-rank {
+      font-size: 0.65rem; color: var(--text-ghost); font-family: monospace;
+      min-width: 20px;
+    }
+
+    /* ── Collision log ── */
+    .log-list {
+      flex: 1; overflow-y: auto;
+      display: flex; flex-direction: column; gap: 6px;
+    }
+    .log-entry {
+      background: var(--bg); border: 1px solid var(--border-soft);
+      border-radius: 6px; padding: 8px 12px;
+      font-size: 0.8rem; font-family: monospace;
+      color: var(--text-muted);
+      display: flex; flex-direction: column; gap: 3px;
+    }
+    .log-entry.current {
+      border-color: var(--accent);
+      background: rgba(122,162,247,0.06);
+    }
+    .log-smash { color: var(--orange-light); font-weight: 700; }
+    .log-result-destroyed { color: var(--red-light); }
+    .log-result-survivor  { color: var(--green); }
+
+    /* ── Bottom nav ── */
+    .nav-bar {
+      flex-shrink: 0;
+      display: flex; align-items: center; gap: 10px;
+      padding: 8px 16px;
+      background: var(--surface); border-top: 1px solid var(--border);
+    }
+    .nav-btn {
+      padding: 4px 14px;
+      background: var(--surface-dark); border: 1px solid var(--border);
+      color: var(--text); border-radius: var(--radius-sm);
+      font-size: 0.82rem; cursor: pointer;
+    }
+    .nav-btn:disabled { opacity: 0.35; cursor: default; }
+    .nav-btn:not(:disabled):hover { border-color: var(--accent); color: var(--accent); }
+    select.speed-sel {
+      background: var(--surface-dark); border: 1px solid var(--border);
+      color: var(--text-dim); border-radius: var(--radius-sm);
+      padding: 4px 6px; font-size: 0.78rem;
+    }
+    .step-info {
+      flex: 1;
+      font-size: 0.82rem; color: var(--text-dim);
+      text-align: center; font-family: monospace;
+    }
+    .step-desc {
+      font-size: 0.82rem; color: var(--text-muted);
+      text-align: center; padding: 0 8px;
+    }
+    .stone-count {
+      font-size: 0.78rem; color: var(--text-dim); white-space: nowrap;
+    }
+    .stone-count span { color: var(--accent); font-weight: 700; }
+  </style>
+</head>
+<body>
+
+<!-- Top bar -->
+<div class="top-bar">
+  <label for="stonesInput">Stones:</label>
+  <input id="stonesInput" type="text" value="2,7,4,1,8,1" spellcheck="false" />
+  <button class="btn-build" id="btnBuild">Build</button>
+</div>
+
+<!-- Middle -->
+<div class="middle">
+
+  <!-- Left: heap -->
+  <div class="panel-box">
+    <div class="panel-title">Max-Heap (sorted descending)</div>
+    <div class="heap-list" id="heapList"></div>
+  </div>
+
+  <!-- Right: collision log -->
+  <div class="panel-box">
+    <div class="panel-title">Collision Log</div>
+    <div class="log-list" id="logList"></div>
+  </div>
+
+</div>
+
+<!-- Bottom nav -->
+<div class="nav-bar">
+  <button class="nav-btn" id="btnPrev">&#8592; Prev</button>
+  <button class="nav-btn" id="btnPlay">Play</button>
+  <button class="nav-btn" id="btnNext">Next &#8594;</button>
+  <select class="speed-sel" id="speedSel">
+    <option value="1200">0.8×</option>
+    <option value="800" selected>1×</option>
+    <option value="400">2×</option>
+    <option value="200">4×</option>
+  </select>
+  <div class="step-desc" id="stepDesc">—</div>
+  <div class="step-info" id="stepInfo">—</div>
+  <div class="stone-count">Remaining: <span id="stoneCount">—</span></div>
+</div>
+
+<script>
+// ── Simulation ──────────────────────────────────────────────────────────────
+
+function buildSteps(stones) {
+  // Clone so we can mutate
+  var heap = stones.slice().sort(function(a,b){ return b-a; });
+  var steps = [];
+  var log = [];   // accumulated collision log
+
+  // Step 0: initial state
+  steps.push({
+    heap: heap.slice(),
+    log: log.slice(),
+    y: null, x: null, result: null,
+    desc: 'Initial heap. Largest stone is at the top.',
+    phase: 'init',
+  });
+
+  while (heap.length >= 2) {
+    // Pop two heaviest
+    var y = heap.shift();
+    var x = heap.shift();
+
+    var entry;
+    if (x === y) {
+      // Both destroyed
+      entry = { y: y, x: x, result: 0, destroyed: true };
+      steps.push({
+        heap: heap.slice(),
+        log: log.slice().concat([entry]),
+        y: y, x: x, result: null,
+        desc: 'Smash: y=' + y + ' vs x=' + x + '. Equal — both destroyed.',
+        phase: 'smash',
+        currentLog: entry,
+      });
+    } else {
+      var remainder = y - x;
+      // Insert remainder back into sorted position
+      var inserted = false;
+      for (var i = 0; i < heap.length; i++) {
+        if (heap[i] < remainder) {
+          heap.splice(i, 0, remainder);
+          inserted = true;
+          break;
+        }
+      }
+      if (!inserted) heap.push(remainder);
+
+      entry = { y: y, x: x, result: remainder, destroyed: false };
+      steps.push({
+        heap: heap.slice(),
+        log: log.slice().concat([entry]),
+        y: y, x: x, result: remainder,
+        desc: 'Smash: y=' + y + ' vs x=' + x + '. Survivor=' + remainder + ' pushed back.',
+        phase: 'smash',
+        currentLog: entry,
+      });
+    }
+    log.push(entry);
+  }
+
+  // Final step
+  var finalStone = heap.length === 1 ? heap[0] : 0;
+  steps.push({
+    heap: heap.slice(),
+    log: log.slice(),
+    y: null, x: null, result: null,
+    desc: heap.length === 0
+      ? 'All stones destroyed. Result = 0.'
+      : 'One stone remains. Result = ' + finalStone + '.',
+    phase: 'done',
+  });
+
+  return steps;
+}
+
+// ── Render ──────────────────────────────────────────────────────────────────
+
+var heapList  = document.getElementById('heapList');
+var logList   = document.getElementById('logList');
+var stepDesc  = document.getElementById('stepDesc');
+var stepInfo  = document.getElementById('stepInfo');
+var stoneCount = document.getElementById('stoneCount');
+
+function renderHeap(heap, y, x) {
+  heapList.innerHTML = '';
+  if (heap.length === 0) {
+    heapList.innerHTML = '<div style="color:var(--text-ghost);font-size:0.8rem;font-family:monospace;">— empty —</div>';
+    return;
+  }
+  var max = heap[0] || 1;
+  heap.forEach(function(val, i) {
+    var pct = Math.max(4, Math.round((val / max) * 100));
+    var barClass = 'heap-bar';
+    if (val === y && y !== null) barClass += ' stone-y';
+    else if (val === x && x !== null) barClass += ' stone-x';
+
+    var row = document.createElement('div');
+    row.className = 'heap-row';
+    row.innerHTML =
+      '<span class="heap-rank">#' + (i+1) + '</span>' +
+      '<div class="heap-bar-wrap"><div class="' + barClass + '" style="width:' + pct + '%"></div></div>' +
+      '<span class="heap-val">' + val + '</span>';
+    heapList.appendChild(row);
+  });
+}
+
+function renderLog(log, currentEntry) {
+  logList.innerHTML = '';
+  if (log.length === 0) {
+    logList.innerHTML = '<div style="color:var(--text-ghost);font-size:0.8rem;font-family:monospace;">No collisions yet.</div>';
+    return;
+  }
+  log.forEach(function(entry, i) {
+    var isCurrent = (currentEntry && i === log.length - 1);
+    var div = document.createElement('div');
+    div.className = 'log-entry' + (isCurrent ? ' current' : '');
+
+    var smash = '<span class="log-smash">y=' + entry.y + ' &#x2715; x=' + entry.x + '</span>';
+    var res;
+    if (entry.destroyed) {
+      res = '<span class="log-result-destroyed">&#10005; both destroyed</span>';
+    } else {
+      res = '<span class="log-result-survivor">&#10003; ' + entry.result + ' survives</span>';
+    }
+    div.innerHTML = '<div>' + smash + '</div><div>' + res + '</div>';
+    logList.appendChild(div);
+  });
+  // scroll latest into view
+  logList.lastElementChild && logList.lastElementChild.scrollIntoView({ block: 'nearest' });
+}
+
+function render(snap, cursor, total) {
+  renderHeap(snap.heap, snap.y, snap.x);
+  renderLog(snap.log, snap.currentLog);
+  stepDesc.textContent = snap.desc;
+  stepInfo.textContent = 'Step ' + (cursor + 1) + ' / ' + total;
+  stoneCount.textContent = snap.heap.length;
+}
+
+// ── Nav wiring ──────────────────────────────────────────────────────────────
+
+var nav = VizNav({
+  btnPrev:  document.getElementById('btnPrev'),
+  btnNext:  document.getElementById('btnNext'),
+  btnPlay:  document.getElementById('btnPlay'),
+  speedSel: document.getElementById('speedSel'),
+  render:   render,
+});
+
+function loadFromInput() {
+  var raw = document.getElementById('stonesInput').value;
+  var stones = raw.split(',').map(function(s){ return parseInt(s.trim(), 10); }).filter(function(n){ return !isNaN(n) && n > 0; });
+  if (stones.length < 1) return;
+  var steps = buildSteps(stones);
+  nav.load(steps);
+}
+
+document.getElementById('btnBuild').addEventListener('click', loadFromInput);
+document.getElementById('stonesInput').addEventListener('keydown', function(e){
+  if (e.key === 'Enter') loadFromInput();
+});
+
+// Boot with default
+loadFromInput();
+</script>
+</body>
+</html>
