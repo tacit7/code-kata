@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Meeting Rooms</title>
+  <link rel="stylesheet" href="../shared/style.css" />
+  <script src="../shared/gsap.min.js"></script>
+  <script src="../shared/viz.js"></script>
+  <style>
+    .viz-area { width: 100%; max-width: 90%; }
+    .main-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
+    .left-col, .right-col { display: flex; flex-direction: column; gap: 12px; }
+    @media (max-width: 700px) { .main-row { grid-template-columns: 1fr; } }
+
+    .timeline-panel {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 16px;
+      display: flex; flex-direction: column; gap: 10px;
+    }
+    .panel-title {
+      font-size: 0.72rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim);
+    }
+    #timeline-svg { width: 100%; display: block; overflow: visible; }
+
+    .panel-box {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 14px 16px;
+      display: flex; flex-direction: column; gap: 8px;
+    }
+
+    .var-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .var-box {
+      padding: 10px 8px; background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      display: flex; flex-direction: column; align-items: center; gap: 3px;
+    }
+    .var-box.accent-border { border-color: var(--accent); }
+    .var-box.yellow-border { border-color: var(--yellow); }
+    .var-box.red-border    { border-color: #f7768e; }
+    .var-label { font-size: 0.65rem; font-family: monospace; color: var(--text-faint); text-align: center; }
+    .var-val   { font-size: 1.1rem; font-weight: 700; color: var(--text-bright); font-family: monospace; }
+
+    .cmp-box {
+      background: var(--bg); border: 1px solid var(--border-soft);
+      border-radius: var(--radius-sm); padding: 10px 12px;
+      display: flex; flex-direction: column; gap: 6px;
+    }
+    .cmp-row { display: flex; align-items: center; gap: 8px; font-family: monospace; font-size: 0.85rem; flex-wrap: wrap; }
+    .cmp-side { color: var(--text-dim); }
+    .cmp-op { color: var(--yellow); font-weight: 700; }
+    .cmp-badge {
+      padding: 3px 10px; border-radius: 5px; font-size: 0.8rem; font-weight: 700;
+      display: none; font-family: monospace;
+    }
+    .cmp-badge.ok     { display: inline-block; background: #1a2b14; color: #9ece6a; border: 1px solid #4d7a23; }
+    .cmp-badge.clash  { display: inline-block; background: #2b1420; color: #f7768e; border: 1px solid #8b3a4a; }
+
+    .result-badge {
+      font-size: 0.88rem; font-weight: 700; padding: 7px 14px; border-radius: 6px;
+      font-family: monospace; display: none; margin-top: 4px;
+    }
+    .result-badge.can    { display: block; background: #1a2b14; color: #9ece6a; border: 1px solid #4d7a23; }
+    .result-badge.cannot { display: block; background: #2b1420; color: #f7768e; border: 1px solid #8b3a4a; }
+
+    .code-panel {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); overflow: hidden;
+    }
+    .code-header { padding: 8px 14px; font-size: 0.72rem; font-weight: 600; color: var(--text-dim); border-bottom: 1px solid var(--border); background: var(--bg); }
+    .code-body { padding: 10px 0; font-size: 0.78rem; line-height: 1.75; white-space: pre; }
+    .code-line { display: flex; align-items: center; padding: 0 14px; }
+    .code-line.hl { background: var(--border-soft); border-left: 2px solid var(--accent); }
+    .ln { min-width: 24px; color: var(--text-ghost); user-select: none; font-size: 0.7rem; }
+
+    .btn-play {
+      background: #15803d; border: none; border-radius: var(--radius-sm);
+      color: #fff; cursor: pointer; font-size: 0.88rem; font-weight: 600;
+      padding: 9px 16px; transition: background 0.2s;
+    }
+    .btn-play:hover { background: #166534; }
+    .btn-play.playing { background: #c2410c; }
+    .btn-play.playing:hover { background: #9a3412; }
+    .btn-play:disabled { opacity: 0.4; cursor: not-allowed; }
+    .speed-select {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); color: var(--text);
+      font-size: 0.85rem; padding: 8px 10px; outline: none; width: 80px;
+    }
+    .nav-row { display: flex; gap: 8px; align-items: center; }
+
+    .preset-row { display: flex; gap: 8px; flex-wrap: wrap; }
+    .btn-preset {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); color: var(--text-dim);
+      font-size: 0.78rem; padding: 5px 10px; cursor: pointer;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .btn-preset:hover { border-color: var(--accent); color: var(--accent-pale); }
+    .btn-preset.active { border-color: var(--accent); color: var(--accent-pale); background: var(--surface-dark); }
+
+    .legend-row { display: flex; align-items: center; gap: 8px; font-size: 0.78rem; color: var(--text-muted); }
+    .legend-swatch { width: 28px; height: 14px; border-radius: 3px; flex-shrink: 0; }
+
+    .kw { color: #bb9af7; }
+    .fn { color: #7dcfff; }
+    .bi { color: #ff9e64; }
+    .op { color: #c0caf5; }
+    .nb { color: #9ece6a; }
+    .cm { color: #3b4261; }
+    .str { color: #9ece6a; }
+  </style>
+</head>
+<body class="page">
+
+<div class="page-header">
+  <a class="back-link" href="../index.html">&larr; All Algorithms</a>
+  <div class="page-title">Meeting Rooms</div>
+  <div class="page-sub">LeetCode 252 &middot; Sort by start time, check each adjacent pair for overlap &middot; O(n log n) time &middot; O(1) extra space</div>
+</div>
+
+<div class="controls">
+  <div class="field">
+    <label>Preset</label>
+    <div class="preset-row" id="preset-row">
+      <button class="btn-preset active" onclick="loadPreset(0,this)">Has conflict</button>
+      <button class="btn-preset" onclick="loadPreset(1,this)">No conflict</button>
+      <button class="btn-preset" onclick="loadPreset(2,this)">Touching only</button>
+    </div>
+  </div>
+  <div class="field">
+    <label>Intervals (start,end pairs separated by semicolons)</label>
+    <input id="inp-intervals" type="text" value="0,30;5,10;15,20" style="width:260px" />
+  </div>
+  <button class="btn-primary" onclick="buildAndRun()">Build &amp; Run</button>
+</div>
+
+<div class="viz-area">
+  <div class="main-row">
+    <div class="left-col">
+      <div class="timeline-panel">
+        <div class="panel-title">Timeline</div>
+        <svg id="timeline-svg" viewBox="0 0 700 100" preserveAspectRatio="xMidYMid meet">
+          <text x="350" y="55" text-anchor="middle" fill="#3b4261" font-size="13" font-family="monospace">Run simulation to see timeline</text>
+        </svg>
+      </div>
+      <div class="code-panel">
+        <div class="code-header">Python</div>
+        <div class="code-body" id="code-body"></div>
+      </div>
+    </div>
+
+    <div class="right-col">
+      <div style="display:flex;gap:12px">
+        <div class="panel-box" style="flex:0 0 auto">
+          <div class="nav-row">
+            <button class="btn-step" id="btn-prev" disabled>&larr;</button>
+            <button class="btn-step" id="btn-next" disabled>&rarr;</button>
+            <button class="btn-play" id="btn-play" disabled>&#9654; Play</button>
+            <select class="speed-select" id="speed-sel">
+              <option value="900">Slow</option>
+              <option value="450" selected>Medium</option>
+              <option value="150">Fast</option>
+            </select>
+          </div>
+        </div>
+        <div class="panel-box" style="flex:1;min-width:0">
+          <div class="panel-title" id="phase-label">&mdash;</div>
+          <div style="font-size:0.82rem;color:var(--text-muted);margin-top:2px" id="step-desc">Choose a preset and click Build &amp; Run.</div>
+          <div class="result-badge" id="result-badge"></div>
+        </div>
+      </div>
+
+      <div class="panel-box">
+        <div class="panel-title">Comparison</div>
+        <div class="var-grid">
+          <div class="var-box yellow-border">
+            <div class="var-label">intervals[i]</div>
+            <div class="var-val" id="vv-curr">&mdash;</div>
+          </div>
+          <div class="var-box accent-border">
+            <div class="var-label">intervals[i-1]</div>
+            <div class="var-val" id="vv-prev">&mdash;</div>
+          </div>
+        </div>
+        <div class="cmp-box">
+          <div class="panel-title" style="margin-bottom:2px">Overlap Check</div>
+          <div class="cmp-row">
+            <span class="cmp-side" id="cmp-lhs">intervals[i].start</span>
+            <span class="cmp-op">&lt;</span>
+            <span class="cmp-side" id="cmp-rhs">intervals[i-1].end</span>
+            <span class="cmp-badge" id="cmp-badge"></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel-box">
+        <div class="panel-title">Legend</div>
+        <div style="display:flex;flex-direction:column;gap:7px">
+          <div class="legend-row">
+            <div class="legend-swatch" style="background:#2a2007;border:1.5px solid #e0af68"></div>
+            <span>Current interval being examined (i)</span>
+          </div>
+          <div class="legend-row">
+            <div class="legend-swatch" style="background:#0d1a35;border:1.5px solid #7aa2f7"></div>
+            <span>Previous interval (i-1)</span>
+          </div>
+          <div class="legend-row">
+            <div class="legend-swatch" style="background:#1a2b14;border:1.5px solid #4d7a23"></div>
+            <span>OK — no overlap with previous</span>
+          </div>
+          <div class="legend-row">
+            <div class="legend-swatch" style="background:#2b1420;border:1.5px solid #8b3a4a"></div>
+            <span>Conflict — overlaps with previous</span>
+          </div>
+          <div class="legend-row">
+            <div class="legend-swatch" style="background:#1a1b26;border:1.5px solid #414868"></div>
+            <span>Pending / not yet processed</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+var PRESETS = [
+  { label: 'Has conflict',  raw: '0,30;5,10;15,20' },
+  { label: 'No conflict',   raw: '7,10;2,4' },
+  { label: 'Touching only', raw: '0,5;5,10;10,15' },
+];
+
+var simSteps = [], nav;
+
+var CODE = [
+  [1,  '<span class="kw">def</span> <span class="fn">canAttendMeetings</span><span class="op">(</span>intervals<span class="op">):</span>'],
+  [2,  '    intervals<span class="op">.</span><span class="bi">sort</span><span class="op">(</span><span class="kw">key</span><span class="op">=</span><span class="kw">lambda</span> x<span class="op">:</span> x<span class="op">[</span><span class="nb">0</span><span class="op">])</span>  <span class="cm"># sort by start</span>'],
+  [3,  '    <span class="kw">for</span> i <span class="kw">in</span> <span class="bi">range</span><span class="op">(</span><span class="nb">1</span><span class="op">,</span> <span class="bi">len</span><span class="op">(</span>intervals<span class="op">)):</span>'],
+  [4,  '        <span class="kw">if</span> intervals<span class="op">[</span>i<span class="op">][</span><span class="nb">0</span><span class="op">]</span> <span class="op">&lt;</span> intervals<span class="op">[</span>i<span class="op">-</span><span class="nb">1</span><span class="op">][</span><span class="nb">1</span><span class="op">]:</span>'],
+  [5,  '            <span class="kw">return</span> <span class="bi">False</span>  <span class="cm"># overlap found</span>'],
+  [6,  '    <span class="kw">return</span> <span class="bi">True</span>'],
+];
+
+window.addEventListener('DOMContentLoaded', function() {
+  buildCodePanel();
+  loadPreset(0, document.querySelector('.btn-preset'));
+
+  nav = VizNav({
+    btnPrev: document.getElementById('btn-prev'),
+    btnNext: document.getElementById('btn-next'),
+    btnPlay: document.getElementById('btn-play'),
+    speedSel: document.getElementById('speed-sel'),
+    render: function(snap, cur, total) {
+      renderStep(snap, cur > 0);
+      var phaseEl = document.getElementById('phase-label');
+      var descEl  = document.getElementById('step-desc');
+      if (phaseEl) phaseEl.textContent = 'Step ' + (cur + 1) + ' / ' + total + '  ·  ' + snap.phase;
+      if (descEl) {
+        gsap.fromTo(descEl, { opacity: 0 }, { opacity: 1, duration: 0.15 });
+        descEl.textContent = snap.desc;
+      }
+      var badge = document.getElementById('result-badge');
+      if (badge) {
+        badge.className = 'result-badge';
+        badge.textContent = '';
+        if (snap.phase === 'Done') {
+          if (snap.canAttend) {
+            badge.className = 'result-badge can';
+            badge.textContent = '✓ CAN attend all meetings';
+          } else {
+            badge.className = 'result-badge cannot';
+            badge.textContent = '✗ CANNOT attend all meetings';
+          }
+        }
+      }
+    }
+  });
+});
+
+function buildCodePanel() {
+  var body = document.getElementById('code-body');
+  body.innerHTML = CODE.map(function(e) {
+    return '<div class="code-line" id="cl-' + e[0] + '"><span class="ln">' + e[0] + '</span><span>' + e[1] + '</span></div>';
+  }).join('');
+}
+
+function loadPreset(idx, btn) {
+  document.querySelectorAll('.btn-preset').forEach(function(b) { b.classList.remove('active'); });
+  if (btn) btn.classList.add('active');
+  document.getElementById('inp-intervals').value = PRESETS[idx].raw;
+}
+
+function parseIntervals(raw) {
+  var result = [];
+  raw.split(';').forEach(function(pair) {
+    var parts = pair.split(',').map(function(s) { return parseInt(s.trim(), 10); });
+    if (parts.length >= 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+      result.push([parts[0], parts[1]]);
+    }
+  });
+  return result;
+}
+
+function buildAndRun() {
+  var raw = document.getElementById('inp-intervals').value;
+  var intervals = parseIntervals(raw);
+  if (intervals.length < 2) {
+    alert('Need at least 2 intervals (format: start,end;start,end).');
+    return;
+  }
+  simSteps = simulate(intervals);
+  nav.load(simSteps);
+}
+
+function fmtIv(iv) { return '[' + iv[0] + ',' + iv[1] + ']'; }
+
+function simulate(intervals) {
+  var steps = [];
+
+  function snap(phase, desc, lines, opts) {
+    opts = opts || {};
+    steps.push({
+      phase: phase,
+      desc: desc,
+      lines: lines,
+      sorted:     (opts.sorted || intervals).slice(),
+      isSorted:   !!opts.isSorted,
+      currentIdx: opts.currentIdx !== undefined ? opts.currentIdx : -1,
+      status:     (opts.status || []).slice(),
+      decision:   opts.decision !== undefined ? opts.decision : null,
+      canAttend:  opts.canAttend !== undefined ? opts.canAttend : null,
+      conflict:   opts.conflict !== undefined ? opts.conflict : -1,
+    });
+  }
+
+  // Step 1: Input
+  snap('Input', 'Input: ' + intervals.length + ' intervals. Can one person attend all meetings without any overlap?', [1], {
+    sorted: intervals.slice(),
+    isSorted: false,
+    status: new Array(intervals.length).fill(null),
+  });
+
+  // Step 2: Sort by start time
+  var sorted = intervals.slice().sort(function(a, b) { return a[0] - b[0]; });
+  snap('Sort', 'Sort by start time: ' + sorted.map(fmtIv).join(' → ') + '. After sorting, overlaps can only occur between adjacent intervals.', [2], {
+    sorted: sorted.slice(),
+    isSorted: true,
+    status: new Array(sorted.length).fill(null),
+  });
+
+  // Step 3: Sweep
+  var status = new Array(sorted.length).fill(null);
+  status[0] = 'ok';
+  snap('Init', 'First interval ' + fmtIv(sorted[0]) + ' is our anchor — mark it OK and start comparing.', [3], {
+    sorted: sorted,
+    isSorted: true,
+    currentIdx: 0,
+    status: status.slice(),
+  });
+
+  var conflictAt = -1;
+  for (var i = 1; i < sorted.length; i++) {
+    var cur = sorted[i];
+    var prev = sorted[i - 1];
+
+    // Examine step
+    snap('Compare', 'Check ' + fmtIv(cur) + ' vs ' + fmtIv(prev) + ': does ' + cur[0] + ' < ' + prev[1] + '?', [3, 4], {
+      sorted: sorted,
+      isSorted: true,
+      currentIdx: i,
+      status: status.slice(),
+      decision: null,
+    });
+
+    if (cur[0] < prev[1]) {
+      // Conflict
+      status[i] = 'conflict';
+      conflictAt = i;
+      snap('Conflict', cur[0] + ' < ' + prev[1] + ' → OVERLAP! ' + fmtIv(cur) + ' starts before ' + fmtIv(prev) + ' ends. Cannot attend all meetings.', [4, 5], {
+        sorted: sorted,
+        isSorted: true,
+        currentIdx: i,
+        status: status.slice(),
+        decision: 'conflict',
+        conflict: i,
+      });
+      // Early exit
+      snap('Done', 'Overlap detected between ' + fmtIv(prev) + ' and ' + fmtIv(cur) + '. Return False — you CANNOT attend all meetings.', [5], {
+        sorted: sorted,
+        isSorted: true,
+        currentIdx: i,
+        status: status.slice(),
+        canAttend: false,
+        conflict: i,
+      });
+      return steps;
+    } else {
+      status[i] = 'ok';
+      snap('OK', cur[0] + ' >= ' + prev[1] + ' → no overlap. ' + fmtIv(cur) + ' starts at or after ' + fmtIv(prev) + ' ends.', [3, 4], {
+        sorted: sorted,
+        isSorted: true,
+        currentIdx: i,
+        status: status.slice(),
+        decision: 'ok',
+      });
+    }
+  }
+
+  // No conflicts
+  snap('Done', 'All ' + sorted.length + ' intervals checked — no overlaps found. Return True — you CAN attend all meetings!', [6], {
+    sorted: sorted,
+    isSorted: true,
+    currentIdx: -1,
+    status: status.slice(),
+    canAttend: true,
+    conflict: -1,
+  });
+
+  return steps;
+}
+
+// ── Render ──────────────────────────────────────────────────────────────────
+var C = {
+  pending:  { fill: '#1a1b26', stroke: '#414868', text: '#565f89' },
+  current:  { fill: '#2a2007', stroke: '#e0af68', text: '#e0af68' },
+  prev:     { fill: '#0d1a35', stroke: '#7aa2f7', text: '#7aa2f7' },
+  ok:       { fill: '#1a2b14', stroke: '#4d7a23', text: '#9ece6a' },
+  conflict: { fill: '#2b1420', stroke: '#8b3a4a', text: '#f7768e' },
+  axis:     '#414868',
+  axisText: '#565f89',
+  label:    '#3b4261',
+};
+
+function renderStep(snap, animate) {
+  renderSVG(snap, animate);
+  renderVars(snap, animate);
+  renderCode(snap.lines);
+}
+
+function renderSVG(snap, animate) {
+  var svg = document.getElementById('timeline-svg');
+  if (!snap.sorted || snap.sorted.length === 0) return;
+
+  var n = snap.sorted.length;
+  var W = 700;
+  var PAD_L = 60;
+  var PAD_R = 24;
+  var CW = W - PAD_L - PAD_R;
+  var BAR_H = 20;
+  var ROW_H = 30;
+
+  var allVals = [];
+  snap.sorted.forEach(function(iv) { allVals.push(iv[0], iv[1]); });
+  var minV = Math.min.apply(null, allVals);
+  var maxV = Math.max.apply(null, allVals);
+  var span = maxV - minV || 1;
+  var vPad = span * 0.1;
+  var vMin = minV - vPad;
+  var vMax = maxV + vPad;
+
+  function xS(v) { return PAD_L + (v - vMin) / (vMax - vMin) * CW; }
+
+  var AXIS_Y  = 22;
+  var ROW_Y0  = 42;
+  var TOTAL_H = ROW_Y0 + n * ROW_H + 20;
+  svg.setAttribute('viewBox', '0 0 ' + W + ' ' + TOTAL_H);
+
+  var parts = [];
+
+  // Axis
+  var rawStep = span / 5;
+  var step = Math.max(1, Math.round(rawStep));
+  var tickStart = Math.ceil(minV / step) * step;
+  parts.push('<line x1="' + PAD_L + '" y1="' + AXIS_Y + '" x2="' + (W - PAD_R) + '" y2="' + AXIS_Y + '" stroke="' + C.axis + '" stroke-width="1"/>');
+  for (var tv = tickStart; tv <= maxV; tv += step) {
+    var tx = xS(tv);
+    parts.push('<line x1="' + tx + '" y1="' + (AXIS_Y - 4) + '" x2="' + tx + '" y2="' + (AXIS_Y + 4) + '" stroke="' + C.axis + '" stroke-width="1"/>');
+    parts.push('<text x="' + tx + '" y="' + (AXIS_Y + 16) + '" text-anchor="middle" fill="' + C.axisText + '" font-size="10" font-family="monospace">' + tv + '</text>');
+  }
+
+  // Section label
+  var sortLabel = snap.isSorted ? 'SORTED' : 'INPUT';
+  parts.push('<text x="' + (PAD_L - 4) + '" y="' + (ROW_Y0 - 6) + '" text-anchor="end" fill="' + C.label + '" font-size="10" font-weight="600" letter-spacing="0.05em">' + sortLabel + '</text>');
+
+  // Interval rows
+  snap.sorted.forEach(function(iv, idx) {
+    var barY  = ROW_Y0 + idx * ROW_H;
+    var barCy = barY + BAR_H / 2;
+    var x1 = xS(iv[0]);
+    var x2 = xS(iv[1]);
+    var bw = Math.max(x2 - x1, 4);
+
+    var st;
+    if (idx === snap.currentIdx) {
+      st = C.current;
+    } else if (idx === snap.currentIdx - 1 && snap.currentIdx > 0) {
+      // previous interval
+      st = snap.status[idx] === 'ok' ? C.ok : (snap.status[idx] === 'conflict' ? C.conflict : C.prev);
+    } else if (snap.status[idx] === 'ok') {
+      st = C.ok;
+    } else if (snap.status[idx] === 'conflict') {
+      st = C.conflict;
+    } else {
+      st = C.pending;
+    }
+
+    // Conflict highlight: prev interval also lit
+    if (snap.conflict > 0 && idx === snap.conflict - 1 && snap.status[idx] !== 'conflict') {
+      st = C.prev;
+    }
+
+    parts.push('<text x="' + (PAD_L - 5) + '" y="' + (barCy + 4) + '" text-anchor="end" fill="' + st.text + '" font-size="10" font-family="monospace">' + fmtIv(iv) + '</text>');
+    parts.push('<rect x="' + x1 + '" y="' + barY + '" width="' + bw + '" height="' + BAR_H + '" rx="4" fill="' + st.fill + '" stroke="' + st.stroke + '" stroke-width="1.5"/>');
+
+    if (bw > 30) {
+      parts.push('<text x="' + (x1 + bw / 2) + '" y="' + (barCy + 4) + '" text-anchor="middle" fill="' + st.text + '" font-size="9.5" font-family="monospace" font-weight="600">' + fmtIv(iv) + '</text>');
+    }
+
+    if (snap.status[idx] === 'conflict') {
+      parts.push('<line x1="' + x1 + '" y1="' + barCy + '" x2="' + (x1 + bw) + '" y2="' + barCy + '" stroke="#f7768e" stroke-width="2" opacity="0.7"/>');
+    }
+  });
+
+  // Overlap shading between current and prev on conflict/compare
+  if (snap.currentIdx > 0) {
+    var ci = snap.currentIdx;
+    var ivCur  = snap.sorted[ci];
+    var ivPrev = snap.sorted[ci - 1];
+    if (ivCur && ivPrev) {
+      var overlapStart = Math.max(ivCur[0], ivPrev[0]);
+      var overlapEnd   = Math.min(ivCur[1], ivPrev[1]);
+      if (overlapEnd > overlapStart && snap.decision === 'conflict') {
+        var ox1 = xS(overlapStart);
+        var ox2 = xS(overlapEnd);
+        var ow  = Math.max(ox2 - ox1, 2);
+        var oy  = ROW_Y0 + (ci - 1) * ROW_H;
+        var oh  = ROW_H * 2 - 4;
+        parts.push('<rect x="' + ox1 + '" y="' + oy + '" width="' + ow + '" height="' + oh + '" fill="#f7768e" opacity="0.15" rx="2"/>');
+        parts.push('<line x1="' + ox1 + '" y1="' + oy + '" x2="' + ox1 + '" y2="' + (oy + oh) + '" stroke="#f7768e" stroke-width="1.5" stroke-dasharray="4,3" opacity="0.6"/>');
+        parts.push('<line x1="' + (ox1 + ow) + '" y1="' + oy + '" x2="' + (ox1 + ow) + '" y2="' + (oy + oh) + '" stroke="#f7768e" stroke-width="1.5" stroke-dasharray="4,3" opacity="0.6"/>');
+      }
+    }
+  }
+
+  svg.innerHTML = parts.join('');
+}
+
+function renderVars(snap, animate) {
+  function setVal(id, val) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    var text = (val === null || val === undefined) ? '—' : String(val);
+    if (animate && el.textContent !== text) {
+      gsap.fromTo(el, { scale: 0.85, opacity: 0.4 }, { scale: 1, opacity: 1, duration: 0.2, ease: 'back.out(1.7)' });
+    }
+    el.textContent = text;
+  }
+
+  var ci = snap.currentIdx;
+  var cur  = ci >= 0 ? snap.sorted[ci] : null;
+  var prev = ci > 0  ? snap.sorted[ci - 1] : null;
+  setVal('vv-curr', cur  ? fmtIv(cur)  : null);
+  setVal('vv-prev', prev ? fmtIv(prev) : null);
+
+  var lhsEl   = document.getElementById('cmp-lhs');
+  var rhsEl   = document.getElementById('cmp-rhs');
+  var badgeEl = document.getElementById('cmp-badge');
+
+  if (cur && prev) {
+    lhsEl.textContent = cur[0];
+    rhsEl.textContent = prev[1];
+    badgeEl.className = 'cmp-badge';
+    if (snap.decision === 'ok') {
+      badgeEl.className = 'cmp-badge ok';
+      badgeEl.textContent = 'no overlap → continue';
+    } else if (snap.decision === 'conflict') {
+      badgeEl.className = 'cmp-badge clash';
+      badgeEl.textContent = 'OVERLAP → false';
+    } else {
+      badgeEl.textContent = '';
+    }
+  } else {
+    lhsEl.textContent = 'intervals[i].start';
+    rhsEl.textContent = 'intervals[i-1].end';
+    badgeEl.className = 'cmp-badge';
+    badgeEl.textContent = '';
+  }
+}
+
+function renderCode(lines) {
+  CODE.forEach(function(e) {
+    var el = document.getElementById('cl-' + e[0]);
+    if (!el) return;
+    if (lines.indexOf(e[0]) >= 0) el.classList.add('hl');
+    else el.classList.remove('hl');
+  });
+}
+</script>
+<script>
+  if (window.self !== window.top) {
+    var bl = document.querySelector('.back-link');
+    if (bl) bl.style.display = 'none';
+  }
+</script>
+</body>
+</html>
