@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Network Delay Time</title>
+  <link rel="stylesheet" href="../shared/style.css" />
+  <script src="../shared/viz.js"></script>
+  <style>
+    .viz-area { width: 100%; max-width: 95%; }
+    .main-row { display: grid; grid-template-columns: 1fr 380px; gap: 20px; align-items: start; }
+    @media (max-width: 800px) { .main-row { grid-template-columns: 1fr; } }
+
+    .graph-panel {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 16px;
+      display: flex; flex-direction: column; gap: 10px;
+    }
+    .graph-svg-wrap {
+      width: 100%; aspect-ratio: 1.4;
+      background: var(--bg); border-radius: var(--radius-sm);
+      overflow: hidden;
+    }
+    #graph-svg { width: 100%; height: 100%; }
+
+    .node-circle { stroke-width: 2.5; transition: fill 0.3s, stroke 0.3s; }
+    .node-circle.state-unvisited { fill: #1a1b2e; stroke: #414868; }
+    .node-circle.state-queued    { fill: #3d3524; stroke: #e0af68; }
+    .node-circle.state-popped    { fill: #1a1f3a; stroke: #7dcfff; }
+    .node-circle.state-settled   { fill: #1a2a1a; stroke: #9ece6a; }
+
+    .node-label {
+      fill: var(--text-bright); font-size: 13px; font-weight: 700;
+      font-family: monospace; text-anchor: middle; dominant-baseline: central;
+      pointer-events: none;
+    }
+
+    .source-ring {
+      fill: none; stroke: #bb9af7; stroke-width: 2; stroke-dasharray: 4 3; opacity: 0.7;
+    }
+
+    .edge-line {
+      stroke-width: 2; fill: none; stroke: #3b4261; transition: stroke 0.3s;
+    }
+    .edge-line.active   { stroke: #7dcfff; stroke-width: 2.5; }
+    .edge-line.relaxed  { stroke: #e0af68; stroke-width: 2.5; }
+    .edge-line.settled  { stroke: #9ece6a; }
+
+    .edge-weight-bg { fill: var(--bg); }
+    .edge-weight {
+      fill: var(--text-dim); font-size: 11px; font-weight: 700;
+      font-family: monospace; text-anchor: middle; dominant-baseline: central;
+    }
+    .edge-weight.active  { fill: #7dcfff; }
+    .edge-weight.relaxed { fill: #e0af68; }
+    .edge-weight.settled { fill: #9ece6a; }
+
+    .right-col { display: flex; flex-direction: column; gap: 12px; }
+
+    .panel-box {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 14px 16px;
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .panel-title {
+      font-size: 0.72rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim);
+    }
+
+    .nav-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .btn-play {
+      background: #15803d; border: none; border-radius: var(--radius-sm);
+      color: #fff; cursor: pointer; font-size: 0.88rem; font-weight: 600;
+      padding: 9px 16px; transition: background 0.2s;
+    }
+    .btn-play:hover { background: #166534; }
+    .btn-play.playing { background: #c2410c; }
+    .btn-play.playing:hover { background: #9a3412; }
+    .btn-play:disabled { opacity: 0.4; cursor: not-allowed; }
+    .speed-select {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); color: var(--text);
+      font-size: 0.85rem; padding: 8px 10px; outline: none; width: 80px;
+    }
+
+    .result-badge {
+      font-size: 0.88rem; font-weight: 700;
+      padding: 5px 14px; border-radius: 6px;
+      display: none; width: fit-content;
+    }
+    .result-badge.success { background: #1a2a1a; color: #9ece6a; border: 1px solid #9ece6a; display: block; }
+    .result-badge.failure { background: #3d1515; color: #f7768e; border: 1px solid #f7768e; display: block; }
+
+    .dist-cells { display: flex; gap: 8px; flex-wrap: wrap; }
+    .dist-cell {
+      display: flex; flex-direction: column; align-items: center; gap: 2px;
+      border: 1px solid var(--border); border-radius: 6px;
+      padding: 5px 10px; min-width: 44px;
+      transition: border-color 0.2s, background 0.2s;
+    }
+    .dist-cell.queued  { border-color: #e0af68; background: #3d3524; }
+    .dist-cell.popped  { border-color: #7dcfff; background: #1a1f3a; }
+    .dist-cell.settled { border-color: #9ece6a; background: #1a2a1a; }
+    .dc-node { font-size: 0.68rem; color: var(--text-dim); font-weight: 600; }
+    .dc-val  { font-size: 0.9rem; font-weight: 700; font-family: monospace; color: var(--text-bright); }
+
+    .heap-list { display: flex; gap: 6px; flex-wrap: wrap; min-height: 28px; align-items: center; }
+    .heap-chip {
+      padding: 3px 10px; border-radius: 4px;
+      font-size: 0.8rem; font-family: monospace; font-weight: 700;
+      background: #3d3524; border: 1px solid #e0af68; color: #e0af68;
+    }
+    .heap-chip.top { background: #1a1f3a; border-color: #7dcfff; color: #7dcfff; }
+
+    .legend-row { display: flex; align-items: center; gap: 8px; font-size: 0.78rem; color: var(--text-muted); }
+    .legend-dot { width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; border: 2px solid; }
+
+    .code-panel {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); overflow: hidden;
+    }
+    .code-header {
+      padding: 8px 14px; font-size: 0.72rem; font-weight: 600;
+      color: var(--text-dim); border-bottom: 1px solid var(--border); background: var(--bg);
+    }
+    .code-body { padding: 10px 0; font-size: 0.78rem; line-height: 1.75; white-space: pre; }
+    .code-line { display: flex; align-items: center; padding: 0 14px; }
+    .code-line.hl { background: var(--border-soft); border-left: 2px solid var(--accent); }
+    .ln { min-width: 24px; color: var(--text-ghost); user-select: none; font-size: 0.7rem; }
+    .kw { color: var(--purple); }
+    .fn { color: var(--blue); }
+    .bi { color: var(--orange); }
+    .cm { color: var(--text-ghost); }
+    .nb { color: var(--green); }
+    .st { color: #9ece6a; }
+
+    .preset-row { display: flex; gap: 8px; flex-wrap: wrap; }
+    .btn-preset {
+      padding: 6px 12px; border-radius: var(--radius-sm);
+      background: var(--bg); border: 1px solid var(--border);
+      color: var(--text-dim); font-size: 0.8rem; cursor: pointer;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .btn-preset:hover, .btn-preset.active { border-color: var(--accent); color: var(--accent-pale); }
+  </style>
+</head>
+<body class="page">
+
+<div class="page-header">
+  <a class="back-link" href="../index.html">&larr; All Algorithms</a>
+  <div class="page-title">Network Delay Time</div>
+  <div class="page-sub">LeetCode 743 &middot; Dijkstra&apos;s algorithm &middot; Min-heap priority queue &middot; O((V+E) log V)</div>
+</div>
+
+<div class="controls">
+  <div class="field">
+    <label>Preset</label>
+    <div class="preset-row">
+      <button class="btn-preset active" id="preset-classic"    onclick="loadPreset('classic')">Classic (k=1)</button>
+      <button class="btn-preset"        id="preset-leetcode"   onclick="loadPreset('leetcode')">LeetCode Ex (k=2)</button>
+      <button class="btn-preset"        id="preset-disconnect" onclick="loadPreset('disconnect')">Disconnected (k=1)</button>
+    </div>
+  </div>
+  <button class="btn-primary" onclick="buildAndRun()">Build &amp; Run</button>
+</div>
+
+<div class="viz-area">
+  <div class="main-row">
+
+    <div class="graph-panel">
+      <div class="panel-title" id="graph-title">Weighted Directed Graph</div>
+      <div class="graph-svg-wrap">
+        <svg id="graph-svg" viewBox="0 0 560 400" preserveAspectRatio="xMidYMid meet">
+          <defs>
+            <marker id="arrow-default" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+              <path d="M0,0 L0,6 L8,3 z" fill="#3b4261"/>
+            </marker>
+            <marker id="arrow-active" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+              <path d="M0,0 L0,6 L8,3 z" fill="#7dcfff"/>
+            </marker>
+            <marker id="arrow-relaxed" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+              <path d="M0,0 L0,6 L8,3 z" fill="#e0af68"/>
+            </marker>
+            <marker id="arrow-settled" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+              <path d="M0,0 L0,6 L8,3 z" fill="#9ece6a"/>
+            </marker>
+          </defs>
+          <g id="edges-g"></g>
+          <g id="nodes-g"></g>
+        </svg>
+      </div>
+    </div>
+
+    <div class="right-col">
+
+      <div class="panel-box">
+        <div class="nav-row">
+          <button class="btn-step" id="btn-back" disabled>&larr;</button>
+          <button class="btn-step" id="btn-next" disabled>&rarr;</button>
+          <button class="btn-play" id="btn-play" disabled>&#9654; Play</button>
+          <select class="speed-select" id="speed-select">
+            <option value="800">Slow</option>
+            <option value="400" selected>Medium</option>
+            <option value="120">Fast</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="panel-box">
+        <div class="panel-title" id="phase-label">&mdash;</div>
+        <div style="font-size:0.82rem;color:var(--text-muted);margin-top:2px;min-height:36px" id="step-desc">Select a preset and click Build &amp; Run.</div>
+        <div class="result-badge" id="result-badge"></div>
+      </div>
+
+      <div class="panel-box">
+        <div class="panel-title">dist[] Array</div>
+        <div class="dist-cells" id="dist-cells">
+          <span style="color:var(--text-ghost);font-size:0.78rem">—</span>
+        </div>
+      </div>
+
+      <div class="panel-box">
+        <div class="panel-title">Min-Heap (priority queue)</div>
+        <div class="heap-list" id="heap-list">
+          <span style="color:var(--text-ghost);font-size:0.78rem">empty</span>
+        </div>
+      </div>
+
+      <div class="panel-box">
+        <div class="panel-title">Legend</div>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <div class="legend-row">
+            <div class="legend-dot" style="background:#1a1b2e;border-color:#414868"></div>
+            <span>Unvisited</span>
+          </div>
+          <div class="legend-row">
+            <div class="legend-dot" style="background:#3d3524;border-color:#e0af68"></div>
+            <span>In heap (queued)</span>
+          </div>
+          <div class="legend-row">
+            <div class="legend-dot" style="background:#1a1f3a;border-color:#7dcfff"></div>
+            <span>Popped — processing now</span>
+          </div>
+          <div class="legend-row">
+            <div class="legend-dot" style="background:#1a2a1a;border-color:#9ece6a"></div>
+            <span>Settled — shortest path confirmed</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="code-panel">
+        <div class="code-header">Python</div>
+        <div class="code-body" id="code-body"></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+var CODE = [
+  [1,  '<span class="kw">def</span> <span class="fn">network_delay_time</span>(times, n, k):'],
+  [2,  '    adj = <span class="bi">defaultdict</span>(<span class="bi">list</span>)'],
+  [3,  '    <span class="kw">for</span> u, v, w <span class="kw">in</span> times:'],
+  [4,  '        adj[u].append((v, w))'],
+  [5,  '    dist = {i: <span class="bi">float</span>(<span class="st">\'inf\'</span>) <span class="kw">for</span> i <span class="kw">in</span> <span class="bi">range</span>(<span class="nb">1</span>, n+<span class="nb">1</span>)}'],
+  [6,  '    dist[k] = <span class="nb">0</span>'],
+  [7,  '    heap = [(<span class="nb">0</span>, k)]  <span class="cm"># (dist, node)</span>'],
+  [8,  '    <span class="kw">while</span> heap:'],
+  [9,  '        d, u = <span class="fn">heappop</span>(heap)'],
+  [10, '        <span class="kw">if</span> d > dist[u]: <span class="kw">continue</span>  <span class="cm"># stale</span>'],
+  [11, '        <span class="kw">for</span> v, w <span class="kw">in</span> adj[u]:'],
+  [12, '            nd = dist[u] + w'],
+  [13, '            <span class="kw">if</span> nd < dist[v]:'],
+  [14, '                dist[v] = nd'],
+  [15, '                <span class="fn">heappush</span>(heap, (nd, v))'],
+  [16, '    ans = <span class="bi">max</span>(dist.values())'],
+  [17, '    <span class="kw">return</span> ans <span class="kw">if</span> ans < <span class="bi">float</span>(<span class="st">\'inf\'</span>) <span class="kw">else</span> -<span class="nb">1</span>'],
+];
+
+var PRESETS = {
+  classic: {
+    label: 'Classic — 4 nodes, source k=1',
+    k: 1,
+    nodes: [
+      {id:1, x:80,  y:200, label:'1'},
+      {id:2, x:240, y:80,  label:'2'},
+      {id:3, x:400, y:200, label:'3'},
+      {id:4, x:520, y:310, label:'4'},
+    ],
+    edges: [
+      {from:1, to:2, w:2},
+      {from:1, to:3, w:4},
+      {from:2, to:3, w:1},
+      {from:3, to:4, w:3},
+    ]
+  },
+  leetcode: {
+    label: 'LeetCode Example — 4 nodes, source k=2, answer=2',
+    k: 2,
+    nodes: [
+      {id:1, x:130, y:200, label:'1'},
+      {id:2, x:290, y:200, label:'2'},
+      {id:3, x:430, y:100, label:'3'},
+      {id:4, x:430, y:310, label:'4'},
+    ],
+    edges: [
+      {from:2, to:1, w:1},
+      {from:2, to:3, w:1},
+      {from:3, to:4, w:1},
+    ]
+  },
+  disconnect: {
+    label: 'Disconnected — 5 nodes, node 5 unreachable, returns -1',
+    k: 1,
+    nodes: [
+      {id:1, x:80,  y:200, label:'1'},
+      {id:2, x:230, y:80,  label:'2'},
+      {id:3, x:230, y:320, label:'3'},
+      {id:4, x:390, y:80,  label:'4'},
+      {id:5, x:450, y:280, label:'5'},
+    ],
+    edges: [
+      {from:1, to:2, w:1},
+      {from:1, to:3, w:5},
+      {from:2, to:4, w:2},
+    ]
+  }
+};
+
+var currentPreset = 'classic';
+var simSteps = [];
+var nav;
+var gNodes = [], gEdges = [], gK = 1;
+
+function loadPreset(name) {
+  currentPreset = name;
+  ['classic','leetcode','disconnect'].forEach(function(p) {
+    document.getElementById('preset-' + p).classList.toggle('active', p === name);
+  });
+}
+
+function buildAndRun() {
+  var preset = PRESETS[currentPreset];
+  gNodes = preset.nodes;
+  gEdges = preset.edges;
+  gK = preset.k;
+  document.getElementById('graph-title').textContent = preset.label;
+  renderGraph(null);
+  simSteps = simulate(gNodes, gEdges, gK);
+  nav.load(simSteps);
+}
+
+// ---- SVG ----
+var NODE_R = 22;
+
+function nodeById(id) {
+  for (var i = 0; i < gNodes.length; i++) {
+    if (gNodes[i].id === id) return gNodes[i];
+  }
+  return null;
+}
+
+function edgeKey(u, v) { return u + '-' + v; }
+
+function getEdgePts(from, to) {
+  var nu = nodeById(from), nv = nodeById(to);
+  var dx = nv.x - nu.x, dy = nv.y - nu.y;
+  var len = Math.sqrt(dx*dx + dy*dy);
+  if (len === 0) return null;
+  var ux = dx/len, uy = dy/len;
+  var x1 = nu.x + ux * NODE_R;
+  var y1 = nu.y + uy * NODE_R;
+  var x2 = nv.x - ux * (NODE_R + 6);
+  var y2 = nv.y - uy * (NODE_R + 6);
+  var mx = (x1 + x2) / 2;
+  var my = (y1 + y2) / 2;
+  // weight label: perpendicular offset (left of travel direction)
+  var wx = mx + uy * 14;
+  var wy = my - ux * 14;
+  return {x1:x1, y1:y1, x2:x2, y2:y2, wx:wx, wy:wy};
+}
+
+function renderGraph(snap) {
+  var edgesG = document.getElementById('edges-g');
+  var nodesG = document.getElementById('nodes-g');
+  edgesG.innerHTML = '';
+  nodesG.innerHTML = '';
+
+  var edgeStates = (snap && snap.edgeStates) ? snap.edgeStates : {};
+  var nodeStates = {};
+  if (snap) {
+    gNodes.forEach(function(n) { nodeStates[n.id] = snap.states[n.id] || 'unvisited'; });
+  } else {
+    gNodes.forEach(function(n) { nodeStates[n.id] = n.id === gK ? 'queued' : 'unvisited'; });
+  }
+
+  // Edges
+  gEdges.forEach(function(e) {
+    var pts = getEdgePts(e.from, e.to);
+    if (!pts) return;
+    var key = edgeKey(e.from, e.to);
+    var st = edgeStates[key] || 'default';
+    var markerName = (st === 'default' || st === 'skipped') ? 'default' : st;
+
+    var line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    line.setAttribute('x1', pts.x1); line.setAttribute('y1', pts.y1);
+    line.setAttribute('x2', pts.x2); line.setAttribute('y2', pts.y2);
+    line.setAttribute('class', 'edge-line' + (st !== 'default' && st !== 'skipped' ? ' ' + st : ''));
+    line.setAttribute('marker-end', 'url(#arrow-' + markerName + ')');
+    edgesG.appendChild(line);
+
+    // Weight label
+    var rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    rect.setAttribute('x', pts.wx - 9); rect.setAttribute('y', pts.wy - 8);
+    rect.setAttribute('width', 18); rect.setAttribute('height', 16);
+    rect.setAttribute('rx', 3);
+    rect.setAttribute('class', 'edge-weight-bg');
+    edgesG.appendChild(rect);
+
+    var wt = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    wt.setAttribute('x', pts.wx); wt.setAttribute('y', pts.wy);
+    wt.setAttribute('class', 'edge-weight' + (st !== 'default' && st !== 'skipped' ? ' ' + st : ''));
+    wt.textContent = e.w;
+    edgesG.appendChild(wt);
+  });
+
+  // Source ring
+  var srcNode = nodeById(gK);
+  if (srcNode) {
+    var ring = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    ring.setAttribute('cx', srcNode.x); ring.setAttribute('cy', srcNode.y);
+    ring.setAttribute('r', NODE_R + 7);
+    ring.setAttribute('class', 'source-ring');
+    nodesG.appendChild(ring);
+  }
+
+  // Nodes
+  gNodes.forEach(function(n) {
+    var g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    var circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    circle.setAttribute('cx', n.x); circle.setAttribute('cy', n.y);
+    circle.setAttribute('r', NODE_R);
+    circle.setAttribute('class', 'node-circle state-' + nodeStates[n.id]);
+    var text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    text.setAttribute('x', n.x); text.setAttribute('y', n.y);
+    text.setAttribute('class', 'node-label');
+    text.textContent = n.label;
+    g.appendChild(circle);
+    g.appendChild(text);
+    nodesG.appendChild(g);
+  });
+}
+
+// ---- Simulation ----
+function simulate(nodes, edges, k) {
+  var steps = [];
+  var INF = Infinity;
+
+  var adj = {};
+  nodes.forEach(function(nd) { adj[nd.id] = []; });
+  edges.forEach(function(e) { adj[e.from].push({to: e.to, w: e.w}); });
+
+  var dist = {};
+  nodes.forEach(function(nd) { dist[nd.id] = INF; });
+  dist[k] = 0;
+
+  var states = {};
+  nodes.forEach(function(nd) { states[nd.id] = 'unvisited'; });
+  states[k] = 'queued';
+
+  var heap = [{d: 0, u: k}];
+  var edgeStates = {};
+
+  function ds(d) { return d === INF ? '∞' : d; }
+
+  function snap(phase, desc, lines) {
+    var sortedHeap = heap.slice().sort(function(a, b) { return a.d - b.d || a.u - b.u; });
+    steps.push({
+      phase: phase, desc: desc, lines: lines,
+      states: Object.assign({}, states),
+      dist: Object.assign({}, dist),
+      heap: sortedHeap,
+      edgeStates: Object.assign({}, edgeStates),
+    });
+  }
+
+  snap('Init',
+    'dist[' + k + '] = 0, all others = ∞. Push (0, ' + k + ') to the min-heap. Source node marked queued.',
+    [5, 6, 7]);
+
+  while (heap.length > 0) {
+    heap.sort(function(a, b) { return a.d - b.d || a.u - b.u; });
+    var top = heap.shift();
+    var d = top.d, u = top.u;
+    edgeStates = {};
+
+    if (d > dist[u]) {
+      snap('Stale',
+        'Pop (' + d + ', ' + u + '). Stale entry — dist[' + u + '] was already improved to ' + dist[u] + '. Skip.',
+        [9, 10]);
+      continue;
+    }
+
+    states[u] = 'popped';
+    snap('Pop',
+      'Pop (' + d + ', ' + u + ') — minimum in heap. Examine outgoing edges from node ' + u + '.',
+      [9]);
+
+    var neighbors = adj[u];
+    for (var i = 0; i < neighbors.length; i++) {
+      var nb = neighbors[i];
+      var v = nb.to, w = nb.w;
+      var nd = dist[u] + w;
+
+      edgeStates = {};
+      edgeStates[edgeKey(u, v)] = 'active';
+      snap('Examine',
+        'Edge ' + u + '→' + v + ' (w=' + w + '). dist[' + u + '] + ' + w + ' = ' + nd + ' vs dist[' + v + '] = ' + ds(dist[v]) + '.',
+        [11, 12, 13]);
+
+      if (nd < dist[v]) {
+        dist[v] = nd;
+        heap.push({d: nd, u: v});
+        if (states[v] !== 'settled') states[v] = 'queued';
+        edgeStates[edgeKey(u, v)] = 'relaxed';
+        snap('Relax',
+          'Relaxed! dist[' + v + '] ← ' + nd + '. Push (' + nd + ', ' + v + ') onto heap.',
+          [13, 14, 15]);
+      } else {
+        edgeStates[edgeKey(u, v)] = 'skipped';
+        snap('NoRelax',
+          'No improvement — dist[' + v + '] = ' + ds(dist[v]) + ' ≤ ' + nd + '. Skip.',
+          [12, 13]);
+      }
+    }
+
+    states[u] = 'settled';
+    edgeStates = {};
+    var edgeDesc = neighbors.length === 0
+      ? 'No outgoing edges from ' + u + '. Node ' + u + ' settled at dist=' + d + '.'
+      : 'All edges from ' + u + ' processed. Node ' + u + ' settled — shortest path confirmed: ' + d + '.';
+    snap('Settle', edgeDesc, [8, 9]);
+  }
+
+  var allDists = nodes.map(function(nd) { return dist[nd.id]; });
+  var maxDist = Math.max.apply(null, allDists);
+  var answer = (maxDist === INF) ? -1 : maxDist;
+
+  var doneDesc;
+  if (answer === -1) {
+    doneDesc = 'Not all nodes reachable from ' + k + '. Return -1.';
+  } else {
+    var distStr = nodes.map(function(nd) { return dist[nd.id]; }).join(', ');
+    doneDesc = 'All nodes settled. max(' + distStr + ') = ' + answer + '. Return ' + answer + '.';
+  }
+  snap('Done', doneDesc, [16, 17]);
+
+  return steps;
+}
+
+// ---- Rendering ----
+function applyStep(snap) {
+  renderGraph(snap);
+  updateDist(snap.dist, snap.states);
+  updateHeap(snap.heap);
+  setCodeLines(snap.lines);
+
+  var badge = document.getElementById('result-badge');
+  badge.className = 'result-badge';
+  badge.textContent = '';
+  if (snap.phase === 'Done') {
+    var allDists = Object.keys(snap.dist).map(function(k) { return snap.dist[k]; });
+    var maxD = Math.max.apply(null, allDists);
+    if (maxD === Infinity) {
+      badge.className = 'result-badge failure';
+      badge.textContent = 'Return -1 (not all nodes reachable)';
+    } else {
+      badge.className = 'result-badge success';
+      badge.textContent = 'Return ' + maxD;
+    }
+  }
+}
+
+function updateDist(dist, states) {
+  var el = document.getElementById('dist-cells');
+  if (!dist) { el.innerHTML = '<span style="color:var(--text-ghost);font-size:0.78rem">—</span>'; return; }
+  var ids = Object.keys(dist).map(Number).sort(function(a, b) { return a - b; });
+  el.innerHTML = ids.map(function(id) {
+    var val = dist[id];
+    var display = val === Infinity ? '∞' : val;
+    var st = states ? (states[id] || 'unvisited') : 'unvisited';
+    var cls = 'dist-cell';
+    if (st === 'popped')  cls += ' popped';
+    else if (st === 'settled') cls += ' settled';
+    else if (st === 'queued')  cls += ' queued';
+    return '<div class="' + cls + '">' +
+      '<div class="dc-node">' + id + '</div>' +
+      '<div class="dc-val">' + display + '</div>' +
+      '</div>';
+  }).join('');
+}
+
+function updateHeap(heap) {
+  var el = document.getElementById('heap-list');
+  if (!heap || heap.length === 0) {
+    el.innerHTML = '<span style="color:var(--text-ghost);font-size:0.78rem">empty</span>';
+    return;
+  }
+  var sorted = heap.slice().sort(function(a, b) { return a.d - b.d || a.u - b.u; });
+  el.innerHTML = sorted.map(function(item, i) {
+    var cls = i === 0 ? 'heap-chip top' : 'heap-chip';
+    return '<div class="' + cls + '">(' + item.d + ', ' + item.u + ')</div>';
+  }).join('');
+}
+
+function setCodeLines(lines) {
+  CODE.forEach(function(e) {
+    var el = document.getElementById('cl-' + e[0]);
+    if (!el) return;
+    el.classList.toggle('hl', !!(lines && lines.indexOf(e[0]) >= 0));
+  });
+}
+
+function buildCodePanel() {
+  var body = document.getElementById('code-body');
+  body.innerHTML = CODE.map(function(e) {
+    return '<div class="code-line" id="cl-' + e[0] + '"><span class="ln">' + e[0] + '</span><span>' + e[1] + '</span></div>';
+  }).join('');
+}
+
+window.addEventListener('DOMContentLoaded', function() {
+  buildCodePanel();
+  loadPreset('classic');
+  nav = VizNav({
+    btnPrev: document.getElementById('btn-back'),
+    btnNext: document.getElementById('btn-next'),
+    btnPlay: document.getElementById('btn-play'),
+    speedSel: document.getElementById('speed-select'),
+    render: function(snap, cur, total) {
+      applyStep(snap);
+      var phaseEl = document.getElementById('phase-label');
+      var descEl  = document.getElementById('step-desc');
+      if (phaseEl) phaseEl.textContent = 'Step ' + (cur + 1) + ' / ' + total + '  ·  ' + snap.phase;
+      if (descEl)  descEl.textContent = snap.desc;
+    }
+  });
+});
+</script>
+
+<script>
+  if (window.self !== window.top) {
+    var bl = document.querySelector('.back-link');
+    if (bl) bl.style.display = 'none';
+  }
+</script>
+</body>
+</html>
