@@ -75,7 +75,17 @@ type VizKataName =
   | "Clone Graph"
   | "Maximum Product Subarray"
   | "Coin Change II"
-  | "Network Delay Time";
+  | "Network Delay Time"
+  | "Subtree of Another Tree"
+  | "Count Good Nodes In Binary Tree"
+  | "K Closest Points to Origin"
+  | "Task Scheduler"
+  | "Course Schedule II"
+  | "Partition Equal Subset Sum"
+  | "Meeting Rooms"
+  | "Sum of Two Integers"
+  | "Happy Number"
+  | "Partition Labels";
 
 // Kata name → algo-viz subfolder served from /algo-viz/<folder>/index.html
 const VIZ_MAP: Partial<Record<VizKataName, string>> = {
@@ -140,6 +150,16 @@ const VIZ_MAP: Partial<Record<VizKataName, string>> = {
   "Maximum Product Subarray":     "max-product-subarray",
   "Coin Change II":               "coin-change-2",
   "Network Delay Time":           "network-delay",
+  "Subtree of Another Tree":      "subtree-of-another-tree",
+  "Count Good Nodes In Binary Tree": "count-good-nodes",
+  "K Closest Points to Origin":   "k-closest-points",
+  "Task Scheduler":               "task-scheduler",
+  "Course Schedule II":           "course-schedule-2",
+  "Partition Equal Subset Sum":   "partition-equal-subset",
+  "Meeting Rooms":                "meeting-rooms",
+  "Sum of Two Integers":          "sum-two-integers",
+  "Happy Number":                 "happy-number",
+  "Partition Labels":             "partition-labels",
 };
 
 // Overrides for slugs that can't be reliably derived from the display name
