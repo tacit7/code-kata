@@ -95,6 +95,7 @@ type VizKataName =
   | "Walls And Gates"
   | "Number of Connected Components in an Undirected Graph"
   | "Redundant Connection"
+  | "Best Time to Buy and Sell Stock"
   | "Best Time to Buy and Sell Stock With Cooldown"
   | "Target Sum"
   | "Meeting Rooms II"
@@ -211,6 +212,7 @@ const VIZ_MAP: Partial<Record<VizKataName, string>> = {
   "Walls And Gates":              "walls-and-gates",
   "Number of Connected Components in an Undirected Graph": "connected-components",
   "Redundant Connection":         "redundant-connection",
+  "Best Time to Buy and Sell Stock": "best-time-buy-sell",
   "Best Time to Buy and Sell Stock With Cooldown": "stock-cooldown",
   "Target Sum":                   "target-sum",
   "Meeting Rooms II":             "meeting-rooms-2",

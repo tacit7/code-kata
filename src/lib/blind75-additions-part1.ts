@@ -14,7 +14,9 @@ Output: 5
 
 Constraints:
 - 1 <= prices.length <= 10^5
-- 0 <= prices[i] <= 10^4`,
+- 0 <= prices[i] <= 10^4
+
+Ref: LeetCode #121 Best Time to Buy and Sell Stock`,
     code: `def max_profit(prices: list[int]) -> int:
     raise NotImplementedError`,
     testCode: `def test_basic_case():
