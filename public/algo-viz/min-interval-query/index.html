@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Min Interval to Query — Visualization</title>
+  <link rel="stylesheet" href="../shared/style.css" />
+  <style>
+    body {
+      display: flex; flex-direction: column; height: 100vh; overflow: hidden;
+      font-family: var(--font); background: var(--bg); color: var(--text);
+    }
+
+    /* ── top bar ── */
+    #top-bar {
+      display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+      padding: 10px 16px; border-bottom: 1px solid var(--border);
+      background: var(--surface); flex-shrink: 0;
+    }
+    #top-bar label { font-size: 0.82rem; color: var(--text-dim); white-space: nowrap; }
+    .top-input {
+      font-size: 0.88rem; padding: 5px 10px;
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius); color: var(--text); flex: 1; min-width: 160px;
+    }
+    #btn-build {
+      padding: 5px 14px; font-size: 0.85rem; font-weight: 600;
+      background: var(--accent); color: #1a1b26;
+      border: none; border-radius: var(--radius); cursor: pointer; flex-shrink: 0;
+    }
+    #btn-build:hover { opacity: 0.85; }
+
+    /* ── middle ── */
+    #middle {
+      display: flex; flex: 1; overflow: hidden;
+    }
+
+    /* ── left: timeline panel ── */
+    #timeline-panel {
+      flex: 1; overflow-y: auto; padding: 16px;
+      display: flex; flex-direction: column; gap: 14px;
+    }
+    .panel-title {
+      font-size: 0.75rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--text-dim);
+    }
+
+    #ruler-wrap {
+      margin-left: 32px; position: relative; height: 16px; margin-bottom: 2px;
+    }
+    .ruler-tick {
+      position: absolute; font-size: 0.6rem; color: var(--text-dim);
+      transform: translateX(-50%);
+    }
+
+    #intervals-rows { display: flex; flex-direction: column; gap: 5px; }
+
+    .iv-row {
+      display: flex; align-items: center; height: 30px;
+    }
+    .iv-label {
+      width: 26px; flex-shrink: 0; font-size: 0.68rem;
+      color: var(--text-dim); text-align: right; padding-right: 6px;
+    }
+    .iv-track {
+      flex: 1; height: 100%; position: relative;
+      background: rgba(255,255,255,0.02); border-radius: 3px;
+      border: 1px solid var(--border);
+    }
+    .iv-bar {
+      position: absolute; top: 4px; height: calc(100% - 8px);
+      border-radius: 3px; display: flex; align-items: center;
+      justify-content: center; font-size: 0.65rem; font-weight: 700;
+      color: #1a1b26; transition: opacity 0.15s;
+      overflow: hidden; white-space: nowrap;
+    }
+    .iv-bar.in-heap { outline: 2px solid #fff; outline-offset: 1px; }
+    .iv-bar.evicted { opacity: 0.25; }
+
+    /* query vertical line */
+    #query-line-wrap {
+      position: absolute; top: 0; bottom: 0; pointer-events: none;
+    }
+    .query-vline {
+      position: absolute; top: 0; bottom: 0; width: 2px;
+      background: var(--accent); opacity: 0.85;
+      transform: translateX(-50%);
+    }
+    .query-vline-label {
+      position: absolute; top: -18px; left: 50%;
+      transform: translateX(-50%); font-size: 0.65rem; font-weight: 700;
+      color: var(--accent); white-space: nowrap;
+    }
+
+    /* query dots row */
+    #query-dots-wrap {
+      display: flex; align-items: center; height: 28px; margin-top: 6px;
+    }
+    .qdots-label {
+      width: 26px; flex-shrink: 0; font-size: 0.68rem;
+      color: var(--text-dim); text-align: right; padding-right: 6px;
+    }
+    #query-track {
+      flex: 1; height: 100%; position: relative;
+    }
+    .q-dot {
+      position: absolute; top: 50%; transform: translate(-50%, -50%);
+      width: 12px; height: 12px; border-radius: 50%;
+      border: 2px solid var(--border); background: var(--surface2);
+      font-size: 0.6rem; display: flex; align-items: center;
+      justify-content: center; color: var(--text-dim); cursor: default;
+    }
+    .q-dot.active {
+      background: var(--accent); border-color: var(--accent); color: #1a1b26;
+      font-weight: 700;
+    }
+    .q-dot.done {
+      background: rgba(var(--accent-ch),0.3); border-color: var(--accent);
+      color: var(--text);
+    }
+
+    /* ── right panel ── */
+    #right-panel {
+      width: 220px; flex-shrink: 0;
+      border-left: 1px solid var(--border);
+      background: var(--surface);
+      padding: 14px 12px;
+      display: flex; flex-direction: column; gap: 14px;
+      overflow-y: auto;
+    }
+
+    #heap-list { display: flex; flex-direction: column; gap: 5px; }
+    .heap-item {
+      display: flex; align-items: center; gap: 8px;
+      padding: 6px 10px; border-radius: var(--radius);
+      background: rgba(255,255,255,0.04); border: 1px solid var(--border);
+      font-size: 0.8rem; font-weight: 600; color: var(--text);
+    }
+    .heap-item.heap-min {
+      border-color: var(--accent);
+      background: rgba(var(--accent-ch), 0.12);
+      color: var(--accent);
+    }
+    .heap-dot {
+      width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0;
+    }
+
+    #answers-list { display: flex; flex-direction: column; gap: 5px; }
+    .ans-row {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 5px 10px; border-radius: var(--radius);
+      background: rgba(255,255,255,0.03); border: 1px solid var(--border);
+      font-size: 0.8rem;
+    }
+    .ans-row .ans-q { color: var(--text-dim); }
+    .ans-row .ans-v { font-weight: 700; color: var(--accent); }
+    .ans-row .ans-v.neg { color: var(--error, #f7768e); }
+    .ans-row.pending { opacity: 0.35; }
+
+    /* ── bottom nav ── */
+    #nav-bar {
+      flex-shrink: 0; border-top: 1px solid var(--border);
+      background: var(--surface); padding: 10px 16px;
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    #nav-controls {
+      display: flex; align-items: center; gap: 8px;
+    }
+    .nav-btn {
+      padding: 5px 14px; font-size: 0.82rem; font-weight: 600;
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: var(--radius); color: var(--text); cursor: pointer;
+    }
+    .nav-btn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+    .nav-btn:disabled { opacity: 0.35; cursor: default; }
+    #speed-sel {
+      font-size: 0.8rem; padding: 4px 8px;
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius); color: var(--text);
+    }
+    #step-counter { font-size: 0.75rem; color: var(--text-dim); margin-left: auto; }
+    #step-desc { font-size: 0.85rem; color: var(--text-bright); min-height: 1.4em; }
+  </style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div id="top-bar">
+  <label>Intervals (start,end;…):</label>
+  <input class="top-input" id="iv-input" type="text" value="1,4;2,4;3,6;4,4" />
+  <label>Queries (comma-sep):</label>
+  <input class="top-input" id="q-input" type="text" value="2,3,4,5" />
+  <button id="btn-build">Build</button>
+</div>
+
+<!-- MIDDLE -->
+<div id="middle">
+  <div id="timeline-panel">
+    <div class="panel-title">Interval Timeline</div>
+    <div id="ruler-wrap"></div>
+    <div id="intervals-rows"></div>
+    <div id="query-dots-wrap">
+      <div class="qdots-label">Q</div>
+      <div id="query-track"></div>
+    </div>
+  </div>
+
+  <div id="right-panel">
+    <div>
+      <div class="panel-title" style="margin-bottom:8px">Min-Heap (by size)</div>
+      <div id="heap-list"></div>
+    </div>
+    <div>
+      <div class="panel-title" style="margin-bottom:8px">Answers</div>
+      <div id="answers-list"></div>
+    </div>
+  </div>
+</div>
+
+<!-- BOTTOM NAV -->
+<div id="nav-bar">
+  <div id="nav-controls">
+    <button class="nav-btn" id="btn-prev">&#8592; Prev</button>
+    <button class="nav-btn" id="btn-next">Next &#8594;</button>
+    <button class="nav-btn" id="btn-play">Play</button>
+    <select id="speed-sel">
+      <option value="1200">0.8×</option>
+      <option value="800" selected>1×</option>
+      <option value="500">1.5×</option>
+      <option value="300">2.5×</option>
+    </select>
+    <div id="step-counter">0 / 0</div>
+  </div>
+  <div id="step-desc">Press Build to start.</div>
+</div>
+
+<script src="../shared/viz.js"></script>
+<script>
+var COLORS = [
+  '#7aa2f7','#9ece6a','#e0af68','#f7768e','#bb9af7',
+  '#2ac3de','#ff9e64','#73daca','#b4f9f8','#c0caf5',
+];
+
+// ── min-heap keyed by size (end-start+1) then end ─────────────────────────
+function MinHeap() {
+  var h = [];
+  function cmp(a, b) {
+    if (a.size !== b.size) return a.size - b.size;
+    return a.end - b.end;
+  }
+  function swap(i, j) { var t = h[i]; h[i] = h[j]; h[j] = t; }
+  function up(i) {
+    while (i > 0) {
+      var p = (i - 1) >> 1;
+      if (cmp(h[p], h[i]) <= 0) break;
+      swap(p, i); i = p;
+    }
+  }
+  function down(i) {
+    var n = h.length;
+    while (true) {
+      var l = 2*i+1, r = 2*i+2, s = i;
+      if (l < n && cmp(h[l], h[s]) < 0) s = l;
+      if (r < n && cmp(h[r], h[s]) < 0) s = r;
+      if (s === i) break;
+      swap(s, i); i = s;
+    }
+  }
+  return {
+    push: function(item) { h.push(item); up(h.length - 1); },
+    pop:  function() {
+      if (!h.length) return null;
+      var top = h[0]; h[0] = h[h.length-1]; h.pop();
+      if (h.length) down(0);
+      return top;
+    },
+    peek: function() { return h[0] || null; },
+    size: function() { return h.length; },
+    snapshot: function() {
+      return h.slice().sort(function(a,b){ return cmp(a,b); });
+    },
+  };
+}
+
+// ── build steps ───────────────────────────────────────────────────────────
+function buildSteps(intervals, queries) {
+  var steps = [];
+
+  // sort intervals by start
+  var sortedIvs = intervals.slice().sort(function(a,b){ return a[0]-b[0]; });
+  // sort queries keeping original index
+  var sortedQs = queries.map(function(q,i){ return {q:q, idx:i}; })
+                        .sort(function(a,b){ return a.q - b.q; });
+
+  var timeline = { min: Infinity, max: -Infinity };
+  sortedIvs.forEach(function(iv){
+    if (iv[0] < timeline.min) timeline.min = iv[0];
+    if (iv[1] > timeline.max) timeline.max = iv[1];
+  });
+  sortedQs.forEach(function(qo){
+    if (qo.q < timeline.min) timeline.min = qo.q;
+    if (qo.q > timeline.max) timeline.max = qo.q;
+  });
+  // slight padding
+  var tMin = timeline.min - 0.5;
+  var tMax = timeline.max + 0.5;
+
+  var answers = new Array(queries.length).fill(null);
+
+  // step 0: sorted state
+  steps.push({
+    phase: 'sort',
+    desc: 'Sort intervals by start: [' +
+      sortedIvs.map(function(iv){ return '['+iv[0]+','+iv[1]+']'; }).join(', ') +
+      ']. Sort queries: [' + sortedQs.map(function(o){ return o.q; }).join(', ') + '].',
+    sortedIvs: sortedIvs,
+    heap: [],
+    heapSet: {},
+    answers: answers.slice(),
+    activeQIdx: -1,
+    activeQOrigIdx: -1,
+    evictedIds: {},
+    addedIds: {},
+    tMin: tMin, tMax: tMax,
+  });
+
+  var heap = MinHeap();
+  var ivPtr = 0;
+  var heapSet = {};   // ivIndex -> true if currently in heap
+  var evictedIds = {};
+
+  sortedQs.forEach(function(qo) {
+    var q = qo.q;
+    var addedIds = {};
+
+    // add intervals with start <= q
+    while (ivPtr < sortedIvs.length && sortedIvs[ivPtr][0] <= q) {
+      var iv = sortedIvs[ivPtr];
+      var size = iv[1] - iv[0] + 1;
+      heap.push({ start: iv[0], end: iv[1], size: size, ivIdx: ivPtr });
+      heapSet[ivPtr] = true;
+      addedIds[ivPtr] = true;
+      ivPtr++;
+    }
+
+    // evict expired: end < q
+    while (heap.size() > 0 && heap.peek().end < q) {
+      var evicted = heap.pop();
+      delete heapSet[evicted.ivIdx];
+      evictedIds[evicted.ivIdx] = true;
+    }
+
+    var ans = heap.size() > 0 ? heap.peek().size : -1;
+    answers[qo.idx] = ans;
+
+    steps.push({
+      phase: 'query',
+      desc: 'Query q=' + q + ': added intervals with start≤' + q +
+        ', evicted those with end<' + q +
+        '. Heap min size = ' + (heap.size() > 0 ? heap.peek().size : 'none') +
+        '. Answer[' + qo.idx + '] = ' + ans + '.',
+      sortedIvs: sortedIvs,
+      heap: heap.snapshot(),
+      heapSet: Object.assign({}, heapSet),
+      answers: answers.slice(),
+      activeQIdx: sortedQs.indexOf(qo),
+      activeQOrigIdx: qo.idx,
+      evictedIds: Object.assign({}, evictedIds),
+      addedIds: addedIds,
+      tMin: tMin, tMax: tMax,
+    });
+  });
+
+  // final step
+  steps.push({
+    phase: 'done',
+    desc: 'Done. Answers: [' + answers.join(', ') + '].',
+    sortedIvs: sortedIvs,
+    heap: [],
+    heapSet: {},
+    answers: answers.slice(),
+    activeQIdx: -1,
+    activeQOrigIdx: -1,
+    evictedIds: evictedIds,
+    addedIds: {},
+    tMin: tMin, tMax: tMax,
+  });
+
+  return steps;
+}
+
+// ── parse ─────────────────────────────────────────────────────────────────
+function parseIntervals(raw) {
+  return raw.trim().split(';').map(function(p) {
+    var ns = p.trim().split(',').map(Number);
+    return [ns[0], ns[1]];
+  }).filter(function(iv){ return !isNaN(iv[0]) && !isNaN(iv[1]); });
+}
+function parseQueries(raw) {
+  return raw.trim().split(',').map(Number).filter(function(n){ return !isNaN(n); });
+}
+
+// ── pct helper ───────────────────────────────────────────────────────────
+function pct(v, tMin, tMax) {
+  return ((v - tMin) / (tMax - tMin)) * 100;
+}
+
+// ── render ────────────────────────────────────────────────────────────────
+var _queries = [];
+
+function render(snap, cursor, total) {
+  document.getElementById('step-counter').textContent = (cursor+1) + ' / ' + total;
+  document.getElementById('step-desc').textContent = snap.desc;
+  renderTimeline(snap);
+  renderHeap(snap);
+  renderAnswers(snap);
+}
+
+function renderTimeline(snap) {
+  var ivs = snap.sortedIvs;
+  var tMin = snap.tMin, tMax = snap.tMax;
+
+  // ruler
+  var rulerEl = document.getElementById('ruler-wrap');
+  rulerEl.innerHTML = '';
+  var span = tMax - tMin;
+  var step = Math.ceil(span / 8);
+  var ticks = [];
+  for (var t = Math.ceil(tMin); t <= Math.floor(tMax); t += step) ticks.push(t);
+  if (!ticks.length || ticks[ticks.length-1] < Math.floor(tMax)) ticks.push(Math.floor(tMax));
+  ticks.forEach(function(t) {
+    var el = document.createElement('span');
+    el.className = 'ruler-tick';
+    el.textContent = t;
+    el.style.left = pct(t, tMin, tMax) + '%';
+    rulerEl.appendChild(el);
+  });
+
+  // current query value (for vline)
+  var curQ = null;
+  if (snap.activeQIdx >= 0 && _queries.length) {
+    // find which query is active
+    var sortedQs = _queries.map(function(q,i){ return {q:q,idx:i}; })
+                           .sort(function(a,b){ return a.q-b.q; });
+    if (snap.activeQIdx < sortedQs.length) {
+      curQ = sortedQs[snap.activeQIdx].q;
+    }
+  }
+
+  // interval rows
+  var rowsEl = document.getElementById('intervals-rows');
+  rowsEl.innerHTML = '';
+  ivs.forEach(function(iv, i) {
+    var row = document.createElement('div');
+    row.className = 'iv-row';
+
+    var lbl = document.createElement('div');
+    lbl.className = 'iv-label';
+    lbl.textContent = 'I' + i;
+    row.appendChild(lbl);
+
+    var track = document.createElement('div');
+    track.className = 'iv-track';
+    track.style.position = 'relative';
+
+    // query vline
+    if (curQ !== null) {
+      var vline = document.createElement('div');
+      vline.style.cssText = 'position:absolute;top:0;bottom:0;left:' +
+        pct(curQ, tMin, tMax) + '%;width:2px;background:var(--accent);' +
+        'opacity:0.7;transform:translateX(-50%);pointer-events:none;z-index:2;';
+      track.appendChild(vline);
+    }
+
+    var inHeap = snap.heapSet[i];
+    var evicted = snap.evictedIds[i];
+    var added = snap.addedIds[i];
+
+    var bar = document.createElement('div');
+    bar.className = 'iv-bar' + (inHeap ? ' in-heap' : '') + (evicted && !inHeap ? ' evicted' : '');
+    var left = pct(iv[0], tMin, tMax);
+    var width = pct(iv[1]+1, tMin, tMax) - left;
+    var color = added ? COLORS[1] : COLORS[i % COLORS.length];
+    bar.style.cssText = 'left:' + left + '%;width:' + Math.max(width, 1) + '%;background:' + color + ';';
+    bar.title = '[' + iv[0] + ',' + iv[1] + '] size=' + (iv[1]-iv[0]+1);
+    bar.textContent = iv[0] + '–' + iv[1];
+    track.appendChild(bar);
+
+    row.appendChild(track);
+    rowsEl.appendChild(row);
+  });
+
+  // query dots
+  var qtEl = document.getElementById('query-track');
+  qtEl.innerHTML = '';
+  qtEl.style.position = 'relative';
+
+  // sorted queries for dot status
+  var sortedQs2 = _queries.map(function(q,i){ return {q:q,idx:i}; })
+                          .sort(function(a,b){ return a.q-b.q; });
+
+  _queries.forEach(function(q, origIdx) {
+    var dot = document.createElement('div');
+    dot.className = 'q-dot';
+    dot.style.left = pct(q, tMin, tMax) + '%';
+    dot.textContent = q;
+
+    var isActive = snap.activeQOrigIdx === origIdx;
+    var isDone = snap.answers[origIdx] !== null;
+
+    if (isActive) dot.classList.add('active');
+    else if (isDone) dot.classList.add('done');
+
+    qtEl.appendChild(dot);
+  });
+}
+
+function renderHeap(snap) {
+  var listEl = document.getElementById('heap-list');
+  listEl.innerHTML = '';
+  if (!snap.heap || snap.heap.length === 0) {
+    var empty = document.createElement('div');
+    empty.style.cssText = 'font-size:0.75rem;color:var(--text-dim);font-style:italic;';
+    empty.textContent = 'empty';
+    listEl.appendChild(empty);
+    return;
+  }
+  snap.heap.forEach(function(item, i) {
+    var el = document.createElement('div');
+    el.className = 'heap-item' + (i === 0 ? ' heap-min' : '');
+
+    var dot = document.createElement('div');
+    dot.className = 'heap-dot';
+    dot.style.background = COLORS[item.ivIdx % COLORS.length];
+    el.appendChild(dot);
+
+    var lbl = document.createElement('span');
+    lbl.textContent = 'size=' + item.size +
+      '  [' + item.start + ',' + item.end + ']' +
+      (i === 0 ? '  ← min' : '');
+    el.appendChild(lbl);
+
+    listEl.appendChild(el);
+  });
+}
+
+function renderAnswers(snap) {
+  var listEl = document.getElementById('answers-list');
+  listEl.innerHTML = '';
+  _queries.forEach(function(q, i) {
+    var row = document.createElement('div');
+    var ans = snap.answers[i];
+    row.className = 'ans-row' + (ans === null ? ' pending' : '');
+
+    var qEl = document.createElement('span');
+    qEl.className = 'ans-q';
+    qEl.textContent = 'q=' + q;
+    row.appendChild(qEl);
+
+    var vEl = document.createElement('span');
+    vEl.className = 'ans-v' + (ans === -1 ? ' neg' : '');
+    vEl.textContent = ans === null ? '?' : ans;
+    row.appendChild(vEl);
+
+    listEl.appendChild(row);
+  });
+}
+
+// ── wire up ───────────────────────────────────────────────────────────────
+var nav = VizNav({
+  btnPrev:  document.getElementById('btn-prev'),
+  btnNext:  document.getElementById('btn-next'),
+  btnPlay:  document.getElementById('btn-play'),
+  speedSel: document.getElementById('speed-sel'),
+  render:   render,
+});
+
+function doLoad() {
+  var ivs = parseIntervals(document.getElementById('iv-input').value);
+  var qs  = parseQueries(document.getElementById('q-input').value);
+  if (ivs.length === 0) { alert('Enter at least one interval, e.g. 1,4;2,4;3,6;4,4'); return; }
+  if (qs.length === 0)  { alert('Enter at least one query, e.g. 2,3,4,5'); return; }
+  _queries = qs;
+  nav.load(buildSteps(ivs, qs));
+}
+
+document.getElementById('btn-build').addEventListener('click', doLoad);
+[document.getElementById('iv-input'), document.getElementById('q-input')]
+  .forEach(function(el){ el.addEventListener('keydown', function(e){ if (e.key==='Enter') doLoad(); }); });
+
+doLoad();
+</script>
+</body>
+</html>
