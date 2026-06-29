@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Partition Labels</title>
+  <link rel="stylesheet" href="../shared/style.css" />
+  <script src="../shared/gsap.min.js"></script>
+  <script src="../shared/viz.js"></script>
+  <style>
+    .viz-area { width: 100%; max-width: 960px; display: flex; flex-direction: column; gap: 16px; flex: 1; min-height: 0; }
+
+    /* ── string display ── */
+    .string-section {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 14px 16px;
+      display: flex; flex-direction: column; gap: 8px;
+      overflow-x: auto;
+    }
+    .char-row { display: flex; gap: 4px; flex-wrap: nowrap; min-height: 52px; align-items: flex-end; }
+    .char-cell {
+      min-width: 30px; height: 44px;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      border: 2px solid var(--border-soft); border-radius: 5px;
+      font-family: monospace; font-size: 1rem; font-weight: 700;
+      color: var(--text-ghost); background: #0f0f0f;
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
+      position: relative; flex-shrink: 0;
+    }
+    .char-cell[data-state="idle"]      { color: var(--text-ghost); border-color: var(--border-soft); background: #0f0f0f; }
+    .char-cell[data-state="scanned"]   { color: var(--text-dim);   border-color: #2a4a2a; background: #0a1a0a; }
+    .char-cell[data-state="current"]   { color: var(--accent-pale); border-color: var(--accent); background: var(--surface-dark); }
+    .char-cell[data-state="window"]    { color: #c4b5fd; border-color: #7c3aed; background: #1e1030; }
+    .char-cell[data-state="extend"]    { color: #fde68a; border-color: #d97706; background: #1c1000; }
+    .char-cell[data-state="close"]     { color: #bbf7d0; border-color: #15803d; background: #052e16; }
+    .char-cell[data-state="done"]      { color: #86efac; border-color: #166534; background: #052e16; }
+    .char-cell[data-state="building"]  { color: #7dd3fc; border-color: #0284c7; background: #0c1a2e; }
+
+    .idx-row { display: flex; gap: 4px; }
+    .idx-cell {
+      min-width: 30px; flex-shrink: 0;
+      text-align: center; font-size: 0.58rem;
+      color: var(--text-ghost); font-family: monospace;
+    }
+
+    .partition-bar-row { display: flex; gap: 4px; height: 10px; }
+    .partition-seg {
+      height: 100%; border-radius: 3px;
+      background: transparent;
+      flex-shrink: 0;
+    }
+
+    /* ── bottom panels ── */
+    .panels-row { display: flex; gap: 12px; flex-wrap: wrap; }
+
+    .panel-box {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 14px 16px;
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .panel-title {
+      font-size: 0.72rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim);
+    }
+
+    /* last_occurrence map */
+    .last-occ-grid {
+      display: flex; gap: 5px; flex-wrap: wrap;
+    }
+    .lo-cell {
+      display: flex; flex-direction: column; align-items: center;
+      gap: 2px; padding: 5px 7px;
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: 4px; min-width: 38px;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .lo-cell[data-active="true"] { border-color: var(--accent); background: var(--surface-dark); }
+    .lo-cell[data-seen="true"]   { border-color: #0284c7; background: #0c1a2e; }
+    .lo-char { font-family: monospace; font-size: 0.9rem; font-weight: 700; color: var(--text-bright); }
+    .lo-idx  { font-family: monospace; font-size: 0.75rem; color: var(--text-muted); }
+    .lo-idx.active { color: var(--accent-pale); }
+
+    /* pointers */
+    .ptr-row { display: flex; gap: 8px; }
+    .ptr-box {
+      flex: 1; padding: 8px 10px;
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      display: flex; flex-direction: column; align-items: center; gap: 3px;
+    }
+    .ptr-box.ptr-i       { border-color: var(--accent); }
+    .ptr-box.ptr-end     { border-color: #7c3aed; }
+    .ptr-box.ptr-start   { border-color: #0284c7; }
+    .ptr-box.ptr-maxend  { border-color: #d97706; }
+    .ptr-label { font-size: 0.65rem; font-family: monospace; color: var(--text-faint); }
+    .ptr-val   { font-size: 1.4rem; font-weight: 700; color: var(--text-bright); }
+
+    /* partitions found */
+    .parts-list { display: flex; gap: 6px; flex-wrap: wrap; }
+    .part-chip {
+      padding: 4px 10px; border-radius: 4px;
+      font-family: monospace; font-size: 0.82rem; font-weight: 600;
+      background: #052e16; border: 1px solid #166534; color: #86efac;
+    }
+
+    /* nav + desc */
+    .nav-desc-row { display: flex; gap: 10px; align-items: stretch; flex-wrap: wrap; }
+    .nav-box {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 10px 14px;
+      display: flex; gap: 8px; align-items: center; flex-shrink: 0;
+    }
+    .desc-box {
+      flex: 1; min-width: 0;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 10px 14px;
+      display: flex; flex-direction: column; gap: 2px;
+    }
+    .desc-phase { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); }
+    .desc-text  { font-size: 0.83rem; color: var(--text-muted); }
+
+    .btn-play {
+      background: #15803d; border: none; border-radius: var(--radius-sm);
+      color: #fff; cursor: pointer; font-size: 0.88rem; font-weight: 600;
+      padding: 9px 16px; transition: background 0.2s;
+    }
+    .btn-play:hover { background: #166534; }
+    .btn-play.playing { background: #c2410c; }
+    .btn-play.playing:hover { background: #9a3412; }
+    .btn-play:disabled { opacity: 0.4; cursor: not-allowed; }
+    .speed-select {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); color: var(--text);
+      font-size: 0.85rem; padding: 8px 10px; outline: none; width: 80px;
+    }
+
+    .legend-row { display: flex; gap: 10px; flex-wrap: wrap; }
+    .legend-item { display: flex; align-items: center; gap: 5px; font-size: 0.68rem; color: var(--text-faint); }
+    .legend-dot { width: 10px; height: 10px; border-radius: 2px; border: 1px solid transparent; }
+
+    .inp-str { width: 320px; font-family: monospace; }
+  </style>
+</head>
+<body class="page">
+
+<div class="page-header">
+  <a class="back-link" href="../index.html">&larr; All Algorithms</a>
+  <div class="page-title">Partition Labels</div>
+  <div class="page-sub">LeetCode 763 &middot; Greedy &middot; O(n) time &middot; O(1) space</div>
+</div>
+
+<div class="controls">
+  <div class="field" style="display:flex;gap:8px;align-items:center">
+    <label style="font-size:0.8rem;color:var(--text-dim)">string</label>
+    <input id="inp-str" class="inp-str" type="text" value="ababcbacadefegdehijhklij" />
+  </div>
+  <button class="btn-primary" onclick="buildAndRun()">Build &amp; Run</button>
+  <button class="btn-primary" onclick="loadPreset('default')" style="background:var(--surface)">Default</button>
+  <button class="btn-primary" onclick="loadPreset('simple')"  style="background:var(--surface)">Simple</button>
+  <button class="btn-primary" onclick="loadPreset('single')"  style="background:var(--surface)">Single</button>
+</div>
+
+<div class="viz-area">
+
+  <div class="string-section" id="string-section">
+    <span style="color:var(--text-dim);font-size:0.82rem">Enter a string and click Build &amp; Run.</span>
+  </div>
+
+  <div class="panels-row">
+    <div class="panel-box" style="flex:1;min-width:220px">
+      <div class="panel-title">last_occurrence</div>
+      <div class="last-occ-grid" id="lo-grid">
+        <span style="color:var(--text-ghost);font-size:0.78rem">—</span>
+      </div>
+    </div>
+
+    <div class="panel-box" style="flex:0 0 auto">
+      <div class="panel-title">Pointers</div>
+      <div class="ptr-row">
+        <div class="ptr-box ptr-i">
+          <div class="ptr-label">i</div>
+          <div class="ptr-val" id="vv-i">&mdash;</div>
+        </div>
+        <div class="ptr-box ptr-start">
+          <div class="ptr-label">start</div>
+          <div class="ptr-val" id="vv-start">&mdash;</div>
+        </div>
+        <div class="ptr-box ptr-end">
+          <div class="ptr-label">end</div>
+          <div class="ptr-val" id="vv-end">&mdash;</div>
+        </div>
+        <div class="ptr-box ptr-maxend">
+          <div class="ptr-label">last[s[i]]</div>
+          <div class="ptr-val" id="vv-maxend">&mdash;</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel-box" style="flex:1;min-width:200px">
+      <div class="panel-title">Partitions found</div>
+      <div class="parts-list" id="parts-list">
+        <span style="color:var(--text-ghost);font-size:0.78rem">—</span>
+      </div>
+      <div class="legend-row" style="margin-top:4px">
+        <div class="legend-item"><div class="legend-dot" style="background:var(--surface-dark);border-color:var(--accent)"></div>current i</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#1e1030;border-color:#7c3aed"></div>in window</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#1c1000;border-color:#d97706"></div>extends end</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#052e16;border-color:#15803d"></div>partition close</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="nav-desc-row">
+    <div class="nav-box">
+      <button class="btn-step" id="btn-back" disabled>&larr;</button>
+      <button class="btn-step" id="btn-next" disabled>&rarr;</button>
+      <button class="btn-play" id="btn-play" disabled>&#9654; Play</button>
+      <select class="speed-select" id="speed-select">
+        <option value="700">Slow</option>
+        <option value="350" selected>Medium</option>
+        <option value="120">Fast</option>
+      </select>
+    </div>
+    <div class="desc-box">
+      <div class="desc-phase" id="phase-label">&mdash;</div>
+      <div class="desc-text"  id="step-desc">Enter a string and click Build &amp; Run.</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+var simSteps = [], nav;
+var strLen = 0;
+
+var PRESETS = {
+  'default': 'ababcbacadefegdehijhklij',
+  'simple':  'eccbbbbdec',
+  'single':  'abcdef',
+};
+
+var PART_COLORS = [
+  '#7c3aed','#0284c7','#d97706','#b91c1c','#166534','#0e7490','#c2410c','#7e22ce',
+];
+
+window.addEventListener('DOMContentLoaded', function() {
+  nav = VizNav({
+    btnPrev:  document.getElementById('btn-back'),
+    btnNext:  document.getElementById('btn-next'),
+    btnPlay:  document.getElementById('btn-play'),
+    speedSel: document.getElementById('speed-select'),
+    render: function(snap, cur, total) {
+      applyStep(snap, cur > 0);
+      document.getElementById('phase-label').textContent =
+        'Step ' + (cur + 1) + ' / ' + total + '  ·  ' + snap.phase;
+      document.getElementById('step-desc').textContent = snap.desc;
+    }
+  });
+  buildAndRun();
+});
+
+function loadPreset(key) {
+  document.getElementById('inp-str').value = PRESETS[key];
+  buildAndRun();
+}
+
+function buildAndRun() {
+  var s = document.getElementById('inp-str').value.trim().replace(/\s/g, '');
+  if (!s) return;
+  strLen = s.length;
+  buildStringSection(s);
+  simSteps = simulate(s);
+  nav.load(simSteps);
+}
+
+/* ── string display ── */
+function buildStringSection(s) {
+  var n = s.length;
+  var html = '';
+
+  // partition color bar (placeholder)
+  html += '<div class="partition-bar-row" id="part-bar-row">';
+  for (var i = 0; i < n; i++) {
+    html += '<div class="partition-seg" id="pb-' + i + '" style="min-width:30px;flex-shrink:0"></div>';
+  }
+  html += '</div>';
+
+  // character cells
+  html += '<div class="char-row" id="char-row">';
+  for (var i = 0; i < n; i++) {
+    html += '<div class="char-cell" id="cc-' + i + '" data-state="idle">' + s[i] + '</div>';
+  }
+  html += '</div>';
+
+  // index row
+  html += '<div class="idx-row">';
+  for (var i = 0; i < n; i++) {
+    html += '<div class="idx-cell">' + i + '</div>';
+  }
+  html += '</div>';
+
+  document.getElementById('string-section').innerHTML = html;
+}
+
+/* ── simulation ── */
+function simulate(s) {
+  var n = s.length;
+  var steps = [];
+
+  // Build last_occurrence
+  var last = {};
+  for (var k = 0; k < n; k++) {
+    last[s[k]] = k;
+  }
+
+  var cellStates  = Array(n).fill('idle');
+  var loRevealed  = {};   // chars revealed so far in last_occ
+  var partitions  = [];   // [{start, end}] closed partitions
+
+  function push(phase, desc, extra) {
+    steps.push(Object.assign({
+      phase:      phase,
+      desc:       desc,
+      cellStates: cellStates.slice(),
+      loRevealed: Object.assign({}, loRevealed),
+      activeChar: null,
+      partitions: partitions.map(function(p) { return Object.assign({}, p); }),
+      i:    null,
+      start: null,
+      end:   null,
+      maxend: null,
+    }, extra || {}));
+  }
+
+  // Phase 1 — build last_occurrence
+  push('Phase 1: Build last_occurrence', 'Scan s right-to-left to record the last index of every character.');
+
+  for (var k = 0; k < n; k++) {
+    var ch = s[k];
+    cellStates[k] = 'building';
+    loRevealed[ch] = last[ch];
+    push('Phase 1: Build last_occurrence',
+      'last[\'' + ch + '\'] = ' + last[ch] + ' (last time \'' + ch + '\' appears).',
+      { activeChar: ch, i: k });
+    cellStates[k] = 'idle';
+  }
+  // Reset cells after phase 1
+  cellStates = Array(n).fill('idle');
+  push('Phase 1: Build last_occurrence',
+    'last_occurrence map complete. Every character\'s final index is recorded.',
+    { i: null });
+
+  // Phase 2 — scan with greedy window
+  var start = 0, end = 0;
+  push('Phase 2: Greedy scan', 'start=0, end=0. Expand the window: end = max(end, last[s[i]]). When i==end, close the partition.',
+    { start: 0, end: 0 });
+
+  for (var i = 0; i < n; i++) {
+    var ch = s[i];
+    var chLast = last[ch];
+    var prevEnd = end;
+    cellStates[i] = 'current';
+
+    if (chLast > end) {
+      end = chLast;
+      // Mark window
+      for (var j = start; j <= end; j++) {
+        if (cellStates[j] === 'idle') cellStates[j] = 'window';
+      }
+      cellStates[i] = 'extend';
+      push('Phase 2: Greedy scan',
+        'i=' + i + ' (\'' + ch + '\'): last[\'' + ch + '\']=' + chLast + ' > end=' + prevEnd + '. Extend end → ' + end + '.',
+        { i: i, start: start, end: end, maxend: chLast, activeChar: ch });
+    } else {
+      // In window, not extending
+      for (var j = start; j <= end; j++) {
+        if (cellStates[j] === 'idle') cellStates[j] = 'window';
+      }
+      cellStates[i] = 'current';
+      push('Phase 2: Greedy scan',
+        'i=' + i + ' (\'' + ch + '\'): last[\'' + ch + '\']=' + chLast + ' ≤ end=' + end + '. No extension.',
+        { i: i, start: start, end: end, maxend: chLast, activeChar: ch });
+    }
+
+    if (i === end) {
+      // Close partition
+      var size = end - start + 1;
+      for (var j = start; j <= end; j++) {
+        cellStates[j] = 'close';
+      }
+      partitions.push({ start: start, end: end });
+      push('Phase 2: Greedy scan',
+        'i=' + i + ' == end=' + end + '. Close partition [' + start + '..' + end + '] → size ' + size + '. New start = ' + (end + 1) + '.',
+        { i: i, start: start, end: end, maxend: chLast, activeChar: ch });
+
+      // Transition closed cells to done
+      for (var j = start; j <= end; j++) {
+        cellStates[j] = 'done';
+      }
+      start = end + 1;
+      end   = start;
+    }
+  }
+
+  var sizes = partitions.map(function(p) { return p.end - p.start + 1; });
+  push('Done',
+    'All partitions found: [' + sizes.join(', ') + ']. Each letter appears in exactly one part.',
+    { i: null, start: null, end: null, partitions: partitions.map(function(p) { return Object.assign({}, p); }) });
+
+  return steps;
+}
+
+/* ── render ── */
+function applyStep(s, animate) {
+  applyCharCells(s.cellStates, s.i, animate);
+  applyLoGrid(s.loRevealed, s.activeChar);
+  applyPointers(s, animate);
+  applyPartitions(s.partitions);
+  applyPartBar(s.partitions);
+}
+
+function applyCharCells(states, curI, animate) {
+  states.forEach(function(state, i) {
+    var el = document.getElementById('cc-' + i);
+    if (!el) return;
+    var prev = el.dataset.state;
+    el.dataset.state = state;
+    if (animate && i === curI && prev !== state) {
+      gsap.fromTo(el, { scale: 0.8 }, { scale: 1, duration: 0.2, ease: 'back.out(2)' });
+    }
+    if (animate && state === 'close' && prev !== 'close') {
+      gsap.fromTo(el, { scale: 1.15 }, { scale: 1, duration: 0.3, ease: 'back.out(1.7)' });
+    }
+  });
+}
+
+function applyLoGrid(revealed, activeChar) {
+  var grid = document.getElementById('lo-grid');
+  if (!grid) return;
+  var chars = Object.keys(revealed).sort();
+  if (!chars.length) {
+    grid.innerHTML = '<span style="color:var(--text-ghost);font-size:0.78rem">—</span>';
+    return;
+  }
+  grid.innerHTML = chars.map(function(ch) {
+    var isActive = ch === activeChar;
+    return '<div class="lo-cell" data-active="' + isActive + '" data-seen="true">' +
+      '<div class="lo-char">' + ch + '</div>' +
+      '<div class="lo-idx' + (isActive ? ' active' : '') + '">' + revealed[ch] + '</div>' +
+      '</div>';
+  }).join('');
+}
+
+function applyPointers(s, animate) {
+  function set(id, val) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    var text = val === null || val === undefined ? '—' : String(val);
+    if (animate && el.textContent !== text) {
+      gsap.fromTo(el, { scale: 0.75, opacity: 0.5 }, { scale: 1, opacity: 1, duration: 0.2, ease: 'back.out(1.7)' });
+    }
+    el.textContent = text;
+  }
+  set('vv-i',      s.i);
+  set('vv-start',  s.start);
+  set('vv-end',    s.end);
+  set('vv-maxend', s.maxend);
+}
+
+function applyPartitions(parts) {
+  var list = document.getElementById('parts-list');
+  if (!list) return;
+  if (!parts.length) {
+    list.innerHTML = '<span style="color:var(--text-ghost);font-size:0.78rem">—</span>';
+    return;
+  }
+  list.innerHTML = parts.map(function(p, idx) {
+    var size = p.end - p.start + 1;
+    return '<div class="part-chip" style="background:' + partBg(idx) + ';border-color:' + PART_COLORS[idx % PART_COLORS.length] + '">' +
+      '[' + p.start + '..' + p.end + '] len=' + size +
+      '</div>';
+  }).join('');
+}
+
+function partBg(idx) {
+  var c = PART_COLORS[idx % PART_COLORS.length];
+  return c + '22';
+}
+
+function applyPartBar(parts) {
+  if (!parts.length) return;
+  parts.forEach(function(p, idx) {
+    var color = PART_COLORS[idx % PART_COLORS.length];
+    for (var j = p.start; j <= p.end; j++) {
+      var el = document.getElementById('pb-' + j);
+      if (el) el.style.background = color;
+    }
+  });
+}
+</script>
+<script>
+  if (window.self !== window.top) {
+    var bl = document.querySelector('.back-link');
+    if (bl) bl.style.display = 'none';
+  }
+</script>
+</body>
+</html>
