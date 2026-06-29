@@ -85,7 +85,17 @@ type VizKataName =
   | "Meeting Rooms"
   | "Sum of Two Integers"
   | "Happy Number"
-  | "Partition Labels";
+  | "Partition Labels"
+  | "Combination Sum II"
+  | "Subsets II"
+  | "Palindrome Partitioning"
+  | "Last Stone Weight"
+  | "Walls And Gates"
+  | "Number of Connected Components in an Undirected Graph"
+  | "Redundant Connection"
+  | "Best Time to Buy and Sell Stock With Cooldown"
+  | "Target Sum"
+  | "Meeting Rooms II";
 
 // Kata name → algo-viz subfolder served from /algo-viz/<folder>/index.html
 const VIZ_MAP: Partial<Record<VizKataName, string>> = {
@@ -160,6 +170,16 @@ const VIZ_MAP: Partial<Record<VizKataName, string>> = {
   "Sum of Two Integers":          "sum-two-integers",
   "Happy Number":                 "happy-number",
   "Partition Labels":             "partition-labels",
+  "Combination Sum II":           "combination-sum-2",
+  "Subsets II":                   "subsets-2",
+  "Palindrome Partitioning":      "palindrome-partitioning",
+  "Last Stone Weight":            "last-stone-weight",
+  "Walls And Gates":              "walls-and-gates",
+  "Number of Connected Components in an Undirected Graph": "connected-components",
+  "Redundant Connection":         "redundant-connection",
+  "Best Time to Buy and Sell Stock With Cooldown": "stock-cooldown",
+  "Target Sum":                   "target-sum",
+  "Meeting Rooms II":             "meeting-rooms-2",
 };
 
 // Overrides for slugs that can't be reliably derived from the display name
