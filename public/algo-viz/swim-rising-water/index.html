@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Swim In Rising Water</title>
+  <link rel="stylesheet" href="../shared/style.css" />
+  <script src="../shared/viz.js"></script>
+  <style>
+    .viz-area { width: 100%; max-width: 95%; }
+    .main-row { display: grid; grid-template-columns: 1fr 370px; gap: 20px; align-items: start; }
+    @media (max-width: 800px) { .main-row { grid-template-columns: 1fr; } }
+
+    /* Grid */
+    .grid-panel {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 20px;
+      display: flex; flex-direction: column; gap: 12px; align-items: center;
+    }
+    .grid-panel-title {
+      font-size: 0.72rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim);
+      align-self: flex-start;
+    }
+    #cell-grid {
+      display: grid;
+      gap: 5px;
+    }
+    .grid-cell {
+      width: 62px; height: 62px;
+      border-radius: 7px;
+      border: 2px solid transparent;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 1px;
+      font-family: monospace;
+      transition: background 0.25s, border-color 0.25s;
+      cursor: default;
+      position: relative;
+    }
+    .grid-cell .elev {
+      font-size: 1.05rem; font-weight: 800; color: var(--text-bright);
+    }
+    .grid-cell .cost-label {
+      font-size: 0.62rem; color: var(--text-dim); font-weight: 600;
+    }
+    /* cell states */
+    .grid-cell.state-unvisited  { background: #0f111a; border-color: #2a2d4a; }
+    .grid-cell.state-queued     { background: #2a1f0e; border-color: #e0af68; }
+    .grid-cell.state-popped     { background: #0e1829; border-color: #7dcfff; }
+    .grid-cell.state-settled    { background: #0e1f0e; border-color: #9ece6a; }
+    /* start / end markers */
+    .grid-cell.is-start::before {
+      content: 'S';
+      position: absolute; top: 2px; left: 4px;
+      font-size: 0.55rem; font-weight: 800; color: #bb9af7; opacity: 0.85;
+    }
+    .grid-cell.is-end::before {
+      content: 'E';
+      position: absolute; top: 2px; left: 4px;
+      font-size: 0.55rem; font-weight: 800; color: #f7768e; opacity: 0.85;
+    }
+    /* water level animation hint */
+    .grid-cell.state-settled .elev { color: #9ece6a; }
+    .grid-cell.state-popped  .elev { color: #7dcfff; }
+    .grid-cell.state-queued  .elev { color: #e0af68; }
+
+    .water-bar-wrap {
+      width: 100%; display: flex; flex-direction: column; gap: 4px;
+    }
+    .water-bar-label {
+      font-size: 0.7rem; color: var(--text-dim); display: flex; justify-content: space-between;
+    }
+    .water-bar-track {
+      height: 8px; border-radius: 4px; background: #1a1d2e;
+      border: 1px solid var(--border); overflow: hidden;
+    }
+    .water-bar-fill {
+      height: 100%; border-radius: 4px;
+      background: linear-gradient(to right, #1a78c2, #7dcfff);
+      transition: width 0.3s;
+    }
+
+    /* Right column */
+    .right-col { display: flex; flex-direction: column; gap: 12px; }
+
+    .panel-box {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 14px 16px;
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .panel-title {
+      font-size: 0.72rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim);
+    }
+
+    .nav-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .btn-play {
+      background: #15803d; border: none; border-radius: var(--radius-sm);
+      color: #fff; cursor: pointer; font-size: 0.88rem; font-weight: 600;
+      padding: 9px 16px; transition: background 0.2s;
+    }
+    .btn-play:hover { background: #166534; }
+    .btn-play.playing { background: #c2410c; }
+    .btn-play.playing:hover { background: #9a3412; }
+    .btn-play:disabled { opacity: 0.4; cursor: not-allowed; }
+    .speed-select {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); color: var(--text);
+      font-size: 0.85rem; padding: 8px 10px; outline: none; width: 80px;
+    }
+
+    .result-badge {
+      font-size: 0.88rem; font-weight: 700;
+      padding: 5px 14px; border-radius: 6px;
+      display: none; width: fit-content;
+    }
+    .result-badge.success { background: #1a2a1a; color: #9ece6a; border: 1px solid #9ece6a; display: block; }
+
+    /* Heap chips */
+    .heap-list { display: flex; gap: 6px; flex-wrap: wrap; min-height: 28px; align-items: center; }
+    .heap-chip {
+      padding: 3px 10px; border-radius: 4px;
+      font-size: 0.78rem; font-family: monospace; font-weight: 700;
+      background: #2a1f0e; border: 1px solid #e0af68; color: #e0af68;
+    }
+    .heap-chip.top { background: #0e1829; border-color: #7dcfff; color: #7dcfff; }
+
+    /* Legend */
+    .legend-row { display: flex; align-items: center; gap: 8px; font-size: 0.78rem; color: var(--text-muted); }
+    .legend-dot { width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; border: 2px solid; }
+
+    /* Code panel */
+    .code-panel {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); overflow: hidden;
+    }
+    .code-header {
+      padding: 8px 14px; font-size: 0.72rem; font-weight: 600;
+      color: var(--text-dim); border-bottom: 1px solid var(--border); background: var(--bg);
+    }
+    .code-body { padding: 10px 0; font-size: 0.78rem; line-height: 1.75; white-space: pre; }
+    .code-line { display: flex; align-items: center; padding: 0 14px; }
+    .code-line.hl { background: var(--border-soft); border-left: 2px solid var(--accent); }
+    .ln { min-width: 24px; color: var(--text-ghost); user-select: none; font-size: 0.7rem; }
+    .kw { color: var(--purple); }
+    .fn { color: var(--blue); }
+    .bi { color: var(--orange); }
+    .cm { color: var(--text-ghost); }
+    .nb { color: var(--green); }
+    .st { color: #9ece6a; }
+
+    /* Preset buttons */
+    .preset-row { display: flex; gap: 8px; flex-wrap: wrap; }
+    .btn-preset {
+      padding: 6px 12px; border-radius: var(--radius-sm);
+      background: var(--bg); border: 1px solid var(--border);
+      color: var(--text-dim); font-size: 0.8rem; cursor: pointer;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .btn-preset:hover, .btn-preset.active { border-color: var(--accent); color: var(--accent-pale); }
+
+    /* Current elevation display */
+    .cur-elev-box {
+      display: flex; align-items: center; gap: 10px;
+    }
+    .cur-elev-num {
+      font-size: 1.6rem; font-weight: 800; font-family: monospace; color: #7dcfff;
+    }
+    .cur-elev-desc { font-size: 0.78rem; color: var(--text-muted); line-height: 1.4; }
+  </style>
+</head>
+<body class="page">
+
+<div class="page-header">
+  <a class="back-link" href="../index.html">&larr; All Algorithms</a>
+  <div class="page-title">Swim In Rising Water</div>
+  <div class="page-sub">LeetCode 778 &middot; Dijkstra on a grid &middot; Min-heap &middot; O(N&sup2; log N)</div>
+</div>
+
+<div class="controls">
+  <div class="field">
+    <label>Preset</label>
+    <div class="preset-row">
+      <button class="btn-preset active" id="preset-small"   onclick="loadPreset('small')">2&times;2 (ans=3)</button>
+      <button class="btn-preset"        id="preset-medium"  onclick="loadPreset('medium')">5&times;5 (ans=16)</button>
+    </div>
+  </div>
+  <button class="btn-primary" onclick="buildAndRun()">Build &amp; Run</button>
+</div>
+
+<div class="viz-area">
+  <div class="main-row">
+
+    <!-- Left: grid -->
+    <div class="grid-panel">
+      <div class="grid-panel-title">Grid (elevation values)</div>
+      <div id="cell-grid"></div>
+      <div class="water-bar-wrap" id="water-bar-wrap" style="display:none">
+        <div class="water-bar-label">
+          <span>Water level (min-max elevation on path)</span>
+          <span id="water-val">0</span>
+        </div>
+        <div class="water-bar-track">
+          <div class="water-bar-fill" id="water-fill" style="width:0%"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: controls + info -->
+    <div class="right-col">
+
+      <div class="panel-box">
+        <div class="nav-row">
+          <button class="btn-step" id="btn-back" disabled>&larr;</button>
+          <button class="btn-step" id="btn-next" disabled>&rarr;</button>
+          <button class="btn-play" id="btn-play" disabled>&#9654; Play</button>
+          <select class="speed-select" id="speed-select">
+            <option value="800">Slow</option>
+            <option value="400" selected>Medium</option>
+            <option value="120">Fast</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="panel-box">
+        <div class="panel-title" id="phase-label">&mdash;</div>
+        <div style="font-size:0.82rem;color:var(--text-muted);margin-top:2px;min-height:36px" id="step-desc">Select a preset and click Build &amp; Run.</div>
+        <div class="result-badge" id="result-badge"></div>
+      </div>
+
+      <div class="panel-box">
+        <div class="panel-title">Current water level</div>
+        <div class="cur-elev-box">
+          <div class="cur-elev-num" id="cur-elev">—</div>
+          <div class="cur-elev-desc">Max elevation seen on the<br>path to the current cell</div>
+        </div>
+      </div>
+
+      <div class="panel-box">
+        <div class="panel-title">Min-Heap — (max_elev, row, col)</div>
+        <div class="heap-list" id="heap-list">
+          <span style="color:var(--text-ghost);font-size:0.78rem">empty</span>
+        </div>
+      </div>
+
+      <div class="panel-box">
+        <div class="panel-title">Legend</div>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <div class="legend-row">
+            <div class="legend-dot" style="background:#0f111a;border-color:#2a2d4a"></div>
+            <span>Unvisited</span>
+          </div>
+          <div class="legend-row">
+            <div class="legend-dot" style="background:#2a1f0e;border-color:#e0af68"></div>
+            <span>In heap (queued)</span>
+          </div>
+          <div class="legend-row">
+            <div class="legend-dot" style="background:#0e1829;border-color:#7dcfff"></div>
+            <span>Popped — processing now</span>
+          </div>
+          <div class="legend-row">
+            <div class="legend-dot" style="background:#0e1f0e;border-color:#9ece6a"></div>
+            <span>Settled — optimal water level known</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="code-panel">
+        <div class="code-header">Python</div>
+        <div class="code-body" id="code-body"></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+var CODE = [
+  [1,  '<span class="kw">def</span> <span class="fn">swim_in_water</span>(grid):'],
+  [2,  '    n = <span class="bi">len</span>(grid)'],
+  [3,  '    dist = [[<span class="bi">float</span>(<span class="st">\'inf\'</span>)] * n <span class="kw">for</span> _ <span class="kw">in</span> <span class="bi">range</span>(n)]'],
+  [4,  '    dist[<span class="nb">0</span>][<span class="nb">0</span>] = grid[<span class="nb">0</span>][<span class="nb">0</span>]'],
+  [5,  '    heap = [(grid[<span class="nb">0</span>][<span class="nb">0</span>], <span class="nb">0</span>, <span class="nb">0</span>)]  <span class="cm"># (max_elev, r, c)</span>'],
+  [6,  '    <span class="kw">while</span> heap:'],
+  [7,  '        cost, r, c = <span class="fn">heappop</span>(heap)'],
+  [8,  '        <span class="kw">if</span> r == n-<span class="nb">1</span> <span class="kw">and</span> c == n-<span class="nb">1</span>:'],
+  [9,  '            <span class="kw">return</span> cost'],
+  [10, '        <span class="kw">for</span> dr, dc <span class="kw">in</span> [(-<span class="nb">1</span>,<span class="nb">0</span>),(<span class="nb">1</span>,<span class="nb">0</span>),(<span class="nb">0</span>,-<span class="nb">1</span>),(<span class="nb">0</span>,<span class="nb">1</span>)]:'],
+  [11, '            nr, nc = r+dr, c+dc'],
+  [12, '            <span class="kw">if</span> <span class="nb">0</span> <= nr < n <span class="kw">and</span> <span class="nb">0</span> <= nc < n:'],
+  [13, '                nc_cost = <span class="bi">max</span>(cost, grid[nr][nc])'],
+  [14, '                <span class="kw">if</span> nc_cost < dist[nr][nc]:'],
+  [15, '                    dist[nr][nc] = nc_cost'],
+  [16, '                    <span class="fn">heappush</span>(heap, (nc_cost, nr, nc))'],
+];
+
+var PRESETS = {
+  small: {
+    label: '2×2 — answer = 3',
+    grid: [[0,2],[1,3]]
+  },
+  medium: {
+    label: '5×5 — answer = 16',
+    grid: [
+      [ 0, 1, 2, 3, 4],
+      [24,23,22,21, 5],
+      [12,13,14,15,16],
+      [11,17,18,19,20],
+      [10, 9, 8, 7, 6]
+    ]
+  }
+};
+
+var currentPreset = 'small';
+var simSteps = [];
+var nav;
+var gGrid = [];
+var gN = 0;
+var gMaxElev = 0;
+
+function loadPreset(name) {
+  currentPreset = name;
+  ['small','medium'].forEach(function(p) {
+    document.getElementById('preset-' + p).classList.toggle('active', p === name);
+  });
+}
+
+function buildAndRun() {
+  var preset = PRESETS[currentPreset];
+  gGrid = preset.grid;
+  gN = gGrid.length;
+  gMaxElev = 0;
+  for (var r = 0; r < gN; r++)
+    for (var c = 0; c < gN; c++)
+      if (gGrid[r][c] > gMaxElev) gMaxElev = gGrid[r][c];
+
+  renderGrid(null);
+  document.getElementById('water-bar-wrap').style.display = 'flex';
+  simSteps = simulate(gGrid, gN);
+  nav.load(simSteps);
+}
+
+// ---- Grid rendering ----
+function cellId(r, c) { return 'cell-' + r + '-' + c; }
+
+function renderGrid(snap) {
+  var container = document.getElementById('cell-grid');
+  container.style.gridTemplateColumns = 'repeat(' + gN + ', 62px)';
+
+  if (!snap) {
+    // Initial render
+    container.innerHTML = '';
+    for (var r = 0; r < gN; r++) {
+      for (var c = 0; c < gN; c++) {
+        var cell = document.createElement('div');
+        cell.className = 'grid-cell state-unvisited';
+        if (r === 0 && c === 0) cell.classList.add('is-start');
+        if (r === gN-1 && c === gN-1) cell.classList.add('is-end');
+        cell.id = cellId(r, c);
+        cell.innerHTML = '<div class="elev">' + gGrid[r][c] + '</div>' +
+                         '<div class="cost-label">cost: ∞</div>';
+        container.appendChild(cell);
+      }
+    }
+    return;
+  }
+
+  // Update existing cells
+  for (var r = 0; r < gN; r++) {
+    for (var c = 0; c < gN; c++) {
+      var el = document.getElementById(cellId(r, c));
+      if (!el) continue;
+      var st = snap.states[r][c] || 'unvisited';
+      el.className = 'grid-cell state-' + st;
+      if (r === 0 && c === 0) el.classList.add('is-start');
+      if (r === gN-1 && c === gN-1) el.classList.add('is-end');
+      var d = snap.dist[r][c];
+      var costStr = d === Infinity ? '∞' : d;
+      el.innerHTML = '<div class="elev">' + gGrid[r][c] + '</div>' +
+                     '<div class="cost-label">cost: ' + costStr + '</div>';
+    }
+  }
+}
+
+function updateWaterBar(level) {
+  var pct = gMaxElev > 0 ? Math.min(100, Math.round(level / gMaxElev * 100)) : 0;
+  document.getElementById('water-fill').style.width = pct + '%';
+  document.getElementById('water-val').textContent = level === Infinity ? '∞' : level;
+  document.getElementById('cur-elev').textContent = level === Infinity ? '—' : level;
+}
+
+// ---- Simulation ----
+function simulate(grid, n) {
+  var steps = [];
+  var INF = Infinity;
+
+  // dist[r][c] = min max-elevation to reach (r,c)
+  var dist = [];
+  var states = [];
+  for (var r = 0; r < n; r++) {
+    dist.push([]);
+    states.push([]);
+    for (var c = 0; c < n; c++) {
+      dist[r].push(INF);
+      states[r].push('unvisited');
+    }
+  }
+  dist[0][0] = grid[0][0];
+  states[0][0] = 'queued';
+
+  var heap = [{cost: grid[0][0], r: 0, c: 0}];
+  var currentLevel = grid[0][0];
+
+  function copyDist() {
+    return dist.map(function(row) { return row.slice(); });
+  }
+  function copyStates() {
+    return states.map(function(row) { return row.slice(); });
+  }
+  function sortedHeap() {
+    return heap.slice().sort(function(a, b) {
+      if (a.cost !== b.cost) return a.cost - b.cost;
+      if (a.r !== b.r) return a.r - b.r;
+      return a.c - b.c;
+    });
+  }
+
+  function snap(phase, desc, lines, level) {
+    steps.push({
+      phase: phase, desc: desc, lines: lines,
+      dist: copyDist(),
+      states: copyStates(),
+      heap: sortedHeap(),
+      level: level !== undefined ? level : currentLevel,
+    });
+  }
+
+  snap('Init',
+    'dist[0][0] = grid[0][0] = ' + grid[0][0] + '. Push (' + grid[0][0] + ', 0, 0). All other cells = ∞.',
+    [2, 3, 4, 5],
+    grid[0][0]);
+
+  var DIRS = [[-1,0],[1,0],[0,-1],[0,1]];
+
+  while (heap.length > 0) {
+    heap.sort(function(a, b) {
+      if (a.cost !== b.cost) return a.cost - b.cost;
+      if (a.r !== b.r) return a.r - b.r;
+      return a.c - b.c;
+    });
+    var top = heap.shift();
+    var cost = top.cost, r = top.r, c = top.c;
+    currentLevel = cost;
+
+    // Check if already settled (stale entry)
+    if (states[r][c] === 'settled') {
+      continue;
+    }
+
+    states[r][c] = 'popped';
+    snap('Pop',
+      'Pop (cost=' + cost + ', r=' + r + ', c=' + c + '). Water must be at least ' + cost + ' to reach this cell.',
+      [7],
+      cost);
+
+    // Check goal
+    if (r === n-1 && c === n-1) {
+      states[r][c] = 'settled';
+      snap('Done',
+        'Reached bottom-right (' + (n-1) + ',' + (n-1) + ')! Minimum water level = ' + cost + '. Return ' + cost + '.',
+        [8, 9],
+        cost);
+      return steps;
+    }
+
+    // Explore neighbors
+    for (var di = 0; di < DIRS.length; di++) {
+      var nr = r + DIRS[di][0];
+      var nc = c + DIRS[di][1];
+      if (nr < 0 || nr >= n || nc < 0 || nc >= n) continue;
+      if (states[nr][nc] === 'settled') continue;
+
+      var ncCost = Math.max(cost, grid[nr][nc]);
+      snap('Examine',
+        'Neighbor (' + nr + ',' + nc + ') elev=' + grid[nr][nc] + '. new_cost = max(' + cost + ', ' + grid[nr][nc] + ') = ' + ncCost + ' vs dist=' + (dist[nr][nc] === INF ? '∞' : dist[nr][nc]) + '.',
+        [10, 11, 12, 13],
+        cost);
+
+      if (ncCost < dist[nr][nc]) {
+        dist[nr][nc] = ncCost;
+        heap.push({cost: ncCost, r: nr, c: nc});
+        if (states[nr][nc] !== 'settled') states[nr][nc] = 'queued';
+        snap('Relax',
+          'Improved! dist[' + nr + '][' + nc + '] ← ' + ncCost + '. Push (' + ncCost + ', ' + nr + ', ' + nc + ') onto heap.',
+          [14, 15, 16],
+          cost);
+      } else {
+        snap('NoRelax',
+          'No improvement — dist[' + nr + '][' + nc + '] = ' + (dist[nr][nc] === INF ? '∞' : dist[nr][nc]) + ' ≤ ' + ncCost + '. Skip.',
+          [13, 14],
+          cost);
+      }
+    }
+
+    states[r][c] = 'settled';
+    snap('Settle',
+      'Cell (' + r + ',' + c + ') settled. Optimal water level to reach it = ' + cost + '.',
+      [6, 7],
+      cost);
+  }
+
+  return steps;
+}
+
+// ---- Apply step ----
+function applyStep(snap) {
+  renderGrid(snap);
+  updateWaterBar(snap.level);
+  updateHeap(snap.heap);
+  setCodeLines(snap.lines);
+
+  var badge = document.getElementById('result-badge');
+  badge.className = 'result-badge';
+  badge.textContent = '';
+  if (snap.phase === 'Done') {
+    badge.className = 'result-badge success';
+    badge.textContent = 'Return ' + snap.level;
+  }
+}
+
+function updateHeap(heap) {
+  var el = document.getElementById('heap-list');
+  if (!heap || heap.length === 0) {
+    el.innerHTML = '<span style="color:var(--text-ghost);font-size:0.78rem">empty</span>';
+    return;
+  }
+  el.innerHTML = heap.map(function(item, i) {
+    var cls = i === 0 ? 'heap-chip top' : 'heap-chip';
+    return '<div class="' + cls + '">(' + item.cost + ',' + item.r + ',' + item.c + ')</div>';
+  }).join('');
+}
+
+function setCodeLines(lines) {
+  CODE.forEach(function(e) {
+    var el = document.getElementById('cl-' + e[0]);
+    if (!el) return;
+    el.classList.toggle('hl', !!(lines && lines.indexOf(e[0]) >= 0));
+  });
+}
+
+function buildCodePanel() {
+  var body = document.getElementById('code-body');
+  body.innerHTML = CODE.map(function(e) {
+    return '<div class="code-line" id="cl-' + e[0] + '"><span class="ln">' + e[0] + '</span><span>' + e[1] + '</span></div>';
+  }).join('');
+}
+
+window.addEventListener('DOMContentLoaded', function() {
+  buildCodePanel();
+  loadPreset('small');
+  nav = VizNav({
+    btnPrev: document.getElementById('btn-back'),
+    btnNext: document.getElementById('btn-next'),
+    btnPlay: document.getElementById('btn-play'),
+    speedSel: document.getElementById('speed-select'),
+    render: function(snap, cur, total) {
+      applyStep(snap);
+      var phaseEl = document.getElementById('phase-label');
+      var descEl  = document.getElementById('step-desc');
+      if (phaseEl) phaseEl.textContent = 'Step ' + (cur + 1) + ' / ' + total + '  ·  ' + snap.phase;
+      if (descEl)  descEl.textContent = snap.desc;
+    }
+  });
+});
+</script>
+
+<script>
+  if (window.self !== window.top) {
+    var bl = document.querySelector('.back-link');
+    if (bl) bl.style.display = 'none';
+  }
+</script>
+</body>
+</html>
