@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Detect Squares</title>
+  <link rel="stylesheet" href="../shared/style.css" />
+  <script src="../shared/viz.js"></script>
+  <style>
+    .main-row {
+      display: grid;
+      grid-template-columns: 1fr 310px;
+      gap: 16px;
+      align-items: start;
+      flex: 1;
+      min-height: 0;
+    }
+    @media (max-width: 900px) { .main-row { grid-template-columns: 1fr; } }
+
+    .grid-panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .grid-svg-wrap {
+      width: 100%;
+      aspect-ratio: 1.5;
+      background: var(--bg);
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+    }
+    .grid-svg-wrap svg { width: 100%; height: 100%; }
+
+    .right-col { display: flex; flex-direction: column; gap: 10px; }
+
+    .panel-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 12px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .panel-title {
+      font-size: 0.70rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim);
+    }
+    .nav-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .speed-select {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); color: var(--text);
+      font-size: 0.85rem; padding: 6px 8px; outline: none; width: 76px;
+    }
+
+    .formula-box {
+      font-family: monospace; font-size: 0.78rem;
+      background: var(--bg); border-radius: 4px;
+      padding: 8px 10px; min-height: 52px;
+      color: var(--text-dim); line-height: 1.8;
+    }
+    .hi-h { color: #bb9af7; }
+    .hi-d { color: #9ece6a; }
+    .hi-r { color: #9ece6a; font-weight: 700; }
+    .hi-q { color: #e0af68; }
+
+    .result-box {
+      font-size: 1.5rem; font-weight: 700; text-align: center;
+      padding: 6px 0 2px; color: var(--text-ghost);
+      font-family: monospace; transition: color 0.3s;
+    }
+    .result-box.found { color: #9ece6a; }
+    .result-label { font-size: 0.72rem; color: var(--text-dim); text-align: center; }
+
+    .pts-wrap { display: flex; flex-wrap: wrap; gap: 5px; }
+    .pt-chip {
+      font-family: monospace; font-size: 0.74rem;
+      padding: 2px 7px; border-radius: 4px;
+      border: 1px solid var(--border); background: var(--bg); color: var(--text-muted);
+      transition: border-color 0.2s, color 0.2s;
+    }
+    .pt-chip.is-h { border-color: #bb9af7; color: #bb9af7; }
+    .pt-chip.is-d { border-color: #9ece6a; color: #9ece6a; }
+
+    .input-row { display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap; }
+    .input-field { display: flex; flex-direction: column; gap: 3px; }
+    .input-field label { font-size: 0.70rem; color: var(--text-dim); font-weight: 600; }
+    .input-field input {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); color: var(--text);
+      font-size: 0.82rem; padding: 7px 9px; outline: none;
+    }
+    .input-field input:focus { border-color: var(--accent); }
+
+    .legend-row { display: flex; align-items: center; gap: 7px; font-size: 0.73rem; color: var(--text-muted); }
+    .l-dot { width: 11px; height: 11px; border-radius: 50%; flex-shrink: 0; }
+  </style>
+</head>
+<body class="page">
+
+<div class="page-header">
+  <a class="back-link" href="../index.html">&larr; All Algorithms</a>
+  <div class="page-title">Detect Squares</div>
+  <div class="page-sub">LeetCode 2013 &middot; Hash Map &middot; O(n) add &middot; O(n) count</div>
+</div>
+
+<div class="controls">
+  <div class="input-row">
+    <div class="input-field">
+      <label>Add points (x,y ; x,y ; ...)</label>
+      <input type="text" id="input-points" value="3,10;11,2;3,2" style="width:195px" />
+    </div>
+    <div class="input-field">
+      <label>Count query (px,py)</label>
+      <input type="text" id="input-query" value="11,10" style="width:88px" />
+    </div>
+    <button class="btn-primary" onclick="buildAndRun()">Run</button>
+  </div>
+</div>
+
+<div class="viz-area" style="display:flex;flex-direction:column;flex:1;min-height:0;">
+  <div class="main-row">
+
+    <!-- Grid -->
+    <div class="grid-panel">
+      <div class="panel-title">Coordinate Grid</div>
+      <div class="grid-svg-wrap">
+        <svg id="grid-svg" viewBox="0 0 460 300" preserveAspectRatio="xMidYMid meet">
+          <g id="g-gridlines"></g>
+          <g id="g-square"></g>
+          <g id="g-points"></g>
+        </svg>
+      </div>
+    </div>
+
+    <!-- Right column -->
+    <div class="right-col">
+
+      <div class="panel-box">
+        <div class="nav-row">
+          <button class="btn-step" id="btn-back" disabled>&larr;</button>
+          <button class="btn-step" id="btn-next" disabled>&rarr;</button>
+          <button class="btn-play" id="btn-play" disabled>&#9654; Play</button>
+          <select class="speed-select" id="speed-select">
+            <option value="900">Slow</option>
+            <option value="450" selected>Med</option>
+            <option value="140">Fast</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="panel-box">
+        <div class="panel-title" id="phase-label">&mdash;</div>
+        <div style="font-size:0.80rem;color:var(--text-muted);min-height:42px;line-height:1.45" id="step-desc">
+          Enter points and a query, then click Run.
+        </div>
+      </div>
+
+      <div class="panel-box">
+        <div class="panel-title">Stored Points</div>
+        <div class="pts-wrap" id="pts-list">
+          <span style="color:var(--text-ghost);font-size:0.76rem">none</span>
+        </div>
+      </div>
+
+      <div class="panel-box">
+        <div class="panel-title">Count Formula</div>
+        <div class="formula-box" id="formula-box">&mdash;</div>
+      </div>
+
+      <div class="panel-box">
+        <div class="result-box" id="result-box">0</div>
+        <div class="result-label" id="result-label">running total</div>
+      </div>
+
+      <div class="panel-box">
+        <div class="panel-title">Legend</div>
+        <div style="display:flex;flex-direction:column;gap:4px">
+          <div class="legend-row"><div class="l-dot" style="background:#7aa2f7"></div><span>Stored point</span></div>
+          <div class="legend-row"><div class="l-dot" style="background:#e0af68"></div><span>Query (px, py)</span></div>
+          <div class="legend-row"><div class="l-dot" style="background:#bb9af7"></div><span>Horizontal corner (x, py)</span></div>
+          <div class="legend-row"><div class="l-dot" style="background:#9ece6a"></div><span>Diagonal + vertical corners</span></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+var SVG_W = 460, SVG_H = 300;
+var PL = 42, PR = 14, PT = 14, PB = 28;
+
+var gStoredPts = [];
+var gQuery = null;
+var gBounds = null;
+var simSteps = [];
+var nav;
+
+function parsePoints(str) {
+  return str.trim().split(';').map(function(s) {
+    var p = s.trim().split(',').map(Number);
+    return (p.length === 2 && !isNaN(p[0]) && !isNaN(p[1])) ? p : null;
+  }).filter(Boolean);
+}
+
+function parseQuery(str) {
+  var p = str.trim().split(',').map(Number);
+  return (p.length === 2 && !isNaN(p[0]) && !isNaN(p[1])) ? p : null;
+}
+
+function buildMap(pts) {
+  var m = {};
+  pts.forEach(function(p) {
+    var x = p[0], y = p[1];
+    if (!m[x]) m[x] = {};
+    m[x][y] = (m[x][y] || 0) + 1;
+  });
+  return m;
+}
+
+function computeBounds(pts, q) {
+  var all = pts.slice();
+  if (q) all.push(q);
+  if (!all.length) return { minX: 0, maxX: 12, minY: 0, maxY: 12 };
+  var xs = all.map(function(p) { return p[0]; });
+  var ys = all.map(function(p) { return p[1]; });
+  var minX = Math.min.apply(null, xs);
+  var maxX = Math.max.apply(null, xs);
+  var minY = Math.min.apply(null, ys);
+  var maxY = Math.max.apply(null, ys);
+  var padX = Math.max(2, Math.ceil((maxX - minX) * 0.18));
+  var padY = Math.max(2, Math.ceil((maxY - minY) * 0.18));
+  return {
+    minX: Math.max(0, minX - padX),
+    maxX: maxX + padX,
+    minY: Math.max(0, minY - padY),
+    maxY: maxY + padY
+  };
+}
+
+function toSVG(gx, gy) {
+  var b = gBounds;
+  var dw = SVG_W - PL - PR;
+  var dh = SVG_H - PT - PB;
+  var rx = b.maxX - b.minX || 1;
+  var ry = b.maxY - b.minY || 1;
+  return {
+    x: PL + (gx - b.minX) / rx * dw,
+    y: SVG_H - PB - (gy - b.minY) / ry * dh
+  };
+}
+
+function svgEl(tag, attrs) {
+  var el = document.createElementNS('http://www.w3.org/2000/svg', tag);
+  Object.keys(attrs).forEach(function(k) { el.setAttribute(k, attrs[k]); });
+  return el;
+}
+
+// ---- Simulation ----
+function simulate(pts, q) {
+  var steps = [];
+  var map = buildMap(pts);
+  var px = q[0], py = q[1];
+  var total = 0;
+
+  function snap(phase, desc, opts) {
+    opts = opts || {};
+    steps.push({
+      phase: phase,
+      desc: desc,
+      hCorner: opts.hCorner || null,
+      dCorner: opts.dCorner || null,
+      vCorner: opts.vCorner || null,
+      squarePts: opts.squarePts || null,
+      formulaHtml: opts.formulaHtml || null,
+      runningTotal: total,
+      done: !!opts.done,
+    });
+  }
+
+  snap('Start',
+    'map built with ' + pts.length + ' add() call(s). Running count(' + px + ', ' + py + '). Iterate over all unique x values in the map where x ≠ px=' + px + '.'
+  );
+
+  var xs = Object.keys(map).map(Number).sort(function(a, b) { return a - b; });
+
+  for (var xi = 0; xi < xs.length; xi++) {
+    var x = xs[xi];
+    if (x === px) continue;
+
+    if (!(map[x] && map[x][py])) {
+      snap('x=' + x + ': skip',
+        'x=' + x + ' ≠ px=' + px + ', but (' + x + ',' + py + ') not in map — skip.'
+      );
+      continue;
+    }
+
+    var c1 = map[x][py];
+    snap('x=' + x + ': horizontal corner found',
+      'x=' + x + ' ≠ px=' + px + '. map[' + x + '][' + py + ']=' + c1 + '. ' +
+      'Horizontal corner (' + x + ',' + py + ') exists! Now scan y’s in map[' + x + '] where y ≠ py=' + py + '.',
+      { hCorner: [x, py] }
+    );
+
+    var ys = Object.keys(map[x]).map(Number).sort(function(a, b) { return a - b; });
+
+    for (var yi = 0; yi < ys.length; yi++) {
+      var y = ys[yi];
+      if (y === py) continue;
+
+      var c2 = map[x][y];
+      var c3 = (map[px] && map[px][y]) ? map[px][y] : 0;
+
+      if (c3 === 0) {
+        snap('y=' + y + ': (' + px + ',' + y + ') missing',
+          'map[' + x + '][' + y + ']=' + c2 + ', but (' + px + ',' + y + ') not in map — skip.',
+          { hCorner: [x, py], dCorner: [x, y] }
+        );
+        continue;
+      }
+
+      var contrib = c1 * c2 * c3;
+      total += contrib;
+
+      snap('Square found!',
+        'All 4 corners present. count += map[' + x + '][' + py + '] × map[' + x + '][' + y + '] × map[' + px + '][' + y + '] = ' +
+        c1 + '×' + c2 + '×' + c3 + '=' + contrib + '. Running total: ' + total + '.',
+        {
+          hCorner: [x, py],
+          dCorner: [x, y],
+          vCorner: [px, y],
+          squarePts: [[px, py], [x, py], [x, y], [px, y]],
+          formulaHtml:
+            'map[x][py]  ×  map[x][y]  ×  map[px][y]<br>' +
+            '<span class="hi-h">map[' + x + '][' + py + ']</span>  ×  ' +
+            '<span class="hi-d">map[' + x + '][' + y + ']</span>  ×  ' +
+            '<span class="hi-d">map[' + px + '][' + y + ']</span><br>' +
+            '<span class="hi-h">' + c1 + '</span>  ×  ' +
+            '<span class="hi-d">' + c2 + '</span>  ×  ' +
+            '<span class="hi-d">' + c3 + '</span>  =  ' +
+            '<span class="hi-r">' + contrib + '</span>',
+        }
+      );
+    }
+  }
+
+  snap('Done',
+    'All x values checked. count(' + px + ',' + py + ') = ' + total + '.',
+    { done: true }
+  );
+
+  return steps;
+}
+
+// ---- Render ----
+function renderGridLines() {
+  var g = document.getElementById('g-gridlines');
+  g.innerHTML = '';
+  var b = gBounds;
+  var rangeX = b.maxX - b.minX;
+  var rangeY = b.maxY - b.minY;
+  var tickEvery = (rangeX <= 12 && rangeY <= 12) ? 1 : 2;
+
+  for (var x = b.minX; x <= b.maxX; x++) {
+    var p0 = toSVG(x, b.minY), p1 = toSVG(x, b.maxY);
+    g.appendChild(svgEl('line', { x1: p0.x, y1: p0.y, x2: p1.x, y2: p1.y, stroke: '#1e2035', 'stroke-width': 1 }));
+    if (x % tickEvery === 0) {
+      var lbl = svgEl('text', { x: p0.x, y: SVG_H - PB + 11, 'text-anchor': 'middle', fill: '#3b4261', 'font-size': 9, 'font-family': 'monospace' });
+      lbl.textContent = x;
+      g.appendChild(lbl);
+    }
+  }
+
+  for (var y = b.minY; y <= b.maxY; y++) {
+    var p0 = toSVG(b.minX, y), p1 = toSVG(b.maxX, y);
+    g.appendChild(svgEl('line', { x1: p0.x, y1: p0.y, x2: p1.x, y2: p1.y, stroke: '#1e2035', 'stroke-width': 1 }));
+    if (y % tickEvery === 0) {
+      var lbl = svgEl('text', { x: PL - 5, y: p0.y + 3, 'text-anchor': 'end', fill: '#3b4261', 'font-size': 9, 'font-family': 'monospace' });
+      lbl.textContent = y;
+      g.appendChild(lbl);
+    }
+  }
+
+  // axis labels
+  var cx = (toSVG(b.minX, b.minY).x + toSVG(b.maxX, b.minY).x) / 2;
+  var axX = svgEl('text', { x: cx, y: SVG_H - 2, 'text-anchor': 'middle', fill: '#3b4261', 'font-size': 8, 'font-family': 'monospace' });
+  axX.textContent = 'x';
+  g.appendChild(axX);
+  var cy = (toSVG(b.minX, b.minY).y + toSVG(b.minX, b.maxY).y) / 2;
+  var axY = svgEl('text', { x: 8, y: cy, 'text-anchor': 'middle', fill: '#3b4261', 'font-size': 8, 'font-family': 'monospace' });
+  axY.textContent = 'y';
+  g.appendChild(axY);
+}
+
+function renderStep(s) {
+  var gSquare = document.getElementById('g-square');
+  var gPts = document.getElementById('g-points');
+  gSquare.innerHTML = '';
+  gPts.innerHTML = '';
+
+  // Square outline
+  if (s.squarePts) {
+    var coords = s.squarePts.map(function(p) {
+      var sv = toSVG(p[0], p[1]);
+      return sv.x + ',' + sv.y;
+    }).join(' ');
+    gSquare.appendChild(svgEl('polygon', {
+      points: coords,
+      fill: 'rgba(158,206,106,0.06)',
+      stroke: '#9ece6a',
+      'stroke-width': 1.5,
+      'stroke-dasharray': '6 3',
+    }));
+  }
+
+  var hKey = s.hCorner ? s.hCorner[0] + ',' + s.hCorner[1] : null;
+  var dKey = s.dCorner ? s.dCorner[0] + ',' + s.dCorner[1] : null;
+  var vKey = s.vCorner ? s.vCorner[0] + ',' + s.vCorner[1] : null;
+  var qKey = gQuery[0] + ',' + gQuery[1];
+  var drawn = {};
+
+  function drawDot(gx, gy, fill, r, skipIfDrawn) {
+    var key = gx + ',' + gy;
+    if (skipIfDrawn && drawn[key]) return;
+    drawn[key] = true;
+    var sv = toSVG(gx, gy);
+    gPts.appendChild(svgEl('circle', { cx: sv.x, cy: sv.y, r: r, fill: fill, stroke: fill, 'stroke-width': 2 }));
+    var lbl = svgEl('text', {
+      x: sv.x + r + 3, y: sv.y - r,
+      fill: fill, 'font-size': 9, 'font-family': 'monospace', 'font-weight': 600
+    });
+    lbl.textContent = '(' + gx + ',' + gy + ')';
+    gPts.appendChild(lbl);
+  }
+
+  // Draw stored points first
+  var map = buildMap(gStoredPts);
+  Object.keys(map).map(Number).sort(function(a, b) { return a - b; }).forEach(function(x) {
+    Object.keys(map[x]).map(Number).sort(function(a, b) { return a - b; }).forEach(function(y) {
+      var key = x + ',' + y;
+      var fill;
+      if (key === hKey)      fill = '#bb9af7';
+      else if (key === dKey || key === vKey) fill = '#9ece6a';
+      else                   fill = '#7aa2f7';
+      drawDot(x, y, fill, 6, true);
+    });
+  });
+
+  // Draw query point on top (orange, slightly larger)
+  var qFill = (s.done && s.runningTotal > 0) ? '#9ece6a' : '#e0af68';
+  drawn[qKey] = false; // allow redraw on top
+  drawDot(gQuery[0], gQuery[1], qFill, 8, false);
+}
+
+function renderPointsList(s) {
+  var map = buildMap(gStoredPts);
+  var hKey = s.hCorner ? s.hCorner[0] + ',' + s.hCorner[1] : null;
+  var dKey = s.dCorner ? s.dCorner[0] + ',' + s.dCorner[1] : null;
+  var vKey = s.vCorner ? s.vCorner[0] + ',' + s.vCorner[1] : null;
+  var html = '';
+
+  Object.keys(map).map(Number).sort(function(a, b) { return a - b; }).forEach(function(x) {
+    Object.keys(map[x]).map(Number).sort(function(a, b) { return a - b; }).forEach(function(y) {
+      var key = x + ',' + y;
+      var cls = 'pt-chip';
+      if (key === hKey) cls += ' is-h';
+      else if (key === dKey || key === vKey) cls += ' is-d';
+      var cnt = map[x][y] > 1 ? '×' + map[x][y] : '';
+      html += '<span class="' + cls + '">(' + x + ',' + y + ')' + cnt + '</span>';
+    });
+  });
+
+  html += '<span class="pt-chip" style="border-color:#e0af68;color:#e0af68;margin-left:6px">query:(' + gQuery[0] + ',' + gQuery[1] + ')</span>';
+  document.getElementById('pts-list').innerHTML = html;
+}
+
+function applyStep(s) {
+  renderStep(s);
+  renderPointsList(s);
+
+  var fb = document.getElementById('formula-box');
+  fb.innerHTML = s.formulaHtml || '&mdash;';
+
+  var rb = document.getElementById('result-box');
+  rb.textContent = s.runningTotal;
+  if (s.runningTotal > 0) rb.classList.add('found');
+  else rb.classList.remove('found');
+
+  var rl = document.getElementById('result-label');
+  rl.textContent = s.done
+    ? 'count(' + gQuery[0] + ',' + gQuery[1] + ') = ' + s.runningTotal
+    : 'running total';
+}
+
+function buildAndRun() {
+  var pts = parsePoints(document.getElementById('input-points').value);
+  var q   = parseQuery(document.getElementById('input-query').value);
+  if (!pts.length || !q) { alert('Invalid input'); return; }
+
+  gStoredPts = pts;
+  gQuery     = q;
+  gBounds    = computeBounds(pts, q);
+
+  renderGridLines();
+  simSteps = simulate(pts, q);
+  nav.load(simSteps);
+}
+
+window.addEventListener('DOMContentLoaded', function() {
+  nav = VizNav({
+    btnPrev:  document.getElementById('btn-back'),
+    btnNext:  document.getElementById('btn-next'),
+    btnPlay:  document.getElementById('btn-play'),
+    speedSel: document.getElementById('speed-select'),
+    render: function(s, cur, total) {
+      applyStep(s);
+      document.getElementById('phase-label').textContent =
+        'Step ' + (cur + 1) + ' / ' + total + '  ·  ' + s.phase;
+      document.getElementById('step-desc').textContent = s.desc;
+    }
+  });
+  buildAndRun();
+});
+</script>
+
+<script>
+  if (window.self !== window.top) {
+    var bl = document.querySelector('.back-link');
+    if (bl) bl.style.display = 'none';
+  }
+</script>
+</body>
+</html>
