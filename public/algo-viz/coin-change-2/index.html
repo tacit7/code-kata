@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Coin Change II</title>
+  <link rel="stylesheet" href="../shared/style.css" />
+  <script src="../shared/gsap.min.js"></script>
+  <script src="../shared/viz.js"></script>
+  <style>
+    .viz-area { width: 100%; max-width: 90%; }
+    .main-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
+    .left-col, .right-col { display: flex; flex-direction: column; gap: 12px; }
+    @media (max-width: 700px) { .main-row { grid-template-columns: 1fr; } }
+
+    .grid-section {
+      padding: 16px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      display: flex; flex-direction: column; gap: 10px;
+      min-height: 100px;
+    }
+    .grid-scroll { overflow-x: auto; }
+    .dp-table { border-collapse: separate; border-spacing: 5px; }
+    .grid-corner { width: 60px; }
+    .grid-col-hdr {
+      font-size: 0.62rem; font-family: monospace; color: var(--text-ghost);
+      text-align: center; padding-bottom: 2px; min-width: 46px;
+    }
+    .grid-row-hdr {
+      font-size: 0.68rem; font-family: monospace; color: var(--text-ghost);
+      text-align: right; padding-right: 8px; white-space: nowrap; vertical-align: middle;
+      transition: color 0.15s;
+    }
+    .grid-row-hdr.active-row { color: var(--accent-pale); }
+    .grid-cell {
+      width: 46px; height: 46px;
+      display: flex; align-items: center; justify-content: center;
+      border: 2px dashed var(--border-soft); border-radius: 5px;
+      background: #0f0f0f;
+      font-size: 0.9rem; font-weight: 700; font-family: monospace;
+      color: var(--text-ghost);
+      transition: border-color 0.15s, background 0.15s, color 0.15s;
+    }
+    .grid-cell[data-state="filled"]   { border-style: solid; color: var(--text-dim); border-color: #2d3148; }
+    .grid-cell[data-state="current"]  { border-style: solid; color: var(--accent-pale); border-color: var(--accent); background: var(--surface-dark); }
+    .grid-cell[data-state="skip-src"] { border-style: solid; color: var(--green); border-color: var(--green-border); background: var(--green-bg); }
+    .grid-cell[data-state="use-src"]  { border-style: solid; color: var(--orange); border-color: #b45309; background: #1c1200; }
+    .grid-cell[data-state="done"]     { border-style: solid; color: var(--yellow); border-color: var(--yellow); background: #1e1b00; }
+
+    .panel-box {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 14px 16px;
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .panel-title {
+      font-size: 0.72rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim);
+    }
+
+    .formula-box {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); padding: 10px 14px;
+      font-family: monospace; font-size: 0.82rem; color: var(--text-dim);
+      min-height: 36px; line-height: 1.5;
+    }
+    .fcur  { color: var(--accent-pale); font-weight: 700; }
+    .fskip { color: var(--green); font-weight: 700; }
+    .fuse  { color: var(--orange); font-weight: 700; }
+
+    .var-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+    .var-box {
+      padding: 10px 8px;
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      display: flex; flex-direction: column; align-items: center; gap: 3px;
+    }
+    .var-box.accent-border { border-color: var(--accent); }
+    .var-box.green-border  { border-color: var(--green-border); }
+    .var-box.amber-border  { border-color: #b45309; }
+    .var-label { font-size: 0.63rem; font-family: monospace; color: var(--text-faint); text-align: center; }
+    .var-val   { font-size: 1.3rem; font-weight: 700; color: var(--text-bright); }
+
+    .code-panel {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); overflow: hidden;
+    }
+    .code-header {
+      padding: 8px 14px; font-size: 0.72rem; font-weight: 600;
+      color: var(--text-dim); border-bottom: 1px solid var(--border); background: var(--bg);
+    }
+    .code-body { padding: 10px 0; font-size: 0.78rem; line-height: 1.75; white-space: pre; }
+    .code-line { display: flex; align-items: center; padding: 0 14px; }
+    .code-line.hl { background: var(--border-soft); border-left: 2px solid var(--accent); }
+    .ln { min-width: 24px; color: var(--text-ghost); user-select: none; font-size: 0.7rem; }
+
+    .btn-play {
+      background: #15803d; border: none; border-radius: var(--radius-sm);
+      color: #fff; cursor: pointer; font-size: 0.88rem; font-weight: 600;
+      padding: 9px 16px; transition: background 0.2s;
+    }
+    .btn-play:hover { background: #166534; }
+    .btn-play.playing { background: #c2410c; }
+    .btn-play.playing:hover { background: #9a3412; }
+    .btn-play:disabled { opacity: 0.4; cursor: not-allowed; }
+    .speed-select {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); color: var(--text);
+      font-size: 0.85rem; padding: 8px 10px; outline: none; width: 80px;
+    }
+    .nav-row { display: flex; gap: 8px; align-items: center; }
+
+    .result-badge {
+      font-size: 0.88rem; font-weight: 700;
+      padding: 4px 13px; border-radius: 6px;
+      display: none; width: fit-content; margin-top: 2px;
+    }
+    .result-badge.found { background: var(--green-bg); color: var(--green); border: 1px solid var(--green-border); display: block; }
+    .result-badge.none  { background: var(--blue-bg);  color: var(--blue);  border: 1px solid var(--blue-border);  display: block; }
+
+    .btn-preset {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); color: var(--text-dim);
+      cursor: pointer; font-size: 0.8rem; font-weight: 600;
+      padding: 6px 10px; transition: border-color 0.15s, color 0.15s;
+    }
+    .btn-preset:hover { border-color: var(--accent); color: var(--accent-pale); }
+
+    .kw { color: var(--purple); }
+    .fn { color: var(--blue); }
+    .bi { color: var(--orange); }
+    .op { color: var(--text); }
+    .nb { color: var(--green); }
+    .cm { color: var(--text-ghost); }
+  </style>
+</head>
+<body class="page">
+
+<div class="page-header">
+  <a class="back-link" href="../index.html">&larr; All Algorithms</a>
+  <div class="page-title">Coin Change II</div>
+  <div class="page-sub">LeetCode 518 &middot; 2-D DP: dp[i][j] = dp[i&#8722;1][j] + dp[i][j&#8722;coin] &middot; O(coins &times; amount) time &middot; O(coins &times; amount) space</div>
+</div>
+
+<div class="controls">
+  <div class="field">
+    <label>Coins (comma-separated)</label>
+    <input id="inp-coins" type="text" value="1,2,5" style="width:160px" />
+  </div>
+  <div class="field">
+    <label>Amount</label>
+    <input id="inp-amount" type="number" value="5" min="0" max="12" style="width:70px" />
+  </div>
+  <div class="field">
+    <label>Preset</label>
+    <div style="display:flex;gap:6px">
+      <button class="btn-preset" onclick="setPreset('1,2,5',5)">[1,2,5] / 5</button>
+      <button class="btn-preset" onclick="setPreset('2',3)">[2] / 3</button>
+      <button class="btn-preset" onclick="setPreset('1,2,3',4)">[1,2,3] / 4</button>
+    </div>
+  </div>
+  <button class="btn-primary" onclick="buildAndRun()">Build &amp; Run</button>
+</div>
+
+<div class="viz-area">
+  <div class="main-row">
+    <div class="left-col">
+      <div class="grid-section" id="grid-section">
+        <span style="color:var(--text-dim);font-size:0.82rem">Set coins &amp; amount, then click Build &amp; Run.</span>
+      </div>
+      <div class="code-panel">
+        <div class="code-header">Python</div>
+        <div class="code-body" id="code-body"></div>
+      </div>
+    </div>
+
+    <div class="right-col">
+      <div style="display:flex;gap:12px">
+        <div class="panel-box" style="flex:0 0 auto">
+          <div class="nav-row">
+            <button class="btn-step" id="btn-back" disabled>&larr;</button>
+            <button class="btn-step" id="btn-next" disabled>&rarr;</button>
+            <button class="btn-play" id="btn-play" disabled>&#9654; Play</button>
+            <select class="speed-select" id="speed-select">
+              <option value="700">Slow</option>
+              <option value="350" selected>Medium</option>
+              <option value="100">Fast</option>
+            </select>
+          </div>
+        </div>
+        <div class="panel-box" style="flex:1;min-width:0">
+          <div class="panel-title" id="phase-label">&mdash;</div>
+          <div style="font-size:0.82rem;color:var(--text-muted);margin-top:2px" id="step-desc">Set coins &amp; amount, then click Build &amp; Run.</div>
+          <div class="result-badge" id="result-badge"></div>
+        </div>
+      </div>
+
+      <div class="panel-box">
+        <div class="panel-title">Formula</div>
+        <div class="formula-box" id="formula-box">&mdash;</div>
+        <div class="var-grid">
+          <div class="var-box accent-border">
+            <div class="var-label">position (i, j)</div>
+            <div class="var-val" id="vv-pos">&mdash;</div>
+          </div>
+          <div class="var-box green-border">
+            <div class="var-label">skip dp[i&#8722;1][j]</div>
+            <div class="var-val" id="vv-skip">&mdash;</div>
+          </div>
+          <div class="var-box amber-border">
+            <div class="var-label">use dp[i][j&#8722;c]</div>
+            <div class="var-val" id="vv-use">&mdash;</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel-box">
+        <div class="panel-title">Legend</div>
+        <div style="display:flex;flex-direction:column;gap:6px;font-size:0.78rem;color:var(--text-muted)">
+          <div style="display:flex;align-items:center;gap:8px">
+            <div style="width:16px;height:16px;border-radius:3px;border:2px solid var(--accent);background:var(--surface-dark)"></div>
+            <span>Current cell dp[i][j] being computed</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <div style="width:16px;height:16px;border-radius:3px;border:2px solid var(--green-border);background:var(--green-bg)"></div>
+            <span>Skip source dp[i&#8722;1][j] (row above, don&apos;t use coin)</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <div style="width:16px;height:16px;border-radius:3px;border:2px solid #b45309;background:#1c1200"></div>
+            <span>Use source dp[i][j&#8722;coin] (same row, use coin)</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <div style="width:16px;height:16px;border-radius:3px;border:2px solid #2d3148;background:#0f0f0f"></div>
+            <span>Filled cell</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <div style="width:16px;height:16px;border-radius:3px;border:2px dashed var(--border-soft);background:#0f0f0f"></div>
+            <span>Unfilled cell</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+var simSteps = [], nav;
+var currentCoins = [], currentAmount = 0;
+
+var CODE = [
+  [1,  '<span class="kw">def</span> <span class="fn">change</span><span class="op">(</span>amount<span class="op">,</span> coins<span class="op">):</span>'],
+  [2,  '    n <span class="op">=</span> <span class="bi">len</span><span class="op">(</span>coins<span class="op">)</span>'],
+  [3,  '    dp <span class="op">=</span> <span class="op">[[</span><span class="nb">0</span><span class="op">]</span> <span class="op">*</span> <span class="op">(</span>amount <span class="op">+</span> <span class="nb">1</span><span class="op">)</span> <span class="kw">for</span> _ <span class="kw">in</span> <span class="bi">range</span><span class="op">(</span>n <span class="op">+</span> <span class="nb">1</span><span class="op">)]</span>'],
+  [4,  '    <span class="kw">for</span> i <span class="kw">in</span> <span class="bi">range</span><span class="op">(</span>n <span class="op">+</span> <span class="nb">1</span><span class="op">):</span>  <span class="cm"># one way to make 0: use nothing</span>'],
+  [5,  '        dp<span class="op">[</span>i<span class="op">][</span><span class="nb">0</span><span class="op">]</span> <span class="op">=</span> <span class="nb">1</span>'],
+  [6,  '    <span class="kw">for</span> i <span class="kw">in</span> <span class="bi">range</span><span class="op">(</span><span class="nb">1</span><span class="op">,</span> n <span class="op">+</span> <span class="nb">1</span><span class="op">):</span>'],
+  [7,  '        <span class="kw">for</span> j <span class="kw">in</span> <span class="bi">range</span><span class="op">(</span><span class="nb">1</span><span class="op">,</span> amount <span class="op">+</span> <span class="nb">1</span><span class="op">):</span>'],
+  [8,  '            skip <span class="op">=</span> dp<span class="op">[</span>i<span class="op">-</span><span class="nb">1</span><span class="op">][</span>j<span class="op">]</span>              <span class="cm"># don\'t use coin i</span>'],
+  [9,  '            use <span class="op">=</span> dp<span class="op">[</span>i<span class="op">][</span>j<span class="op">-</span>coins<span class="op">[</span>i<span class="op">-</span><span class="nb">1</span><span class="op">]]</span> <span class="kw">if</span> j <span class="op">&gt;=</span> coins<span class="op">[</span>i<span class="op">-</span><span class="nb">1</span><span class="op">]</span> <span class="kw">else</span> <span class="nb">0</span>'],
+  [10, '            dp<span class="op">[</span>i<span class="op">][</span>j<span class="op">]</span> <span class="op">=</span> skip <span class="op">+</span> use'],
+  [11, '    <span class="kw">return</span> dp<span class="op">[</span>n<span class="op">][</span>amount<span class="op">]</span>'],
+];
+
+window.addEventListener('DOMContentLoaded', function() {
+  buildCodePanel();
+  nav = VizNav({
+    btnPrev: document.getElementById('btn-back'),
+    btnNext: document.getElementById('btn-next'),
+    btnPlay: document.getElementById('btn-play'),
+    speedSel: document.getElementById('speed-select'),
+    render: function(snap, cur, total) {
+      renderGrid(snap, cur > 0);
+      renderVars(snap, cur > 0);
+      setCodeLines(snap.lines);
+
+      var phaseEl = document.getElementById('phase-label');
+      var descEl  = document.getElementById('step-desc');
+      if (phaseEl) phaseEl.textContent = 'Step ' + (cur + 1) + ' / ' + total + '  ·  ' + snap.phase;
+      if (descEl) {
+        gsap.fromTo(descEl, { opacity: 0 }, { opacity: 1, duration: 0.15 });
+        descEl.textContent = snap.desc;
+      }
+      var badge = document.getElementById('result-badge');
+      if (badge) {
+        badge.className = 'result-badge';
+        badge.textContent = '';
+        if (snap.phase === 'Done') {
+          var n = currentCoins.length;
+          var ans = snap.dp[n][currentAmount];
+          if (ans === 0) {
+            badge.className = 'result-badge none';
+            badge.textContent = 'Answer: 0 combinations';
+          } else {
+            badge.className = 'result-badge found';
+            badge.textContent = 'Answer: ' + ans + ' combination' + (ans === 1 ? '' : 's');
+          }
+        }
+      }
+    }
+  });
+  setPreset('1,2,5', 5);
+  buildAndRun();
+});
+
+function buildCodePanel() {
+  var body = document.getElementById('code-body');
+  body.innerHTML = CODE.map(function(e) {
+    return '<div class="code-line" id="cl-' + e[0] + '"><span class="ln">' + e[0] + '</span><span>' + e[1] + '</span></div>';
+  }).join('');
+}
+
+function setPreset(coins, amount) {
+  document.getElementById('inp-coins').value = coins;
+  document.getElementById('inp-amount').value = amount;
+  buildAndRun();
+}
+
+function buildAndRun() {
+  var raw = document.getElementById('inp-coins').value;
+  var amount = parseInt(document.getElementById('inp-amount').value, 10);
+  if (isNaN(amount) || amount < 0 || amount > 12) return;
+
+  var coins = raw.split(',').map(function(s) { return parseInt(s.trim(), 10); }).filter(function(n) { return !isNaN(n) && n > 0; });
+  if (coins.length === 0 || coins.length > 6) return;
+
+  currentCoins = coins;
+  currentAmount = amount;
+
+  buildGrid(coins, amount);
+  simSteps = simulate(coins, amount);
+  nav.load(simSteps);
+}
+
+function buildGrid(coins, amount) {
+  var n = coins.length;
+  var sec = document.getElementById('grid-section');
+  var html = '<div class="grid-scroll"><table class="dp-table">';
+  html += '<tr><td class="grid-corner"></td>';
+  for (var j = 0; j <= amount; j++) {
+    html += '<td class="grid-col-hdr">j=' + j + '</td>';
+  }
+  html += '</tr>';
+  html += '<tr><td class="grid-row-hdr" id="rh-0">∅ none</td>';
+  for (var j = 0; j <= amount; j++) {
+    html += '<td><div class="grid-cell" id="gc-0-' + j + '" data-state="empty">?</div></td>';
+  }
+  html += '</tr>';
+  for (var i = 1; i <= n; i++) {
+    html += '<tr><td class="grid-row-hdr" id="rh-' + i + '">c=' + coins[i - 1] + '</td>';
+    for (var j = 0; j <= amount; j++) {
+      html += '<td><div class="grid-cell" id="gc-' + i + '-' + j + '" data-state="empty">?</div></td>';
+    }
+    html += '</tr>';
+  }
+  html += '</table></div>';
+  sec.innerHTML = html;
+}
+
+function simulate(coins, amount) {
+  var n = coins.length;
+  var steps = [];
+  var dp = [];
+  for (var i = 0; i <= n; i++) {
+    dp.push(new Array(amount + 1).fill(-1));
+  }
+
+  function snap(phase, desc, lines, cur, skipSrc, useSrc, activeRow) {
+    steps.push({
+      phase: phase,
+      desc: desc,
+      lines: lines,
+      dp: dp.map(function(row) { return row.slice(); }),
+      n: n,
+      amount: amount,
+      cur: cur || null,
+      skipSrc: skipSrc || null,
+      useSrc: useSrc || null,
+      activeRow: (activeRow !== undefined) ? activeRow : -1,
+    });
+  }
+
+  snap('Init',
+    'Create a ' + (n + 1) + '×' + (amount + 1) + ' table. dp[i][j] = ways to make amount j using the first i coin types.',
+    [1, 2, 3], null, null, null, -1);
+
+  for (var i = 0; i <= n; i++) dp[i][0] = 1;
+  snap('Base Case',
+    'dp[i][0] = 1 for every row — there is exactly one way to make amount 0: use zero coins.',
+    [4, 5], null, null, null, -1);
+
+  for (var j = 1; j <= amount; j++) dp[0][j] = 0;
+  snap('Base Case',
+    'dp[0][j] = 0 for j > 0 — with no coin types available we cannot make any positive amount.',
+    [3], null, null, null, 0);
+
+  for (var i = 1; i <= n; i++) {
+    var coin = coins[i - 1];
+    snap('New Coin',
+      'Row ' + i + ': considering coin ' + coin + '. For each amount j we either skip it (inherit from row above) or use it (look back ' + coin + ' columns in the same row).',
+      [6], null, null, null, i);
+
+    for (var j = 1; j <= amount; j++) {
+      var skip = dp[i - 1][j];
+      var canUse = j >= coin;
+      var useVal = canUse ? dp[i][j - coin] : 0;
+      var useSrcCell = canUse ? [i, j - coin] : null;
+      dp[i][j] = skip + useVal;
+
+      if (canUse) {
+        snap('Compute',
+          'dp[' + i + '][' + j + '] = skip + use = dp[' + (i - 1) + '][' + j + '] + dp[' + i + '][' + (j - coin) + '] = ' + skip + ' + ' + useVal + ' = ' + dp[i][j] + '.',
+          [7, 8, 9, 10], [i, j], [i - 1, j], useSrcCell, i);
+      } else {
+        snap('Compute',
+          'dp[' + i + '][' + j + '] = skip only (coin ' + coin + ' > j=' + j + '). = dp[' + (i - 1) + '][' + j + '] = ' + skip + '.',
+          [7, 8, 9, 10], [i, j], [i - 1, j], null, i);
+      }
+    }
+  }
+
+  var answer = dp[n][amount];
+  snap('Done',
+    'dp[' + n + '][' + amount + '] = ' + answer + '. There ' + (answer === 1 ? 'is 1 combination' : 'are ' + answer + ' combinations') + ' that sum to ' + amount + '.',
+    [11], [n, amount], null, null, n);
+
+  return steps;
+}
+
+function renderGrid(snap, animate) {
+  for (var i = 0; i <= snap.n; i++) {
+    var rhEl = document.getElementById('rh-' + i);
+    if (rhEl) {
+      if (snap.activeRow === i) rhEl.classList.add('active-row');
+      else rhEl.classList.remove('active-row');
+    }
+    for (var j = 0; j <= snap.amount; j++) {
+      var el = document.getElementById('gc-' + i + '-' + j);
+      if (!el) continue;
+      var val = snap.dp[i][j];
+      var state = 'empty';
+
+      if (snap.cur && snap.cur[0] === i && snap.cur[1] === j) {
+        state = (snap.phase === 'Done') ? 'done' : 'current';
+      } else if (snap.skipSrc && snap.skipSrc[0] === i && snap.skipSrc[1] === j) {
+        state = 'skip-src';
+      } else if (snap.useSrc && snap.useSrc[0] === i && snap.useSrc[1] === j) {
+        state = 'use-src';
+      } else if (val >= 0) {
+        state = 'filled';
+      }
+
+      el.dataset.state = state;
+      el.textContent = (val >= 0) ? String(val) : '?';
+
+      if (animate && snap.phase === 'Compute' && snap.cur && snap.cur[0] === i && snap.cur[1] === j) {
+        gsap.fromTo(el, { scale: 0.5 }, { scale: 1.15, duration: 0.18, ease: 'power2.out',
+          onComplete: function(e) { gsap.to(e, { scale: 1, duration: 0.12 }); }.bind(null, el)
+        });
+      }
+    }
+  }
+}
+
+function renderVars(snap, animate) {
+  var fbox = document.getElementById('formula-box');
+  if (fbox) {
+    if (snap.cur && snap.skipSrc) {
+      var ci = snap.cur[0], cj = snap.cur[1];
+      var si = snap.skipSrc[0], sj = snap.skipSrc[1];
+      var skipVal = snap.dp[si][sj];
+      var curVal  = snap.dp[ci][cj];
+      if (snap.useSrc) {
+        var useVal = snap.dp[snap.useSrc[0]][snap.useSrc[1]];
+        fbox.innerHTML =
+          '<span class="fcur">dp[' + ci + '][' + cj + ']</span> = ' +
+          '<span class="fskip">dp[' + si + '][' + sj + ']</span> + ' +
+          '<span class="fuse">dp[' + snap.useSrc[0] + '][' + snap.useSrc[1] + ']</span>' +
+          ' = <span class="fskip">' + skipVal + '</span> + <span class="fuse">' + useVal + '</span>' +
+          ' = <span class="fcur">' + (curVal >= 0 ? curVal : '?') + '</span>';
+      } else {
+        fbox.innerHTML =
+          '<span class="fcur">dp[' + ci + '][' + cj + ']</span> = ' +
+          '<span class="fskip">dp[' + si + '][' + sj + ']</span> + 0 (coin too large)' +
+          ' = <span class="fcur">' + (curVal >= 0 ? curVal : '?') + '</span>';
+      }
+    } else {
+      fbox.textContent = '—';
+    }
+  }
+
+  function setVal(id, val) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    var text = (val === null || val === undefined) ? '—' : String(val);
+    if (animate && el.textContent !== text) {
+      gsap.fromTo(el, { scale: 0.8, opacity: 0.4 }, { scale: 1, opacity: 1, duration: 0.22, ease: 'back.out(1.7)' });
+    }
+    el.textContent = text;
+  }
+
+  setVal('vv-pos',  snap.cur     ? '(' + snap.cur[0] + ',' + snap.cur[1] + ')' : null);
+  setVal('vv-skip', snap.skipSrc ? snap.dp[snap.skipSrc[0]][snap.skipSrc[1]]    : null);
+  setVal('vv-use',  snap.useSrc  ? snap.dp[snap.useSrc[0]][snap.useSrc[1]]      : null);
+}
+
+function setCodeLines(lines) {
+  CODE.forEach(function(e) {
+    var el = document.getElementById('cl-' + e[0]);
+    if (!el) return;
+    if (lines.indexOf(e[0]) >= 0) el.classList.add('hl');
+    else el.classList.remove('hl');
+  });
+}
+</script>
+<script>
+  if (window.self !== window.top) {
+    var bl = document.querySelector('.back-link');
+    if (bl) bl.style.display = 'none';
+  }
+</script>
+</body>
+</html>
