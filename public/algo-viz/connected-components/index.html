@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Number of Connected Components</title>
+  <link rel="stylesheet" href="../shared/style.css" />
+  <script src="../shared/viz.js"></script>
+  <style>
+    .main-row {
+      display: grid;
+      grid-template-columns: 1fr 320px;
+      gap: 16px;
+      align-items: start;
+      flex: 1;
+      min-height: 0;
+    }
+    @media (max-width: 900px) { .main-row { grid-template-columns: 1fr; } }
+
+    .graph-panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .graph-svg-wrap {
+      width: 100%;
+      aspect-ratio: 1.4;
+      background: var(--bg);
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+    }
+    .graph-svg-wrap svg { width: 100%; height: 100%; }
+
+    /* node states */
+    .nc-default  { fill: #1a1b2e; stroke: #3b4261; }
+    .nc-active   { fill: #2d1a3d; stroke: #bb9af7; stroke-width: 3; }
+    .nc-merged   { fill: #1a2035; stroke: #7aa2f7; }
+    .nc-same     { fill: #3d3524; stroke: #e0af68; }
+    .nc-done     { fill: #1a2a1a; stroke: #9ece6a; }
+
+    .node-circle { stroke-width: 2.5; transition: fill 0.25s, stroke 0.25s; }
+    .node-label {
+      fill: var(--text-bright); font-size: 13px; font-weight: 700;
+      font-family: monospace; text-anchor: middle; dominant-baseline: central;
+      pointer-events: none;
+    }
+
+    .edge-line     { stroke: #3b4261; stroke-width: 2; }
+    .edge-active   { stroke: #bb9af7; stroke-width: 3; }
+    .edge-merged   { stroke: #7aa2f7; stroke-width: 2.5; }
+    .edge-same     { stroke: #e0af68; stroke-width: 2.5; }
+    .edge-done     { stroke: #9ece6a; stroke-width: 2; }
+
+    /* right column */
+    .right-col { display: flex; flex-direction: column; gap: 12px; }
+
+    .panel-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 14px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .panel-title {
+      font-size: 0.72rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim);
+    }
+
+    .nav-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .speed-select {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); color: var(--text);
+      font-size: 0.85rem; padding: 8px 10px; outline: none; width: 80px;
+    }
+
+    /* Union-Find parent array display */
+    .uf-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .uf-row {
+      display: flex;
+      gap: 4px;
+      align-items: center;
+      font-size: 0.75rem;
+      font-family: monospace;
+    }
+    .uf-label {
+      color: var(--text-dim);
+      width: 52px;
+      flex-shrink: 0;
+      font-weight: 600;
+    }
+    .uf-cells { display: flex; gap: 4px; flex-wrap: wrap; }
+    .uf-cell {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+    }
+    .uf-idx {
+      font-size: 0.62rem;
+      color: var(--text-ghost);
+    }
+    .uf-val {
+      width: 32px; height: 28px;
+      display: flex; align-items: center; justify-content: center;
+      border-radius: 4px;
+      font-weight: 700;
+      font-size: 0.82rem;
+      border: 1px solid var(--border);
+      background: var(--bg);
+      color: var(--text);
+      transition: background 0.2s, border-color 0.2s, color 0.2s;
+    }
+    .uf-val.is-root {
+      background: #1a2a1a;
+      border-color: #9ece6a;
+      color: #9ece6a;
+    }
+    .uf-val.is-active {
+      background: #2d1a3d;
+      border-color: #bb9af7;
+      color: #bb9af7;
+    }
+    .uf-val.changed {
+      background: #1a2035;
+      border-color: #7aa2f7;
+      color: #7aa2f7;
+    }
+
+    .comp-count {
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--accent);
+      text-align: center;
+      padding: 6px 0 2px;
+    }
+    .comp-label {
+      font-size: 0.75rem;
+      color: var(--text-dim);
+      text-align: center;
+    }
+
+    .legend-row { display: flex; align-items: center; gap: 8px; font-size: 0.75rem; color: var(--text-muted); }
+    .legend-dot { width: 13px; height: 13px; border-radius: 50%; flex-shrink: 0; border: 2px solid; }
+
+    .code-panel {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); overflow: hidden;
+    }
+    .code-header {
+      padding: 8px 14px; font-size: 0.72rem; font-weight: 600;
+      color: var(--text-dim); border-bottom: 1px solid var(--border); background: var(--bg);
+    }
+    .code-body { padding: 10px 0; font-size: 0.75rem; line-height: 1.75; white-space: pre; }
+    .code-line { display: flex; align-items: center; padding: 0 14px; }
+    .code-line.hl { background: var(--border-soft); border-left: 2px solid var(--accent); }
+    .ln { min-width: 22px; color: var(--text-ghost); user-select: none; font-size: 0.68rem; }
+    .kw { color: var(--purple); }
+    .fn { color: var(--blue); }
+    .bi { color: var(--orange); }
+    .cm { color: var(--text-ghost); }
+    .nb { color: var(--green); }
+
+    .input-row { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
+    .input-field { display: flex; flex-direction: column; gap: 4px; }
+    .input-field label { font-size: 0.72rem; color: var(--text-dim); font-weight: 600; }
+    .input-field input {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); color: var(--text);
+      font-size: 0.85rem; padding: 8px 10px; outline: none; width: 60px;
+    }
+    .input-field input.wide { width: 200px; }
+    .input-field input:focus { border-color: var(--accent); }
+  </style>
+</head>
+<body class="page">
+
+<div class="page-header">
+  <a class="back-link" href="../index.html">&larr; All Algorithms</a>
+  <div class="page-title">Number of Connected Components</div>
+  <div class="page-sub">LeetCode 323 &middot; Union-Find with path compression + rank &middot; O(E &middot; &alpha;(N))</div>
+</div>
+
+<div class="controls">
+  <div class="input-row">
+    <div class="input-field">
+      <label>Nodes (n)</label>
+      <input type="number" id="input-n" value="5" min="2" max="10" />
+    </div>
+    <div class="input-field">
+      <label>Edges (e.g. 0,1;1,2;3,4)</label>
+      <input type="text" id="input-edges" value="0,1;1,2;3,4" class="wide" />
+    </div>
+    <button class="btn-primary" onclick="buildAndRun()">Build &amp; Run</button>
+  </div>
+</div>
+
+<div class="viz-area" style="display:flex;flex-direction:column;flex:1;min-height:0;">
+  <div class="main-row">
+
+    <!-- Graph -->
+    <div class="graph-panel">
+      <div class="panel-title">Graph</div>
+      <div class="graph-svg-wrap">
+        <svg id="graph-svg" viewBox="0 0 460 320" preserveAspectRatio="xMidYMid meet">
+          <g id="edges-g"></g>
+          <g id="nodes-g"></g>
+        </svg>
+      </div>
+    </div>
+
+    <!-- Right column -->
+    <div class="right-col">
+
+      <div class="panel-box">
+        <div class="nav-row">
+          <button class="btn-step" id="btn-back" disabled>&larr;</button>
+          <button class="btn-step" id="btn-next" disabled>&rarr;</button>
+          <button class="btn-play" id="btn-play" disabled>&#9654; Play</button>
+          <select class="speed-select" id="speed-select">
+            <option value="900">Slow</option>
+            <option value="450" selected>Medium</option>
+            <option value="140">Fast</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="panel-box">
+        <div class="panel-title" id="phase-label">&mdash;</div>
+        <div style="font-size:0.82rem;color:var(--text-muted);min-height:36px" id="step-desc">Enter n and edges, then click Build &amp; Run.</div>
+      </div>
+
+      <div class="panel-box">
+        <div class="panel-title">Union-Find State</div>
+        <div class="uf-grid" id="uf-grid">
+          <span style="color:var(--text-ghost);font-size:0.78rem">not built</span>
+        </div>
+      </div>
+
+      <div class="panel-box">
+        <div class="comp-count" id="comp-count">&mdash;</div>
+        <div class="comp-label">connected components</div>
+      </div>
+
+      <div class="panel-box">
+        <div class="panel-title">Legend</div>
+        <div style="display:flex;flex-direction:column;gap:5px">
+          <div class="legend-row">
+            <div class="legend-dot" style="background:#1a1b2e;border-color:#3b4261"></div>
+            <span>Untouched</span>
+          </div>
+          <div class="legend-row">
+            <div class="legend-dot" style="background:#2d1a3d;border-color:#bb9af7"></div>
+            <span>Active edge endpoints</span>
+          </div>
+          <div class="legend-row">
+            <div class="legend-dot" style="background:#3d3524;border-color:#e0af68"></div>
+            <span>Already connected</span>
+          </div>
+          <div class="legend-row">
+            <div class="legend-dot" style="background:#1a2035;border-color:#7aa2f7"></div>
+            <span>Just merged</span>
+          </div>
+          <div class="legend-row">
+            <div class="legend-dot" style="background:#1a2a1a;border-color:#9ece6a"></div>
+            <span>Processed</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="code-panel">
+        <div class="code-header">Python</div>
+        <div class="code-body" id="code-body"></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+var CODE = [
+  [1,  '<span class="kw">def</span> <span class="fn">countComponents</span>(n, edges):'],
+  [2,  '    par = <span class="bi">list</span>(<span class="bi">range</span>(n))'],
+  [3,  '    rank = [<span class="nb">0</span>] * n'],
+  [4,  ''],
+  [5,  '    <span class="kw">def</span> <span class="fn">find</span>(x):'],
+  [6,  '        <span class="kw">while</span> par[x] != x:'],
+  [7,  '            par[x] = par[par[x]]  <span class="cm"># path compression</span>'],
+  [8,  '            x = par[x]'],
+  [9,  '        <span class="kw">return</span> x'],
+  [10, ''],
+  [11, '    res = n'],
+  [12, '    <span class="kw">for</span> u, v <span class="kw">in</span> edges:'],
+  [13, '        ru, rv = <span class="fn">find</span>(u), <span class="fn">find</span>(v)'],
+  [14, '        <span class="kw">if</span> ru == rv: <span class="kw">continue</span>'],
+  [15, '        res -= <span class="nb">1</span>'],
+  [16, '        <span class="kw">if</span> rank[ru] < rank[rv]:'],
+  [17, '            par[ru] = rv'],
+  [18, '        <span class="kw">elif</span> rank[ru] > rank[rv]:'],
+  [19, '            par[rv] = ru'],
+  [20, '        <span class="kw">else</span>:'],
+  [21, '            par[rv] = ru; rank[ru] += <span class="nb">1</span>'],
+  [22, '    <span class="kw">return</span> res'],
+];
+
+var gN = 5;
+var gEdges = [[0,1],[1,2],[3,4]];
+var gPositions = [];
+var simSteps = [];
+var nav;
+
+// Colors per component (cycling)
+var COMP_COLORS = ['#7aa2f7','#9ece6a','#e0af68','#bb9af7','#f7768e','#2ac3de','#ff9e64','#73daca'];
+
+function parseEdges(str) {
+  if (!str.trim()) return [];
+  return str.trim().split(';').map(function(s) {
+    var parts = s.trim().split(',');
+    return [parseInt(parts[0]), parseInt(parts[1])];
+  }).filter(function(e) { return !isNaN(e[0]) && !isNaN(e[1]); });
+}
+
+function computePositions(n) {
+  var cx = 230, cy = 160, r = 120;
+  var positions = [];
+  for (var i = 0; i < n; i++) {
+    var angle = (2 * Math.PI * i / n) - Math.PI / 2;
+    positions.push({ x: cx + r * Math.cos(angle), y: cy + r * Math.sin(angle) });
+  }
+  return positions;
+}
+
+function buildAndRun() {
+  var nVal = parseInt(document.getElementById('input-n').value);
+  var eStr = document.getElementById('input-edges').value;
+  if (isNaN(nVal) || nVal < 1 || nVal > 10) { alert('n must be 1–10'); return; }
+  gN = nVal;
+  gEdges = parseEdges(eStr);
+  gPositions = computePositions(gN);
+  simSteps = simulate(gN, gEdges);
+  nav.load(simSteps);
+}
+
+// ---- Simulation ----
+function simulate(n, edges) {
+  var steps = [];
+  var par = [];
+  var rnk = [];
+  for (var i = 0; i < n; i++) { par.push(i); rnk.push(0); }
+  var res = n;
+
+  // Track edge states: 'none','active','merged','same','done'
+  var edgeState = edges.map(function() { return 'none'; });
+  // Track node highlight: per-step override
+  var nodeActive = [];
+
+  function findRoot(x, parArr) {
+    // path-halving (non-mutating for display, returns root)
+    var a = x;
+    while (parArr[a] !== a) { a = parArr[a]; }
+    return a;
+  }
+
+  function snap(phase, desc, lines, opts) {
+    opts = opts || {};
+    steps.push({
+      phase: phase,
+      desc: desc,
+      lines: lines,
+      par: par.slice(),
+      rnk: rnk.slice(),
+      res: res,
+      edgeState: edgeState.slice(),
+      activeNodes: opts.activeNodes || [],
+      sameNodes: opts.sameNodes || [],
+      mergedNodes: opts.mergedNodes || [],
+      doneEdges: opts.doneEdges || [],
+      changedParent: opts.changedParent !== undefined ? opts.changedParent : -1,
+      activeEdge: opts.activeEdge !== undefined ? opts.activeEdge : -1,
+    });
+  }
+
+  // Init
+  snap('Initialize',
+    'parent[i] = i for all nodes — each node is its own component. rank[i] = 0.',
+    [2, 3, 11],
+    { activeNodes: [] }
+  );
+
+  for (var ei = 0; ei < edges.length; ei++) {
+    var u = edges[ei][0], v = edges[ei][1];
+    edgeState[ei] = 'active';
+
+    snap('Process Edge',
+      'Edge (' + u + ', ' + v + '): find roots of ' + u + ' and ' + v + '.',
+      [12, 13],
+      { activeNodes: [u, v], activeEdge: ei }
+    );
+
+    var ru = findRoot(u, par);
+    var rv = findRoot(v, par);
+
+    // Apply path compression (halving) on par
+    var a = u;
+    while (par[a] !== a) { var next = par[par[a]]; par[a] = next; a = next; }
+    var b = v;
+    while (par[b] !== b) { var next2 = par[par[b]]; par[b] = next2; b = next2; }
+
+    if (ru === rv) {
+      edgeState[ei] = 'same';
+      snap('Already Connected',
+        'find(' + u + ')=' + ru + ', find(' + v + ')=' + rv + ' — same root. Skip union, components unchanged (' + res + ').',
+        [14],
+        { sameNodes: [u, v], activeEdge: ei }
+      );
+      edgeState[ei] = 'done';
+    } else {
+      res -= 1;
+      var changedIdx = -1;
+      if (rnk[ru] < rnk[rv]) {
+        par[ru] = rv;
+        changedIdx = ru;
+        snap('Union',
+          'find(' + u + ')=' + ru + ', find(' + v + ')=' + rv + ' — different roots. rank[' + ru + ']<rank[' + rv + ']: par[' + ru + ']=' + rv + '. Components: ' + res + '.',
+          [16, 17],
+          { mergedNodes: [u, v, ru, rv], activeEdge: ei, changedParent: changedIdx }
+        );
+      } else if (rnk[ru] > rnk[rv]) {
+        par[rv] = ru;
+        changedIdx = rv;
+        snap('Union',
+          'find(' + u + ')=' + ru + ', find(' + v + ')=' + rv + ' — different roots. rank[' + ru + ']>rank[' + rv + ']: par[' + rv + ']=' + ru + '. Components: ' + res + '.',
+          [18, 19],
+          { mergedNodes: [u, v, ru, rv], activeEdge: ei, changedParent: changedIdx }
+        );
+      } else {
+        par[rv] = ru;
+        rnk[ru] += 1;
+        changedIdx = rv;
+        snap('Union',
+          'find(' + u + ')=' + ru + ', find(' + v + ')=' + rv + ' — equal ranks. par[' + rv + ']=' + ru + ', rank[' + ru + '] → ' + rnk[ru] + '. Components: ' + res + '.',
+          [20, 21],
+          { mergedNodes: [u, v, ru, rv], activeEdge: ei, changedParent: changedIdx }
+        );
+      }
+      edgeState[ei] = 'merged';
+    }
+  }
+
+  snap('Done',
+    'All edges processed. Nodes where parent[i]==i are roots — there are ' + res + ' component(s).',
+    [22],
+    { activeNodes: [] }
+  );
+
+  return steps;
+}
+
+// ---- Render ----
+function renderGraph(snap) {
+  var edgesG = document.getElementById('edges-g');
+  var nodesG = document.getElementById('nodes-g');
+  edgesG.innerHTML = '';
+  nodesG.innerHTML = '';
+
+  var activeSet = {};
+  var sameSet = {};
+  var mergedSet = {};
+  (snap.activeNodes || []).forEach(function(i) { activeSet[i] = true; });
+  (snap.sameNodes || []).forEach(function(i) { sameSet[i] = true; });
+  (snap.mergedNodes || []).forEach(function(i) { mergedSet[i] = true; });
+
+  // Edges
+  gEdges.forEach(function(e, ei) {
+    var u = e[0], v = e[1];
+    if (u >= gPositions.length || v >= gPositions.length) return;
+    var pu = gPositions[u], pv = gPositions[v];
+    var line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    line.setAttribute('x1', pu.x); line.setAttribute('y1', pu.y);
+    line.setAttribute('x2', pv.x); line.setAttribute('y2', pv.y);
+    var es = snap.edgeState[ei];
+    var cls = 'edge-line';
+    if (ei === snap.activeEdge) {
+      cls = (es === 'same') ? 'edge-same' : (es === 'merged' ? 'edge-merged' : 'edge-active');
+    } else if (es === 'merged') {
+      cls = 'edge-merged';
+    } else if (es === 'same') {
+      cls = 'edge-same';
+    } else if (es === 'done') {
+      cls = 'edge-done';
+    }
+    line.setAttribute('class', cls);
+    edgesG.appendChild(line);
+  });
+
+  // Nodes
+  for (var i = 0; i < gN; i++) {
+    var pos = gPositions[i];
+    var g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    var circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    circle.setAttribute('cx', pos.x);
+    circle.setAttribute('cy', pos.y);
+    circle.setAttribute('r', 22);
+
+    var cls = 'node-circle nc-default';
+    if (activeSet[i]) cls = 'node-circle nc-active';
+    else if (sameSet[i]) cls = 'node-circle nc-same';
+    else if (mergedSet[i]) cls = 'node-circle nc-merged';
+    circle.setAttribute('class', cls);
+
+    var text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    text.setAttribute('x', pos.x);
+    text.setAttribute('y', pos.y);
+    text.setAttribute('class', 'node-label');
+    text.textContent = i;
+
+    g.appendChild(circle);
+    g.appendChild(text);
+    nodesG.appendChild(g);
+  }
+}
+
+function renderUF(snap) {
+  var el = document.getElementById('uf-grid');
+  var par = snap.par;
+  var rnk = snap.rnk;
+  var n = par.length;
+  var changed = snap.changedParent;
+
+  var idxHtml = '';
+  var parHtml = '';
+  var rnkHtml = '';
+
+  for (var i = 0; i < n; i++) {
+    var isRoot = par[i] === i;
+    var isChanged = i === changed;
+    var parCls = 'uf-val' + (isRoot ? ' is-root' : '') + (isChanged ? ' changed' : '');
+    idxHtml += '<div class="uf-cell"><div class="uf-val" style="background:transparent;border:none;color:var(--text-ghost)">' + i + '</div></div>';
+    parHtml += '<div class="uf-cell"><div class="' + parCls + '">' + par[i] + '</div></div>';
+    rnkHtml += '<div class="uf-cell"><div class="uf-val">' + rnk[i] + '</div></div>';
+  }
+
+  el.innerHTML =
+    '<div class="uf-row"><div class="uf-label">index</div><div class="uf-cells">' + idxHtml + '</div></div>' +
+    '<div class="uf-row"><div class="uf-label">parent[]</div><div class="uf-cells">' + parHtml + '</div></div>' +
+    '<div class="uf-row"><div class="uf-label">rank[]</div><div class="uf-cells">' + rnkHtml + '</div></div>';
+}
+
+function applyStep(snap) {
+  renderGraph(snap);
+  renderUF(snap);
+  document.getElementById('comp-count').textContent = snap.res !== undefined ? snap.res : '—';
+  setCodeLines(snap.lines);
+}
+
+function setCodeLines(lines) {
+  CODE.forEach(function(e) {
+    var el = document.getElementById('cl-' + e[0]);
+    if (!el) return;
+    if (lines && lines.indexOf(e[0]) >= 0) el.classList.add('hl');
+    else el.classList.remove('hl');
+  });
+}
+
+function buildCodePanel() {
+  var body = document.getElementById('code-body');
+  body.innerHTML = CODE.map(function(e) {
+    return '<div class="code-line" id="cl-' + e[0] + '"><span class="ln">' + e[0] + '</span><span>' + e[1] + '</span></div>';
+  }).join('');
+}
+
+window.addEventListener('DOMContentLoaded', function() {
+  buildCodePanel();
+  nav = VizNav({
+    btnPrev: document.getElementById('btn-back'),
+    btnNext: document.getElementById('btn-next'),
+    btnPlay: document.getElementById('btn-play'),
+    speedSel: document.getElementById('speed-select'),
+    render: function(snap, cur, total) {
+      applyStep(snap);
+      document.getElementById('phase-label').textContent =
+        'Step ' + (cur + 1) + ' / ' + total + '  ·  ' + snap.phase;
+      document.getElementById('step-desc').textContent = snap.desc;
+    }
+  });
+  buildAndRun();
+});
+</script>
+
+<script>
+  if (window.self !== window.top) {
+    var bl = document.querySelector('.back-link');
+    if (bl) bl.style.display = 'none';
+  }
+</script>
+</body>
+</html>
