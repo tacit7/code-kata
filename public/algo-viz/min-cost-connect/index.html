@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Min Cost to Connect All Points</title>
+  <link rel="stylesheet" href="../shared/style.css" />
+  <script src="../shared/viz.js"></script>
+  <style>
+    body { display:flex; flex-direction:column; height:100vh; overflow:hidden; }
+
+    .main-row {
+      display: grid;
+      grid-template-columns: 1fr 360px;
+      gap: 16px;
+      flex: 1;
+      padding: 0 16px 10px;
+      min-height: 0;
+      overflow: hidden;
+    }
+    @media (max-width: 800px) { .main-row { grid-template-columns: 1fr; } }
+
+    .graph-panel {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 14px 16px;
+      display: flex; flex-direction: column; gap: 10px;
+      overflow: hidden; min-height: 0;
+    }
+    .panel-title {
+      font-size: 0.72rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim);
+      flex-shrink: 0;
+    }
+    .graph-svg-wrap {
+      flex: 1; min-height: 0;
+      background: var(--bg); border-radius: var(--radius-sm);
+      overflow: hidden;
+    }
+    #graph-svg { width: 100%; height: 100%; }
+
+    /* node states */
+    .nc { stroke-width: 2.5; }
+    .nc.unvisited { fill: #1a1b2e; stroke: #414868; }
+    .nc.queued    { fill: #3d3524; stroke: #e0af68; }
+    .nc.popped    { fill: #1a1f3a; stroke: #7dcfff; }
+    .nc.inMST     { fill: #1a2a1a; stroke: #9ece6a; }
+
+    .node-label {
+      fill: var(--text-bright); font-size: 12px; font-weight: 700;
+      font-family: monospace; text-anchor: middle; dominant-baseline: central;
+      pointer-events: none;
+    }
+    .node-coord {
+      fill: var(--text-dim); font-size: 9px;
+      font-family: monospace; text-anchor: middle;
+      pointer-events: none;
+    }
+
+    /* edge states */
+    .mst-edge     { stroke: #9ece6a; stroke-width: 2.5; fill: none; }
+    .pending-edge { stroke: #e0af68; stroke-width: 1.5; fill: none; stroke-dasharray: 5 4; }
+    .active-edge  { stroke: #7dcfff; stroke-width: 2.5; fill: none; }
+
+    .edge-weight {
+      fill: var(--text-dim); font-size: 10px; font-weight: 700;
+      font-family: monospace; text-anchor: middle; dominant-baseline: central;
+    }
+    .edge-weight.mst     { fill: #9ece6a; }
+    .edge-weight.active  { fill: #7dcfff; }
+
+    /* right column */
+    .right-col {
+      display: flex; flex-direction: column; gap: 10px;
+      overflow-y: auto; min-height: 0;
+    }
+    .panel-box {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 12px 14px;
+      display: flex; flex-direction: column; gap: 8px;
+      flex-shrink: 0;
+    }
+
+    .nav-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .speed-select {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); color: var(--text);
+      font-size: 0.85rem; padding: 8px 10px; outline: none; width: 80px;
+    }
+
+    .result-badge {
+      font-size: 0.88rem; font-weight: 700;
+      padding: 5px 14px; border-radius: 6px;
+      display: none; width: fit-content;
+    }
+    .result-badge.success { background: #1a2a1a; color: #9ece6a; border: 1px solid #9ece6a; display: block; }
+
+    /* key[] cells */
+    .key-cells { display: flex; gap: 6px; flex-wrap: wrap; }
+    .key-cell {
+      display: flex; flex-direction: column; align-items: center; gap: 2px;
+      border: 1px solid var(--border); border-radius: 6px;
+      padding: 4px 8px; min-width: 42px;
+      transition: border-color 0.2s, background 0.2s;
+    }
+    .key-cell.queued  { border-color: #e0af68; background: #3d3524; }
+    .key-cell.popped  { border-color: #7dcfff; background: #1a1f3a; }
+    .key-cell.inMST   { border-color: #9ece6a; background: #1a2a1a; }
+    .kc-node { font-size: 0.65rem; color: var(--text-dim); font-weight: 600; }
+    .kc-val  { font-size: 0.88rem; font-weight: 700; font-family: monospace; color: var(--text-bright); }
+
+    /* heap */
+    .heap-list { display: flex; gap: 5px; flex-wrap: wrap; min-height: 26px; align-items: center; }
+    .heap-chip {
+      padding: 3px 8px; border-radius: 4px;
+      font-size: 0.78rem; font-family: monospace; font-weight: 700;
+      background: #3d3524; border: 1px solid #e0af68; color: #e0af68;
+    }
+    .heap-chip.top { background: #1a1f3a; border-color: #7dcfff; color: #7dcfff; }
+
+    /* MST edges */
+    .mst-edges-list { display: flex; flex-direction: column; gap: 4px; }
+    .mst-edge-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 4px 10px; border-radius: 5px;
+      background: #1a2a1a; border: 1px solid #9ece6a;
+      font-size: 0.8rem; font-family: monospace; color: #9ece6a;
+    }
+    .mst-cost-total {
+      font-size: 0.88rem; font-weight: 700; color: var(--accent-pale);
+      margin-top: 2px;
+    }
+
+    .legend-row { display: flex; align-items: center; gap: 8px; font-size: 0.76rem; color: var(--text-muted); }
+    .legend-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; border: 2px solid; }
+
+    .code-panel {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); overflow: hidden; flex-shrink: 0;
+    }
+    .code-header {
+      padding: 7px 14px; font-size: 0.72rem; font-weight: 600;
+      color: var(--text-dim); border-bottom: 1px solid var(--border); background: var(--bg);
+    }
+    .code-body { padding: 8px 0; font-size: 0.76rem; line-height: 1.75; white-space: pre; }
+    .code-line { display: flex; align-items: center; padding: 0 14px; }
+    .code-line.hl { background: var(--border-soft); border-left: 2px solid var(--accent); }
+    .ln { min-width: 22px; color: var(--text-ghost); user-select: none; font-size: 0.68rem; }
+    .kw { color: var(--purple); }
+    .fn { color: var(--blue); }
+    .bi { color: var(--orange); }
+    .cm { color: var(--text-ghost); }
+    .nb { color: var(--green); }
+    .st { color: #9ece6a; }
+
+    .preset-row { display: flex; gap: 8px; flex-wrap: wrap; }
+    .btn-preset {
+      padding: 5px 11px; border-radius: var(--radius-sm);
+      background: var(--bg); border: 1px solid var(--border);
+      color: var(--text-dim); font-size: 0.78rem; cursor: pointer;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .btn-preset:hover, .btn-preset.active { border-color: var(--accent); color: var(--accent-pale); }
+  </style>
+</head>
+<body class="page">
+
+<div class="page-header">
+  <a class="back-link" href="../index.html">&larr; All Algorithms</a>
+  <div class="page-title">Min Cost to Connect All Points</div>
+  <div class="page-sub">LeetCode 1584 &middot; Prim&apos;s MST &middot; Min-heap &middot; Manhattan distance &middot; O(n&sup2; log n)</div>
+</div>
+
+<div class="controls">
+  <div class="field">
+    <label>Preset</label>
+    <div class="preset-row">
+      <button class="btn-preset active" id="preset-default" onclick="loadPreset('default')">Default (n=5)</button>
+      <button class="btn-preset" id="preset-line" onclick="loadPreset('line')">Line (n=4)</button>
+      <button class="btn-preset" id="preset-spread" onclick="loadPreset('spread')">Spread (n=6)</button>
+    </div>
+  </div>
+  <button class="btn-primary" onclick="buildAndRun()">Build &amp; Run</button>
+</div>
+
+<div class="main-row">
+
+  <div class="graph-panel">
+    <div class="panel-title" id="graph-title">Prim&apos;s MST — Manhattan Distance</div>
+    <div class="graph-svg-wrap">
+      <svg id="graph-svg" viewBox="0 0 560 380" preserveAspectRatio="xMidYMid meet">
+        <g id="edges-g"></g>
+        <g id="nodes-g"></g>
+      </svg>
+    </div>
+  </div>
+
+  <div class="right-col">
+
+    <div class="panel-box">
+      <div class="nav-row">
+        <button class="btn-step" id="btn-back" disabled>&larr;</button>
+        <button class="btn-step" id="btn-next" disabled>&rarr;</button>
+        <button class="btn-play" id="btn-play" disabled>&#9654; Play</button>
+        <select class="speed-select" id="speed-select">
+          <option value="900">Slow</option>
+          <option value="450" selected>Medium</option>
+          <option value="130">Fast</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="panel-box">
+      <div class="panel-title" id="phase-label">&mdash;</div>
+      <div style="font-size:0.82rem;color:var(--text-muted);margin-top:2px;min-height:34px" id="step-desc">Select a preset and click Build &amp; Run.</div>
+      <div class="result-badge" id="result-badge"></div>
+    </div>
+
+    <div class="panel-box">
+      <div class="panel-title">key[] — cheapest edge to reach each node</div>
+      <div class="key-cells" id="key-cells">
+        <span style="color:var(--text-ghost);font-size:0.78rem">—</span>
+      </div>
+    </div>
+
+    <div class="panel-box">
+      <div class="panel-title">Min-Heap (cost, node)</div>
+      <div class="heap-list" id="heap-list">
+        <span style="color:var(--text-ghost);font-size:0.78rem">empty</span>
+      </div>
+    </div>
+
+    <div class="panel-box">
+      <div class="panel-title">MST Edges Added</div>
+      <div class="mst-edges-list" id="mst-edges-list">
+        <span style="color:var(--text-ghost);font-size:0.78rem">none yet</span>
+      </div>
+      <div class="mst-cost-total" id="mst-cost-total" style="display:none"></div>
+    </div>
+
+    <div class="panel-box">
+      <div class="panel-title">Legend</div>
+      <div style="display:flex;flex-direction:column;gap:5px">
+        <div class="legend-row">
+          <div class="legend-dot" style="background:#1a1b2e;border-color:#414868"></div>
+          <span>Unvisited</span>
+        </div>
+        <div class="legend-row">
+          <div class="legend-dot" style="background:#3d3524;border-color:#e0af68"></div>
+          <span>In heap (candidate)</span>
+        </div>
+        <div class="legend-row">
+          <div class="legend-dot" style="background:#1a1f3a;border-color:#7dcfff"></div>
+          <span>Popped — evaluating now</span>
+        </div>
+        <div class="legend-row">
+          <div class="legend-dot" style="background:#1a2a1a;border-color:#9ece6a"></div>
+          <span>In MST — connected</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="code-panel">
+      <div class="code-header">Python &mdash; Prim&apos;s MST</div>
+      <div class="code-body" id="code-body"></div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+var CODE = [
+  [1,  '<span class="kw">def</span> <span class="fn">min_cost_connect_points</span>(points):'],
+  [2,  '    n = <span class="bi">len</span>(points)'],
+  [3,  '    key = [<span class="bi">float</span>(<span class="st">\'inf\'</span>)] * n'],
+  [4,  '    key[<span class="nb">0</span>] = <span class="nb">0</span>'],
+  [5,  '    heap = [(<span class="nb">0</span>, <span class="nb">0</span>)]  <span class="cm"># (cost, node)</span>'],
+  [6,  '    visited = <span class="bi">set</span>()'],
+  [7,  '    total = <span class="nb">0</span>'],
+  [8,  '    <span class="kw">while</span> heap:'],
+  [9,  '        cost, u = <span class="fn">heappop</span>(heap)'],
+  [10, '        <span class="kw">if</span> u <span class="kw">in</span> visited: <span class="kw">continue</span>'],
+  [11, '        visited.add(u)'],
+  [12, '        total += cost'],
+  [13, '        <span class="kw">for</span> v <span class="kw">in</span> <span class="bi">range</span>(n):'],
+  [14, '            <span class="kw">if</span> v <span class="kw">in</span> visited: <span class="kw">continue</span>'],
+  [15, '            d = <span class="bi">abs</span>(x[u]-x[v]) + <span class="bi">abs</span>(y[u]-y[v])'],
+  [16, '            <span class="kw">if</span> d < key[v]:'],
+  [17, '                key[v] = d'],
+  [18, '                <span class="fn">heappush</span>(heap, (d, v))'],
+  [19, '    <span class="kw">return</span> total'],
+];
+
+var PRESETS = {
+  'default': {
+    label: 'Default — 5 points → cost 20',
+    points: [[0,0],[2,2],[3,10],[5,2],[7,0]],
+  },
+  'line': {
+    label: 'Line — 4 collinear points → cost 6',
+    points: [[0,0],[1,0],[3,0],[6,0]],
+  },
+  'spread': {
+    label: 'Spread — 6 points scattered',
+    points: [[0,0],[4,0],[0,4],[4,4],[2,2],[6,2]],
+  },
+};
+
+var currentPreset = 'default';
+var simSteps = [];
+var nav;
+var gPoints = [];
+
+function loadPreset(name) {
+  currentPreset = name;
+  ['default','line','spread'].forEach(function(p) {
+    document.getElementById('preset-' + p).classList.toggle('active', p === name);
+  });
+}
+
+// ---- Coordinate mapping ----
+var PAD = 52, SVG_W = 560, SVG_H = 380;
+
+function ptToSVG(points, px, py) {
+  var xs = points.map(function(p) { return p[0]; });
+  var ys = points.map(function(p) { return p[1]; });
+  var minX = Math.min.apply(null, xs), maxX = Math.max.apply(null, xs);
+  var minY = Math.min.apply(null, ys), maxY = Math.max.apply(null, ys);
+  var rangeX = Math.max(maxX - minX, 1);
+  var rangeY = Math.max(maxY - minY, 1);
+  var usableW = SVG_W - PAD * 2;
+  var usableH = SVG_H - PAD * 2;
+  var scale = Math.min(usableW / rangeX, usableH / rangeY);
+  var offX = PAD + (usableW - rangeX * scale) / 2;
+  var offY = PAD + (usableH - rangeY * scale) / 2;
+  return {
+    x: offX + (px - minX) * scale,
+    y: (SVG_H - offY) - (py - minY) * scale,
+  };
+}
+
+function svgCoords(points) {
+  return points.map(function(p) { return ptToSVG(points, p[0], p[1]); });
+}
+
+// ---- Rendering ----
+var NODE_R = 20;
+
+function renderGraph(snap) {
+  var edgesG = document.getElementById('edges-g');
+  var nodesG = document.getElementById('nodes-g');
+  edgesG.innerHTML = '';
+  nodesG.innerHTML = '';
+
+  var coords = svgCoords(gPoints);
+  var n = gPoints.length;
+
+  var nodeStates = {};
+  var mstEdgeSet = {};
+  var activeEdge = null;
+
+  if (snap) {
+    for (var i = 0; i < n; i++) nodeStates[i] = snap.states[i] || 'unvisited';
+    mstEdgeSet = snap.mstEdges || {};
+    activeEdge = snap.activeEdge || null;
+  } else {
+    for (var i = 0; i < n; i++) nodeStates[i] = i === 0 ? 'queued' : 'unvisited';
+  }
+
+  // Draw MST edges first (solid green)
+  Object.keys(mstEdgeSet).forEach(function(key) {
+    var parts = key.split('-');
+    var u = parseInt(parts[0]), v = parseInt(parts[1]);
+    var cu = coords[u], cv = coords[v];
+    var line = makeSVGElem('line');
+    line.setAttribute('x1', cu.x); line.setAttribute('y1', cu.y);
+    line.setAttribute('x2', cv.x); line.setAttribute('y2', cv.y);
+    line.setAttribute('class', 'mst-edge');
+    edgesG.appendChild(line);
+
+    var mx = (cu.x + cv.x) / 2, my = (cu.y + cv.y) / 2;
+    var wt = makeSVGElem('text');
+    wt.setAttribute('x', mx); wt.setAttribute('y', my - 8);
+    wt.setAttribute('class', 'edge-weight mst');
+    wt.textContent = mstEdgeSet[key];
+    edgesG.appendChild(wt);
+  });
+
+  // Draw active edge (blue)
+  if (activeEdge) {
+    var cu = coords[activeEdge.u], cv = coords[activeEdge.v];
+    var line = makeSVGElem('line');
+    line.setAttribute('x1', cu.x); line.setAttribute('y1', cu.y);
+    line.setAttribute('x2', cv.x); line.setAttribute('y2', cv.y);
+    line.setAttribute('class', 'active-edge');
+    edgesG.appendChild(line);
+
+    var mx = (cu.x + cv.x) / 2, my = (cu.y + cv.y) / 2;
+    var wt = makeSVGElem('text');
+    wt.setAttribute('x', mx); wt.setAttribute('y', my - 8);
+    wt.setAttribute('class', 'edge-weight active');
+    wt.textContent = activeEdge.cost;
+    edgesG.appendChild(wt);
+  }
+
+  // Nodes
+  for (var i = 0; i < n; i++) {
+    var c = coords[i];
+    var st = nodeStates[i];
+    var g = makeSVGElem('g');
+
+    var circle = makeSVGElem('circle');
+    circle.setAttribute('cx', c.x); circle.setAttribute('cy', c.y);
+    circle.setAttribute('r', NODE_R);
+    circle.setAttribute('class', 'nc ' + st);
+    g.appendChild(circle);
+
+    var label = makeSVGElem('text');
+    label.setAttribute('x', c.x); label.setAttribute('y', c.y);
+    label.setAttribute('class', 'node-label');
+    label.textContent = i;
+    g.appendChild(label);
+
+    var coord = makeSVGElem('text');
+    coord.setAttribute('x', c.x); coord.setAttribute('y', c.y + NODE_R + 11);
+    coord.setAttribute('class', 'node-coord');
+    coord.textContent = '(' + gPoints[i][0] + ',' + gPoints[i][1] + ')';
+    g.appendChild(coord);
+
+    nodesG.appendChild(g);
+  }
+}
+
+function makeSVGElem(tag) {
+  return document.createElementNS('http://www.w3.org/2000/svg', tag);
+}
+
+// ---- Simulation ----
+function simulate(points) {
+  var steps = [];
+  var n = points.length;
+  var INF = Infinity;
+
+  var key = [];
+  for (var i = 0; i < n; i++) key.push(INF);
+  key[0] = 0;
+
+  var states = [];
+  for (var i = 0; i < n; i++) states.push(i === 0 ? 'queued' : 'unvisited');
+
+  var visited = {};
+  var heap = [{cost: 0, u: 0}];
+  var mstEdges = {};
+  var total = 0;
+  var mstEdgeList = [];
+
+  function manhattan(a, b) {
+    return Math.abs(points[a][0] - points[b][0]) + Math.abs(points[a][1] - points[b][1]);
+  }
+
+  function edgeKey(u, v) { return Math.min(u,v) + '-' + Math.max(u,v); }
+
+  function snap(phase, desc, lines, activeEdge) {
+    var sortedHeap = heap.slice().sort(function(a,b) { return a.cost - b.cost || a.u - b.u; });
+    steps.push({
+      phase: phase, desc: desc, lines: lines,
+      states: states.slice(),
+      key: key.slice(),
+      heap: sortedHeap,
+      mstEdges: Object.assign({}, mstEdges),
+      mstEdgeList: mstEdgeList.slice(),
+      total: total,
+      activeEdge: activeEdge || null,
+    });
+  }
+
+  snap('Init',
+    'key[0]=0, all others=∞. Push (0, node 0) to heap. Start Prim\'s from node 0.',
+    [3,4,5,6]);
+
+  while (heap.length > 0) {
+    heap.sort(function(a,b) { return a.cost - b.cost || a.u - b.u; });
+    var top = heap.shift();
+    var cost = top.cost, u = top.u;
+
+    if (visited[u]) {
+      snap('Stale',
+        'Pop (cost=' + cost + ', node ' + u + '). Node ' + u + ' already in MST — stale entry, skip.',
+        [9,10]);
+      continue;
+    }
+
+    states[u] = 'popped';
+    snap('Pop',
+      'Pop (cost=' + cost + ', node ' + u + '). Minimum in heap. Node ' + u + ' = ' + JSON.stringify(points[u]) + '.',
+      [9]);
+
+    visited[u] = true;
+    states[u] = 'inMST';
+    total += cost;
+
+    if (cost > 0) {
+      mstEdgeList.push({u: top.from, v: u, cost: cost});
+      mstEdges[edgeKey(top.from, u)] = cost;
+    }
+
+    snap('Add',
+      'Node ' + u + ' added to MST. total += ' + cost + ' = ' + total + '.',
+      [11,12]);
+
+    for (var v = 0; v < n; v++) {
+      if (visited[v]) continue;
+      var d = manhattan(u, v);
+
+      snap('Check',
+        'Check edge ' + u + '→' + v + ': manhattan=' + d + ' vs key[' + v + ']=' + (key[v] === INF ? '∞' : key[v]) + '.',
+        [13,14,15,16],
+        {u: u, v: v, cost: d});
+
+      if (d < key[v]) {
+        key[v] = d;
+        heap.push({cost: d, u: v, from: u});
+        states[v] = 'queued';
+        snap('Update',
+          'key[' + v + '] updated to ' + d + '. Push (' + d + ', node ' + v + ') onto heap.',
+          [16,17,18],
+          {u: u, v: v, cost: d});
+      } else {
+        snap('NoUpdate',
+          'key[' + v + ']=' + (key[v] === INF ? '∞' : key[v]) + ' ≤ ' + d + '. No improvement.',
+          [16]);
+      }
+    }
+  }
+
+  snap('Done',
+    'All ' + n + ' nodes in MST. Total cost = ' + total + '.',
+    [19]);
+
+  return steps;
+}
+
+// ---- Apply step ----
+function applyStep(snap) {
+  renderGraph(snap);
+  updateKeyCells(snap.key, snap.states);
+  updateHeap(snap.heap);
+  updateMSTEdges(snap.mstEdgeList, snap.total);
+  setCodeLines(snap.lines);
+
+  var badge = document.getElementById('result-badge');
+  badge.className = 'result-badge';
+  badge.textContent = '';
+  if (snap.phase === 'Done') {
+    badge.className = 'result-badge success';
+    badge.textContent = 'Total MST cost = ' + snap.total;
+  }
+}
+
+function updateKeyCells(keyArr, statesArr) {
+  var el = document.getElementById('key-cells');
+  if (!keyArr) { el.innerHTML = '<span style="color:var(--text-ghost);font-size:0.78rem">—</span>'; return; }
+  el.innerHTML = keyArr.map(function(v, i) {
+    var display = v === Infinity ? '∞' : v;
+    var st = statesArr ? (statesArr[i] || 'unvisited') : 'unvisited';
+    var cls = 'key-cell';
+    if (st === 'popped') cls += ' popped';
+    else if (st === 'inMST') cls += ' inMST';
+    else if (st === 'queued') cls += ' queued';
+    return '<div class="' + cls + '"><div class="kc-node">' + i + '</div><div class="kc-val">' + display + '</div></div>';
+  }).join('');
+}
+
+function updateHeap(heap) {
+  var el = document.getElementById('heap-list');
+  if (!heap || heap.length === 0) {
+    el.innerHTML = '<span style="color:var(--text-ghost);font-size:0.78rem">empty</span>';
+    return;
+  }
+  var sorted = heap.slice().sort(function(a,b) { return a.cost - b.cost || a.u - b.u; });
+  el.innerHTML = sorted.map(function(item, i) {
+    var cls = i === 0 ? 'heap-chip top' : 'heap-chip';
+    return '<div class="' + cls + '">(' + item.cost + ', ' + item.u + ')</div>';
+  }).join('');
+}
+
+function updateMSTEdges(edgeList, total) {
+  var el = document.getElementById('mst-edges-list');
+  var totalEl = document.getElementById('mst-cost-total');
+  if (!edgeList || edgeList.length === 0) {
+    el.innerHTML = '<span style="color:var(--text-ghost);font-size:0.78rem">none yet</span>';
+    totalEl.style.display = 'none';
+    return;
+  }
+  el.innerHTML = edgeList.map(function(e) {
+    return '<div class="mst-edge-row"><span>' + e.u + ' ↔ ' + e.v + '</span><span>cost ' + e.cost + '</span></div>';
+  }).join('');
+  totalEl.style.display = 'block';
+  totalEl.textContent = 'Running total: ' + total;
+}
+
+function setCodeLines(lines) {
+  CODE.forEach(function(e) {
+    var el = document.getElementById('cl-' + e[0]);
+    if (!el) return;
+    el.classList.toggle('hl', !!(lines && lines.indexOf(e[0]) >= 0));
+  });
+}
+
+function buildCodePanel() {
+  var body = document.getElementById('code-body');
+  body.innerHTML = CODE.map(function(e) {
+    return '<div class="code-line" id="cl-' + e[0] + '"><span class="ln">' + e[0] + '</span><span>' + e[1] + '</span></div>';
+  }).join('');
+}
+
+function buildAndRun() {
+  var preset = PRESETS[currentPreset];
+  gPoints = preset.points;
+  document.getElementById('graph-title').textContent = preset.label;
+  renderGraph(null);
+  simSteps = simulate(gPoints);
+  nav.load(simSteps);
+}
+
+window.addEventListener('DOMContentLoaded', function() {
+  buildCodePanel();
+  loadPreset('default');
+  nav = VizNav({
+    btnPrev: document.getElementById('btn-back'),
+    btnNext: document.getElementById('btn-next'),
+    btnPlay: document.getElementById('btn-play'),
+    speedSel: document.getElementById('speed-select'),
+    render: function(snap, cur, total) {
+      applyStep(snap);
+      var phaseEl = document.getElementById('phase-label');
+      var descEl  = document.getElementById('step-desc');
+      if (phaseEl) phaseEl.textContent = 'Step ' + (cur + 1) + ' / ' + total + '  ·  ' + snap.phase;
+      if (descEl)  descEl.textContent = snap.desc;
+    }
+  });
+});
+</script>
+
+<script>
+  if (window.self !== window.top) {
+    var bl = document.querySelector('.back-link');
+    if (bl) bl.style.display = 'none';
+  }
+</script>
+</body>
+</html>
