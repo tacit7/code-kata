@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Happy Number</title>
+  <link rel="stylesheet" href="../shared/style.css" />
+  <script src="../shared/gsap.min.js"></script>
+  <script src="../shared/viz.js"></script>
+  <style>
+    /* ── layout ── */
+    body { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+
+    .top-bar {
+      display: flex; align-items: center; gap: 12px;
+      padding: 12px 20px; border-bottom: 1px solid var(--border);
+      background: var(--bg); flex-shrink: 0;
+    }
+    .top-bar label { font-size: 0.85rem; color: var(--text-dim); }
+    .top-bar input[type=number] {
+      width: 80px; padding: 5px 8px; border-radius: 6px;
+      border: 1px solid var(--border); background: var(--surface-dark);
+      color: var(--text-bright); font-size: 0.9rem; font-family: monospace;
+    }
+    .top-bar button {
+      padding: 6px 14px; border-radius: 6px; border: 1px solid var(--accent);
+      background: transparent; color: var(--accent); font-size: 0.85rem;
+      cursor: pointer; font-weight: 600;
+    }
+    .top-bar button:hover { background: rgba(var(--accent-ch), 0.1); }
+    .result-badge {
+      margin-left: auto; padding: 4px 12px; border-radius: 20px;
+      font-size: 0.82rem; font-weight: 700; display: none;
+    }
+    .result-badge.happy  { background: rgba(34,197,94,0.15);  border: 1px solid rgba(34,197,94,0.4);  color: #22c55e; }
+    .result-badge.sad    { background: rgba(239,68,68,0.12);   border: 1px solid rgba(239,68,68,0.35);  color: #f87171; }
+
+    /* ── middle ── */
+    .middle {
+      flex: 1; display: grid; grid-template-columns: 1fr 1fr;
+      gap: 16px; padding: 16px; overflow: hidden;
+    }
+    @media (max-width: 680px) { .middle { grid-template-columns: 1fr; } }
+
+    .panel-box {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 16px;
+      display: flex; flex-direction: column; gap: 12px; overflow: hidden;
+    }
+    .panel-title {
+      font-size: 0.72rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--text-dim);
+    }
+
+    /* ── chain ── */
+    .chain-scroll { overflow-y: auto; overflow-x: hidden; flex: 1; }
+    .chain-list { display: flex; flex-direction: column; gap: 10px; }
+
+    .chain-node {
+      display: flex; flex-direction: column; gap: 4px;
+    }
+    .chain-num {
+      display: inline-flex; align-items: center; justify-content: center;
+      min-width: 64px; height: 40px; padding: 0 14px;
+      border: 2px solid var(--border); border-radius: 8px;
+      font-size: 1.1rem; font-weight: 700; font-family: monospace;
+      color: var(--text-ghost); background: #0f0f0f;
+      transition: border-color 0.2s, color 0.2s, background 0.2s;
+      position: relative;
+    }
+    .chain-num[data-state="past"] {
+      border-color: #2d3148; color: var(--text-dim); background: #111420;
+    }
+    .chain-num[data-state="active"] {
+      border-color: var(--accent); color: var(--accent-pale); background: var(--surface-dark);
+    }
+    .chain-num[data-state="cycle"] {
+      border-color: #f87171; color: #fca5a5; background: rgba(239,68,68,0.08);
+    }
+    .chain-num[data-state="happy"] {
+      border-color: #22c55e; color: #86efac; background: rgba(34,197,94,0.08);
+    }
+
+    .chain-breakdown {
+      font-size: 0.75rem; font-family: monospace; color: var(--text-dim);
+      padding-left: 4px; display: none;
+    }
+    .chain-breakdown.show { display: block; }
+
+    .chain-arrow {
+      font-size: 1rem; color: var(--text-ghost); padding-left: 20px;
+      line-height: 1;
+    }
+
+    /* pointer labels */
+    .ptr-labels { display: flex; gap: 6px; padding-left: 4px; }
+    .ptr-chip {
+      font-size: 0.65rem; font-weight: 700; text-transform: uppercase;
+      padding: 1px 6px; border-radius: 4px; letter-spacing: 0.06em;
+    }
+    .ptr-chip.slow { background: rgba(139,92,246,0.15); border: 1px solid rgba(139,92,246,0.4); color: #c084fc; }
+    .ptr-chip.fast { background: rgba(251,146,60,0.12); border: 1px solid rgba(251,146,60,0.35); color: var(--orange); }
+    .ptr-chip.both { background: rgba(234,179,8,0.12);  border: 1px solid rgba(234,179,8,0.4);  color: var(--yellow); }
+
+    /* ── seen set ── */
+    .seen-scroll { overflow-y: auto; flex: 1; }
+    .seen-grid { display: flex; flex-wrap: wrap; gap: 8px; align-content: flex-start; }
+    .seen-chip {
+      min-width: 48px; height: 36px; padding: 0 10px;
+      display: flex; align-items: center; justify-content: center;
+      border: 1px solid #2d3148; border-radius: 6px;
+      background: #111420; font-size: 0.88rem; font-weight: 700;
+      font-family: monospace; color: var(--text-dim);
+      transition: border-color 0.2s, color 0.2s;
+    }
+    .seen-chip.just-added {
+      border-color: var(--accent); color: var(--accent-pale); background: var(--surface-dark);
+    }
+    .seen-chip.cycle-hit {
+      border-color: #f87171; color: #fca5a5; background: rgba(239,68,68,0.08);
+    }
+
+    /* pointer info box */
+    .ptr-info {
+      background: var(--surface-dark); border: 1px solid var(--border-soft);
+      border-radius: var(--radius); padding: 10px 12px;
+      font-size: 0.82rem; font-family: monospace;
+      display: flex; flex-direction: column; gap: 4px;
+    }
+    .ptr-row { display: flex; gap: 8px; align-items: center; }
+    .ptr-label { width: 40px; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; }
+    .ptr-label.slow { color: #c084fc; }
+    .ptr-label.fast { color: var(--orange); }
+    .ptr-val { color: var(--text-bright); font-weight: 700; }
+    .ptr-calc { color: var(--text-dim); font-size: 0.75rem; }
+
+    /* ── bottom ── */
+    .bottom-bar {
+      border-top: 1px solid var(--border); padding: 10px 20px;
+      background: var(--bg); flex-shrink: 0;
+      display: flex; flex-direction: column; gap: 6px;
+    }
+    .step-info { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .phase-label { font-size: 0.78rem; color: var(--text-dim); min-width: 80px; }
+    .step-desc { font-size: 0.88rem; color: var(--text-bright); flex: 1; }
+    .nav-row { display: flex; align-items: center; gap: 8px; }
+    .nav-row button {
+      padding: 5px 14px; border-radius: 6px;
+      border: 1px solid var(--border); background: var(--surface);
+      color: var(--text-bright); cursor: pointer; font-size: 0.85rem;
+    }
+    .nav-row button:hover { border-color: var(--accent); color: var(--accent); }
+    #btn-play { border-color: var(--accent); color: var(--accent); font-weight: 600; }
+    #speed-select {
+      padding: 4px 8px; border-radius: 6px; border: 1px solid var(--border);
+      background: var(--surface-dark); color: var(--text-dim); font-size: 0.82rem;
+    }
+  </style>
+</head>
+<body>
+
+<!-- TOP -->
+<div class="top-bar">
+  <label>n =</label>
+  <input type="number" id="n-input" value="19" min="1" max="9999" />
+  <button id="btn-build">Build</button>
+  <span class="result-badge" id="result-badge"></span>
+</div>
+
+<!-- MIDDLE -->
+<div class="middle">
+
+  <!-- LEFT: chain -->
+  <div class="panel-box">
+    <div class="panel-title">Number Chain</div>
+    <div class="chain-scroll">
+      <div class="chain-list" id="chain-list"></div>
+    </div>
+  </div>
+
+  <!-- RIGHT: seen set + pointer info -->
+  <div class="panel-box">
+    <div class="panel-title">Seen Set</div>
+    <div class="seen-scroll">
+      <div class="seen-grid" id="seen-grid"></div>
+    </div>
+    <div class="ptr-info" id="ptr-info">
+      <div class="ptr-row">
+        <span class="ptr-label slow">slow</span>
+        <span class="ptr-val" id="slow-val">—</span>
+        <span class="ptr-calc" id="slow-calc"></span>
+      </div>
+      <div class="ptr-row">
+        <span class="ptr-label fast">fast</span>
+        <span class="ptr-val" id="fast-val">—</span>
+        <span class="ptr-calc" id="fast-calc"></span>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- BOTTOM -->
+<div class="bottom-bar">
+  <div class="step-info">
+    <span class="phase-label" id="phase-label">Step 0 / 0</span>
+    <span class="step-desc" id="step-desc">Press Build to start.</span>
+  </div>
+  <div class="nav-row">
+    <button id="btn-back">&#8592; Prev</button>
+    <button id="btn-play">&#9654; Play</button>
+    <button id="btn-next">Next &#8594;</button>
+    <select id="speed-select">
+      <option value="1200">0.5×</option>
+      <option value="700" selected>1×</option>
+      <option value="350">2×</option>
+      <option value="150">4×</option>
+    </select>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+var nav = null;
+var steps = [];
+
+// ── helpers ──────────────────────────────────────────────────────────────────
+
+function sumOfSquaredDigits(n) {
+  var s = 0;
+  while (n > 0) { var d = n % 10; s += d * d; n = Math.floor(n / 10); }
+  return s;
+}
+
+function digitBreakdown(n) {
+  var digits = String(n).split('').map(Number);
+  return digits.map(function(d) { return d + '²(' + (d*d) + ')'; }).join(' + ') + ' = ' + sumOfSquaredDigits(n);
+}
+
+function nextF(n) { return sumOfSquaredDigits(sumOfSquaredDigits(n)); }
+
+// ── simulate ─────────────────────────────────────────────────────────────────
+// Floyd's cycle detection: slow moves 1 step, fast moves 2 steps per iteration.
+// Chain list shows every unique number encountered (in slow's path).
+
+function simulate(startN) {
+  var out = [];
+  var seen = {};          // number → first index in chain
+  var chain = [];         // ordered list of numbers slow visited
+  var slow = startN;
+  var fast = sumOfSquaredDigits(startN);
+
+  // initial state
+  out.push({
+    phase: 'Init',
+    desc: 'Start with n = ' + startN + '. slow = ' + slow + ', fast = ' + fast + ' (one step ahead).',
+    chain: chain.slice(),
+    slowIdx: -1,
+    fastIdx: -1,
+    seenSet: Object.keys(seen).map(Number),
+    justAdded: null,
+    cycleHit: null,
+    slowCalc: '',
+    fastCalc: ''
+  });
+
+  // add start to chain & seen
+  chain.push(startN);
+  seen[startN] = 0;
+
+  var maxIter = 60;
+  for (var i = 0; i < maxIter; i++) {
+    var slowNext = sumOfSquaredDigits(slow);
+    var fastNext = nextF(fast);   // fast moves 2
+
+    var slowCalcStr = digitBreakdown(slow);
+    var fastCalcStr = 'f(' + fast + ')=' + sumOfSquaredDigits(fast) + ' → f(' + sumOfSquaredDigits(fast) + ')=' + fastNext;
+
+    // add slowNext to chain if not already there
+    var justAdded = null;
+    var cycleHit = null;
+    if (!(slowNext in seen)) {
+      seen[slowNext] = chain.length;
+      chain.push(slowNext);
+      justAdded = slowNext;
+    }
+
+    // find slow/fast positions in chain
+    var slowIdxNext = seen[slow] !== undefined ? seen[slow] : -1;
+    var fastIdxNext = seen[fast] !== undefined ? seen[fast] : -1;
+
+    // move pointers
+    slow = slowNext;
+    fast = fastNext;
+
+    var slowIdxCur = seen[slow] !== undefined ? seen[slow] : -1;
+    var fastIdxCur = seen[fast] !== undefined ? seen[fast] : -1;
+
+    // detect: happy or cycle
+    if (slow === 1) {
+      out.push({
+        phase: 'Happy!',
+        desc: 'slow reached 1 — ' + startN + ' is a Happy Number! 🎉',
+        chain: chain.slice(),
+        slowIdx: slowIdxCur,
+        fastIdx: fastIdxCur,
+        seenSet: Object.keys(seen).map(Number),
+        justAdded: justAdded,
+        cycleHit: null,
+        result: 'happy',
+        slowCalc: slowCalcStr,
+        fastCalc: fastCalcStr
+      });
+      break;
+    }
+
+    if (slow === fast) {
+      cycleHit = slow;
+      // fast may not be in chain yet — add it for display
+      if (!(fast in seen)) { seen[fast] = chain.length; chain.push(fast); }
+      out.push({
+        phase: 'Cycle!',
+        desc: 'slow = fast = ' + slow + ' — cycle detected. ' + startN + ' is NOT a Happy Number.',
+        chain: chain.slice(),
+        slowIdx: seen[slow],
+        fastIdx: seen[fast],
+        seenSet: Object.keys(seen).map(Number),
+        justAdded: justAdded,
+        cycleHit: cycleHit,
+        result: 'sad',
+        slowCalc: slowCalcStr,
+        fastCalc: fastCalcStr
+      });
+      break;
+    }
+
+    out.push({
+      phase: 'Iter ' + (i + 1),
+      desc: 'slow: ' + (slow === slowNext ? slow : slowNext) + ' → ' + slow
+          + '   fast: ' + fast + '   (step ' + (i+1) + ')',
+      chain: chain.slice(),
+      slowIdx: slowIdxCur,
+      fastIdx: fastIdxCur,
+      seenSet: Object.keys(seen).map(Number),
+      justAdded: justAdded,
+      cycleHit: null,
+      slowCalc: slowCalcStr,
+      fastCalc: fastCalcStr
+    });
+  }
+
+  return out;
+}
+
+// ── render ────────────────────────────────────────────────────────────────────
+
+function buildChainDOM(chain) {
+  var list = document.getElementById('chain-list');
+  list.innerHTML = '';
+  for (var i = 0; i < chain.length; i++) {
+    var node = document.createElement('div');
+    node.className = 'chain-node';
+    node.id = 'cn-' + i;
+
+    var numEl = document.createElement('div');
+    numEl.className = 'chain-num';
+    numEl.id = 'cnum-' + i;
+    numEl.dataset.state = 'idle';
+    numEl.textContent = chain[i];
+
+    var bd = document.createElement('div');
+    bd.className = 'chain-breakdown';
+    bd.id = 'cbd-' + i;
+    bd.textContent = digitBreakdown(chain[i]);
+
+    node.appendChild(numEl);
+    node.appendChild(bd);
+
+    if (i < chain.length - 1) {
+      var arr = document.createElement('div');
+      arr.className = 'chain-arrow';
+      arr.textContent = '↓';
+      node.appendChild(arr);
+    }
+
+    list.appendChild(node);
+  }
+}
+
+function buildSeenDOM(seenNums) {
+  var grid = document.getElementById('seen-grid');
+  grid.innerHTML = '';
+  for (var i = 0; i < seenNums.length; i++) {
+    var chip = document.createElement('div');
+    chip.className = 'seen-chip';
+    chip.id = 'sc-' + seenNums[i];
+    chip.textContent = seenNums[i];
+    grid.appendChild(chip);
+  }
+}
+
+function applyStep(snap) {
+  // rebuild chain if needed (new numbers added)
+  var existingCount = document.getElementById('chain-list').children.length;
+  if (snap.chain.length !== existingCount) {
+    buildChainDOM(snap.chain);
+  }
+
+  // apply states to chain nodes
+  for (var i = 0; i < snap.chain.length; i++) {
+    var numEl = document.getElementById('cnum-' + i);
+    var bdEl  = document.getElementById('cbd-' + i);
+    if (!numEl) continue;
+
+    // clear ptr chips
+    var existing = numEl.querySelector('.ptr-labels');
+    if (existing) numEl.removeChild(existing);
+
+    var state = 'idle';
+    if (snap.result === 'happy' && snap.chain[i] === 1) state = 'happy';
+    else if (snap.cycleHit !== null && snap.chain[i] === snap.cycleHit) state = 'cycle';
+    else if (i < snap.slowIdx) state = 'past';
+    else if (i === snap.slowIdx) state = 'active';
+
+    numEl.dataset.state = state;
+
+    // show breakdown on the active or slow node
+    if (bdEl) {
+      if (i === snap.slowIdx && snap.slowCalc) {
+        bdEl.className = 'chain-breakdown show';
+        bdEl.textContent = snap.slowCalc;
+      } else {
+        bdEl.className = 'chain-breakdown';
+      }
+    }
+
+    // pointer chips
+    var hasSlow = (i === snap.slowIdx);
+    var hasFast = (snap.fastIdx !== undefined && i === snap.fastIdx);
+    if (hasSlow || hasFast) {
+      var labels = document.createElement('div');
+      labels.className = 'ptr-labels';
+      if (hasSlow && hasFast) {
+        var chip = document.createElement('span');
+        chip.className = 'ptr-chip both';
+        chip.textContent = 'slow+fast';
+        labels.appendChild(chip);
+      } else {
+        if (hasSlow) {
+          var s = document.createElement('span');
+          s.className = 'ptr-chip slow';
+          s.textContent = 'slow';
+          labels.appendChild(s);
+        }
+        if (hasFast) {
+          var f = document.createElement('span');
+          f.className = 'ptr-chip fast';
+          f.textContent = 'fast';
+          labels.appendChild(f);
+        }
+      }
+      numEl.appendChild(labels);
+    }
+  }
+
+  // seen set
+  buildSeenDOM(snap.seenSet);
+  if (snap.justAdded !== null) {
+    var chip = document.getElementById('sc-' + snap.justAdded);
+    if (chip) chip.className = 'seen-chip just-added';
+  }
+  if (snap.cycleHit !== null) {
+    var cycleChip = document.getElementById('sc-' + snap.cycleHit);
+    if (cycleChip) cycleChip.className = 'seen-chip cycle-hit';
+  }
+
+  // pointer info
+  document.getElementById('slow-val').textContent = snap.slowIdx >= 0 ? snap.chain[snap.slowIdx] : '—';
+  document.getElementById('fast-val').textContent = snap.fastIdx >= 0 ? snap.chain[snap.fastIdx] : '—';
+  document.getElementById('slow-calc').textContent = snap.slowCalc || '';
+  document.getElementById('fast-calc').textContent = snap.fastCalc || '';
+
+  // result badge
+  var badge = document.getElementById('result-badge');
+  if (snap.result === 'happy') {
+    badge.className = 'result-badge happy';
+    badge.textContent = '✓ Happy Number';
+    badge.style.display = '';
+  } else if (snap.result === 'sad') {
+    badge.className = 'result-badge sad';
+    badge.textContent = '✗ Not Happy';
+    badge.style.display = '';
+  } else {
+    badge.style.display = 'none';
+  }
+
+  // scroll active node into view
+  var activeEl = document.getElementById('cnum-' + snap.slowIdx);
+  if (activeEl) activeEl.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+}
+
+// ── init ──────────────────────────────────────────────────────────────────────
+
+function buildAndRun() {
+  var n = parseInt(document.getElementById('n-input').value, 10);
+  if (!n || n < 1) return;
+  document.getElementById('result-badge').style.display = 'none';
+
+  steps = simulate(n);
+  // build initial DOM with first step's chain
+  buildChainDOM(steps[0].chain);
+  buildSeenDOM([]);
+
+  nav = VizNav({
+    btnPrev:  document.getElementById('btn-back'),
+    btnNext:  document.getElementById('btn-next'),
+    btnPlay:  document.getElementById('btn-play'),
+    speedSel: document.getElementById('speed-select'),
+    render: function(snap, cur, total) {
+      applyStep(snap);
+      document.getElementById('phase-label').textContent = 'Step ' + (cur + 1) + ' / ' + total + '  ·  ' + snap.phase;
+      var descEl = document.getElementById('step-desc');
+      gsap.fromTo(descEl, { opacity: 0 }, { opacity: 1, duration: 0.15 });
+      descEl.textContent = snap.desc;
+    }
+  });
+
+  nav.load(steps);
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  document.getElementById('btn-build').addEventListener('click', buildAndRun);
+  document.getElementById('n-input').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') buildAndRun();
+  });
+  buildAndRun();
+});
+</script>
+</body>
+</html>
