@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Palindrome Partitioning</title>
+  <link rel="stylesheet" href="../shared/style.css" />
+  <script src="../shared/gsap.min.js"></script>
+  <script src="../shared/viz.js"></script>
+  <style>
+    .viz-area { width: 100%; max-width: 90%; }
+    .main-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
+    .left-col, .right-col { display: flex; flex-direction: column; gap: 12px; }
+    @media (max-width: 700px) { .main-row { grid-template-columns: 1fr; } }
+
+    .page-sub { font-size: 0.8rem; color: var(--text-dim); margin-left: auto; white-space: nowrap; }
+
+    .sect {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 14px 16px;
+      display: flex; flex-direction: column; gap: 8px;
+    }
+
+    /* String display */
+    .string-row {
+      display: flex; gap: 4px; flex-wrap: wrap; margin-top: 4px; align-items: center;
+    }
+    .char-cell {
+      width: 36px; height: 36px;
+      display: flex; align-items: center; justify-content: center;
+      border: 2px solid var(--border); border-radius: 6px;
+      background: var(--bg);
+      font-size: 1.1rem; font-weight: 700; font-family: monospace;
+      color: var(--text-dim);
+      transition: border-color 0.15s, color 0.15s, background 0.15s;
+      position: relative;
+    }
+    .char-cell .char-idx {
+      position: absolute; top: -9px; left: 50%;
+      transform: translateX(-50%);
+      font-size: 0.55rem; color: var(--text-ghost); font-family: monospace;
+    }
+    .char-cell.window-start { border-color: var(--accent); }
+    .char-cell.window-inner { border-color: var(--accent); background: rgba(122,162,247,0.08); color: var(--accent-pale); }
+    .char-cell.window-end   { border-color: var(--yellow); background: rgba(224,175,104,0.1); color: var(--yellow-light); }
+    .char-cell.in-path      { border-color: var(--green); background: var(--green-bg); color: var(--green); }
+    .char-cell.done-path    { border-color: var(--green); background: var(--green-bg); color: var(--green); opacity: 0.7; }
+
+    /* Palindrome check */
+    .palin-box {
+      display: flex; align-items: center; gap: 12px; padding: 10px 14px;
+      background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm);
+      transition: border-color 0.2s, background 0.2s;
+    }
+    .palin-box.yes { border-color: var(--green); background: var(--green-bg); }
+    .palin-box.no  { border-color: var(--red);   background: #200a0a; }
+    .palin-sub-str {
+      font-family: monospace; font-size: 1rem; font-weight: 700;
+      color: var(--text-bright); letter-spacing: 0.08em;
+    }
+    .palin-result {
+      font-size: 0.82rem; font-weight: 700;
+    }
+    .palin-result.yes { color: var(--green); }
+    .palin-result.no  { color: var(--red); }
+    .palin-idle { font-size: 0.82rem; color: var(--text-ghost); font-style: italic; }
+
+    /* Path / partitions */
+    .path-row {
+      display: flex; align-items: center; gap: 6px;
+      flex-wrap: wrap; min-height: 42px; margin-top: 4px;
+    }
+    .path-part {
+      padding: 6px 10px;
+      border: 2px solid var(--accent); border-radius: 6px;
+      background: var(--surface-dark);
+      font-size: 0.9rem; font-weight: 700; font-family: monospace;
+      color: var(--accent-pale);
+    }
+    .path-part.found { border-color: var(--green); color: var(--green-light); background: var(--green-bg); }
+    .path-sep { font-size: 0.85rem; color: var(--text-ghost); }
+    .path-empty { color: var(--text-ghost); font-size: 0.82rem; font-style: italic; }
+
+    /* Call stack */
+    .stack-body {
+      font-family: monospace; font-size: 0.74rem;
+      max-height: 180px; overflow-y: auto; margin-top: 4px;
+    }
+    .stack-frame { padding: 1px 0; color: var(--text-muted); white-space: nowrap; }
+    .stack-frame.top { color: var(--accent-pale); font-weight: 700; }
+    .stack-frame.win { color: var(--green); font-weight: 700; }
+
+    /* Code */
+    .code-panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
+    .code-header { padding: 8px 14px; font-size: 0.72rem; font-weight: 600; color: var(--text-dim); border-bottom: 1px solid var(--border); background: var(--bg); }
+    .code-body { padding: 10px 0; font-size: 0.78rem; line-height: 1.75; white-space: pre; }
+    .code-line { display: flex; align-items: center; padding: 0 14px; }
+    .code-line.hl { background: var(--border-soft); border-left: 2px solid var(--accent); }
+    .ln { min-width: 24px; color: var(--text-ghost); user-select: none; font-size: 0.7rem; }
+
+    /* Nav */
+    .btn-play {
+      background: #15803d; border: none; border-radius: var(--radius-sm);
+      color: #fff; cursor: pointer; font-size: 0.88rem; font-weight: 600;
+      padding: 9px 16px; transition: background 0.2s;
+    }
+    .btn-play:hover { background: #166534; }
+    .btn-play.playing { background: #c2410c; }
+    .btn-play.playing:hover { background: #9a3412; }
+    .btn-play:disabled { opacity: 0.4; cursor: not-allowed; }
+    .speed-select {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); color: var(--text);
+      font-size: 0.85rem; padding: 8px 10px; outline: none; width: 80px;
+    }
+    .nav-row { display: flex; gap: 8px; align-items: center; }
+
+    /* Variables */
+    .var-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+    .var-box {
+      padding: 10px 8px; background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); display: flex; flex-direction: column;
+      align-items: center; gap: 3px;
+    }
+    .var-box.ab { border-color: var(--accent); }
+    .var-box.ob { border-color: #b45309; }
+    .var-box.gb { border-color: var(--green-border); }
+    .var-label { font-size: 0.62rem; font-family: monospace; color: var(--text-faint); text-align: center; }
+    .var-val   { font-size: 1.1rem; font-weight: 700; color: var(--text-bright); font-family: monospace; }
+
+    /* Results */
+    .results-list { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; min-height: 38px; }
+    .result-partition {
+      display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+      padding: 6px 10px;
+      background: var(--green-bg); border: 1px solid var(--green-border);
+      border-radius: 6px; font-family: monospace; font-size: 0.82rem;
+    }
+    .result-part-seg { color: var(--green); font-weight: 700; }
+    .result-sep { color: var(--text-ghost); }
+    .result-empty { color: var(--text-ghost); font-size: 0.82rem; font-style: italic; }
+
+    .kw { color: var(--purple); }
+    .fn { color: var(--blue); }
+    .bi { color: var(--orange); }
+    .nb { color: var(--green); }
+    .cm { color: var(--text-ghost); }
+    .st { color: var(--yellow-light); }
+  </style>
+</head>
+<body class="page">
+
+<div class="page-header">
+  <a class="back-link" href="../index.html">&larr; All Algorithms</a>
+  <div class="page-title">Palindrome Partitioning</div>
+  <div class="page-sub">LeetCode 131 &middot; Backtracking &middot; try every prefix, recurse on remainder</div>
+</div>
+
+<div class="controls">
+  <div class="field">
+    <label>String</label>
+    <input id="inp-str" type="text" value="aab" maxlength="8" style="width:120px;font-family:monospace;font-size:1rem" />
+  </div>
+  <div class="field">
+    <label>Preset</label>
+    <select id="preset-sel" onchange="loadPreset(this.value)" style="width:160px">
+      <option value="0">aab</option>
+      <option value="1">aba</option>
+      <option value="2">abba</option>
+      <option value="3">aabb</option>
+    </select>
+  </div>
+  <button class="btn-primary" onclick="buildAndRun()">Build &amp; Run</button>
+</div>
+
+<div class="viz-area">
+  <div class="main-row">
+
+    <!-- ── Left column ── -->
+    <div class="left-col">
+
+      <!-- String with window highlight -->
+      <div class="sect">
+        <div class="panel-title">String <span class="panel-sub" id="str-sub"></span></div>
+        <div class="string-row" id="string-row">
+          <span style="color:var(--text-ghost);font-size:0.82rem">Click Build &amp; Run.</span>
+        </div>
+      </div>
+
+      <!-- Palindrome check -->
+      <div class="sect">
+        <div class="panel-title">Palindrome Check</div>
+        <div class="palin-box" id="palin-box">
+          <span class="palin-idle">No substring selected yet.</span>
+        </div>
+      </div>
+
+      <!-- Current path -->
+      <div class="sect">
+        <div class="panel-title">Current Path</div>
+        <div class="path-row" id="path-row">
+          <span class="path-empty">empty</span>
+        </div>
+      </div>
+
+      <!-- Call stack -->
+      <div class="sect" style="gap:4px">
+        <div class="panel-title">Call Stack <span class="panel-sub">(deepest = active frame)</span></div>
+        <div class="stack-body" id="stack-body">
+          <div style="color:var(--text-ghost);font-size:0.78rem">No active recursion.</div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ── Right column ── -->
+    <div class="right-col">
+
+      <!-- Nav + description -->
+      <div style="display:flex;gap:12px">
+        <div class="panel-box" style="flex:0 0 auto;display:flex;flex-direction:column;gap:8px">
+          <div class="nav-row">
+            <button class="btn-step" id="btn-back" disabled>&larr;</button>
+            <button class="btn-step" id="btn-next" disabled>&rarr;</button>
+            <button class="btn-play" id="btn-play" disabled>&#9654; Play</button>
+            <select class="speed-select" id="speed-select">
+              <option value="900">Slow</option>
+              <option value="450" selected>Medium</option>
+              <option value="150">Fast</option>
+            </select>
+          </div>
+        </div>
+        <div class="panel-box" style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px">
+          <div class="panel-title" id="phase-label">&mdash;</div>
+          <div style="font-size:0.82rem;color:var(--text-muted)" id="step-desc">
+            Enter a string and click Build &amp; Run.
+          </div>
+        </div>
+      </div>
+
+      <!-- Variables -->
+      <div class="panel-box" style="display:flex;flex-direction:column;gap:8px">
+        <div class="panel-title">Variables</div>
+        <div class="var-grid">
+          <div class="var-box ab">
+            <div class="var-label">start (i)</div>
+            <div class="var-val" id="vv-i">&mdash;</div>
+          </div>
+          <div class="var-box ob">
+            <div class="var-label">end (j)</div>
+            <div class="var-val" id="vv-j">&mdash;</div>
+          </div>
+          <div class="var-box gb">
+            <div class="var-label">partitions</div>
+            <div class="var-val" id="vv-parts">&mdash;</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Results -->
+      <div class="sect">
+        <div class="panel-title">Results <span class="panel-sub" id="result-count"></span></div>
+        <div class="results-list" id="results-list">
+          <span class="result-empty">No partitions found yet.</span>
+        </div>
+      </div>
+
+      <!-- Code -->
+      <div class="code-panel">
+        <div class="code-header">Python</div>
+        <div class="code-body" id="code-body"></div>
+      </div>
+
+      <!-- Legend -->
+      <div class="panel-box" style="display:flex;flex-direction:column;gap:8px">
+        <div class="panel-title">Legend</div>
+        <div style="display:flex;flex-direction:column;gap:7px;font-size:0.78rem;color:var(--text-muted)">
+          <div style="display:flex;align-items:center;gap:8px">
+            <div style="width:16px;height:16px;border-radius:3px;border:2px solid var(--accent);background:rgba(122,162,247,0.08)"></div>
+            <span>Characters in current window s[i..j]</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <div style="width:16px;height:16px;border-radius:3px;border:2px solid var(--yellow);background:rgba(224,175,104,0.1)"></div>
+            <span>End character j being tested</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <div style="width:16px;height:16px;border-radius:3px;border:2px solid var(--green);background:var(--green-bg)"></div>
+            <span>Characters already in current path</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <div style="width:16px;height:16px;border-radius:3px;background:var(--green-bg);border:1px solid var(--green-border)"></div>
+            <span>Complete partition found</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+var simSteps = [], nav;
+var currentStr = '';
+
+var CODE = [
+  [1,  '<span class="kw">def</span> <span class="fn">partition</span>(s):'],
+  [2,  '    res = []'],
+  [3,  '    <span class="kw">def</span> <span class="fn">backtrack</span>(i, path):'],
+  [4,  '        <span class="kw">if</span> i == <span class="bi">len</span>(s):            <span class="cm"># covered whole string</span>'],
+  [5,  '            res.<span class="bi">append</span>(path[:])'],
+  [6,  '            <span class="kw">return</span>'],
+  [7,  '        <span class="kw">for</span> j <span class="kw">in</span> <span class="bi">range</span>(i, <span class="bi">len</span>(s)):'],
+  [8,  '            sub = s[i:j+<span class="nb">1</span>]       <span class="cm"># candidate prefix</span>'],
+  [9,  '            <span class="kw">if</span> sub != sub[::<span class="nb">-1</span>]:  <span class="cm"># not palindrome</span>'],
+  [10, '                <span class="kw">continue</span>'],
+  [11, '            path.<span class="bi">append</span>(sub)     <span class="cm"># choose</span>'],
+  [12, '            <span class="fn">backtrack</span>(j+<span class="nb">1</span>, path) <span class="cm"># explore</span>'],
+  [13, '            path.<span class="bi">pop</span>()           <span class="cm"># unchoose</span>'],
+  [14, '    <span class="fn">backtrack</span>(<span class="nb">0</span>, [])'],
+  [15, '    <span class="kw">return</span> res'],
+];
+
+var PHASE_LINES = {
+  'enter':    [3, 4],
+  'found':    [4, 5, 6],
+  'check':    [7, 8, 9],
+  'skip':     [9, 10],
+  'add':      [11, 12],
+  'remove':   [13],
+  'done':     [14, 15],
+};
+
+var PRESETS = ['aab', 'aba', 'abba', 'aabb'];
+
+function loadPreset(idx) {
+  document.getElementById('inp-str').value = PRESETS[parseInt(idx, 10)];
+  buildAndRun();
+}
+
+function isPalin(s) { return s === s.split('').reverse().join(''); }
+
+function simulate(s) {
+  var steps = [];
+  var results = [];
+  var callStack = [];
+
+  function snap(phase, desc, i, j, path) {
+    steps.push({
+      phase:   phase,
+      desc:    desc,
+      i:       i,
+      j:       j,
+      path:    path.slice(),
+      results: results.slice(),
+      stack:   callStack.map(function(f) { return { i: f.i, path: f.path.slice() }; }),
+      lines:   PHASE_LINES[phase] || [],
+    });
+  }
+
+  function backtrack(i, path) {
+    callStack.push({ i: i, path: path.slice() });
+
+    snap('enter', 'backtrack(i=' + i + '). ' +
+      (i < s.length ? 'Try prefixes starting at index ' + i + '.' : '') +
+      (path.length ? ' Path so far: [' + path.map(function(p) { return '"' + p + '"'; }).join(', ') + '].' : ''),
+      i, -1, path);
+
+    if (i === s.length) {
+      results.push(path.slice());
+      snap('found',
+        'i (' + i + ') == len(s) (' + s.length + '). ' +
+        'Complete partition: [' + path.map(function(p) { return '"' + p + '"'; }).join(', ') + ']. Record it.',
+        i, -1, path);
+      callStack.pop();
+      return;
+    }
+
+    for (var j = i; j < s.length; j++) {
+      var sub = s.slice(i, j + 1);
+      var pal = isPalin(sub);
+
+      snap('check',
+        'Check s[' + i + '..' + j + '] = "' + sub + '". ' +
+        (pal
+          ? '"' + sub + '" is a palindrome (' + (sub.length === 1 ? 'single char' : sub + ' == ' + sub.split('').reverse().join('')) + ').'
+          : '"' + sub + '" is NOT a palindrome (' + sub + ' ≠ ' + sub.split('').reverse().join('') + '). Skip.'),
+        i, j, path);
+
+      if (!pal) {
+        snap('skip',
+          '"' + sub + '" is not a palindrome. Continue to next j.',
+          i, j, path);
+        continue;
+      }
+
+      path.push(sub);
+      snap('add',
+        '"' + sub + '" is a palindrome. Append to path → [' + path.map(function(p) { return '"' + p + '"'; }).join(', ') + ']. Recurse from j+1=' + (j + 1) + '.',
+        i, j, path);
+
+      backtrack(j + 1, path);
+
+      path.pop();
+      snap('remove',
+        'Back from recursion. Pop "' + sub + '" → path=[' + path.map(function(p) { return '"' + p + '"'; }).join(', ') + ']. Try next j.',
+        i, j, path);
+    }
+
+    callStack.pop();
+  }
+
+  backtrack(0, []);
+
+  snap('done',
+    'All branches explored. ' + results.length + ' complete partition' +
+    (results.length === 1 ? '' : 's') + ' found.',
+    -1, -1, []);
+
+  return steps;
+}
+
+window.addEventListener('DOMContentLoaded', function() {
+  buildCodePanel();
+  nav = VizNav({
+    btnPrev:  document.getElementById('btn-back'),
+    btnNext:  document.getElementById('btn-next'),
+    btnPlay:  document.getElementById('btn-play'),
+    speedSel: document.getElementById('speed-select'),
+    render: function(s, cur, total) { renderStep(s, cur > 0, cur, total); },
+  });
+  buildAndRun();
+});
+
+function buildCodePanel() {
+  var body = document.getElementById('code-body');
+  body.innerHTML = CODE.map(function(e) {
+    return '<div class="code-line" id="cl-' + e[0] + '"><span class="ln">' + e[0] + '</span><span>' + e[1] + '</span></div>';
+  }).join('');
+}
+
+function buildAndRun() {
+  var raw = document.getElementById('inp-str').value.trim().toLowerCase();
+  if (!raw || raw.length > 8) return;
+  currentStr = raw;
+
+  document.getElementById('str-sub').textContent = '— length ' + raw.length;
+
+  var row = document.getElementById('string-row');
+  row.innerHTML = raw.split('').map(function(c, idx) {
+    return '<div class="char-cell" id="ch-' + idx + '">' +
+           '<span class="char-idx">' + idx + '</span>' + c + '</div>';
+  }).join('');
+
+  simSteps = simulate(raw);
+  nav.load(simSteps);
+}
+
+function renderStep(s, animate, cur, total) {
+  var phaseEl = document.getElementById('phase-label');
+  if (phaseEl) phaseEl.textContent = 'Step ' + (cur + 1) + ' / ' + total + '  \xb7  ' + s.phase;
+
+  var descEl = document.getElementById('step-desc');
+  if (descEl) {
+    if (animate) gsap.fromTo(descEl, { opacity: 0 }, { opacity: 1, duration: 0.15 });
+    descEl.textContent = s.desc;
+  }
+
+  renderString(s, animate);
+  renderPalinBox(s, animate);
+  renderPath(s, animate);
+  renderStack(s, animate);
+  renderVars(s, animate);
+  renderResults(s, animate);
+  setCodeLines(s.lines);
+}
+
+function renderString(s, animate) {
+  // Determine which indices are "in path" (already consumed) and which are in window
+  var pathLen = s.path.reduce(function(acc, p) { return acc + p.length; }, 0);
+  // covered up to pathLen - 1
+  for (var idx = 0; idx < currentStr.length; idx++) {
+    var el = document.getElementById('ch-' + idx);
+    if (!el) continue;
+    el.className = 'char-cell';
+
+    if (idx < pathLen) {
+      // Already committed into path
+      el.classList.add('in-path');
+    } else if (s.i >= 0 && s.j >= 0) {
+      if (idx >= s.i && idx < s.j) {
+        el.classList.add('window-inner');
+      } else if (idx === s.j) {
+        el.classList.add('window-end');
+      }
+    }
+  }
+}
+
+function renderPalinBox(s, animate) {
+  var box = document.getElementById('palin-box');
+  if (!box) return;
+
+  if (s.phase === 'check' || s.phase === 'skip' || s.phase === 'add') {
+    var sub = currentStr.slice(s.i, s.j + 1);
+    var pal = isPalin(sub);
+    box.className = 'palin-box ' + (pal ? 'yes' : 'no');
+    box.innerHTML =
+      '<span class="palin-sub-str">&ldquo;' + sub + '&rdquo;</span>' +
+      '<span class="palin-result ' + (pal ? 'yes' : 'no') + '">' +
+        (pal ? '&#10003; palindrome' : '&#10007; not palindrome') +
+      '</span>';
+    if (animate) {
+      gsap.fromTo(box, { scale: 0.97 }, { scale: 1, duration: 0.18, ease: 'back.out(1.5)' });
+    }
+  } else if (s.phase === 'found') {
+    var joined = s.path.map(function(p) { return '"' + p + '"'; }).join(' | ');
+    box.className = 'palin-box yes';
+    box.innerHTML = '<span class="palin-sub-str">' + joined + '</span>' +
+                    '<span class="palin-result yes">&#10003; all palindromes</span>';
+  } else {
+    box.className = 'palin-box';
+    box.innerHTML = '<span class="palin-idle">No substring being checked.</span>';
+  }
+}
+
+function renderPath(s, animate) {
+  var row = document.getElementById('path-row');
+  if (!row) return;
+
+  if (s.path.length === 0) {
+    row.innerHTML = '<span class="path-empty">empty</span>';
+    return;
+  }
+
+  var isFound = s.phase === 'found';
+  var cls = 'path-part' + (isFound ? ' found' : '');
+  var html = s.path.map(function(p, idx) {
+    return (idx > 0 ? '<span class="path-sep">|</span>' : '') +
+           '<div class="' + cls + '">' + p + '</div>';
+  }).join('');
+  row.innerHTML = html;
+
+  if (animate && s.phase === 'add') {
+    var parts = row.querySelectorAll('.path-part');
+    var last = parts[parts.length - 1];
+    if (last) {
+      gsap.fromTo(last, { scale: 0, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.22, ease: 'back.out(2)' });
+    }
+  }
+  if (animate && isFound) {
+    gsap.fromTo(row, { backgroundColor: 'rgba(158,206,106,0.12)' }, { backgroundColor: 'transparent', duration: 0.6 });
+  }
+}
+
+function renderStack(s, animate) {
+  var body = document.getElementById('stack-body');
+  if (!body) return;
+
+  if (s.stack.length === 0) {
+    body.innerHTML = '<div style="color:var(--text-ghost);font-size:0.78rem">No active recursion.</div>';
+    return;
+  }
+
+  var isWin = s.phase === 'found';
+  body.innerHTML = s.stack.map(function(f, depth) {
+    var isTop = depth === s.stack.length - 1;
+    var cls = isTop ? (isWin ? 'stack-frame win' : 'stack-frame top') : 'stack-frame';
+    var indent = '  '.repeat(depth * 2);
+    var pathStr = f.path.length
+      ? '[' + f.path.map(function(p) { return '"' + p + '"'; }).join(', ') + ']'
+      : '[]';
+    return '<div class="' + cls + '">' + indent + '&#9658; backtrack(i=' + f.i + ', path=' + pathStr + ')</div>';
+  }).join('');
+  body.scrollTop = body.scrollHeight;
+}
+
+function renderVars(s, animate) {
+  function setVal(id, val) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    var text = (val === null || val === undefined) ? '&mdash;' : String(val);
+    if (animate) {
+      gsap.fromTo(el, { scale: 0.8, opacity: 0.4 }, { scale: 1, opacity: 1, duration: 0.22, ease: 'back.out(1.7)' });
+    }
+    el.innerHTML = text;
+  }
+  setVal('vv-i', s.i >= 0 ? s.i : null);
+  setVal('vv-j', s.j >= 0 ? s.j : null);
+  setVal('vv-parts', s.path.length > 0 ? s.path.length : (s.phase === 'done' ? s.results.length + ' res' : 0));
+}
+
+function renderResults(s, animate) {
+  var list    = document.getElementById('results-list');
+  var countEl = document.getElementById('result-count');
+  if (!list) return;
+
+  if (countEl) countEl.textContent = s.results.length ? '(' + s.results.length + ' found)' : '';
+
+  if (s.results.length === 0) {
+    list.innerHTML = '<span class="result-empty">No complete partitions found yet.</span>';
+    return;
+  }
+
+  list.innerHTML = s.results.map(function(partition) {
+    var segs = partition.map(function(p) {
+      return '<span class="result-part-seg">' + p + '</span>';
+    }).join('<span class="result-sep"> | </span>');
+    return '<div class="result-partition">[&nbsp;' + segs + '&nbsp;]</div>';
+  }).join('');
+
+  if (animate && s.phase === 'found') {
+    var last = list.querySelector('.result-partition:last-child');
+    if (last) {
+      gsap.fromTo(last, { x: -8, opacity: 0 }, { x: 0, opacity: 1, duration: 0.28, ease: 'power2.out' });
+    }
+  }
+}
+
+function setCodeLines(lines) {
+  CODE.forEach(function(e) {
+    var ln = e[0];
+    var el = document.getElementById('cl-' + ln);
+    if (!el) return;
+    if (lines.indexOf(ln) >= 0) el.classList.add('hl');
+    else el.classList.remove('hl');
+  });
+}
+</script>
+
+<script>
+  if (window.self !== window.top) {
+    var bl = document.querySelector('.back-link');
+    if (bl) bl.style.display = 'none';
+  }
+</script>
+</body>
+</html>
