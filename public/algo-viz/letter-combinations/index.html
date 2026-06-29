@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Letter Combinations of a Phone Number</title>
+  <link rel="stylesheet" href="../shared/style.css" />
+  <script src="../shared/gsap.min.js"></script>
+  <script src="../shared/viz.js"></script>
+  <style>
+    .viz-area { width: 100%; max-width: 96%; display: flex; flex-direction: column; gap: 12px; }
+    .main-layout { display: grid; grid-template-columns: 1fr 300px; gap: 12px; align-items: start; }
+    @media (max-width: 860px) { .main-layout { grid-template-columns: 1fr; } }
+
+    .tree-wrap {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); overflow: hidden;
+    }
+    #tree-svg { display: block; width: 100%; }
+
+    .right-col { display: flex; flex-direction: column; gap: 10px; }
+
+    .panel-box {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 13px 16px;
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .panel-title {
+      font-size: 0.67rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-dim);
+    }
+
+    /* phone keypad */
+    .keypad-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 4px;
+    }
+    .key {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: 5px; padding: 5px 2px;
+      text-align: center; cursor: default;
+      transition: background 0.18s, border-color 0.18s;
+    }
+    .key.active {
+      background: rgba(99,102,241,0.18);
+      border-color: var(--accent);
+    }
+    .key-digit {
+      display: block; font-size: 0.9rem; font-weight: 700; color: var(--text);
+      line-height: 1.2;
+    }
+    .key-letters {
+      display: block; font-size: 0.58rem; color: var(--text-dim);
+      font-family: 'JetBrains Mono', monospace; letter-spacing: 0.06em;
+    }
+    .key.no-letters .key-digit { color: var(--text-faint); }
+    .key.active .key-digit { color: var(--accent); }
+    .key.active .key-letters { color: #a5b4fc; }
+
+    /* digit display */
+    .digit-display {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 1.25rem; font-weight: 700;
+      letter-spacing: 0.25em; min-height: 1.6em;
+    }
+    .digit-char { color: var(--text-faint); }
+    .digit-char.done { color: var(--green); }
+    .digit-char.active {
+      color: var(--accent);
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
+
+    /* combinations list */
+    #combos-list {
+      display: flex; flex-wrap: wrap; gap: 6px;
+      max-height: 160px; overflow-y: auto;
+    }
+    .combo-chip {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: 5px; padding: 3px 10px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem; color: var(--text-dim); letter-spacing: 0.08em;
+    }
+    .combo-chip.new {
+      border-color: var(--green); color: var(--green);
+      background: rgba(22,163,74,0.08);
+    }
+
+    #active-path {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 1.15rem; font-weight: 700;
+      color: var(--accent); min-height: 1.5em;
+      letter-spacing: 0.12em;
+    }
+
+    /* code */
+    .code-panel {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); overflow: hidden;
+    }
+    .code-header {
+      padding: 8px 14px; font-size: 0.67rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.1em;
+      color: var(--text-dim); border-bottom: 1px solid var(--border);
+      background: var(--bg);
+    }
+    .code-body {
+      padding: 8px 0; font-size: 0.76rem; line-height: 1.72;
+      font-family: 'JetBrains Mono', 'Fira Code', monospace; overflow-x: auto;
+    }
+    .cl {
+      display: flex; align-items: stretch;
+      border-left: 3px solid transparent; padding: 0 14px 0 0;
+      white-space: pre;
+    }
+    .cl .ln { width: 26px; min-width: 26px; text-align: right; color: #3d4468; user-select: none; padding-right: 12px; font-size: 0.7rem; line-height: 1.72; }
+    .cl .code { color: var(--text-muted); }
+
+    .nav-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .btn-play {
+      background: #15803d; border: none; border-radius: var(--radius-sm);
+      color: #fff; cursor: pointer; font-size: 0.88rem; font-weight: 600;
+      padding: 8px 14px; transition: background 0.2s;
+    }
+    .btn-play:hover { background: #166534; }
+    .btn-play.playing { background: #c2410c; }
+    .btn-play.playing:hover { background: #9a3412; }
+    .btn-play:disabled { opacity: 0.4; cursor: not-allowed; }
+    .speed-select {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); color: var(--text);
+      font-size: 0.84rem; padding: 7px 9px; outline: none;
+    }
+
+    .leg-row { display: flex; gap: 14px; flex-wrap: wrap; font-size: 0.76rem; color: var(--text-muted); }
+    .leg-item { display: flex; align-items: center; gap: 6px; }
+
+    .kw  { color: var(--purple); }
+    .fn  { color: var(--blue); }
+    .bi  { color: var(--orange); }
+    .cm  { color: #3d4468; font-style: italic; }
+    .op  { color: var(--text); }
+    .nb  { color: var(--green); }
+    .st  { color: #f59e0b; }
+  </style>
+</head>
+<body class="page">
+
+<div class="page-header">
+  <a class="back-link" href="../index.html">&larr; All Algorithms</a>
+  <div class="page-title">Letter Combinations of a Phone Number</div>
+  <div class="page-sub">LeetCode 17 &middot; Backtracking over phone key mappings &middot; O(4<sup>n</sup> &times; n) time &middot; O(n) stack space</div>
+</div>
+
+<div class="controls">
+  <div class="field">
+    <label>Preset</label>
+    <select id="preset-sel" onchange="applyPreset()">
+      <option value="23" selected>"23"</option>
+      <option value="234">"234"</option>
+      <option value="9">"9"</option>
+    </select>
+  </div>
+  <div class="field">
+    <label>Digits (2–9, max 3)</label>
+    <input id="inp-digits" type="text" value="23" style="width:110px" />
+  </div>
+  <button class="btn-primary" onclick="buildAndRun()">Build &amp; Run</button>
+</div>
+
+<div class="viz-area">
+  <div class="main-layout">
+
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div class="tree-wrap">
+        <svg id="tree-svg" viewBox="0 0 800 400" preserveAspectRatio="xMidYMid meet"></svg>
+      </div>
+      <div class="code-panel">
+        <div class="code-header">Python</div>
+        <div class="code-body" id="code-body"></div>
+      </div>
+    </div>
+
+    <div class="right-col">
+
+      <div class="panel-box">
+        <div class="nav-row">
+          <button class="btn-step" id="btn-back" disabled>&larr;</button>
+          <button class="btn-step" id="btn-next" disabled>&rarr;</button>
+          <button class="btn-play" id="btn-play" disabled>&#9654; Play</button>
+          <select class="speed-select" id="speed-select">
+            <option value="900">Slow</option>
+            <option value="420" selected>Medium</option>
+            <option value="120">Fast</option>
+          </select>
+        </div>
+        <div class="panel-title" id="phase-label">&mdash;</div>
+        <div style="font-size:0.82rem;color:var(--text-muted)" id="step-desc">Choose a preset or enter digits, then click Build &amp; Run.</div>
+      </div>
+
+      <div class="panel-box">
+        <div class="panel-title">Phone Keypad</div>
+        <div class="digit-display" id="digit-display">&mdash;</div>
+        <div class="keypad-grid" id="keypad-grid"></div>
+      </div>
+
+      <div class="panel-box">
+        <div class="panel-title">Current path</div>
+        <div id="active-path">·</div>
+      </div>
+
+      <div class="panel-box">
+        <div class="panel-title">Combinations <span id="combo-count" style="font-weight:400;color:var(--text-faint)"></span></div>
+        <div id="combos-list"><span style="color:var(--text-faint);font-size:0.8rem;font-style:italic">none yet</span></div>
+      </div>
+
+      <div class="panel-box">
+        <div class="panel-title">Legend</div>
+        <div class="leg-row">
+          <div class="leg-item">
+            <svg width="14" height="14"><circle cx="7" cy="7" r="6" fill="#1e2130" stroke="#2d3148" stroke-width="2"/></svg>
+            Unvisited
+          </div>
+          <div class="leg-item">
+            <svg width="14" height="14"><circle cx="7" cy="7" r="6" fill="#4338ca" stroke="var(--accent)" stroke-width="2"/></svg>
+            Active
+          </div>
+          <div class="leg-item">
+            <svg width="14" height="14"><circle cx="7" cy="7" r="6" fill="#052e16" stroke="#16a34a" stroke-width="2"/></svg>
+            Done
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Phone map & keypad layout ────────────────────────────────────────────────
+var PHONE_MAP = {
+  '2': 'abc', '3': 'def', '4': 'ghi', '5': 'jkl',
+  '6': 'mno', '7': 'pqrs', '8': 'tuv', '9': 'wxyz'
+};
+
+var KEYPAD_LAYOUT = [
+  [{d:'1',l:''}, {d:'2',l:'abc'}, {d:'3',l:'def'}],
+  [{d:'4',l:'ghi'}, {d:'5',l:'jkl'}, {d:'6',l:'mno'}],
+  [{d:'7',l:'pqrs'}, {d:'8',l:'tuv'}, {d:'9',l:'wxyz'}],
+  [{d:'*',l:''}, {d:'0',l:''}, {d:'#',l:''}]
+];
+
+// ── Code lines ───────────────────────────────────────────────────────────────
+var CODE_LINES = [
+  [1,  '<span class="kw">def</span> <span class="fn">letterCombinations</span><span class="op">(</span>digits<span class="op">):</span>'],
+  [2,  '    phone <span class="op">=</span> <span class="op">{</span><span class="st">"2"</span><span class="op">:</span><span class="st">"abc"</span>, <span class="st">"3"</span><span class="op">:</span><span class="st">"def"</span>, ...<span class="op">}</span>'],
+  [3,  '    <span class="kw">def</span> <span class="fn">backtrack</span><span class="op">(</span>i<span class="op">,</span> path<span class="op">):</span>'],
+  [4,  '        <span class="kw">if</span> i <span class="op">==</span> <span class="bi">len</span><span class="op">(</span>digits<span class="op">):</span>'],
+  [5,  '            res<span class="op">.</span><span class="fn">append</span><span class="op">(</span><span class="st">""</span><span class="op">.</span><span class="fn">join</span><span class="op">(</span>path<span class="op">))</span>  <span class="cm"># record combo</span>'],
+  [6,  '        <span class="kw">for</span> ch <span class="kw">in</span> phone<span class="op">[</span>digits<span class="op">[</span>i<span class="op">]]:</span>'],
+  [7,  '            path<span class="op">.</span><span class="fn">append</span><span class="op">(</span>ch<span class="op">)</span>'],
+  [8,  '            <span class="fn">backtrack</span><span class="op">(</span>i <span class="op">+</span> <span class="nb">1</span><span class="op">,</span> path<span class="op">)</span>'],
+  [9,  '            path<span class="op">.</span><span class="fn">pop</span><span class="op">()</span>'],
+  [10, '    <span class="fn">backtrack</span><span class="op">(</span><span class="nb">0</span><span class="op">,</span> <span class="op">[])</span>'],
+  [11, '    <span class="kw">return</span> res'],
+];
+
+function buildCodePanel() {
+  var body = document.getElementById('code-body');
+  body.innerHTML = CODE_LINES.map(function(e) {
+    return '<div class="cl" id="cl-' + e[0] + '">'
+      + '<span class="ln">' + e[0] + '</span>'
+      + '<span class="code">' + e[1] + '</span></div>';
+  }).join('');
+}
+
+// ── SVG helpers ──────────────────────────────────────────────────────────────
+function svgEl(tag, attrs) {
+  var el = document.createElementNS('http://www.w3.org/2000/svg', tag);
+  Object.keys(attrs).forEach(function(k) { el.setAttribute(k, attrs[k]); });
+  return el;
+}
+
+var C = {
+  idle:   { fill: '#1e2130', stroke: '#2d3148', text: '#7b82a3' },
+  active: { fill: '#4338ca', stroke: '#818cf8', text: '#e0e7ff' },
+  leaf:   { fill: '#052e16', stroke: '#16a34a', text: '#4ade80' },
+  path:   { stroke: '#818cf8' },
+  done:   { stroke: '#2d3148' },
+};
+
+// ── Globals ──────────────────────────────────────────────────────────────────
+var gDigits = '';
+var gNodes = [];
+var gSteps = [];
+var prevLines = [];
+var nav;
+
+// ── Build keypad UI ──────────────────────────────────────────────────────────
+function buildKeypad() {
+  var grid = document.getElementById('keypad-grid');
+  grid.innerHTML = '';
+  KEYPAD_LAYOUT.forEach(function(row) {
+    row.forEach(function(key) {
+      var div = document.createElement('div');
+      div.className = 'key' + (key.l ? '' : ' no-letters');
+      div.id = 'key-' + key.d;
+      div.innerHTML = '<span class="key-digit">' + key.d + '</span>'
+        + (key.l ? '<span class="key-letters">' + key.l + '</span>' : '');
+      grid.appendChild(div);
+    });
+  });
+}
+
+function updateKeypad(activeChar) {
+  KEYPAD_LAYOUT.forEach(function(row) {
+    row.forEach(function(key) {
+      var el = document.getElementById('key-' + key.d);
+      if (!el) return;
+      if (key.d === activeChar) el.classList.add('active');
+      else el.classList.remove('active');
+    });
+  });
+}
+
+function updateDigitDisplay(digitIdx) {
+  var el = document.getElementById('digit-display');
+  if (!el || !gDigits) return;
+  if (digitIdx < 0) {
+    el.innerHTML = gDigits.split('').map(function(d) {
+      return '<span class="digit-char">' + d + '</span>';
+    }).join('');
+    return;
+  }
+  el.innerHTML = gDigits.split('').map(function(d, i) {
+    var cls = 'digit-char';
+    if (i < digitIdx) cls += ' done';
+    else if (i === digitIdx) cls += ' active';
+    return '<span class="' + cls + '">' + d + '</span>';
+  }).join('');
+}
+
+// ── Decision tree ─────────────────────────────────────────────────────────────
+function buildDecisionTree(digits) {
+  var nodes = [];
+  var id = 0;
+
+  function rec(digitIdx, path, parentId, edgeLabel) {
+    var nid = id++;
+    nodes.push({
+      id: nid, digitIdx: digitIdx,
+      path: path.slice(), parentId: parentId,
+      edgeLabel: edgeLabel, children: []
+    });
+    if (parentId >= 0) nodes[parentId].children.push(nid);
+
+    if (digitIdx < digits.length) {
+      var letters = PHONE_MAP[digits[digitIdx]] || '';
+      for (var i = 0; i < letters.length; i++) {
+        path.push(letters[i]);
+        rec(digitIdx + 1, path, nid, letters[i]);
+        path.pop();
+      }
+    }
+  }
+
+  rec(0, [], -1, '');
+  return nodes;
+}
+
+// Reingold-Tilford-ish layout (leaf-count based centering)
+function layoutTree(nodes) {
+  function countLeaves(nid) {
+    var node = nodes[nid];
+    if (node.children.length === 0) { node._leafSpan = 1; return; }
+    node.children.forEach(function(cid) { countLeaves(cid); });
+    node._leafSpan = node.children.reduce(function(s, cid) { return s + nodes[cid]._leafSpan; }, 0);
+  }
+  countLeaves(0);
+
+  var leafIdx = 0;
+  function assignX(nid) {
+    var node = nodes[nid];
+    if (node.children.length === 0) { node._leafIdx = leafIdx++; node.x = node._leafIdx; return; }
+    node.children.forEach(function(cid) { assignX(cid); });
+    node.x = (nodes[node.children[0]].x + nodes[node.children[node.children.length - 1]].x) / 2;
+  }
+  assignX(0);
+
+  var maxDepth = 0;
+  function assignDepth(nid, d) {
+    nodes[nid].depth = d;
+    if (d > maxDepth) maxDepth = d;
+    nodes[nid].children.forEach(function(cid) { assignDepth(cid, d + 1); });
+  }
+  assignDepth(0, 0);
+
+  return { totalLeaves: nodes[0]._leafSpan, maxDepth: maxDepth };
+}
+
+function renderTree(nodes, totalLeaves, maxDepth) {
+  var svg = document.getElementById('tree-svg');
+  svg.innerHTML = '';
+
+  var R = 18;
+  var PAD_X = 28, PAD_Y = 34;
+  var Y_STEP = Math.min(72, Math.max(50, 300 / Math.max(1, maxDepth)));
+  var xUnit = Math.max(34, Math.min(90, (860 - PAD_X * 2) / Math.max(1, totalLeaves - 1)));
+
+  var VW = Math.max(480, PAD_X * 2 + (totalLeaves - 1) * xUnit);
+  var VH = PAD_Y * 2 + maxDepth * Y_STEP + R * 2 + 24;
+
+  svg.setAttribute('viewBox', '0 0 ' + VW + ' ' + VH);
+
+  nodes.forEach(function(nd) {
+    nd.px = PAD_X + nd.x * xUnit;
+    nd.py = PAD_Y + nd.depth * Y_STEP + R;
+  });
+
+  var edgeG = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  edgeG.id = 'edges';
+  var nodeG = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  nodeG.id = 'nodes';
+  svg.appendChild(edgeG);
+  svg.appendChild(nodeG);
+
+  nodes.forEach(function(nd) {
+    if (nd.parentId < 0) return;
+    var par = nodes[nd.parentId];
+    edgeG.appendChild(svgEl('line', {
+      id: 'edge-' + par.id + '-' + nd.id,
+      x1: par.px, y1: par.py, x2: nd.px, y2: nd.py,
+      stroke: C.done.stroke, 'stroke-width': 1.5, 'stroke-linecap': 'round'
+    }));
+    var mx = (par.px + nd.px) / 2, my = (par.py + nd.py) / 2;
+    var lbl = svgEl('text', {
+      id: 'elbl-' + par.id + '-' + nd.id,
+      x: mx, y: my, 'text-anchor': 'middle', 'dominant-baseline': 'middle',
+      fill: '#3d4468', 'font-size': Math.max(9, Math.min(13, xUnit * 0.22)),
+      'font-family': 'JetBrains Mono, monospace', 'font-weight': '600'
+    });
+    lbl.textContent = nd.edgeLabel;
+    edgeG.appendChild(lbl);
+  });
+
+  nodes.forEach(function(nd) {
+    var g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    g.id = 'node-g-' + nd.id;
+
+    g.appendChild(svgEl('circle', {
+      id: 'nc-' + nd.id, cx: nd.px, cy: nd.py, r: R,
+      fill: C.idle.fill, stroke: C.idle.stroke, 'stroke-width': 2
+    }));
+
+    var label = nd.path.length === 0 ? '·' : nd.path.join('');
+    var fontSize = label.length <= 2 ? 11 : label.length <= 3 ? 9 : 8;
+    var txt = svgEl('text', {
+      id: 'nt-' + nd.id, x: nd.px, y: nd.py,
+      'text-anchor': 'middle', 'dominant-baseline': 'middle',
+      fill: C.idle.text, 'font-size': fontSize, 'font-weight': '700',
+      'font-family': 'JetBrains Mono, monospace'
+    });
+    txt.textContent = label;
+    g.appendChild(txt);
+    nodeG.appendChild(g);
+  });
+}
+
+// ── Simulate ─────────────────────────────────────────────────────────────────
+function simulate(digits, nodes) {
+  var steps = [];
+  var collected = [];
+  var stateMap = {};
+  nodes.forEach(function(nd) { stateMap[nd.id] = 'idle'; });
+
+  function snap(phase, desc, lines, activeId, pathNow, newCombo, digitIdx) {
+    steps.push({
+      phase: phase, desc: desc, lines: lines,
+      activeId: activeId,
+      stateMap: Object.assign({}, stateMap),
+      path: pathNow ? pathNow.slice() : [],
+      collected: collected.slice(),
+      newCombo: newCombo || null,
+      digitIdx: digitIdx !== undefined ? digitIdx : -1
+    });
+  }
+
+  function pStr(path) { return path.length === 0 ? '""' : '"' + path.join('') + '"'; }
+
+  function rec(nodeId) {
+    var nd = nodes[nodeId];
+    stateMap[nodeId] = 'active';
+
+    if (nd.children.length === 0) {
+      var combo = nd.path.join('');
+      collected.push(combo);
+      snap('Found', 'i == len(digits). Path complete → record "' + combo + '".',
+           [4, 5], nodeId, nd.path, combo, -1);
+      stateMap[nodeId] = 'leaf';
+    } else {
+      var digit = digits[nd.digitIdx];
+      var letters = PHONE_MAP[digit] || '';
+      snap('Explore', 'At ' + pStr(nd.path) + ', i=' + nd.digitIdx
+           + '. Loop over phone["' + digit + '"] = "' + letters + '".',
+           [6], nodeId, nd.path, null, nd.digitIdx);
+
+      nd.children.forEach(function(cid, ci) {
+        var child = nodes[cid];
+        var letter = child.edgeLabel;
+        var isLast = ci === nd.children.length - 1;
+        snap('Choose', 'Append "' + letter + '" → path = "' + child.path.join('')
+             + '". Recurse (i=' + (nd.digitIdx + 1) + ').',
+             [7, 8], nodeId, nd.path, null, nd.digitIdx);
+        rec(cid);
+        snap('Backtrack', 'Pop "' + letter + '". Path back to ' + pStr(nd.path) + '.'
+             + (isLast ? '' : ' Try next letter.'),
+             [9], nodeId, nd.path, null, nd.digitIdx);
+      });
+
+      stateMap[nodeId] = 'leaf';
+      snap('Done', 'All letters for digit "' + digit + '" from ' + pStr(nd.path) + ' explored.',
+           [9], nodeId, nd.path, null, -1);
+    }
+  }
+
+  snap('Start', 'Call backtrack(0, []). Process each digit in "' + digits + '".',
+       [3, 10], 0, [], null, 0);
+  rec(0);
+  snap('Done', 'Found all ' + collected.length + ' combinations for "' + digits + '".',
+       [11], -1, [], null, -1);
+  return steps;
+}
+
+// ── Apply step ───────────────────────────────────────────────────────────────
+function applyStep(s, animate) {
+  Object.keys(s.stateMap).forEach(function(idStr) {
+    var id = +idStr;
+    var st = s.stateMap[id];
+    var c = st === 'active' ? C.active : st === 'leaf' ? C.leaf : C.idle;
+    var nc = document.getElementById('nc-' + id);
+    var nt = document.getElementById('nt-' + id);
+    if (!nc) return;
+    if (animate) {
+      gsap.to(nc, { duration: 0.22, attr: { fill: c.fill, stroke: c.stroke } });
+      gsap.to(nt, { duration: 0.22, attr: { fill: c.text } });
+    } else {
+      nc.setAttribute('fill', c.fill); nc.setAttribute('stroke', c.stroke);
+      if (nt) nt.setAttribute('fill', c.text);
+    }
+  });
+
+  if (animate && s.activeId >= 0) {
+    var nc = document.getElementById('nc-' + s.activeId);
+    if (nc) gsap.fromTo(nc, { attr: { r: 18 } }, { attr: { r: 22 }, duration: 0.14, yoyo: true, repeat: 1 });
+  }
+
+  gNodes.forEach(function(nd) {
+    if (nd.parentId < 0) return;
+    var edge = document.getElementById('edge-' + nd.parentId + '-' + nd.id);
+    var lbl  = document.getElementById('elbl-' + nd.parentId + '-' + nd.id);
+    if (!edge) return;
+    var onPath = s.stateMap[nd.id] === 'active' || s.stateMap[nd.id] === 'leaf';
+    var col    = onPath ? C.path.stroke : C.done.stroke;
+    var lblCol = onPath ? '#a5b4fc' : '#3d4468';
+    if (animate) gsap.to(edge, { duration: 0.18, attr: { stroke: col } });
+    else edge.setAttribute('stroke', col);
+    if (lbl) lbl.setAttribute('fill', lblCol);
+  });
+
+  var ap = document.getElementById('active-path');
+  var pathStr = s.path.length === 0 ? '·' : s.path.join('');
+  if (ap) {
+    if (animate) gsap.fromTo(ap, { opacity: 0.3 }, { opacity: 1, duration: 0.18 });
+    ap.textContent = pathStr;
+  }
+
+  var activeChar = (s.digitIdx >= 0 && s.digitIdx < gDigits.length) ? gDigits[s.digitIdx] : null;
+  updateKeypad(activeChar);
+  updateDigitDisplay(s.digitIdx);
+
+  var listEl = document.getElementById('combos-list');
+  var countEl = document.getElementById('combo-count');
+  if (listEl) {
+    if (s.collected.length === 0) {
+      listEl.innerHTML = '<span style="color:var(--text-faint);font-size:0.8rem;font-style:italic">none yet</span>';
+    } else {
+      listEl.innerHTML = s.collected.map(function(combo, idx) {
+        var isNew = s.newCombo && idx === s.collected.length - 1;
+        return '<span class="combo-chip' + (isNew ? ' new' : '') + '">' + combo + '</span>';
+      }).join('');
+      if (animate && s.newCombo) {
+        var chips = listEl.querySelectorAll('.combo-chip.new');
+        if (chips.length) gsap.from(chips[chips.length - 1], { scale: 0.6, opacity: 0, duration: 0.22, ease: 'back.out(1.7)' });
+      }
+    }
+    if (countEl) countEl.textContent = s.collected.length ? '(' + s.collected.length + ')' : '';
+  }
+
+  setCodeLines(prevLines, s.lines, animate);
+  prevLines = s.lines || [];
+}
+
+function setCodeLines(oldLines, newLines, animate) {
+  var HL_BG   = 'rgba(99,102,241,0.13)';
+  var HL_BORD = 'var(--accent)';
+  var DUR = 0.18;
+  (oldLines || []).filter(function(n) { return (newLines || []).indexOf(n) < 0; }).forEach(function(n) {
+    var el = document.getElementById('cl-' + n);
+    if (!el) return;
+    if (animate) gsap.to(el, { backgroundColor: 'transparent', borderLeftColor: 'transparent', duration: DUR });
+    else { el.style.backgroundColor = ''; el.style.borderLeftColor = ''; }
+  });
+  (newLines || []).filter(function(n) { return (oldLines || []).indexOf(n) < 0; }).forEach(function(n) {
+    var el = document.getElementById('cl-' + n);
+    if (!el) return;
+    if (animate) gsap.to(el, { backgroundColor: HL_BG, borderLeftColor: HL_BORD, duration: DUR, delay: 0.05 });
+    else { el.style.backgroundColor = HL_BG; el.style.borderLeftColor = HL_BORD; }
+  });
+}
+
+// ── Build & Run ───────────────────────────────────────────────────────────────
+function buildAndRun() {
+  var raw = document.getElementById('inp-digits').value.trim().replace(/\s/g, '');
+  var digits = raw.split('').filter(function(c) { return /[2-9]/.test(c); });
+  if (digits.length === 0 || digits.length > 3) {
+    alert('Enter 1–3 digits from 2–9.');
+    return;
+  }
+  digits = digits.join('');
+  gDigits = digits;
+  prevLines = [];
+
+  buildCodePanel();
+  buildKeypad();
+  updateDigitDisplay(-1);
+
+  var nodes = buildDecisionTree(digits);
+  var info = layoutTree(nodes);
+  gNodes = nodes;
+  renderTree(nodes, info.totalLeaves, info.maxDepth);
+
+  gSteps = simulate(digits, nodes);
+  nav.load(gSteps);
+}
+
+function applyPreset() {
+  var val = document.getElementById('preset-sel').value;
+  document.getElementById('inp-digits').value = val;
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', function() {
+  buildCodePanel();
+  buildKeypad();
+
+  nav = VizNav({
+    btnPrev: document.getElementById('btn-back'),
+    btnNext: document.getElementById('btn-next'),
+    btnPlay: document.getElementById('btn-play'),
+    speedSel: document.getElementById('speed-select'),
+    render: function(snap, cur, total) {
+      applyStep(snap, cur > 0);
+      var pl = document.getElementById('phase-label');
+      if (pl) pl.textContent = 'Step ' + (cur + 1) + ' / ' + total + '  ·  ' + snap.phase;
+      var sd = document.getElementById('step-desc');
+      if (sd) { gsap.fromTo(sd, { opacity: 0.3 }, { opacity: 1, duration: 0.14 }); sd.textContent = snap.desc; }
+    }
+  });
+
+  buildAndRun();
+});
+</script>
+<script>
+if (window.self !== window.top) { var bl = document.querySelector('.back-link'); if (bl) bl.style.display = 'none'; }
+</script>
+</body>
+</html>
