@@ -1,0 +1,809 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Subtree of Another Tree</title>
+  <link rel="stylesheet" href="../shared/style.css" />
+  <script src="../shared/gsap.min.js"></script>
+  <script src="../shared/viz.js"></script>
+  <style>
+    .viz-area {
+      width: 100%; max-width: 92%;
+      display: flex; flex-direction: column; gap: 12px;
+    }
+    .trees-wrap {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+    }
+    .tree-cell {
+      position: relative;
+      border-right: 1px solid var(--border);
+    }
+    .tree-cell:last-child { border-right: none; }
+    .tree-label {
+      position: absolute;
+      top: 8px; left: 12px;
+      font-size: 0.7rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.1em;
+      color: var(--text-dim);
+    }
+    .tree-svg { display: block; width: 100%; }
+
+    .bottom-row {
+      display: grid;
+      grid-template-columns: 55% 1fr;
+      gap: 12px;
+      align-items: start;
+    }
+    .right-col { display: flex; flex-direction: column; gap: 12px; }
+    @media (max-width: 680px) { .bottom-row { grid-template-columns: 1fr; } }
+
+    .code-panel {
+      background: #0a0d14;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      display: flex; flex-direction: column;
+    }
+    .code-header {
+      padding: 9px 14px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      font-size: 0.67rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.11em;
+      color: var(--text-dim);
+    }
+    .code-body {
+      padding: 10px 0;
+      flex: 1;
+      font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+      font-size: 0.78rem; line-height: 1.7; overflow-x: auto;
+    }
+    .cl {
+      display: flex; align-items: stretch;
+      border-left: 3px solid transparent;
+      padding: 0 14px 0 0;
+      transition: background-color 0.01s;
+      white-space: pre;
+    }
+    .cl .ln {
+      width: 28px; min-width: 28px; text-align: right;
+      color: #3d4468; user-select: none;
+      padding-right: 14px; font-size: 0.72rem; line-height: 1.7;
+    }
+    .cl .code { color: var(--text-muted); }
+    .kw  { color: var(--purple); }
+    .fn  { color: var(--blue); }
+    .bi  { color: var(--orange); }
+    .str { color: var(--green); }
+    .cm  { color: #3d4468; font-style: italic; }
+    .op  { color: var(--text); }
+    .sep-line {
+      display: flex; align-items: center;
+      border-left: 3px solid transparent;
+      padding: 0;
+    }
+
+    .panel-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 13px 18px;
+    }
+    .panel-title {
+      font-size: 0.67rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.11em;
+      color: var(--text-dim); margin-bottom: 10px;
+    }
+    .compare-row {
+      display: flex; align-items: center; gap: 14px; min-height: 42px;
+      justify-content: center;
+    }
+    .cmp-chip {
+      background: #1e2130; color: var(--text);
+      border: 1.5px solid #2d3148; border-radius: 8px;
+      padding: 6px 14px; font-size: 0.95rem; font-weight: 700;
+      min-width: 46px; text-align: center;
+    }
+    .cmp-chip.null { color: var(--text-faint); font-style: italic; border-style: dashed; }
+    .cmp-op { color: var(--text-dim); font-size: 1.1rem; font-weight: 700; }
+    .verdict {
+      margin-top: 8px; padding: 10px 14px;
+      border-radius: 7px; font-weight: 700; text-align: center;
+      font-size: 0.92rem;
+      background: #1e2130; color: var(--text-faint); border: 1px solid var(--border);
+    }
+    .verdict.ok   { background: #052e16; color: var(--green);  border-color: #16a34a; }
+    .verdict.bad  { background: #3f0a14; color: #fb7185; border-color: #e11d48; }
+
+    .dfs-info {
+      display: flex; flex-direction: column; gap: 6px;
+    }
+    .dfs-row {
+      display: flex; align-items: center; gap: 10px;
+      font-size: 0.82rem; color: var(--text-muted);
+    }
+    .dfs-label { color: var(--text-dim); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; min-width: 72px; }
+    .dfs-val { font-weight: 700; color: var(--text-bright); font-family: monospace; }
+    .dfs-val.none { color: var(--text-faint); font-style: italic; }
+  </style>
+</head>
+<body class="page">
+
+<div class="page-header">
+  <a class="back-link" href="../index.html">← All Algorithms</a>
+  <h1 class="page-title">Subtree of Another Tree</h1>
+</div>
+
+<div class="controls">
+  <div class="field" style="flex:1;min-width:200px">
+    <label>Root (level-order, e.g. [3,4,5,1,2])</label>
+    <input id="inp-root" type="text" value="[3,4,5,1,2]" />
+  </div>
+  <div class="field" style="flex:1;min-width:160px">
+    <label>subRoot (level-order, e.g. [4,1,2])</label>
+    <input id="inp-sub" type="text" value="[4,1,2]" />
+  </div>
+  <button class="btn-primary" onclick="build()">Build</button>
+  <button class="btn-primary" style="background:#374151" onclick="loadNoMatch()">No-Match Example</button>
+</div>
+
+<div class="viz-area">
+
+  <div class="trees-wrap">
+    <div class="tree-cell">
+      <span class="tree-label">root</span>
+      <svg id="svg-root" class="tree-svg" viewBox="0 0 540 260" preserveAspectRatio="xMidYMid meet"></svg>
+    </div>
+    <div class="tree-cell">
+      <span class="tree-label">subRoot</span>
+      <svg id="svg-sub" class="tree-svg" viewBox="0 0 280 260" preserveAspectRatio="xMidYMid meet"></svg>
+    </div>
+  </div>
+
+  <div class="status-bar" style="max-width:100%">
+    <span class="phase-label" id="phase-label">—</span>
+    <span class="step-desc"   id="step-desc">Click Build to start.</span>
+  </div>
+
+  <div class="bottom-row">
+
+    <div class="code-panel">
+      <div class="code-header">Python</div>
+      <div class="code-body" id="code-body"></div>
+    </div>
+
+    <div class="right-col">
+      <div class="panel-box">
+        <div class="panel-title">isSameTree Comparison</div>
+        <div class="compare-row">
+          <div class="cmp-chip null" id="cmp-root">—</div>
+          <span class="cmp-op">vs</span>
+          <div class="cmp-chip null" id="cmp-sub">—</div>
+        </div>
+      </div>
+      <div class="panel-box">
+        <div class="panel-title">DFS State</div>
+        <div class="dfs-info">
+          <div class="dfs-row">
+            <span class="dfs-label">Checking</span>
+            <span class="dfs-val none" id="dfs-cur">—</span>
+          </div>
+          <div class="dfs-row">
+            <span class="dfs-label">Same call</span>
+            <span class="dfs-val none" id="dfs-same">—</span>
+          </div>
+        </div>
+      </div>
+      <div class="panel-box">
+        <div class="panel-title">Result</div>
+        <div class="verdict" id="verdict">running…</div>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<div class="legend">
+  <div class="leg-item">
+    <svg width="14" height="14"><circle cx="7" cy="7" r="6" fill="#1e2130" stroke="#2d3148" stroke-width="2"/></svg>
+    Unvisited
+  </div>
+  <div class="leg-item">
+    <svg width="14" height="14"><circle cx="7" cy="7" r="6" fill="#1a3a52" stroke="#38bdf8" stroke-width="2"/></svg>
+    DFS cursor
+  </div>
+  <div class="leg-item">
+    <svg width="14" height="14"><circle cx="7" cy="7" r="6" fill="#c2410c" stroke="var(--orange)" stroke-width="2"/></svg>
+    Comparing
+  </div>
+  <div class="leg-item">
+    <svg width="14" height="14"><circle cx="7" cy="7" r="6" fill="#052e16" stroke="#16a34a" stroke-width="2"/></svg>
+    Matched
+  </div>
+  <div class="leg-item">
+    <svg width="14" height="14"><circle cx="7" cy="7" r="6" fill="#3f0a14" stroke="#e11d48" stroke-width="2"/></svg>
+    Mismatch
+  </div>
+  <div class="leg-item">
+    <svg width="14" height="14"><circle cx="7" cy="7" r="6" fill="#251a38" stroke="#7c3aed" stroke-width="2"/></svg>
+    Skipped
+  </div>
+</div>
+
+<div class="step-nav">
+  <button class="btn-step" id="btn-back" disabled>← Back</button>
+  <button class="btn-step" id="btn-next" disabled>Next →</button>
+  <button id="btn-play" style="background:#15803d;color:#fff;border:none;border-radius:4px;padding:6px 14px;font-weight:600;cursor:pointer">&#9654; Play</button>
+  <select id="speed-select" style="background:var(--bg);border:1px solid var(--border);color:var(--text);border-radius:4px;padding:6px 8px;font-size:0.85rem">
+    <option value="1100">Slow</option>
+    <option value="600" selected>Medium</option>
+    <option value="220">Fast</option>
+  </select>
+</div>
+
+<script>
+// ─── Code panel ───────────────────────────────────────────────────────────────
+const CODE_LINES = [
+  [1,  `<span class="kw">def</span> <span class="fn">isSubtree</span><span class="op">(</span>root<span class="op">,</span> subRoot<span class="op">):</span>`],
+  [2,  `    <span class="kw">if not</span> root<span class="op">:</span>`],
+  [3,  `        <span class="kw">return False</span>`],
+  [4,  `    <span class="kw">if</span> <span class="fn">isSameTree</span><span class="op">(</span>root<span class="op">,</span> subRoot<span class="op">):</span>`],
+  [5,  `        <span class="kw">return True</span>`],
+  [6,  `    <span class="kw">return</span> <span class="fn">isSubtree</span><span class="op">(</span>root<span class="op">.</span>left<span class="op">,</span> subRoot<span class="op">)</span>`],
+  [7,  `           <span class="kw">or</span> <span class="fn">isSubtree</span><span class="op">(</span>root<span class="op">.</span>right<span class="op">,</span> subRoot<span class="op">)</span>`],
+  [0,  ``],
+  [8,  `<span class="kw">def</span> <span class="fn">isSameTree</span><span class="op">(</span>p<span class="op">,</span> q<span class="op">):</span>`],
+  [9,  `    <span class="kw">if not</span> p <span class="kw">and not</span> q<span class="op">:</span> <span class="kw">return True</span>`],
+  [10, `    <span class="kw">if not</span> p <span class="kw">or not</span> q<span class="op">:  </span><span class="kw">return False</span>`],
+  [11, `    <span class="kw">if</span> p<span class="op">.</span>val <span class="op">!=</span> q<span class="op">.</span>val<span class="op">:</span>   <span class="kw">return False</span>`],
+  [12, `    <span class="kw">return</span> <span class="fn">isSameTree</span><span class="op">(</span>p<span class="op">.</span>left<span class="op">,</span> q<span class="op">.</span>left<span class="op">)</span>`],
+  [13, `           <span class="kw">and</span> <span class="fn">isSameTree</span><span class="op">(</span>p<span class="op">.</span>right<span class="op">,</span> q<span class="op">.</span>right<span class="op">)</span>`],
+];
+
+function buildCodePanel() {
+  const body = document.getElementById('code-body');
+  body.innerHTML = '';
+  CODE_LINES.forEach(([ln, html]) => {
+    const row = document.createElement('div');
+    row.className = ln === 0 ? 'sep-line' : 'cl';
+    if (ln > 0) row.id = `cl-${ln}`;
+    row.innerHTML = `<span class="ln">${ln > 0 ? ln : ''}</span><span class="code">${html}</span>`;
+    body.appendChild(row);
+  });
+}
+
+// ─── Colors ───────────────────────────────────────────────────────────────────
+const COLORS = {
+  idle:     { fill: '#1e2130', stroke: '#2d3148', text: 'var(--text-muted)' },
+  cursor:   { fill: '#1a3a52', stroke: '#38bdf8', text: '#7dd3fc' },
+  active:   { fill: '#c2410c', stroke: 'var(--orange)', text: '#ffffff' },
+  matched:  { fill: '#052e16', stroke: '#16a34a', text: 'var(--green)' },
+  mismatch: { fill: '#3f0a14', stroke: '#e11d48', text: '#fb7185' },
+  skipped:  { fill: '#251a38', stroke: '#7c3aed', text: '#a78bfa' },
+  visited:  { fill: '#0f1f2e', stroke: '#1e3a50', text: '#4a7090' },
+};
+
+// ─── Globals ─────────────────────────────────────────────────────────────────
+let rootTree = null, subTree = null;
+let nodesRoot = {}, nodesSub = {};
+let layRoot = null, laySub = null;
+
+// ─── Parse ────────────────────────────────────────────────────────────────────
+function parseTree(text) {
+  let arr;
+  try { arr = JSON.parse(text); } catch { return null; }
+  if (!Array.isArray(arr)) return null;
+  if (arr.length === 0) return { root: null, nodes: {} };
+
+  const nodes = {};
+  let nextId = 0;
+  function mkNode(val, isNull) {
+    const id = String(nextId++);
+    const n = { id, val, isNull, leftId: null, rightId: null };
+    nodes[id] = n;
+    return n;
+  }
+
+  const root = mkNode(arr[0], arr[0] === null);
+  if (root.isNull) return { root: null, nodes: {} };
+
+  const q = [root];
+  let i = 1;
+  while (q.length && i < arr.length) {
+    const cur = q.shift();
+    if (cur.isNull) continue;
+    if (i < arr.length) {
+      const v = arr[i++];
+      if (v !== null) { const c = mkNode(v, false); cur.leftId = c.id; q.push(c); }
+    }
+    if (i < arr.length) {
+      const v = arr[i++];
+      if (v !== null) { const c = mkNode(v, false); cur.rightId = c.id; q.push(c); }
+    }
+  }
+  return { root, nodes };
+}
+
+// ─── Layout ──────────────────────────────────────────────────────────────────
+function layout(root, nodes, vw, vh) {
+  const phantoms = {};
+  let phantomCounter = -1;
+
+  function ensureChild(parent, side) {
+    const field = side === 'L' ? 'leftId' : 'rightId';
+    if (parent[field] != null) return nodes[parent[field]];
+    const pid = String(phantomCounter--);
+    const ph = { id: pid, val: null, isNull: true, leftId: null, rightId: null, isPhantom: true };
+    phantoms[pid] = ph;
+    parent[field] = pid;
+    return ph;
+  }
+
+  function depthOf(node, d) {
+    if (!node || node.isNull || node.isPhantom) return d;
+    const ld = node.leftId != null ? depthOf(nodes[node.leftId], d + 1) : d;
+    const rd = node.rightId != null ? depthOf(nodes[node.rightId], d + 1) : d;
+    return Math.max(ld, rd);
+  }
+  const maxDepth = root ? depthOf(root, 0) : 0;
+
+  function addPhantoms(node) {
+    if (!node || node.isPhantom) return;
+    const has = (node.leftId != null) || (node.rightId != null);
+    if (has) {
+      const l = node.leftId != null ? nodes[node.leftId] : ensureChild(node, 'L');
+      const r = node.rightId != null ? nodes[node.rightId] : ensureChild(node, 'R');
+      if (!l.isPhantom) addPhantoms(l);
+      if (!r.isPhantom) addPhantoms(r);
+    }
+  }
+  if (root) addPhantoms(root);
+
+  const all = Object.assign({}, nodes, phantoms);
+  let xIdx = 0;
+  const order = [];
+
+  function inorder(nodeId, depth) {
+    if (nodeId == null) return;
+    const n = all[nodeId];
+    if (!n) return;
+    inorder(n.leftId, depth + 1);
+    n.x = xIdx++;
+    n.depth = depth;
+    order.push(n);
+    inorder(n.rightId, depth + 1);
+  }
+  if (root) inorder(root.id, 0);
+
+  const total = Math.max(1, order.length);
+  const PAD_X = 30, PAD_Y = 36;
+  const dx = (vw - PAD_X * 2) / total;
+  const dy = (vh - PAD_Y * 2) / Math.max(1, maxDepth);
+
+  order.forEach(n => {
+    n.px = PAD_X + (n.x + 0.5) * dx;
+    n.py = PAD_Y + n.depth * dy;
+  });
+
+  return { all, order, maxDepth };
+}
+
+// ─── Render ──────────────────────────────────────────────────────────────────
+function renderTree(svgId, root, nodes, vw, vh) {
+  const svg = document.getElementById(svgId);
+  svg.innerHTML = '';
+  svg.setAttribute('viewBox', `0 0 ${vw} ${vh}`);
+
+  if (!root) {
+    const t = svgEl('text', { x: vw/2, y: vh/2, 'text-anchor':'middle', fill:'var(--text-faint)', 'font-size': 14 });
+    t.textContent = '(empty)';
+    svg.appendChild(t);
+    return { all: {}, order: [], maxDepth: 0 };
+  }
+
+  const lay = layout(root, nodes, vw, vh);
+  const all = lay.all;
+  const R = lay.order.length <= 4 ? 20 : lay.order.length <= 8 ? 17 : lay.order.length <= 14 ? 14 : 11;
+
+  const edgeG = svgG('edges-' + svgId);
+  const nodeG = svgG('nodes-' + svgId);
+  svg.appendChild(edgeG); svg.appendChild(nodeG);
+
+  Object.values(all).forEach(n => {
+    if (n.isPhantom || n.isNull) return;
+    [['leftId'], ['rightId']].forEach(([f]) => {
+      const cid = n[f];
+      if (cid == null) return;
+      const c = all[cid];
+      if (!c) return;
+      edgeG.appendChild(svgEl('line', {
+        id: `edge-${svgId}-${n.id}-${c.id}`,
+        x1: n.px, y1: n.py, x2: c.px, y2: c.py,
+        stroke: c.isPhantom ? '#374151' : '#2d3148',
+        'stroke-width': c.isPhantom ? 1.2 : 2,
+        'stroke-dasharray': c.isPhantom ? '3 3' : '0',
+        'stroke-linecap': 'round',
+      }));
+    });
+  });
+
+  Object.values(all).forEach(n => {
+    const g = svgG(`g-${svgId}-${n.id}`);
+    if (n.isPhantom) {
+      g.appendChild(svgEl('circle', {
+        id: `nc-${svgId}-${n.id}`, cx: n.px, cy: n.py, r: R * 0.65,
+        fill: 'none', stroke: '#475569', 'stroke-width': 1.5, 'stroke-dasharray': '2 2',
+      }));
+    } else {
+      g.appendChild(svgEl('circle', {
+        id: `nc-${svgId}-${n.id}`, cx: n.px, cy: n.py, r: R,
+        fill: COLORS.idle.fill, stroke: COLORS.idle.stroke, 'stroke-width': 2.5,
+      }));
+      const t = svgEl('text', {
+        id: `nt-${svgId}-${n.id}`, x: n.px, y: n.py,
+        'text-anchor':'middle', 'dominant-baseline':'middle',
+        fill: COLORS.idle.text,
+        'font-size': Math.round(R * 0.75), 'font-weight':'bold',
+        'font-family': 'Segoe UI, system-ui, sans-serif',
+      });
+      t.textContent = n.val;
+      g.appendChild(t);
+    }
+    nodeG.appendChild(g);
+  });
+
+  return lay;
+}
+
+function svgEl(tag, attrs) {
+  const el = document.createElementNS('http://www.w3.org/2000/svg', tag);
+  Object.entries(attrs).forEach(([k,v]) => el.setAttribute(k, v));
+  return el;
+}
+function svgG(id) {
+  const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  if (id) g.id = id;
+  return g;
+}
+
+// ─── Simulation ──────────────────────────────────────────────────────────────
+function simulate(rootNode, nodesR, subNode, nodesS) {
+  const out = [];
+  // Track display states for all real nodes
+  const stR = {}, stS = {};
+  Object.keys(nodesR).forEach(id => stR[id] = 'idle');
+  Object.keys(nodesS).forEach(id => stS[id] = 'idle');
+
+  let finalResult = null;
+  let activeRootId = null;  // current DFS cursor in root
+  let activeSameP = null;   // current isSameTree p node
+  let activeSameQ = null;   // current isSameTree q node
+
+  function snap(opts) {
+    out.push(Object.assign({
+      phase: 'dfs', desc: '', lines: [],
+      stR: { ...stR }, stS: { ...stS },
+      activeRootId,
+      activeSameP, activeSameQ,
+      result: finalResult,
+      dfsNode: null,
+      sameCall: null,
+    }, opts));
+  }
+
+  snap({ phase: 'start', desc: 'Begin DFS over root. At each node, check if it matches subRoot via isSameTree.', lines: [1] });
+
+  // isSameTree: returns true/false, emits steps comparing node `pId` in root vs `qId` in sub
+  function isSameTree(pId, qId, prefix) {
+    const p = pId != null ? nodesR[pId] : null;
+    const q = qId != null ? nodesS[qId] : null;
+    const pLabel = p ? p.val : 'null';
+    const qLabel = q ? q.val : 'null';
+
+    if (p) stR[pId] = 'active';
+    if (q) stS[qId] = 'active';
+    activeSameP = pId;
+    activeSameQ = qId;
+
+    snap({
+      phase: 'same-check',
+      desc: `isSameTree: compare root.${prefix}=${pLabel} vs subRoot.${prefix}=${qLabel}.`,
+      lines: [8],
+      dfsNode: activeRootId,
+      sameCall: `(${pLabel}, ${qLabel})`,
+    });
+
+    if (!p && !q) {
+      snap({ phase: 'same-null-match', desc: `Both null at "${prefix}" — branch matches. Return True.`, lines: [9], dfsNode: activeRootId, sameCall: `(null, null)` });
+      activeSameP = null; activeSameQ = null;
+      return true;
+    }
+    if (!p || !q) {
+      if (p) stR[pId] = 'mismatch';
+      if (q) stS[qId] = 'mismatch';
+      snap({ phase: 'same-struct-mismatch', desc: `Structural mismatch at "${prefix}" — one is null. Return False.`, lines: [10], dfsNode: activeRootId, sameCall: null });
+      activeSameP = null; activeSameQ = null;
+      return false;
+    }
+    if (String(p.val) !== String(q.val)) {
+      stR[pId] = 'mismatch';
+      stS[qId] = 'mismatch';
+      snap({ phase: 'same-val-mismatch', desc: `Value mismatch at "${prefix}" (${p.val} ≠ ${q.val}). Return False.`, lines: [11], dfsNode: activeRootId, sameCall: null });
+      activeSameP = null; activeSameQ = null;
+      return false;
+    }
+
+    stR[pId] = 'active';
+    stS[qId] = 'active';
+    snap({ phase: 'same-val-match', desc: `Values match at "${prefix}" (${p.val} == ${q.val}) — recurse into children.`, lines: [12, 13], dfsNode: activeRootId, sameCall: `(${p.val}, ${q.val}) ✓` });
+
+    stR[pId] = 'matched';
+    stS[qId] = 'matched';
+    activeSameP = null; activeSameQ = null;
+
+    const leftOk = isSameTree(p.leftId, q.leftId, prefix + '.left');
+    if (!leftOk) return false;
+    const rightOk = isSameTree(p.rightId, q.rightId, prefix + '.right');
+    return rightOk;
+  }
+
+  function resetSubColors() {
+    Object.keys(stS).forEach(id => stS[id] = 'idle');
+  }
+  function resetRootSubtreeColors(nodeId) {
+    if (nodeId == null) return;
+    const n = nodesR[nodeId];
+    if (!n) return;
+    if (stR[nodeId] !== 'skipped') stR[nodeId] = 'idle';
+    resetRootSubtreeColors(n.leftId);
+    resetRootSubtreeColors(n.rightId);
+  }
+
+  // DFS over root
+  function dfs(nodeId, path) {
+    if (finalResult) return;
+    const node = nodesR[nodeId];
+    if (!node) return;
+
+    activeRootId = nodeId;
+    // Mark cursor
+    stR[nodeId] = 'cursor';
+    snap({
+      phase: 'dfs-visit',
+      desc: `DFS: visiting root.${path} (val=${node.val}). Call isSameTree(this, subRoot).`,
+      lines: [4],
+      dfsNode: String(node.val),
+      sameCall: null,
+    });
+
+    // Run isSameTree
+    const result = isSameTree(nodeId, subNode ? subNode.id : null, 'root');
+
+    if (result) {
+      finalResult = true;
+      // Color the matched subtree
+      function markMatch(nid) {
+        if (nid == null) return;
+        const n = nodesR[nid];
+        if (!n) return;
+        stR[nid] = 'matched';
+        markMatch(n.leftId);
+        markMatch(n.rightId);
+      }
+      markMatch(nodeId);
+      Object.keys(stS).forEach(id => stS[id] = 'matched');
+      snap({
+        phase: 'found',
+        desc: `isSameTree returned True at root.${path} — subRoot IS a subtree! Return True.`,
+        lines: [4, 5],
+        result: true,
+        dfsNode: String(node.val),
+        sameCall: 'True ✓',
+      });
+      return;
+    }
+
+    // No match here — mark this node skipped, reset sub colors, continue DFS
+    stR[nodeId] = 'skipped';
+    resetSubColors();
+    snap({
+      phase: 'dfs-recurse',
+      desc: `isSameTree returned False at root.${path}. Recurse into children.`,
+      lines: [6, 7],
+      dfsNode: String(node.val),
+      sameCall: 'False',
+    });
+
+    dfs(node.leftId, path + '.left');
+    if (!finalResult) dfs(node.rightId, path + '.right');
+  }
+
+  // Handle null root
+  if (!rootNode) {
+    snap({ phase: 'null-root', desc: 'root is null — subRoot cannot be a subtree. Return False.', lines: [2, 3], result: false });
+    finalResult = false;
+  } else {
+    dfs(rootNode.id, 'root');
+  }
+
+  if (finalResult === null) finalResult = false;
+
+  snap({
+    phase: 'done',
+    desc: finalResult
+      ? 'subRoot found as a subtree of root. Result: True.'
+      : 'DFS exhausted — subRoot is NOT a subtree of root. Result: False.',
+    lines: finalResult ? [4, 5] : [6, 7],
+    result: finalResult,
+    dfsNode: null,
+    sameCall: finalResult ? 'True' : 'False',
+  });
+
+  return out;
+}
+
+// ─── Build ───────────────────────────────────────────────────────────────────
+function build() {
+  buildCodePanel();
+  const r = parseTree(document.getElementById('inp-root').value);
+  const s = parseTree(document.getElementById('inp-sub').value);
+  if (!r || !s) {
+    document.getElementById('step-desc').textContent = 'Bad input — use JSON arrays like [3,4,5,1,2].';
+    return;
+  }
+  rootTree  = r.root;  nodesRoot = r.nodes;
+  subTree   = s.root;  nodesSub  = s.nodes;
+
+  layRoot = renderTree('svg-root', rootTree, nodesRoot, 540, 260);
+  laySub  = renderTree('svg-sub',  subTree,  nodesSub,  280, 260);
+
+  const steps = simulate(rootTree, nodesRoot, subTree, nodesSub);
+  nav.load(steps);
+}
+
+function loadNoMatch() {
+  document.getElementById('inp-root').value = '[3,4,5,1,2]';
+  document.getElementById('inp-sub').value  = '[4,1]';
+  build();
+}
+
+// ─── Apply step ──────────────────────────────────────────────────────────────
+function applyStep(s, animate) {
+  Object.entries(s.stR).forEach(([id, st]) => setNodeColor('svg-root', id, st, animate));
+  Object.entries(s.stS).forEach(([id, st]) => setNodeColor('svg-sub',  id, st, animate));
+
+  // Comparison chips
+  const p = s.activeSameP != null ? nodesRoot[s.activeSameP] : null;
+  const q = s.activeSameQ != null ? nodesSub[s.activeSameQ]  : null;
+  const cR = document.getElementById('cmp-root');
+  const cS = document.getElementById('cmp-sub');
+  cR.textContent = p ? p.val : (s.activeSameP === null ? '—' : '∅');
+  cS.textContent = q ? q.val : (s.activeSameQ === null ? '—' : '∅');
+  cR.classList.toggle('null', !p);
+  cS.classList.toggle('null', !q);
+
+  // DFS info
+  const dEl = document.getElementById('dfs-cur');
+  dEl.textContent = s.dfsNode || '—';
+  dEl.className = 'dfs-val' + (s.dfsNode ? '' : ' none');
+
+  const sEl = document.getElementById('dfs-same');
+  sEl.textContent = s.sameCall || '—';
+  sEl.className = 'dfs-val' + (s.sameCall ? '' : ' none');
+
+  // Verdict
+  const v = document.getElementById('verdict');
+  if (s.result === true)       { v.textContent = '✓ subRoot is a subtree'; v.className = 'verdict ok'; }
+  else if (s.result === false) { v.textContent = '✗ Not a subtree';         v.className = 'verdict bad'; }
+  else                         { v.textContent = 'running…';                v.className = 'verdict'; }
+
+  // Pulse active nodes
+  if (animate) {
+    if (s.activeSameP != null) pulseNode('svg-root', s.activeSameP, s.phase);
+    if (s.activeSameQ != null) pulseNode('svg-sub',  s.activeSameQ, s.phase);
+    if (s.phase === 'dfs-visit' && s.activeRootId != null) {
+      pulseNode('svg-root', s.activeRootId, 'cursor');
+    }
+  }
+
+  setCodeLines(s.lines, animate);
+}
+
+function pulseNode(svgId, id, phase) {
+  const g = document.getElementById(`g-${svgId}-${id}`);
+  if (!g) return;
+  if (phase.includes('mismatch')) {
+    gsap.fromTo(g, { x: -3 }, { x: 3, repeat: 5, yoyo: true, duration: 0.05, onComplete: () => gsap.set(g, { x: 0 }) });
+  } else {
+    const c = document.getElementById(`nc-${svgId}-${id}`);
+    const cx = c ? c.getAttribute('cx') : '0';
+    const cy = c ? c.getAttribute('cy') : '0';
+    gsap.fromTo(g, { scale: 1 }, { scale: 1.2, yoyo: true, repeat: 1, duration: 0.18, transformOrigin: 'center', svgOrigin: `${cx} ${cy}` });
+  }
+}
+
+// ─── Code highlight ───────────────────────────────────────────────────────────
+const HL_BG   = 'rgba(var(--orange-ch),0.13)';
+const HL_BORD = 'var(--orange)';
+let activeLines = [];
+
+function setCodeLines(newLines, animate) {
+  const DUR = 0.22;
+  activeLines.filter(n => !newLines.includes(n)).forEach(n => {
+    const el = document.getElementById(`cl-${n}`);
+    if (!el) return;
+    if (animate) {
+      gsap.to(el, { backgroundColor: 'rgba(0,0,0,0)', borderLeftColor: 'transparent', duration: DUR });
+      gsap.to(el.querySelector('.ln'), { color: '#3d4468', duration: DUR });
+    } else {
+      el.style.backgroundColor = ''; el.style.borderLeftColor = '';
+      const ln = el.querySelector('.ln'); if (ln) ln.style.color = '';
+    }
+  });
+  newLines.filter(n => !activeLines.includes(n)).forEach(n => {
+    const el = document.getElementById(`cl-${n}`);
+    if (!el) return;
+    if (animate) {
+      gsap.to(el, { backgroundColor: HL_BG, borderLeftColor: HL_BORD, duration: DUR, delay: 0.06 });
+      gsap.to(el.querySelector('.ln'), { color: 'var(--orange)', duration: DUR, delay: 0.06 });
+    } else {
+      el.style.backgroundColor = HL_BG; el.style.borderLeftColor = HL_BORD;
+      const ln = el.querySelector('.ln'); if (ln) ln.style.color = 'var(--orange)';
+    }
+  });
+  if (newLines.length) {
+    const el = document.getElementById(`cl-${newLines[0]}`);
+    if (el) el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }
+  activeLines = newLines.slice();
+}
+
+// ─── Node color ──────────────────────────────────────────────────────────────
+function setNodeColor(svgId, id, state, animate, dur) {
+  dur = dur || 0.25;
+  const c = COLORS[state] || COLORS.idle;
+  const nc = document.getElementById(`nc-${svgId}-${id}`);
+  const nt = document.getElementById(`nt-${svgId}-${id}`);
+  if (!nc) return;
+  if (nc.getAttribute('stroke-dasharray') === '2 2') return;
+  if (animate) {
+    gsap.to(nc, { duration: dur, ease: 'power2.out', attr: { fill: c.fill, stroke: c.stroke } });
+    if (nt) gsap.to(nt, { duration: dur, attr: { fill: c.text } });
+  } else {
+    nc.setAttribute('fill', c.fill); nc.setAttribute('stroke', c.stroke);
+    if (nt) nt.setAttribute('fill', c.text);
+  }
+}
+
+// ─── Init ────────────────────────────────────────────────────────────────────
+var nav = VizNav({
+  btnPrev:  document.getElementById('btn-back'),
+  btnNext:  document.getElementById('btn-next'),
+  btnPlay:  document.getElementById('btn-play'),
+  speedSel: document.getElementById('speed-select'),
+  render: function(step, idx, total) {
+    applyStep(step, idx > 0);
+    var pl = document.getElementById('phase-label');
+    if (pl) pl.textContent = 'Step ' + (idx + 1) + ' / ' + total + '  ·  ' + step.phase;
+    var sd = document.getElementById('step-desc');
+    if (sd) sd.textContent = step.desc;
+  }
+});
+
+build();
+</script>
+<script>
+  if (window.self !== window.top) {
+    var bl = document.querySelector('.back-link');
+    if (bl) bl.style.display = 'none';
+  }
+</script>
+</body>
+</html>
