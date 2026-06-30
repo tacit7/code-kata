@@ -173,6 +173,46 @@
       background: #1c0000; color: #f87171;
       border: 1px solid #7f1d1d; display: block;
     }
+
+    /* ── viz-inputs styling ── */
+    .viz-inputs {
+      display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end;
+      padding: 10px 0 14px; width: 100%; max-width: 90%;
+    }
+    .viz-inputs .field {
+      display: flex; flex-direction: column; gap: 4px;
+    }
+    .viz-inputs label {
+      font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--text-dim);
+    }
+    .viz-inputs input[type="text"] {
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--text); border-radius: var(--radius-sm);
+      padding: 6px 10px; font-size: 0.85rem; width: 180px;
+    }
+    .viz-inputs input[type="number"] {
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--text); border-radius: var(--radius-sm);
+      padding: 6px 10px; font-size: 0.85rem; width: 80px;
+    }
+    .viz-inputs select {
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--text); border-radius: var(--radius-sm);
+      padding: 6px 10px; font-size: 0.85rem; cursor: pointer;
+    }
+    .viz-inputs button {
+      padding: 7px 18px; font-weight: 600; cursor: pointer;
+      border-radius: var(--radius-sm); border: none;
+      font-size: 0.85rem;
+    }
+    .viz-inputs .btn-run {
+      background: var(--accent); color: #fff;
+    }
+    .viz-inputs .btn-random {
+      background: var(--surface); color: var(--text);
+      border: 1px solid var(--border);
+    }
   </style>
 </head>
 <body class="page">
@@ -185,14 +225,27 @@
 
 <div class="viz-inputs">
   <div class="field">
+    <label>Preset</label>
+    <select id="presetSel" onchange="loadPreset()">
+      <option value="">— pick a preset —</option>
+      <option value='{"nums":"1,1,1","target":1}'>All 1s, target=1</option>
+      <option value='{"nums":"1,1,1","target":-3}'>All 1s, target=-3</option>
+      <option value='{"nums":"1,2,1","target":0}'>Mixed, target=0</option>
+      <option value='{"nums":"1,0,1,2,1","target":0}'>With 0, target=0</option>
+      <option value='{"nums":"2,2,2,2","target":0}'>All 2s, target=0</option>
+      <option value='{"nums":"5,3,2,1","target":7}'>Unique, target=7</option>
+    </select>
+  </div>
+  <div class="field">
     <label>Numbers</label>
-    <input id="inp-nums" type="text" value="1,1,1,1,1" style="width:150px" />
+    <input id="inp-nums" type="text" value="1,1,1,1,1" />
   </div>
   <div class="field">
     <label>Target</label>
-    <input id="inp-target" type="number" value="3" style="width:60px" />
+    <input id="inp-target" type="number" value="3" />
   </div>
-  <button class="btn-primary" onclick="buildAndRun()">Build &amp; Run</button>
+  <button class="btn-run" onclick="buildAndRun()">Run</button>
+  <button class="btn-random" onclick="randomExample()">🎲 Random</button>
 </div>
 
 <div class="viz-area" id="viz-area">
@@ -217,7 +270,7 @@
         </div>
         <div class="dp-scroll">
           <div id="dp-list">
-            <div class="dp-empty">Enter numbers and click Build &amp; Run.</div>
+            <div class="dp-empty">Enter numbers and click Run.</div>
           </div>
         </div>
       </div>
@@ -251,7 +304,7 @@
 
     <div class="info-panel">
       <div class="panel-title" id="phase-label">&mdash;</div>
-      <div style="font-size:0.82rem;color:var(--text-muted)" id="step-desc">Enter numbers and click Build &amp; Run.</div>
+      <div style="font-size:0.82rem;color:var(--text-muted)" id="step-desc">Enter numbers and click Run.</div>
       <div class="result-badge" id="result-badge"></div>
     </div>
   </div>
@@ -544,6 +597,28 @@ function buildAndRun() {
 
   simSteps = buildSteps(nums, target);
   nav.load(simSteps);
+}
+
+function loadPreset() {
+  var sel = document.getElementById('presetSel');
+  if (!sel.value) return;
+  var d = JSON.parse(sel.value);
+  document.getElementById('inp-nums').value = d.nums;
+  document.getElementById('inp-target').value = d.target;
+  buildAndRun();
+}
+
+function randomExample() {
+  var numCount = Math.floor(Math.random() * 4) + 2;
+  var nums = [];
+  for (var i = 0; i < numCount; i++) {
+    nums.push(Math.floor(Math.random() * 8) + 1);
+  }
+  var target = Math.floor(Math.random() * 10) - 5;
+  document.getElementById('inp-nums').value = nums.join(',');
+  document.getElementById('inp-target').value = target;
+  document.getElementById('presetSel').value = '';
+  buildAndRun();
 }
 </script>
 
