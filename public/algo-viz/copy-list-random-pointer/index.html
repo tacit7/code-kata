@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Copy List with Random Pointer</title>
+  <link rel="stylesheet" href="../shared/style.css" />
+  <script src="../shared/viz.js"></script>
+  <style>
+    .viz-inputs {
+      display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end;
+      padding: 10px 0 14px; width: 100%; max-width: 90%;
+    }
+    .viz-inputs .field { display: flex; flex-direction: column; gap: 4px; }
+    .viz-inputs label {
+      font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--text-dim);
+    }
+    .viz-inputs select {
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--text); border-radius: var(--radius-sm);
+      padding: 6px 10px; font-size: 0.85rem; cursor: pointer;
+    }
+    .viz-inputs input[type="text"] {
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--text); border-radius: var(--radius-sm);
+      padding: 6px 10px; font-size: 0.85rem; width: 280px;
+    }
+
+    .viz-area {
+      width: 100%; max-width: 90%;
+      display: flex; flex-direction: column; gap: 14px;
+    }
+
+    .nav-row { display: flex; gap: 12px; }
+
+    .main-cols {
+      display: grid;
+      grid-template-columns: 56% 1fr;
+      gap: 14px;
+      align-items: start;
+    }
+
+    @media (max-width: 860px) { .main-cols { grid-template-columns: 1fr; } }
+
+    .left-panel { display: flex; flex-direction: column; gap: 14px; }
+
+    .list-section {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 14px 16px;
+      overflow: visible;
+    }
+
+    .section-label {
+      font-size: 0.68rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.1em; color: var(--text-dim); margin-bottom: 12px;
+    }
+
+    .list-container {
+      position: relative;
+      min-height: 120px;
+      overflow: visible;
+    }
+
+    .nodes-row {
+      display: flex;
+      gap: 32px;
+      align-items: center;
+      padding: 36px 8px 16px;
+      flex-wrap: nowrap;
+    }
+
+    .node-box {
+      width: 62px; min-height: 62px;
+      background: var(--bg); border: 2px solid var(--border);
+      border-radius: 8px;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      font-family: monospace;
+      flex-shrink: 0;
+      transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+    }
+
+    .node-val { font-size: 1.1rem; font-weight: 700; color: var(--text); }
+    .node-rnd { font-size: 0.58rem; color: var(--text-dim); margin-top: 3px; }
+
+    .node-box.active-orig {
+      border-color: var(--accent);
+      background: rgba(122,162,247,0.1);
+      box-shadow: 0 0 8px rgba(122,162,247,0.25);
+    }
+
+    .node-box.active-copy {
+      border-color: var(--green);
+      background: rgba(158,206,106,0.1);
+      box-shadow: 0 0 8px rgba(158,206,106,0.25);
+    }
+
+    .node-box.flash-blue {
+      border-color: var(--blue);
+      background: rgba(125,207,255,0.15);
+      box-shadow: 0 0 8px rgba(125,207,255,0.25);
+    }
+
+    .node-box.placeholder {
+      border-style: dashed; border-color: var(--border);
+      background: transparent; opacity: 0.2;
+    }
+
+    .list-svg {
+      position: absolute; top: 0; left: 0;
+      width: 100%; height: 100%;
+      pointer-events: none; overflow: visible;
+    }
+
+    .right-panel { display: flex; flex-direction: column; gap: 14px; }
+
+    .phase-panel {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 14px 16px;
+    }
+
+    .phase-banner {
+      font-size: 1rem; font-weight: 700; color: var(--text);
+      margin-bottom: 8px;
+    }
+
+    .step-annotation {
+      font-size: 0.85rem; color: var(--text-dim); line-height: 1.5;
+      min-height: 2.5em;
+    }
+
+    .map-panel {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 14px 16px; flex: 1;
+    }
+
+    .panel-label {
+      font-size: 0.68rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.1em; color: var(--text-dim); margin-bottom: 10px;
+    }
+
+    .map-entries { display: flex; flex-direction: column; gap: 4px; }
+
+    .map-row {
+      display: flex; align-items: center; gap: 8px;
+      padding: 5px 8px; border-radius: 6px;
+      font-family: monospace; font-size: 0.82rem;
+      border: 1px solid transparent; transition: all 0.2s;
+    }
+
+    .map-row.highlighted {
+      background: rgba(122,162,247,0.12); border-color: var(--accent);
+    }
+
+    .map-orig { color: var(--text); font-weight: 600; }
+    .map-arrow { color: var(--text-dim); }
+    .map-copy { color: var(--green); font-weight: 600; }
+
+    .empty-copy-hint {
+      font-size: 0.78rem; color: var(--text-dim); font-style: italic;
+      padding: 8px 0;
+    }
+  </style>
+</head>
+<body class="page">
+
+<div class="page-header">
+  <a class="back-link" href="../index.html">&larr; All Algorithms</a>
+  <div>
+    <div class="page-title">Copy List with Random Pointer</div>
+    <div style="font-size:0.78rem;color:var(--text-dim);margin-top:4px;">LeetCode #138 &middot; Linked List &middot; O(n) time &middot; O(n) space</div>
+  </div>
+</div>
+
+<div class="viz-inputs">
+  <div class="field">
+    <label>Preset</label>
+    <select id="presetSel" onchange="loadPreset()">
+      <option value="">-- custom --</option>
+      <option value="[[7,0]]">Single node, self-random</option>
+      <option value="[[1,1],[2,0]]">Two nodes, cross-random</option>
+      <option value="[[7,null],[13,0],[11,4],[10,2],[1,0]]" selected>LeetCode canonical (5 nodes)</option>
+      <option value="[[3,null],[3,null],[3,null]]">All-null randoms</option>
+      <option value="[[1,0],[2,0],[3,0],[4,0]]">All point to head</option>
+      <option value="[[1,1],[2,2],[3,3],[4,null]]">Linear chain (each to next)</option>
+    </select>
+  </div>
+  <div class="field">
+    <label>List JSON</label>
+    <input type="text" id="listInput" value="[[7,null],[13,0],[11,4],[10,2],[1,0]]" />
+  </div>
+  <button onclick="buildAndRun()" style="background:var(--accent);border:none;color:#fff;border-radius:var(--radius-sm);padding:8px 16px;cursor:pointer;font-size:0.85rem;font-weight:700;">Run</button>
+  <button onclick="randomExample()" style="background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:var(--radius-sm);padding:8px 14px;cursor:pointer;font-size:0.85rem;">&#127922; Random</button>
+</div>
+
+<div class="controls"></div>
+
+<div class="viz-area">
+  <div class="nav-row">
+    <div class="panel-box" style="flex:0 0 auto">
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="btn-step" id="prevBtn" disabled>&#8592;</button>
+        <button class="btn-step" id="stepBtn" disabled>&#8594;</button>
+        <button class="btn-play" id="playBtn" disabled>&#9654; Play</button>
+        <button id="resetBtn" style="display:none"></button>
+        <select id="speedSel" style="background:var(--bg);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:6px 10px;font-size:0.85rem">
+          <option value="700">Slow</option>
+          <option value="250" selected>Medium</option>
+          <option value="80">Fast</option>
+        </select>
+      </div>
+    </div>
+    <div class="panel-box" style="flex:1;min-width:0">
+      <div style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--text-dim)" id="phase-label">--</div>
+      <div style="font-size:0.88rem;color:var(--text-dim);margin-top:3px" id="step-desc">Click Run to start.</div>
+    </div>
+  </div>
+
+  <div class="main-cols">
+    <div class="left-panel">
+      <div class="list-section">
+        <div class="section-label">Original List</div>
+        <div class="list-container" id="orig-container">
+          <svg class="list-svg" id="orig-svg"></svg>
+          <div class="nodes-row" id="orig-nodes"></div>
+        </div>
+      </div>
+      <div class="list-section">
+        <div class="section-label">Copy List</div>
+        <div class="list-container" id="copy-container">
+          <svg class="list-svg" id="copy-svg"></svg>
+          <div class="nodes-row" id="copy-nodes"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="right-panel">
+      <div class="phase-panel">
+        <div class="phase-banner" id="phase-banner">--</div>
+        <div class="step-annotation" id="step-annotation">Click Run to start the visualization.</div>
+      </div>
+      <div class="map-panel">
+        <div class="panel-label">Hash Map (orig &rarr; copy)</div>
+        <div class="map-entries" id="map-entries">
+          <div style="color:var(--text-dim);font-size:0.82rem;font-family:monospace;padding:4px 8px;">{} empty</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+var nav;
+var currentSnap = null;
+
+window.addEventListener('DOMContentLoaded', function() {
+  nav = VizNav({
+    btnPrev: document.getElementById('prevBtn'),
+    btnNext: document.getElementById('stepBtn'),
+    btnPlay: document.getElementById('playBtn'),
+    speedSel: document.getElementById('speedSel'),
+    render: function(snap, cur, total) {
+      currentSnap = snap;
+      renderSnap(snap);
+      document.getElementById('phase-label').textContent = 'Step ' + (cur + 1) + ' / ' + total;
+      document.getElementById('step-desc').textContent = snap.annotation;
+    }
+  });
+
+  if (window.self !== window.top) {
+    var bl = document.querySelector('.back-link');
+    if (bl) bl.style.display = 'none';
+  }
+
+  buildAndRun();
+});
+
+// ---------- Simulation ----------
+
+function simulate(inputNodes) {
+  var n = inputNodes.length;
+  var steps = [];
+
+  if (n === 0) {
+    steps.push({
+      phase: 'done', phaseBanner: 'Empty List',
+      annotation: 'Empty list -- nothing to copy.',
+      originalNodes: [], copyNodes: [], mapEntries: [],
+      activeOrigId: null, activeCopyId: null, highlightedArrow: null,
+    });
+    return steps;
+  }
+
+  var originalNodes = inputNodes.map(function(node, i) {
+    return { id: i, val: node.val, nextId: i < n - 1 ? i + 1 : null, randomId: node.randomId };
+  });
+
+  // copyNodes tracks mutable state throughout simulation
+  var copyNodes = originalNodes.map(function(node) {
+    return { id: node.id, val: node.val, nextId: null, randomId: null, exists: false };
+  });
+
+  var mapEntries = [];
+
+  function makeSnap(phase, phaseBanner, annotation, activeOrigId, activeCopyId, highlightedArrow, mapHighlightId) {
+    return {
+      phase: phase,
+      phaseBanner: phaseBanner,
+      annotation: annotation,
+      originalNodes: originalNodes.slice(),
+      copyNodes: copyNodes.map(function(cn) { return Object.assign({}, cn); }),
+      mapEntries: mapEntries.map(function(e) {
+        return { origId: e.origId, copyId: e.copyId, highlighted: e.origId === mapHighlightId };
+      }),
+      activeOrigId: activeOrigId !== undefined ? activeOrigId : null,
+      activeCopyId: activeCopyId !== undefined ? activeCopyId : null,
+      highlightedArrow: highlightedArrow || null,
+    };
+  }
+
+  // Init
+  steps.push(makeSnap('init', '&#128203; Original List',
+    'Original list loaded. We will deep-copy it in two passes using a hash map.',
+    null, null, null, null));
+
+  // Pass 1a: Create all copies + populate map
+  for (var i = 0; i < n; i++) {
+    var orig = originalNodes[i];
+
+    steps.push(makeSnap('pass1', '&#128309; Pass 1: Create Copies',
+      'Visit node ' + orig.val + '. Create a copy node and add to map.',
+      i, null, null, null));
+
+    copyNodes[i] = { id: i, val: orig.val, nextId: null, randomId: null, exists: true };
+    mapEntries.push({ origId: i, copyId: i });
+
+    steps.push(makeSnap('pass1', '&#128309; Pass 1: Create Copies',
+      'map[node(' + orig.val + ')] = copy(' + orig.val + '). Copy node created!',
+      i, i, null, i));
+  }
+
+  // Pass 1b: Wire .next for all copies
+  for (var i = 0; i < n; i++) {
+    var orig = originalNodes[i];
+    copyNodes[i].nextId = orig.nextId;
+
+    var nextDesc = orig.nextId !== null
+      ? 'copy(' + originalNodes[orig.nextId].val + ')'
+      : 'null';
+
+    steps.push(makeSnap('pass1', '&#128309; Pass 1: Wire .next Pointers',
+      'Wire copy(' + orig.val + ').next = ' + nextDesc,
+      null, i,
+      { type: 'next', fromId: i, toId: orig.nextId, isCopy: true },
+      null));
+  }
+
+  // Pass 2: Wire random pointers
+  for (var i = 0; i < n; i++) {
+    var orig = originalNodes[i];
+    var randomId = orig.randomId;
+
+    // (a) Visit orig, show its random arrow
+    var randDesc = randomId !== null
+      ? 'node(' + originalNodes[randomId].val + ')'
+      : 'null';
+    steps.push(makeSnap('pass2', '&#128994; Pass 2: Wire Random Pointers',
+      'Visit node ' + orig.val + '. orig.random points to ' + randDesc + '.',
+      i, null,
+      randomId !== null ? { type: 'random', fromId: i, toId: randomId, isCopy: false } : null,
+      null));
+
+    if (randomId !== null) {
+      // (b) Map lookup
+      steps.push(makeSnap('pass2', '&#128994; Pass 2: Wire Random Pointers',
+        'Look up map[node(' + originalNodes[randomId].val + ')] = copy(' + originalNodes[randomId].val + ')',
+        i, null,
+        { type: 'random', fromId: i, toId: randomId, isCopy: false },
+        randomId));
+    }
+
+    // Wire copy.random
+    copyNodes[i].randomId = randomId;
+
+    // (c) Draw copy.random arrow
+    var copyRandDesc = randomId !== null
+      ? 'copy(' + originalNodes[randomId].val + ')'
+      : 'null';
+    steps.push(makeSnap('pass2', '&#128994; Pass 2: Wire Random Pointers',
+      'Set copy(' + orig.val + ').random = ' + copyRandDesc + ' &#10003;',
+      null, i,
+      randomId !== null ? { type: 'random', fromId: i, toId: randomId, isCopy: true } : null,
+      null));
+  }
+
+  // Done
+  steps.push(makeSnap('done', '&#9989; Deep Copy Complete',
+    'Deep copy complete! Both lists are fully independent.',
+    null, null, null, null));
+
+  return steps;
+}
+
+// ---------- Rendering ----------
+
+function renderSnap(snap) {
+  renderNodeRow('orig-nodes', snap.originalNodes, snap.activeOrigId, false, snap);
+  renderNodeRow('copy-nodes', snap.copyNodes, snap.activeCopyId, true, snap);
+  renderMap(snap.mapEntries, snap.originalNodes);
+  document.getElementById('phase-banner').innerHTML = snap.phaseBanner || '--';
+  document.getElementById('step-annotation').innerHTML = snap.annotation || '';
+  requestAnimationFrame(function() { drawAllArrows(snap); });
+}
+
+function renderNodeRow(rowId, nodes, activeId, isCopy, snap) {
+  var row = document.getElementById(rowId);
+  row.innerHTML = '';
+
+  if (nodes.length === 0) {
+    row.innerHTML = '<div class="empty-copy-hint">Empty list</div>';
+    return;
+  }
+
+  nodes.forEach(function(node) {
+    var box = document.createElement('div');
+    var classes = ['node-box'];
+
+    if (isCopy && !node.exists) {
+      classes.push('placeholder');
+    } else {
+      if (node.id === activeId) {
+        // Flash blue for newly created copy in pass1
+        var isFlash = isCopy && snap.phase === 'pass1' &&
+          snap.annotation.indexOf('created') !== -1 &&
+          snap.activeCopyId === node.id;
+        classes.push(isFlash ? 'flash-blue' : (isCopy ? 'active-copy' : 'active-orig'));
+      }
+    }
+
+    box.className = classes.join(' ');
+    box.setAttribute('data-id', node.id);
+
+    var inner = '';
+    if (!isCopy || node.exists) {
+      inner += '<div class="node-val">' + node.val + '</div>';
+      var rndText;
+      if (node.randomId !== null && node.randomId < nodes.length) {
+        rndText = 'rnd&#8594;' + nodes[node.randomId].val;
+      } else {
+        rndText = 'rnd:null';
+      }
+      inner += '<div class="node-rnd">' + rndText + '</div>';
+    }
+    // placeholders stay empty
+
+    box.innerHTML = inner;
+    row.appendChild(box);
+  });
+}
+
+function renderMap(entries, originalNodes) {
+  var el = document.getElementById('map-entries');
+  if (!entries || entries.length === 0) {
+    el.innerHTML = '<div style="color:var(--text-dim);font-size:0.82rem;font-family:monospace;padding:4px 8px;">{} empty</div>';
+    return;
+  }
+  el.innerHTML = entries.map(function(e) {
+    var origVal = originalNodes[e.origId] ? originalNodes[e.origId].val : e.origId;
+    var copyVal = originalNodes[e.copyId] ? originalNodes[e.copyId].val : e.copyId;
+    var cls = e.highlighted ? 'map-row highlighted' : 'map-row';
+    return '<div class="' + cls + '">' +
+      '<span class="map-orig">node(' + origVal + ')</span>' +
+      '<span class="map-arrow"> &#8594; </span>' +
+      '<span class="map-copy">copy(' + copyVal + ')</span>' +
+      '</div>';
+  }).join('');
+}
+
+// ---------- SVG Arrow Drawing ----------
+
+function getNodeCenters(rowId, containerId) {
+  var container = document.getElementById(containerId);
+  var row = document.getElementById(rowId);
+  if (!container || !row) return [];
+  var containerRect = container.getBoundingClientRect();
+  var boxes = row.querySelectorAll('.node-box:not(.placeholder)');
+  var allBoxes = row.querySelectorAll('.node-box');
+  var result = [];
+  // Build a map: data-id -> center, filling nulls for placeholders
+  allBoxes.forEach(function(box) {
+    if (box.classList.contains('placeholder')) {
+      result.push(null);
+    } else {
+      var r = box.getBoundingClientRect();
+      result.push({
+        cx: r.left - containerRect.left + r.width / 2,
+        cy: r.top - containerRect.top + r.height / 2,
+        left: r.left - containerRect.left,
+        right: r.left - containerRect.left + r.width,
+        top: r.top - containerRect.top,
+        bottom: r.top - containerRect.top + r.height,
+        w: r.width, h: r.height,
+      });
+    }
+  });
+  return result;
+}
+
+function svgEl(tag, attrs) {
+  var el = document.createElementNS('http://www.w3.org/2000/svg', tag);
+  Object.keys(attrs).forEach(function(k) { el.setAttribute(k, attrs[k]); });
+  return el;
+}
+
+function drawAllArrows(snap) {
+  drawListArrows('orig-svg', 'orig-container', 'orig-nodes', snap.originalNodes, false, snap);
+  drawListArrows('copy-svg', 'copy-container', 'copy-nodes', snap.copyNodes, true, snap);
+}
+
+function drawListArrows(svgId, containerId, rowId, nodes, isCopy, snap) {
+  var svg = document.getElementById(svgId);
+  if (!svg) return;
+  svg.innerHTML = '';
+
+  var centers = getNodeCenters(rowId, containerId);
+  if (centers.length === 0) return;
+
+  var defs = svgEl('defs', {});
+  svg.appendChild(defs);
+
+  var COLOR_NEXT = '#565f89';
+  var COLOR_NEXT_HL = '#7aa2f7';
+  var COLOR_RND = isCopy ? 'rgba(158,206,106,0.45)' : 'rgba(125,207,255,0.45)';
+  var COLOR_RND_HL = isCopy ? '#9ece6a' : '#7dcfff';
+
+  function addMarker(id, color) {
+    var m = svgEl('marker', { id: id, markerWidth: '8', markerHeight: '8', refX: '6', refY: '3', orient: 'auto' });
+    m.appendChild(svgEl('path', { d: 'M0,0 L0,6 L8,3 z', fill: color }));
+    defs.appendChild(m);
+  }
+  addMarker('mn-' + svgId, COLOR_NEXT);
+  addMarker('mn-hl-' + svgId, COLOR_NEXT_HL);
+  addMarker('mr-' + svgId, COLOR_RND);
+  addMarker('mr-hl-' + svgId, COLOR_RND_HL);
+
+  // Draw next arrows
+  nodes.forEach(function(node, i) {
+    if (isCopy && !node.exists) return;
+    var c = centers[i];
+    if (!c) return;
+
+    if (node.nextId === null) {
+      // Null terminus: short line + crossed circle
+      var x1 = c.right + 2, y1 = c.cy, x2 = x1 + 14;
+      svg.appendChild(svgEl('line', { x1: x1, y1: y1, x2: x2, y2: y1, stroke: COLOR_NEXT, 'stroke-width': '1.5' }));
+      svg.appendChild(svgEl('circle', { cx: x2 + 5, cy: y1, r: '5', fill: 'none', stroke: COLOR_NEXT, 'stroke-width': '1.5' }));
+      svg.appendChild(svgEl('line', { x1: x2+1, y1: y1-4, x2: x2+9, y2: y1+4, stroke: COLOR_NEXT, 'stroke-width': '1.5' }));
+      svg.appendChild(svgEl('line', { x1: x2+9, y1: y1-4, x2: x2+1, y2: y1+4, stroke: COLOR_NEXT, 'stroke-width': '1.5' }));
+      return;
+    }
+
+    var nextId = node.nextId;
+    if (nextId >= centers.length) return;
+    var to = centers[nextId];
+    if (!to) return;
+
+    var isHl = snap.highlightedArrow &&
+      snap.highlightedArrow.type === 'next' &&
+      snap.highlightedArrow.fromId === i &&
+      snap.highlightedArrow.toId === nextId &&
+      snap.highlightedArrow.isCopy === isCopy;
+
+    var color = isHl ? COLOR_NEXT_HL : COLOR_NEXT;
+    var marker = 'url(#' + (isHl ? 'mn-hl-' : 'mn-') + svgId + ')';
+
+    svg.appendChild(svgEl('line', {
+      x1: c.right + 2, y1: c.cy, x2: to.left - 2, y2: to.cy,
+      stroke: color, 'stroke-width': isHl ? '2.5' : '1.5',
+      'marker-end': marker,
+    }));
+  });
+
+  // Draw random arrows
+  var arrowIdx = 0;
+  nodes.forEach(function(node, i) {
+    if (isCopy && !node.exists) return;
+    if (node.randomId === null) return;
+
+    var randomId = node.randomId;
+    if (randomId >= centers.length) return;
+
+    var isHl = snap.highlightedArrow &&
+      snap.highlightedArrow.type === 'random' &&
+      snap.highlightedArrow.fromId === i &&
+      snap.highlightedArrow.toId === randomId &&
+      snap.highlightedArrow.isCopy === isCopy;
+
+    var color = isHl ? COLOR_RND_HL : COLOR_RND;
+    var marker = 'url(#' + (isHl ? 'mr-hl-' : 'mr-') + svgId + ')';
+    var sw = isHl ? '2.5' : '1.5';
+
+    var from = centers[i];
+    var to = centers[randomId];
+    if (!from) return;
+
+    if (i === randomId) {
+      // Self-loop: circular arc above the node
+      var cx = from.cx, top = from.top;
+      var r = 18;
+      var pathD = 'M ' + (cx - 8) + ' ' + top +
+        ' C ' + (cx - r - 8) + ' ' + (top - r * 2) + ' ' +
+        (cx + r + 8) + ' ' + (top - r * 2) + ' ' +
+        (cx + 8) + ' ' + top;
+      svg.appendChild(svgEl('path', {
+        d: pathD, fill: 'none', stroke: color,
+        'stroke-width': sw, 'stroke-dasharray': '5 3', 'marker-end': marker,
+      }));
+    } else if (to) {
+      // Curved arc: backward (randomId < i) arcs above, forward arcs below
+      var above = randomId < i;
+      var arcH = 38 + (arrowIdx % 3) * 14;
+      var fromX = from.cx;
+      var toX = to.cx;
+      var fromY, toY, midY;
+      if (above) {
+        fromY = from.top;
+        toY = to.top;
+        midY = Math.min(fromY, toY) - arcH;
+      } else {
+        fromY = from.bottom;
+        toY = to.bottom;
+        midY = Math.max(fromY, toY) + arcH;
+      }
+      var midX = (fromX + toX) / 2;
+      svg.appendChild(svgEl('path', {
+        d: 'M ' + fromX + ' ' + fromY +
+           ' Q ' + midX + ' ' + midY + ' ' + toX + ' ' + toY,
+        fill: 'none', stroke: color,
+        'stroke-width': sw, 'stroke-dasharray': '5 3', 'marker-end': marker,
+      }));
+      arrowIdx++;
+    }
+  });
+}
+
+// ---------- Input / Controls ----------
+
+function parseInput(str) {
+  try {
+    var parsed = JSON.parse(str.trim());
+    if (!Array.isArray(parsed)) throw new Error('Expected a JSON array');
+    var n = parsed.length;
+    return parsed.map(function(item, i) {
+      if (!Array.isArray(item) || item.length < 2) {
+        throw new Error('Item at index ' + i + ' must be [val, randomIdx]');
+      }
+      var val = item[0];
+      var rid = item[1];
+      if (rid !== null) {
+        rid = Math.floor(rid);
+        if (rid < 0 || rid >= n) throw new Error('randomIdx ' + rid + ' at index ' + i + ' is out of bounds (0..' + (n-1) + ')');
+      }
+      return { val: val, randomId: rid };
+    });
+  } catch (e) {
+    alert('Invalid input: ' + e.message + '\n\nFormat: [[val, randomIdx], ...]\nUse null for no random pointer.');
+    return null;
+  }
+}
+
+function buildAndRun() {
+  var str = document.getElementById('listInput').value;
+  var nodes = parseInput(str);
+  if (!nodes) return;
+  var steps = simulate(nodes);
+  nav.load(steps);
+}
+
+function loadPreset() {
+  var sel = document.getElementById('presetSel');
+  if (!sel.value) return;
+  document.getElementById('listInput').value = sel.value;
+  buildAndRun();
+}
+
+function randomExample() {
+  var n = Math.floor(Math.random() * 4) + 2; // 2-5 nodes
+  var nodes = [];
+  for (var i = 0; i < n; i++) {
+    var val = Math.floor(Math.random() * 20) + 1;
+    var rid = Math.random() < 0.25 ? null : Math.floor(Math.random() * n);
+    nodes.push([val, rid]);
+  }
+  document.getElementById('listInput').value = JSON.stringify(nodes);
+  document.getElementById('presetSel').value = '';
+  buildAndRun();
+}
+
+window.addEventListener('resize', function() {
+  if (currentSnap) drawAllArrows(currentSnap);
+});
+</script>
+
+</body>
+</html>
