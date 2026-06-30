@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Sliding Window Maximum</title>
+<link rel="stylesheet" href="../shared/style.css"/>
+<script src="../shared/gsap.min.js"></script>
+<script src="../shared/viz.js"></script>
+<style>
+body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,sans-serif;}
+#layout{display:flex;flex-direction:column;height:100vh;padding:10px;gap:7px;box-sizing:border-box;}
+.header{display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+.header h1{margin:0;font-size:1.05rem;color:var(--text);}
+.nav-row{display:flex;gap:5px;align-items:center;}
+.btn-step,.btn-play{padding:5px 11px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text);cursor:pointer;font-size:0.78rem;}
+.btn-play{background:var(--accent);color:#fff;border-color:var(--accent);}
+select{padding:5px 7px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:0.78rem;}
+
+/* Array panel */
+#array-panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:10px 14px;flex-shrink:0;}
+.panel-label{font-size:0.68rem;color:var(--text-muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:.04em;}
+.arr-cells{display:flex;gap:6px;align-items:flex-end;}
+.arr-cell{text-align:center;position:relative;flex-shrink:0;}
+.arr-cell-inner{width:50px;height:50px;border-radius:var(--radius-sm);border:2px solid var(--border);display:flex;flex-direction:column;align-items:center;justify-content:center;transition:background .18s,border-color .18s;background:#0f172a;position:relative;}
+.arr-cell-inner.current{background:#78350f;border-color:#ca8a04;}
+.arr-cell-inner.in-window{background:#1e3a5f;border-color:#3b82f6;}
+.arr-cell-inner.in-deque{box-shadow:0 0 0 2px #0d9488;}
+.arr-cell-inner.popped{animation:cellFlash .4s ease-out;}
+.arr-idx{font-size:0.6rem;color:var(--text-muted);}
+.arr-val{font-size:1rem;font-weight:700;font-family:monospace;color:var(--text);}
+.arr-cell-inner.current .arr-val{color:#fde68a;}
+.deque-dot{width:7px;height:7px;border-radius:50%;background:#0d9488;position:absolute;top:-4px;right:1px;}
+.win-bracket{position:absolute;top:-16px;left:0;right:0;text-align:center;font-size:0.62rem;color:#60a5fa;font-family:monospace;}
+
+/* Middle row */
+.middle-row{display:flex;gap:7px;flex:1;min-height:0;}
+
+/* Deque panel */
+#deque-panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:10px 14px;flex:1;display:flex;flex-direction:column;min-width:0;}
+.dq-header{display:flex;justify-content:space-between;margin-bottom:8px;}
+.dq-front-label{font-size:0.68rem;color:#0d9488;font-weight:600;}
+.dq-back-label{font-size:0.68rem;color:#0d9488;font-weight:600;}
+.dq-title{font-size:0.68rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em;}
+.dq-cells{display:flex;gap:4px;align-items:center;flex:1;min-height:70px;}
+.dq-cell{width:68px;height:58px;background:#134e4a;border:2px solid #0d9488;border-radius:var(--radius-sm);display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:monospace;flex-shrink:0;transition:border-color .15s;}
+.dq-cell.pushed{border-color:#22c55e;animation:dqPush .35s ease-out;}
+.dq-idx{font-size:0.65rem;color:#5eead4;}
+.dq-val{font-size:1rem;font-weight:700;color:#fff;}
+.dq-arrow{color:#475569;font-size:0.85rem;flex-shrink:0;}
+.dq-empty{color:var(--text-dim);font-style:italic;font-size:0.82rem;}
+.dq-invariant{font-size:0.62rem;color:#0d9488;text-align:center;margin-top:4px;}
+
+/* Code panel */
+#code-panel{background:#020617;border:1px solid var(--border);border-radius:var(--radius-lg);padding:8px 0;width:275px;flex-shrink:0;overflow-y:auto;font-family:monospace;font-size:0.76rem;}
+.code-line{display:flex;padding:1px 10px;line-height:1.65;white-space:pre;}
+.code-line.active{background:rgba(202,138,4,.28);}
+.code-ln{color:#374151;width:18px;flex-shrink:0;text-align:right;margin-right:8px;user-select:none;}
+.code-text{color:#94a3b8;}
+.kw{color:#c084fc;}
+.fn{color:#60a5fa;}
+.cm{color:#4b5563;}
+.num{color:#34d399;}
+
+/* Result panel */
+#result-panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:9px 14px;flex-shrink:0;}
+.result-cells{display:flex;gap:5px;min-height:46px;align-items:center;flex-wrap:wrap;}
+.result-cell{min-width:40px;height:44px;border-radius:var(--radius-sm);border:2px solid var(--green);background:#0a1f0a;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:monospace;}
+.result-cell.new{animation:resultFlash .5s ease-out;}
+.result-widx{font-size:0.58rem;color:var(--text-dim);}
+.result-val{font-size:0.92rem;font-weight:700;color:var(--green);}
+.result-empty{color:var(--text-dim);font-style:italic;font-size:0.8rem;}
+
+/* Step bar */
+#step-bar{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:9px 14px;flex-shrink:0;min-height:56px;transition:background .25s;}
+.step-top{display:flex;justify-content:space-between;align-items:flex-start;}
+.step-action{font-size:0.86rem;font-weight:600;color:var(--text);margin-bottom:3px;}
+.step-detail{font-size:0.76rem;color:var(--text-muted);}
+.step-counter{font-size:0.68rem;color:var(--text-dim);white-space:nowrap;margin-left:12px;}
+
+/* Phase backgrounds */
+.ph-init,.ph-move{background:#1a2540!important;}
+.ph-pop_front{background:#3a1e05!important;}
+.ph-pop_back{background:#3a0a0a!important;}
+.ph-push{background:#082a14!important;}
+.ph-check{background:#12122e!important;}
+.ph-record{background:#0a2410!important;}
+.ph-done{background:#1a1a30!important;}
+
+/* Animations */
+@keyframes cellFlash{0%{background:#7f1d1d;box-shadow:0 0 8px #dc2626;}80%{background:#7f1d1d;}100%{}}
+@keyframes resultFlash{0%{background:#14532d;border-color:#22c55e;}100%{}}
+@keyframes dqPush{0%{opacity:0;transform:translateX(18px);}100%{opacity:1;transform:translateX(0);}}
+</style>
+</head>
+<body>
+<div id="layout">
+  <div class="header">
+    <h1>Sliding Window Maximum — Monotonic Deque</h1>
+    <div class="nav-row">
+      <button id="prevBtn" class="btn-step">← Prev</button>
+      <button id="stepBtn" class="btn-step">Step →</button>
+      <button id="playBtn" class="btn-play">Play</button>
+      <button id="resetBtn" class="btn-step">↺ Reset</button>
+      <select id="speedSel">
+        <option value="800">0.5×</option>
+        <option value="400" selected>1×</option>
+        <option value="200">2×</option>
+        <option value="100">4×</option>
+      </select>
+    </div>
+  </div>
+
+  <div id="array-panel">
+    <div class="panel-label">Input Array — nums (k = 3)</div>
+    <div class="arr-cells" id="arrCells"></div>
+  </div>
+
+  <div class="middle-row">
+    <div id="deque-panel">
+      <div class="dq-header">
+        <div>
+          <div class="dq-title">Monotonic Deque (indices)</div>
+          <div class="dq-invariant" id="dqInvariant">Values strictly decrease left → right</div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:4px;margin-bottom:6px;">
+        <span class="dq-front-label">← FRONT (max)</span>
+        <span style="flex:1"></span>
+        <span class="dq-back-label">BACK (push) →</span>
+      </div>
+      <div class="dq-cells" id="dqCells"></div>
+    </div>
+    <div id="code-panel"></div>
+  </div>
+
+  <div id="result-panel">
+    <div class="panel-label">Output — sliding window maxima</div>
+    <div class="result-cells" id="resultCells"></div>
+  </div>
+
+  <div id="step-bar">
+    <div class="step-top">
+      <div class="step-action" id="stepAction">Ready</div>
+      <span class="step-counter" id="stepCounter">0 / 0</span>
+    </div>
+    <div class="step-detail" id="stepDetail"></div>
+  </div>
+</div>
+
+<script>
+const NUMS = [3,1,2,5,4,2,1,3];
+const K = 3;
+
+const CODE_LINES = [
+  'from collections import deque',
+  '',
+  'def maxSlidingWindow(nums, k):',
+  '    result = []',
+  '    dq = deque()  # stores indices',
+  '',
+  '    for i in range(len(nums)):',
+  '        # Remove out-of-window from front',
+  '        while dq and dq[0] < i - k + 1:',
+  '            dq.popleft()',
+  '',
+  '        # Remove dominated indices from back',
+  '        while dq and nums[dq[-1]] <= nums[i]:',
+  '            dq.pop()',
+  '',
+  '        dq.append(i)',
+  '',
+  '        # Record max when window is full',
+  '        if i >= k - 1:',
+  '            result.append(nums[dq[0]])',
+  '',
+  '    return result',
+];
+
+// ── Snapshot Builder ────────────────────────────────────────────────────────
+function buildSnapshots() {
+  var snaps = [];
+  var dq = [], result = [];
+
+  function push(phase, i, opts) {
+    var minW = i >= 0 ? i - K + 1 : -1;
+    snaps.push(Object.assign({
+      phase: phase,
+      i: i,
+      k: K,
+      nums: NUMS,
+      deque_indices: dq.slice(),
+      window_start: i >= 0 ? Math.max(0, minW) : -1,
+      window_end: i,
+      window_full: i >= K - 1,
+      result: result.slice(),
+      highlighted_index: i,
+      popped_back_index: -1,
+      popped_front_index: -1,
+      pushed_index: -1,
+      recorded_max: -1,
+      active_line: -1,
+      description: '',
+      detail: ''
+    }, opts));
+  }
+
+  // Initial
+  snaps.push({
+    phase:'init', i:-1, k:K, nums:NUMS, deque_indices:[], window_start:-1, window_end:-1,
+    window_full:false, result:[], highlighted_index:-1, popped_back_index:-1,
+    popped_front_index:-1, pushed_index:-1, recorded_max:-1, active_line:-1,
+    description:'Initial state — ready to begin',
+    detail:'nums = [' + NUMS.join(', ') + '], k = ' + K + '. We will use a monotonic deque to find the max in each window.'
+  });
+
+  for (var i = 0; i < NUMS.length; i++) {
+    var val = NUMS[i];
+    var minW = i - K + 1;
+
+    // MOVE
+    push('move', i, {
+      active_line: 7,
+      description: 'Process index ' + i + '  (val = ' + val + ')',
+      detail: 'Advance to i = ' + i + '; window spans [' + Math.max(0,minW) + ', ' + i + ']'
+    });
+
+    // POP FRONT — remove expired indices
+    var poppedFront = false;
+    while (dq.length && dq[0] < minW) {
+      var exp = dq.shift();
+      poppedFront = true;
+      push('pop_front', i, {
+        popped_front_index: exp, active_line: 10,
+        description: 'Pop index ' + exp + ' (val=' + NUMS[exp] + ') from front — expired',
+        detail: 'dq[0]=' + exp + ' < i−k+1=' + minW + ', index has left the window'
+      });
+    }
+    // show stopping condition
+    if (!poppedFront || dq.length) {
+      push('pop_front', i, {
+        active_line: 9,
+        description: dq.length === 0
+          ? 'Front check: deque empty — nothing to expire'
+          : 'Front index ' + dq[0] + ' (val=' + NUMS[dq[0]] + ') is still in window',
+        detail: dq.length === 0
+          ? 'Skip front removal; proceed to back'
+          : 'dq[0]=' + dq[0] + ' ≥ i−k+1=' + minW + ' → valid, stop'
+      });
+    }
+
+    // POP BACK — remove dominated indices
+    var poppedBack = false;
+    while (dq.length && NUMS[dq[dq.length-1]] <= val) {
+      var dom = dq.pop();
+      poppedBack = true;
+      push('pop_back', i, {
+        popped_back_index: dom, active_line: 14,
+        description: 'Pop index ' + dom + ' (val=' + NUMS[dom] + ') from back — dominated',
+        detail: 'nums[dq[-1]]=' + NUMS[dom] + ' ≤ nums[i]=' + val + ' → can never be a future max while ' + val + ' is in the window'
+      });
+    }
+    if (!poppedBack || dq.length) {
+      push('pop_back', i, {
+        active_line: 13,
+        description: dq.length === 0
+          ? 'Back check: deque empty — stop'
+          : 'Back index ' + dq[dq.length-1] + ' (val=' + NUMS[dq[dq.length-1]] + ') stays — not dominated',
+        detail: dq.length === 0
+          ? 'Deque is empty; proceed to push'
+          : 'nums[dq[-1]]=' + NUMS[dq[dq.length-1]] + ' > nums[i]=' + val + ' → stop popping'
+      });
+    }
+
+    // PUSH
+    dq.push(i);
+    push('push', i, {
+      pushed_index: i, active_line: 16,
+      description: 'Push index ' + i + ' (val=' + val + ') onto back of deque',
+      detail: 'Deque: [' + dq.map(function(x){return x+'('+NUMS[x]+')';}).join(' → ') + ']'
+    });
+
+    // CHECK / RECORD
+    if (i >= K - 1) {
+      var maxVal = NUMS[dq[0]];
+      result.push(maxVal);
+      var isFirst = result.length === 1;
+      push('record', i, {
+        recorded_max: maxVal, active_line: 20,
+        description: 'Window [' + Math.max(0,minW) + '..' + i + '] → max = ' + maxVal + ' → output[' + (result.length-1) + ']',
+        detail: isFirst
+          ? 'Monotonic invariant: front (index ' + dq[0] + ') holds the max because deque values strictly decrease left→right'
+          : 'Front of deque (index ' + dq[0] + ', val=' + maxVal + ') is always the current window max'
+      });
+    } else {
+      push('check', i, {
+        active_line: 19,
+        description: 'Window not yet full (i=' + i + ' < k−1=' + (K-1) + ')',
+        detail: 'Need ' + (K-1-i) + ' more element(s) before the first max is recorded'
+      });
+    }
+  }
+
+  // DONE
+  snaps.push({
+    phase:'done', i:NUMS.length-1, k:K, nums:NUMS, deque_indices:dq.slice(),
+    window_start:-1, window_end:-1, window_full:false, result:result.slice(),
+    highlighted_index:-1, popped_back_index:-1, popped_front_index:-1,
+    pushed_index:-1, recorded_max:-1, active_line:22,
+    description: 'Complete!  Output = [' + result.join(', ') + ']',
+    detail: 'Scanned all ' + NUMS.length + ' elements; produced ' + result.length + ' window maxima in O(n) time'
+  });
+
+  return snaps;
+}
+
+var SNAPSHOTS = buildSnapshots();
+
+// ── Code Panel ───────────────────────────────────────────────────────────────
+function buildCodePanel() {
+  var el = document.getElementById('code-panel');
+  el.innerHTML = CODE_LINES.map(function(line, idx) {
+    var ln = idx + 1;
+    var esc = line.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    var html = esc
+      .replace(/(#.*)$/, '<span class="cm">$1</span>')
+      .replace(/\b(from|import|def|for|while|if|return|in|and|not)\b/g, '<span class="kw">$1</span>')
+      .replace(/\b(maxSlidingWindow|deque|range|len|append|popleft|pop)\b/g, '<span class="fn">$1</span>')
+      .replace(/\b(\d+)\b/g, '<span class="num">$1</span>');
+    return '<div class="code-line" data-line="'+ln+'"><span class="code-ln">'+ln+'</span><span class="code-text">'+html+'</span></div>';
+  }).join('');
+}
+
+// ── Render Functions ─────────────────────────────────────────────────────────
+var arrBuilt = false;
+var prevResultLen = 0;
+var prevPushedIdx = -1;
+
+function renderArray(snap) {
+  var el = document.getElementById('arrCells');
+  if (!arrBuilt) {
+    el.innerHTML = snap.nums.map(function(v, idx) {
+      return '<div class="arr-cell" id="ac'+idx+'">'
+        + '<div class="win-bracket" id="wb'+idx+'"></div>'
+        + '<div class="arr-cell-inner" id="ai'+idx+'">'
+        + '<span class="arr-idx">'+idx+'</span>'
+        + '<span class="arr-val">'+v+'</span>'
+        + '</div>'
+        + '<div class="deque-dot" id="dd'+idx+'" style="display:none"></div>'
+        + '</div>';
+    }).join('');
+    arrBuilt = true;
+  }
+  snap.nums.forEach(function(v, idx) {
+    var inner = document.getElementById('ai'+idx);
+    var dot   = document.getElementById('dd'+idx);
+    var wb    = document.getElementById('wb'+idx);
+    inner.className = 'arr-cell-inner';
+    if (idx === snap.highlighted_index) {
+      inner.classList.add('current');
+    } else if (snap.window_start >= 0 && idx >= snap.window_start && idx <= snap.window_end) {
+      inner.classList.add('in-window');
+    }
+    if (snap.deque_indices.indexOf(idx) !== -1) inner.classList.add('in-deque');
+    if (idx === snap.popped_front_index || idx === snap.popped_back_index) {
+      // force reflow to replay animation
+      inner.classList.remove('popped');
+      void inner.offsetWidth;
+      inner.classList.add('popped');
+    }
+    dot.style.display = snap.deque_indices.indexOf(idx) !== -1 ? 'block' : 'none';
+    if (snap.window_start >= 0 && idx === snap.window_start && snap.window_start === snap.window_end) {
+      wb.textContent = '[ ]';
+    } else if (snap.window_start >= 0 && idx === snap.window_start) {
+      wb.textContent = '[';
+    } else if (snap.window_end >= 0 && idx === snap.window_end) {
+      wb.textContent = ']';
+    } else if (snap.window_start >= 0 && idx > snap.window_start && idx < snap.window_end) {
+      wb.textContent = '─';
+    } else {
+      wb.textContent = '';
+    }
+  });
+}
+
+function renderDeque(snap, animate) {
+  var el = document.getElementById('dqCells');
+  var ids = snap.deque_indices;
+  el.innerHTML = '';
+  if (ids.length === 0) {
+    var em = document.createElement('span');
+    em.className = 'dq-empty';
+    em.textContent = '[ empty ]';
+    el.appendChild(em);
+  } else {
+    ids.forEach(function(idx, pos) {
+      if (pos > 0) {
+        var arr = document.createElement('span');
+        arr.className = 'dq-arrow';
+        arr.textContent = '→';
+        el.appendChild(arr);
+      }
+      var cell = document.createElement('div');
+      cell.className = 'dq-cell';
+      if (animate && snap.pushed_index === idx && idx !== prevPushedIdx) {
+        cell.classList.add('pushed');
+      }
+      cell.innerHTML = '<span class="dq-idx">idx ' + idx + '</span><span class="dq-val">' + NUMS[idx] + '</span>';
+      el.appendChild(cell);
+    });
+  }
+  prevPushedIdx = snap.pushed_index;
+}
+
+function renderResult(snap, animate) {
+  var el = document.getElementById('resultCells');
+  var res = snap.result;
+  el.innerHTML = '';
+  if (res.length === 0) {
+    var em = document.createElement('span');
+    em.className = 'result-empty';
+    em.textContent = '[ empty ]';
+    el.appendChild(em);
+  } else {
+    res.forEach(function(v, idx) {
+      var cell = document.createElement('div');
+      cell.className = 'result-cell';
+      if (animate && idx >= prevResultLen) {
+        void cell.offsetWidth;
+        cell.classList.add('new');
+      }
+      cell.innerHTML = '<span class="result-widx">w' + idx + '</span><span class="result-val">' + v + '</span>';
+      el.appendChild(cell);
+    });
+  }
+  prevResultLen = res.length;
+}
+
+function renderCode(snap) {
+  document.querySelectorAll('.code-line').forEach(function(el) { el.classList.remove('active'); });
+  if (snap.active_line > 0) {
+    var el = document.querySelector('.code-line[data-line="' + snap.active_line + '"]');
+    if (el) { el.classList.add('active'); el.scrollIntoView({block:'nearest'}); }
+  }
+}
+
+var PHASE_BG = {
+  init:'#1a2540', move:'#1a2540',
+  pop_front:'#3a1e05', pop_back:'#3a0a0a',
+  push:'#082a14', check:'#12122e',
+  record:'#0a2410', done:'#1a1a30'
+};
+
+function applyStep(snap, animate) {
+  renderArray(snap);
+  renderDeque(snap, animate);
+  renderResult(snap, animate);
+  renderCode(snap);
+  var bar = document.getElementById('step-bar');
+  bar.style.background = PHASE_BG[snap.phase] || '#1a2540';
+  document.getElementById('stepAction').textContent = snap.description || '';
+  document.getElementById('stepDetail').textContent = snap.detail || '';
+}
+
+function updateStatus(snap, cur, total) {
+  document.getElementById('stepCounter').textContent = cur + ' / ' + total;
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+var nav;
+document.addEventListener('DOMContentLoaded', function() {
+  buildCodePanel();
+  nav = VizNav({
+    btnPrev:  document.getElementById('prevBtn'),
+    btnNext:  document.getElementById('stepBtn'),
+    btnPlay:  document.getElementById('playBtn'),
+    speedSel: document.getElementById('speedSel'),
+    render: function(snap, cur, total) {
+      applyStep(snap, cur > 0);
+      updateStatus(snap, cur, total);
+    }
+  });
+  document.getElementById('resetBtn').addEventListener('click', function() { nav.reset(); });
+  nav.load(SNAPSHOTS);
+});
+</script>
+</body>
+</html>
