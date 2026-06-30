@@ -196,6 +196,29 @@
     .nb  { color: var(--green); }
     .cm  { color: var(--text-ghost); }
     .str { color: var(--yellow); }
+
+    /* Viz Inputs */
+    .viz-inputs {
+      display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end;
+      padding: 10px 0 14px; width: 100%; max-width: 90%;
+    }
+    .viz-inputs .field {
+      display: flex; flex-direction: column; gap: 4px;
+    }
+    .viz-inputs label {
+      font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--text-dim);
+    }
+    .viz-inputs input[type="text"] {
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--text); border-radius: var(--radius-sm);
+      padding: 6px 10px; font-size: 0.85rem; width: 120px; font-family: monospace;
+    }
+    .viz-inputs select {
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--text); border-radius: var(--radius-sm);
+      padding: 6px 10px; font-size: 0.85rem; cursor: pointer;
+    }
   </style>
 </head>
 <body class="page">
@@ -206,17 +229,32 @@
   <div class="page-sub">LeetCode 10 &middot; 2-D boolean DP &middot; dp[i][j] = p[0..j-1] matches s[0..i-1] &middot; &lsquo;*&rsquo; enables zero-or-more, &lsquo;.&rsquo; matches any &middot; O(m&times;n) time &amp; space</div>
 </div>
 
-<div class="controls">
+<div class="viz-inputs">
+  <div class="field">
+    <label>Preset</label>
+    <select id="presetSel" onchange="loadPreset()">
+      <option value="">— pick a preset —</option>
+      <option value='{"s":"aab","p":"c*a*b"}'>Default: "aab" / "c*a*b"</option>
+      <option value='{"s":"aa","p":"a*"}'>a* match: "aa" / "a*"</option>
+      <option value='{"s":"aa","p":"a"}'>Too short: "aa" / "a"</option>
+      <option value='{"s":"ab","p":".*"}'>Wildcard: "ab" / ".*"</option>
+      <option value='{"s":"mississippi","p":"mis*is*p*."}'>Classic: "mississippi" / "mis*is*p*."</option>
+      <option value='{"s":"","p":".*"}'>Empty string: "" / ".*"</option>
+    </select>
+  </div>
   <div class="field">
     <label>String s</label>
-    <input id="inp-s" type="text" value="aab" maxlength="7" style="width:100px;font-family:monospace" />
+    <input id="inp-s" type="text" value="aab" maxlength="7" />
   </div>
   <div class="field">
     <label>Pattern p</label>
-    <input id="inp-p" type="text" value="c*a*b" maxlength="10" style="width:120px;font-family:monospace" />
+    <input id="inp-p" type="text" value="c*a*b" maxlength="10" />
   </div>
-  <button class="btn-primary" onclick="buildAndRun()">Build &amp; Run</button>
+  <button onclick="buildAndRun()" style="padding:7px 18px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);font-weight:600;cursor:pointer;">Run</button>
+  <button onclick="randomExample()" style="padding:7px 14px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;">🎲 Random</button>
 </div>
+
+<div class="controls"></div>
 
 <div class="viz-area">
   <div class="main-row">
@@ -338,15 +376,15 @@ var CODE = [
   [3,  '    dp <span class="op">=</span> <span class="op">[[</span><span class="kw">False</span><span class="op">]*(</span>n<span class="op">+</span><span class="nb">1</span><span class="op">)</span> <span class="kw">for</span> _ <span class="kw">in</span> <span class="bi">range</span><span class="op">(</span>m<span class="op">+</span><span class="nb">1</span><span class="op">)]</span>'],
   [4,  '    dp<span class="op">[</span><span class="nb">0</span><span class="op">][</span><span class="nb">0</span><span class="op">]</span> <span class="op">=</span> <span class="kw">True</span>  <span class="cm"># empty matches empty</span>'],
   [5,  '    <span class="kw">for</span> j <span class="kw">in</span> <span class="bi">range</span><span class="op">(</span><span class="nb">1</span><span class="op">,</span> n<span class="op">+</span><span class="nb">1</span><span class="op">):</span>  <span class="cm"># base row: empty s</span>'],
-  [6,  '        <span class="kw">if</span> p<span class="op">[</span>j<span class="op">-</span><span class="nb">1</span><span class="op">]</span> <span class="op">==</span> <span class="str">\'*\'</span><span class="op">:</span>'],
+  [6,  '        <span class="kw">if</span> p<span class="op">[</span>j<span class="op">-</span><span class="nb">1</span><span class="op">]</span> <span class="op">==</span> <span class="str">'*'</span><span class="op">:</span>'],
   [7,  '            dp<span class="op">[</span><span class="nb">0</span><span class="op">][</span>j<span class="op">]</span> <span class="op">=</span> dp<span class="op">[</span><span class="nb">0</span><span class="op">][</span>j<span class="op">-</span><span class="nb">2</span><span class="op">]</span>  <span class="cm"># zero occurrences</span>'],
   [8,  '    <span class="kw">for</span> i <span class="kw">in</span> <span class="bi">range</span><span class="op">(</span><span class="nb">1</span><span class="op">,</span> m<span class="op">+</span><span class="nb">1</span><span class="op">):</span>'],
   [9,  '        <span class="kw">for</span> j <span class="kw">in</span> <span class="bi">range</span><span class="op">(</span><span class="nb">1</span><span class="op">,</span> n<span class="op">+</span><span class="nb">1</span><span class="op">):</span>'],
-  [10, '            <span class="kw">if</span> p<span class="op">[</span>j<span class="op">-</span><span class="nb">1</span><span class="op">]</span> <span class="op">==</span> <span class="str">\'*\'</span><span class="op">:</span>'],
+  [10, '            <span class="kw">if</span> p<span class="op">[</span>j<span class="op">-</span><span class="nb">1</span><span class="op">]</span> <span class="op">==</span> <span class="str">'*'</span><span class="op">:</span>'],
   [11, '                dp<span class="op">[</span>i<span class="op">][</span>j<span class="op">]</span> <span class="op">=</span> dp<span class="op">[</span>i<span class="op">][</span>j<span class="op">-</span><span class="nb">2</span><span class="op">]</span>  <span class="cm"># zero occurrences</span>'],
-  [12, '                <span class="kw">if</span> p<span class="op">[</span>j<span class="op">-</span><span class="nb">2</span><span class="op">]</span> <span class="op">==</span> <span class="str">\'.\' </span><span class="op">or</span> p<span class="op">[</span>j<span class="op">-</span><span class="nb">2</span><span class="op">]</span> <span class="op">==</span> s<span class="op">[</span>i<span class="op">-</span><span class="nb">1</span><span class="op">]:</span>'],
+  [12, '                <span class="kw">if</span> p<span class="op">[</span>j<span class="op">-</span><span class="nb">2</span><span class="op">]</span> <span class="op">==</span> <span class="str">'.' </span><span class="op">or</span> p<span class="op">[</span>j<span class="op">-</span><span class="nb">2</span><span class="op">]</span> <span class="op">==</span> s<span class="op">[</span>i<span class="op">-</span><span class="nb">1</span><span class="op">]:</span>'],
   [13, '                    dp<span class="op">[</span>i<span class="op">][</span>j<span class="op">]</span> <span class="op">=</span> dp<span class="op">[</span>i<span class="op">][</span>j<span class="op">]</span> <span class="op">or</span> dp<span class="op">[</span>i<span class="op">-</span><span class="nb">1</span><span class="op">][</span>j<span class="op">]</span>  <span class="cm"># one or more</span>'],
-  [14, '            <span class="kw">elif</span> p<span class="op">[</span>j<span class="op">-</span><span class="nb">1</span><span class="op">]</span> <span class="op">==</span> <span class="str">\'.\' </span><span class="op">or</span> p<span class="op">[</span>j<span class="op">-</span><span class="nb">1</span><span class="op">]</span> <span class="op">==</span> s<span class="op">[</span>i<span class="op">-</span><span class="nb">1</span><span class="op">]:</span>'],
+  [14, '            <span class="kw">elif</span> p<span class="op">[</span>j<span class="op">-</span><span class="nb">1</span><span class="op">]</span> <span class="op">==</span> <span class="str">'.' </span><span class="op">or</span> p<span class="op">[</span>j<span class="op">-</span><span class="nb">1</span><span class="op">]</span> <span class="op">==</span> s<span class="op">[</span>i<span class="op">-</span><span class="nb">1</span><span class="op">]:</span>'],
   [15, '                dp<span class="op">[</span>i<span class="op">][</span>j<span class="op">]</span> <span class="op">=</span> dp<span class="op">[</span>i<span class="op">-</span><span class="nb">1</span><span class="op">][</span>j<span class="op">-</span><span class="nb">1</span><span class="op">]</span>  <span class="cm"># match &rarr; inherit diagonal</span>'],
   [16, '            <span class="kw">else</span><span class="op">:</span>'],
   [17, '                dp<span class="op">[</span>i<span class="op">][</span>j<span class="op">]</span> <span class="op">=</span> <span class="kw">False</span>  <span class="cm"># mismatch</span>'],
@@ -390,6 +428,26 @@ function setPreset(idx) {
   });
   document.getElementById('inp-s').value = PRESETS[idx].s;
   document.getElementById('inp-p').value = PRESETS[idx].p;
+  buildAndRun();
+}
+
+function loadPreset() {
+  var sel = document.getElementById('presetSel');
+  if (!sel.value) return;
+  var d = JSON.parse(sel.value);
+  document.getElementById('inp-s').value = d.s;
+  document.getElementById('inp-p').value = d.p;
+  buildAndRun();
+}
+
+function randomExample() {
+  var patterns = ['.*', 'a*', 'b*', 'a*b*', 'c*a*b', '.', 'a*b', 'a.b'];
+  var strings = ['', 'a', 'b', 'ab', 'aa', 'bb', 'aab', 'aba', 'bbb', 'abc'];
+  var s = strings[Math.floor(Math.random() * strings.length)];
+  var p = patterns[Math.floor(Math.random() * patterns.length)];
+  document.getElementById('inp-s').value = s;
+  document.getElementById('inp-p').value = p;
+  document.getElementById('presetSel').value = '';
   buildAndRun();
 }
 
@@ -467,9 +525,9 @@ function simulate(s, p) {
       phase: phase,
       desc: desc,
       lines: lines || [],
-      cur: cur || null,         // [i,j]
+      cur: cur || null,
       rule: rule || '',
-      sources: sources || [],   // [{pos:[i,j], type:'zero'|'more'|'diag'}]
+      sources: sources || [],
       result: (result === undefined ? null : result),
       dp: deepCopy2D(dp),
     });
@@ -487,14 +545,14 @@ function simulate(s, p) {
       var prev = j >= 2 ? dp[0][j-2] : false;
       dp[0][j] = prev === true;
       snap('Base Row',
-        'j=' + j + ': p[' + (j-1) + ']=\'*\'. Empty string matches "' + p.slice(0,j) + '" iff it matched "' + p.slice(0,j-2) + '" (zero occurrences). dp[0][' + j + '] = dp[0][' + (j-2) + '] = ' + dp[0][j] + '.',
+        'j=' + j + ': p[' + (j-1) + ']='*'. Empty string matches "' + p.slice(0,j) + '" iff it matched "' + p.slice(0,j-2) + '" (zero occurrences). dp[0][' + j + '] = dp[0][' + (j-2) + '] = ' + dp[0][j] + '.',
         [5, 6, 7], [0, j], 'star',
         [{pos:[0, j-2], type:'zero'}],
         null);
     } else {
       dp[0][j] = false;
       snap('Base Row',
-        'j=' + j + ': p[' + (j-1) + ']=\'' + p[j-1] + '\' is not \'*\'. Empty string cannot match a non-star pattern. dp[0][' + j + '] = False.',
+        'j=' + j + ': p[' + (j-1) + ']='' + p[j-1] + '' is not '*'. Empty string cannot match a non-star pattern. dp[0][' + j + '] = False.',
         [5, 6], [0, j], 'miss',
         [],
         null);
@@ -509,7 +567,7 @@ function simulate(s, p) {
 
       if (pj === '*') {
         // p[j-2] is the character that '*' quantifies
-        var pc = p[j-2];  // always exists since '*' can't be first valid char
+        var pc = p[j-2];
         var zeroOcc = (j >= 2 && dp[i][j-2] === true);
         var charMatches = (pc === '.' || pc === si);
         var prevRowMatch = (dp[i-1][j] === true);
@@ -522,14 +580,14 @@ function simulate(s, p) {
         var desc;
         if (dp[i][j]) {
           if (zeroOcc && !(charMatches && prevRowMatch)) {
-            desc = 'i=' + i + ',j=' + j + ': p[' + (j-1) + ']=\'*\' quantifies \'' + pc + '\'. Zero occurrences: dp[' + i + '][' + (j-2) + ']=' + dp[i][j-2] + ' → True. dp[' + i + '][' + j + '] = True.';
+            desc = 'i=' + i + ',j=' + j + ': p[' + (j-1) + ']='*' quantifies '' + pc + ''. Zero occurrences: dp[' + i + '][' + (j-2) + ']=' + dp[i][j-2] + ' → True. dp[' + i + '][' + j + '] = True.';
           } else if (!zeroOcc && charMatches && prevRowMatch) {
-            desc = 'i=' + i + ',j=' + j + ': p[' + (j-1) + ']=\'*\' quantifies \'' + pc + '\'. Zero occ=False, but \'' + pc + '\' matches s[' + (i-1) + ']=\'' + si + '\' and dp[' + (i-1) + '][' + j + ']=' + dp[i-1][j] + ' → one-or-more applies. dp[' + i + '][' + j + '] = True.';
+            desc = 'i=' + i + ',j=' + j + ': p[' + (j-1) + ']='*' quantifies '' + pc + ''. Zero occ=False, but '' + pc + '' matches s[' + (i-1) + ']='' + si + '' and dp[' + (i-1) + '][' + j + ']=' + dp[i-1][j] + ' → one-or-more applies. dp[' + i + '][' + j + '] = True.';
           } else {
-            desc = 'i=' + i + ',j=' + j + ': p[' + (j-1) + ']=\'*\' quantifies \'' + pc + '\'. Both zero-occ and one-or-more contribute True. dp[' + i + '][' + j + '] = True.';
+            desc = 'i=' + i + ',j=' + j + ': p[' + (j-1) + ']='*' quantifies '' + pc + ''. Both zero-occ and one-or-more contribute True. dp[' + i + '][' + j + '] = True.';
           }
         } else {
-          desc = 'i=' + i + ',j=' + j + ': p[' + (j-1) + ']=\'*\' quantifies \'' + pc + '\'. Zero-occ dp[' + i + '][' + (j-2) + ']=' + dp[i][j-2] + '. \'' + pc + '\' ' + (charMatches ? 'matches' : 'does not match') + ' s[' + (i-1) + ']=\'' + si + '\'.' + (charMatches ? ' dp[' + (i-1) + '][' + j + ']=' + dp[i-1][j] + '.' : '') + ' Both paths False. dp[' + i + '][' + j + '] = False.';
+          desc = 'i=' + i + ',j=' + j + ': p[' + (j-1) + ']='*' quantifies '' + pc + ''. Zero-occ dp[' + i + '][' + (j-2) + ']=' + dp[i][j-2] + '. '' + pc + '' ' + (charMatches ? 'matches' : 'does not match') + ' s[' + (i-1) + ']='' + si + ''.' + (charMatches ? ' dp[' + (i-1) + '][' + j + ']=' + dp[i-1][j] + '.' : '') + ' Both paths False. dp[' + i + '][' + j + '] = False.';
         }
 
         var codeLines = [8, 9, 10, 11, 12];
@@ -544,9 +602,9 @@ function simulate(s, p) {
         // '.' matches any, or exact char match
         dp[i][j] = (dp[i-1][j-1] === true);
         var ruleType = pj === '.' ? 'dot' : 'match';
-        var matchDesc = pj === '.' ? '\'.\'  matches any char → ' : '\'' + pj + '\' == \'' + si + '\' → ';
+        var matchDesc = pj === '.' ? ''.'  matches any char → ' : ''' + pj + '' == '' + si + '' → ';
         snap('Fill (' + (pj === '.' ? '.' : 'char') + ')',
-          'i=' + i + ',j=' + j + ': p[' + (j-1) + ']=\'' + pj + '\', s[' + (i-1) + ']=\'' + si + '\'. ' + matchDesc + 'dp[' + i + '][' + j + '] = dp[' + (i-1) + '][' + (j-1) + '] = ' + dp[i][j] + '.',
+          'i=' + i + ',j=' + j + ': p[' + (j-1) + ']='' + pj + '', s[' + (i-1) + ']='' + si + ''. ' + matchDesc + 'dp[' + i + '][' + j + '] = dp[' + (i-1) + '][' + (j-1) + '] = ' + dp[i][j] + '.',
           [8, 9, 14, 15],
           [i, j], ruleType,
           [{pos:[i-1, j-1], type:'diag'}],
@@ -556,7 +614,7 @@ function simulate(s, p) {
         // Mismatch
         dp[i][j] = false;
         snap('Fill (miss)',
-          'i=' + i + ',j=' + j + ': p[' + (j-1) + ']=\'' + pj + '\' ≠ s[' + (i-1) + ']=\'' + si + '\'. Mismatch — dp[' + i + '][' + j + '] = False.',
+          'i=' + i + ',j=' + j + ': p[' + (j-1) + ']='' + pj + '' ≠ s[' + (i-1) + ']='' + si + ''. Mismatch — dp[' + i + '][' + j + '] = False.',
           [8, 9, 16, 17],
           [i, j], 'miss',
           [],
@@ -568,7 +626,7 @@ function simulate(s, p) {
   // Final step
   var finalResult = dp[m][n] === true;
   snap('Done',
-    'Fill complete. dp[' + m + '][' + n + '] = ' + finalResult + '. Pattern \'' + p + '\' ' + (finalResult ? 'matches' : 'does NOT match') + ' string \'' + s + '\'.',
+    'Fill complete. dp[' + m + '][' + n + '] = ' + finalResult + '. Pattern '' + p + '' ' + (finalResult ? 'matches' : 'does NOT match') + ' string '' + s + ''.',
     [18],
     [m, n], finalResult ? 'match' : 'miss',
     [],
