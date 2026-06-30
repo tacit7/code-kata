@@ -13,6 +13,28 @@
       display: flex; flex-direction: column; gap: 12px;
     }
 
+    .viz-inputs {
+      display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end;
+      padding: 10px 0 14px; width: 100%; max-width: 90%;
+    }
+    .viz-inputs .field {
+      display: flex; flex-direction: column; gap: 4px;
+    }
+    .viz-inputs label {
+      font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--text-dim);
+    }
+    .viz-inputs input[type="text"] {
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--text); border-radius: var(--radius-sm);
+      padding: 6px 10px; font-size: 0.85rem; width: 280px;
+    }
+    .viz-inputs select {
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--text); border-radius: var(--radius-sm);
+      padding: 6px 10px; font-size: 0.85rem; cursor: pointer;
+    }
+
     .tree-wrap {
       background: var(--surface);
       border: 1px solid var(--border);
@@ -128,13 +150,28 @@
   <h1 class="page-title">Max Depth of Binary Tree</h1>
 </div>
 
-<div class="controls">
+<div class="viz-inputs">
+  <div class="field">
+    <label>Preset</label>
+    <select id="presetSel" onchange="loadPreset()">
+      <option value="">— pick a preset —</option>
+      <option value='{"tree":"1"}'>Single Node</option>
+      <option value='{"tree":"1,2,3"}'>Two-level tree</option>
+      <option value='{"tree":"3,9,20,null,null,15,7"}'>Balanced tree</option>
+      <option value='{"tree":"1,2,3,4"}'>Left skewed</option>
+      <option value='{"tree":"1,null,2,null,3,null,4"}'>Right skewed</option>
+      <option value='{"tree":"5,4,8,11,null,13,4,7,2,null,1"}'>Complex</option>
+    </select>
+  </div>
   <div class="field">
     <label>Level-order (use null for empty)</label>
-    <input id="inp-tree" type="text" value="3,9,20,null,null,15,7" style="width:280px" />
+    <input id="inp-tree" type="text" value="3,9,20,null,null,15,7" />
   </div>
-  <button class="btn-primary" onclick="build()">Build</button>
+  <button class="btn-primary" onclick="buildAndRun()" style="padding:7px 18px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);font-weight:600;cursor:pointer;">Run</button>
+  <button onclick="randomExample()" style="padding:7px 14px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;">🎲 Random</button>
 </div>
+
+<div class="controls"></div>
 
 <div class="viz-area">
 
@@ -145,7 +182,7 @@
 
   <div class="status-bar" style="max-width:100%">
     <span class="phase-label" id="phase-label">—</span>
-    <span class="step-desc"   id="step-desc">Click Build to start.</span>
+    <span class="step-desc"   id="step-desc">Click Run to start.</span>
   </div>
 
   <div class="bottom-row">
@@ -572,6 +609,33 @@ function build() {
   renderSVG(root);
   prevLines = [];
   nav.load(simulate(root));
+}
+
+function buildAndRun() {
+  build();
+}
+
+function loadPreset() {
+  var sel = document.getElementById('presetSel');
+  if (!sel.value) return;
+  var d = JSON.parse(sel.value);
+  document.getElementById('inp-tree').value = d.tree;
+  buildAndRun();
+}
+
+function randomExample() {
+  var presets = [
+    '1',
+    '1,2,3',
+    '3,9,20,null,null,15,7',
+    '1,2,3,4',
+    '1,null,2,null,3,null,4',
+    '5,4,8,11,null,13,4,7,2,null,1',
+  ];
+  var idx = Math.floor(Math.random() * presets.length);
+  document.getElementById('inp-tree').value = presets[idx];
+  document.getElementById('presetSel').value = '';
+  buildAndRun();
 }
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
