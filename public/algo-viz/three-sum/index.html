@@ -5,8 +5,34 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>3Sum</title>
   <link rel="stylesheet" href="../shared/style.css" />
-  <script src="../shared/gsap.min.js"></script>
-  <script src="../shared/viz.js"></script>
+  <script src="../shared/gsap.min.js">
+function randomExample() {
+  document.querySelectorAll('.btn-preset').forEach(b => b.classList.remove('active'));
+  const min = -50, max = 50;
+  const count = Math.floor(Math.random() * 5) + 4; // 4-8 numbers
+  const nums = [];
+  for (let i = 0; i < count; i++) {
+    nums.push(Math.floor(Math.random() * (max - min + 1)) + min);
+  }
+  document.getElementById('inp-nums').value = nums.join(',');
+  buildAndRun();
+}
+
+</script>
+  <script src="../shared/viz.js">
+function randomExample() {
+  document.querySelectorAll('.btn-preset').forEach(b => b.classList.remove('active'));
+  const min = -50, max = 50;
+  const count = Math.floor(Math.random() * 5) + 4; // 4-8 numbers
+  const nums = [];
+  for (let i = 0; i < count; i++) {
+    nums.push(Math.floor(Math.random() * (max - min + 1)) + min);
+  }
+  document.getElementById('inp-nums').value = nums.join(',');
+  buildAndRun();
+}
+
+</script>
   <style>
     .viz-area { width: 100%; max-width: 90%; }
     .main-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
@@ -139,6 +165,36 @@
     .op { color: #c0caf5; }
     .nb { color: #9ece6a; }
     .cm { color: #3b4261; }
+
+    .viz-inputs {
+      display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end;
+      padding: 10px 0 14px; width: 100%; max-width: 90%;
+    }
+    .viz-inputs .field {
+      display: flex; flex-direction: column; gap: 4px;
+    }
+    .viz-inputs label {
+      font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--text-dim);
+    }
+    .viz-inputs input[type="text"] {
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--text); border-radius: var(--radius-sm);
+      padding: 6px 10px; font-size: 0.85rem; width: 280px;
+    }
+    .viz-inputs input[type="number"] {
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--text); border-radius: var(--radius-sm);
+      padding: 6px 10px; font-size: 0.85rem; width: 80px;
+    }
+    .btn-primary {
+      padding: 7px 18px; background: var(--accent); color: #fff;
+      border: none; border-radius: var(--radius-sm); font-weight: 600;
+      cursor: pointer; font-size: 0.88rem;
+      transition: background 0.15s;
+    }
+    .btn-primary:hover { background: var(--accent-pale); }
+
   </style>
 </head>
 <body class="page">
@@ -566,6 +622,19 @@ if (window.self !== window.top) {
   const bl = document.querySelector('.back-link');
   if (bl) bl.style.display = 'none';
 }
+
+function randomExample() {
+  document.querySelectorAll('.btn-preset').forEach(b => b.classList.remove('active'));
+  const min = -50, max = 50;
+  const count = Math.floor(Math.random() * 5) + 4; // 4-8 numbers
+  const nums = [];
+  for (let i = 0; i < count; i++) {
+    nums.push(Math.floor(Math.random() * (max - min + 1)) + min);
+  }
+  document.getElementById('inp-nums').value = nums.join(',');
+  buildAndRun();
+}
+
 </script>
 </body>
 </html>
