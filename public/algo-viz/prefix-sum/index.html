@@ -5,59 +5,76 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Prefix Sum / Range Sum Query</title>
 <link rel="stylesheet" href="../shared/style.css">
+<script src="../shared/gsap.min.js"></script>
+<script src="../shared/viz.js"></script>
 <style>
-  body { margin: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
-  #main-layout { display: flex; flex: 1; overflow: hidden; }
-  #left-panel { display: flex; flex-direction: column; flex: 1; padding: 16px; overflow-y: auto; gap: 14px; }
-  #code-panel { width: 280px; border-left: 1px solid var(--border); padding: 12px; overflow-y: auto; font-size: 0.78rem; flex-shrink: 0; }
-  #code-panel h4 { margin: 0 0 8px 0; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); }
-  #code-body { margin: 0; font-family: monospace; line-height: 1.7; }
-  .cl { padding: 1px 6px; border-radius: 3px; color: var(--text-dim); transition: background 0.2s, color 0.2s; white-space: pre; }
-  .cl.hl  { background: var(--accent); color: #fff; }
-  .cl.hl2 { background: #2a5c2a; color: #7eff7e; }
-  .section-label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); font-weight: 700; margin-bottom: 6px; }
-  .array-row { display: flex; align-items: flex-end; gap: 4px; flex-wrap: wrap; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: "Fira Code", "Cascadia Code", monospace; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+
+  #header { padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+  #phase-badge { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; padding: 3px 10px; border-radius: var(--radius-sm); background: #1e3a5f; color: var(--blue); border: 1px solid var(--blue); }
+  #step-desc { font-size: 12px; color: var(--text-muted); }
+  #step-counter { font-size: 12px; color: var(--text-muted); margin-left: auto; }
+
+  .viz-inputs { width: 100%; max-width: 100%; padding: 10px 16px; background: var(--surface); border: none; border-bottom: 1px solid var(--border); border-radius: 0; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; flex-shrink: 0; }
+  .viz-inputs label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); display: block; margin-bottom: 3px; }
+  .viz-inputs select, .viz-inputs input { background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 0 8px; height: 30px; font-size: 0.82rem; font-family: inherit; appearance: none; -webkit-appearance: none; }
+  .vi-btn-run  { padding: 6px 14px; border-radius: 6px; font-size: 0.82rem; font-weight: 600; cursor: pointer; font-family: inherit; background: var(--accent); color: #fff; border: none; }
+  .vi-btn-rand { padding: 6px 14px; border-radius: 6px; font-size: 0.82rem; cursor: pointer; font-family: inherit; background: var(--bg); color: var(--text); border: 1px solid var(--border); }
+
+  #main { display: flex; flex: 1; overflow: hidden; }
+
+  #viz-area { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; gap: 20px; overflow-y: auto; }
+
+  .section-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--text-dim); margin-bottom: 8px; }
+  .array-row { display: flex; align-items: flex-end; gap: 4px; flex-wrap: wrap; justify-content: center; }
   .cell { display: flex; flex-direction: column; align-items: center; gap: 2px; }
   .cell-idx { font-size: 0.65rem; color: var(--text-dim); }
-  .cell-box {
-    width: 46px; height: 46px;
-    border: 2px solid var(--border);
-    border-radius: 6px;
-    background: var(--bg-card);
-    display: flex; align-items: center; justify-content: center;
-    font-size: 1rem; font-weight: 700;
-    color: var(--text-main);
-    transition: background 0.25s, border-color 0.25s, color 0.25s, transform 0.2s;
-  }
-  .cell-box.building    { background: var(--accent); border-color: var(--accent); color: #fff; transform: scale(1.12); }
-  .cell-box.done-build  { background: #1a3a5c; border-color: var(--accent); color: var(--accent); }
+  .cell-box { width: 46px; height: 46px; border: 2px solid var(--border); border-radius: 6px; background: var(--surface); display: flex; align-items: center; justify-content: center; font-size: 1rem; font-weight: 700; color: var(--text); transition: background 0.25s, border-color 0.25s, color 0.25s, transform 0.2s; }
+  .cell-box.building   { background: var(--accent); border-color: var(--accent); color: #fff; transform: scale(1.12); }
+  .cell-box.done-build { background: #1a3a5c; border-color: var(--accent); color: var(--accent); }
   .cell-box.query-range { background: #1a4d1a; border-color: #4caf50; color: #7eff7e; }
   .cell-box.answer-cell { background: #3a3000; border-color: #f0c040; color: #f0c040; }
-  #status-box {
-    background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px;
-    padding: 10px 14px; font-size: 0.88rem; color: var(--text-main); min-height: 40px;
-    line-height: 1.6;
-  }
-  .phase   { font-weight: 700; color: var(--accent); margin-right: 4px; }
+
+  #answer-box { background: #3a3000; border: 2px solid #f0c040; border-radius: 8px; padding: 10px 14px; font-size: 1rem; font-weight: 700; color: #f0c040; display: none; }
   .formula { font-family: monospace; background: #1a1a2e; padding: 1px 6px; border-radius: 4px; color: #f0c040; }
-  #answer-box {
-    background: #3a3000; border: 2px solid #f0c040; border-radius: 8px;
-    padding: 10px 14px; font-size: 1rem; font-weight: 700; color: #f0c040;
-    display: none;
-  }
-  .viz-inputs label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); }
-  .viz-inputs input  { background: var(--bg-card); color: var(--text-main); border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px; font-size: 0.85rem; }
-  .viz-inputs input.wide  { width: 200px; }
-  .viz-inputs input.small { width: 60px; }
+  .phase { font-weight: 700; color: var(--accent); margin-right: 4px; }
+
+  #resize-handle { width: 5px; flex-shrink: 0; cursor: col-resize; background: transparent; border-left: 1px solid var(--border); transition: background .15s; z-index: 10; }
+  #resize-handle:hover, #resize-handle.dragging { background: var(--accent); }
+
+  #code-panel { width: 350px; min-width: 120px; max-width: 560px; flex-shrink: 0; background: #0d1117; border-right: 1px solid var(--border); overflow-y: auto; overflow-x: auto; padding: 10px 12px; display: flex; flex-direction: column; }
+  .code-panel-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--text-dim); margin-bottom: 8px; }
+  .cl { display: flex; align-items: stretch; padding: 2px 0; white-space: pre; border-left: 2px solid transparent; padding-left: 6px; color: var(--text-muted); transition: all 0.2s; font-family: 'Fira Code','Cascadia Code',monospace; font-size: 0.75rem; line-height: 1.8; }
+  .cl.hl  { background: rgba(122,162,247,0.12); border-left-color: var(--accent); color: var(--text); }
+  .cl.hl2 { background: rgba(158,206,106,0.1); border-left-color: #9ece6a; color: var(--text); }
+  .ln { display: inline-block; width: 20px; text-align: right; color: var(--text-dim); user-select: none; margin-right: 10px; font-size: 0.7rem; }
+  .kw { color: var(--purple); }
+  .cm { color: var(--text-dim); font-style: italic; }
+
+  #sidebar { width: 220px; flex-shrink: 0; background: var(--surface); border-left: 1px solid var(--border); overflow-y: auto; padding: 14px 12px; display: flex; flex-direction: column; gap: 12px; }
+  .sidebar-section { font-size: 11px; }
+  .sidebar-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--text-dim); margin-bottom: 6px; }
+  .var-item { font-size: 11px; font-family: monospace; color: var(--text-muted); padding: 4px 0; border-bottom: 1px solid var(--border-soft); }
+  .var-item:last-child { border-bottom: none; }
+  .var-key { color: var(--text-dim); }
+  .var-val { color: var(--accent); font-weight: 700; }
+
+  #nav-row { flex-shrink: 0; display: flex; align-items: center; gap: 8px; padding: 10px 16px; background: var(--surface); border-top: 1px solid var(--border); }
+  .btn-step, .btn-play { padding: 6px 14px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--surface); color: var(--text); font-family: inherit; font-size: 12px; cursor: pointer; transition: background .15s; }
+  .btn-step:hover:not(:disabled) { background: #334155; }
+  .btn-step:disabled { opacity: 0.35; cursor: not-allowed; }
+  .btn-play { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn-play:hover { background: var(--accent-hover); }
+  select { padding: 5px 8px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: #1e293b; color: var(--text); font-size: 12px; font-family: inherit; cursor: pointer; }
 </style>
 </head>
 <body>
 
-<!-- user controls MUST be in .viz-inputs — .controls is hidden by iframe bridge -->
-<div class="viz-inputs" style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;padding:10px 14px 10px;">
-  <div style="display:flex;flex-direction:column;gap:4px;">
+<div class="viz-inputs">
+  <div>
     <label>Preset</label>
-    <select id="presetSel" onchange="loadPreset()" style="background:var(--bg-card);color:var(--text-main);border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-size:0.85rem;">
+    <select id="presetSel" onchange="loadPreset()" style="width:220px;">
       <option value="">— pick a preset —</option>
       <option value="1,3,5,7,9,11|0|5">Sequential odds [1..11], full range</option>
       <option value="1,2,4,8,16,32|1|4">Powers of 2, mid query</option>
@@ -68,61 +85,91 @@
       <option value="1,2,3,4,5,6,7,8|3|6">1..8, mid query [3,6]</option>
     </select>
   </div>
-  <div style="display:flex;flex-direction:column;gap:4px;">
+  <div>
     <label>Array (comma-separated)</label>
-    <input id="arrInput" type="text" class="wide" value="1,3,5,7,9,11" placeholder="e.g. 1,3,5,7,9">
+    <input id="arrInput" type="text" value="1,3,5,7,9,11" style="width:180px;" />
   </div>
-  <div style="display:flex;flex-direction:column;gap:4px;">
+  <div>
     <label>Query L</label>
-    <input id="qL" type="number" class="small" value="1" min="0">
+    <input id="qL" type="number" value="1" min="0" style="width:60px;" />
   </div>
-  <div style="display:flex;flex-direction:column;gap:4px;">
+  <div>
     <label>Query R</label>
-    <input id="qR" type="number" class="small" value="4" min="0">
+    <input id="qR" type="number" value="4" min="0" style="width:60px;" />
   </div>
-  <button onclick="buildAndRun()" style="padding:7px 18px;background:var(--accent);color:#fff;border:none;border-radius:6px;font-weight:600;cursor:pointer;">Run</button>
-  <button onclick="randomExample()" style="padding:7px 14px;background:var(--bg-card);color:var(--text-main);border:1px solid var(--border);border-radius:6px;cursor:pointer;">&#127922; Random</button>
-</div>
-
-<div id="main-layout">
-  <div id="left-panel">
-
-    <div>
-      <div class="section-label">Original Array</div>
-      <div class="array-row" id="orig-cells"></div>
-    </div>
-
-    <div>
-      <div class="section-label">
-        Prefix Sum Array
-        <span style="color:var(--text-dim);font-size:0.7rem;font-weight:400;text-transform:none;">
-          &nbsp;prefix[0]=0 &nbsp;|&nbsp; prefix[i] = prefix[i-1] + arr[i-1]
-        </span>
-      </div>
-      <div class="array-row" id="prefix-cells"></div>
-    </div>
-
-    <div id="status-box">Press Run to start.</div>
-    <div id="answer-box"></div>
-
-  </div>
-
-  <div id="code-panel">
-    <h4>Pseudocode</h4>
-    <pre id="code-body"><div id="cl1" class="cl">// Build prefix sum</div><div id="cl2" class="cl">prefix = [0] * (n+1)</div><div id="cl3" class="cl">for i in range(1, n+1):</div><div id="cl4" class="cl">  prefix[i] = prefix[i-1]</div><div id="cl5" class="cl">            + arr[i-1]</div><div id="cl6" class="cl"> </div><div id="cl7" class="cl">// Range Query  O(1)</div><div id="cl8" class="cl">def rangeSum(l, r):</div><div id="cl9" class="cl">  return prefix[r+1]</div><div id="cl10" class="cl">       - prefix[l]</div></pre>
-  </div>
+  <button class="vi-btn-run" onclick="buildAndRun()">Run</button>
+  <button class="vi-btn-rand" onclick="randomExample()">Random</button>
 </div>
 
 <div class="controls"></div>
 
-<script src="../shared/gsap.min.js"></script>
-<script src="../shared/viz.js"></script>
+<div id="header">
+  <span id="phase-badge">Build</span>
+  <span style="font-size:13px;font-weight:700;">Range Sum Query</span>
+  <span id="step-desc" style="font-size:12px;color:var(--text-muted);">Press Run to start.</span>
+  <span id="step-counter" style="font-size:12px;color:var(--text-muted);margin-left:auto;">Step 0 / 0</span>
+</div>
+
+<div id="main">
+  <div id="viz-area">
+    <div style="width:100%;max-width:580px;">
+      <div class="section-label">Original Array</div>
+      <div class="array-row" id="orig-cells"></div>
+    </div>
+    <div style="width:100%;max-width:580px;">
+      <div class="section-label">Prefix Sum Array &nbsp;<span style="color:var(--text-dim);font-size:0.7rem;font-weight:400;text-transform:none;">prefix[0]=0 · prefix[i] = prefix[i-1] + arr[i-1]</span></div>
+      <div class="array-row" id="prefix-cells"></div>
+    </div>
+    <div id="answer-box"></div>
+  </div>
+
+  <div id="resize-handle"></div>
+
+  <div id="code-panel">
+    <div class="code-panel-title">Code</div>
+    <div id="code-body">
+      <div id="cl1"  class="cl"><span class="ln">1</span><span class="cm">// Build prefix sum</span></div>
+      <div id="cl2"  class="cl"><span class="ln">2</span>prefix = [0] * (n+1)</div>
+      <div id="cl3"  class="cl"><span class="ln">3</span><span class="kw">for</span> i <span class="kw">in</span> range(1, n+1):</div>
+      <div id="cl4"  class="cl"><span class="ln">4</span>  prefix[i] = prefix[i-1]</div>
+      <div id="cl5"  class="cl"><span class="ln">5</span>            + arr[i-1]</div>
+      <div id="cl6"  class="cl"><span class="ln">6</span></div>
+      <div id="cl7"  class="cl"><span class="ln">7</span><span class="cm">// Range Query  O(1)</span></div>
+      <div id="cl8"  class="cl"><span class="ln">8</span><span class="kw">def</span> rangeSum(l, r):</div>
+      <div id="cl9"  class="cl"><span class="ln">9</span>  <span class="kw">return</span> prefix[r+1]</div>
+      <div id="cl10" class="cl"><span class="ln">10</span>         - prefix[l]</div>
+    </div>
+  </div>
+
+  <div id="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-title">Variables</div>
+      <div id="vars-items"><span style="color:var(--text-dim);">—</span></div>
+    </div>
+  </div>
+</div>
+
+<div id="nav-row">
+  <button id="prevBtn" class="btn-step" onclick="navStep(-1)" disabled>&#8592; Prev</button>
+  <button id="stepBtn" class="btn-step" onclick="navStep(1)" disabled>Step &#8594;</button>
+  <button id="playBtn" class="btn-play" onclick="navTogglePlay()" disabled>Play</button>
+  <button id="resetBtn" class="btn-step" onclick="navReset()">&#8635; Reset</button>
+  <select id="speedSel">
+    <option value="800">0.5&#215;</option>
+    <option value="400" selected>1&#215;</option>
+    <option value="200">2&#215;</option>
+    <option value="100">4&#215;</option>
+  </select>
+</div>
+
 <script>
 var steps = [];
 var currentStep = 0;
 var arr = [];
 var prefix = [];
 var queryL = 0, queryR = 0;
+var playing = false;
+var playTimer = null;
 
 function loadPreset() {
   var val = document.getElementById('presetSel').value;
@@ -153,6 +200,7 @@ function parseArr() {
 }
 
 function buildAndRun() {
+  stopPlay();
   arr = parseArr();
   if (arr.length === 0) return;
   var n = arr.length;
@@ -163,39 +211,28 @@ function buildAndRun() {
   for (var i = 1; i <= n; i++) prefix[i] = prefix[i - 1] + arr[i - 1];
 
   steps = [];
+  steps.push({ phase: 'Build', builtUpTo: 0, msg: 'Initialize prefix[0] = 0', lines: ['cl2'], i: null });
 
-  // Step 0: init
-  steps.push({ phase: 'build', builtUpTo: 0,
-    msg: '<span class="phase">Build</span> Initialize prefix[0] = 0',
-    lines: ['cl2'] });
-
-  // Build steps
   for (var i = 1; i <= n; i++) {
-    steps.push({ phase: 'build', builtUpTo: i, currentI: i,
-      msg: '<span class="phase">Build</span> prefix[' + i + '] = prefix[' + (i-1) + '] + arr[' + (i-1) + '] = ' +
-           prefix[i-1] + ' + ' + arr[i-1] + ' = <span class="formula">' + prefix[i] + '</span>',
-      lines: ['cl3','cl4','cl5'] });
+    steps.push({ phase: 'Build', builtUpTo: i, currentI: i,
+      msg: 'prefix[' + i + '] = prefix[' + (i-1) + '] + arr[' + (i-1) + '] = ' + prefix[i-1] + ' + ' + arr[i-1] + ' = ' + prefix[i],
+      lines: ['cl3','cl4','cl5'], i: i });
   }
 
-  // Query announce
-  steps.push({ phase: 'query', builtUpTo: n, queryActive: false,
-    msg: '<span class="phase">Query</span> Computing rangeSum(' + queryL + ', ' + queryR + ')...',
-    lines: ['cl8'] });
+  steps.push({ phase: 'Query', builtUpTo: n, queryActive: false,
+    msg: 'Computing rangeSum(' + queryL + ', ' + queryR + ')…',
+    lines: ['cl8'], i: null });
 
-  // Query resolve
   var answer = prefix[queryR + 1] - prefix[queryL];
-  steps.push({ phase: 'query', builtUpTo: n, queryActive: true,
-    msg: '<span class="phase">Query</span> rangeSum(' + queryL + ', ' + queryR + ') = ' +
-         'prefix[' + (queryR+1) + '] - prefix[' + queryL + '] = ' +
-         prefix[queryR+1] + ' - ' + prefix[queryL] + ' = <span class="formula">' + answer + '</span>',
-    lines: ['cl9','cl10'],
-    answer: answer });
+  steps.push({ phase: 'Query', builtUpTo: n, queryActive: true,
+    msg: 'rangeSum(' + queryL + ', ' + queryR + ') = prefix[' + (queryR+1) + '] - prefix[' + queryL + '] = ' + prefix[queryR+1] + ' - ' + prefix[queryL] + ' = ' + answer,
+    lines: ['cl9','cl10'], answer: answer, i: null });
 
   renderCells();
   document.getElementById('answer-box').style.display = 'none';
   currentStep = 0;
   render(0);
-  if (window.__vizSetSteps) window.__vizSetSteps(steps.length);
+  setButtons(true);
 }
 
 function makeCell(id, idx, val) {
@@ -224,10 +261,8 @@ function renderCells() {
 }
 
 function clearHighlights() {
-  var boxes = document.querySelectorAll('.cell-box');
-  for (var i = 0; i < boxes.length; i++) boxes[i].className = 'cell-box';
-  var cls = document.querySelectorAll('.cl');
-  for (var i = 0; i < cls.length; i++) { cls[i].classList.remove('hl'); cls[i].classList.remove('hl2'); }
+  document.querySelectorAll('.cell-box').forEach(function(b) { b.className = 'cell-box'; });
+  document.querySelectorAll('.cl').forEach(function(c) { c.classList.remove('hl', 'hl2'); });
 }
 
 function render(idx) {
@@ -238,72 +273,142 @@ function render(idx) {
   var n = arr.length;
   clearHighlights();
 
-  // Render prefix cells
   for (var i = 0; i <= n; i++) {
     var box = document.getElementById('pre-' + i);
     if (!box) continue;
     if (i < s.builtUpTo) {
-      box.textContent = prefix[i];
-      box.classList.add('done-build');
-    } else if (i === s.builtUpTo && s.phase === 'build' && s.currentI !== undefined) {
-      box.textContent = prefix[i];
-      box.classList.add('building');
+      box.textContent = prefix[i]; box.classList.add('done-build');
+    } else if (i === s.builtUpTo && s.phase === 'Build' && s.currentI !== undefined) {
+      box.textContent = prefix[i]; box.classList.add('building');
     } else if (i === 0) {
-      box.textContent = 0;
-      box.classList.add('done-build');
-    } else if (i === s.builtUpTo && s.phase === 'build' && s.currentI === undefined) {
-      // init step
-      box.textContent = '?';
+      box.textContent = 0; box.classList.add('done-build');
     } else {
       box.textContent = '?';
     }
   }
-
-  // fix pre-0 always shown
   var pre0 = document.getElementById('pre-0');
   if (pre0) { pre0.textContent = 0; pre0.classList.add('done-build'); }
 
-  if (s.phase === 'query' && s.queryActive) {
-    // show query range on orig
+  if (s.phase === 'Query' && s.queryActive) {
     for (var i = queryL; i <= queryR; i++) {
       var ob = document.getElementById('orig-' + i);
       if (ob) ob.classList.add('query-range');
     }
-    // highlight lookup cells
     var pL = document.getElementById('pre-' + queryL);
     var pR = document.getElementById('pre-' + (queryR + 1));
     if (pL) { pL.classList.remove('done-build'); pL.classList.add('answer-cell'); }
     if (pR) { pR.classList.remove('done-build'); pR.classList.add('answer-cell'); }
   }
 
-  // status
-  document.getElementById('status-box').innerHTML = s.msg;
+  document.getElementById('phase-badge').textContent = s.phase;
+  document.getElementById('step-desc').textContent = s.msg;
+  document.getElementById('step-counter').textContent = 'Step ' + idx + ' / ' + (steps.length - 1);
 
-  // answer
+  var varsDiv = document.getElementById('vars-items');
+  var vhtml = '';
+  if (s.i !== null && s.i !== undefined) {
+    vhtml += "<div class='var-item'><span class='var-key'>i</span> = <span class='var-val'>" + s.i + "</span></div>";
+    vhtml += "<div class='var-item'><span class='var-key'>arr[i-1]</span> = <span class='var-val'>" + arr[s.i-1] + "</span></div>";
+    vhtml += "<div class='var-item'><span class='var-key'>prefix[i]</span> = <span class='var-val'>" + prefix[s.i] + "</span></div>";
+  }
+  if (s.answer !== undefined) {
+    vhtml += "<div class='var-item'><span class='var-key'>L, R</span> = <span class='var-val'>" + queryL + ", " + queryR + "</span></div>";
+    vhtml += "<div class='var-item'><span class='var-key'>result</span> = <span class='var-val'>" + s.answer + "</span></div>";
+  }
+  varsDiv.innerHTML = vhtml || "<span style='color:var(--text-dim);'>—</span>";
+
   if (s.answer !== undefined) {
     var ab = document.getElementById('answer-box');
     ab.style.display = 'block';
-    ab.textContent = 'Result: rangeSum(' + queryL + ', ' + queryR + ') = ' + s.answer;
+    ab.textContent = 'rangeSum(' + queryL + ', ' + queryR + ') = ' + s.answer;
   } else {
     document.getElementById('answer-box').style.display = 'none';
   }
 
-  // code lines
-  var isQuery = s.phase === 'query';
+  var isQuery = s.phase === 'Query';
   if (s.lines) {
-    for (var i = 0; i < s.lines.length; i++) {
-      var el = document.getElementById(s.lines[i]);
+    s.lines.forEach(function(id) {
+      var el = document.getElementById(id);
       if (el) el.classList.add(isQuery ? 'hl2' : 'hl');
-    }
+    });
   }
+
+  document.getElementById('prevBtn').disabled = idx <= 0;
+  document.getElementById('stepBtn').disabled = idx >= steps.length - 1;
+  document.getElementById('playBtn').disabled = idx >= steps.length - 1;
+  if (idx >= steps.length - 1 && playing) stopPlay();
 }
 
-// VizNav hooks
+function setButtons(active) {
+  document.getElementById('prevBtn').disabled = !active || currentStep <= 0;
+  document.getElementById('stepBtn').disabled = !active || currentStep >= steps.length - 1;
+  document.getElementById('playBtn').disabled = !active || currentStep >= steps.length - 1;
+}
+
+function navStep(delta) {
+  if (!steps.length) return;
+  render(currentStep + delta);
+}
+
+function navTogglePlay() {
+  if (playing) { stopPlay(); return; }
+  playing = true;
+  document.getElementById('playBtn').textContent = 'Pause';
+  tick();
+}
+
+function stopPlay() {
+  playing = false;
+  if (playTimer) { clearTimeout(playTimer); playTimer = null; }
+  var pb = document.getElementById('playBtn');
+  if (pb) pb.textContent = 'Play';
+}
+
+function tick() {
+  if (!playing) return;
+  if (currentStep >= steps.length - 1) { stopPlay(); return; }
+  render(currentStep + 1);
+  playTimer = setTimeout(tick, parseInt(document.getElementById('speedSel').value, 10));
+}
+
+function navReset() {
+  stopPlay();
+  steps = []; currentStep = 0;
+  document.getElementById('orig-cells').innerHTML = '';
+  document.getElementById('prefix-cells').innerHTML = '';
+  document.getElementById('answer-box').style.display = 'none';
+  document.getElementById('phase-badge').textContent = 'Build';
+  document.getElementById('step-desc').textContent = 'Press Run to start.';
+  document.getElementById('step-counter').textContent = 'Step 0 / 0';
+  document.getElementById('vars-items').innerHTML = "<span style='color:var(--text-dim);'>—</span>";
+  document.querySelectorAll('.cl').forEach(function(c) { c.classList.remove('hl', 'hl2'); });
+  setButtons(false);
+}
+
+// Hook API for parent frame integration
 window.__vizRender = render;
 window.__vizGetStep = function() { return currentStep; };
 window.__vizGetTotal = function() { return steps.length; };
 
 buildAndRun();
+
+(function() {
+  var handle = document.getElementById('resize-handle');
+  var panel  = document.getElementById('code-panel');
+  var dragging = false, startX = 0, startW = 0;
+  handle.addEventListener('mousedown', function(e) {
+    dragging = true; startX = e.clientX; startW = panel.offsetWidth;
+    handle.classList.add('dragging'); e.preventDefault();
+  });
+  document.addEventListener('mousemove', function(e) {
+    if (!dragging) return;
+    panel.style.width = Math.min(560, Math.max(120, startW + (startX - e.clientX))) + 'px';
+  });
+  document.addEventListener('mouseup', function() {
+    if (!dragging) return;
+    dragging = false; handle.classList.remove('dragging');
+  });
+})();
 </script>
 </body>
 </html>
