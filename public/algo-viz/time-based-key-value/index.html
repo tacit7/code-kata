@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>981. Time Based Key-Value Store</title>
+  <link rel="stylesheet" href="../shared/style.css" />
+  <script src="../shared/viz.js"></script>
+  <style>
+    body { display:flex; flex-direction:column; height:100vh; overflow:hidden; }
+    .page-title {
+      font-size:1rem; font-weight:700; color:var(--text-bright);
+      padding:12px 16px 0; letter-spacing:0.01em; flex-shrink:0;
+    }
+    .viz-root {
+      display:flex; flex:1; gap:16px;
+      padding:8px 16px 12px; min-height:0;
+    }
+    .left-col, .right-col {
+      display:flex; flex-direction:column; gap:10px; flex:1; min-width:0;
+    }
+
+    /* viz-inputs */
+    .viz-inputs {
+      display:flex; flex-wrap:wrap; gap:8px; align-items:flex-end;
+      padding:6px 16px 4px; flex-shrink:0;
+    }
+    .vi-group { display:flex; flex-direction:column; gap:3px; }
+    .vi-label {
+      font-size:0.62rem; font-weight:700; text-transform:uppercase;
+      letter-spacing:0.08em; color:var(--text-dim);
+    }
+    select.vi-sel {
+      background:var(--surface); color:var(--text); border:1px solid var(--border);
+      border-radius:6px; padding:5px 8px; font-size:0.8rem; cursor:pointer;
+      min-width:200px;
+    }
+    .vi-btn {
+      padding:6px 14px; border-radius:6px; font-size:0.8rem; font-weight:600;
+      cursor:pointer; border:1px solid var(--border);
+      background:var(--surface); color:var(--text);
+    }
+    .vi-btn.primary { background:var(--accent); border-color:var(--accent); color:#fff; }
+    .vi-btn:hover { border-color:var(--accent); }
+
+    /* panel-box */
+    .panel-box {
+      background:var(--surface); border:1px solid var(--border-soft);
+      border-radius:var(--radius-lg); padding:10px 12px;
+    }
+    .panel-title {
+      font-size:0.62rem; font-weight:700; text-transform:uppercase;
+      letter-spacing:0.1em; color:var(--text-dim); margin-bottom:8px;
+    }
+
+    /* store panel */
+    .store-empty {
+      color:var(--text-dim); font-size:0.8rem; text-align:center;
+      padding:18px 0; font-style:italic;
+    }
+    .store-keys { display:flex; flex-direction:column; gap:8px; }
+    .key-row {
+      border-radius:8px; border:1px solid var(--border-soft);
+      background:var(--surface-dark); padding:6px 10px;
+      border-left:3px solid transparent; transition:border-color 0.15s;
+    }
+    .key-row.active { border-left-color:var(--accent); }
+    .key-name {
+      font-size:0.72rem; font-weight:700; color:var(--accent);
+      font-family:monospace; margin-bottom:5px;
+    }
+    .timeline-row {
+      display:flex; gap:5px; align-items:center;
+      overflow-x:auto; padding-bottom:2px; flex-wrap:nowrap;
+    }
+    .ts-chip {
+      display:inline-flex; align-items:center;
+      padding:2px 7px; border-radius:5px; font-size:0.7rem;
+      background:var(--surface); border:1px solid var(--border);
+      color:var(--text-muted); white-space:nowrap; flex-shrink:0;
+      transition:background 0.15s, border-color 0.15s, opacity 0.15s;
+    }
+    .ts-chip.dim       { opacity:0.3; }
+    .ts-chip.candidate { border:2px dashed var(--green); color:var(--green); background:rgba(158,206,106,0.06); }
+    .ts-chip.found     { background:var(--green); color:#0d1117; font-weight:700; border-color:var(--green); }
+    .ts-chip.mid-chip  { background:var(--blue); color:#0d1117; font-weight:700; border-color:var(--blue); }
+    .ts-chip.not-found-badge { background:var(--red); color:#fff; font-weight:700; border-color:var(--red); font-size:0.65rem; }
+    .ts-chip.new-chip  { background:rgba(158,206,106,0.15); border-color:var(--green); color:var(--green); }
+
+    /* op panel */
+    .op-box { display:flex; align-items:flex-start; gap:10px; }
+    .op-badge {
+      font-size:0.6rem; font-weight:700; text-transform:uppercase;
+      letter-spacing:0.1em; border-radius:5px; padding:3px 8px;
+      flex-shrink:0; margin-top:2px;
+    }
+    .op-badge.set { background:rgba(158,206,106,0.18); color:var(--green); border:1px solid var(--green); }
+    .op-badge.get { background:rgba(122,162,247,0.18); color:var(--accent); border:1px solid var(--accent); }
+    .op-detail { font-size:0.8rem; color:var(--text-muted); line-height:1.6; }
+    .op-key   { color:var(--accent); font-family:monospace; }
+    .op-val   { color:var(--green);  font-family:monospace; }
+    .op-ts    { color:var(--yellow); font-family:monospace; }
+
+    /* bsearch panel */
+    .bs-panel { display:flex; flex-direction:column; gap:8px; }
+    .bs-phase {
+      font-size:0.65rem; font-weight:700; text-transform:uppercase;
+      letter-spacing:0.08em; color:var(--text-dim);
+    }
+    .bs-phase.done-found    { color:var(--green); }
+    .bs-phase.done-notfound { color:var(--red); }
+
+    .bs-arr-wrap { position:relative; }
+    .bs-arr-row  { display:flex; gap:5px; flex-wrap:nowrap; overflow-x:auto; padding-bottom:24px; }
+    .bs-ptr-zone { position:absolute; bottom:0; left:0; right:0; height:20px; }
+    .bs-ptr-label {
+      position:absolute; font-size:0.58rem; font-weight:700;
+      text-transform:uppercase; letter-spacing:0.06em;
+      padding:1px 5px; border-radius:3px; white-space:nowrap;
+      transform:translateX(-50%);
+    }
+    .bs-ptr-label.lo  { color:var(--green);  background:rgba(158,206,106,0.13); }
+    .bs-ptr-label.mid { color:var(--blue);   background:rgba(125,207,255,0.13); }
+    .bs-ptr-label.hi  { color:var(--orange); background:rgba(255,158,100,0.13); }
+
+    /* result */
+    .result-box { display:flex; align-items:center; gap:10px; }
+    .result-label { font-size:0.65rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.08em; }
+    .result-val { font-size:1.05rem; font-weight:700; font-family:monospace; color:var(--text-bright); }
+    .result-val.found-val { color:var(--green); }
+    .result-val.empty-val { color:var(--red); opacity:0.8; }
+
+    /* narration */
+    .narration {
+      font-size:0.76rem; color:var(--text-dim); font-style:italic;
+      padding:5px 0 2px; line-height:1.45; flex-shrink:0;
+      border-top:1px solid var(--border-soft); margin-top:2px;
+    }
+
+    .step-counter { font-size:0.65rem; color:var(--text-dim); text-align:right; flex-shrink:0; }
+
+    /* VizNav buttons hidden */
+    #prevBtn, #stepBtn, #playBtn, #resetBtn, #speedSel { display:none; }
+  </style>
+</head>
+<body>
+
+<div class="page-title">981. Time Based Key-Value Store</div>
+
+<!-- USER INPUTS (visible in iframe) -->
+<div class="viz-inputs">
+  <div class="vi-group">
+    <div class="vi-label">Preset</div>
+    <select class="vi-sel" id="presetSel" onchange="loadPreset()">
+      <option value="0">Basic two-value key</option>
+      <option value="1">Exact vs floor match</option>
+      <option value="2">Timestamp before first entry</option>
+      <option value="3">Multiple independent keys</option>
+      <option value="4">Binary search depth demo</option>
+      <option value="5">Single entry edge cases</option>
+    </select>
+  </div>
+  <button class="vi-btn primary" onclick="buildAndRun()">Run</button>
+  <button class="vi-btn" onclick="randomExample()">&#127922; Random</button>
+</div>
+
+<!-- Hidden VizNav controls (bridge listens for postMessage) -->
+<button id="prevBtn">Prev</button>
+<button id="stepBtn">Step</button>
+<button id="playBtn">Play</button>
+<button id="resetBtn">Reset</button>
+<select id="speedSel">
+  <option value="1400">Slow</option>
+  <option value="800" selected>Normal</option>
+  <option value="380">Fast</option>
+</select>
+
+<div class="viz-root">
+
+  <!-- LEFT: Store state -->
+  <div class="left-col">
+    <div class="panel-box" style="flex:1; min-height:0; overflow:hidden; display:flex; flex-direction:column;">
+      <div class="panel-title">TimeMap Store</div>
+      <div id="storePanel" style="flex:1; overflow-y:auto;">
+        <div class="store-empty">Store is empty</div>
+      </div>
+    </div>
+    <div class="narration" id="narration">Ready &mdash; pick a preset or click &#127922; Random</div>
+  </div>
+
+  <!-- RIGHT: Op + BS + Result -->
+  <div class="right-col">
+
+    <div class="panel-box">
+      <div class="panel-title">Current Operation</div>
+      <div id="opBox">
+        <div style="color:var(--text-dim); font-size:0.78rem; font-style:italic;">No operation yet</div>
+      </div>
+    </div>
+
+    <div class="panel-box" id="bsPanel" style="display:none;">
+      <div class="panel-title">Binary Search</div>
+      <div class="bs-panel">
+        <div class="bs-phase" id="bsPhaseLabel">Searching&hellip;</div>
+        <div class="bs-arr-wrap">
+          <div class="bs-arr-row" id="bsArrRow"></div>
+          <div class="bs-ptr-zone" id="bsPtrZone"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel-box">
+      <div class="panel-title">Result</div>
+      <div class="result-box">
+        <div class="result-label">get() returns:</div>
+        <div class="result-val" id="resultVal">&mdash;</div>
+      </div>
+    </div>
+
+    <div class="step-counter" id="stepCounter">Step 0 / 0</div>
+
+  </div>
+</div>
+
+<!-- .controls required by iframe bridge; must be empty -->
+<div class="controls"></div>
+
+<script>
+// ── Presets ──────────────────────────────────────────────────────────────────
+var PRESETS = [
+  { label: 'Basic two-value key', ops: [
+    { type:'set', key:'foo', val:'bar',  ts:1 },
+    { type:'set', key:'foo', val:'bar2', ts:4 },
+    { type:'get', key:'foo', ts:4 },
+    { type:'get', key:'foo', ts:3 },
+  ]},
+  { label: 'Exact vs floor match', ops: [
+    { type:'set', key:'a', val:'alpha', ts:2 },
+    { type:'set', key:'a', val:'beta',  ts:5 },
+    { type:'set', key:'a', val:'gamma', ts:9 },
+    { type:'get', key:'a', ts:5 },
+    { type:'get', key:'a', ts:7 },
+  ]},
+  { label: 'Timestamp before first entry', ops: [
+    { type:'set', key:'key', val:'val1', ts:10 },
+    { type:'set', key:'key', val:'val2', ts:20 },
+    { type:'get', key:'key', ts:5  },
+    { type:'get', key:'key', ts:10 },
+  ]},
+  { label: 'Multiple independent keys', ops: [
+    { type:'set', key:'love', val:'high', ts:10 },
+    { type:'set', key:'love', val:'low',  ts:20 },
+    { type:'set', key:'hate', val:'low',  ts:10 },
+    { type:'set', key:'hate', val:'high', ts:20 },
+    { type:'get', key:'love', ts:15 },
+    { type:'get', key:'hate', ts:15 },
+  ]},
+  { label: 'Binary search depth demo', ops: [
+    { type:'set', key:'x', val:'v1', ts:1 },
+    { type:'set', key:'x', val:'v2', ts:3 },
+    { type:'set', key:'x', val:'v3', ts:5 },
+    { type:'set', key:'x', val:'v4', ts:7 },
+    { type:'set', key:'x', val:'v5', ts:9 },
+    { type:'get', key:'x', ts:6 },
+    { type:'get', key:'x', ts:9 },
+  ]},
+  { label: 'Single entry edge cases', ops: [
+    { type:'set', key:'z', val:'only', ts:42 },
+    { type:'get', key:'z', ts:42  },
+    { type:'get', key:'z', ts:100 },
+    { type:'get', key:'z', ts:1   },
+  ]},
+];
+
+var currentOps = PRESETS[0].ops.slice();
+
+function loadPreset() {
+  var idx = parseInt(document.getElementById('presetSel').value);
+  currentOps = PRESETS[idx].ops.map(function(o) { return Object.assign({}, o); });
+  buildAndRun();
+}
+
+function randInt(a, b) { return Math.floor(Math.random() * (b - a + 1)) + a; }
+
+function randomExample() {
+  var keyPool = ['foo','bar','key','data','x'];
+  var valPool = ['alpha','beta','gamma','hello','world','a1','b2'];
+  var numKeys = randInt(1, 3);
+  var usedKeys = keyPool.slice(0, numKeys);
+  var ops = [];
+
+  usedKeys.forEach(function(k) {
+    var count = randInt(2, 4);
+    var ts = randInt(1, 5);
+    for (var i = 0; i < count; i++) {
+      ops.push({ type:'set', key:k, val:valPool[randInt(0, valPool.length - 1)], ts:ts });
+      ts += randInt(1, 8);
+    }
+  });
+
+  for (var i = 0; i < 3; i++) {
+    var k = usedKeys[randInt(0, usedKeys.length - 1)];
+    var setOps = ops.filter(function(o) { return o.key === k; });
+    var maxTs = Math.max.apply(null, setOps.map(function(o) { return o.ts; }));
+    ops.push({ type:'get', key:k, ts: randInt(0, maxTs + 3) });
+  }
+
+  currentOps = ops;
+  buildAndRun();
+}
+
+// ── Step builder ─────────────────────────────────────────────────────────────
+function buildSteps() {
+  var ops = currentOps;
+  var steps = [];
+  var store = {};  // { key: [{ts,val}] }
+
+  function cloneStore(s) {
+    var out = {};
+    Object.keys(s).forEach(function(k) {
+      out[k] = s[k].map(function(e) { return { ts: e.ts, val: e.val }; });
+    });
+    return out;
+  }
+
+  function snap(extra) {
+    return Object.assign({
+      store: cloneStore(store),
+      op: null,
+      bsearch: null,
+      label: '',
+      activeKey: null,
+      highlightIdx: -1,
+      resultText: null,
+    }, extra);
+  }
+
+  // Step 0: initial
+  steps.push(snap({ label: 'Ready — pick a preset or click Random' }));
+
+  ops.forEach(function(op) {
+    if (op.type === 'set') {
+      // Announce
+      steps.push(snap({
+        op: { type:'set', key:op.key, val:op.val, ts:op.ts },
+        label: 'SET "' + op.key + '" = "' + op.val + '" at t=' + op.ts,
+        activeKey: op.key,
+      }));
+
+      // Apply
+      if (!store[op.key]) store[op.key] = [];
+      store[op.key].push({ ts: op.ts, val: op.val });
+
+      // Chip appears
+      steps.push(snap({
+        op: { type:'set', key:op.key, val:op.val, ts:op.ts },
+        label: 'Stored (t=' + op.ts + ', "' + op.val + '") under key "' + op.key + '"',
+        activeKey: op.key,
+        highlightIdx: store[op.key].length - 1,
+      }));
+
+    } else {
+      // GET
+      var arr = store[op.key] ? store[op.key].slice() : [];
+      var target = op.ts;
+
+      // Announce
+      steps.push(snap({
+        op: { type:'get', key:op.key, ts:op.ts },
+        label: 'GET "' + op.key + '" at t=' + op.ts,
+        activeKey: op.key,
+      }));
+
+      // Key not in store
+      if (arr.length === 0) {
+        steps.push(snap({
+          op: { type:'get', key:op.key, ts:op.ts },
+          bsearch: { active:true, arr:[], lo:0, hi:-1, mid:null, phase:'done', found:false, foundIdx:null, candidateIdx:null },
+          label: 'Key "' + op.key + '" not in store → return ""',
+          activeKey: op.key,
+          resultText: '',
+        }));
+        return;
+      }
+
+      // BS init
+      var lo = 0, hi = arr.length - 1;
+      steps.push(snap({
+        op: { type:'get', key:op.key, ts:op.ts },
+        bsearch: { active:true, arr:arr.slice(), lo:lo, hi:hi, mid:null, phase:'init', found:false, foundIdx:null, candidateIdx:null },
+        label: 'Binary search on ' + arr.length + ' entries for largest ts ≤ ' + target,
+        activeKey: op.key,
+      }));
+
+      var candidateIdx = null;
+
+      while (lo <= hi) {
+        var mid = Math.floor((lo + hi) / 2);
+
+        // check-mid
+        steps.push(snap({
+          op: { type:'get', key:op.key, ts:op.ts },
+          bsearch: { active:true, arr:arr.slice(), lo:lo, hi:hi, mid:mid, phase:'check-mid', found:false, foundIdx:null, candidateIdx:candidateIdx },
+          label: 'mid=' + mid + ', arr[mid].ts=' + arr[mid].ts + ' — compare with target t=' + target,
+          activeKey: op.key,
+        }));
+
+        if (arr[mid].ts <= target) {
+          // go-right
+          steps.push(snap({
+            op: { type:'get', key:op.key, ts:op.ts },
+            bsearch: { active:true, arr:arr.slice(), lo:lo, hi:hi, mid:mid, phase:'go-right', found:false, foundIdx:null, candidateIdx:mid },
+            label: 'arr[' + mid + '].ts=' + arr[mid].ts + ' ≤ ' + target + ', candidate="' + arr[mid].val + '", search right (lo=' + (mid+1) + ')',
+            activeKey: op.key,
+          }));
+          candidateIdx = mid;
+          lo = mid + 1;
+          // advance
+          steps.push(snap({
+            op: { type:'get', key:op.key, ts:op.ts },
+            bsearch: { active:true, arr:arr.slice(), lo:lo, hi:hi, mid:mid, phase:'advance', found:false, foundIdx:null, candidateIdx:candidateIdx },
+            label: 'Advance: lo=' + lo + ', hi=' + hi + (lo > hi ? ' — search complete' : ''),
+            activeKey: op.key,
+          }));
+        } else {
+          // go-left
+          steps.push(snap({
+            op: { type:'get', key:op.key, ts:op.ts },
+            bsearch: { active:true, arr:arr.slice(), lo:lo, hi:hi, mid:mid, phase:'go-left', found:false, foundIdx:null, candidateIdx:candidateIdx },
+            label: 'arr[' + mid + '].ts=' + arr[mid].ts + ' > ' + target + ', search left (hi=' + (mid-1) + ')',
+            activeKey: op.key,
+          }));
+          hi = mid - 1;
+          // advance
+          steps.push(snap({
+            op: { type:'get', key:op.key, ts:op.ts },
+            bsearch: { active:true, arr:arr.slice(), lo:lo, hi:hi, mid:mid, phase:'advance', found:false, foundIdx:null, candidateIdx:candidateIdx },
+            label: 'Advance: lo=' + lo + ', hi=' + hi + (lo > hi ? ' — search complete' : ''),
+            activeKey: op.key,
+          }));
+        }
+      }
+
+      var found = candidateIdx !== null;
+      var result = found ? arr[candidateIdx].val : '';
+
+      steps.push(snap({
+        op: { type:'get', key:op.key, ts:op.ts },
+        bsearch: { active:true, arr:arr.slice(), lo:lo, hi:hi, mid:null, phase:'done', found:found, foundIdx:candidateIdx, candidateIdx:candidateIdx },
+        label: found
+          ? 'Result: "' + result + '" (largest ts ≤ ' + target + ' at index ' + candidateIdx + ')'
+          : 'No entry with ts ≤ ' + target + ' — return ""',
+        activeKey: op.key,
+        highlightIdx: found ? candidateIdx : -1,
+        resultText: result,
+      }));
+    }
+  });
+
+  return steps;
+}
+
+// ── Render ───────────────────────────────────────────────────────────────────
+function render(snap, cursor, total) {
+
+  // -- Store panel --
+  var storePanel = document.getElementById('storePanel');
+  var keys = Object.keys(snap.store);
+
+  if (keys.length === 0) {
+    storePanel.innerHTML = '<div class="store-empty">Store is empty</div>';
+  } else {
+    storePanel.innerHTML = '';
+    var keysDiv = document.createElement('div');
+    keysDiv.className = 'store-keys';
+
+    keys.forEach(function(k) {
+      var entries = snap.store[k];
+      var isActive = (k === snap.activeKey);
+      var bs = snap.bsearch;
+      var isSearchKey = isActive && bs && bs.active && snap.op && snap.op.key === k;
+
+      var row = document.createElement('div');
+      row.className = 'key-row' + (isActive ? ' active' : '');
+
+      var keyName = document.createElement('div');
+      keyName.className = 'key-name';
+      keyName.textContent = '"' + k + '"';
+      row.appendChild(keyName);
+
+      var timeline = document.createElement('div');
+      timeline.className = 'timeline-row';
+
+      entries.forEach(function(entry, idx) {
+        var chip = document.createElement('span');
+        chip.className = 'ts-chip';
+        chip.textContent = 't=' + entry.ts + ': "' + entry.val + '"';
+
+        if (snap.op && snap.op.type === 'set' && snap.op.key === k && idx === snap.highlightIdx) {
+          chip.className += ' new-chip';
+        } else if (isSearchKey) {
+          if (bs.phase === 'done') {
+            if (bs.found && idx === bs.foundIdx) {
+              chip.className += ' found';
+            } else if (!bs.found) {
+              // all normal on not-found (no dimming)
+            } else {
+              chip.className += ' dim';
+            }
+          } else if (bs.arr && bs.arr.length > 0) {
+            var lo = bs.lo, hi = bs.hi, mid = bs.mid;
+            var cIdx = bs.candidateIdx;
+            if (bs.phase === 'check-mid' && idx === mid) {
+              chip.className += ' mid-chip';
+            } else if (bs.phase === 'go-right' && idx === mid) {
+              chip.className += ' mid-chip';
+            } else if (bs.phase === 'go-left' && idx === mid) {
+              chip.className += ' mid-chip';
+            }
+            if (cIdx !== null && idx === cIdx && chip.className.indexOf('mid-chip') === -1) {
+              chip.className += ' candidate';
+            }
+            if ((idx < lo || idx > hi) && chip.className === 'ts-chip') {
+              chip.className += ' dim';
+            }
+          }
+        }
+
+        timeline.appendChild(chip);
+      });
+
+      // Not-found badge
+      if (isSearchKey && bs && bs.phase === 'done' && !bs.found) {
+        var badge = document.createElement('span');
+        badge.className = 'ts-chip not-found-badge';
+        badge.textContent = 'no match';
+        timeline.appendChild(badge);
+      }
+
+      row.appendChild(timeline);
+      keysDiv.appendChild(row);
+    });
+
+    storePanel.appendChild(keysDiv);
+  }
+
+  // -- Op panel --
+  var opBox = document.getElementById('opBox');
+  if (!snap.op) {
+    opBox.innerHTML = '<div style="color:var(--text-dim); font-size:0.78rem; font-style:italic;">No operation yet</div>';
+  } else {
+    var op = snap.op;
+    var detail = '';
+    if (op.type === 'set') {
+      detail = 'key=<span class="op-key">"' + op.key + '"</span>' +
+               '&nbsp;&nbsp;value=<span class="op-val">"' + op.val + '"</span>' +
+               '&nbsp;&nbsp;ts=<span class="op-ts">' + op.ts + '</span>';
+    } else {
+      detail = 'key=<span class="op-key">"' + op.key + '"</span>' +
+               '&nbsp;&nbsp;ts=<span class="op-ts">' + op.ts + '</span>';
+    }
+    opBox.innerHTML =
+      '<div class="op-box">' +
+      '<div class="op-badge ' + op.type + '">' + op.type.toUpperCase() + '</div>' +
+      '<div class="op-detail">' + detail + '</div>' +
+      '</div>';
+  }
+
+  // -- Binary search panel --
+  var bsPanel = document.getElementById('bsPanel');
+  var bsPhaseLabel = document.getElementById('bsPhaseLabel');
+  var bsArrRow = document.getElementById('bsArrRow');
+  var bsPtrZone = document.getElementById('bsPtrZone');
+
+  var bs = snap.bsearch;
+  if (bs && bs.active) {
+    bsPanel.style.display = '';
+
+    if (bs.arr.length === 0) {
+      bsArrRow.innerHTML = '<span style="color:var(--text-dim); font-style:italic; font-size:0.75rem;">Empty &mdash; key not in store</span>';
+      bsPtrZone.innerHTML = '';
+      bsPhaseLabel.textContent = 'Key not found';
+      bsPhaseLabel.className = 'bs-phase done-notfound';
+    } else {
+      bsArrRow.innerHTML = '';
+      bsPtrZone.innerHTML = '';
+
+      var chipEls = [];
+      bs.arr.forEach(function(entry, idx) {
+        var chip = document.createElement('span');
+        chip.className = 'ts-chip';
+        chip.textContent = 't=' + entry.ts + ': "' + entry.val + '"';
+
+        if (bs.phase === 'done') {
+          if (bs.found && idx === bs.foundIdx) chip.className += ' found';
+          else chip.className += ' dim';
+        } else {
+          var lo = bs.lo, hi = bs.hi, mid = bs.mid;
+          if (idx < lo || idx > hi) {
+            chip.className += ' dim';
+          } else if (idx === mid) {
+            chip.className += ' mid-chip';
+          } else if (bs.candidateIdx !== null && idx === bs.candidateIdx) {
+            chip.className += ' candidate';
+          }
+        }
+
+        bsArrRow.appendChild(chip);
+        chipEls.push(chip);
+      });
+
+      // Pointer labels (positioned after layout)
+      if (bs.phase !== 'done') {
+        requestAnimationFrame(function() {
+          bsPtrZone.innerHTML = '';
+          var rowRect = bsArrRow.getBoundingClientRect();
+
+          function addPtr(idx, cls, text) {
+            if (idx === null || idx < 0 || idx >= chipEls.length) return;
+            var chipRect = chipEls[idx].getBoundingClientRect();
+            var left = chipRect.left - rowRect.left + chipRect.width / 2;
+            var lbl = document.createElement('span');
+            lbl.className = 'bs-ptr-label ' + cls;
+            lbl.textContent = text;
+            lbl.style.left = left + 'px';
+            bsPtrZone.appendChild(lbl);
+          }
+
+          if (bs.lo <= bs.hi) {
+            addPtr(bs.lo, 'lo', 'lo');
+            if (bs.mid !== null) addPtr(bs.mid, 'mid', 'mid');
+            addPtr(bs.hi, 'hi', 'hi');
+          }
+        });
+      }
+
+      var phaseMap = {
+        'init':      'Initializing…',
+        'check-mid': 'Checking mid…',
+        'go-right':  'arr[mid].ts ≤ target → go right',
+        'go-left':   'arr[mid].ts > target → go left',
+        'advance':   'Advancing pointers…',
+        'done':      bs.found ? 'Found!' : 'Not found',
+      };
+      bsPhaseLabel.textContent = phaseMap[bs.phase] || bs.phase;
+      bsPhaseLabel.className = 'bs-phase' +
+        (bs.phase === 'done' && bs.found  ? ' done-found'    : '') +
+        (bs.phase === 'done' && !bs.found ? ' done-notfound' : '');
+    }
+  } else {
+    bsPanel.style.display = 'none';
+  }
+
+  // -- Result --
+  var resultVal = document.getElementById('resultVal');
+  if (snap.resultText === null) {
+    resultVal.textContent = '—';
+    resultVal.className = 'result-val';
+  } else if (snap.resultText === '') {
+    resultVal.textContent = '"" (not found)';
+    resultVal.className = 'result-val empty-val';
+  } else {
+    resultVal.textContent = '"' + snap.resultText + '"';
+    resultVal.className = 'result-val found-val';
+  }
+
+  // -- Narration --
+  document.getElementById('narration').textContent = snap.label;
+
+  // -- Step counter --
+  document.getElementById('stepCounter').textContent = 'Step ' + (cursor + 1) + ' / ' + total;
+}
+
+// ── VizNav ───────────────────────────────────────────────────────────────────
+var btnPrev  = document.getElementById('prevBtn');
+var btnStep  = document.getElementById('stepBtn');
+var btnPlay  = document.getElementById('playBtn');
+var btnReset = document.getElementById('resetBtn');
+var speedSel = document.getElementById('speedSel');
+
+var nav = VizNav({ btnPrev:btnPrev, btnNext:btnStep, btnPlay:btnPlay, btnReset:btnReset, speedSel:speedSel, render:render });
+
+function buildAndRun() {
+  nav.load(buildSteps());
+}
+
+window.addEventListener('DOMContentLoaded', function() {
+  loadPreset();
+});
+</script>
+</body>
+</html>
