@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Reorder List</title>
+<link rel="stylesheet" href="../shared/style.css" />
+<script src="../shared/gsap.min.js"></script>
+<script src="../shared/viz.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Fira Code', 'Cascadia Code', monospace; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+
+  /* Header */
+  #header { padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+  #phase-badge { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; padding: 3px 10px; border-radius: var(--radius-sm); background: #1e3a5f; color: var(--blue); border: 1px solid var(--blue); }
+  #step-counter { font-size: 12px; color: var(--text-muted); margin-left: auto; }
+
+  /* Main layout */
+  #main { display: flex; flex: 1; overflow: hidden; }
+
+  /* Viz area */
+  #viz-area { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; gap: 24px; overflow: hidden; }
+
+  /* Description */
+  #desc { font-size: 13px; color: var(--text-muted); text-align: center; max-width: 560px; min-height: 36px; line-height: 1.5; }
+
+  /* Linked list canvas */
+  #list-canvas { width: 100%; max-width: 700px; position: relative; }
+
+  /* Phase row labels */
+  .phase-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--text-dim); margin-bottom: 6px; }
+
+  /* Row wrapper */
+  .list-row { display: flex; align-items: center; flex-wrap: wrap; gap: 0; position: relative; min-height: 70px; }
+  .list-row + .list-row { margin-top: 20px; }
+
+  /* Node */
+  .node-wrap { display: flex; flex-direction: column; align-items: center; position: relative; }
+  .node-box {
+    width: 48px; height: 48px; border-radius: 8px;
+    background: #1e293b; border: 2px solid #334155; color: #f1f5f9;
+    font-size: 17px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    transition: border-color .25s, background .25s, opacity .25s;
+    position: relative; z-index: 1;
+  }
+  .node-box.highlight-slow { border-color: #3b82f6; box-shadow: 0 0 0 3px #3b82f620; }
+  .node-box.highlight-fast { border-color: #f97316; box-shadow: 0 0 0 3px #f9731620; }
+  .node-box.highlight-mid { border-color: #eab308; background: #451a0330; box-shadow: 0 0 0 3px #eab30820; }
+  .node-box.highlight-first { border-color: #22c55e; }
+  .node-box.highlight-second { border-color: #a855f7; }
+  .node-box.highlight-prev { border-color: #f59e0b; }
+  .node-box.highlight-curr { border-color: #ec4899; }
+  .node-box.highlight-p1 { border-color: #06b6d4; }
+  .node-box.highlight-p2 { border-color: #8b5cf6; }
+  .node-box.highlight-done { border-color: #22c55e; background: #14532d40; color: #4ade80; }
+  .node-box.pulse { animation: nodePulse .5s ease; }
+  @keyframes nodePulse { 0%,100%{box-shadow:0 0 0 0 #10b98140} 50%{box-shadow:0 0 0 8px #10b98130} }
+  .node-box.faded { opacity: 0.3; }
+
+  /* Pointer badges */
+  .badges { display: flex; flex-wrap: wrap; gap: 3px; justify-content: center; margin-top: 4px; min-height: 18px; }
+  .badge { font-size: 9px; font-weight: 700; padding: 1px 5px; border-radius: 4px; letter-spacing: .05em; }
+  .badge-slow { background: #1e3a5f; color: #3b82f6; border: 1px solid #3b82f6; }
+  .badge-fast { background: #431407; color: #f97316; border: 1px solid #f97316; }
+  .badge-mid  { background: #45280a; color: #eab308; border: 1px solid #eab308; }
+  .badge-prev { background: #451a03; color: #f59e0b; border: 1px solid #f59e0b; }
+  .badge-curr { background: #4a044e; color: #ec4899; border: 1px solid #ec4899; }
+  .badge-p1   { background: #083344; color: #06b6d4; border: 1px solid #06b6d4; }
+  .badge-p2   { background: #2e1065; color: #8b5cf6; border: 1px solid #8b5cf6; }
+  .badge-head { background: #1a2e1a; color: #22c55e; border: 1px solid #22c55e; }
+
+  /* Arrow */
+  .arrow { display: flex; align-items: center; width: 28px; flex-shrink: 0; position: relative; }
+  .arrow svg { width: 28px; height: 16px; }
+  .arrow.faded { opacity: 0.2; }
+  .null-marker { font-size: 10px; color: var(--text-dim); margin-left: 4px; padding: 0 4px; }
+
+  /* Right sidebar */
+  #sidebar { width: 260px; flex-shrink: 0; background: var(--surface); border-left: 1px solid var(--border); overflow-y: auto; padding: 14px 12px; display: flex; flex-direction: column; gap: 12px; }
+  .sidebar-section { font-size: 11px; }
+  .sidebar-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--text-dim); margin-bottom: 6px; }
+  .ptr-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+  .ptr-table td { padding: 3px 5px; border-bottom: 1px solid var(--border); }
+  .ptr-table td:first-child { color: var(--text-muted); width: 44px; }
+  .ptr-table td:last-child { color: var(--text); font-weight: 600; }
+  .list-text { font-size: 11px; color: var(--text-muted); word-break: break-all; line-height: 1.6; }
+  .half-label { font-weight: 700; color: var(--green); margin-right: 4px; }
+  .half-label2 { font-weight: 700; color: var(--purple); margin-right: 4px; }
+
+  /* Code panel */
+  #code-wrap { flex-shrink: 0; background: #0d1117; border-top: 1px solid var(--border); }
+  #code-toggle { width: 100%; background: #161b22; color: var(--text-muted); border: none; border-bottom: 1px solid var(--border); padding: 5px 12px; font-size: 11px; text-align: left; cursor: pointer; font-family: inherit; }
+  #code-toggle:hover { color: var(--text); }
+  #code-body { overflow: auto; max-height: 180px; padding: 10px 14px; }
+  pre { font-size: 11px; line-height: 1.7; font-family: inherit; }
+  .code-line { padding: 0 4px; border-radius: 3px; display: block; transition: background .2s; white-space: pre; }
+  .code-line.active { background: #451a0350; color: #fbbf24; }
+  .kw { color: #c792ea; } .fn { color: #82aaff; } .cm { color: #546e7a; font-style: italic; }
+  .str { color: #c3e88d; } .num { color: #f78c6c; }
+
+  /* Nav */
+  #nav-row { flex-shrink: 0; display: flex; align-items: center; gap: 8px; padding: 10px 16px; background: var(--surface); border-top: 1px solid var(--border); }
+  .btn-step, .btn-play { padding: 6px 14px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--surface); color: var(--text); font-family: inherit; font-size: 12px; cursor: pointer; transition: background .15s; }
+  .btn-step:hover { background: #334155; }
+  .btn-play { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn-play:hover { background: var(--accent-hover); }
+  select { padding: 5px 8px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: #1e293b; color: var(--text); font-size: 12px; font-family: inherit; cursor: pointer; }
+</style>
+</head>
+<body>
+<div id="header">
+  <span id="phase-badge">Find Middle</span>
+  <span style="font-size:13px;font-weight:700;">Reorder List</span>
+  <span id="step-counter">Step 0 / 0</span>
+</div>
+
+<div id="main">
+  <div id="viz-area">
+    <div id="desc">Initializing...</div>
+    <div id="list-canvas"></div>
+  </div>
+
+  <div id="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-title">Pointers</div>
+      <table class="ptr-table" id="ptr-table">
+        <tbody></tbody>
+      </table>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-title">List State</div>
+      <div class="list-text" id="list-state"></div>
+    </div>
+  </div>
+</div>
+
+<div id="code-wrap">
+  <button id="code-toggle">▼ Code (click to collapse)</button>
+  <div id="code-body">
+    <pre id="code-pre"></pre>
+  </div>
+</div>
+
+<div class="nav-row" id="nav-row">
+  <button id="prevBtn" class="btn-step">← Prev</button>
+  <button id="stepBtn" class="btn-step">Step →</button>
+  <button id="playBtn" class="btn-play">Play</button>
+  <button id="resetBtn" class="btn-step">↺ Reset</button>
+  <select id="speedSel">
+    <option value="800">0.5×</option>
+    <option value="400" selected>1×</option>
+    <option value="200">2×</option>
+    <option value="100">4×</option>
+  </select>
+</div>
+
+<script>
+// ─── Code lines ───────────────────────────────────────────────────────────
+const CODE_LINES = [
+  { n:  1, t: '<span class="kw">def</span> <span class="fn">reorderList</span>(head):' },
+  { n:  2, t: '    <span class="kw">if not</span> head <span class="kw">or not</span> head.next:' },
+  { n:  3, t: '        <span class="kw">return</span>' },
+  { n:  4, t: '' },
+  { n:  5, t: '    <span class="cm"># Phase 1: Find middle</span>' },
+  { n:  6, t: '    slow, fast = head, head' },
+  { n:  7, t: '    <span class="kw">while</span> fast <span class="kw">and</span> fast.next:' },
+  { n:  8, t: '        slow = slow.next' },
+  { n:  9, t: '        fast = fast.next.next' },
+  { n: 10, t: '' },
+  { n: 11, t: '    <span class="cm"># Phase 2: Reverse second half</span>' },
+  { n: 12, t: '    prev, curr = <span class="kw">None</span>, slow.next' },
+  { n: 13, t: '    slow.next = <span class="kw">None</span>' },
+  { n: 14, t: '    <span class="kw">while</span> curr:' },
+  { n: 15, t: '        next_node = curr.next' },
+  { n: 16, t: '        curr.next = prev' },
+  { n: 17, t: '        prev = curr' },
+  { n: 18, t: '        curr = next_node' },
+  { n: 19, t: '' },
+  { n: 20, t: '    <span class="cm"># Phase 3: Merge two halves</span>' },
+  { n: 21, t: '    p1, p2 = head, prev' },
+  { n: 22, t: '    <span class="kw">while</span> p2:' },
+  { n: 23, t: '        next1, next2 = p1.next, p2.next' },
+  { n: 24, t: '        p1.next = p2' },
+  { n: 25, t: '        p2.next = next1' },
+  { n: 26, t: '        p1, p2 = next1, next2' },
+];
+
+// ─── Build snapshots ───────────────────────────────────────────────────────
+function buildSnapshots() {
+  // nodes: id=value, connections will be built each snap
+  // We'll simulate the algorithm on [1,2,3,4,5]
+
+  const vals = [1, 2, 3, 4, 5];
+  const snaps = [];
+
+  function makeNode(id, nextId) { return { id, value: id, next_id: nextId }; }
+
+  // Initial nodes
+  const initialNodes = [
+    makeNode(1,2), makeNode(2,3), makeNode(3,4), makeNode(4,5), makeNode(5,null)
+  ];
+  function nodesCopy(nodes) { return nodes.map(n => ({...n})); }
+  function conns(nodes) {
+    const cs = [];
+    nodes.forEach(n => { if (n.next_id !== null) cs.push({from_id:n.id, to_id:n.next_id}); });
+    return cs;
+  }
+
+  function snap(phase, description, extra) {
+    const base = {
+      phase, description,
+      nodes: nodesCopy(initialNodes),
+      connections: conns(initialNodes),
+      first_half_ids: [],
+      second_half_ids: [],
+      reversed_second_ids: null,
+      head_id: 1,
+      slow_id: null, fast_id: null, mid_id: null,
+      prev_id: null, curr_id: null,
+      p1_id: null, p2_id: null,
+      merged_order: [],
+      active_line: 0,
+      split_done: false,
+    };
+    return {...base, ...extra};
+  }
+
+  // Step 1: INIT — slow=1, fast=1
+  snaps.push(snap("find_middle",
+    "Initialize: slow and fast both start at the head (node 1). We'll move slow one step and fast two steps per iteration.",
+    { slow_id:1, fast_id:1, active_line:6 }
+  ));
+
+  // Step 2: advance once — slow=2, fast=3
+  snaps.push(snap("find_middle",
+    "Iteration 1: slow moves to node 2, fast moves to node 3. fast.next exists → continue loop.",
+    { slow_id:2, fast_id:3, active_line:8 }
+  ));
+
+  // Step 3: advance again — slow=3, fast=5; fast.next is null → exit
+  snaps.push(snap("find_middle",
+    "Iteration 2: slow moves to node 3, fast moves to node 5. fast.next is None → while condition false, loop exits.",
+    { slow_id:3, fast_id:5, active_line:7 }
+  ));
+
+  // Step 4: MIDDLE_FOUND
+  snaps.push(snap("find_middle",
+    "Middle found: slow rests at node 3. First half is 1→2→3, second half starts at node 4 (slow.next).",
+    { slow_id:3, fast_id:5, mid_id:3, active_line:7 }
+  ));
+
+  // Step 5: Set up prev/curr (before split)
+  snaps.push(snap("reverse",
+    "Set prev = None, curr = slow.next = node 4. We capture node 4 before severing the first half.",
+    { mid_id:3, prev_id:null, curr_id:4, active_line:12,
+      first_half_ids:[1,2,3], second_half_ids:[4,5] }
+  ));
+
+  // Step 6: SPLIT — slow.next = None; now we have two separate lists
+  const splitNodes = [
+    makeNode(1,2), makeNode(2,3), makeNode(3,null),  // first half: 3.next = null
+    makeNode(4,5), makeNode(5,null)
+  ];
+  snaps.push({
+    phase:"reverse",
+    description:"Split: slow.next = None severs the list. First half: 1→2→3→∅. Second half: 4→5 (curr=4). Now we reverse the second half in-place.",
+    nodes: nodesCopy(splitNodes),
+    connections: conns(splitNodes),
+    first_half_ids:[1,2,3], second_half_ids:[4,5], reversed_second_ids:null,
+    head_id:1, slow_id:null, fast_id:null, mid_id:3,
+    prev_id:null, curr_id:4,
+    p1_id:null, p2_id:null,
+    merged_order:[], active_line:13, split_done:true,
+  });
+
+  // Step 7: REVERSE_STEP 1 — node4.next = None (prev), prev=4, curr=5
+  const rev1Nodes = [
+    makeNode(1,2), makeNode(2,3), makeNode(3,null),
+    makeNode(4,null),  // 4.next = None (reversed)
+    makeNode(5,null)
+  ];
+  snaps.push({
+    phase:"reverse",
+    description:"Reverse step 1: next_node = node5; node4.next = prev (None); prev = node4; curr = node5. Node 4's arrow is now null.",
+    nodes: nodesCopy(rev1Nodes),
+    connections: conns(rev1Nodes),
+    first_half_ids:[1,2,3], second_half_ids:[4,5], reversed_second_ids:[4],
+    head_id:1, slow_id:null, fast_id:null, mid_id:3,
+    prev_id:4, curr_id:5,
+    p1_id:null, p2_id:null,
+    merged_order:[], active_line:15, split_done:true,
+  });
+
+  // Step 8: REVERSE_STEP 2 — node5.next = 4, prev=5, curr=null
+  const rev2Nodes = [
+    makeNode(1,2), makeNode(2,3), makeNode(3,null),
+    makeNode(5,4), makeNode(4,null)  // 5→4
+  ];
+  snaps.push({
+    phase:"reverse",
+    description:"Reverse step 2: next_node = None; node5.next = prev (node4); prev = node5; curr = None. Second half reversed: 5→4.",
+    nodes: nodesCopy(rev2Nodes),
+    connections: conns(rev2Nodes),
+    first_half_ids:[1,2,3], second_half_ids:[5,4], reversed_second_ids:[5,4],
+    head_id:1, slow_id:null, fast_id:null, mid_id:3,
+    prev_id:5, curr_id:null,
+    p1_id:null, p2_id:null,
+    merged_order:[], active_line:15, split_done:true,
+  });
+
+  // Step 9: REVERSE_DONE — curr is None, while exits
+  snaps.push({
+    phase:"reverse",
+    description:"Reverse done: curr = None → while loop exits. Second half is now 5→4. First half: 1→2→3.",
+    nodes: nodesCopy(rev2Nodes),
+    connections: conns(rev2Nodes),
+    first_half_ids:[1,2,3], second_half_ids:[5,4], reversed_second_ids:[5,4],
+    head_id:1, slow_id:null, fast_id:null, mid_id:3,
+    prev_id:5, curr_id:null,
+    p1_id:null, p2_id:null,
+    merged_order:[], active_line:14, split_done:true,
+  });
+
+  // Step 10: MERGE_INIT — p1=1, p2=5
+  snaps.push({
+    phase:"merge",
+    description:"Merge init: p1 = head (node 1), p2 = prev (node 5). We'll interleave: take one from each half alternately.",
+    nodes: nodesCopy(rev2Nodes),
+    connections: conns(rev2Nodes),
+    first_half_ids:[1,2,3], second_half_ids:[5,4], reversed_second_ids:[5,4],
+    head_id:1, slow_id:null, fast_id:null, mid_id:null,
+    prev_id:null, curr_id:null,
+    p1_id:1, p2_id:5,
+    merged_order:[], active_line:21, split_done:true,
+  });
+
+  // Step 11: MERGE_STEP 1 — link 1→5→2, advance p1=2, p2=4
+  // next1=2, next2=4; 1.next=5, 5.next=2
+  const m1Nodes = [
+    makeNode(1,5), makeNode(5,2),
+    makeNode(2,3), makeNode(3,null),
+    makeNode(4,null)
+  ];
+  snaps.push({
+    phase:"merge",
+    description:"Merge step 1: next1=node2, next2=node4. Link: node1→node5→node2. Advance p1=node2, p2=node4. Partial: 1→5→2→…",
+    nodes: nodesCopy(m1Nodes),
+    connections: conns(m1Nodes),
+    first_half_ids:[1,2,3], second_half_ids:[5,4], reversed_second_ids:[5,4],
+    head_id:1, slow_id:null, fast_id:null, mid_id:null,
+    prev_id:null, curr_id:null,
+    p1_id:2, p2_id:4,
+    merged_order:[1,5], active_line:23, split_done:true,
+  });
+
+  // Step 12: MERGE_STEP 2 — link 2→4→3, advance p1=3, p2=null
+  // next1=3, next2=null; 2.next=4, 4.next=3
+  const m2Nodes = [
+    makeNode(1,5), makeNode(5,2),
+    makeNode(2,4), makeNode(4,3),
+    makeNode(3,null)
+  ];
+  snaps.push({
+    phase:"merge",
+    description:"Merge step 2: next1=node3, next2=None. Link: node2→node4→node3. Advance p1=node3, p2=None. Partial: 1→5→2→4→3.",
+    nodes: nodesCopy(m2Nodes),
+    connections: conns(m2Nodes),
+    first_half_ids:[1,2,3], second_half_ids:[5,4], reversed_second_ids:[5,4],
+    head_id:1, slow_id:null, fast_id:null, mid_id:null,
+    prev_id:null, curr_id:null,
+    p1_id:3, p2_id:null,
+    merged_order:[1,5,2,4], active_line:23, split_done:true,
+  });
+
+  // Step 13: MERGE_DONE — p2 is null, loop exits
+  snaps.push({
+    phase:"merge",
+    description:"Merge done: p2 = None → while loop exits. The list is fully reordered.",
+    nodes: nodesCopy(m2Nodes),
+    connections: conns(m2Nodes),
+    first_half_ids:[1,2,3], second_half_ids:[5,4], reversed_second_ids:[5,4],
+    head_id:1, slow_id:null, fast_id:null, mid_id:null,
+    prev_id:null, curr_id:null,
+    p1_id:3, p2_id:null,
+    merged_order:[1,5,2,4,3], active_line:22, split_done:true,
+  });
+
+  // Step 14: DONE
+  snaps.push({
+    phase:"done",
+    description:"Complete! Reordered list: 1→5→2→4→3. Original: L0→L1→L2→L3→L4 became L0→L4→L1→L3→L2.",
+    nodes: nodesCopy(m2Nodes),
+    connections: conns(m2Nodes),
+    first_half_ids:[1,2,3], second_half_ids:[5,4], reversed_second_ids:[5,4],
+    head_id:1, slow_id:null, fast_id:null, mid_id:null,
+    prev_id:null, curr_id:null,
+    p1_id:null, p2_id:null,
+    merged_order:[1,5,2,4,3], active_line:0, split_done:true,
+  });
+
+  return snaps;
+}
+
+// ─── Render helpers ────────────────────────────────────────────────────────
+const ARROW_SVG = `<svg viewBox="0 0 28 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <line x1="0" y1="8" x2="22" y2="8" stroke="#475569" stroke-width="2"/>
+  <polygon points="20,4 28,8 20,12" fill="#475569"/>
+</svg>`;
+
+const ARROW_FADED_SVG = `<svg viewBox="0 0 28 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <line x1="0" y1="8" x2="22" y2="8" stroke="#334155" stroke-width="2" opacity="0.3"/>
+  <polygon points="20,4 28,8 20,12" fill="#334155" opacity="0.3"/>
+</svg>`;
+
+function nodeClasses(nodeId, snap) {
+  const classes = ['node-box'];
+  const { phase, slow_id, fast_id, mid_id, prev_id, curr_id, p1_id, p2_id, merged_order, first_half_ids, second_half_ids, reversed_second_ids } = snap;
+
+  if (phase === 'done') { classes.push('highlight-done'); return classes; }
+
+  // pointer highlights (order matters — most specific wins)
+  if (nodeId === slow_id && nodeId === fast_id) { classes.push('highlight-slow'); }
+  else if (nodeId === slow_id) classes.push('highlight-slow');
+  else if (nodeId === fast_id) classes.push('highlight-fast');
+
+  if (nodeId === mid_id) classes.push('highlight-mid');
+  if (nodeId === prev_id) classes.push('highlight-prev');
+  if (nodeId === curr_id) classes.push('highlight-curr');
+  if (nodeId === p1_id) classes.push('highlight-p1');
+  if (nodeId === p2_id) classes.push('highlight-p2');
+
+  // phase tints
+  if (phase === 'find_middle' && !classes.some(c => c.startsWith('highlight'))) {
+    // no extra class
+  }
+  if ((phase === 'reverse' || phase === 'merge') && snap.split_done) {
+    const inFirst = first_half_ids.includes(nodeId);
+    const inSecond = second_half_ids.includes(nodeId) || (reversed_second_ids && reversed_second_ids.includes(nodeId));
+    const inMerged = merged_order.includes(nodeId);
+    if (inMerged) { /* success tint handled by highlight-done */ }
+    else if (inFirst && !classes.some(c=>c.startsWith('highlight'))) classes.push('highlight-first');
+    else if (inSecond && !classes.some(c=>c.startsWith('highlight'))) classes.push('highlight-second');
+  }
+
+  // faded if consumed during merge
+  if (phase === 'merge' || phase === 'done') {
+    // nodes already interleaved get done tint
+    if (merged_order.includes(nodeId) && phase !== 'done') {
+      // slight done effect
+    }
+  }
+
+  return classes;
+}
+
+function pointerBadges(nodeId, snap) {
+  const badges = [];
+  const { slow_id, fast_id, mid_id, prev_id, curr_id, p1_id, p2_id } = snap;
+  if (nodeId === snap.head_id && snap.phase !== 'done') badges.push('<span class="badge badge-head">head</span>');
+  if (nodeId === slow_id) badges.push('<span class="badge badge-slow">slow</span>');
+  if (nodeId === fast_id) badges.push('<span class="badge badge-fast">fast</span>');
+  if (nodeId === mid_id) badges.push('<span class="badge badge-mid">mid</span>');
+  if (nodeId === prev_id) badges.push('<span class="badge badge-prev">prev</span>');
+  if (nodeId === curr_id) badges.push('<span class="badge badge-curr">curr</span>');
+  if (nodeId === p1_id) badges.push('<span class="badge badge-p1">p1</span>');
+  if (nodeId === p2_id) badges.push('<span class="badge badge-p2">p2</span>');
+  return badges;
+}
+
+function renderRow(nodeIds, snap, labelText, faded) {
+  // nodeIds: ordered list of node ids to render in this row
+  // Returns HTML for a list-row div
+  const nodeMap = {};
+  snap.nodes.forEach(n => { nodeMap[n.id] = n; });
+  const connSet = new Set(snap.connections.map(c => `${c.from_id}->${c.to_id}`));
+
+  let html = '<div class="list-row">';
+  if (labelText) html = `<div class="phase-label">${labelText}</div>` + html;
+
+  nodeIds.forEach((nid, i) => {
+    const node = nodeMap[nid];
+    if (!node) return;
+    const cls = nodeClasses(nid, snap);
+    if (faded) cls.push('faded');
+    const badges = pointerBadges(nid, snap);
+
+    html += `<div class="node-wrap">
+      <div class="${cls.join(' ')}">${node.value}</div>
+      <div class="badges">${badges.join('')}</div>
+    </div>`;
+
+    // Arrow to next
+    if (i < nodeIds.length - 1) {
+      const nextId = nodeIds[i+1];
+      const hasConn = connSet.has(`${nid}->${nextId}`);
+      if (hasConn) {
+        html += `<div class="arrow">${ARROW_SVG}</div>`;
+      } else {
+        html += `<div class="arrow">${ARROW_FADED_SVG}</div>`;
+      }
+    } else {
+      // Last node — show null if applicable
+      const hasAnyNext = snap.connections.some(c => c.from_id === nid);
+      if (!hasAnyNext && snap.phase !== 'find_middle') {
+        html += `<span class="null-marker">∅</span>`;
+      }
+    }
+  });
+
+  html += '</div>';
+  return html;
+}
+
+function buildListHtml(snap) {
+  const { phase, first_half_ids, second_half_ids, reversed_second_ids, merged_order, split_done } = snap;
+
+  // Walk the linked list from head to build traversal order
+  function walkFrom(headId, nodes) {
+    const map = {};
+    nodes.forEach(n => { map[n.id] = n; });
+    const order = [];
+    let cur = map[headId];
+    const seen = new Set();
+    while (cur && !seen.has(cur.id)) {
+      seen.add(cur.id);
+      order.push(cur.id);
+      cur = cur.next_id !== null ? map[cur.next_id] : null;
+    }
+    return order;
+  }
+
+  if (phase === 'find_middle') {
+    const order = walkFrom(1, snap.nodes);
+    return renderRow(order, snap, '', false);
+  }
+
+  if (phase === 'reverse') {
+    // Top row: first half
+    // Bottom row: second half (in current order)
+    const secondIds = reversed_second_ids && reversed_second_ids.length > 0
+      ? reversed_second_ids
+      : second_half_ids;
+
+    // Find the second half head (first of secondIds)
+    // Walk second half from its head
+    const secondHead = secondIds[0];
+    const secondWalked = secondHead ? walkFrom(secondHead, snap.nodes) : secondIds;
+
+    let html = '<div>';
+    if (labelText => labelText) html += `<div class="phase-label" style="color:var(--green)">First Half</div>`;
+    html += renderRow(first_half_ids, snap, 'First Half', false);
+    html += `<div class="phase-label" style="color:var(--purple);margin-top:20px;">Second Half (${reversed_second_ids ? 'reversed' : 'original'})</div>`;
+    html += renderRow(secondWalked, snap, '', false);
+    html += '</div>';
+    return html;
+  }
+
+  if (phase === 'merge') {
+    // Show merged result growing; show remaining source nodes faded
+    const mergedHead = merged_order.length > 0 ? merged_order[0] : null;
+    const allIds = [1,5,2,4,3]; // known merge order
+    const mergedSoFar = walkFrom(1, snap.nodes);
+
+    // Source tracking for faded display
+    const remainFirst = first_half_ids.filter(id => !merged_order.includes(id) || snap.p1_id === id);
+    const remainSecond = (reversed_second_ids || second_half_ids).filter(id => !merged_order.includes(id) || snap.p2_id === id);
+
+    let html = '<div>';
+    html += `<div class="phase-label" style="color:var(--accent)">Merged Result</div>`;
+    html += renderRow(mergedSoFar, snap, '', false);
+    html += '</div>';
+    return html;
+  }
+
+  if (phase === 'done') {
+    const order = walkFrom(1, snap.nodes);
+    return renderRow(order, snap, '', false);
+  }
+
+  return '';
+}
+
+// ─── Update sidebar ────────────────────────────────────────────────────────
+function updateSidebar(snap) {
+  const tbody = document.querySelector('#ptr-table tbody');
+  const { phase, slow_id, fast_id, mid_id, prev_id, curr_id, p1_id, p2_id } = snap;
+
+  function ptrVal(id) {
+    if (id === null || id === undefined) return '<span style="color:var(--text-dim)">None</span>';
+    return `<span style="color:var(--text)">node${id} (val=${id})</span>`;
+  }
+
+  let rows = '';
+  if (phase === 'find_middle') {
+    rows += `<tr><td>slow</td><td>${ptrVal(slow_id)}</td></tr>`;
+    rows += `<tr><td>fast</td><td>${ptrVal(fast_id)}</td></tr>`;
+    if (mid_id) rows += `<tr><td>mid</td><td>${ptrVal(mid_id)}</td></tr>`;
+  } else if (phase === 'reverse') {
+    rows += `<tr><td>mid</td><td>${ptrVal(snap.mid_id)}</td></tr>`;
+    rows += `<tr><td>prev</td><td>${ptrVal(prev_id)}</td></tr>`;
+    rows += `<tr><td>curr</td><td>${ptrVal(curr_id)}</td></tr>`;
+  } else if (phase === 'merge' || phase === 'done') {
+    rows += `<tr><td>p1</td><td>${ptrVal(p1_id)}</td></tr>`;
+    rows += `<tr><td>p2</td><td>${ptrVal(p2_id)}</td></tr>`;
+  }
+  tbody.innerHTML = rows;
+
+  const listStateEl = document.getElementById('list-state');
+  const { first_half_ids, second_half_ids, reversed_second_ids, merged_order } = snap;
+  let stateHtml = '';
+  if (first_half_ids.length > 0) {
+    stateHtml += `<div><span class="half-label">First:</span>[${first_half_ids.join('→')}]</div>`;
+  }
+  if ((second_half_ids.length > 0 || (reversed_second_ids && reversed_second_ids.length > 0)) && snap.split_done) {
+    const secIds = reversed_second_ids && reversed_second_ids.length > 0 ? reversed_second_ids : second_half_ids;
+    stateHtml += `<div><span class="half-label2">Second:</span>[${secIds.join('→')}]</div>`;
+  }
+  if (merged_order.length > 0) {
+    stateHtml += `<div style="margin-top:4px;color:var(--green)">Merged: [${merged_order.join('→')}…]</div>`;
+  }
+  if (!stateHtml) stateHtml = '<span style="color:var(--text-dim)">Full list: [1→2→3→4→5]</span>';
+  listStateEl.innerHTML = stateHtml;
+}
+
+// ─── Update code panel ─────────────────────────────────────────────────────
+function renderCode(activeLine) {
+  const pre = document.getElementById('code-pre');
+  pre.innerHTML = CODE_LINES.map(l => {
+    const cls = l.n === activeLine ? 'code-line active' : 'code-line';
+    return `<span class="${cls}">${l.t || ' '}</span>`;
+  }).join('');
+  // scroll active line into view
+  const active = pre.querySelector('.active');
+  if (active) active.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+}
+
+// ─── Phase label map ───────────────────────────────────────────────────────
+const PHASE_LABELS = {
+  find_middle: 'Find Middle',
+  reverse: 'Reverse Second Half',
+  merge: 'Merge Two Halves',
+  done: 'Complete',
+};
+
+// ─── applyStep ────────────────────────────────────────────────────────────
+function applyStep(snap, animated) {
+  // Phase badge
+  document.getElementById('phase-badge').textContent = PHASE_LABELS[snap.phase] || snap.phase;
+
+  // Description
+  document.getElementById('desc').textContent = snap.description;
+
+  // List canvas
+  const canvas = document.getElementById('list-canvas');
+  canvas.innerHTML = buildListHtml(snap);
+
+  // Pulse newly linked node
+  if (animated && snap.merged_order.length > 0) {
+    const lastId = snap.merged_order[snap.merged_order.length - 1];
+    // find node-box by data or position
+    const boxes = canvas.querySelectorAll('.node-box');
+    boxes.forEach(box => {
+      if (parseInt(box.textContent) === lastId) {
+        box.classList.add('pulse');
+        setTimeout(() => box.classList.remove('pulse'), 600);
+      }
+    });
+  }
+
+  updateSidebar(snap);
+  renderCode(snap.active_line);
+}
+
+// ─── updateStatus ─────────────────────────────────────────────────────────
+function updateStatus(snap, cur, total) {
+  document.getElementById('step-counter').textContent = `Step ${cur} / ${total}`;
+}
+
+// ─── Code toggle ──────────────────────────────────────────────────────────
+let codeExpanded = true;
+document.getElementById('code-toggle').addEventListener('click', () => {
+  codeExpanded = !codeExpanded;
+  const body = document.getElementById('code-body');
+  body.style.display = codeExpanded ? 'block' : 'none';
+  document.getElementById('code-toggle').textContent = (codeExpanded ? '▼' : '▶') + ' Code (click to ' + (codeExpanded ? 'collapse' : 'expand') + ')';
+});
+
+// ─── Reset ────────────────────────────────────────────────────────────────
+document.getElementById('resetBtn').addEventListener('click', () => {
+  if (window.nav) window.nav.reset();
+});
+
+// ─── Init ─────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  const snaps = buildSnapshots();
+
+  window.nav = VizNav({
+    btnPrev: document.getElementById('prevBtn'),
+    btnNext: document.getElementById('stepBtn'),
+    btnPlay: document.getElementById('playBtn'),
+    speedSel: document.getElementById('speedSel'),
+    render: function(snap, cur, total) { applyStep(snap, cur > 0); updateStatus(snap, cur, total); }
+  });
+
+  window.nav.load(snaps);
+});
+</script>
+</body>
+</html>
