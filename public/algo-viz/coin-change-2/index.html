@@ -126,6 +126,33 @@
     }
     .btn-preset:hover { border-color: var(--accent); color: var(--accent-pale); }
 
+    .viz-inputs {
+      display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end;
+      padding: 10px 0 14px; width: 100%; max-width: 90%;
+    }
+    .viz-inputs .field {
+      display: flex; flex-direction: column; gap: 4px;
+    }
+    .viz-inputs label {
+      font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--text-dim);
+    }
+    .viz-inputs input[type="text"] {
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--text); border-radius: var(--radius-sm);
+      padding: 6px 10px; font-size: 0.85rem; width: 160px;
+    }
+    .viz-inputs input[type="number"] {
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--text); border-radius: var(--radius-sm);
+      padding: 6px 10px; font-size: 0.85rem; width: 80px;
+    }
+    .viz-inputs select {
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--text); border-radius: var(--radius-sm);
+      padding: 6px 10px; font-size: 0.85rem; cursor: pointer;
+    }
+
     .kw { color: var(--purple); }
     .fn { color: var(--blue); }
     .bi { color: var(--orange); }
@@ -142,25 +169,32 @@
   <div class="page-sub">LeetCode 518 &middot; 2-D DP: dp[i][j] = dp[i&#8722;1][j] + dp[i][j&#8722;coin] &middot; O(coins &times; amount) time &middot; O(coins &times; amount) space</div>
 </div>
 
-<div class="controls">
+<div class="viz-inputs">
+  <div class="field">
+    <label>Preset</label>
+    <select id="presetSel" onchange="loadPreset()">
+      <option value="">— pick a preset —</option>
+      <option value='{"coins":"1,2,5","amount":"5"}'>Classic: [1,2,5] / 5</option>
+      <option value='{"coins":"1,2","amount":"4"}'>Simple: [1,2] / 4</option>
+      <option value='{"coins":"2","amount":"3"}'>Single: [2] / 3</option>
+      <option value='{"coins":"1,2,3","amount":"4"}'>Ascending: [1,2,3] / 4</option>
+      <option value='{"coins":"5,10","amount":"10"}'>Larger: [5,10] / 10</option>
+      <option value='{"coins":"3,6,9","amount":"12"}'>Multiples: [3,6,9] / 12</option>
+    </select>
+  </div>
   <div class="field">
     <label>Coins (comma-separated)</label>
-    <input id="inp-coins" type="text" value="1,2,5" style="width:160px" />
+    <input id="inp-coins" type="text" value="1,2,5" />
   </div>
   <div class="field">
     <label>Amount</label>
-    <input id="inp-amount" type="number" value="5" min="0" max="12" style="width:70px" />
+    <input id="inp-amount" type="number" value="5" min="0" max="12" />
   </div>
-  <div class="field">
-    <label>Preset</label>
-    <div style="display:flex;gap:6px">
-      <button class="btn-preset" onclick="setPreset('1,2,5',5)">[1,2,5] / 5</button>
-      <button class="btn-preset" onclick="setPreset('2',3)">[2] / 3</button>
-      <button class="btn-preset" onclick="setPreset('1,2,3',4)">[1,2,3] / 4</button>
-    </div>
-  </div>
-  <button class="btn-primary" onclick="buildAndRun()">Build &amp; Run</button>
+  <button onclick="buildAndRun()" style="padding:7px 18px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);font-weight:600;cursor:pointer;">Run</button>
+  <button onclick="randomExample()" style="padding:7px 14px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;">🎲 Random</button>
 </div>
+
+<div class="controls"></div>
 
 <div class="viz-area">
   <div class="main-row">
@@ -255,7 +289,7 @@ var CODE = [
   [5,  '        dp<span class="op">[</span>i<span class="op">][</span><span class="nb">0</span><span class="op">]</span> <span class="op">=</span> <span class="nb">1</span>'],
   [6,  '    <span class="kw">for</span> i <span class="kw">in</span> <span class="bi">range</span><span class="op">(</span><span class="nb">1</span><span class="op">,</span> n <span class="op">+</span> <span class="nb">1</span><span class="op">):</span>'],
   [7,  '        <span class="kw">for</span> j <span class="kw">in</span> <span class="bi">range</span><span class="op">(</span><span class="nb">1</span><span class="op">,</span> amount <span class="op">+</span> <span class="nb">1</span><span class="op">):</span>'],
-  [8,  '            skip <span class="op">=</span> dp<span class="op">[</span>i<span class="op">-</span><span class="nb">1</span><span class="op">][</span>j<span class="op">]</span>              <span class="cm"># don\'t use coin i</span>'],
+  [8,  '            skip <span class="op">=</span> dp<span class="op">[</span>i<span class="op">-</span><span class="nb">1</span><span class="op">][</span>j<span class="op">]</span>              <span class="cm"># don't use coin i</span>'],
   [9,  '            use <span class="op">=</span> dp<span class="op">[</span>i<span class="op">][</span>j<span class="op">-</span>coins<span class="op">[</span>i<span class="op">-</span><span class="nb">1</span><span class="op">]]</span> <span class="kw">if</span> j <span class="op">&gt;=</span> coins<span class="op">[</span>i<span class="op">-</span><span class="nb">1</span><span class="op">]</span> <span class="kw">else</span> <span class="nb">0</span>'],
   [10, '            dp<span class="op">[</span>i<span class="op">][</span>j<span class="op">]</span> <span class="op">=</span> skip <span class="op">+</span> use'],
   [11, '    <span class="kw">return</span> dp<span class="op">[</span>n<span class="op">][</span>amount<span class="op">]</span>'],
@@ -312,6 +346,31 @@ function buildCodePanel() {
 function setPreset(coins, amount) {
   document.getElementById('inp-coins').value = coins;
   document.getElementById('inp-amount').value = amount;
+  buildAndRun();
+}
+
+function loadPreset() {
+  var sel = document.getElementById('presetSel');
+  if (!sel.value) return;
+  var d = JSON.parse(sel.value);
+  document.getElementById('inp-coins').value = d.coins;
+  document.getElementById('inp-amount').value = d.amount;
+  buildAndRun();
+}
+
+function randomExample() {
+  var coinCounts = [1, 2, 3];
+  var coinValues = [1, 2, 3, 5, 7, 10];
+  var numCoins = coinCounts[Math.floor(Math.random() * coinCounts.length)];
+  var coins = [];
+  for (var i = 0; i < numCoins; i++) {
+    coins.push(coinValues[Math.floor(Math.random() * coinValues.length)]);
+  }
+  coins = Array.from(new Set(coins)).slice(0, numCoins).sort(function(a, b) { return a - b; });
+  var amount = Math.floor(Math.random() * 10) + 2;
+  document.getElementById('inp-coins').value = coins.join(',');
+  document.getElementById('inp-amount').value = amount;
+  document.getElementById('presetSel').value = '';
   buildAndRun();
 }
 
