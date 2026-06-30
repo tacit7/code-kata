@@ -9,6 +9,9 @@ export default defineConfig({
   optimizeDeps: {
     exclude: ["pyodide"],
   },
+  worker: {
+    format: "es",
+  },
   clearScreen: false,
   server: {
     port: 1420,
