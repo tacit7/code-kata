@@ -239,6 +239,19 @@
 
   <div class="controls">
     <div class="field">
+      <label>Preset</label>
+      <select id="presetSel" onchange="loadPreset()">
+        <option value="">— custom —</option>
+        <option value="2,7,11,15|9" selected>2,7,11,15 → target 9</option>
+        <option value="3,2,4|6">3,2,4 → target 6</option>
+        <option value="3,3|6">3,3 → target 6</option>
+        <option value="1,5,3,8,2|10">1,5,3,8,2 → target 10</option>
+        <option value="-1,-2,-3,-4,-5|-8">-1,-2,-3,-4,-5 → target -8</option>
+        <option value="0,4,3,0|0">0,4,3,0 → target 0</option>
+        <option value="1,2,3,4,5,6,7,8,9,10|19">1..10 → target 19</option>
+      </select>
+    </div>
+    <div class="field">
       <label>Array (comma-separated)</label>
       <input type="text" id="arrayInput" value="2,7,11,15" />
     </div>
@@ -247,6 +260,7 @@
       <input type="number" id="targetInput" value="9" />
     </div>
     <button class="btn-primary" onclick="buildAndRun()">Build &amp; Run</button>
+    <button class="btn-secondary" onclick="randomExample()" style="background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:var(--radius-sm);padding:8px 14px;cursor:pointer;font-size:0.85rem;">🎲 Random</button>
   </div>
 
   <div class="viz-area">
@@ -586,6 +600,29 @@
         alert('Error: ' + e.message);
       }
     };
+
+    function loadPreset() {
+      const sel = document.getElementById('presetSel');
+      if (!sel.value) return;
+      const [arr, tgt] = sel.value.split('|');
+      document.getElementById('arrayInput').value = arr;
+      document.getElementById('targetInput').value = tgt;
+      buildAndRun();
+    }
+
+    function randomExample() {
+      const len = 4 + Math.floor(Math.random() * 5); // 4–8 elements
+      const nums = Array.from({length: len}, () => Math.floor(Math.random() * 19) - 4); // -4..14
+      // Pick two random indices to guarantee a solution exists
+      const i = Math.floor(Math.random() * len);
+      let j = Math.floor(Math.random() * (len - 1));
+      if (j >= i) j++;
+      const target = nums[i] + nums[j];
+      document.getElementById('arrayInput').value = nums.join(',');
+      document.getElementById('targetInput').value = target;
+      document.getElementById('presetSel').value = '';
+      buildAndRun();
+    }
   </script>
 </body>
 </html>
