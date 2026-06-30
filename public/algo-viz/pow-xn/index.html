@@ -34,6 +34,34 @@
       color: #7dd3fc; display: none;
     }
 
+    /* ── viz-inputs ── */
+    .viz-inputs {
+      display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end;
+      padding: 10px 0 14px; width: 100%; max-width: 90%;
+    }
+    .viz-inputs .field {
+      display: flex; flex-direction: column; gap: 4px;
+    }
+    .viz-inputs label {
+      font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--text-dim);
+    }
+    .viz-inputs input[type="text"] {
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--text); border-radius: var(--radius-sm);
+      padding: 6px 10px; font-size: 0.85rem; width: 180px;
+    }
+    .viz-inputs input[type="number"] {
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--text); border-radius: var(--radius-sm);
+      padding: 6px 10px; font-size: 0.85rem; width: 80px;
+    }
+    .viz-inputs select {
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--text); border-radius: var(--radius-sm);
+      padding: 6px 10px; font-size: 0.85rem; cursor: pointer;
+    }
+
     .middle {
       flex: 1; display: grid; grid-template-columns: 1fr 1fr;
       gap: 16px; padding: 16px; overflow: hidden;
@@ -137,13 +165,34 @@
 </head>
 <body>
 
+<!-- VIZ INPUTS -->
+<div class="viz-inputs">
+  <div class="field">
+    <label>Preset</label>
+    <select id="presetSel" onchange="loadPreset()">
+      <option value="">— pick a preset —</option>
+      <option value='{"x":2,"n":10}'>2^10 (simple positive)</option>
+      <option value='{"x":2,"n":-3}'>2^-3 (negative exponent)</option>
+      <option value='{"x":0.5,"n":6}'>0.5^6 (fractional base)</option>
+      <option value='{"x":-2,"n":5}'>-2^5 (negative base, odd)</option>
+      <option value='{"x":3,"n":0}'>3^0 (zero exponent)</option>
+      <option value='{"x":0.1,"n":-2}'>0.1^-2 (fractional, negative)</option>
+    </select>
+  </div>
+  <div class="field">
+    <label>x</label>
+    <input type="number" id="x-input" value="2" step="0.1" />
+  </div>
+  <div class="field">
+    <label>n</label>
+    <input type="number" id="n-input" value="10" />
+  </div>
+  <button onclick="buildAndRun()" style="padding:7px 18px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);font-weight:600;cursor:pointer;">Run</button>
+  <button onclick="randomExample()" style="padding:7px 14px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;">🎲 Random</button>
+</div>
+
 <!-- TOP -->
 <div class="top-bar">
-  <label>x =</label>
-  <input type="number" id="x-input" value="2" step="0.1" />
-  <label>n =</label>
-  <input type="number" id="n-input" value="10" />
-  <button id="btn-build">Build</button>
   <span class="result-badge" id="result-badge"></span>
 </div>
 
@@ -191,7 +240,7 @@
 <div class="bottom-bar">
   <div class="step-info">
     <span class="phase-label" id="phase-label">Step 0 / 0</span>
-    <span class="step-desc" id="step-desc">Press Build to start.</span>
+    <span class="step-desc" id="step-desc">Press Run to start.</span>
   </div>
   <div class="nav-row">
     <button id="prevBtn">&#8592; Prev</button>
@@ -216,6 +265,29 @@ function fmt(v) {
   // show up to 6 significant digits, strip trailing zeros
   var s = parseFloat(v.toPrecision(10)).toString();
   return s;
+}
+
+// ── preset and random ────────────────────────────────────────────────────────
+
+function loadPreset() {
+  var sel = document.getElementById('presetSel');
+  if (!sel.value) return;
+  var d = JSON.parse(sel.value);
+  document.getElementById('x-input').value = d.x;
+  document.getElementById('n-input').value = d.n;
+  buildAndRun();
+}
+
+function randomExample() {
+  var xMin = -5, xMax = 5;
+  var nMin = -15, nMax = 15;
+  var x = Math.random() * (xMax - xMin) + xMin;
+  var n = Math.floor(Math.random() * (nMax - nMin + 1)) + nMin;
+  x = parseFloat(x.toFixed(2));
+  document.getElementById('x-input').value = x;
+  document.getElementById('n-input').value = n;
+  document.getElementById('presetSel').value = '';
+  buildAndRun();
 }
 
 // ── simulate ─────────────────────────────────────────────────────────────────
@@ -424,7 +496,6 @@ function buildAndRun() {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
-  document.getElementById('btn-build').addEventListener('click', buildAndRun);
   document.getElementById('x-input').addEventListener('keydown', function(e) { if (e.key === 'Enter') buildAndRun(); });
   document.getElementById('n-input').addEventListener('keydown', function(e) { if (e.key === 'Enter') buildAndRun(); });
   buildAndRun();
