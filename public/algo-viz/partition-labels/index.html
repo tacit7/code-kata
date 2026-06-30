@@ -139,6 +139,47 @@
     .legend-dot { width: 10px; height: 10px; border-radius: 2px; border: 1px solid transparent; }
 
     .inp-str { width: 320px; font-family: monospace; }
+
+    /* viz-inputs */
+    .viz-inputs {
+      display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end;
+      padding: 10px 0 14px; width: 100%; max-width: 90%;
+    }
+    .viz-inputs .field {
+      display: flex; flex-direction: column; gap: 4px;
+    }
+    .viz-inputs label {
+      font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--text-dim);
+    }
+    .viz-inputs input[type="text"] {
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--text); border-radius: var(--radius-sm);
+      padding: 6px 10px; font-size: 0.85rem; width: 240px;
+    }
+    .viz-inputs select {
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--text); border-radius: var(--radius-sm);
+      padding: 6px 10px; font-size: 0.85rem; cursor: pointer;
+    }
+    .viz-inputs button {
+      padding: 7px 18px;
+      background: var(--accent); color: #fff; border: none;
+      border-radius: var(--radius-sm); font-weight: 600;
+      cursor: pointer; font-size: 0.85rem;
+      transition: background 0.2s;
+    }
+    .viz-inputs button:hover {
+      background: var(--accent-bright);
+    }
+    .viz-inputs .btn-random {
+      padding: 7px 14px;
+      background: var(--surface); color: var(--text);
+      border: 1px solid var(--border);
+    }
+    .viz-inputs .btn-random:hover {
+      background: var(--bg);
+    }
   </style>
 </head>
 <body class="page">
@@ -149,15 +190,36 @@
   <div class="page-sub">LeetCode 763 &middot; Greedy &middot; O(n) time &middot; O(1) space</div>
 </div>
 
-<div class="controls">
-  <div class="field" style="display:flex;gap:8px;align-items:center">
-    <label style="font-size:0.8rem;color:var(--text-dim)">string</label>
+<div class="viz-inputs">
+  <div class="field">
+    <label>Preset</label>
+    <select id="presetSel" onchange="loadPreset()">
+      <option value="">— pick a preset —</option>
+      <option value='{"str":"ababcbacadefegdehijhklij"}'>Complex (default)</option>
+      <option value='{"str":"eccbbbbdec"}'>Simple</option>
+      <option value='{"str":"abcdef"}'>All unique</option>
+      <option value='{"str":"aaaaaa"}'>All same</option>
+      <option value='{"str":"ababab"}'>Two chars</option>
+      <option value='{"str":"abcabcabc"}'>Repeating pattern</option>
+    </select>
+  </div>
+  <div class="field">
+    <label>String</label>
     <input id="inp-str" class="inp-str" type="text" value="ababcbacadefegdehijhklij" />
   </div>
-  <button class="btn-primary" onclick="buildAndRun()">Build &amp; Run</button>
-  <button class="btn-primary" onclick="loadPreset('default')" style="background:var(--surface)">Default</button>
-  <button class="btn-primary" onclick="loadPreset('simple')"  style="background:var(--surface)">Simple</button>
-  <button class="btn-primary" onclick="loadPreset('single')"  style="background:var(--surface)">Single</button>
+  <button onclick="buildAndRun()" style="padding:7px 18px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);font-weight:600;cursor:pointer;">Run</button>
+  <button class="btn-random" onclick="randomExample()">🎲 Random</button>
+</div>
+
+<div class="controls">
+  <button class="stepBtn" id="prevBtn" disabled>&larr;</button>
+  <button class="stepBtn" id="stepBtn" disabled>&rarr;</button>
+  <button class="playBtn" id="playBtn" disabled>&#9654; Play</button>
+  <select class="speedSel" id="speedSel">
+    <option value="700">Slow</option>
+    <option value="350" selected>Medium</option>
+    <option value="120">Fast</option>
+  </select>
 </div>
 
 <div class="viz-area">
@@ -212,10 +274,10 @@
 
   <div class="nav-desc-row">
     <div class="nav-box">
-      <button class="stepBtn" id="prevBtn" disabled>&larr;</button>
-      <button class="stepBtn" id="stepBtn" disabled>&rarr;</button>
-      <button class="playBtn" id="playBtn" disabled>&#9654; Play</button>
-      <select class="speedSel" id="speedSel">
+      <button class="stepBtn" id="prevBtn-copy" disabled>&larr;</button>
+      <button class="stepBtn" id="stepBtn-copy" disabled>&rarr;</button>
+      <button class="playBtn" id="playBtn-copy" disabled>&#9654; Play</button>
+      <select class="speedSel" id="speedSel-copy">
         <option value="700">Slow</option>
         <option value="350" selected>Medium</option>
         <option value="120">Fast</option>
@@ -233,16 +295,6 @@
 var simSteps = [], nav;
 var strLen = 0;
 
-var PRESETS = {
-  'default': 'ababcbacadefegdehijhklij',
-  'simple':  'eccbbbbdec',
-  'single':  'abcdef',
-};
-
-var PART_COLORS = [
-  '#7c3aed','#0284c7','#d97706','#b91c1c','#166534','#0e7490','#c2410c','#7e22ce',
-];
-
 window.addEventListener('DOMContentLoaded', function() {
   nav = VizNav({
     btnPrev:  document.getElementById('prevBtn'),
@@ -259,8 +311,23 @@ window.addEventListener('DOMContentLoaded', function() {
   buildAndRun();
 });
 
-function loadPreset(key) {
-  document.getElementById('inp-str').value = PRESETS[key];
+function loadPreset() {
+  var sel = document.getElementById('presetSel');
+  if (!sel.value) return;
+  var d = JSON.parse(sel.value);
+  document.getElementById('inp-str').value = d.str;
+  buildAndRun();
+}
+
+function randomExample() {
+  var chars = 'abcdefghijklmnopqrstuvwxyz'.split('');
+  var len = Math.floor(Math.random() * 15) + 6;
+  var result = '';
+  for (var i = 0; i < len; i++) {
+    result += chars[Math.floor(Math.random() * chars.length)];
+  }
+  document.getElementById('inp-str').value = result;
+  document.getElementById('presetSel').value = '';
   buildAndRun();
 }
 
@@ -302,6 +369,10 @@ function buildStringSection(s) {
   document.getElementById('string-section').innerHTML = html;
 }
 
+var PART_COLORS = [
+  '#7c3aed','#0284c7','#d97706','#b91c1c','#166534','#0e7490','#c2410c','#7e22ce',
+];
+
 /* ── simulation ── */
 function simulate(s) {
   var n = s.length;
@@ -340,14 +411,14 @@ function simulate(s) {
     cellStates[k] = 'building';
     loRevealed[ch] = last[ch];
     push('Phase 1: Build last_occurrence',
-      'last[\'' + ch + '\'] = ' + last[ch] + ' (last time \'' + ch + '\' appears).',
+      'last['' + ch + ''] = ' + last[ch] + ' (last time '' + ch + '' appears).',
       { activeChar: ch, i: k });
     cellStates[k] = 'idle';
   }
   // Reset cells after phase 1
   cellStates = Array(n).fill('idle');
   push('Phase 1: Build last_occurrence',
-    'last_occurrence map complete. Every character\'s final index is recorded.',
+    'last_occurrence map complete. Every character's final index is recorded.',
     { i: null });
 
   // Phase 2 — scan with greedy window
@@ -369,7 +440,7 @@ function simulate(s) {
       }
       cellStates[i] = 'extend';
       push('Phase 2: Greedy scan',
-        'i=' + i + ' (\'' + ch + '\'): last[\'' + ch + '\']=' + chLast + ' > end=' + prevEnd + '. Extend end → ' + end + '.',
+        'i=' + i + ' ('' + ch + ''): last['' + ch + '']=' + chLast + ' > end=' + prevEnd + '. Extend end → ' + end + '.',
         { i: i, start: start, end: end, maxend: chLast, activeChar: ch });
     } else {
       // In window, not extending
@@ -378,7 +449,7 @@ function simulate(s) {
       }
       cellStates[i] = 'current';
       push('Phase 2: Greedy scan',
-        'i=' + i + ' (\'' + ch + '\'): last[\'' + ch + '\']=' + chLast + ' ≤ end=' + end + '. No extension.',
+        'i=' + i + ' ('' + ch + ''): last['' + ch + '']=' + chLast + ' ≤ end=' + end + '. No extension.',
         { i: i, start: start, end: end, maxend: chLast, activeChar: ch });
     }
 
