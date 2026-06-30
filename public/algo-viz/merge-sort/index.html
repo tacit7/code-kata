@@ -279,25 +279,25 @@
   <script>
     // ── Code lines ──────────────────────────────────────────────────────────────
     var codeLines = [
-      '<span class="kw">function</span> <span class="nb">mergeSort</span>(arr, lo, hi):',   // 0
-      '  <span class="kw">if</span> lo &gt;= hi: <span class="kw">return</span>',                // 1
-      '  mid = (lo + hi) // 2',                                                    // 2
-      '  mergeSort(arr, lo, mid)',                                                  // 3
-      '  mergeSort(arr, mid+1, hi)',                                                // 4
-      '  merge(arr, lo, mid, hi)',                                                  // 5
-      '',                                                                            // 6
-      '<span class="kw">function</span> <span class="nb">merge</span>(arr, lo, mid, hi):',     // 7
-      '  L = arr[lo..mid]  <span class="cm">  # copy left half</span>',              // 8
-      '  R = arr[mid+1..hi]<span class="cm">  # copy right half</span>',             // 9
-      '  i, j, k = 0, 0, lo',                                                      // 10
-      '  <span class="kw">while</span> i &lt; L.len <span class="kw">and</span> j &lt; R.len:', // 11
-      '    <span class="kw">if</span> L[i] &lt;= R[j]:',                              // 12
-      '      arr[k++] = L[i++]',                                                   // 13
-      '    <span class="kw">else</span>:',                                             // 14
-      '      arr[k++] = R[j++]',                                                   // 15
-      '  copy remaining L to arr',                                                  // 16
-      '  copy remaining R to arr',                                                  // 17
-      '  <span class="cm"># subarray [lo..hi] now sorted</span>',                  // 18
+      '<span class="kw">function</span> <span class="nb">mergeSort</span>(arr) {',                                              // 0
+      '  <span class="kw">if</span> (arr.length &lt;= 1) <span class="kw">return</span> arr;',                        // 1
+      '  <span class="kw">const</span> mid = Math.floor(arr.length / 2);',                              // 2
+      '  <span class="kw">const</span> left  = mergeSort(arr.slice(0, mid));',                          // 3
+      '  <span class="kw">const</span> right = mergeSort(arr.slice(mid));',                             // 4
+      '  <span class="kw">return</span> <span class="fn">merge</span>(left, right);',                             // 5
+      '}',                                                                           // 6
+      '<span class="kw">function</span> <span class="nb">merge</span>(left, right) {',                                      // 7
+      '  <span class="kw">const</span> result = [];',                                                    // 8
+      '  <span class="kw">let</span> i = 0, j = 0;',                                                    // 9
+      '  <span class="cm">// merge left and right into result</span>',                             // 10
+      '  <span class="kw">while</span> (i &lt; left.length &amp;&amp; j &lt; right.length) {',              // 11
+      '    <span class="kw">if</span> (left[i] &lt;= right[j]) {',                                    // 12
+      '      result.push(left[i++]);',                                               // 13
+      '    } <span class="kw">else</span> {',                                                          // 14
+      '      result.push(right[j++]);',                                              // 15
+      '  <span class="kw">while</span> (i &lt; left.length)  result.push(left[i++]);',               // 16
+      '  <span class="kw">while</span> (j &lt; right.length) result.push(right[j++]);',              // 17
+      '  <span class="kw">return</span> result;',                                                      // 18
     ];
 
     // Build code panel
