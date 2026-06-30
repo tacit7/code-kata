@@ -31,6 +31,8 @@ export interface TestResult {
   passed: boolean;
   error?: string;
   output?: string;
+  expected?: string;
+  got?: string;
 }
 
 export type SessionType = "daily" | "random" | "custom";

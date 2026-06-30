@@ -9,18 +9,36 @@ async function getPyodide(): Promise<PyodideInterface> {
 }
 
 const PYTHON_ASSERT_HELPERS = `
-import json
+import json as _json
 
 def assert_equal(actual, expected, msg=None):
     if actual != expected:
-        a = json.dumps(actual, default=str)
-        e = json.dumps(expected, default=str)
-        raise AssertionError(msg or f"Expected {e}, got {a}")
+        payload = _json.dumps({
+            "expected": _json.dumps(expected, default=str),
+            "got": _json.dumps(actual, default=str),
+            "msg": msg,
+        })
+        raise AssertionError("__ASSERT__" + payload)
 
 def assert_true(condition, msg=None):
     if not condition:
         raise AssertionError(msg or "Assertion failed")
 `;
+
+function parseError(raw: string): { error: string; expected?: string; got?: string } {
+  const idx = raw.indexOf("__ASSERT__");
+  if (idx === -1) return { error: extractUsefulTraceback(raw) };
+  try {
+    const data = JSON.parse(raw.slice(idx + 10)) as { expected: string; got: string; msg: string | null };
+    return {
+      error: data.msg ?? `Expected ${data.expected}, got ${data.got}`,
+      expected: data.expected,
+      got: data.got,
+    };
+  } catch {
+    return { error: extractUsefulTraceback(raw) };
+  }
+}
 
 function extractUsefulTraceback(msg: string): string {
   const lines = msg.split("\n");
@@ -46,7 +64,7 @@ self.onmessage = async (e: MessageEvent<{ userCode: string; testCode: string }>)
     return;
   }
 
-  const results: Array<{ name: string; passed: boolean; error?: string; output?: string }> = [];
+  const results: Array<{ name: string; passed: boolean; error?: string; output?: string; expected?: string; got?: string }> = [];
 
   for (const name of testNames) {
     let captured = "";
@@ -57,13 +75,9 @@ self.onmessage = async (e: MessageEvent<{ userCode: string; testCode: string }>)
       await py.runPythonAsync(script);
       results.push({ name, passed: true, output: captured.trim() || undefined });
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      results.push({
-        name,
-        passed: false,
-        error: extractUsefulTraceback(msg),
-        output: captured.trim() || undefined,
-      });
+      const raw = err instanceof Error ? err.message : String(err);
+      const { error, expected, got } = parseError(raw);
+      results.push({ name, passed: false, error, expected, got, output: captured.trim() || undefined });
     }
   }
 

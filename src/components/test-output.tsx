@@ -21,16 +21,34 @@ export function TestOutput({ results, ranAt }: TestOutputProps) {
       </div>
       <ul className="px-3 py-1">
         {results.map((r) => (
-          <li key={r.name} className="py-1">
+          <li key={r.name} className="py-1.5">
             <div className="flex items-baseline gap-1.5">
               <span className={r.passed ? "text-success" : "text-error"}>
-                {r.passed ? "\u2713" : "\u2717"}
+                {r.passed ? "✓" : "✗"}
               </span>
               <span className="text-base-content/70">{r.name.replace(/^test_/, "").replaceAll("_", " ")}</span>
             </div>
-            {r.error && (
+
+            {!r.passed && (r.expected !== undefined || r.got !== undefined) && (
+              <div className="ml-4 mt-1 flex flex-col gap-0.5">
+                <div className="flex gap-2 items-baseline">
+                  <span className="text-xs text-base-content/40 w-16 shrink-0">Expected</span>
+                  <pre className="text-xs text-success/80 whitespace-pre-wrap">{r.expected}</pre>
+                </div>
+                <div className="flex gap-2 items-baseline">
+                  <span className="text-xs text-base-content/40 w-16 shrink-0">Got</span>
+                  <pre className="text-xs text-error/80 whitespace-pre-wrap">{r.got}</pre>
+                </div>
+                {r.error && r.error !== `Expected ${r.expected}, got ${r.got}` && (
+                  <pre className="mt-0.5 text-xs text-base-content/40 whitespace-pre-wrap">{r.error}</pre>
+                )}
+              </div>
+            )}
+
+            {!r.passed && r.expected === undefined && r.error && (
               <pre className="ml-4 mt-0.5 text-xs text-error/80 whitespace-pre-wrap leading-relaxed bg-error/5 rounded px-2 py-1">{r.error}</pre>
             )}
+
             {r.output && (
               <pre className="ml-4 mt-0.5 text-xs text-base-content/40 whitespace-pre-wrap">{r.output}</pre>
             )}

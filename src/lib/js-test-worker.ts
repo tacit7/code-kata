@@ -3,10 +3,31 @@ function assert(condition, message) {
   if (!condition) throw new Error(message || "Assertion failed");
 }
 function assertEqual(actual, expected, message) {
-  if (JSON.stringify(actual) !== JSON.stringify(expected))
-    throw new Error(message || "Expected " + JSON.stringify(expected) + ", got " + JSON.stringify(actual));
+  if (JSON.stringify(actual) !== JSON.stringify(expected)) {
+    const payload = JSON.stringify({
+      expected: JSON.stringify(expected),
+      got: JSON.stringify(actual),
+      msg: message || null,
+    });
+    throw new Error("__ASSERT__" + payload);
+  }
 }
 `;
+
+function parseError(raw: string): { error: string; expected?: string; got?: string } {
+  const idx = raw.indexOf("__ASSERT__");
+  if (idx === -1) return { error: raw };
+  try {
+    const data = JSON.parse(raw.slice(idx + 10)) as { expected: string; got: string; msg: string | null };
+    return {
+      error: data.msg ?? `Expected ${data.expected}, got ${data.got}`,
+      expected: data.expected,
+      got: data.got,
+    };
+  } catch {
+    return { error: raw };
+  }
+}
 
 self.onmessage = (e: MessageEvent<{ userCode: string; testCode: string }>) => {
   const { userCode, testCode } = e.data;
@@ -18,7 +39,7 @@ self.onmessage = (e: MessageEvent<{ userCode: string; testCode: string }>) => {
     return;
   }
 
-  const results: Array<{ name: string; passed: boolean; error?: string }> = [];
+  const results: Array<{ name: string; passed: boolean; error?: string; expected?: string; got?: string }> = [];
 
   for (const name of testNames) {
     try {
@@ -26,11 +47,9 @@ self.onmessage = (e: MessageEvent<{ userCode: string; testCode: string }>) => {
       new Function(script)();
       results.push({ name, passed: true });
     } catch (err) {
-      results.push({
-        name,
-        passed: false,
-        error: err instanceof Error ? err.message : String(err),
-      });
+      const raw = err instanceof Error ? err.message : String(err);
+      const { error, expected, got } = parseError(raw);
+      results.push({ name, passed: false, error, expected, got });
     }
   }
 
