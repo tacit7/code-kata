@@ -1,462 +1,427 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Container With Most Water | Code Kata</title>
-  <link rel="stylesheet" href="../shared/style.css" />
-  <style>
-    .bar-chart {
-      display: flex;
-      align-items: flex-end;
-      gap: 4px;
-      height: 300px;
-      padding: 20px;
-      background: var(--surface);
-      border-radius: 8px;
-      border: 1px solid var(--border);
-      position: relative;
-    }
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Container With Most Water</title>
+<link rel="stylesheet" href="../shared/style.css" />
+<script src="../shared/gsap.min.js"></script>
+<script src="../shared/viz.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: "Fira Code", "Cascadia Code", monospace; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
 
-    .bar {
-      flex: 1;
-      background: var(--blue);
-      border-radius: 4px 4px 0 0;
-      position: relative;
-      transition: background-color 0.2s;
-    }
+  /* viz-inputs */
+  .viz-inputs { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; padding: 10px 16px 14px; background: var(--surface); border-bottom: 1px solid var(--border); flex-shrink: 0; }
+  .vi-label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); margin-bottom: 4px; }
 
-    .bar.active-l {
-      background: var(--text);
-      box-shadow: 0 0 8px rgba(0, 150, 255, 0.6);
-    }
+  /* Header */
+  #header { padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+  #phase-badge { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; padding: 3px 10px; border-radius: var(--radius-sm); background: #1e3a5f; color: var(--blue); border: 1px solid var(--blue); }
+  #step-counter { font-size: 12px; color: var(--text-muted); margin-left: auto; }
 
-    .bar.active-r {
-      background: var(--orange);
-      box-shadow: 0 0 8px rgba(255, 165, 0, 0.6);
-    }
+  /* Main layout */
+  #main { display: flex; flex: 1; overflow: hidden; }
 
-    .bar.water-fill {
-      background: linear-gradient(to top, rgba(0, 150, 255, 0.3), rgba(0, 150, 255, 0.1));
-      border: 1px solid rgba(0, 150, 255, 0.5);
-    }
+  /* Viz area */
+  #viz-area { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; gap: 16px; overflow: hidden; }
 
-    .bar-label {
-      position: absolute;
-      bottom: -20px;
-      left: 50%;
-      transform: translateX(-50%);
-      font-size: 0.7rem;
-      color: var(--text-muted);
-      white-space: nowrap;
-    }
+  /* Description */
+  #desc { font-size: 13px; color: var(--text-muted); text-align: center; max-width: 640px; min-height: 36px; line-height: 1.5; }
 
-    .variables-panel {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-      margin-top: 20px;
-    }
+  /* Bar chart */
+  #chart-wrap { width: 100%; max-width: 720px; display: flex; flex-direction: column; align-items: stretch; }
+  #bar-area { display: flex; align-items: flex-end; gap: 4px; width: 100%; height: 200px; padding: 0 2px; }
 
-    .var-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 12px;
-    }
+  .bar-col { display: flex; flex-direction: column; align-items: stretch; justify-content: flex-end; flex: 1; min-width: 26px; max-width: 72px; height: 100%; position: relative; }
+  .bar-spacer { flex-shrink: 0; }
+  .bar-water { flex-shrink: 0; background: rgba(6,182,212,0.18); border-left: 1px dashed rgba(6,182,212,0.4); border-right: 1px dashed rgba(6,182,212,0.4); border-top: 1px dashed rgba(6,182,212,0.6); }
+  .bar-rect { flex-shrink: 0; border-radius: 4px 4px 0 0; transition: background .25s, box-shadow .25s, border-color .25s; }
+  .bar-normal { background: #1e293b; border: 2px solid #334155; }
+  .bar-left   { background: #1e3a5f; border: 2px solid #3b82f6; box-shadow: 0 0 0 3px #3b82f620; }
+  .bar-right  { background: #431407; border: 2px solid #f97316; box-shadow: 0 0 0 3px #f9731620; }
+  .bar-done   { background: #0f2318; border: 2px solid #1e4d2e; }
+  .bar-best   { background: #1a2e50; border: 2px solid #818cf8; box-shadow: 0 0 0 3px #818cf820; }
+  .bar-val {
+    position: absolute; left: 0; right: 0; text-align: center;
+    font-size: 10px; font-weight: 700; pointer-events: none;
+    color: #94a3b8;
+  }
+  .bar-val.val-left  { color: #3b82f6; }
+  .bar-val.val-right { color: #f97316; }
+  .bar-val.val-best  { color: #818cf8; }
 
-    .var-label {
-      font-size: 0.68rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-      color: var(--text-dim);
-      margin-bottom: 4px;
-    }
+  #idx-row { display: flex; gap: 4px; width: 100%; padding: 0 2px; margin-top: 4px; }
+  .idx-label { flex: 1; min-width: 26px; max-width: 72px; text-align: center; font-size: 10px; color: var(--text-dim); }
+  .idx-left  { color: #3b82f6; font-weight: 700; }
+  .idx-right { color: #f97316; font-weight: 700; }
+  .idx-both  { color: #a855f7; font-weight: 700; }
 
-    .var-value {
-      font-size: 1.1rem;
-      color: var(--text);
-      font-weight: 600;
-      font-family: monospace;
-    }
+  #badge-row { display: flex; gap: 4px; width: 100%; padding: 0 2px; margin-top: 3px; }
+  .badge-col { flex: 1; min-width: 26px; max-width: 72px; display: flex; justify-content: center; gap: 2px; flex-wrap: wrap; min-height: 16px; }
+  .badge { font-size: 9px; font-weight: 700; padding: 1px 5px; border-radius: 4px; letter-spacing: .05em; }
+  .badge-left  { background: #1e3a5f; color: #3b82f6; border: 1px solid #3b82f6; }
+  .badge-right { background: #431407; color: #f97316; border: 1px solid #f97316; }
 
-    .code-line {
-      padding: 2px 6px;
-      border-left: 2px solid transparent;
-      transition: all 0.2s;
-    }
+  /* Right sidebar */
+  #sidebar { width: 220px; flex-shrink: 0; background: var(--surface); border-left: 1px solid var(--border); overflow-y: auto; padding: 14px 12px; display: flex; flex-direction: column; gap: 12px; }
+  .sidebar-section { font-size: 11px; }
+  .sidebar-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--text-dim); margin-bottom: 6px; }
+  .ptr-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+  .ptr-table td { padding: 3px 5px; border-bottom: 1px solid var(--border); }
+  .ptr-table td:first-child { color: var(--text-muted); width: 80px; }
+  .ptr-table td:last-child { color: var(--text); font-weight: 600; }
 
-    .code-line.hl {
-      background: rgba(122, 162, 247, 0.12);
-      border-left: 2px solid var(--accent);
-      padding-left: 6px;
-    }
+  /* Code panel */
+  #code-wrap { flex-shrink: 0; background: #0d1117; border-top: 1px solid var(--border); }
+  #code-toggle { width: 100%; background: #161b22; color: var(--text-muted); border: none; border-bottom: 1px solid var(--border); padding: 5px 12px; font-size: 11px; text-align: left; cursor: pointer; font-family: inherit; }
+  #code-toggle:hover { color: var(--text); }
+  #code-body { overflow: auto; max-height: 160px; padding: 10px 14px; }
+  pre { font-size: 11px; line-height: 1.7; font-family: inherit; }
+  .code-line { padding: 0 4px; border-radius: 3px; display: block; transition: background .2s; white-space: pre; }
+  .code-line.active { background: #451a0350; color: #fbbf24; }
+  .kw { color: #c792ea; } .fn { color: #82aaff; } .cm { color: #546e7a; font-style: italic; }
+  .str { color: #c3e88d; } .num { color: #f78c6c; }
 
-    .viz-inputs {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      align-items: flex-end;
-      padding: 10px 0 14px;
-      width: 100%;
-      max-width: 90%;
-      margin: 0 auto;
-    }
-
-    .viz-inputs .field {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }
-
-    .viz-inputs label {
-      font-size: 0.7rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      color: var(--text-dim);
-    }
-
-    .viz-inputs input[type="text"] {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      color: var(--text);
-      border-radius: 6px;
-      padding: 6px 10px;
-      font-size: 0.85rem;
-      width: 200px;
-    }
-
-    .viz-inputs select {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      color: var(--text);
-      border-radius: 6px;
-      padding: 6px 10px;
-      font-size: 0.85rem;
-      cursor: pointer;
-    }
-
-    .controls input {
-      background: var(--bg);
-      border: 1px solid var(--border);
-      color: var(--text);
-      border-radius: 6px;
-      padding: 8px 12px;
-      font-size: 0.9rem;
-    }
-
-    .controls button {
-      background: var(--accent);
-      color: white;
-      border: none;
-      border-radius: 6px;
-      padding: 8px 16px;
-      font-size: 0.9rem;
-      cursor: pointer;
-      font-weight: 600;
-    }
-
-    .controls button:hover {
-      opacity: 0.9;
-    }
-  </style>
+  /* Nav */
+  #nav-row { flex-shrink: 0; display: flex; align-items: center; gap: 8px; padding: 10px 16px; background: var(--surface); border-top: 1px solid var(--border); }
+  .btn-step, .btn-play { padding: 6px 14px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--surface); color: var(--text); font-family: inherit; font-size: 12px; cursor: pointer; transition: background .15s; }
+  .btn-step:hover { background: #334155; }
+  .btn-play { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn-play:hover { background: var(--accent-hover); }
+  select { padding: 5px 8px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: #1e293b; color: var(--text); font-size: 12px; font-family: inherit; cursor: pointer; }
+</style>
 </head>
-<body class="page">
-  <div class="page-header">
-    <a class="back-link" href="../index.html">← All Algorithms</a>
-    <div class="page-title">Container With Most Water</div>
-    <div class="page-sub">LeetCode #11 · Two Pointers · O(n) time · O(1) space</div>
+<body>
+
+<div class="viz-inputs">
+  <div style="display:flex;flex-direction:column;gap:4px;">
+    <div class="vi-label">Preset</div>
+    <select id="presetSel" onchange="loadPreset()" style="background:var(--bg-card,#1e293b);color:var(--text-main,#f1f5f9);border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-size:0.85rem;">
+      <option value="">— pick a preset —</option>
+      <option value="1,8,6,2,5,4,8,3,7">[1,8,6,2,5,4,8,3,7] — classic</option>
+      <option value="1,1">[1,1] — minimal</option>
+      <option value="4,3,2,1,4">[4,3,2,1,4] — symmetric</option>
+      <option value="1,2,3,4,5">[1,2,3,4,5] — ascending</option>
+      <option value="5,4,3,2,1">[5,4,3,2,1] — descending</option>
+    </select>
   </div>
-
-  <div class="viz-inputs">
-    <div class="field">
-      <label>Preset</label>
-      <select id="presetSel" onchange="loadPreset()">
-        <option value="">— pick a preset —</option>
-        <option value='{"heights":"1,8,6,2,5,4,8,3,7"}'>Classic: max water 49</option>
-        <option value='{"heights":"2,3,4,5,18,17,6"}'>Peak: tall container</option>
-        <option value='{"heights":"2,2,2,2,2"}'>Equal heights: 8</option>
-        <option value='{"heights":"1,2,4,3,2"}'>Varied: max 6</option>
-        <option value='{"heights":"9,8,6,2,3,5,20,2,6,5"}'>Large array</option>
-        <option value='{"heights":"1,1"}'>Minimum case</option>
-      </select>
-    </div>
-    <div class="field">
-      <label>Heights</label>
-      <input type="text" id="inputField" placeholder="e.g., 1,8,6,2,5,4,8,3,7" value="1,8,6,2,5,4,8,3,7" style="width: 200px;">
-    </div>
-    <button onclick="buildAndRun()" style="padding:7px 18px;background:var(--accent);color:#fff;border:none;border-radius:6px;font-weight:600;cursor:pointer;">Run</button>
-    <button onclick="randomExample()" style="padding:7px 14px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:6px;cursor:pointer;">🎲 Random</button>
+  <div style="display:flex;flex-direction:column;gap:4px;">
+    <div class="vi-label">Heights (comma-separated)</div>
+    <input id="heightsInput" type="text" value="1,8,6,2,5,4,8,3,7"
+      style="background:var(--bg-card,#1e293b);color:var(--text-main,#f1f5f9);border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-size:0.85rem;width:230px;" />
   </div>
+  <button onclick="buildAndRun()" style="padding:7px 18px;background:var(--accent);color:#fff;border:none;border-radius:6px;font-weight:600;cursor:pointer;align-self:flex-end;">Run</button>
+  <button onclick="randomExample()" style="padding:7px 14px;background:var(--bg-card,#1e293b);color:var(--text-main,#f1f5f9);border:1px solid var(--border);border-radius:6px;cursor:pointer;align-self:flex-end;">🎲 Random</button>
+</div>
 
-  <div class="controls"></div>
+<div id="header">
+  <span id="phase-badge">Init</span>
+  <span style="font-size:13px;font-weight:700;">Container With Most Water</span>
+  <span id="step-counter">Step 0 / 0</span>
+</div>
 
-  <div class="viz-area" style="width: 100%; max-width: 90%; margin: 0 auto;">
-    <!-- Navigation & Status Row -->
-    <div style="display: flex; gap: 12px; margin-bottom: 14px;">
-      <div class="panel-box" style="flex: 0 0 auto;">
-        <div style="display: flex; gap: 8px; align-items: center;">
-          <button class="btn-step" id="prevBtn" disabled>&#8592;</button>
-          <button class="btn-step" id="stepBtn" disabled>&#8594;</button>
-          <button class="btn-play" id="playBtn" disabled>&#9654; Play</button>
-          <select id="speedSel" style="background: var(--bg); border: 1px solid var(--border); color: var(--text); border-radius: 8px; padding: 6px 10px; font-size: 0.85rem;">
-            <option value="700">Slow</option>
-            <option value="250" selected>Medium</option>
-            <option value="80">Fast</option>
-          </select>
-        </div>
-      </div>
-      <div class="panel-box" style="flex: 1; min-width: 0;">
-        <div style="font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-dim);" id="phase-label">—</div>
-        <div style="font-size: 0.88rem; color: var(--text-muted); margin-top: 3px;" id="step-desc">Click Run to start.</div>
-      </div>
-    </div>
-
-    <!-- Bar Chart Visualization -->
-    <div class="bar-chart" id="barChart"></div>
-
-    <!-- Variables Panel -->
-    <div class="variables-panel">
-      <div class="var-card">
-        <div class="var-label">Left Pointer (l)</div>
-        <div class="var-value" id="var-l">—</div>
-      </div>
-      <div class="var-card">
-        <div class="var-label">Right Pointer (r)</div>
-        <div class="var-value" id="var-r">—</div>
-      </div>
-      <div class="var-card">
-        <div class="var-label">Current Water</div>
-        <div class="var-value" id="var-water">—</div>
-      </div>
-      <div class="var-card">
-        <div class="var-label">Max Water</div>
-        <div class="var-value" id="var-max">—</div>
-      </div>
-    </div>
-
-    <!-- Code Panel -->
-    <div class="panel-box" style="font-family: monospace; font-size: 0.78rem; line-height: 1.75; margin-top: 20px;">
-      <div style="font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-dim); margin-bottom: 8px;">Python</div>
-      <div id="code-body"></div>
+<div id="main">
+  <div id="viz-area">
+    <div id="desc">Initializing...</div>
+    <div id="chart-wrap">
+      <div id="bar-area"></div>
+      <div id="idx-row"></div>
+      <div id="badge-row"></div>
     </div>
   </div>
 
-  <script src="../shared/gsap.min.js"></script>
-  <script src="../shared/viz.js"></script>
-  <script>
-    var nav;
-    var currentHeights = [];
-    var currentStep = null;
+  <div id="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-title">Pointers</div>
+      <table class="ptr-table"><tbody id="ptr-tbody"></tbody></table>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-title">Area</div>
+      <table class="ptr-table"><tbody id="area-tbody"></tbody></table>
+    </div>
+  </div>
+</div>
 
-    const pythonCode = [
-      "def max_area(heights):",
-      "    l, r = 0, len(heights) - 1",
-      "    max_water = 0",
-      "    while l < r:",
-      "        water = min(heights[l], heights[r]) * (r - l)",
-      "        max_water = max(max_water, water)",
-      "        if heights[l] < heights[r]:",
-      "            l += 1",
-      "        else:",
-      "            r -= 1",
-      "    return max_water"
-    ];
+<div id="code-wrap">
+  <button id="code-toggle">&#9660; Code (click to collapse)</button>
+  <div id="code-body">
+    <pre id="code-pre"></pre>
+  </div>
+</div>
 
-    window.addEventListener('DOMContentLoaded', function() {
-      renderCodePanel();
-      nav = VizNav({
-        btnPrev: document.getElementById('prevBtn'),
-        btnNext: document.getElementById('stepBtn'),
-        btnPlay: document.getElementById('playBtn'),
-        speedSel: document.getElementById('speedSel'),
-        render: function(snap, cur, total) {
-          applyStep(snap, cur > 0);
-          updateStatus(snap, cur, total);
-        }
-      });
-      buildAndRun();
+<div class="nav-row" id="nav-row">
+  <button id="prevBtn" class="btn-step">&#8592; Prev</button>
+  <button id="stepBtn" class="btn-step">Step &#8594;</button>
+  <button id="playBtn" class="btn-play">Play</button>
+  <button id="resetBtn" class="btn-step">&#8634; Reset</button>
+  <select id="speedSel">
+    <option value="800">0.5&#215;</option>
+    <option value="400" selected>1&#215;</option>
+    <option value="200">2&#215;</option>
+    <option value="100">4&#215;</option>
+  </select>
+</div>
+
+<script>
+// ─── Code lines ───────────────────────────────────────────────────────────
+const CODE_LINES = [
+  { n: 1, t: '<span class="kw">def</span> <span class="fn">maxArea</span>(height):' },
+  { n: 2, t: '    left, right, maxW = <span class="num">0</span>, len(height)-<span class="num">1</span>, <span class="num">0</span>' },
+  { n: 3, t: '    <span class="kw">while</span> left &lt; right:' },
+  { n: 4, t: '        maxW = max(maxW, min(height[left], height[right]) * (right-left))' },
+  { n: 5, t: '        <span class="kw">if</span> height[left] &lt; height[right]: left += <span class="num">1</span>' },
+  { n: 6, t: '        <span class="kw">else</span>: right -= <span class="num">1</span>' },
+  { n: 7, t: '    <span class="kw">return</span> maxW' },
+];
+
+// ─── Build snapshots ───────────────────────────────────────────────────────
+function buildSnapshots(heights) {
+  const snaps = [];
+  const n = heights.length;
+
+  snaps.push({
+    phase: 'init',
+    description: 'Initialize: left=0 (h=' + heights[0] + '), right=' + (n-1) + ' (h=' + heights[n-1] + '). Scan inward, tracking maximum container area.',
+    heights: heights.slice(),
+    left: 0, right: n - 1,
+    currentArea: null, maxArea: 0, waterLevel: null,
+    movedPointer: null, active_line: 2,
+    bestLeft: null, bestRight: null,
+  });
+
+  let left = 0, right = n - 1, maxW = 0;
+  let bestLeft = null, bestRight = null;
+
+  while (left < right) {
+    const h = Math.min(heights[left], heights[right]);
+    const area = h * (right - left);
+    const newMax = Math.max(maxW, area);
+    const isNewMax = newMax > maxW;
+    if (isNewMax) { bestLeft = left; bestRight = right; }
+    maxW = newMax;
+
+    const movingLeft = heights[left] < heights[right];
+    const moveNote = movingLeft
+      ? 'h[' + left + ']=' + heights[left] + ' < h[' + right + ']=' + heights[right] + ' → move left right.'
+      : 'h[' + left + ']=' + heights[left] + ' ≥ h[' + right + ']=' + heights[right] + ' → move right left.';
+
+    snaps.push({
+      phase: 'scan',
+      description: 'area = min(' + heights[left] + ',' + heights[right] + ') × (' + right + '−' + left + ') = ' + h + '×' + (right-left) + ' = ' + area + '. Max=' + maxW + '. ' + moveNote,
+      heights: heights.slice(),
+      left, right,
+      currentArea: area, maxArea: maxW,
+      waterLevel: h,
+      movedPointer: movingLeft ? 'left' : 'right',
+      active_line: movingLeft ? 5 : 6,
+      bestLeft: bestLeft, bestRight: bestRight,
     });
 
-    function renderCodePanel() {
-      const codeBody = document.getElementById('code-body');
-      codeBody.innerHTML = pythonCode.map((line, i) =>
-        `<div class="code-line" id="cl-${i}">${escapeHtml(line)}</div>`
-      ).join('');
+    if (heights[left] < heights[right]) left++;
+    else right--;
+  }
+
+  snaps.push({
+    phase: 'done',
+    description: 'Done! left (' + left + ') ≥ right (' + right + ') — loop exits. Maximum water = ' + maxW + ' units.',
+    heights: heights.slice(),
+    left, right,
+    currentArea: null, maxArea: maxW, waterLevel: null,
+    movedPointer: null, active_line: 7,
+    bestLeft: bestLeft, bestRight: bestRight,
+  });
+
+  return snaps;
+}
+
+// ─── Render bar chart ─────────────────────────────────────────────────────
+function renderChart(snap) {
+  const { heights, left, right, phase, waterLevel, bestLeft, bestRight } = snap;
+  const n = heights.length;
+  const maxH = Math.max(...heights, 1);
+  const CHART_H = 180;
+
+  const barArea = document.getElementById('bar-area');
+  const idxRow  = document.getElementById('idx-row');
+  const bRow    = document.getElementById('badge-row');
+  barArea.innerHTML = ''; idxRow.innerHTML = ''; bRow.innerHTML = '';
+
+  heights.forEach((h, i) => {
+    const isLeft  = phase !== 'done' && i === left;
+    const isRight = phase !== 'done' && i === right;
+    const isBest  = phase === 'done' && (i === bestLeft || i === bestRight);
+    const inRange = phase === 'scan' && waterLevel !== null && i >= left && i <= right;
+
+    const barH   = Math.round((h / maxH) * CHART_H);
+    const waterH = (inRange && waterLevel > h) ? Math.round(((waterLevel - h) / maxH) * CHART_H) : 0;
+    const spacerH = Math.max(0, CHART_H - barH - waterH);
+
+    let barClass = 'bar-rect ';
+    if (phase === 'done') barClass += isBest ? 'bar-best' : 'bar-done';
+    else if (isLeft)  barClass += 'bar-left';
+    else if (isRight) barClass += 'bar-right';
+    else              barClass += 'bar-normal';
+
+    const col = document.createElement('div');
+    col.className = 'bar-col';
+
+    if (spacerH > 0) {
+      const sp = document.createElement('div');
+      sp.className = 'bar-spacer';
+      sp.style.height = spacerH + 'px';
+      col.appendChild(sp);
     }
-
-    function escapeHtml(text) {
-      const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
-      return text.replace(/[&<>"']/g, m => map[m]);
+    if (waterH > 0) {
+      const w = document.createElement('div');
+      w.className = 'bar-water';
+      w.style.height = waterH + 'px';
+      col.appendChild(w);
     }
+    const bar = document.createElement('div');
+    bar.className = barClass;
+    bar.style.height = barH + 'px';
+    col.appendChild(bar);
 
-    function setCodeLines(activeLines) {
-      document.querySelectorAll('.code-line').forEach(el => el.classList.remove('hl'));
-      activeLines.forEach(lineNum => {
-        const el = document.getElementById(`cl-${lineNum}`);
-        if (el) el.classList.add('hl');
-      });
-    }
+    // Value label positioned above bar
+    const vLabel = document.createElement('div');
+    vLabel.className = 'bar-val' + (isLeft ? ' val-left' : isRight ? ' val-right' : isBest ? ' val-best' : '');
+    vLabel.style.bottom = (barH + waterH + 3) + 'px';
+    vLabel.textContent = h;
+    col.appendChild(vLabel);
 
-    function loadPreset() {
-      var sel = document.getElementById('presetSel');
-      if (!sel.value) return;
-      var d = JSON.parse(sel.value);
-      document.getElementById('inputField').value = d.heights;
-      buildAndRun();
-    }
+    barArea.appendChild(col);
 
-    function randomExample() {
-      var len = Math.floor(Math.random() * 6) + 3;
-      var heights = [];
-      for (var i = 0; i < len; i++) {
-        heights.push(Math.floor(Math.random() * 10) + 1);
-      }
-      document.getElementById('inputField').value = heights.join(',');
-      document.getElementById('presetSel').value = '';
-      buildAndRun();
-    }
+    // Index label
+    const idxEl = document.createElement('div');
+    idxEl.className = 'idx-label' + (isLeft && isRight ? ' idx-both' : isLeft ? ' idx-left' : isRight ? ' idx-right' : '');
+    idxEl.textContent = i;
+    idxRow.appendChild(idxEl);
 
-    function buildAndRun() {
-      const input = document.getElementById('inputField').value.trim();
-      let heights = [];
-      try {
-        if (input.includes(',')) {
-          heights = input.split(',').map(x => parseInt(x.trim()));
-        } else {
-          heights = input.split(' ').map(x => parseInt(x.trim())).filter(x => !isNaN(x));
-        }
-        if (heights.length === 0) throw new Error('No valid heights');
-      } catch (e) {
-        alert('Invalid input. Use comma or space-separated numbers.');
-        return;
-      }
+    // Badge
+    const bc = document.createElement('div');
+    bc.className = 'badge-col';
+    if (isLeft && isRight) bc.innerHTML = '<span class="badge badge-left">L=R</span>';
+    else if (isLeft)  bc.innerHTML = '<span class="badge badge-left">left</span>';
+    else if (isRight) bc.innerHTML = '<span class="badge badge-right">right</span>';
+    bRow.appendChild(bc);
+  });
+}
 
-      currentHeights = heights;
-      const steps = simulate(heights);
-      nav.load(steps);
-    }
+// ─── Update sidebar ────────────────────────────────────────────────────────
+function updateSidebar(snap) {
+  const { phase, left, right, heights, currentArea, maxArea, bestLeft, bestRight } = snap;
 
-    function simulate(heights) {
-      const steps = [];
-      let l = 0, r = heights.length - 1, max_water = 0;
+  const ptrTbody = document.getElementById('ptr-tbody');
+  let ptrRows = '';
+  if (phase !== 'done') {
+    ptrRows += '<tr><td>left</td><td style="color:#3b82f6">idx ' + left + ' (h=' + heights[left] + ')</td></tr>';
+    ptrRows += '<tr><td>right</td><td style="color:#f97316">idx ' + right + ' (h=' + heights[right] + ')</td></tr>';
+    ptrRows += '<tr><td>width</td><td>' + (right - left) + '</td></tr>';
+  } else {
+    ptrRows += '<tr><td>left</td><td style="color:var(--text-dim)">' + left + '</td></tr>';
+    ptrRows += '<tr><td>right</td><td style="color:var(--text-dim)">' + right + '</td></tr>';
+  }
+  ptrTbody.innerHTML = ptrRows;
 
-      // Initial state
-      steps.push({
-        phase: 'Initialize',
-        desc: `Initialize: l=0, r=${heights.length - 1}, max_water=0`,
-        l, r, max_water, water: 0,
-        lines: [1]
-      });
+  const areaTbody = document.getElementById('area-tbody');
+  let areaRows = '';
+  if (currentArea !== null) {
+    areaRows += '<tr><td>current</td><td style="color:#06b6d4">' + currentArea + '</td></tr>';
+  }
+  areaRows += '<tr><td>max so far</td><td style="color:#22c55e;font-size:14px;font-weight:800;">' + maxArea + '</td></tr>';
+  if (bestLeft !== null) {
+    areaRows += '<tr><td>best pair</td><td style="color:#818cf8">idx ' + bestLeft + ' &#8596; ' + bestRight + '</td></tr>';
+  }
+  areaTbody.innerHTML = areaRows;
+}
 
-      while (l < r) {
-        const hL = heights[l];
-        const hR = heights[r];
-        const water = Math.min(hL, hR) * (r - l);
+// ─── Code panel ───────────────────────────────────────────────────────────
+function renderCode(activeLine) {
+  const pre = document.getElementById('code-pre');
+  pre.innerHTML = CODE_LINES.map(l => {
+    const cls = l.n === activeLine ? 'code-line active' : 'code-line';
+    return '<span class="' + cls + '">' + (l.t || ' ') + '</span>';
+  }).join('');
+  const active = pre.querySelector('.active');
+  if (active) active.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+}
 
-        // Calculate water
-        steps.push({
-          phase: 'Calculate',
-          desc: `Calculate water at (l=${l}, r=${r}): min(${hL}, ${hR}) × ${r - l} = ${water}`,
-          l, r, water, max_water,
-          lines: [4]
-        });
+// ─── Phase badge ──────────────────────────────────────────────────────────
+const PHASE_LABELS = { init: 'Init', scan: 'Scanning', done: 'Done' };
 
-        // Update max
-        const newMax = Math.max(max_water, water);
-        if (newMax !== max_water) {
-          steps.push({
-            phase: 'Update',
-            desc: `Update max_water: ${max_water} → ${newMax}`,
-            l, r, water, max_water: newMax,
-            lines: [5]
-          });
-          max_water = newMax;
-        }
+// ─── applyStep ────────────────────────────────────────────────────────────
+function applyStep(snap) {
+  document.getElementById('phase-badge').textContent = PHASE_LABELS[snap.phase] || snap.phase;
+  document.getElementById('desc').textContent = snap.description;
+  renderChart(snap);
+  updateSidebar(snap);
+  renderCode(snap.active_line);
+}
 
-        // Compare heights
-        if (hL < hR) {
-          steps.push({
-            phase: 'Move',
-            desc: `heights[${l}]=${hL} < heights[${r}]=${hR}, move left pointer`,
-            l, r, water, max_water,
-            lines: [6, 7]
-          });
-          l++;
-        } else {
-          steps.push({
-            phase: 'Move',
-            desc: `heights[${l}]=${hL} >= heights[${r}]=${hR}, move right pointer`,
-            l, r, water, max_water,
-            lines: [8, 9]
-          });
-          r--;
-        }
-      }
+function updateStatus(snap, cur, total) {
+  document.getElementById('step-counter').textContent = 'Step ' + cur + ' / ' + total;
+}
 
-      // Final result
-      steps.push({
-        phase: 'Complete',
-        desc: `Algorithm complete. Maximum water area: ${max_water}`,
-        l, r, water: max_water, max_water,
-        lines: [10]
-      });
+// ─── Code toggle ──────────────────────────────────────────────────────────
+let codeExpanded = true;
+document.getElementById('code-toggle').addEventListener('click', () => {
+  codeExpanded = !codeExpanded;
+  document.getElementById('code-body').style.display = codeExpanded ? 'block' : 'none';
+  document.getElementById('code-toggle').textContent =
+    (codeExpanded ? '▼' : '►') + ' Code (click to ' + (codeExpanded ? 'collapse' : 'expand') + ')';
+});
 
-      return steps;
-    }
+// ─── Reset ────────────────────────────────────────────────────────────────
+document.getElementById('resetBtn').addEventListener('click', () => {
+  if (window.nav) window.nav.reset();
+});
 
-    function applyStep(snap, animate) {
-      const { l, r, water, max_water, lines } = snap;
+// ─── viz-inputs ───────────────────────────────────────────────────────────
+function loadPreset() {
+  const sel = document.getElementById('presetSel');
+  if (sel.value) {
+    document.getElementById('heightsInput').value = sel.value;
+    buildAndRun();
+  }
+}
 
-      // Update code highlighting
-      if (lines) {
-        setCodeLines(lines);
-      }
+function parseHeights() {
+  const raw = document.getElementById('heightsInput').value;
+  const nums = raw.split(',').map(s => parseInt(s.trim(), 10)).filter(n => !isNaN(n) && n > 0);
+  return nums.length >= 2 ? nums : null;
+}
 
-      // Render bar chart
-      renderBarChart(currentHeights, l, r, water, max_water);
+function buildAndRun() {
+  const heights = parseHeights();
+  if (!heights) { alert('Enter at least 2 positive integers, comma-separated.'); return; }
+  const snaps = buildSnapshots(heights);
+  window.nav.load(snaps);
+}
 
-      // Update variables
-      document.getElementById('var-l').textContent = l !== undefined ? l : '—';
-      document.getElementById('var-r').textContent = r !== undefined ? r : '—';
-      document.getElementById('var-water').textContent = water !== undefined ? water : '—';
-      document.getElementById('var-max').textContent = max_water !== undefined ? max_water : '—';
-    }
+function randomExample() {
+  const n = Math.floor(Math.random() * 7) + 3;
+  const arr = Array.from({ length: n }, () => Math.floor(Math.random() * 9) + 1);
+  document.getElementById('heightsInput').value = arr.join(',');
+  document.getElementById('presetSel').value = '';
+  buildAndRun();
+}
 
-    function renderBarChart(heights, l, r, water, max_water) {
-      const chart = document.getElementById('barChart');
-      const maxH = Math.max(...heights);
-      const minH = Math.min(...heights);
-      const scaleFactor = 250 / maxH;
-
-      chart.innerHTML = heights.map((h, i) => {
-        let barClass = 'bar';
-        if (i === l) barClass += ' active-l';
-        if (i === r) barClass += ' active-r';
-        if (i > l && i < r) barClass += ' water-fill';
-
-        const heightPx = h * scaleFactor;
-        return `
-          <div class="${barClass}" style="height: ${heightPx}px;">
-            <div class="bar-label">${h}</div>
-          </div>
-        `;
-      }).join('');
-    }
-
-    function updateStatus(snap, cur, total) {
-      const { phase, desc, lines } = snap;
-      document.getElementById('phase-label').textContent = phase || '—';
-      document.getElementById('step-desc').textContent = desc || 'Click Run to start.';
-    }
-
-    // Hide back-link in iframe
-    if (window.self !== window.top) {
-      const backLink = document.querySelector('.back-link');
-      if (backLink) backLink.style.display = 'none';
-    }
-  </script>
+// ─── Init ─────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  const snaps = buildSnapshots([1,8,6,2,5,4,8,3,7]);
+  window.nav = VizNav({
+    btnPrev:  document.getElementById('prevBtn'),
+    btnNext:  document.getElementById('stepBtn'),
+    btnPlay:  document.getElementById('playBtn'),
+    speedSel: document.getElementById('speedSel'),
+    render: function(snap, cur, total) {
+      applyStep(snap);
+      updateStatus(snap, cur, total);
+    },
+  });
+  window.nav.load(snaps);
+});
+</script>
 </body>
 </html>

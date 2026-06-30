@@ -1,678 +1,586 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>138. Copy List with Random Pointer</title>
-  <link rel="stylesheet" href="../shared/style.css" />
-  <script src="../shared/viz.js"></script>
-  <style>
-    body { display:flex; flex-direction:column; height:100vh; overflow:hidden; margin:0; }
-    .page-title {
-      font-size:1rem; font-weight:700; color:var(--text-bright);
-      padding:10px 16px 0; letter-spacing:0.01em; flex-shrink:0;
-    }
-    .viz-root {
-      display:flex; flex:1; gap:12px;
-      padding:8px 16px 12px; min-height:0;
-    }
-    .left-col { display:flex; flex-direction:column; gap:10px; flex:0 0 58%; min-width:0; }
-    .right-col { display:flex; flex-direction:column; gap:10px; flex:1; min-width:0; }
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Copy List with Random Pointer</title>
+<link rel="stylesheet" href="../shared/style.css" />
+<script src="../shared/gsap.min.js"></script>
+<script src="../shared/viz.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Fira Code', 'Cascadia Code', monospace; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
 
-    /* node list area */
-    .list-area {
-      position:relative; flex:1; min-height:0;
-      display:flex; flex-direction:column; justify-content:center;
-    }
-    .list-label {
-      font-size:0.62rem; font-weight:700; text-transform:uppercase;
-      letter-spacing:0.09em; color:var(--text-dim); margin-bottom:4px;
-    }
-    .node-row {
-      display:flex; align-items:center; gap:0; flex-wrap:nowrap;
-      position:relative; min-height:60px;
-    }
-    .node-box {
-      display:flex; flex-direction:column; align-items:center; justify-content:center;
-      width:62px; height:56px; border-radius:8px; flex-shrink:0;
-      border:2px solid var(--border); background:var(--surface-dark);
-      color:var(--text-muted); position:relative; transition:border-color 0.15s, background 0.15s;
-      cursor:default;
-    }
-    .node-box .nval { font-size:1rem; font-weight:700; color:var(--text-bright); line-height:1; }
-    .node-box .nrnd {
-      font-size:0.5rem; color:var(--text-ghost); margin-top:2px;
-      font-family:monospace; letter-spacing:0.03em;
-    }
-    .node-box.active-orig { border-color:var(--accent); background:rgba(var(--accent-ch),0.12); }
-    .node-box.active-copy { border-color:var(--green); background:rgba(var(--green-ch),0.12); }
-    .node-box.new-copy { border-color:var(--blue); background:rgba(var(--blue-ch),0.15); }
-    .node-box.rnd-wired { border-color:var(--green); background:rgba(var(--green-ch),0.09); }
-    .node-box.ghost { opacity:0.22; border-style:dashed; }
+  #header { padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+  #phase-badge { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; padding: 3px 10px; border-radius: var(--radius-sm); background: #1e3a5f; color: var(--blue); border: 1px solid var(--blue); }
+  #step-counter { font-size: 12px; color: var(--text-muted); margin-left: auto; }
 
-    .next-arrow { color:var(--text-ghost); font-size:0.85rem; width:14px; text-align:center; flex-shrink:0; }
-    .null-end { font-size:0.68rem; color:var(--text-ghost); font-family:monospace; padding:0 4px; }
+  #main { display: flex; flex: 1; overflow: hidden; }
 
-    /* SVG overlay for random arrows */
-    .svg-overlay { position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; overflow:visible; }
+  #viz-area { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding: 16px 20px; gap: 16px; overflow: hidden; position: relative; }
 
-    /* map panel */
-    .map-panel { display:flex; flex-direction:column; gap:4px; flex:1; min-height:0; overflow-y:auto; }
-    .map-row {
-      display:flex; align-items:center; gap:6px;
-      padding:4px 8px; border-radius:6px;
-      border:1px solid var(--border); background:var(--surface-dark);
-      font-size:0.75rem; transition:background 0.15s, border-color 0.15s;
-    }
-    .map-row.active-lookup { border-color:var(--accent); background:rgba(var(--accent-ch),0.12); }
-    .map-row .map-orig { color:var(--text-muted); font-family:monospace; }
-    .map-row .map-arr  { color:var(--text-ghost); }
-    .map-row .map-copy { color:var(--blue); font-family:monospace; font-weight:600; }
+  #desc { font-size: 13px; color: var(--text-muted); text-align: center; max-width: 600px; min-height: 36px; line-height: 1.5; flex-shrink: 0; }
 
-    /* phase + annotation */
-    .phase-banner {
-      font-size:0.72rem; font-weight:700; text-transform:uppercase;
-      letter-spacing:0.1em; padding:3px 10px; border-radius:4px; display:inline-block;
-    }
-    .phase-banner.init  { color:var(--text-muted); background:var(--surface-dark); border:1px solid var(--border); }
-    .phase-banner.pass1 { color:var(--blue); background:rgba(var(--blue-ch),0.1); border:1px solid rgba(var(--blue-ch),0.25); }
-    .phase-banner.pass2 { color:var(--green); background:rgba(var(--green-ch),0.1); border:1px solid rgba(var(--green-ch),0.25); }
-    .phase-banner.done  { color:var(--accent); background:rgba(var(--accent-ch),0.1); border:1px solid rgba(var(--accent-ch),0.25); }
+  .list-section { width: 100%; max-width: 720px; }
+  .section-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; margin-bottom: 6px; }
+  .section-label.orig { color: #f97316; }
+  .section-label.clone { color: #22c55e; }
 
-    .annotation { font-size:0.76rem; color:var(--text-muted); line-height:1.5; margin-top:6px; }
-    .step-counter { font-size:0.65rem; color:var(--text-dim); margin-top:4px; }
+  .list-row { display: flex; align-items: flex-start; flex-wrap: nowrap; gap: 0; position: relative; min-height: 72px; overflow-x: auto; }
 
-    /* controls inside .controls (hidden by bridge) */
-    .ctrl-row { display:flex; align-items:center; gap:6px; }
-    .btn { background:var(--surface); border:1px solid var(--border); color:var(--text); border-radius:6px; padding:5px 10px; cursor:pointer; font-size:0.78rem; }
-    .btn:hover { border-color:var(--accent); }
-    .btn.primary { background:var(--accent); border-color:var(--accent); color:#fff; }
-    .speed-sel { background:var(--surface); border:1px solid var(--border); color:var(--text); border-radius:6px; padding:5px 6px; font-size:0.75rem; }
+  .node-wrap { display: flex; flex-direction: column; align-items: center; position: relative; }
+  .node-box {
+    width: 48px; height: 48px; border-radius: 8px;
+    background: #1e293b; border: 2px solid #334155; color: #f1f5f9;
+    font-size: 17px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    transition: border-color .25s, background .25s, box-shadow .25s;
+    position: relative; z-index: 1;
+  }
+  .node-box.orig-node { border-color: #f97316; }
+  .node-box.clone-node { border-color: #22c55e; }
+  .node-box.orig-node.active-node { border-color: #fb923c; box-shadow: 0 0 0 4px #f9731640; background: #431407; }
+  .node-box.clone-node.active-node { border-color: #4ade80; box-shadow: 0 0 0 4px #22c55e40; background: #14532d; }
+  .node-box.highlight-done { border-color: #22c55e; background: #14532d40; color: #4ade80; }
+  .node-box.empty-node { border-style: dashed; border-color: #334155; opacity: 0.4; }
+  .node-box.pulse { animation: nodePulse .5s ease; }
+  @keyframes nodePulse { 0%,100%{box-shadow:0 0 0 0 #10b98140} 50%{box-shadow:0 0 0 8px #10b98130} }
 
-    /* viz-inputs visible */
-    .viz-inputs { padding:6px 0 8px; flex-shrink:0; display:flex; flex-wrap:wrap; gap:8px; align-items:flex-end; }
-    .vi-group { display:flex; flex-direction:column; gap:3px; }
-    .vi-label { font-size:0.62rem; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:var(--text-dim); }
-    .vi-sel, .vi-input { background:var(--surface-dark); color:var(--text-main); border:1px solid var(--border); border-radius:6px; padding:5px 9px; font-size:0.8rem; }
-    .vi-sel { min-width:200px; }
-    .vi-input { width:260px; font-family:monospace; }
-    .vi-btn { padding:6px 16px; border:none; border-radius:6px; font-weight:600; cursor:pointer; font-size:0.82rem; }
-    .vi-btn.run { background:var(--accent); color:#fff; }
-    .vi-btn.rnd { background:var(--surface-dark); color:var(--text-main); border:1px solid var(--border); }
+  .badges { display: flex; flex-wrap: wrap; gap: 3px; justify-content: center; margin-top: 4px; min-height: 18px; }
+  .badge { font-size: 9px; font-weight: 700; padding: 1px 5px; border-radius: 4px; letter-spacing: .05em; }
+  .badge-cur  { background: #431407; color: #fb923c; border: 1px solid #f97316; }
+  .badge-head { background: #1a2e1a; color: #22c55e; border: 1px solid #22c55e; }
+  .badge-idx  { background: #1e293b; color: #94a3b8; border: 1px solid #475569; }
 
-    /* left column split */
-    .list-wrapper { display:flex; flex-direction:column; gap:8px; flex:1; min-height:0; position:relative; }
-    .divider-h { height:1px; background:var(--border-soft); flex-shrink:0; }
-    .code-panel { background:var(--surface); border:1px solid var(--border-soft); border-radius:var(--radius-md); padding:10px 12px; overflow-x:auto; flex-shrink:0; }
-    .code-title { font-size:0.65rem; font-weight:700; text-transform:uppercase; letter-spacing:0.1em; color:var(--text-dim); margin-bottom:8px; }
-    #code-body { font-family:'JetBrains Mono','Fira Code',monospace; font-size:0.73rem; line-height:1.75; }
-    .cl { display:flex; align-items:stretch; white-space:pre; border-left:2px solid transparent; padding-left:6px; color:var(--text-muted); transition:all 0.15s; }
-    .cl.hl { background:rgba(122,162,247,0.1); border-left-color:var(--accent); color:var(--text); }
-    .ln { display:inline-block; width:18px; text-align:right; color:var(--text-dim); user-select:none; margin-right:10px; font-size:0.68rem; }
-    .kw2 { color:#bb9af7; } .nb2 { color:#9ece6a; } .cm2 { color:var(--text-dim); font-style:italic; }
-  </style>
+  .arrow { display: flex; align-items: center; width: 28px; flex-shrink: 0; }
+  .arrow svg { width: 28px; height: 16px; }
+  .null-marker { font-size: 10px; color: var(--text-dim); margin-left: 4px; padding: 0 4px; }
+
+  /* Random pointer SVG overlay */
+  #random-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
+
+  #sidebar { width: 260px; flex-shrink: 0; background: var(--surface); border-left: 1px solid var(--border); overflow-y: auto; padding: 14px 12px; display: flex; flex-direction: column; gap: 12px; }
+  .sidebar-section { font-size: 11px; }
+  .sidebar-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--text-dim); margin-bottom: 6px; }
+  .ptr-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+  .ptr-table td { padding: 3px 5px; border-bottom: 1px solid var(--border); }
+  .ptr-table td:first-child { color: var(--text-muted); width: 50px; }
+  .ptr-table td:last-child { color: var(--text); font-weight: 600; }
+
+  .map-table { width: 100%; border-collapse: collapse; font-size: 10px; }
+  .map-table th { text-align: left; color: var(--text-dim); padding: 2px 4px; font-weight: 600; border-bottom: 1px solid var(--border); }
+  .map-table td { padding: 2px 4px; border-bottom: 1px solid #1e293b; }
+  .map-table td:first-child { color: #f97316; }
+  .map-table td:last-child { color: #22c55e; }
+  .map-table tr.active-map { background: #1e293b; }
+
+  #code-wrap { flex-shrink: 0; background: #0d1117; border-top: 1px solid var(--border); }
+  #code-toggle { width: 100%; background: #161b22; color: var(--text-muted); border: none; border-bottom: 1px solid var(--border); padding: 5px 12px; font-size: 11px; text-align: left; cursor: pointer; font-family: inherit; }
+  #code-toggle:hover { color: var(--text); }
+  #code-body { overflow: auto; max-height: 160px; padding: 10px 14px; }
+  pre { font-size: 11px; line-height: 1.7; font-family: inherit; }
+  .code-line { padding: 0 4px; border-radius: 3px; display: block; transition: background .2s; white-space: pre; }
+  .code-line.active { background: #451a0350; color: #fbbf24; }
+  .kw { color: #c792ea; } .fn { color: #82aaff; } .cm { color: #546e7a; font-style: italic; }
+  .str { color: #c3e88d; } .num { color: #f78c6c; }
+
+  #nav-row { flex-shrink: 0; display: flex; align-items: center; gap: 8px; padding: 10px 16px; background: var(--surface); border-top: 1px solid var(--border); }
+  .btn-step, .btn-play { padding: 6px 14px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--surface); color: var(--text); font-family: inherit; font-size: 12px; cursor: pointer; transition: background .15s; }
+  .btn-step:hover { background: #334155; }
+  .btn-play { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn-play:hover { background: var(--accent-hover); }
+  select { padding: 5px 8px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: #1e293b; color: var(--text); font-size: 12px; font-family: inherit; cursor: pointer; }
+
+  /* viz-inputs */
+  .viz-inputs { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; padding: 10px 16px 10px; background: var(--surface); border-bottom: 1px solid var(--border); flex-shrink: 0; }
+  .viz-inputs label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); display: block; margin-bottom: 4px; }
+  .viz-inputs input, .viz-inputs select { background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px; font-size: 0.85rem; font-family: inherit; }
+  .viz-inputs input { width: 320px; }
+  .btn-run { padding: 7px 18px; background: var(--accent); color: #fff; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; font-family: inherit; }
+  .btn-rand { padding: 7px 14px; background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: 6px; cursor: pointer; font-family: inherit; }
+</style>
 </head>
 <body>
 
-<div class="page-title">138. Copy List with Random Pointer</div>
-
 <div class="viz-inputs">
-  <div class="vi-group">
-    <label class="vi-label">Preset</label>
-    <select class="vi-sel" id="presetSel" onchange="loadPreset()">
-      <option value="0">Single node, self-random [[7,0]]</option>
-      <option value="1">Two nodes, cross-random [[1,1],[2,0]]</option>
-      <option value="2" selected>LeetCode canonical [[7,null],[13,0],[11,4],[10,2],[1,0]]</option>
-      <option value="3">All-null randoms [[3,null],[3,null],[3,null]]</option>
-      <option value="4">All point to head [[1,0],[2,0],[3,0],[4,0]]</option>
-      <option value="5">Linear chain [[1,1],[2,2],[3,3],[4,null]]</option>
+  <div>
+    <label>Preset</label>
+    <select id="presetSel" onchange="loadPreset()">
+      <option value="">— pick a preset —</option>
+      <option value="7,null|13,0|11,4|10,2|1,0">5-node (LeetCode example)</option>
+      <option value="1,1|2,1">2-node both random→1</option>
+      <option value="3,null|3,0|3,null">3-node same values</option>
+      <option value="42,0">Single node self-random</option>
+      <option value="1,null|2,null|3,null">3-node no randoms</option>
     </select>
   </div>
-  <div class="vi-group">
-    <label class="vi-label">Input [[val,rndIdx],...]</label>
-    <input class="vi-input" id="listInput" type="text" value="[[7,null],[13,0],[11,4],[10,2],[1,0]]" />
+  <div>
+    <label>Nodes (val,rand_idx | ...)</label>
+    <input id="nodeInput" type="text" value="7,null|13,0|11,4|10,2|1,0" placeholder="7,null|13,0|11,4" />
   </div>
-  <button class="vi-btn run" onclick="buildAndRun()">Run</button>
-  <button class="vi-btn rnd" onclick="randomExample()">🎲 Random</button>
+  <button class="btn-run" onclick="buildAndRun()">Run</button>
+  <button class="btn-rand" onclick="randomExample()">🎲 Random</button>
 </div>
 
-<div class="viz-root">
+<div id="header">
+  <span id="phase-badge">Pass 1: Clone</span>
+  <span style="font-size:13px;font-weight:700;">Copy List with Random Pointer</span>
+  <span id="step-counter">Step 0 / 0</span>
+</div>
 
-  <!-- LEFT COLUMN: original + copy lists -->
-  <div class="left-col">
-    <div class="panel-box" style="display:flex;flex-direction:column;flex:1;min-height:0;">
-      <div class="panel-title">Lists</div>
-      <div class="list-wrapper">
-        <div>
-          <div class="list-label">Original</div>
-          <div class="node-row" id="orig-row"></div>
-        </div>
-        <div class="divider-h"></div>
-        <div>
-          <div class="list-label">Copy</div>
-          <div class="node-row" id="copy-row"></div>
-        </div>
+<div id="main">
+  <div id="viz-area">
+    <div id="desc">Initializing...</div>
+    <div id="lists-container" style="width:100%;max-width:720px;display:flex;flex-direction:column;gap:20px;position:relative;">
+      <div class="list-section">
+        <div class="section-label orig">Original List</div>
+        <div id="orig-row" class="list-row"></div>
       </div>
+      <div class="list-section">
+        <div class="section-label clone">Cloned List</div>
+        <div id="clone-row" class="list-row"></div>
+      </div>
+      <svg id="random-overlay" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;overflow:visible;"></svg>
     </div>
   </div>
 
-  <!-- RIGHT COLUMN: map + status -->
-  <div class="right-col">
-    <div class="panel-box" style="flex-shrink:0;">
-      <div class="panel-title">Status</div>
-      <span class="phase-banner init" id="phaseBanner">📋 Init</span>
-      <div class="annotation" id="annotation">Load a preset or enter input and press Run.</div>
-      <div class="step-counter" id="stepCounter">Step 0 / 0</div>
+  <div id="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-title">Current Step</div>
+      <table class="ptr-table" id="ptr-table">
+        <tbody></tbody>
+      </table>
     </div>
-    <div class="panel-box" style="flex:1;min-height:0;display:flex;flex-direction:column;">
-      <div class="panel-title">Hash Map  <span style="font-weight:400;color:var(--text-ghost);font-size:0.7rem;">original id → copy id</span></div>
-      <div class="map-panel" id="mapPanel"></div>
-    </div>
-
-    <div class="code-panel">
-      <div class="code-title">Algorithm</div>
-      <div id="code-body">
-        <div class="cl" id="cl0"><span class="ln">1</span><span class="cm2"># Pass 1: create all clones</span></div>
-        <div class="cl" id="cl1"><span class="ln">2</span>node = head</div>
-        <div class="cl" id="cl2"><span class="ln">3</span><span class="kw2">while</span> node: map[node] = Node(node.val); node = node.next</div>
-        <div class="cl" id="cl3"><span class="ln">4</span><span class="cm2"># Pass 2: wire .next and .random</span></div>
-        <div class="cl" id="cl4"><span class="ln">5</span>node = head</div>
-        <div class="cl" id="cl5"><span class="ln">6</span><span class="kw2">while</span> node:</div>
-        <div class="cl" id="cl6"><span class="ln">7</span>  <span class="kw2">if</span> node.next:   map[node].next   = map[node.next]</div>
-        <div class="cl" id="cl7"><span class="ln">8</span>  <span class="kw2">if</span> node.random: map[node].random = map[node.random]</div>
-        <div class="cl" id="cl8"><span class="ln">9</span>  node = node.next</div>
-        <div class="cl" id="cl9"><span class="ln">10</span><span class="nb2">return</span> map[head]</div>
-      </div>
+    <div class="sidebar-section">
+      <div class="sidebar-title">Hash Map (old→new)</div>
+      <table class="map-table" id="map-table">
+        <thead><tr><th>old</th><th>new (copy)</th></tr></thead>
+        <tbody id="map-body"></tbody>
+      </table>
     </div>
   </div>
 </div>
 
-<!-- VizNav controls (hidden by iframe bridge) -->
-<div class="controls" style="display:none;">
-  <button id="prevBtn">Prev</button>
-  <button id="stepBtn">Step</button>
-  <button id="playBtn">Play</button>
-  <button id="resetBtn">Reset</button>
+<div id="code-wrap">
+  <button id="code-toggle">▼ Code (click to collapse)</button>
+  <div id="code-body">
+    <pre id="code-pre"></pre>
+  </div>
+</div>
+
+<div class="nav-row" id="nav-row">
+  <button id="prevBtn" class="btn-step">← Prev</button>
+  <button id="stepBtn" class="btn-step">Step →</button>
+  <button id="playBtn" class="btn-play">Play</button>
+  <button id="resetBtn" class="btn-step">↺ Reset</button>
   <select id="speedSel">
-    <option value="1400">Slow</option>
-    <option value="800" selected>Normal</option>
-    <option value="380">Fast</option>
+    <option value="800">0.5×</option>
+    <option value="400" selected>1×</option>
+    <option value="200">2×</option>
+    <option value="100">4×</option>
   </select>
 </div>
 
+<div class="controls"></div>
+
 <script>
-// ── Presets ───────────────────────────────────────────────────────────────
-var PRESETS = [
-  [[7, 0]],
-  [[1, 1], [2, 0]],
-  [[7, null], [13, 0], [11, 4], [10, 2], [1, 0]],
-  [[3, null], [3, null], [3, null]],
-  [[1, 0], [2, 0], [3, 0], [4, 0]],
-  [[1, 1], [2, 2], [3, 3], [4, null]],
+// ─── Code lines ───────────────────────────────────────────────────────────
+const CODE_LINES = [
+  { n:  1, t: '<span class="kw">def</span> <span class="fn">copyRandomList</span>(head):' },
+  { n:  2, t: '    <span class="kw">if not</span> head: <span class="kw">return None</span>' },
+  { n:  3, t: '' },
+  { n:  4, t: '    <span class="cm"># Pass 1: clone each node</span>' },
+  { n:  5, t: '    old_to_new = {}' },
+  { n:  6, t: '    cur = head' },
+  { n:  7, t: '    <span class="kw">while</span> cur:' },
+  { n:  8, t: '        old_to_new[cur] = <span class="fn">Node</span>(cur.val)' },
+  { n:  9, t: '        cur = cur.next' },
+  { n: 10, t: '' },
+  { n: 11, t: '    <span class="cm"># Pass 2: wire next and random</span>' },
+  { n: 12, t: '    cur = head' },
+  { n: 13, t: '    <span class="kw">while</span> cur:' },
+  { n: 14, t: '        <span class="kw">if</span> cur.next:' },
+  { n: 15, t: '            old_to_new[cur].next = old_to_new[cur.next]' },
+  { n: 16, t: '        <span class="kw">if</span> cur.random:' },
+  { n: 17, t: '            old_to_new[cur].random = old_to_new[cur.random]' },
+  { n: 18, t: '        cur = cur.next' },
+  { n: 19, t: '    <span class="kw">return</span> old_to_new[head]' },
 ];
 
-// ── Build steps ───────────────────────────────────────────────────────────
-function buildSteps(nodeList) {
-  var steps = [];
-  var n = nodeList.length;
+// ─── Parse user input ──────────────────────────────────────────────────────
+function parseInput(raw) {
+  // Format: "val,rand_idx|val,rand_idx|..."
+  // rand_idx is 0-based index or "null"
+  const parts = raw.trim().split('|').map(s => s.trim()).filter(Boolean);
+  const nodes = parts.map((p, i) => {
+    const [valStr, randStr] = p.split(',').map(s => s.trim());
+    const val = parseInt(valStr) || 0;
+    const randIdx = (randStr === 'null' || randStr === undefined) ? null : parseInt(randStr);
+    return { idx: i, val, randIdx };
+  });
+  return nodes;
+}
 
-  if (n === 0) {
-    steps.push({
-      phase: "done",
-      originalNodes: [], copyNodes: [], mapEntries: [],
-      activeOrigId: null, activeCopyId: null, highlightedArrow: null,
-      annotation: "Empty list — nothing to copy.",
-      phaseBanner: "✅ Done", phaseCls: "done",
-    });
-    return steps;
-  }
+// ─── Build snapshots ───────────────────────────────────────────────────────
+function buildSnapshots(nodes) {
+  const n = nodes.length;
+  const snaps = [];
 
-  // Build original node descriptors
-  function makeOrigNodes(activeOrigId, activeCopyId, copyExistsSet, copyNextSet, copyRndSet, mapHighlight) {
-    return nodeList.map(function(item, i) {
-      return { id: i, val: item[0], nextId: i + 1 < n ? i + 1 : null, randomId: item[1] };
-    });
-  }
-
-  function makeCopyNodes(copyExistsSet, copyNextSet, copyRndSet) {
-    return nodeList.map(function(item, i) {
-      var exists = copyExistsSet.has(i);
-      return {
-        id: i, val: item[0],
-        nextId: copyNextSet.has(i) ? (i + 1 < n ? i + 1 : null) : null,
-        randomId: copyRndSet.has(i) ? item[1] : undefined,
-        exists: exists,
-      };
-    });
-  }
-
-  function snap(phase, phaseBanner, phaseCls, annotation, activeOrigId, activeCopyId, copyExistsSet, copyNextSet, copyRndSet, mapEntries, highlightedArrow, mapHighlight) {
+  function snap(phase, description, extra) {
     return {
-      phase: phase,
-      phaseBanner: phaseBanner,
-      phaseCls: phaseCls,
-      annotation: annotation,
-      originalNodes: makeOrigNodes(activeOrigId, activeCopyId, copyExistsSet, copyNextSet, copyRndSet, mapHighlight),
-      copyNodes: makeCopyNodes(copyExistsSet, copyNextSet, copyRndSet),
-      mapEntries: mapEntries.map(function(e, i) {
-        return { origId: e.origId, copyId: e.copyId, highlighted: mapHighlight === i };
-      }),
-      activeOrigId: activeOrigId,
-      activeCopyId: activeCopyId,
-      highlightedArrow: highlightedArrow || null,
+      phase,
+      description,
+      nodes: nodes,
+      // which original nodes have been cloned so far (0-based indices)
+      cloned_indices: [],
+      // which clone nodes have been wired so far
+      wired_indices: [],
+      // current index being processed (-1 = none)
+      cur_idx: -1,
+      active_line: 0,
+      ...extra
     };
   }
 
-  var copyExists = new Set();
-  var copyNext   = new Set();
-  var copyRnd    = new Set();
-  var mapEntries = [];
+  // INIT
+  snaps.push(snap('pass1', 'Initialize: create empty hash map old_to_new. Set cur = head (node 0). We will clone each node one by one in Pass 1.', {
+    active_line: 5, cur_idx: -1, cloned_indices: [], wired_indices: []
+  }));
 
-  // Step 0: init
-  steps.push(snap("init", "📋 Original List", "init",
-    "Original list loaded. We will deep-copy it in two passes.",
-    null, null, copyExists, copyNext, copyRnd, mapEntries, null, -1));
-
-  // Pass 1a: create all copies + populate map
-  steps.push(snap("pass1", "🔵 Pass 1: Create Copies", "pass1",
-    "Pass 1 begins: walk original list and create a copy of each node.",
-    null, null, copyExists, copyNext, copyRnd, mapEntries, null, -1));
-
-  for (var i = 0; i < n; i++) {
-    var val = nodeList[i][0];
-    // Visit original node
-    steps.push(snap("pass1", "🔵 Pass 1: Create Copies", "pass1",
-      "Visit node [" + val + "] (id=" + i + "). Create a copy.",
-      i, null, copyExists, copyNext, copyRnd, mapEntries, null, -1));
-
-    // Create copy + add to map
-    copyExists.add(i);
-    mapEntries = mapEntries.concat([{ origId: i, copyId: i }]);
-    steps.push(snap("pass1", "🔵 Pass 1: Create Copies", "pass1",
-      "Created copy[" + val + "]. Added to map: orig[" + i + "] → copy[" + i + "].",
-      i, i, new Set(copyExists), copyNext, copyRnd, mapEntries, null, mapEntries.length - 1));
-  }
-
-  // Pass 1b: wire copy.next for all
-  steps.push(snap("pass1", "🔵 Pass 1: Wire .next", "pass1",
-    "All copies created. Now wire copy.next pointers using the map.",
-    null, null, new Set(copyExists), copyNext, copyRnd, mapEntries, null, -1));
-
-  for (var i = 0; i < n; i++) {
-    var val = nodeList[i][0];
-    var nextId = i + 1 < n ? i + 1 : null;
-    var nextVal = nextId !== null ? nodeList[nextId][0] : null;
-    copyNext.add(i);
-    var arrow = nextId !== null ? { type: "next", fromId: i, toId: nextId, isCopy: true } : null;
-    steps.push(snap("pass1", "🔵 Pass 1: Wire .next", "pass1",
-      nextId !== null
-        ? "Wire copy[" + val + "].next = copy[" + nextVal + "] (id=" + nextId + ")."
-        : "copy[" + val + "].next = null (last node).",
-      null, i, new Set(copyExists), new Set(copyNext), copyRnd, mapEntries, arrow, -1));
-  }
-
-  // Pass 2: wire random pointers
-  steps.push(snap("pass2", "🟢 Pass 2: Wire Randoms", "pass2",
-    "Pass 2 begins: walk original list and wire copy.random from the map.",
-    null, null, new Set(copyExists), new Set(copyNext), copyRnd, mapEntries, null, -1));
-
-  for (var i = 0; i < n; i++) {
-    var val = nodeList[i][0];
-    var rndIdx = nodeList[i][1];
-
-    // (a) Visit orig, show its random arrow
-    steps.push(snap("pass2", "🟢 Pass 2: Wire Randoms", "pass2",
-      rndIdx !== null
-        ? "Visit node [" + val + "]. orig.random → node[" + nodeList[rndIdx][0] + "] (id=" + rndIdx + ")."
-        : "Visit node [" + val + "]. orig.random = null.",
-      i, null, new Set(copyExists), new Set(copyNext), new Set(copyRnd), mapEntries,
-      rndIdx !== null ? { type: "random", fromId: i, toId: rndIdx, isCopy: false } : null,
-      -1));
-
-    if (rndIdx !== null) {
-      // (b) Highlight map row for lookup
-      var mapIdx = rndIdx; // mapEntries[rndIdx].origId === rndIdx
-      steps.push(snap("pass2", "🟢 Pass 2: Wire Randoms", "pass2",
-        "Look up map[" + rndIdx + "]: orig[" + rndIdx + "] → copy[" + rndIdx + "].",
-        i, null, new Set(copyExists), new Set(copyNext), new Set(copyRnd), mapEntries,
-        { type: "random", fromId: i, toId: rndIdx, isCopy: false },
-        mapIdx));
+  // Pass 1: clone each node
+  const clonedSoFar = [];
+  for (let i = 0; i < n; i++) {
+    snaps.push(snap('pass1', `Pass 1 — node ${i} (val=${nodes[i].val}): Create new Node(${nodes[i].val}) and store old_to_new[node${i}] = clone${i}. No next/random yet.`, {
+      active_line: 8, cur_idx: i, cloned_indices: [...clonedSoFar, i], wired_indices: []
+    }));
+    clonedSoFar.push(i);
+    if (i < n - 1) {
+      snaps.push(snap('pass1', `Advance cur to node ${i+1} (val=${nodes[i+1].val}).`, {
+        active_line: 9, cur_idx: i+1, cloned_indices: [...clonedSoFar], wired_indices: []
+      }));
     }
+  }
 
-    // (c) Wire copy.random
-    copyRnd.add(i);
-    steps.push(snap("pass2", "🟢 Pass 2: Wire Randoms", "pass2",
-      rndIdx !== null
-        ? "Set copy[" + val + "].random = copy[" + nodeList[rndIdx][0] + "] (from map)."
-        : "copy[" + val + "].random = null.",
-      null, i, new Set(copyExists), new Set(copyNext), new Set(copyRnd), mapEntries,
-      rndIdx !== null ? { type: "random", fromId: i, toId: rndIdx, isCopy: true } : null,
-      rndIdx !== null ? rndIdx : -1));
+  // Pass 1 done
+  snaps.push(snap('pass1', `Pass 1 complete. All ${n} nodes cloned. cur = None → loop exits. Map has ${n} entries. Starting Pass 2: wire next and random pointers.`, {
+    active_line: 12, cur_idx: -1, cloned_indices: [...clonedSoFar], wired_indices: []
+  }));
+
+  // Pass 2: wire each node
+  const wiredSoFar = [];
+  for (let i = 0; i < n; i++) {
+    const node = nodes[i];
+    const hasNext = i < n - 1;
+    const hasRandom = node.randIdx !== null;
+    let desc = `Pass 2 — node ${i} (val=${node.val}): `;
+    if (hasNext) desc += `Wire clone${i}.next = clone${i+1}. `;
+    else desc += `No next (last node). `;
+    if (hasRandom) desc += `Wire clone${i}.random = clone${node.randIdx} (node${node.randIdx}, val=${nodes[node.randIdx].val}).`;
+    else desc += `random is None — skip.`;
+
+    snaps.push(snap('pass2', desc, {
+      active_line: 14, cur_idx: i, cloned_indices: [...clonedSoFar], wired_indices: [...wiredSoFar, i]
+    }));
+    wiredSoFar.push(i);
   }
 
   // Done
-  steps.push(snap("done", "✅ Deep Copy Complete", "done",
-    "Deep copy complete! Both lists are independent — no shared nodes.",
-    null, null, new Set(copyExists), new Set(copyNext), new Set(copyRnd), mapEntries, null, -1));
+  snaps.push(snap('done', `Done! Deep copy complete. All ${n} nodes cloned with correct next and random pointers. Return old_to_new[head] = clone0.`, {
+    active_line: 19, cur_idx: -1, cloned_indices: [...clonedSoFar], wired_indices: [...wiredSoFar]
+  }));
 
-  return steps;
+  return snaps;
 }
 
-// ── DOM refs ──────────────────────────────────────────────────────────────
-var origRow     = document.getElementById("orig-row");
-var copyRow     = document.getElementById("copy-row");
-var mapPanel    = document.getElementById("mapPanel");
-var phaseBanner = document.getElementById("phaseBanner");
-var annotEl     = document.getElementById("annotation");
-var counterEl   = document.getElementById("stepCounter");
+// ─── Render ────────────────────────────────────────────────────────────────
+const ARROW_SVG = `<svg viewBox="0 0 28 16" fill="none"><line x1="0" y1="8" x2="22" y2="8" stroke="#475569" stroke-width="2"/><polygon points="20,4 28,8 20,12" fill="#475569"/></svg>`;
 
-// ── Render helpers ────────────────────────────────────────────────────────
-function renderNodeRow(container, nodes, activeOrigId, activeCopyId, isCopy, snap) {
-  container.innerHTML = "";
-  var n = nodes.length;
-  if (n === 0) {
-    var emp = document.createElement("div");
-    emp.className = "null-end"; emp.textContent = "(empty)";
-    container.appendChild(emp); return;
-  }
-  nodes.forEach(function(node, i) {
-    // Build node box
-    var box = document.createElement("div");
-    box.className = "node-box";
-    box.id = (isCopy ? "copy-" : "orig-") + node.id;
+function renderOrigRow(snap) {
+  const { nodes, cur_idx, cloned_indices, phase } = snap;
+  let html = '';
+  nodes.forEach((node, i) => {
+    const isActive = cur_idx === i;
+    const isCloned = cloned_indices.includes(i);
+    let cls = 'node-box orig-node';
+    if (phase === 'done') cls += ' highlight-done';
+    else if (isActive) cls += ' active-node';
 
-    if (isCopy && !node.exists) {
-      box.classList.add("ghost");
-    } else if (!isCopy && node.id === activeOrigId) {
-      box.classList.add("active-orig");
-    } else if (isCopy && node.id === activeCopyId && node.exists) {
-      var phase = snap.phase;
-      if (phase === "pass1" && phaseBanner.textContent.indexOf("Wire") >= 0) {
-        box.classList.add("active-copy");
-      } else if (phase === "pass1") {
-        box.classList.add("new-copy");
-      } else if (phase === "pass2") {
-        box.classList.add("rnd-wired");
-      } else {
-        box.classList.add("active-copy");
-      }
-    } else if (snap.phase === "pass1" && isCopy && node.id === activeCopyId) {
-      box.classList.add("new-copy");
-    }
+    const badges = [];
+    if (i === 0) badges.push('<span class="badge badge-head">head</span>');
+    if (isActive) badges.push('<span class="badge badge-cur">cur</span>');
+    badges.push(`<span class="badge badge-idx">[${i}]</span>`);
 
-    var valEl = document.createElement("div");
-    valEl.className = "nval"; valEl.textContent = node.val;
-    box.appendChild(valEl);
-
-    // Show random label
-    if (isCopy && node.exists) {
-      var rndEl = document.createElement("div");
-      rndEl.className = "nrnd";
-      if (node.randomId !== undefined) {
-        rndEl.textContent = node.randomId !== null ? "rnd:" + node.randomId : "rnd:null";
-      } else {
-        rndEl.textContent = "rnd:?";
-      }
-      box.appendChild(rndEl);
-    } else if (!isCopy) {
-      var rndEl = document.createElement("div");
-      rndEl.className = "nrnd";
-      rndEl.textContent = node.randomId !== null ? "rnd:" + node.randomId : "rnd:null";
-      box.appendChild(rndEl);
-    }
-
-    container.appendChild(box);
-
-    // next arrow
-    if (i < n - 1) {
-      var arr = document.createElement("div");
-      arr.className = "next-arrow"; arr.textContent = "→";
-      container.appendChild(arr);
+    html += `<div class="node-wrap" id="orig-${i}">
+      <div class="${cls}">${node.val}</div>
+      <div class="badges">${badges.join('')}</div>
+    </div>`;
+    if (i < nodes.length - 1) {
+      html += `<div class="arrow">${ARROW_SVG}</div>`;
     } else {
-      var nullEnd = document.createElement("div");
-      nullEnd.className = "null-end"; nullEnd.textContent = "→null";
-      container.appendChild(nullEnd);
+      html += `<span class="null-marker">∅</span>`;
     }
   });
+  return html;
 }
 
-function drawRandomArrows(container, nodes, snap, isCopy) {
-  // Remove existing SVG
-  var existingSvg = container.parentElement.querySelector(".svg-overlay");
-  if (existingSvg) existingSvg.remove();
+function renderCloneRow(snap) {
+  const { nodes, cur_idx, cloned_indices, wired_indices, phase } = snap;
+  let html = '';
+  nodes.forEach((node, i) => {
+    const isCloned = cloned_indices.includes(i);
+    const isWired = wired_indices.includes(i);
+    const isActive = cur_idx === i && (phase === 'pass2' || phase === 'done');
 
-  // Get node positions
-  var boxes = Array.from(container.querySelectorAll(".node-box"));
-  if (boxes.length === 0) return;
+    let cls = 'node-box';
+    if (!isCloned) {
+      cls += ' empty-node';
+    } else {
+      cls += ' clone-node';
+      if (phase === 'done') cls += ' highlight-done';
+      else if (isActive) cls += ' active-node';
+    }
 
-  var containerRect = container.getBoundingClientRect();
-  var n = nodes.length;
+    const badges = [];
+    if (i === 0 && isCloned) badges.push('<span class="badge badge-head">copy</span>');
+    if (isActive) badges.push('<span class="badge badge-cur">cur</span>');
 
-  // Compute centers
-  var centers = boxes.map(function(b) {
-    var r = b.getBoundingClientRect();
+    const displayVal = isCloned ? node.val : '?';
+    html += `<div class="node-wrap" id="clone-${i}">
+      <div class="${cls}">${displayVal}</div>
+      <div class="badges">${badges.join('')}</div>
+    </div>`;
+
+    // Arrow: only show for wired nodes
+    if (i < nodes.length - 1) {
+      const showArrow = isWired;
+      if (showArrow) {
+        html += `<div class="arrow">${ARROW_SVG}</div>`;
+      } else {
+        html += `<div class="arrow" style="opacity:0.15">${ARROW_SVG}</div>`;
+      }
+    } else if (isCloned) {
+      html += `<span class="null-marker">∅</span>`;
+    }
+  });
+  return html;
+}
+
+// Draw random pointer arcs using SVG overlay
+function drawRandomPointers(snap) {
+  const overlay = document.getElementById('random-overlay');
+  overlay.innerHTML = '';
+  const { nodes, cloned_indices, wired_indices, phase } = snap;
+  if (!nodes) return;
+
+  const container = document.getElementById('lists-container');
+  const containerRect = container.getBoundingClientRect();
+
+  function getCenterOf(el) {
+    if (!el) return null;
+    const r = el.getBoundingClientRect();
     return {
       x: r.left - containerRect.left + r.width / 2,
-      y: r.top  - containerRect.top  + r.height / 2,
-      w: r.width, h: r.height,
+      y: r.top - containerRect.top + r.height / 2
     };
-  });
-
-  var svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-  svg.setAttribute("class", "svg-overlay");
-  svg.style.position = "absolute";
-  svg.style.top = "0"; svg.style.left = "0";
-  svg.style.width = containerRect.width + "px";
-  svg.style.height = containerRect.height + 60 + "px"; // extra space for arcs
-  svg.style.overflow = "visible";
-  svg.style.pointerEvents = "none";
-
-  // Arrow marker
-  var defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
-  function mkMarker(id, color) {
-    var m = document.createElementNS("http://www.w3.org/2000/svg", "marker");
-    m.setAttribute("id", id); m.setAttribute("markerWidth", "7"); m.setAttribute("markerHeight", "7");
-    m.setAttribute("refX", "6"); m.setAttribute("refY", "3.5"); m.setAttribute("orient", "auto");
-    var poly = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
-    poly.setAttribute("points", "0 0, 7 3.5, 0 7"); poly.setAttribute("fill", color);
-    m.appendChild(poly); return m;
   }
-  defs.appendChild(mkMarker("arr-blue",  "var(--blue)"));
-  defs.appendChild(mkMarker("arr-green", "var(--green)"));
-  defs.appendChild(mkMarker("arr-dim",   "var(--text-ghost)"));
-  svg.appendChild(defs);
 
-  var color = isCopy ? "var(--green)" : "var(--blue)";
-  var markerId = isCopy ? "arr-green" : "arr-blue";
+  function drawArc(x1, y1, x2, y2, color, dashed) {
+    const dx = x2 - x1, dy = y2 - y1;
+    const mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
+    // control point: arc upward (negative y offset)
+    const curvature = -Math.min(60, Math.abs(dx) * 0.5 + 30);
+    const cx = mx, cy = my + curvature;
 
-  // Determine which random arrows to draw
-  // For original: always draw all
-  // For copy: only draw nodes where randomId is defined (wired)
-  var highlightedArrow = snap.highlightedArrow;
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    const d = `M ${x1} ${y1} Q ${cx} ${cy} ${x2} ${y2}`;
+    path.setAttribute('d', d);
+    path.setAttribute('fill', 'none');
+    path.setAttribute('stroke', color);
+    path.setAttribute('stroke-width', '1.5');
+    if (dashed) path.setAttribute('stroke-dasharray', '4 3');
+    path.setAttribute('opacity', '0.7');
 
-  nodes.forEach(function(node, i) {
-    var rndIdx = null;
-    if (!isCopy) {
-      rndIdx = node.randomId;
-    } else {
-      if (node.exists && node.randomId !== undefined && node.randomId !== null) {
-        rndIdx = node.randomId;
-      }
-    }
-    if (rndIdx === null || rndIdx === undefined) return;
+    // arrowhead
+    const arrow = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    // approximate direction at end of bezier
+    const t = 0.95;
+    const bx = (1-t)*(1-t)*x1 + 2*(1-t)*t*cx + t*t*x2;
+    const by = (1-t)*(1-t)*y1 + 2*(1-t)*t*cy + t*t*y2;
+    const angle = Math.atan2(y2 - by, x2 - bx);
+    const aw = 7;
+    const ax1 = x2 - aw * Math.cos(angle - 0.4);
+    const ay1 = y2 - aw * Math.sin(angle - 0.4);
+    const ax2 = x2 - aw * Math.cos(angle + 0.4);
+    const ay2 = y2 - aw * Math.sin(angle + 0.4);
+    arrow.setAttribute('d', `M ${x2} ${y2} L ${ax1} ${ay1} L ${ax2} ${ay2} Z`);
+    arrow.setAttribute('fill', color);
+    arrow.setAttribute('opacity', '0.8');
 
-    var fromC = centers[i];
-    var toC   = centers[rndIdx];
-    if (!fromC || !toC) return;
-
-    var isHighlighted = highlightedArrow &&
-      highlightedArrow.type === "random" &&
-      highlightedArrow.fromId === node.id &&
-      highlightedArrow.isCopy === isCopy;
-
-    var strokeColor = isHighlighted ? (isCopy ? "var(--green)" : "var(--accent)") : color;
-    var arrowMarker = isHighlighted ? (isCopy ? "arr-green" : "arr-blue") : markerId;
-    var strokeW = isHighlighted ? 2.2 : 1.5;
-    var opacity = isHighlighted ? 1 : 0.55;
-
-    var path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-    path.setAttribute("stroke", strokeColor);
-    path.setAttribute("stroke-width", strokeW);
-    path.setAttribute("fill", "none");
-    path.setAttribute("stroke-dasharray", "5 3");
-    path.setAttribute("opacity", opacity);
-    path.setAttribute("marker-end", "url(#" + arrowMarker + ")");
-
-    var x1 = fromC.x, y1 = fromC.y - fromC.h / 2;
-    var x2 = toC.x,   y2 = toC.y   - toC.h / 2;
-
-    if (i === rndIdx) {
-      // Self-loop: small circle above the node
-      var cx = fromC.x;
-      var cy = fromC.y - fromC.h / 2;
-      var r  = 16;
-      var d  = "M " + (cx - 4) + " " + cy +
-               " C " + (cx - 24) + " " + (cy - 38) +
-               ", " + (cx + 24) + " " + (cy - 38) +
-               ", " + (cx + 4)  + " " + cy;
-      path.setAttribute("d", d);
-    } else {
-      // Arc above the row (upward)
-      var midX = (x1 + x2) / 2;
-      var dx   = Math.abs(x2 - x1);
-      var arcH = Math.max(28, dx * 0.38);
-      // Stagger arcs by index to reduce overlap
-      arcH += (i % 3) * 10;
-      var controlY = Math.min(y1, y2) - arcH;
-      var d = "M " + x1 + " " + y1 +
-              " Q " + midX + " " + controlY +
-              ", " + (x2 + (i < rndIdx ? -4 : 4)) + " " + y2;
-      path.setAttribute("d", d);
-    }
-
-    svg.appendChild(path);
-  });
-
-  container.style.position = "relative";
-  container.appendChild(svg);
-}
-
-// ── Map panel render ──────────────────────────────────────────────────────
-function renderMap(mapEntries) {
-  mapPanel.innerHTML = "";
-  if (mapEntries.length === 0) {
-    var empty = document.createElement("div");
-    empty.style.cssText = "font-size:0.72rem;color:var(--text-ghost);padding:6px;";
-    empty.textContent = "(empty)";
-    mapPanel.appendChild(empty);
-    return;
+    overlay.appendChild(path);
+    overlay.appendChild(arrow);
   }
-  mapEntries.forEach(function(e, i) {
-    var row = document.createElement("div");
-    row.className = "map-row" + (e.highlighted ? " active-lookup" : "");
-    var origSpan = document.createElement("span");
-    origSpan.className = "map-orig";
-    origSpan.textContent = "orig[" + e.origId + "]";
-    var arrSpan = document.createElement("span");
-    arrSpan.className = "map-arr"; arrSpan.textContent = "→";
-    var copySpan = document.createElement("span");
-    copySpan.className = "map-copy";
-    copySpan.textContent = "copy[" + e.copyId + "]";
-    row.appendChild(origSpan); row.appendChild(arrSpan); row.appendChild(copySpan);
-    mapPanel.appendChild(row);
-  });
-}
 
-// ── Main render ───────────────────────────────────────────────────────────
-function render(snap, cursor, total) {
-  // Phase banner
-  phaseBanner.textContent = snap.phaseBanner;
-  phaseBanner.className = "phase-banner " + snap.phaseCls;
-
-  // Annotation
-  annotEl.textContent = snap.annotation;
-  counterEl.textContent = "Step " + (cursor + 1) + " / " + total;
-
-  // Render original list
-  renderNodeRow(origRow, snap.originalNodes, snap.activeOrigId, snap.activeCopyId, false, snap);
-  // Render copy list
-  renderNodeRow(copyRow, snap.copyNodes, snap.activeOrigId, snap.activeCopyId, true, snap);
-
-  // Draw random arrows (after DOM layout)
-  requestAnimationFrame(function() {
-    drawRandomArrows(origRow, snap.originalNodes, snap, false);
-    drawRandomArrows(copyRow, snap.copyNodes, snap, true);
+  // Draw original random pointers (always show when nodes exist)
+  nodes.forEach((node, i) => {
+    if (node.randIdx === null) return;
+    const fromEl = document.querySelector(`#orig-${i} .node-box`);
+    const toEl = document.querySelector(`#orig-${node.randIdx} .node-box`);
+    if (!fromEl || !toEl) return;
+    const from = getCenterOf(fromEl);
+    const to = getCenterOf(toEl);
+    if (!from || !to) return;
+    drawArc(from.x, from.y, to.x, to.y, '#a78bfa', true);
   });
 
-  // Code highlight
-  var CL_LINES = { 'init':[0,1], 'pass1':[0,1,2,3,4,5,6], 'pass2':[3,4,5,7,8], 'done':[9] };
-  for (var li = 0; li <= 9; li++) { var elc = document.getElementById('cl'+li); if(elc) elc.classList.remove('hl'); }
-  (CL_LINES[snap.phase] || []).forEach(function(li){ var e=document.getElementById('cl'+li); if(e) e.classList.add('hl'); });
-
-  // Map
-  renderMap(snap.mapEntries);
+  // Draw clone random pointers (only when wired)
+  if (phase === 'pass2' || phase === 'done') {
+    nodes.forEach((node, i) => {
+      if (!wired_indices.includes(i)) return;
+      if (node.randIdx === null) return;
+      const fromEl = document.querySelector(`#clone-${i} .node-box`);
+      const toEl = document.querySelector(`#clone-${node.randIdx} .node-box`);
+      if (!fromEl || !toEl) return;
+      const from = getCenterOf(fromEl);
+      const to = getCenterOf(toEl);
+      if (!from || !to) return;
+      drawArc(from.x, from.y, to.x, to.y, '#34d399', true);
+    });
+  }
 }
 
-// ── VizNav wiring ─────────────────────────────────────────────────────────
-var btnPrev  = document.getElementById("prevBtn");
-var btnStep  = document.getElementById("stepBtn");
-var btnPlay  = document.getElementById("playBtn");
-var btnReset = document.getElementById("resetBtn");
-var speedSel = document.getElementById("speedSel");
+// ─── Update sidebar ────────────────────────────────────────────────────────
+function updateSidebar(snap) {
+  const { nodes, cur_idx, cloned_indices, wired_indices, phase } = snap;
 
-var nav = VizNav({ btnPrev: btnPrev, btnNext: btnStep, btnPlay: btnPlay, speedSel: speedSel, render: render });
+  // ptr-table
+  const tbody = document.querySelector('#ptr-table tbody');
+  let rows = '';
+  const passLabel = phase === 'pass1' ? 'Pass 1' : phase === 'pass2' ? 'Pass 2' : 'Done';
+  rows += `<tr><td>pass</td><td>${passLabel}</td></tr>`;
+  if (cur_idx >= 0) {
+    rows += `<tr><td>cur</td><td>node${cur_idx} (val=${nodes[cur_idx].val})</td></tr>`;
+  } else {
+    rows += `<tr><td>cur</td><td><span style="color:var(--text-dim)">None</span></td></tr>`;
+  }
+  rows += `<tr><td>map size</td><td>${cloned_indices.length} / ${nodes.length}</td></tr>`;
+  if (phase === 'pass2' || phase === 'done') {
+    rows += `<tr><td>wired</td><td>${wired_indices.length} / ${nodes.length}</td></tr>`;
+  }
+  tbody.innerHTML = rows;
 
-// ── Input / presets ───────────────────────────────────────────────────────
-var PRESET_STRS = [
-  "[[7,0]]",
-  "[[1,1],[2,0]]",
-  "[[7,null],[13,0],[11,4],[10,2],[1,0]]",
-  "[[3,null],[3,null],[3,null]]",
-  "[[1,0],[2,0],[3,0],[4,0]]",
-  "[[1,1],[2,2],[3,3],[4,null]]",
-];
+  // map-table
+  const mapBody = document.getElementById('map-body');
+  let mapHtml = '';
+  nodes.forEach((node, i) => {
+    if (!cloned_indices.includes(i)) return;
+    const isActive = cur_idx === i;
+    mapHtml += `<tr class="${isActive ? 'active-map' : ''}">
+      <td>node${i}(${node.val})</td>
+      <td>clone${i}(${node.val})</td>
+    </tr>`;
+  });
+  if (!mapHtml) mapHtml = '<tr><td colspan="2" style="color:var(--text-dim);font-style:italic">empty</td></tr>';
+  mapBody.innerHTML = mapHtml;
+}
 
+// ─── Render code ───────────────────────────────────────────────────────────
+function renderCode(activeLine) {
+  const pre = document.getElementById('code-pre');
+  pre.innerHTML = CODE_LINES.map(l => {
+    const cls = l.n === activeLine ? 'code-line active' : 'code-line';
+    return `<span class="${cls}">${l.t || ' '}</span>`;
+  }).join('');
+  const active = pre.querySelector('.active');
+  if (active) active.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+}
+
+// ─── Phase label map ───────────────────────────────────────────────────────
+const PHASE_LABELS = {
+  pass1: 'Pass 1: Clone',
+  pass2: 'Pass 2: Wire',
+  done: 'Done',
+};
+
+// ─── applyStep ────────────────────────────────────────────────────────────
+function applyStep(snap, animated) {
+  document.getElementById('phase-badge').textContent = PHASE_LABELS[snap.phase] || snap.phase;
+  document.getElementById('desc').textContent = snap.description;
+
+  document.getElementById('orig-row').innerHTML = renderOrigRow(snap);
+  document.getElementById('clone-row').innerHTML = renderCloneRow(snap);
+
+  updateSidebar(snap);
+  renderCode(snap.active_line);
+
+  // Draw random pointer arcs after DOM update
+  requestAnimationFrame(() => drawRandomPointers(snap));
+
+  if (animated && snap.cloned_indices.length > 0) {
+    const lastIdx = snap.cloned_indices[snap.cloned_indices.length - 1];
+    const box = document.querySelector(`#clone-${lastIdx} .node-box`);
+    if (box) { box.classList.add('pulse'); setTimeout(() => box.classList.remove('pulse'), 600); }
+  }
+}
+
+function updateStatus(snap, cur, total) {
+  document.getElementById('step-counter').textContent = `Step ${cur} / ${total}`;
+}
+
+// ─── Code toggle ──────────────────────────────────────────────────────────
+let codeExpanded = true;
+document.getElementById('code-toggle').addEventListener('click', () => {
+  codeExpanded = !codeExpanded;
+  document.getElementById('code-body').style.display = codeExpanded ? 'block' : 'none';
+  document.getElementById('code-toggle').textContent = (codeExpanded ? '▼' : '▶') + ' Code (click to ' + (codeExpanded ? 'collapse' : 'expand') + ')';
+});
+
+document.getElementById('resetBtn').addEventListener('click', () => {
+  if (window.nav) window.nav.reset();
+});
+
+// ─── viz-inputs ───────────────────────────────────────────────────────────
 function loadPreset() {
-  var idx = parseInt(document.getElementById("presetSel").value);
-  document.getElementById("listInput").value = PRESET_STRS[idx];
-  buildAndRun();
+  const sel = document.getElementById('presetSel');
+  if (sel.value) {
+    document.getElementById('nodeInput').value = sel.value;
+    buildAndRun();
+  }
 }
 
 function buildAndRun() {
-  var raw = document.getElementById("listInput").value.trim();
-  var nodeList;
-  try { nodeList = JSON.parse(raw); } catch(e) { annotEl.textContent = "Invalid JSON input."; return; }
-  if (!Array.isArray(nodeList)) { annotEl.textContent = "Input must be a JSON array."; return; }
-  var n = nodeList.length;
-  for (var i = 0; i < n; i++) {
-    if (!Array.isArray(nodeList[i]) || nodeList[i].length !== 2) {
-      annotEl.textContent = "Each entry must be [val, randomIdx]."; return;
-    }
-    var rndIdx = nodeList[i][1];
-    if (rndIdx !== null && (typeof rndIdx !== "number" || rndIdx < 0 || rndIdx >= n)) {
-      annotEl.textContent = "randomIdx " + rndIdx + " is out of range (0–" + (n-1) + ") or not null."; return;
-    }
-  }
-  var steps = buildSteps(nodeList);
-  nav.load(steps);
+  const raw = document.getElementById('nodeInput').value;
+  const nodes = parseInput(raw);
+  if (!nodes.length) return;
+  const snaps = buildSnapshots(nodes);
+  if (window.nav) window.nav.load(snaps);
 }
 
 function randomExample() {
-  var n = Math.floor(Math.random() * 4) + 2;
-  var nodes = [];
-  for (var i = 0; i < n; i++) {
-    var val = Math.floor(Math.random() * 20) + 1;
-    var rndIdx = Math.random() < 0.25 ? null : Math.floor(Math.random() * n);
-    nodes.push([val, rndIdx]);
-  }
-  document.getElementById("listInput").value = JSON.stringify(nodes);
-  document.getElementById("presetSel").value = "";
+  const n = Math.floor(Math.random() * 4) + 2; // 2-5 nodes
+  const vals = Array.from({length: n}, () => Math.floor(Math.random() * 20) + 1);
+  const parts = vals.map((v, i) => {
+    const rand = Math.random() < 0.6 ? Math.floor(Math.random() * n) : null;
+    return `${v},${rand === null ? 'null' : rand}`;
+  });
+  document.getElementById('nodeInput').value = parts.join('|');
+  document.getElementById('presetSel').value = '';
   buildAndRun();
 }
 
-// ── Auto-load ─────────────────────────────────────────────────────────────
-window.addEventListener("DOMContentLoaded", function() {
-  loadPreset();
+// ─── Init ─────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  const initialNodes = parseInput('7,null|13,0|11,4|10,2|1,0');
+  const snaps = buildSnapshots(initialNodes);
+
+  window.nav = VizNav({
+    btnPrev: document.getElementById('prevBtn'),
+    btnNext: document.getElementById('stepBtn'),
+    btnPlay: document.getElementById('playBtn'),
+    speedSel: document.getElementById('speedSel'),
+    render: function(snap, cur, total) { applyStep(snap, cur > 0); updateStatus(snap, cur, total); }
+  });
+
+  window.nav.load(snaps);
 });
 </script>
 </body>

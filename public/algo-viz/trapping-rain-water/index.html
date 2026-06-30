@@ -1,825 +1,427 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Trapping Rain Water — Step Visualizer</title>
-  <link rel="stylesheet" href="../shared/style.css" />
-  <style>
-    :root {
-      --bg: #0f1117; --surface: #1a1d27; --border: #2a2d3a;
-      --text: #e2e8f0; --text-muted: #94a3b8; --text-dim: #64748b;
-      --accent: #6366f1; --accent-hover: #818cf8;
-      --green: #22c55e; --red: #ef4444; --orange: #f97316;
-      --purple: #a855f7; --blue: #3b82f6; --yellow: #eab308;
-      --radius-sm: 4px; --radius-lg: 12px;
-    }
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Trapping Rain Water</title>
+<link rel="stylesheet" href="../shared/style.css" />
+<script src="../shared/gsap.min.js"></script>
+<script src="../shared/viz.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Fira Code', 'Cascadia Code', monospace; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
 
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  /* Header */
+  #header { padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+  #phase-badge { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; padding: 3px 10px; border-radius: var(--radius-sm); background: #1e3a5f; color: var(--blue); border: 1px solid var(--blue); }
+  #step-counter { font-size: 12px; color: var(--text-muted); margin-left: auto; }
 
-    body {
-      background: var(--bg);
-      color: var(--text);
-      font-family: 'JetBrains Mono', 'Fira Code', monospace;
-      font-size: 13px;
-      height: 100vh;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-    }
+  /* Main layout */
+  #main { display: flex; flex: 1; overflow: hidden; }
 
-    header {
-      padding: 10px 16px;
-      background: var(--surface);
-      border-bottom: 1px solid var(--border);
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      flex-shrink: 0;
-    }
+  /* Viz area */
+  #viz-area { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; gap: 20px; overflow: hidden; }
 
-    header h1 {
-      font-size: 15px;
-      font-weight: 600;
-      color: var(--text);
-    }
+  /* Description */
+  #desc { font-size: 13px; color: var(--text-muted); text-align: center; max-width: 620px; min-height: 40px; line-height: 1.5; }
 
-    header .tag {
-      font-size: 11px;
-      background: rgba(99,102,241,0.2);
-      color: var(--accent-hover);
-      border: 1px solid rgba(99,102,241,0.3);
-      border-radius: var(--radius-sm);
-      padding: 2px 8px;
-    }
+  /* Bar chart wrapper */
+  #bar-chart-wrap { width: 100%; max-width: 740px; overflow-x: auto; display: flex; justify-content: center; }
+  #bar-chart { display: flex; align-items: flex-end; gap: 5px; padding: 4px 4px 0; flex-shrink: 0; }
 
-    .viz-inputs {
-      display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end;
-      padding: 10px 16px; width: 100%; max-width: 90%;
-    }
-    .viz-inputs .field {
-      display: flex; flex-direction: column; gap: 4px;
-    }
-    .viz-inputs label {
-      font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
-      letter-spacing: 0.08em; color: var(--text-dim);
-    }
-    .viz-inputs input[type="text"] {
-      background: var(--surface); border: 1px solid var(--border);
-      color: var(--text); border-radius: var(--radius-sm);
-      padding: 6px 10px; font-size: 0.85rem; width: 180px;
-    }
-    .viz-inputs input[type="number"] {
-      background: var(--surface); border: 1px solid var(--border);
-      color: var(--text); border-radius: var(--radius-sm);
-      padding: 6px 10px; font-size: 0.85rem; width: 80px;
-    }
-    .viz-inputs select {
-      background: var(--surface); border: 1px solid var(--border);
-      color: var(--text); border-radius: var(--radius-sm);
-      padding: 6px 10px; font-size: 0.85rem; cursor: pointer;
-    }
-    .viz-inputs button {
-      padding: 7px 18px; border-radius: var(--radius-sm); cursor: pointer;
-      border: none; font-weight: 600; font-family: inherit;
-    }
-    .viz-inputs .btn-run {
-      background: var(--accent); color: #fff;
-    }
-    .viz-inputs .btn-run:hover { background: var(--accent-hover); }
-    .viz-inputs .btn-random {
-      background: var(--surface); color: var(--text);
-      border: 1px solid var(--border);
-    }
-    .viz-inputs .btn-random:hover { background: var(--border); }
+  .bar-col { display: flex; flex-direction: column; align-items: center; flex-shrink: 0; }
+  .bar-inner { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; width: 42px; }
+  .bar-water { width: 38px; background: #3b82f655; border: 1px solid #3b82f6; border-bottom: none; }
+  .bar-solid {
+    width: 38px; border-radius: 4px 4px 0 0;
+    background: #334155; border: 2px solid #475569;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700; color: #94a3b8;
+    transition: border-color .2s, box-shadow .2s, background .2s;
+    min-height: 4px;
+  }
+  .bar-solid.bs-left  { border-color: #3b82f6; box-shadow: 0 0 0 2px #3b82f630; color: #93c5fd; }
+  .bar-solid.bs-right { border-color: #f97316; box-shadow: 0 0 0 2px #f9731630; color: #fdba74; }
+  .bar-solid.bs-both  { border-color: #eab308; box-shadow: 0 0 0 2px #eab30830; color: #fef08a; }
+  .bar-solid.bs-done  { border-color: #22c55e; background: #14532d40; color: #4ade80; }
+  .bar-solid.bs-last  { border-color: #a855f7; box-shadow: 0 0 0 2px #a855f730; }
 
-    .input-row {
-      padding: 8px 16px;
-      background: var(--surface);
-      border-bottom: 1px solid var(--border);
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      flex-shrink: 0;
-    }
+  .bar-idx { font-size: 10px; color: var(--text-dim); margin-top: 4px; }
+  .badges { display: flex; flex-wrap: wrap; gap: 2px; justify-content: center; margin-top: 3px; min-height: 16px; }
+  .badge { font-size: 9px; font-weight: 700; padding: 1px 5px; border-radius: 4px; letter-spacing: .05em; }
+  .badge-l { background: #1e3a5f; color: #3b82f6; border: 1px solid #3b82f6; }
+  .badge-r { background: #431407; color: #f97316; border: 1px solid #f97316; }
 
-    .input-row label {
-      color: var(--text-muted);
-      font-size: 12px;
-      white-space: nowrap;
-    }
+  /* Right sidebar */
+  #sidebar { width: 240px; flex-shrink: 0; background: var(--surface); border-left: 1px solid var(--border); overflow-y: auto; padding: 14px 12px; display: flex; flex-direction: column; gap: 12px; }
+  .sidebar-section { font-size: 11px; }
+  .sidebar-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--text-dim); margin-bottom: 6px; }
+  .ptr-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+  .ptr-table td { padding: 3px 5px; border-bottom: 1px solid var(--border); }
+  .ptr-table td:first-child { color: var(--text-muted); width: 72px; }
+  .ptr-table td:last-child { color: var(--text); font-weight: 600; }
+  .water-big { font-size: 26px; font-weight: 800; color: #3b82f6; }
+  .water-lbl { font-size: 10px; color: var(--text-dim); }
+  .wmap-text { font-size: 11px; color: var(--text-muted); line-height: 1.7; word-break: break-all; }
 
-    .input-row input {
-      flex: 1;
-      background: var(--bg);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-sm);
-      color: var(--text);
-      padding: 4px 8px;
-      font-family: inherit;
-      font-size: 12px;
-    }
+  /* Code panel */
+  #code-wrap { flex-shrink: 0; background: #0d1117; border-top: 1px solid var(--border); }
+  #code-toggle { width: 100%; background: #161b22; color: var(--text-muted); border: none; border-bottom: 1px solid var(--border); padding: 5px 12px; font-size: 11px; text-align: left; cursor: pointer; font-family: inherit; }
+  #code-toggle:hover { color: var(--text); }
+  #code-body { overflow: auto; max-height: 160px; padding: 10px 14px; }
+  pre { font-size: 11px; line-height: 1.7; font-family: inherit; }
+  .code-line { padding: 0 4px; border-radius: 3px; display: block; transition: background .2s; white-space: pre; }
+  .code-line.active { background: #451a0350; color: #fbbf24; }
+  .kw { color: #c792ea; } .fn { color: #82aaff; } .cm { color: #546e7a; font-style: italic; }
+  .str { color: #c3e88d; } .num { color: #f78c6c; }
 
-    .input-row input:focus {
-      outline: none;
-      border-color: var(--accent);
-    }
-
-    .btn-set {
-      background: var(--accent);
-      color: #fff;
-      border: none;
-      border-radius: var(--radius-sm);
-      padding: 4px 12px;
-      cursor: pointer;
-      font-family: inherit;
-      font-size: 12px;
-    }
-
-    .btn-set:hover { background: var(--accent-hover); }
-
-    .main-area {
-      flex: 1;
-      display: flex;
-      overflow: hidden;
-    }
-
-    /* ── Left panel ── */
-    .left-panel {
-      flex: 0 0 60%;
-      display: flex;
-      flex-direction: column;
-      border-right: 1px solid var(--border);
-      overflow: hidden;
-    }
-
-    .chart-wrapper {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      justify-content: flex-end;
-      padding: 20px 16px 0;
-      overflow: hidden;
-    }
-
-    .chart-area {
-      display: flex;
-      align-items: flex-end;
-      gap: 3px;
-      height: 220px;
-      position: relative;
-    }
-
-    .bar-col {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: flex-end;
-      position: relative;
-      height: 100%;
-    }
-
-    .bar-stack {
-      width: 100%;
-      display: flex;
-      flex-direction: column;
-      justify-content: flex-end;
-      height: 100%;
-      position: relative;
-    }
-
-    .water-cell {
-      width: 100%;
-      background: rgba(59,130,246,0.35);
-      border-top: 1px solid rgba(59,130,246,0.6);
-      transition: height 0.15s;
-    }
-
-    .bar-fill {
-      width: 100%;
-      background: var(--text-muted);
-      border-radius: 2px 2px 0 0;
-      transition: background 0.2s, height 0.15s;
-      min-height: 2px;
-      position: relative;
-    }
-
-    .bar-fill.active-l { background: var(--green); }
-    .bar-fill.active-r { background: var(--red); }
-    .bar-fill.done     { background: rgba(59,130,246,0.7); }
-
-    .bar-label-top {
-      font-size: 10px;
-      color: var(--text-muted);
-      margin-bottom: 2px;
-      text-align: center;
-    }
-
-    .bar-index {
-      font-size: 10px;
-      color: var(--text-dim);
-      margin-top: 3px;
-      text-align: center;
-    }
-
-    .pointer-row {
-      display: flex;
-      gap: 3px;
-      padding: 2px 0 4px;
-    }
-
-    .ptr-cell {
-      flex: 1;
-      text-align: center;
-      font-size: 11px;
-      font-weight: 700;
-      height: 16px;
-      line-height: 16px;
-    }
-
-    .ptr-cell.L { color: var(--green); }
-    .ptr-cell.R { color: var(--red); }
-
-    /* status + code */
-    .status-bar {
-      padding: 6px 16px;
-      background: rgba(26,29,39,0.8);
-      border-top: 1px solid var(--border);
-      font-size: 12px;
-      color: var(--text-muted);
-      flex-shrink: 0;
-    }
-
-    .status-bar span { color: var(--accent-hover); font-weight: 600; }
-
-    .code-panel {
-      flex-shrink: 0;
-      background: #12141e;
-      border-top: 1px solid var(--border);
-      overflow-y: auto;
-      max-height: 200px;
-    }
-
-    .code-panel pre {
-      padding: 10px 16px;
-      font-size: 12px;
-      line-height: 1.7;
-      color: var(--text-muted);
-    }
-
-    .code-line { display: block; padding: 0 4px; border-radius: 2px; }
-    .code-line.hl { background: rgba(99,102,241,0.25); color: var(--text); }
-
-    .nav-row {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      padding: 8px 16px;
-      background: var(--surface);
-      border-top: 1px solid var(--border);
-      flex-shrink: 0;
-    }
-
-    .btn-step, .btn-play {
-      background: var(--surface);
-      color: var(--text);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-sm);
-      padding: 5px 12px;
-      cursor: pointer;
-      font-family: inherit;
-      font-size: 12px;
-      transition: background 0.15s, border-color 0.15s;
-    }
-
-    .btn-step:hover  { background: var(--border); }
-    .btn-play        { background: var(--accent); color: #fff; border-color: var(--accent); }
-    .btn-play:hover  { background: var(--accent-hover); }
-    .btn-play.active { background: var(--orange); border-color: var(--orange); }
-
-    select#speedSel {
-      background: var(--surface);
-      color: var(--text);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-sm);
-      padding: 5px 8px;
-      font-family: inherit;
-      font-size: 12px;
-      cursor: pointer;
-    }
-
-    /* ── Right panel ── */
-    .right-panel {
-      flex: 0 0 40%;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-    }
-
-    .right-panel h2 {
-      font-size: 12px;
-      color: var(--text-dim);
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      padding: 10px 16px 6px;
-      border-bottom: 1px solid var(--border);
-      flex-shrink: 0;
-    }
-
-    .vars-panel {
-      flex: 1;
-      padding: 14px 16px;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      overflow-y: auto;
-    }
-
-    .var-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 8px 12px;
-      background: var(--bg);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-sm);
-    }
-
-    .var-name  { color: var(--text-muted); font-size: 12px; }
-    .var-value { font-size: 15px; font-weight: 700; }
-
-    .var-value.green  { color: var(--green); }
-    .var-value.red    { color: var(--red); }
-    .var-value.orange { color: var(--orange); }
-    .var-value.blue   { color: var(--blue); }
-    .var-value.purple { color: var(--purple); }
-    .var-value.yellow { color: var(--yellow); }
-
-    .water-total-box {
-      margin-top: 6px;
-      padding: 14px 12px;
-      background: rgba(59,130,246,0.1);
-      border: 1px solid rgba(59,130,246,0.4);
-      border-radius: var(--radius-sm);
-      text-align: center;
-    }
-
-    .water-total-box .wt-label { color: var(--text-muted); font-size: 11px; margin-bottom: 4px; }
-    .water-total-box .wt-value { font-size: 28px; font-weight: 800; color: var(--blue); }
-
-    .legend {
-      padding: 10px 16px;
-      border-top: 1px solid var(--border);
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-      flex-shrink: 0;
-    }
-
-    .legend-title { font-size: 11px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 2px; }
-
-    .legend-item {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 11px;
-      color: var(--text-muted);
-    }
-
-    .legend-swatch {
-      width: 14px; height: 14px;
-      border-radius: 2px;
-      flex-shrink: 0;
-    }
-  </style>
+  /* Nav */
+  #nav-row { flex-shrink: 0; display: flex; align-items: center; gap: 8px; padding: 10px 16px; background: var(--surface); border-top: 1px solid var(--border); }
+  .btn-step, .btn-play { padding: 6px 14px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--surface); color: var(--text); font-family: inherit; font-size: 12px; cursor: pointer; transition: background .15s; }
+  .btn-step:hover { background: #334155; }
+  .btn-play { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn-play:hover { background: var(--accent-hover); }
+  select { padding: 5px 8px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: #1e293b; color: var(--text); font-size: 12px; font-family: inherit; cursor: pointer; }
+</style>
 </head>
 <body>
 
-<header>
-  <h1>Trapping Rain Water</h1>
-  <span class="tag">Two Pointer</span>
-  <span class="tag">O(n) time · O(1) space</span>
-</header>
-
-<div class="viz-inputs">
-  <div class="field">
-    <label>Preset</label>
-    <select id="presetSel" onchange="loadPreset()">
-      <option value="">— pick a preset —</option>
-      <option value='{"heights":"0,1,0,2,1,0,1,3,2,1,2,1"}'>Classic Example</option>
-      <option value='{"heights":"4,2,0,3,2,5"}'>Tall Boundaries</option>
-      <option value='{"heights":"0,1,0,2,1,0,1,3,2,1,2,1"}'>Multi-Peak</option>
-      <option value='{"heights":"5,4,3,2,1"}'>Descending</option>
-      <option value='{"heights":"1,2,3,4,5"}'>Ascending</option>
-      <option value='{"heights":"3,0,2,0,4"}'>Deep Valleys</option>
+<div class="viz-inputs" style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;padding:10px 14px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;">
+  <div style="display:flex;flex-direction:column;gap:4px;">
+    <label style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-dim);">Preset</label>
+    <select id="presetSel" onchange="loadPreset()" style="background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-size:0.85rem;">
+      <option value="">-- pick a preset --</option>
+      <option value="0,1,0,2,1,0,1,3,2,1,2,1">Classic [0,1,0,2,1,0,1,3,2,1,2,1] = 6</option>
+      <option value="4,2,0,3,2,5">[4,2,0,3,2,5] = 9</option>
+      <option value="3,0,2,0,4">[3,0,2,0,4] = 7</option>
+      <option value="1,0,1">[1,0,1] = 1</option>
+      <option value="0,0,0">[0,0,0] = 0</option>
     </select>
   </div>
-  <div class="field">
-    <label>Heights:</label>
-    <input id="heightInput" type="text" value="0,1,0,2,1,0,1,3,2,1,2,1" />
+  <div style="display:flex;flex-direction:column;gap:4px;">
+    <label style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-dim);">Heights (comma-separated)</label>
+    <input type="text" id="heightInput" value="0,1,0,2,1,0,1,3,2,1,2,1" style="background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-size:0.85rem;width:260px;" />
   </div>
-  <button class="btn-run" onclick="buildAndRun()">Run</button>
-  <button class="btn-random" onclick="randomExample()">🎲 Random</button>
+  <button onclick="buildAndRun()" style="padding:7px 18px;background:var(--accent);color:#fff;border:none;border-radius:6px;font-weight:600;cursor:pointer;">Run</button>
+  <button onclick="randomExample()" style="padding:7px 14px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:6px;cursor:pointer;">&#127922; Random</button>
 </div>
 
-<div class="main-area">
-
-  <!-- ── Left ── -->
-  <div class="left-panel">
-    <div class="chart-wrapper">
-      <div class="chart-area" id="chartArea"></div>
-      <div class="pointer-row" id="pointerRow"></div>
-    </div>
-
-    <div class="status-bar" id="statusBar">Ready</div>
-
-    <div class="code-panel">
-      <pre id="codePre"></pre>
-    </div>
-
-    <div class="nav-row">
-      <button id="prevBtn"  class="btn-step">← Prev</button>
-      <button id="stepBtn"  class="btn-step">Step →</button>
-      <button id="playBtn"  class="btn-play">Play</button>
-      <button id="resetBtn" class="btn-step">↺ Reset</button>
-      <select id="speedSel">
-        <option value="800">0.5×</option>
-        <option value="400" selected>1×</option>
-        <option value="200">2×</option>
-        <option value="100">4×</option>
-      </select>
-    </div>
-  </div>
-
-  <!-- ── Right ── -->
-  <div class="right-panel">
-    <h2>Variables</h2>
-
-    <div class="vars-panel">
-      <div class="var-row">
-        <span class="var-name">l (left pointer)</span>
-        <span class="var-value green" id="vL">0</span>
-      </div>
-      <div class="var-row">
-        <span class="var-name">r (right pointer)</span>
-        <span class="var-value red" id="vR">—</span>
-      </div>
-      <div class="var-row">
-        <span class="var-name">leftMax</span>
-        <span class="var-value orange" id="vLeftMax">0</span>
-      </div>
-      <div class="var-row">
-        <span class="var-name">rightMax</span>
-        <span class="var-value purple" id="vRightMax">0</span>
-      </div>
-      <div class="var-row">
-        <span class="var-name">Δ water this step</span>
-        <span class="var-value yellow" id="vDelta">—</span>
-      </div>
-      <div class="water-total-box">
-        <div class="wt-label">Total Water Trapped</div>
-        <div class="wt-value" id="vWater">0</div>
-      </div>
-    </div>
-
-    <div class="legend">
-      <div class="legend-title">Legend</div>
-      <div class="legend-item"><div class="legend-swatch" style="background:var(--green)"></div>Left pointer (L)</div>
-      <div class="legend-item"><div class="legend-swatch" style="background:var(--red)"></div>Right pointer (R)</div>
-      <div class="legend-item"><div class="legend-swatch" style="background:rgba(59,130,246,0.45)"></div>Trapped water</div>
-      <div class="legend-item"><div class="legend-swatch" style="background:var(--text-muted)"></div>Bar height</div>
-    </div>
-  </div>
-
+<div id="header">
+  <span id="phase-badge">Init</span>
+  <span style="font-size:13px;font-weight:700;">Trapping Rain Water</span>
+  <span id="step-counter">Step 0 / 0</span>
 </div>
 
-<script src="../shared/gsap.min.js"></script>
-<script src="../shared/viz.js"></script>
+<div id="main">
+  <div id="viz-area">
+    <div id="desc">Initializing...</div>
+    <div id="bar-chart-wrap">
+      <div id="bar-chart"></div>
+    </div>
+  </div>
+
+  <div id="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-title">Pointers</div>
+      <table class="ptr-table" id="ptr-table"><tbody></tbody></table>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-title">Total Water</div>
+      <div class="water-big" id="water-total">0</div>
+      <div class="water-lbl">units trapped</div>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-title">Water per Index</div>
+      <div class="wmap-text" id="wmap-display">No water yet</div>
+    </div>
+  </div>
+</div>
+
+<div id="code-wrap">
+  <button id="code-toggle">&#9660; Code (click to collapse)</button>
+  <div id="code-body">
+    <pre id="code-pre"></pre>
+  </div>
+</div>
+
+<div class="nav-row" id="nav-row">
+  <button id="prevBtn" class="btn-step">&#8592; Prev</button>
+  <button id="stepBtn" class="btn-step">Step &#8594;</button>
+  <button id="playBtn" class="btn-play">Play</button>
+  <button id="resetBtn" class="btn-step">&#8634; Reset</button>
+  <select id="speedSel">
+    <option value="800">0.5x</option>
+    <option value="400" selected>1x</option>
+    <option value="200">2x</option>
+    <option value="100">4x</option>
+  </select>
+</div>
+
 <script>
-(function () {
-  'use strict';
+// ─── Code lines ────────────────────────────────────────────────────────────
+const CODE_LINES = [
+  { n:  1, t: '<span class="kw">def</span> <span class="fn">trap</span>(height: list[int]) -> int:' },
+  { n:  2, t: '    left, right = <span class="num">0</span>, len(height) - <span class="num">1</span>' },
+  { n:  3, t: '    leftMax, rightMax = height[<span class="num">0</span>], height[-<span class="num">1</span>]' },
+  { n:  4, t: '    water = <span class="num">0</span>' },
+  { n:  5, t: '    <span class="kw">while</span> left &lt; right:' },
+  { n:  6, t: '        <span class="kw">if</span> leftMax &lt; rightMax:' },
+  { n:  7, t: '            left += <span class="num">1</span>' },
+  { n:  8, t: '            leftMax = max(leftMax, height[left])' },
+  { n:  9, t: '            water += leftMax - height[left]' },
+  { n: 10, t: '        <span class="kw">else</span>:  <span class="cm"># leftMax >= rightMax</span>' },
+  { n: 11, t: '            right -= <span class="num">1</span>' },
+  { n: 12, t: '            rightMax = max(rightMax, height[right])' },
+  { n: 13, t: '            water += rightMax - height[right]' },
+  { n: 14, t: '    <span class="kw">return</span> water' },
+];
 
-  /* ── Code lines ── */
-  const CODE_LINES = [
-    'def trap(height):',
-    '    l, r = 0, len(height) - 1',
-    '    leftMax, rightMax = 0, 0',
-    '    water = 0',
-    '    ',
-    '    while l < r:',
-    '        if height[l] <= height[r]:',
-    '            leftMax = max(leftMax, height[l])',
-    '            water += leftMax - height[l]',
-    '            l += 1',
-    '        else:',
-    '            rightMax = max(rightMax, height[r])',
-    '            water += rightMax - height[r]',
-    '            r -= 1',
-    '    ',
-    '    return water',
-  ];
+// ─── Build snapshots ────────────────────────────────────────────────────────
+function buildSnapshots(heights) {
+  var n = heights.length;
+  var snaps = [];
 
-  /* ── Snapshot generation ── */
-  function buildSnapshots(heights) {
-    const n = heights.length;
-    const snaps = [];
-
-    function snap(l, r, leftMax, rightMax, water, codeLine, desc, delta, phase) {
-      snaps.push({ l, r, leftMax, rightMax, water, codeLine, desc, delta: delta || 0, phase: phase || 'loop', heights: heights.slice() });
-    }
-
-    // Initial snapshot
-    snap(0, n - 1, 0, 0, 0, 1, 'Initialize pointers and maxima', 0, 'init');
-
-    let l = 0, r = n - 1, leftMax = 0, rightMax = 0, water = 0;
-
-    snap(l, r, leftMax, rightMax, water, 5, 'Enter while loop: l < r', 0, 'check');
-
-    while (l < r) {
-      if (heights[l] <= heights[r]) {
-        // highlight the condition
-        snap(l, r, leftMax, rightMax, water, 6, `height[${l}]=${heights[l]} ≤ height[${r}]=${heights[r]}: process left`, 0, 'cond');
-        leftMax = Math.max(leftMax, heights[l]);
-        snap(l, r, leftMax, rightMax, water, 7, `leftMax = max(leftMax, height[${l}]) = ${leftMax}`, 0, 'update');
-        const added = leftMax - heights[l];
-        water += added;
-        snap(l, r, leftMax, rightMax, water, 8, `water += ${leftMax} - ${heights[l]} = +${added} (total ${water})`, added, 'water');
-        l += 1;
-        snap(l, r, leftMax, rightMax, water, 9, `l advances to ${l}`, 0, 'advance');
-      } else {
-        snap(l, r, leftMax, rightMax, water, 6, `height[${l}]=${heights[l]} > height[${r}]=${heights[r]}: process right`, 0, 'cond');
-        rightMax = Math.max(rightMax, heights[r]);
-        snap(l, r, leftMax, rightMax, water, 11, `rightMax = max(rightMax, height[${r}]) = ${rightMax}`, 0, 'update');
-        const added = rightMax - heights[r];
-        water += added;
-        snap(l, r, leftMax, rightMax, water, 12, `water += ${rightMax} - ${heights[r]} = +${added} (total ${water})`, added, 'water');
-        r -= 1;
-        snap(l, r, leftMax, rightMax, water, 13, `r retreats to ${r}`, 0, 'advance');
-      }
-      if (l < r) snap(l, r, leftMax, rightMax, water, 5, 'Check while condition: l < r', 0, 'check');
-    }
-
-    snap(l, r, leftMax, rightMax, water, 15, `Done! Total water trapped = ${water}`, 0, 'done');
+  if (n < 2) {
+    snaps.push({
+      phase: 'done',
+      description: 'Array needs at least 2 elements to trap water. Total: 0.',
+      heights: heights.slice(),
+      left: 0, right: 0,
+      leftMax: heights[0] || 0, rightMax: heights[0] || 0,
+      waterMap: {}, totalWater: 0, lastProcessed: -1, active_line: 0
+    });
     return snaps;
   }
 
-  /* ── Water level per index at a snapshot ── */
-  function computeWaterLevels(heights, snap) {
-    const n = heights.length;
-    const leftMax = new Array(n).fill(0);
-    const rightMax = new Array(n).fill(0);
-    // Use the cumulative maxes up to the current snap state
-    // For a clean visual, pre-compute full prefix/suffix maxes from heights
-    // but only "reveal" water on indices already processed by the algorithm.
-    // processed left: 0..snap.l-1  processed right: snap.r+1..n-1
-    // Everything between l and r is not yet processed — show bar only.
-    leftMax[0] = heights[0];
-    for (let i = 1; i < n; i++) leftMax[i] = Math.max(leftMax[i - 1], heights[i]);
-    rightMax[n - 1] = heights[n - 1];
-    for (let i = n - 2; i >= 0; i--) rightMax[i] = Math.max(rightMax[i + 1], heights[i]);
+  var waterMap = {};
+  for (var i = 0; i < n; i++) waterMap[i] = 0;
 
-    const water = new Array(n).fill(0);
-    for (let i = 0; i < n; i++) {
-      const isProcessed = i < snap.l || i > snap.r;
-      if (isProcessed) {
-        water[i] = Math.max(0, Math.min(leftMax[i], rightMax[i]) - heights[i]);
-      }
-    }
-    return water;
+  function total() {
+    return Object.values(waterMap).reduce(function(a, b) { return a + b; }, 0);
   }
 
-  /* ── DOM helpers ── */
-  let nav;
-  let currentHeights = [0,1,0,2,1,0,1,3,2,1,2,1];
-  let snapshots = [];
-
-  const chartArea   = document.getElementById('chartArea');
-  const pointerRow  = document.getElementById('pointerRow');
-  const statusBar   = document.getElementById('statusBar');
-  const codePre     = document.getElementById('codePre');
-  const vL          = document.getElementById('vL');
-  const vR          = document.getElementById('vR');
-  const vLeftMax    = document.getElementById('vLeftMax');
-  const vRightMax   = document.getElementById('vRightMax');
-  const vDelta      = document.getElementById('vDelta');
-  const vWater      = document.getElementById('vWater');
-
-  /* ── Build code panel ── */
-  function renderCode() {
-    codePre.innerHTML = CODE_LINES
-      .map((line, i) => `<span class="code-line" id="cl${i}">${escHtml(line)}</span>`)
-      .join('\n');
+  function snap(phase, desc, left, right, lM, rM, lp, al) {
+    return {
+      phase: phase, description: desc,
+      heights: heights.slice(),
+      left: left, right: right,
+      leftMax: lM, rightMax: rM,
+      waterMap: Object.assign({}, waterMap),
+      totalWater: total(),
+      lastProcessed: lp,
+      active_line: al
+    };
   }
 
-  function escHtml(s) {
-    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  }
+  var left = 0, right = n - 1;
+  var leftMax = heights[0], rightMax = heights[n - 1];
 
-  function highlightLine(idx) {
-    document.querySelectorAll('.code-line').forEach(el => el.classList.remove('hl'));
-    const el = document.getElementById('cl' + idx);
-    if (el) {
-      el.classList.add('hl');
-      el.scrollIntoView({ block: 'nearest' });
-    }
-  }
+  snaps.push(snap('init',
+    'Initialize: left=0, right=' + (n - 1) + '. leftMax=h[0]=' + leftMax +
+    ', rightMax=h[' + (n - 1) + ']=' + rightMax +
+    '. We process from both ends — always advance the pointer with the smaller running max.',
+    left, right, leftMax, rightMax, -1, 2
+  ));
 
-  /* ── Build chart DOM ── */
-  function buildChart(heights) {
-    const n = heights.length;
-    const maxH = Math.max(...heights, 1);
-    const chartH = 210; // px
-
-    chartArea.innerHTML = '';
-    pointerRow.innerHTML = '';
-
-    for (let i = 0; i < n; i++) {
-      const col = document.createElement('div');
-      col.className = 'bar-col';
-      col.id = 'col' + i;
-
-      const stack = document.createElement('div');
-      stack.className = 'bar-stack';
-
-      // water cell (above bar)
-      const waterEl = document.createElement('div');
-      waterEl.className = 'water-cell';
-      waterEl.id = 'water' + i;
-      waterEl.style.height = '0px';
-      waterEl.style.flexShrink = '0';
-
-      // bar fill
-      const barH = Math.round((heights[i] / maxH) * chartH);
-      const barEl = document.createElement('div');
-      barEl.className = 'bar-fill';
-      barEl.id = 'bar' + i;
-      barEl.style.height = barH + 'px';
-      barEl.style.flexShrink = '0';
-
-      // height label on top of bar
-      const labelEl = document.createElement('div');
-      labelEl.className = 'bar-label-top';
-      labelEl.id = 'lbl' + i;
-      labelEl.textContent = heights[i];
-
-      stack.appendChild(waterEl);
-      stack.appendChild(barEl);
-
-      col.appendChild(labelEl);
-      col.appendChild(stack);
-
-      // index label
-      const idxEl = document.createElement('div');
-      idxEl.className = 'bar-index';
-      idxEl.textContent = i;
-      col.appendChild(idxEl);
-
-      chartArea.appendChild(col);
-
-      // pointer cell
-      const ptr = document.createElement('div');
-      ptr.className = 'ptr-cell';
-      ptr.id = 'ptr' + i;
-      pointerRow.appendChild(ptr);
-    }
-  }
-
-  /* ── Apply a snapshot ── */
-  function applyStep(snap, _animated) {
-    const heights = snap.heights;
-    const n = heights.length;
-    const maxH = Math.max(...heights, 1);
-    const chartH = 210;
-
-    const waterLevels = computeWaterLevels(heights, snap);
-
-    for (let i = 0; i < n; i++) {
-      const barEl   = document.getElementById('bar' + i);
-      const waterEl = document.getElementById('water' + i);
-      const ptrEl   = document.getElementById('ptr' + i);
-
-      if (!barEl) continue;
-
-      // bar height
-      const barPx   = Math.max(2, Math.round((heights[i] / maxH) * chartH));
-      const waterPx = waterLevels[i] > 0 ? Math.round((waterLevels[i] / maxH) * chartH) : 0;
-
-      barEl.style.height   = barPx + 'px';
-      waterEl.style.height = waterPx + 'px';
-
-      // bar color
-      barEl.classList.remove('active-l', 'active-r', 'done');
-      if (snap.phase === 'done') {
-        barEl.classList.add('done');
-      } else if (i === snap.l) {
-        barEl.classList.add('active-l');
-      } else if (i === snap.r) {
-        barEl.classList.add('active-r');
-      }
-
-      // pointer labels
-      ptrEl.textContent = '';
-      ptrEl.className = 'ptr-cell';
-      if (i === snap.l && i === snap.r) {
-        ptrEl.textContent = 'L=R';
-        ptrEl.classList.add('L');
-      } else if (i === snap.l) {
-        ptrEl.textContent = 'L';
-        ptrEl.classList.add('L');
-      } else if (i === snap.r) {
-        ptrEl.textContent = 'R';
-        ptrEl.classList.add('R');
-      }
-    }
-
-    // vars panel
-    vL.textContent       = snap.l;
-    vR.textContent       = snap.r;
-    vLeftMax.textContent = snap.leftMax;
-    vRightMax.textContent = snap.rightMax;
-    vWater.textContent   = snap.water;
-    vDelta.textContent   = snap.delta > 0 ? '+' + snap.delta : (snap.phase === 'init' ? '—' : snap.delta);
-
-    highlightLine(snap.codeLine);
-  }
-
-  function updateStatus(snap, cur, total) {
-    statusBar.innerHTML = `Step <span>${cur + 1} / ${total}</span> — ${snap.desc}`;
-  }
-
-  /* ── Init ── */
-  function init(heights) {
-    currentHeights = heights;
-    snapshots = buildSnapshots(heights);
-
-    buildChart(heights);
-    renderCode();
-
-    if (nav) {
-      nav.load(snapshots);
+  while (left < right) {
+    if (leftMax < rightMax) {
+      left++;
+      var oldLM = leftMax;
+      leftMax = Math.max(leftMax, heights[left]);
+      var wL = leftMax - heights[left];
+      waterMap[left] = wL;
+      snaps.push(snap('trap',
+        'leftMax(' + oldLM + ') < rightMax(' + rightMax + '): rightMax is larger so the water level at left is bounded by leftMax. ' +
+        'Advance left to [' + left + '] (h=' + heights[left] + '). ' +
+        'leftMax=max(' + oldLM + ',' + heights[left] + ')=' + leftMax + '. water[' + left + ']=' + leftMax + '-' + heights[left] + '=' + wL + '.',
+        left, right, leftMax, rightMax, left, 7
+      ));
     } else {
-      nav = VizNav({
-        btnPrev:  document.getElementById('prevBtn'),
-        btnNext:  document.getElementById('stepBtn'),
-        btnPlay:  document.getElementById('playBtn'),
-        speedSel: document.getElementById('speedSel'),
-        render: function(snap, cur, total) {
-          applyStep(snap, cur > 0);
-          updateStatus(snap, cur, total);
-        }
-      });
-      nav.load(snapshots);
+      right--;
+      var oldRM = rightMax;
+      rightMax = Math.max(rightMax, heights[right]);
+      var wR = rightMax - heights[right];
+      waterMap[right] = wR;
+      snaps.push(snap('trap',
+        'leftMax(' + leftMax + ') ≥ rightMax(' + oldRM + '): leftMax is larger so the water level at right is bounded by rightMax. ' +
+        'Advance right to [' + right + '] (h=' + heights[right] + '). ' +
+        'rightMax=max(' + oldRM + ',' + heights[right] + ')=' + rightMax + '. water[' + right + ']=' + rightMax + '-' + heights[right] + '=' + wR + '.',
+        left, right, leftMax, rightMax, right, 11
+      ));
+    }
+  }
 
-      document.getElementById('resetBtn').addEventListener('click', function () {
-        nav.reset();
-      });
+  snaps.push(snap('done',
+    'Complete! left=right=' + left + ', loop exits. Total water trapped: ' + total() + ' units.',
+    left, right, leftMax, rightMax, -1, 14
+  ));
+
+  return snaps;
+}
+
+// ─── Render bar chart ───────────────────────────────────────────────────────
+function renderChart(snap) {
+  var heights = snap.heights;
+  var n = heights.length;
+  if (n === 0) return '<div style="color:var(--text-dim);padding:20px">Empty array</div>';
+
+  var maxH = Math.max.apply(null, heights.concat([1]));
+  var scale = Math.min(150 / maxH, 44);
+  var chartH = (maxH + 1) * scale;
+
+  var html = '';
+  for (var i = 0; i < n; i++) {
+    var h = heights[i];
+    var w = snap.waterMap[i] || 0;
+    var barPx = Math.max(h * scale, 4);
+    var waterPx = w * scale;
+
+    var barCls = 'bar-solid';
+    if (snap.phase === 'done') {
+      barCls += ' bs-done';
+    } else if (i === snap.left && i === snap.right) {
+      barCls += ' bs-both';
+    } else if (i === snap.left) {
+      barCls += ' bs-left';
+    } else if (i === snap.right) {
+      barCls += ' bs-right';
+    } else if (i === snap.lastProcessed) {
+      barCls += ' bs-last';
     }
 
-    // Show first frame
-    applyStep(snapshots[0], false);
-    updateStatus(snapshots[0], 0, snapshots.length);
-  }
-
-  /* ── User input functions ── */
-  function buildAndRun() {
-    const raw = document.getElementById('heightInput').value;
-    const parsed = raw.split(',').map(s => parseInt(s.trim(), 10)).filter(n => !isNaN(n) && n >= 0);
-    if (parsed.length < 2) { alert('Enter at least 2 non-negative integers.'); return; }
-    init(parsed);
-  }
-
-  function loadPreset() {
-    var sel = document.getElementById('presetSel');
-    if (!sel.value) return;
-    var d = JSON.parse(sel.value);
-    document.getElementById('heightInput').value = d.heights;
-    buildAndRun();
-  }
-
-  function randomExample() {
-    const len = Math.floor(Math.random() * 8) + 6; // 6-13 elements
-    const heights = [];
-    for (let i = 0; i < len; i++) {
-      heights.push(Math.floor(Math.random() * 10));
+    var badges = [];
+    if (snap.phase !== 'done') {
+      if (i === snap.left) badges.push('<span class="badge badge-l">L</span>');
+      if (i === snap.right) badges.push('<span class="badge badge-r">R</span>');
     }
-    document.getElementById('heightInput').value = heights.join(',');
-    document.getElementById('presetSel').value = '';
+
+    var valLabel = barPx >= 20 ? h : '';
+    var waterBlock = waterPx > 0
+      ? '<div class="bar-water" style="width:38px;height:' + waterPx + 'px"></div>'
+      : '';
+
+    html += '<div class="bar-col">';
+    html += '<div class="bar-inner" style="width:42px;height:' + chartH + 'px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;">';
+    html += waterBlock;
+    html += '<div class="' + barCls + '" style="height:' + barPx + 'px">' + valLabel + '</div>';
+    html += '</div>';
+    html += '<div class="bar-idx">' + i + '</div>';
+    html += '<div class="badges">' + badges.join('') + '</div>';
+    html += '</div>';
+  }
+  return html;
+}
+
+// ─── Update sidebar ─────────────────────────────────────────────────────────
+function updateSidebar(snap) {
+  var tbody = document.querySelector('#ptr-table tbody');
+  var h = snap.heights;
+  var lp = snap.lastProcessed;
+
+  var rows = '';
+  rows += '<tr><td>left</td><td>' + snap.left + ' <span style="color:var(--text-dim)">(h=' + h[snap.left] + ')</span></td></tr>';
+  rows += '<tr><td>right</td><td>' + snap.right + ' <span style="color:var(--text-dim)">(h=' + h[snap.right] + ')</span></td></tr>';
+  rows += '<tr><td>leftMax</td><td><span style="color:#3b82f6">' + snap.leftMax + '</span></td></tr>';
+  rows += '<tr><td>rightMax</td><td><span style="color:#f97316">' + snap.rightMax + '</span></td></tr>';
+  if (lp >= 0) {
+    rows += '<tr><td>water[' + lp + ']</td><td><span style="color:#60a5fa">+' + (snap.waterMap[lp] || 0) + '</span></td></tr>';
+  }
+  tbody.innerHTML = rows;
+
+  document.getElementById('water-total').textContent = snap.totalWater;
+
+  var entries = Object.entries(snap.waterMap).filter(function(e) { return e[1] > 0; });
+  var wmEl = document.getElementById('wmap-display');
+  if (entries.length === 0) {
+    wmEl.innerHTML = '<span style="color:var(--text-dim)">No water yet</span>';
+  } else {
+    wmEl.innerHTML = entries.map(function(e) {
+      return '<span style="color:#60a5fa">[' + e[0] + ']:' + e[1] + '</span>';
+    }).join(' ');
+  }
+}
+
+// ─── Render code ────────────────────────────────────────────────────────────
+function renderCode(activeLine) {
+  var pre = document.getElementById('code-pre');
+  pre.innerHTML = CODE_LINES.map(function(l) {
+    var cls = l.n === activeLine ? 'code-line active' : 'code-line';
+    return '<span class="' + cls + '">' + l.t + '</span>';
+  }).join('');
+  var active = pre.querySelector('.active');
+  if (active) active.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+}
+
+// ─── Phase labels ────────────────────────────────────────────────────────────
+var PHASE_LABELS = { init: 'Init', trap: 'Trapping', done: 'Done' };
+
+// ─── Apply step ─────────────────────────────────────────────────────────────
+function applyStep(snap, animated) {
+  document.getElementById('phase-badge').textContent = PHASE_LABELS[snap.phase] || snap.phase;
+  document.getElementById('desc').textContent = snap.description;
+  document.getElementById('bar-chart').innerHTML = renderChart(snap);
+  updateSidebar(snap);
+  renderCode(snap.active_line);
+}
+
+function updateStatus(snap, cur, total) {
+  document.getElementById('step-counter').textContent = 'Step ' + cur + ' / ' + total;
+}
+
+// ─── viz-inputs ──────────────────────────────────────────────────────────────
+function loadPreset() {
+  var sel = document.getElementById('presetSel');
+  if (sel.value) {
+    document.getElementById('heightInput').value = sel.value;
     buildAndRun();
   }
+}
 
-  document.addEventListener('DOMContentLoaded', function () {
-    init(currentHeights);
+function buildAndRun() {
+  var raw = document.getElementById('heightInput').value;
+  var heights = raw.split(',').map(function(s) { return parseInt(s.trim(), 10); }).filter(function(n) { return !isNaN(n) && n >= 0; });
+  if (heights.length < 1) return;
+  var snaps = buildSnapshots(heights);
+  if (window.nav) window.nav.load(snaps);
+}
+
+function randomExample() {
+  var len = 6 + Math.floor(Math.random() * 6);
+  var heights = [];
+  for (var i = 0; i < len; i++) heights.push(Math.floor(Math.random() * 6));
+  document.getElementById('heightInput').value = heights.join(',');
+  document.getElementById('presetSel').value = '';
+  buildAndRun();
+}
+
+// ─── Code toggle ─────────────────────────────────────────────────────────────
+var codeExpanded = true;
+document.getElementById('code-toggle').addEventListener('click', function() {
+  codeExpanded = !codeExpanded;
+  document.getElementById('code-body').style.display = codeExpanded ? 'block' : 'none';
+  document.getElementById('code-toggle').textContent = (codeExpanded ? '\u25bc' : '\u25ba') + ' Code (click to ' + (codeExpanded ? 'collapse' : 'expand') + ')';
+});
+
+// ─── Reset ───────────────────────────────────────────────────────────────────
+document.getElementById('resetBtn').addEventListener('click', function() {
+  if (window.nav) window.nav.reset();
+});
+
+// ─── Init ────────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', function() {
+  var defaultHeights = [0,1,0,2,1,0,1,3,2,1,2,1];
+  var snaps = buildSnapshots(defaultHeights);
+
+  window.nav = VizNav({
+    btnPrev: document.getElementById('prevBtn'),
+    btnNext: document.getElementById('stepBtn'),
+    btnPlay: document.getElementById('playBtn'),
+    speedSel: document.getElementById('speedSel'),
+    render: function(snap, cur, total) { applyStep(snap, cur > 0); updateStatus(snap, cur, total); }
   });
 
-  // Also run immediately in case DOMContentLoaded already fired
-  if (document.readyState === 'loading') {
-    // already attached above
-  } else {
-    init(currentHeights);
-  }
-
-})();
+  window.nav.load(snaps);
+});
 </script>
 </body>
 </html>

@@ -1,630 +1,562 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>21. Merge Two Sorted Lists</title>
-  <link rel="stylesheet" href="../shared/style.css" />
-  <script src="../shared/viz.js"></script>
-  <script src="../shared/gsap.min.js"></script>
-  <style>
-    body { display:flex; flex-direction:column; height:100vh; overflow:hidden; }
-    .page-title {
-      font-size:1rem; font-weight:700; color:var(--text-bright);
-      padding:12px 16px 0; letter-spacing:0.01em; flex-shrink:0;
-    }
-    .viz-root {
-      display:flex; flex:1; gap:16px;
-      padding:12px 16px 16px; min-height:0;
-    }
-    .left-col, .right-col {
-      display:flex; flex-direction:column; gap:12px; flex:1; min-width:0;
-    }
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Merge Two Sorted Lists</title>
+<link rel="stylesheet" href="../shared/style.css" />
+<script src="../shared/gsap.min.js"></script>
+<script src="../shared/viz.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: "Fira Code", "Cascadia Code", monospace; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
 
-    /* ── List rows ── */
-    .list-section { display:flex; flex-direction:column; gap:12px; }
-    .list-row     { display:flex; align-items:center; gap:8px; }
-    .list-lbl     {
-      font-size:0.72rem; font-weight:700; color:var(--accent);
-      width:52px; flex-shrink:0; text-align:right; padding-right:8px;
-    }
-    .list-lbl.l2     { color:var(--blue); }
-    .list-lbl.merged { color:var(--green); }
-    .list-nodes {
-      display:flex; align-items:center; gap:3px;
-      flex-wrap:nowrap; overflow-x:auto;
-      padding-bottom:22px;  /* room for pointer labels below nodes */
-    }
+  #header { padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+  #phase-badge { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; padding: 3px 10px; border-radius: var(--radius-sm); background: #1e3a5f; color: var(--blue); border: 1px solid var(--blue); }
+  #step-counter { font-size: 12px; color: var(--text-muted); margin-left: auto; }
 
-    /* ── Node groups ── */
-    .node-group { position:relative; flex-shrink:0; }
-    .list-node {
-      width:40px; height:40px; border-radius:7px;
-      display:flex; align-items:center; justify-content:center;
-      font-size:0.9rem; font-weight:600;
-      border:2px solid transparent; flex-shrink:0;
-      background:var(--surface-dark); color:var(--text-muted);
-      transition:background 0.14s, border-color 0.14s, opacity 0.14s;
-    }
-    .list-node.active-l1 { border-color:var(--accent); color:var(--accent-pale); background:rgba(var(--accent-ch),0.13); }
-    .list-node.active-l2 { border-color:var(--blue);   color:var(--blue-light);  background:rgba(var(--blue-ch),0.13); }
-    .list-node.picked    { border-color:var(--green);   color:var(--green-light); background:rgba(var(--green-ch),0.22); }
-    .list-node.consumed  { opacity:0.18; }
-    .list-node.dummy     { opacity:0.22; border-style:dashed; border-color:var(--border); color:var(--text-ghost); }
-    .list-node.merged-l1 { border-color:var(--accent); color:var(--accent-dim); background:rgba(var(--green-ch),0.06); }
-    .list-node.merged-l2 { border-color:var(--blue);   color:var(--blue);       background:rgba(var(--green-ch),0.06); }
-    .list-node.tail-src  { border-color:var(--green);  color:var(--green-light); background:rgba(var(--green-ch),0.09); }
-    .list-node.head-node { border-color:var(--yellow); color:var(--yellow-light); background:rgba(var(--yellow-ch),0.10); }
+  #main { display: flex; flex: 1; overflow: hidden; }
 
-    /* Pointer label: absolutely below each node */
-    .node-ptr {
-      position:absolute; bottom:-19px; left:50%; transform:translateX(-50%);
-      font-size:0.52rem; font-weight:700; text-transform:uppercase;
-      letter-spacing:0.06em; white-space:nowrap; color:transparent;
-      pointer-events:none;
-    }
-    .node-ptr.ptr-l1   { color:var(--accent); }
-    .node-ptr.ptr-l2   { color:var(--blue); }
-    .node-ptr.ptr-curr { color:var(--green); }
-    .node-ptr.ptr-head { color:var(--yellow); }
+  #viz-area { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; gap: 16px; overflow: hidden; }
 
-    .list-null {
-      font-size:0.7rem; color:var(--text-ghost); font-family:monospace;
-      flex-shrink:0; height:40px; display:flex; align-items:center;
-    }
-    .list-arrow {
-      color:var(--text-ghost); font-size:0.8rem; flex-shrink:0;
-      line-height:40px;
-    }
-    .list-divider { height:1px; background:var(--border-soft); margin:2px 0; }
+  #desc { font-size: 13px; color: var(--text-muted); text-align: center; max-width: 560px; min-height: 36px; line-height: 1.5; }
 
-    /* ── Code ── */
-    .code-panel { flex:1; min-height:0; overflow:auto; display:flex; flex-direction:column; }
-    .code-body  {
-      font-family:'Fira Code','Cascadia Code',monospace;
-      font-size:0.78rem; line-height:1.65; color:var(--text-muted);
-      flex:1; white-space:pre;
-    }
-    .code-line        { display:block; padding:0 4px; border-radius:3px; }
-    .code-line.active { background:rgba(var(--accent-ch),0.18); color:var(--text); }
-    .kw { color:var(--purple); }
-    .fn { color:var(--blue); }
-    .nb { color:var(--green); }
+  #list-canvas { width: 100%; max-width: 720px; display: flex; flex-direction: column; gap: 18px; }
 
-    /* ── Controls ── */
-    .ctrl-row { display:flex; align-items:center; gap:6px; }
-    .btn {
-      background:var(--surface); border:1px solid var(--border);
-      color:var(--text); border-radius:6px; padding:5px 10px;
-      cursor:pointer; font-size:0.78rem;
-    }
-    .btn:hover   { border-color:var(--accent); }
-    .btn.primary { background:var(--accent); border-color:var(--accent); color:#fff; }
-    .speed-select, .preset-select {
-      background:var(--surface); border:1px solid var(--border);
-      color:var(--text); border-radius:6px; padding:5px 6px; font-size:0.75rem;
-    }
-    .speed-select  { width:78px; }
-    .preset-select { width:100%; margin-top:6px; }
-    .counter       { font-size:0.68rem; color:var(--text-dim); margin-top:4px; }
+  .row-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--text-dim); margin-bottom: 5px; }
 
-    /* ── Status ── */
-    .phase-badge {
-      font-size:0.6rem; font-weight:700; text-transform:uppercase; letter-spacing:0.1em;
-      color:var(--accent); background:rgba(var(--accent-ch),0.08); border:1px solid rgba(var(--accent-ch),0.18);
-      border-radius:4px; padding:2px 7px; display:inline-block;
-    }
-    .status-desc { font-size:0.76rem; color:var(--text-muted); margin-top:6px; line-height:1.45; }
+  .list-row { display: flex; align-items: center; flex-wrap: wrap; gap: 0; min-height: 70px; }
 
-    /* ── Comparison card ── */
-    .cmp-row { display:flex; align-items:center; justify-content:center; gap:14px; }
-    .cmp-val {
-      display:flex; flex-direction:column; align-items:center; gap:3px;
-      padding:8px 18px; border-radius:8px;
-      border:1px solid var(--border); background:var(--surface-dark);
-      min-width:76px; transition:border-color 0.14s, opacity 0.14s;
-    }
-    .cmp-val.winner { border-color:var(--green); background:rgba(var(--green-ch),0.07); }
-    .cmp-val.loser  { opacity:0.35; }
-    .cmp-name { font-size:0.56rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.07em; }
-    .cmp-num  { font-size:1.35rem; font-weight:700; color:var(--text-bright); }
-    .cmp-vs   { font-size:0.8rem; color:var(--text-ghost); }
-    .cmp-expr { font-size:0.72rem; color:var(--text-muted); text-align:center; margin-top:8px; min-height:1.2em; }
+  .node-wrap { display: flex; flex-direction: column; align-items: center; position: relative; }
+  .node-box {
+    width: 48px; height: 48px; border-radius: 8px;
+    background: #1e293b; border: 2px solid #334155; color: #f1f5f9;
+    font-size: 17px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    transition: border-color .25s, background .25s, opacity .25s;
+    position: relative; z-index: 1;
+  }
+  .node-box.hl-l1     { border-color: #3b82f6; box-shadow: 0 0 0 3px #3b82f620; }
+  .node-box.hl-l2     { border-color: #8b5cf6; box-shadow: 0 0 0 3px #8b5cf620; }
+  .node-box.hl-curr   { border-color: #22c55e; box-shadow: 0 0 0 3px #22c55e20; }
+  .node-box.hl-picked { border-color: #eab308; background: #451a0330; box-shadow: 0 0 0 3px #eab30820; }
+  .node-box.hl-done   { border-color: #22c55e; background: #14532d40; color: #4ade80; }
+  .node-box.hl-appended { border-color: #a3e635; background: #1a2e1a40; }
+  .node-box.faded     { opacity: 0.3; }
+  .node-box.pulse     { animation: nodePulse .5s ease; }
+  @keyframes nodePulse { 0%,100%{box-shadow:0 0 0 0 #10b98140} 50%{box-shadow:0 0 0 8px #10b98130} }
 
-    /* ── Pointers / Variables ── */
-    .vars-row { display:flex; gap:8px; }
-    .var-box {
-      flex:1; display:flex; flex-direction:column; align-items:center;
-      gap:2px; padding:7px 4px; border-radius:8px;
-      background:var(--surface-dark); border:1px solid var(--border);
-    }
-    .var-box.accent { border-color:rgba(var(--accent-ch),0.4); }
-    .var-box.sky    { border-color:rgba(var(--blue-ch),0.4); }
-    .var-box.green  { border-color:rgba(var(--green-ch),0.4); }
-    .var-label { font-size:0.55rem; text-transform:uppercase; letter-spacing:0.1em; color:var(--text-dim); }
-    .var-value { font-size:1.1rem; font-weight:700; color:var(--text-bright); }
-    .var-sub   { font-size:0.52rem; color:var(--text-ghost); font-family:monospace; text-align:center; }
-    .var-box.accent .var-value { color:var(--accent); }
-    .var-box.sky    .var-value { color:var(--blue); }
-    .var-box.green  .var-value { color:var(--green); }
-  </style>
+  .badges { display: flex; flex-wrap: wrap; gap: 3px; justify-content: center; margin-top: 4px; min-height: 18px; }
+  .badge { font-size: 9px; font-weight: 700; padding: 1px 5px; border-radius: 4px; letter-spacing: .05em; }
+  .badge-l1   { background: #1e3a5f; color: #3b82f6; border: 1px solid #3b82f6; }
+  .badge-l2   { background: #2e1065; color: #8b5cf6; border: 1px solid #8b5cf6; }
+  .badge-curr { background: #1a2e1a; color: #22c55e; border: 1px solid #22c55e; }
+  .badge-picked { background: #45280a; color: #eab308; border: 1px solid #eab308; }
+  .badge-dummy { background: #1e293b; color: #94a3b8; border: 1px solid #475569; }
+
+  .arrow { display: flex; align-items: center; width: 28px; flex-shrink: 0; }
+  .arrow svg { width: 28px; height: 16px; }
+  .null-marker { font-size: 10px; color: var(--text-dim); margin-left: 4px; padding: 0 4px; }
+
+  #sidebar { width: 260px; flex-shrink: 0; background: var(--surface); border-left: 1px solid var(--border); overflow-y: auto; padding: 14px 12px; display: flex; flex-direction: column; gap: 12px; }
+  .sidebar-section { font-size: 11px; }
+  .sidebar-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--text-dim); margin-bottom: 6px; }
+  .ptr-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+  .ptr-table td { padding: 3px 5px; border-bottom: 1px solid var(--border); }
+  .ptr-table td:first-child { color: var(--text-muted); width: 44px; }
+  .ptr-table td:last-child { color: var(--text); font-weight: 600; }
+  .list-text { font-size: 11px; color: var(--text-muted); line-height: 1.8; }
+
+  #code-wrap { flex-shrink: 0; background: #0d1117; border-top: 1px solid var(--border); }
+  #code-toggle { width: 100%; background: #161b22; color: var(--text-muted); border: none; border-bottom: 1px solid var(--border); padding: 5px 12px; font-size: 11px; text-align: left; cursor: pointer; font-family: inherit; }
+  #code-toggle:hover { color: var(--text); }
+  #code-body { overflow: auto; max-height: 160px; padding: 10px 14px; }
+  pre { font-size: 11px; line-height: 1.7; font-family: inherit; }
+  .code-line { padding: 0 4px; border-radius: 3px; display: block; transition: background .2s; white-space: pre; }
+  .code-line.active { background: #451a0350; color: #fbbf24; }
+  .kw { color: #c792ea; } .fn { color: #82aaff; } .cm { color: #546e7a; font-style: italic; }
+  .str { color: #c3e88d; } .num { color: #f78c6c; }
+
+  #nav-row { flex-shrink: 0; display: flex; align-items: center; gap: 8px; padding: 10px 16px; background: var(--surface); border-top: 1px solid var(--border); }
+  .btn-step, .btn-play { padding: 6px 14px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--surface); color: var(--text); font-family: inherit; font-size: 12px; cursor: pointer; transition: background .15s; }
+  .btn-step:hover { background: #334155; }
+  .btn-play { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn-play:hover { background: var(--accent-hover); }
+  select { padding: 5px 8px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: #1e293b; color: var(--text); font-size: 12px; font-family: inherit; cursor: pointer; }
+
+  .viz-inputs { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; padding: 10px 0 14px; }
+  .viz-inputs label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); display: block; margin-bottom: 3px; }
+  .viz-inputs input { background: var(--bg-card, #1e293b); color: var(--text-main, #f1f5f9); border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px; font-size: 0.85rem; width: 140px; font-family: inherit; }
+  .viz-inputs select { background: var(--bg-card, #1e293b); color: var(--text-main, #f1f5f9); border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px; font-size: 0.85rem; }
+  .btn-run { padding: 7px 18px; background: var(--accent); color: #fff; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; font-family: inherit; font-size: 0.85rem; }
+  .btn-rand { padding: 7px 14px; background: var(--bg-card, #1e293b); color: var(--text-main, #f1f5f9); border: 1px solid var(--border); border-radius: 6px; cursor: pointer; font-family: inherit; font-size: 0.85rem; }
+</style>
 </head>
 <body>
 
-<div class="page-title">21. Merge Two Sorted Lists &mdash; Iterative Dummy Node</div>
+<div class="viz-inputs" style="padding: 8px 16px; background: var(--surface); border-bottom: 1px solid var(--border);">
+  <div>
+    <label>Preset</label>
+    <select id="presetSel" onchange="loadPreset()">
+      <option value="">— pick a preset —</option>
+      <option value="1,2,4|1,3,4">[1,2,4] + [1,3,4]</option>
+      <option value="1,3,5|2,4,6">[1,3,5] + [2,4,6]</option>
+      <option value="1|2,3,4">[1] + [2,3,4]</option>
+      <option value="|1,2,3">[] + [1,2,3]</option>
+      <option value="5|1">[5] + [1]</option>
+    </select>
+  </div>
+  <div>
+    <label>List 1 (comma-sep)</label>
+    <input id="inp1" type="text" value="1,2,4" placeholder="e.g. 1,2,4" />
+  </div>
+  <div>
+    <label>List 2 (comma-sep)</label>
+    <input id="inp2" type="text" value="1,3,4" placeholder="e.g. 1,3,4" />
+  </div>
+  <button class="btn-run" onclick="buildAndRun()">Run</button>
+  <button class="btn-rand" onclick="randomExample()">&#x1F3B2; Random</button>
+</div>
 
-<div class="viz-root">
+<div id="header">
+  <span id="phase-badge">Init</span>
+  <span style="font-size:13px;font-weight:700;">Merge Two Sorted Lists</span>
+  <span id="step-counter">Step 0 / 0</span>
+</div>
 
-  <!-- LEFT COLUMN -->
-  <div class="left-col">
-
-    <div class="panel-box">
-      <div class="panel-title">Lists</div>
-      <div class="list-section">
-        <div class="list-row">
-          <div class="list-lbl">l1</div>
-          <div class="list-nodes" id="row-l1"></div>
-        </div>
-        <div class="list-row">
-          <div class="list-lbl l2">l2</div>
-          <div class="list-nodes" id="row-l2"></div>
-        </div>
-        <div class="list-divider"></div>
-        <div class="list-row">
-          <div class="list-lbl merged">merged</div>
-          <div class="list-nodes" id="row-merged"></div>
-        </div>
-      </div>
-    </div>
-
-    <div class="panel-box code-panel">
-      <div class="panel-title">Code</div>
-      <pre class="code-body" id="code-body"></pre>
-    </div>
-
+<div id="main">
+  <div id="viz-area">
+    <div id="desc">Initializing...</div>
+    <div id="list-canvas"></div>
   </div>
 
-  <!-- RIGHT COLUMN -->
-  <div class="right-col">
-
-    <div style="display:flex;gap:10px">
-      <div class="panel-box" style="flex:0 0 auto">
-        <div class="ctrl-row">
-          <button class="btn" id="prevBtn">&larr;</button>
-          <button class="btn" id="stepBtn">&rarr;</button>
-          <button class="btn primary" id="playBtn">Play</button>
-          <select class="speedSel" id="speedSel">
-            <option value="1400">Slow</option>
-            <option value="800" selected>Normal</option>
-            <option value="380">Fast</option>
-          </select>
-        </div>
-        <div class="counter" id="counter">Step 0 / 0</div>
-        <select class="preset-select" id="preset-select">
-          <option value="0">[1,2,4] / [1,3,4]</option>
-          <option value="1">[1,3,5] / [2,4,6] &mdash; interleaved</option>
-          <option value="2">[1,2,3] / [4,5,6] &mdash; tail append</option>
-          <option value="3">[1,1,2] / [1,3]   &mdash; duplicates</option>
-          <option value="4">[] / [0] &mdash; empty list</option>
-        </select>
-      </div>
-      <div class="panel-box" style="flex:1">
-        <span class="phase-badge" id="phase-badge">&mdash;</span>
-        <div class="status-desc" id="status-desc">Press Play or step forward to begin.</div>
-      </div>
+  <div id="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-title">Pointers</div>
+      <table class="ptr-table" id="ptr-table"><tbody></tbody></table>
     </div>
-
-    <div class="panel-box">
-      <div class="panel-title">Comparison</div>
-      <div class="cmp-row">
-        <div class="cmp-val" id="cmp-l1">
-          <div class="cmp-name">l1.val</div>
-          <div class="cmp-num" id="cmp-l1-num">&mdash;</div>
-        </div>
-        <div class="cmp-vs">vs</div>
-        <div class="cmp-val" id="cmp-l2">
-          <div class="cmp-name">l2.val</div>
-          <div class="cmp-num" id="cmp-l2-num">&mdash;</div>
-        </div>
-      </div>
-      <div class="cmp-expr" id="cmp-expr">&mdash;</div>
+    <div class="sidebar-section">
+      <div class="sidebar-title">State</div>
+      <div class="list-text" id="list-state"></div>
     </div>
-
-    <div class="panel-box">
-      <div class="panel-title">Pointers</div>
-      <div class="vars-row">
-        <div class="var-box accent">
-          <div class="var-label">l1</div>
-          <div class="var-value" id="val-l1">&mdash;</div>
-          <div class="var-sub"  id="sub-l1">&mdash;</div>
-        </div>
-        <div class="var-box sky">
-          <div class="var-label">l2</div>
-          <div class="var-value" id="val-l2">&mdash;</div>
-          <div class="var-sub"  id="sub-l2">&mdash;</div>
-        </div>
-        <div class="var-box green">
-          <div class="var-label">curr</div>
-          <div class="var-value" id="val-curr">&mdash;</div>
-          <div class="var-sub"  id="sub-curr">&mdash;</div>
-        </div>
-      </div>
-    </div>
-
   </div>
 </div>
 
-<script>
-// ── Code HTML ─────────────────────────────────────────────────────────────
-const CODE_HTML = [
-  '<span class="code-line" data-lines="1"><span class="kw">def</span> <span class="fn">mergeTwoLists</span>(l1, l2):</span>',
-  '<span class="code-line" data-lines="2">    dummy = <span class="fn">ListNode</span>(<span class="nb">0</span>)</span>',
-  '<span class="code-line" data-lines="3">    curr = dummy</span>',
-  '<span class="code-line" data-lines="4">    <span class="kw">while</span> l1 <span class="kw">and</span> l2:</span>',
-  '<span class="code-line" data-lines="5">        <span class="kw">if</span> l1.val &lt;= l2.val:</span>',
-  '<span class="code-line" data-lines="6">            curr.next = l1</span>',
-  '<span class="code-line" data-lines="7">            l1 = l1.next</span>',
-  '<span class="code-line" data-lines="8">        <span class="kw">else</span>:</span>',
-  '<span class="code-line" data-lines="9">            curr.next = l2</span>',
-  '<span class="code-line" data-lines="10">            l2 = l2.next</span>',
-  '<span class="code-line" data-lines="11">        curr = curr.next</span>',
-  '<span class="code-line" data-lines="12">    curr.next = l1 <span class="kw">or</span> l2</span>',
-  '<span class="code-line" data-lines="13">    <span class="kw">return</span> dummy.next</span>',
-].join('');
+<div id="code-wrap">
+  <button id="code-toggle">&#x25BC; Code (click to collapse)</button>
+  <div id="code-body">
+    <pre id="code-pre"></pre>
+  </div>
+</div>
 
-// ── Presets ───────────────────────────────────────────────────────────────
-var PRESETS = [
-  { l1: [1,2,4], l2: [1,3,4] },
-  { l1: [1,3,5], l2: [2,4,6] },
-  { l1: [1,2,3], l2: [4,5,6] },
-  { l1: [1,1,2], l2: [1,3]   },
-  { l1: [],      l2: [0]     },
+<div class="nav-row" id="nav-row">
+  <button id="prevBtn" class="btn-step">&#x2190; Prev</button>
+  <button id="stepBtn" class="btn-step">Step &#x2192;</button>
+  <button id="playBtn" class="btn-play">Play</button>
+  <button id="resetBtn" class="btn-step">&#x21BA; Reset</button>
+  <select id="speedSel">
+    <option value="800">0.5&times;</option>
+    <option value="400" selected>1&times;</option>
+    <option value="200">2&times;</option>
+    <option value="100">4&times;</option>
+  </select>
+</div>
+
+<script>
+// ─── Code lines ─────────────────────────────────────────────────────────────
+const CODE_LINES = [
+  { n: 1,  t: '<span class=kw>def</span> <span class=fn>mergeTwoLists</span>(l1, l2):' },
+  { n: 2,  t: '    dummy = curr = ListNode(<span class=num>0</span>)' },
+  { n: 3,  t: '    <span class=kw>while</span> l1 <span class=kw>and</span> l2:' },
+  { n: 4,  t: '        <span class=kw>if</span> l1.val &lt;= l2.val:' },
+  { n: 5,  t: '            curr.next = l1' },
+  { n: 6,  t: '            l1 = l1.next' },
+  { n: 7,  t: '        <span class=kw>else</span>:' },
+  { n: 8,  t: '            curr.next = l2' },
+  { n: 9,  t: '            l2 = l2.next' },
+  { n: 10, t: '        curr = curr.next' },
+  { n: 11, t: '    curr.next = l1 <span class=kw>or</span> l2' },
+  { n: 12, t: '    <span class=kw>return</span> dummy.next' },
 ];
 
-// ── Build steps ───────────────────────────────────────────────────────────
-function buildSteps(l1arr, l2arr) {
-  var nodes = {};
-  nodes['dummy'] = { id: 'dummy', list: 'merged', value: '·' };
-  l1arr.forEach(function(v, k) { nodes['l1-' + k] = { id: 'l1-' + k, list: 'l1', value: v }; });
-  l2arr.forEach(function(v, k) { nodes['l2-' + k] = { id: 'l2-' + k, list: 'l2', value: v }; });
+// ─── Build snapshots ────────────────────────────────────────────────────────
+function buildSnapshots(list1Vals, list2Vals) {
+  // Each node: { id, val, listOrigin: 1|2|"dummy", consumed: false }
+  // Snapshot shape: { phase, description, active_line,
+  //   l1Remaining, l2Remaining,       // arrays of node ids still in input lists
+  //   mergedOrder,                     // ordered ids in merged result so far
+  //   l1_ptr, l2_ptr, curr_ptr,        // current pointer ids (null if exhausted/none)
+  //   picked_id,                       // id just picked this step (null otherwise)
+  //   comparison,                      // string like "l1(1) <= l2(3) → pick l1"
+  //   allNodes                         // id -> {id, val, origin}
+  // }
 
-  var p1 = 0, p2 = 0;
-  var l1Id = l1arr.length > 0 ? 'l1-0' : null;
-  var l2Id = l2arr.length > 0 ? 'l2-0' : null;
-  var currId = 'dummy';
-  var mergedIds = ['dummy'];
+  // Assign ids: list1 nodes get ids 1..n1, list2 nodes get ids 100..100+n2, dummy=0
+  const allNodes = {};
+  const n1 = list1Vals.length;
+  const n2 = list2Vals.length;
 
-  function snap(phase, desc, lines, extra) {
-    var base = {
-      phase: phase, desc: desc, lines: [].concat(lines),
-      nodes: nodes, l1arr: l1arr, l2arr: l2arr,
-      l1Id: l1Id, l2Id: l2Id, currId: currId,
-      mergedIds: mergedIds.slice(),
-      pickedId: null, cmp: null, tailCount: 0, done: false,
+  list1Vals.forEach((v, i) => { allNodes[i+1] = { id: i+1, val: v, origin: 1 }; });
+  list2Vals.forEach((v, i) => { allNodes[100+i] = { id: 100+i, val: v, origin: 2 }; });
+  allNodes[0] = { id: 0, val: 0, origin: "dummy" };
+
+  const l1Ids = list1Vals.map((_, i) => i+1);
+  const l2Ids = list2Vals.map((_, i) => 100+i);
+
+  const snaps = [];
+
+  function snap(phase, description, extra) {
+    const base = {
+      phase, description,
+      active_line: 0,
+      l1Remaining: [],
+      l2Remaining: [],
+      mergedOrder: [],
+      l1_ptr: null, l2_ptr: null, curr_ptr: null,
+      picked_id: null,
+      comparison: null,
+      allNodes,
     };
-    if (extra) { for (var kk in extra) base[kk] = extra[kk]; }
-    return base;
+    return { ...base, ...extra };
   }
 
-  var steps = [];
+  // INIT snap
+  snaps.push(snap("init",
+    "Create dummy head node. l1 points to first node of list 1, l2 to first of list 2, curr = dummy.",
+    {
+      active_line: 2,
+      l1Remaining: [...l1Ids],
+      l2Remaining: [...l2Ids],
+      mergedOrder: [],
+      l1_ptr: l1Ids[0] || null,
+      l2_ptr: l2Ids[0] || null,
+      curr_ptr: 0,
+    }
+  ));
 
-  steps.push(snap('Init',
-    'Create dummy sentinel. curr = dummy. The algorithm will rewire existing node pointers — no new nodes are allocated.',
-    [2,3]));
+  // Simulate the merge
+  let l1Rem = [...l1Ids];
+  let l2Rem = [...l2Ids];
+  let merged = [];
 
-  while (l1Id !== null && l2Id !== null) {
-    var v1 = nodes[l1Id].value;
-    var v2 = nodes[l2Id].value;
-    var lte = v1 <= v2;
-    var cmp = { v1: v1, v2: v2, lte: lte };
+  while (l1Rem.length > 0 && l2Rem.length > 0) {
+    const id1 = l1Rem[0];
+    const id2 = l2Rem[0];
+    const v1 = allNodes[id1].val;
+    const v2 = allNodes[id2].val;
 
-    steps.push(snap('Compare',
-      'Compare l1.val (' + v1 + ') vs l2.val (' + v2 + ').  Result: ' + v1 + (lte ? ' ≤ ' : ' > ') + v2 + '.',
-      [4,5], { cmp: cmp }));
+    // Step: show comparison
+    const cmp = v1 <= v2
+      ? "l1(" + v1 + ") ≤ l2(" + v2 + ") → pick l1"
+      : "l2(" + v2 + ") < l1(" + v1 + ") → pick l2";
 
-    var chosenId, savedCurrId;
+    snaps.push(snap("compare",
+      "Compare: " + cmp + ". curr.next = picked node, advance picked pointer.",
+      {
+        active_line: v1 <= v2 ? 4 : 7,
+        l1Remaining: [...l1Rem],
+        l2Remaining: [...l2Rem],
+        mergedOrder: [...merged],
+        l1_ptr: id1,
+        l2_ptr: id2,
+        curr_ptr: merged.length > 0 ? merged[merged.length-1] : 0,
+        picked_id: v1 <= v2 ? id1 : id2,
+        comparison: cmp,
+      }
+    ));
 
-    if (lte) {
-      chosenId   = l1Id;
-      savedCurrId = currId;
-      mergedIds  = mergedIds.concat([chosenId]);
-      steps.push(snap('Pick',
-        'l1.val ≤ l2.val. curr.next = l1. Node [' + v1 + '] rewired into merged chain. curr still at [' + nodes[savedCurrId].value + '].',
-        [6], { cmp: cmp, pickedId: chosenId, currId: savedCurrId }));
-      p1++;
-      l1Id   = p1 < l1arr.length ? 'l1-' + p1 : null;
-      currId = chosenId;
-      steps.push(snap('Advance',
-        'l1 = l1.next. curr = curr.next. curr now at [' + v1 + '].' + (l1Id ? ' l1 now at ' + nodes[l1Id].value + '.' : ' l1 is null.'),
-        [7,11], { cmp: cmp }));
+    // Pick
+    let pickedId;
+    if (v1 <= v2) {
+      pickedId = id1;
+      l1Rem.shift();
     } else {
-      chosenId   = l2Id;
-      savedCurrId = currId;
-      mergedIds  = mergedIds.concat([chosenId]);
-      steps.push(snap('Pick',
-        'l2.val < l1.val. curr.next = l2. Node [' + v2 + '] rewired into merged chain. curr still at [' + nodes[savedCurrId].value + '].',
-        [8,9], { cmp: cmp, pickedId: chosenId, currId: savedCurrId }));
-      p2++;
-      l2Id   = p2 < l2arr.length ? 'l2-' + p2 : null;
-      currId = chosenId;
-      steps.push(snap('Advance',
-        'l2 = l2.next. curr = curr.next. curr now at [' + v2 + '].' + (l2Id ? ' l2 now at ' + nodes[l2Id].value + '.' : ' l2 is null.'),
-        [10,11], { cmp: cmp }));
+      pickedId = id2;
+      l2Rem.shift();
     }
+    merged.push(pickedId);
+
+    // Step: after picking — curr advances
+    snaps.push(snap("compare",
+      "Picked node " + allNodes[pickedId].val + ". curr advances to this node. Merged so far: [" + merged.map(id => allNodes[id].val).join("→") + "].",
+      {
+        active_line: 10,
+        l1Remaining: [...l1Rem],
+        l2Remaining: [...l2Rem],
+        mergedOrder: [...merged],
+        l1_ptr: l1Rem[0] || null,
+        l2_ptr: l2Rem[0] || null,
+        curr_ptr: pickedId,
+        picked_id: pickedId,
+        comparison: cmp,
+      }
+    ));
   }
 
-  // Tail
-  var tailCount = 0;
-  var tailDesc;
-  if (l1Id !== null) {
-    var tailIds = [];
-    var cur = l1Id;
-    while (cur !== null) {
-      tailIds.push(cur);
-      var idx = parseInt(cur.split('-')[1]);
-      cur = idx + 1 < l1arr.length ? 'l1-' + (idx + 1) : null;
+  // Append remaining
+  const remaining = l1Rem.length > 0 ? l1Rem : l2Rem;
+  const remainOrigin = l1Rem.length > 0 ? 1 : 2;
+  if (remaining.length > 0) {
+    const remVals = remaining.map(id => allNodes[id].val).join("→");
+    snaps.push(snap("append",
+      "One list exhausted. Append remaining " + (remainOrigin === 1 ? "l1" : "l2") + ": [" + remVals + "] directly.",
+      {
+        active_line: 11,
+        l1Remaining: [...l1Rem],
+        l2Remaining: [...l2Rem],
+        mergedOrder: [...merged],
+        l1_ptr: l1Rem[0] || null,
+        l2_ptr: l2Rem[0] || null,
+        curr_ptr: merged.length > 0 ? merged[merged.length-1] : 0,
+        picked_id: null,
+        comparison: null,
+      }
+    ));
+    merged = merged.concat(remaining);
+  }
+
+  // Done
+  const finalVals = merged.map(id => allNodes[id].val).join("→");
+  snaps.push(snap("done",
+    "Complete! Merged result: [" + finalVals + "]. Return dummy.next.",
+    {
+      active_line: 12,
+      l1Remaining: [],
+      l2Remaining: [],
+      mergedOrder: [...merged],
+      l1_ptr: null,
+      l2_ptr: null,
+      curr_ptr: null,
+      picked_id: null,
+      comparison: null,
     }
-    tailCount = tailIds.length;
-    tailDesc = 'l2 is null. curr.next = l1. Remaining l1 nodes [' +
-      tailIds.map(function(id) { return nodes[id].value; }).join(', ') + '] appended at once.';
-    mergedIds = mergedIds.concat(tailIds);
-  } else if (l2Id !== null) {
-    var tailIds = [];
-    var cur = l2Id;
-    while (cur !== null) {
-      tailIds.push(cur);
-      var idx = parseInt(cur.split('-')[1]);
-      cur = idx + 1 < l2arr.length ? 'l2-' + (idx + 1) : null;
-    }
-    tailCount = tailIds.length;
-    tailDesc = 'l1 is null. curr.next = l2. Remaining l2 nodes [' +
-      tailIds.map(function(id) { return nodes[id].value; }).join(', ') + '] appended at once.';
-    mergedIds = mergedIds.concat(tailIds);
-  } else {
-    tailDesc = 'Both lists exhausted simultaneously. No tail to append.';
-  }
-  steps.push(snap('Tail', tailDesc, [12], { tailCount: tailCount }));
+  ));
 
-  var headVal = mergedIds.length > 1 ? nodes[mergedIds[1]].value : 'null';
-  steps.push(snap('Done',
-    'Return dummy.next. Merged list head is node [' + headVal + ']. The algorithm rewired existing pointers — no new nodes were created.',
-    [13], { done: true, l1Id: null, l2Id: null, currId: null }));
-
-  return { steps: steps, nodes: nodes };
+  return snaps;
 }
 
-// ── DOM helpers ───────────────────────────────────────────────────────────
-function mkNodeGroup(value, nodeCls, ptrLabel, ptrCls) {
-  var group = document.createElement('div');
-  group.className = 'node-group';
+// ─── Render helpers ──────────────────────────────────────────────────────────
+const ARROW_SVG = `<svg viewBox="0 0 28 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <line x1="0" y1="8" x2="22" y2="8" stroke="#475569" stroke-width="2"/>
+  <polygon points="20,4 28,8 20,12" fill="#475569"/>
+</svg>`;
 
-  var nodeEl = document.createElement('div');
-  nodeEl.className = 'list-node' + (nodeCls ? ' ' + nodeCls : '');
-  nodeEl.textContent = value;
-  group.appendChild(nodeEl);
+function renderListRow(nodeIds, snap, labelText, forcePhase) {
+  // nodeIds: ordered array of node ids
+  const { l1_ptr, l2_ptr, curr_ptr, picked_id, phase, mergedOrder, allNodes } = snap;
+  let html = "";
+  if (labelText) html += `<div class="row-label">${labelText}</div>`;
+  html += `<div class="list-row">`;
 
-  var ptrEl = document.createElement('div');
-  ptrEl.className = 'node-ptr' + (ptrCls ? ' ' + ptrCls : '');
-  ptrEl.textContent = ptrLabel || '';
-  group.appendChild(ptrEl);
+  nodeIds.forEach((nid, i) => {
+    const node = allNodes[nid];
+    if (!node) return;
 
-  return { group: group, node: nodeEl };
-}
+    const cls = ["node-box"];
+    const badges = [];
+    const isDone = phase === "done";
+    const isAppended = (snap.phase === "append" || snap.phase === "done") && mergedOrder.includes(nid);
 
-function mkArrow() {
-  var el = document.createElement('div');
-  el.className = 'list-arrow';
-  el.textContent = '→';
-  return el;
-}
-
-function mkNullGroup(ptrLabel, ptrCls) {
-  var group = document.createElement('div');
-  group.className = 'node-group';
-  var nullEl = document.createElement('div');
-  nullEl.className = 'list-null';
-  nullEl.textContent = 'null';
-  group.appendChild(nullEl);
-  if (ptrLabel) {
-    var ptrEl = document.createElement('div');
-    ptrEl.className = 'node-ptr ' + ptrCls;
-    ptrEl.textContent = ptrLabel;
-    group.appendChild(ptrEl);
-  }
-  return group;
-}
-
-// ── Render source row ─────────────────────────────────────────────────────
-function renderSourceRow(container, arr, listName, activeId, pickedId, isTailSide) {
-  container.innerHTML = '';
-
-  var activeIdx = (activeId !== null) ? parseInt(activeId.split('-')[1]) : -1;
-
-  if (arr.length === 0) {
-    container.appendChild(mkNullGroup(listName, 'ptr-' + listName));
-    return;
-  }
-
-  arr.forEach(function(v, k) {
-    var nodeId = listName + '-' + k;
-    var nodeCls, ptrLabel = '', ptrCls = '';
-
-    if (activeIdx < 0) {
-      nodeCls = 'consumed';
-    } else if (isTailSide && k >= activeIdx) {
-      nodeCls = 'tail-src';
-      if (k === activeIdx) { ptrLabel = listName; ptrCls = 'ptr-' + listName; }
-    } else if (k < activeIdx) {
-      nodeCls = 'consumed';
-    } else if (k === activeIdx) {
-      nodeCls = (pickedId === nodeId) ? 'picked' : ('active-' + listName);
-      ptrLabel = listName;
-      ptrCls   = 'ptr-' + listName;
+    if (isDone) {
+      cls.push("hl-done");
     } else {
-      nodeCls = 'available';
+      if (nid === picked_id) cls.push("hl-picked");
+      else if (nid === l1_ptr) cls.push("hl-l1");
+      else if (nid === l2_ptr) cls.push("hl-l2");
+      else if (nid === curr_ptr) cls.push("hl-curr");
     }
 
-    var g = mkNodeGroup(v, nodeCls, ptrLabel, ptrCls);
-    container.appendChild(g.group);
-    container.appendChild(mkArrow());
+    if (nid === 0 && !isDone) badges.push(`<span class="badge badge-dummy">dummy</span>`);
+    if (nid === l1_ptr && !isDone) badges.push(`<span class="badge badge-l1">l1</span>`);
+    if (nid === l2_ptr && !isDone) badges.push(`<span class="badge badge-l2">l2</span>`);
+    if (nid === curr_ptr && !isDone) badges.push(`<span class="badge badge-curr">curr</span>`);
+    if (nid === picked_id && !isDone) badges.push(`<span class="badge badge-picked">✓ pick</span>`);
+
+    // consumed nodes from input rows get faded
+    if (forcePhase === "input" && mergedOrder.includes(nid)) {
+      cls.push("faded");
+    }
+
+    const displayVal = nid === 0 ? "D" : node.val;
+
+    html += `<div class="node-wrap">
+      <div class="${cls.join(" ")}">${displayVal}</div>
+      <div class="badges">${badges.join("")}</div>
+    </div>`;
+
+    if (i < nodeIds.length - 1) {
+      html += `<div class="arrow">${ARROW_SVG}</div>`;
+    } else {
+      html += `<span class="null-marker">∅</span>`;
+    }
   });
 
-  var nullPtrLabel = (activeIdx < 0) ? listName : '';
-  var nullPtrCls   = (activeIdx < 0) ? 'ptr-' + listName : '';
-  container.appendChild(mkNullGroup(nullPtrLabel, nullPtrCls));
+  html += "</div>";
+  return html;
 }
 
-// ── Render merged row ─────────────────────────────────────────────────────
-function renderMergedRow(container, mergedIds, currId, pickedId, nodes, isDone) {
-  container.innerHTML = '';
+function buildVizHtml(snap) {
+  const { l1Remaining, l2Remaining, mergedOrder, allNodes, phase } = snap;
 
-  mergedIds.forEach(function(nodeId, idx) {
-    var node = nodes[nodeId];
-    var cls, ptrLabel = '', ptrCls = '';
+  // Build full original l1 and l2 id arrays from allNodes
+  const l1All = Object.values(allNodes).filter(n => n.origin === 1).sort((a,b) => a.id - b.id).map(n => n.id);
+  const l2All = Object.values(allNodes).filter(n => n.origin === 2).sort((a,b) => a.id - b.id).map(n => n.id);
 
-    if (nodeId === 'dummy') {
-      cls = 'dummy';
-      if (!isDone && currId === 'dummy') { ptrLabel = 'curr'; ptrCls = 'ptr-curr'; }
-    } else if (nodeId === pickedId) {
-      cls = 'picked';
-    } else if (isDone && idx === 1) {
-      cls = 'head-node';
-      ptrLabel = 'head'; ptrCls = 'ptr-head';
-    } else {
-      cls = 'merged-' + node.list;
-      if (!isDone && nodeId === currId) { ptrLabel = 'curr'; ptrCls = 'ptr-curr'; }
+  let html = "";
+
+  if (l1All.length > 0 || l2All.length > 0) {
+    html += renderListRow(l1All, snap, "List 1", "input");
+    html += renderListRow(l2All, snap, "List 2", "input");
+  } else {
+    html += `<div class="row-label">Both lists empty</div>`;
+  }
+
+  // Merged row: dummy + merged nodes
+  const mergedRowIds = [0, ...mergedOrder];
+  html += renderListRow(mergedRowIds, snap, "Merged Result", "merged");
+
+  return html;
+}
+
+// ─── Sidebar ─────────────────────────────────────────────────────────────────
+function updateSidebar(snap) {
+  const { l1_ptr, l2_ptr, curr_ptr, allNodes, phase, comparison, mergedOrder, l1Remaining, l2Remaining } = snap;
+
+  function ptrVal(id) {
+    if (id === null || id === undefined) return `<span style="color:var(--text-dim)">None</span>`;
+    if (id === 0) return `<span style="color:var(--text)">dummy(0)</span>`;
+    const n = allNodes[id];
+    return n ? `<span style="color:var(--text)">${n.val}</span>` : `<span style="color:var(--text-dim)">None</span>`;
+  }
+
+  let rows = "";
+  rows += `<tr><td>l1</td><td>${ptrVal(l1_ptr)}</td></tr>`;
+  rows += `<tr><td>l2</td><td>${ptrVal(l2_ptr)}</td></tr>`;
+  rows += `<tr><td>curr</td><td>${ptrVal(curr_ptr)}</td></tr>`;
+  document.querySelector("#ptr-table tbody").innerHTML = rows;
+
+  let stateHtml = "";
+  if (comparison) {
+    stateHtml += `<div style="color:var(--yellow,#eab308);margin-bottom:6px;">${comparison}</div>`;
+  }
+  stateHtml += `<div>Merged: ${mergedOrder.length} node${mergedOrder.length !== 1 ? "s" : ""}</div>`;
+  if (mergedOrder.length > 0) {
+    const vals = mergedOrder.map(id => allNodes[id].val).join("→");
+    stateHtml += `<div style="color:var(--green,#22c55e);margin-top:3px;">[D→${vals}]</div>`;
+  }
+  stateHtml += `<div style="margin-top:6px;">l1 left: ${l1Remaining.length}</div>`;
+  stateHtml += `<div>l2 left: ${l2Remaining.length}</div>`;
+  document.getElementById("list-state").innerHTML = stateHtml;
+}
+
+// ─── Code panel ───────────────────────────────────────────────────────────────
+function renderCode(activeLine) {
+  const pre = document.getElementById("code-pre");
+  pre.innerHTML = CODE_LINES.map(l => {
+    const cls = l.n === activeLine ? "code-line active" : "code-line";
+    return `<span class="${cls}">${l.t || " "}</span>`;
+  }).join("");
+  const active = pre.querySelector(".active");
+  if (active) active.scrollIntoView({ block: "nearest", behavior: "smooth" });
+}
+
+const PHASE_LABELS = {
+  init: "Init",
+  compare: "Compare & Pick",
+  append: "Append Remaining",
+  done: "Done",
+};
+
+// ─── applyStep ───────────────────────────────────────────────────────────────
+function applyStep(snap, animated) {
+  document.getElementById("phase-badge").textContent = PHASE_LABELS[snap.phase] || snap.phase;
+  document.getElementById("desc").textContent = snap.description;
+
+  const canvas = document.getElementById("list-canvas");
+  canvas.innerHTML = buildVizHtml(snap);
+
+  if (animated && snap.picked_id !== null) {
+    const boxes = canvas.querySelectorAll(".node-box");
+    boxes.forEach(box => {
+      if (box.textContent == String(snap.allNodes[snap.picked_id]?.val)) {
+        box.classList.add("pulse");
+        setTimeout(() => box.classList.remove("pulse"), 600);
+      }
+    });
+  }
+
+  updateSidebar(snap);
+  renderCode(snap.active_line);
+}
+
+function updateStatus(snap, cur, total) {
+  document.getElementById("step-counter").textContent = `Step ${cur} / ${total}`;
+}
+
+// ─── Code toggle ──────────────────────────────────────────────────────────────
+let codeExpanded = true;
+document.getElementById("code-toggle").addEventListener("click", () => {
+  codeExpanded = !codeExpanded;
+  document.getElementById("code-body").style.display = codeExpanded ? "block" : "none";
+  document.getElementById("code-toggle").textContent = (codeExpanded ? "▼" : "▶") + " Code (click to " + (codeExpanded ? "collapse" : "expand") + ")";
+});
+
+document.getElementById("resetBtn").addEventListener("click", () => {
+  if (window.nav) window.nav.reset();
+});
+
+// ─── viz-inputs logic ─────────────────────────────────────────────────────────
+function parseList(str) {
+  if (!str || str.trim() === "") return [];
+  return str.split(",").map(s => parseInt(s.trim(), 10)).filter(n => !isNaN(n));
+}
+
+function loadPreset() {
+  const sel = document.getElementById("presetSel");
+  const val = sel.value;
+  if (!val) return;
+  const [p1, p2] = val.split("|");
+  document.getElementById("inp1").value = p1 || "";
+  document.getElementById("inp2").value = p2 || "";
+  buildAndRun();
+}
+
+function buildAndRun() {
+  const list1 = parseList(document.getElementById("inp1").value);
+  const list2 = parseList(document.getElementById("inp2").value);
+  const snaps = buildSnapshots(list1, list2);
+  if (window.nav) window.nav.load(snaps);
+}
+
+function randomExample() {
+  function randSortedList(maxLen) {
+    const len = Math.floor(Math.random() * 4) + 1;
+    const arr = [];
+    let cur = Math.floor(Math.random() * 3);
+    for (let i = 0; i < len; i++) {
+      arr.push(cur);
+      cur += Math.floor(Math.random() * 4) + 1;
     }
+    return arr;
+  }
+  document.getElementById("inp1").value = randSortedList(4).join(",");
+  document.getElementById("inp2").value = randSortedList(4).join(",");
+  document.getElementById("presetSel").value = "";
+  buildAndRun();
+}
 
-    var g = mkNodeGroup(node.value, cls, ptrLabel, ptrCls);
-    container.appendChild(g.group);
-    container.appendChild(mkArrow());
+// ─── Init ─────────────────────────────────────────────────────────────────────
+document.addEventListener("DOMContentLoaded", () => {
+  window.nav = VizNav({
+    btnPrev: document.getElementById("prevBtn"),
+    btnNext: document.getElementById("stepBtn"),
+    btnPlay: document.getElementById("playBtn"),
+    speedSel: document.getElementById("speedSel"),
+    render: function(snap, cur, total) { applyStep(snap, cur > 0); updateStatus(snap, cur, total); }
   });
 
-  container.appendChild(mkNullGroup('', ''));
-}
-
-// ── DOM refs ──────────────────────────────────────────────────────────────
-var rowL1      = document.getElementById('row-l1');
-var rowL2      = document.getElementById('row-l2');
-var rowMerged  = document.getElementById('row-merged');
-var codeBody   = document.getElementById('code-body');
-var phBadge    = document.getElementById('phase-badge');
-var statusDesc = document.getElementById('status-desc');
-var counterEl  = document.getElementById('counter');
-var cmpL1El    = document.getElementById('cmp-l1');
-var cmpL2El    = document.getElementById('cmp-l2');
-var cmpL1Num   = document.getElementById('cmp-l1-num');
-var cmpL2Num   = document.getElementById('cmp-l2-num');
-var cmpExpr    = document.getElementById('cmp-expr');
-var presetSel  = document.getElementById('preset-select');
-var valL1      = document.getElementById('val-l1');
-var subL1      = document.getElementById('sub-l1');
-var valL2      = document.getElementById('val-l2');
-var subL2      = document.getElementById('sub-l2');
-var valCurr    = document.getElementById('val-curr');
-var subCurr    = document.getElementById('sub-curr');
-
-// ── Render ────────────────────────────────────────────────────────────────
-function render(snap, cursor, total) {
-  var nodes      = snap.nodes;
-  var isTail     = snap.phase === 'Tail';
-  var isDone     = snap.done;
-
-  // Source rows
-  renderSourceRow(rowL1, snap.l1arr, 'l1', snap.l1Id, snap.pickedId, isTail && snap.l1Id !== null);
-  renderSourceRow(rowL2, snap.l2arr, 'l2', snap.l2Id, snap.pickedId, isTail && snap.l2Id !== null);
-
-  // Merged row
-  renderMergedRow(rowMerged, snap.mergedIds, snap.currId, snap.pickedId, nodes, isDone);
-
-  // Animate new merged nodes
-  if (snap.phase === 'Pick' && snap.pickedId) {
-    var pnodes = rowMerged.querySelectorAll('.list-node.picked');
-    if (pnodes.length > 0) {
-      gsap.fromTo(pnodes[pnodes.length - 1], { scale: 0.7 }, { scale: 1, duration: 0.22, ease: 'back.out(1.7)' });
-    }
-  }
-  if (isTail && snap.tailCount > 0) {
-    var allMN = Array.from(rowMerged.querySelectorAll('.list-node:not(.dummy)'));
-    var newMN = allMN.slice(-snap.tailCount);
-    if (newMN.length > 0) {
-      gsap.fromTo(newMN, { scale: 0.7, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.22, stagger: 0.06, ease: 'back.out(1.7)' });
-    }
-  }
-
-  // Comparison card
-  if (snap.cmp) {
-    cmpL1Num.textContent = snap.cmp.v1;
-    cmpL2Num.textContent = snap.cmp.v2;
-    var pickedList = snap.pickedId ? nodes[snap.pickedId].list : null;
-    cmpL1El.className = 'cmp-val' + (pickedList === 'l1' ? ' winner' : pickedList === 'l2' ? ' loser' : '');
-    cmpL2El.className = 'cmp-val' + (pickedList === 'l2' ? ' winner' : pickedList === 'l1' ? ' loser' : '');
-    if (snap.phase === 'Compare') {
-      cmpExpr.textContent = snap.cmp.v1 + (snap.cmp.lte ? ' ≤ ' : ' > ') + snap.cmp.v2;
-    } else if (snap.cmp.lte) {
-      cmpExpr.textContent = snap.cmp.v1 + ' ≤ ' + snap.cmp.v2 + '  →  pick l1';
-    } else {
-      cmpExpr.textContent = snap.cmp.v2 + ' < ' + snap.cmp.v1 + '  →  pick l2';
-    }
-  } else {
-    cmpL1Num.textContent = '—';
-    cmpL2Num.textContent = '—';
-    cmpL1El.className = 'cmp-val';
-    cmpL2El.className = 'cmp-val';
-    cmpExpr.textContent = '—';
-  }
-
-  // Pointers panel
-  if (snap.l1Id) {
-    valL1.textContent = nodes[snap.l1Id].value;
-    subL1.textContent = snap.l1Id;
-  } else {
-    valL1.textContent = '∅';
-    subL1.textContent = 'null';
-  }
-  if (snap.l2Id) {
-    valL2.textContent = nodes[snap.l2Id].value;
-    subL2.textContent = snap.l2Id;
-  } else {
-    valL2.textContent = '∅';
-    subL2.textContent = 'null';
-  }
-  if (snap.currId) {
-    valCurr.textContent = nodes[snap.currId].value;
-    subCurr.textContent = snap.currId;
-  } else {
-    valCurr.textContent = '—';
-    subCurr.textContent = '—';
-  }
-
-  // Status
-  phBadge.textContent    = snap.phase;
-  statusDesc.textContent = snap.desc;
-  counterEl.textContent  = 'Step ' + (cursor + 1) + ' / ' + total;
-
-  // Code highlight
-  codeBody.querySelectorAll('.code-line').forEach(function(line) {
-    var nums = (line.dataset.lines || '').split(',').map(Number);
-    line.classList.toggle('active', snap.lines.some(function(l) { return nums.indexOf(l) >= 0; }));
-  });
-}
-
-// ── Bootstrap ─────────────────────────────────────────────────────────────
-var btnPrev  = document.getElementById('prevBtn');
-var btnNext  = document.getElementById('stepBtn');
-var btnPlay  = document.getElementById('playBtn');
-var speedSel = document.getElementById('speedSel');
-
-var nav = VizNav({ btnPrev: btnPrev, btnNext: btnNext, btnPlay: btnPlay, speedSel: speedSel, render: render });
-
-function loadPreset(idx) {
-  var p = PRESETS[idx];
-  codeBody.innerHTML = CODE_HTML;
-  nav.load(buildSteps(p.l1, p.l2).steps);
-}
-
-presetSel.addEventListener('change', function() { loadPreset(parseInt(presetSel.value)); });
-loadPreset(0);
+  buildAndRun();
+});
 </script>
 </body>
 </html>

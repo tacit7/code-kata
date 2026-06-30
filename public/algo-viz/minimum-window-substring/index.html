@@ -1,637 +1,473 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Minimum Window Substring</title>
-  <link rel="stylesheet" href="../shared/style.css" />
-  <style>
-    body {
-      margin: 0;
-      display: flex;
-      flex-direction: column;
-      height: 100vh;
-      background: var(--bg);
-      color: var(--text);
-      font-family: monospace;
-      overflow: hidden;
-    }
-    header {
-      padding: 10px 18px;
-      border-bottom: 1px solid var(--border);
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      flex-shrink: 0;
-    }
-    header h1 { font-size: 1rem; font-weight: 700; margin: 0; }
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Minimum Window Substring</title>
+<link rel="stylesheet" href="../shared/style.css" />
+<script src="../shared/viz.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Fira Code', 'Cascadia Code', monospace; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
 
-    .phase-pill {
-      padding: 2px 10px;
-      border-radius: 99px;
-      font-size: 0.7rem;
-      font-weight: 700;
-      letter-spacing: 0.05em;
-      text-transform: uppercase;
-    }
-    .phase-init   { background: var(--surface); color: var(--text-muted); border: 1px solid var(--border); }
-    .phase-expand { background: var(--blue);    color: #fff; }
-    .phase-shrink { background: var(--orange);  color: #fff; }
-    .phase-done   { background: var(--green);   color: #fff; }
+  .viz-inputs { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border); flex-shrink: 0; }
+  .viz-inputs label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); display: block; margin-bottom: 3px; }
+  .viz-inputs input, .viz-inputs select { background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px; font-size: 0.85rem; font-family: inherit; }
+  .viz-inputs button { padding: 7px 18px; border-radius: 6px; font-weight: 600; cursor: pointer; font-family: inherit; font-size: 0.85rem; border: 1px solid var(--border); }
+  .btn-run { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .btn-rand { background: #1e293b; color: var(--text); }
 
-    main {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      padding: 10px 14px;
-      overflow: hidden;
-    }
+  #header { padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+  #phase-badge { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; padding: 3px 10px; border-radius: 4px; background: #1e3a5f; color: #3b82f6; border: 1px solid #3b82f6; transition: background .3s, color .3s, border-color .3s; }
+  #step-counter { font-size: 12px; color: var(--text-muted); margin-left: auto; }
 
-    /* String section */
-    .str-section {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-lg);
-      padding: 12px 14px;
-      flex-shrink: 0;
-    }
-    .str-label {
-      font-size: 0.68rem;
-      color: var(--text-muted);
-      text-transform: uppercase;
-      letter-spacing: 0.07em;
-      margin-bottom: 8px;
-    }
-    .str-cells { display: flex; gap: 3px; margin-bottom: 4px; }
-    .ptr-row   { display: flex; gap: 3px; }
+  #main { display: flex; flex: 1; overflow: hidden; }
+  #viz-area { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; gap: 18px; overflow: auto; }
+  #desc { font-size: 13px; color: var(--text-muted); text-align: center; max-width: 620px; min-height: 36px; line-height: 1.5; }
 
-    .cell {
-      width: 34px;
-      height: 36px;
-      border-radius: var(--radius-sm);
-      border: 2px solid var(--border);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 0.95rem;
-      font-weight: 700;
-      flex-shrink: 0;
-      transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
-      background: var(--bg);
-      color: var(--text-dim);
-    }
-    .cell.in-window {
-      border-color: var(--orange);
-      background: rgba(219, 119, 4, 0.13);
-      color: var(--text);
-    }
-    .cell.is-best {
-      border-color: var(--green);
-      background: rgba(34, 197, 94, 0.14);
-      color: var(--text);
-    }
-    .cell.is-active-expand {
-      border-color: var(--blue);
-      background: rgba(59, 130, 246, 0.22);
-      color: var(--text);
-      box-shadow: 0 0 8px rgba(59, 130, 246, 0.38);
-    }
-    .cell.is-active-shrink {
-      border-color: var(--red);
-      background: rgba(239, 68, 68, 0.18);
-      color: var(--text);
-      box-shadow: 0 0 8px rgba(239, 68, 68, 0.32);
-    }
+  #need-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; justify-content: center; }
+  .need-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--text-dim); margin-right: 4px; }
+  .need-pill { font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 6px; border: 1.5px solid #475569; background: #1e293b; color: #94a3b8; display: flex; gap: 6px; align-items: center; transition: border-color .25s, background .25s, color .25s; }
+  .need-pill.satisfied { border-color: #22c55e; background: #14532d40; color: #4ade80; }
+  .need-pill.partial { border-color: #f59e0b; background: #451a0330; color: #fbbf24; }
 
-    .ptr-c {
-      width: 34px;
-      text-align: center;
-      font-size: 0.6rem;
-      font-weight: 700;
-      line-height: 1;
-      height: 14px;
-      flex-shrink: 0;
-      color: transparent;
-    }
-    .ptr-c.L  { color: var(--accent); }
-    .ptr-c.R  { color: var(--purple); }
-    .ptr-c.LR { color: var(--yellow, #c9960a); }
+  #string-area { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; width: 100%; max-width: 820px; }
+  .str-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--text-dim); }
+  #char-row { display: flex; flex-wrap: wrap; gap: 5px; }
 
-    /* Content row */
-    .content-row {
-      flex: 1;
-      display: flex;
-      gap: 8px;
-      min-height: 0;
-    }
-    .left-panel {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      min-width: 0;
-    }
+  .char-wrap { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+  .char-box {
+    width: 40px; height: 40px; border-radius: 7px;
+    background: #1e293b; border: 2px solid #334155;
+    color: #f1f5f9; font-size: 16px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    transition: border-color .2s, background .2s, box-shadow .2s;
+  }
+  .char-box.in-window { border-color: #3b82f6; box-shadow: 0 0 0 2px #3b82f620; }
+  .char-box.at-left { border-color: #22c55e; box-shadow: 0 0 0 3px #22c55e30; }
+  .char-box.at-right { border-color: #f97316; box-shadow: 0 0 0 3px #f9731630; }
+  .char-box.at-both { border-color: #a855f7; box-shadow: 0 0 0 3px #a855f730; }
+  .char-box.needed-sat { background: #14532d40; }
+  .char-box.needed-part { background: #451a0330; }
+  .char-box.in-best { background: #1e1b4b; border-color: #8b5cf6; box-shadow: 0 0 0 3px #8b5cf630; }
+  .char-idx { font-size: 9px; color: var(--text-dim); }
+  .ptr-badges { display: flex; gap: 2px; min-height: 14px; }
+  .ptr-b { font-size: 9px; font-weight: 700; padding: 1px 4px; border-radius: 3px; }
+  .ptr-l { background: #14532d40; color: #22c55e; border: 1px solid #22c55e; }
+  .ptr-r { background: #431407; color: #f97316; border: 1px solid #f97316; }
+  .ptr-lr { background: #2e1065; color: #a855f7; border: 1px solid #a855f7; }
 
-    /* Maps */
-    .maps-row { display: flex; gap: 8px; flex-shrink: 0; }
-    .map-box {
-      flex: 1;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-lg);
-      padding: 10px 12px;
-    }
-    .map-hdr {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 8px;
-    }
-    .map-title {
-      font-size: 0.66rem;
-      color: var(--text-muted);
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-    }
-    .have-badge {
-      font-size: 0.8rem;
-      font-weight: 700;
-      padding: 1px 8px;
-      border-radius: 99px;
-      border: 1px solid var(--border);
-      background: var(--bg);
-      color: var(--text);
-      transition: background 0.2s, color 0.2s, border-color 0.2s;
-    }
-    .have-badge.full { background: var(--green); border-color: var(--green); color: #fff; }
+  #sidebar { width: 240px; flex-shrink: 0; background: var(--surface); border-left: 1px solid var(--border); overflow-y: auto; padding: 14px 12px; display: flex; flex-direction: column; gap: 14px; }
+  .sidebar-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--text-dim); margin-bottom: 6px; }
+  .ptr-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+  .ptr-table td { padding: 3px 5px; border-bottom: 1px solid var(--border); }
+  .ptr-table td:first-child { color: var(--text-muted); }
+  .ptr-table td:last-child { color: var(--text); font-weight: 600; }
+  .wc-pills { display: flex; flex-wrap: wrap; gap: 4px; }
+  .wc-pill { font-size: 10px; padding: 2px 7px; border-radius: 4px; border: 1px solid #334155; background: #1e293b; color: #64748b; }
+  .wc-pill.sat { border-color: #22c55e; color: #4ade80; background: #14532d40; }
+  .wc-pill.part { border-color: #f59e0b; color: #fbbf24; background: #451a0330; }
 
-    .map-entries {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 5px;
-      min-height: 26px;
-      align-items: center;
-    }
-    .entry {
-      padding: 2px 8px;
-      border-radius: var(--radius-sm);
-      font-size: 0.78rem;
-      font-weight: 600;
-      border: 1px solid var(--border);
-      color: var(--text-dim);
-    }
-    .entry.sat  { border-color: var(--green);  background: rgba(34, 197, 94, 0.12);  color: var(--green); }
-    .entry.over { border-color: var(--blue);   background: rgba(59, 130, 246, 0.1);  color: var(--blue); }
-    .empty-msg  { font-size: 0.72rem; color: var(--text-dim); }
+  #code-wrap { flex-shrink: 0; background: #0d1117; border-top: 1px solid var(--border); }
+  #code-toggle { width: 100%; background: #161b22; color: var(--text-muted); border: none; border-bottom: 1px solid var(--border); padding: 5px 12px; font-size: 11px; text-align: left; cursor: pointer; font-family: inherit; }
+  #code-toggle:hover { color: var(--text); }
+  #code-body { overflow: auto; max-height: 180px; padding: 10px 14px; }
+  pre { font-size: 11px; line-height: 1.7; font-family: inherit; }
+  .code-line { padding: 0 4px; border-radius: 3px; display: block; transition: background .2s; white-space: pre; }
+  .code-line.active { background: #1d2d44; color: #fbbf24; }
+  .kw { color: #c792ea; } .fn { color: #82aaff; } .cm { color: #546e7a; font-style: italic; }
+  .str { color: #c3e88d; } .num { color: #f78c6c; }
 
-    /* Status box */
-    .status-box {
-      flex: 1;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-lg);
-      padding: 10px 12px;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      overflow: hidden;
-    }
-    .step-desc {
-      font-size: 0.82rem;
-      color: var(--text);
-      line-height: 1.55;
-      flex: 1;
-    }
-    .result-row { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
-    .result-lbl {
-      font-size: 0.66rem;
-      color: var(--text-muted);
-      text-transform: uppercase;
-      letter-spacing: 0.07em;
-    }
-    .result-val  { font-size: 0.95rem; font-weight: 700; color: var(--green); }
-    .result-none { font-size: 0.95rem; font-weight: 700; color: var(--text-dim); }
-
-    /* Code panel */
-    .code-panel {
-      width: 320px;
-      flex-shrink: 0;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-lg);
-      padding: 10px 12px;
-      display: flex;
-      flex-direction: column;
-    }
-    .code-title {
-      font-size: 0.66rem;
-      color: var(--text-muted);
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      margin-bottom: 8px;
-      flex-shrink: 0;
-    }
-    .code-body { flex: 1; overflow-y: auto; }
-    .cl {
-      padding: 1px 6px;
-      border-radius: 3px;
-      font-size: 0.7rem;
-      line-height: 1.68;
-      white-space: pre;
-      color: var(--text-dim);
-      transition: background 0.15s, color 0.15s;
-    }
-    .cl.hl {
-      background: rgba(100, 160, 255, 0.18);
-      color: var(--text);
-    }
-
-    /* Nav */
-    .nav-row {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      flex-shrink: 0;
-      padding-top: 6px;
-      border-top: 1px solid var(--border);
-    }
-    .btn-step {
-      padding: 5px 12px;
-      border-radius: var(--radius-sm);
-      border: 1px solid var(--border);
-      background: var(--surface);
-      color: var(--text);
-      font-size: 0.78rem;
-      cursor: pointer;
-      font-family: monospace;
-    }
-    .btn-step:hover { background: var(--border); }
-    .btn-play {
-      padding: 5px 14px;
-      border-radius: var(--radius-sm);
-      border: none;
-      background: var(--accent);
-      color: #fff;
-      font-size: 0.78rem;
-      cursor: pointer;
-      font-family: monospace;
-    }
-    .btn-play:hover { opacity: 0.85; }
-    select {
-      padding: 5px 8px;
-      border-radius: var(--radius-sm);
-      border: 1px solid var(--border);
-      background: var(--surface);
-      color: var(--text);
-      font-size: 0.78rem;
-      font-family: monospace;
-      cursor: pointer;
-    }
-    .step-ctr { margin-left: auto; font-size: 0.72rem; color: var(--text-muted); }
-  </style>
+  #nav-row { flex-shrink: 0; display: flex; align-items: center; gap: 8px; padding: 10px 16px; background: var(--surface); border-top: 1px solid var(--border); }
+  .btn-step, .btn-play { padding: 6px 14px; border-radius: 4px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font-family: inherit; font-size: 12px; cursor: pointer; transition: background .15s; }
+  .btn-step:hover { background: #334155; }
+  .btn-play { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn-play:hover { opacity: .9; }
+  select { padding: 5px 8px; border-radius: 4px; border: 1px solid var(--border); background: #1e293b; color: var(--text); font-size: 12px; font-family: inherit; cursor: pointer; }
+</style>
 </head>
 <body>
-  <header>
-    <h1>Minimum Window Substring</h1>
-    <span id="phasePill" class="phase-pill phase-init">INIT</span>
-  </header>
 
-  <main>
-    <div class="str-section">
-      <div class="str-label">s = "ADOBECODEBANC" &nbsp;·&nbsp; t = "ABC"</div>
-      <div class="str-cells" id="strCells"></div>
-      <div class="ptr-row"   id="ptrRow"></div>
+<div class="viz-inputs">
+  <div>
+    <label>Preset</label>
+    <select id="presetSel" onchange="loadPreset()">
+      <option value="">— pick a preset —</option>
+      <option value="ADOBECODEBANC|ABC">ADOBECODEBANC / ABC</option>
+      <option value="a|a">a / a</option>
+      <option value="a|aa">a / aa (impossible)</option>
+      <option value="AAAABC|ABC">AAAABC / ABC</option>
+      <option value="aa|aa">aa / aa</option>
+    </select>
+  </div>
+  <div>
+    <label>s</label>
+    <input type="text" id="inputS" value="ADOBECODEBANC" style="width:180px;" />
+  </div>
+  <div>
+    <label>t</label>
+    <input type="text" id="inputT" value="ABC" style="width:80px;" />
+  </div>
+  <button class="btn-run" onclick="buildAndRun()">Run</button>
+  <button class="btn-rand" onclick="randomExample()">&#127922; Random</button>
+</div>
+
+<div id="header">
+  <span id="phase-badge">Expand</span>
+  <span style="font-size:13px;font-weight:700;">Minimum Window Substring</span>
+  <span id="step-counter">Step 0 / 0</span>
+</div>
+
+<div id="main">
+  <div id="viz-area">
+    <div id="desc">Initializing...</div>
+    <div id="need-row"></div>
+    <div id="string-area">
+      <div class="str-label">s</div>
+      <div id="char-row"></div>
     </div>
+  </div>
 
-    <div class="content-row">
-      <div class="left-panel">
-        <div class="maps-row">
-          <div class="map-box">
-            <div class="map-hdr">
-              <div class="map-title">Window</div>
-              <span id="haveBadge" class="have-badge">0/3</span>
-            </div>
-            <div class="map-entries" id="windowMap"></div>
-          </div>
-          <div class="map-box">
-            <div class="map-hdr">
-              <div class="map-title">Need</div>
-            </div>
-            <div class="map-entries" id="needMap"></div>
-          </div>
-        </div>
-
-        <div class="status-box">
-          <div class="step-desc" id="stepDesc">Initializing algorithm...</div>
-          <div class="result-row">
-            <span class="result-lbl">Best window</span>
-            <span id="resultVal" class="result-none">&#8212;</span>
-          </div>
-        </div>
-      </div>
-
-      <div class="code-panel">
-        <div class="code-title">Python</div>
-        <div class="code-body" id="codeBody"></div>
-      </div>
+  <div id="sidebar">
+    <div>
+      <div class="sidebar-title">Pointers</div>
+      <table class="ptr-table" id="ptr-table"><tbody></tbody></table>
     </div>
-
-    <div class="nav-row">
-      <button id="prevBtn" class="btn-step">&#8592; Prev</button>
-      <button id="stepBtn" class="btn-step">Step &#8594;</button>
-      <button id="playBtn" class="btn-play">Play</button>
-      <button id="resetBtn" class="btn-step">&#8635; Reset</button>
-      <select id="speedSel">
-        <option value="800">0.5&#215;</option>
-        <option value="400" selected>1&#215;</option>
-        <option value="200">2&#215;</option>
-        <option value="100">4&#215;</option>
-      </select>
-      <span class="step-ctr" id="stepCtr">Step 0 / 0</span>
+    <div>
+      <div class="sidebar-title">Window Counts</div>
+      <div class="wc-pills" id="window-counts"></div>
     </div>
-  </main>
+    <div>
+      <div class="sidebar-title">Best Result</div>
+      <div id="result-info" style="font-size:11px;color:var(--text-muted);line-height:1.6;"></div>
+    </div>
+  </div>
+</div>
 
-  <script src="../shared/gsap.min.js"></script>
-  <script src="../shared/viz.js"></script>
-  <script>
-    var S = 'ADOBECODEBANC';
-    var T = 'ABC';
+<div id="code-wrap">
+  <button id="code-toggle">&#9660; Code (click to collapse)</button>
+  <div id="code-body">
+    <pre id="code-pre"></pre>
+  </div>
+</div>
 
-    /* ── Snapshot generation ─────────────────────────────────────────── */
-    function buildSnapshots(s, t) {
-      var snaps = [];
-      var need = {};
-      for (var ci = 0; ci < t.length; ci++) {
-        var tc = t[ci];
-        need[tc] = (need[tc] || 0) + 1;
+<div id="nav-row">
+  <button id="prevBtn" class="btn-step">&#8592; Prev</button>
+  <button id="stepBtn" class="btn-step">Step &#8594;</button>
+  <button id="playBtn" class="btn-play">Play</button>
+  <button id="resetBtn" class="btn-step">&#8634; Reset</button>
+  <select id="speedSel">
+    <option value="800">0.5&#215;</option>
+    <option value="400" selected>1&#215;</option>
+    <option value="200">2&#215;</option>
+    <option value="100">4&#215;</option>
+  </select>
+</div>
+
+<script>
+const CODE_LINES = [
+  { n:  1, t: '<span class="kw">def</span> <span class="fn">minWindow</span>(s, t):' },
+  { n:  2, t: '    need = Counter(t)' },
+  { n:  3, t: '    have, want = <span class="num">0</span>, len(need)' },
+  { n:  4, t: '    window = {}' },
+  { n:  5, t: '    res, resLen = [-<span class="num">1</span>, -<span class="num">1</span>], float(<span class="str">"inf"</span>)' },
+  { n:  6, t: '    left = <span class="num">0</span>' },
+  { n:  7, t: '    <span class="kw">for</span> right <span class="kw">in</span> range(len(s)):' },
+  { n:  8, t: '        c = s[right]' },
+  { n:  9, t: '        window[c] = window.get(c, <span class="num">0</span>) + <span class="num">1</span>' },
+  { n: 10, t: '        <span class="kw">if</span> c <span class="kw">in</span> need <span class="kw">and</span> window[c] == need[c]:' },
+  { n: 11, t: '            have += <span class="num">1</span>' },
+  { n: 12, t: '        <span class="kw">while</span> have == want:' },
+  { n: 13, t: '            <span class="kw">if</span> right - left + <span class="num">1</span> < resLen:' },
+  { n: 14, t: '                resLen = right - left + <span class="num">1</span>' },
+  { n: 15, t: '                res = [left, right]' },
+  { n: 16, t: '            window[s[left]] -= <span class="num">1</span>' },
+  { n: 17, t: '            <span class="kw">if</span> s[left] <span class="kw">in</span> need <span class="kw">and</span> window[s[left]] < need[s[left]]:' },
+  { n: 18, t: '                have -= <span class="num">1</span>' },
+  { n: 19, t: '            left += <span class="num">1</span>' },
+  { n: 20, t: '    l, r = res' },
+  { n: 21, t: '    <span class="kw">return</span> s[l : r+<span class="num">1</span>] <span class="kw">if</span> resLen != float(<span class="str">"inf"</span>) <span class="kw">else</span> <span class="str">""</span>' },
+];
+
+// ─── buildSnapshots ────────────────────────────────────────────────────────
+function buildSnapshots(s, t) {
+  const snaps = [];
+
+  // Build need map
+  const need = {};
+  for (const c of t) need[c] = (need[c] || 0) + 1;
+  const want = Object.keys(need).length;
+
+  let win = {};
+  let have = 0;
+  let left = 0;
+  let resLeft = -1, resRight = -1, resLen = Infinity;
+
+  function mkSnap(phase, description, active_line, right) {
+    return {
+      phase, description, active_line,
+      s, t,
+      need: Object.assign({}, need),
+      left, right,
+      window: Object.assign({}, win),
+      have, want,
+      best: resLen === Infinity ? null : {
+        left: resLeft, right: resRight,
+        sub: s.slice(resLeft, resRight + 1)
       }
-      var required = Object.keys(need).length;
-      var win = {};
-      var have = 0, l = 0, res = null, resLen = Infinity;
+    };
+  }
 
-      function cloneWin() {
-        var o = {};
-        var ks = Object.keys(win);
-        for (var i = 0; i < ks.length; i++) o[ks[i]] = win[ks[i]];
-        return o;
-      }
-      function cloneNeed() {
-        var o = {};
-        var ks = Object.keys(need);
-        for (var i = 0; i < ks.length; i++) o[ks[i]] = need[ks[i]];
-        return o;
-      }
+  // Initial snap
+  const needStr = Object.entries(need).map(function(e) { return e[0] + ':' + e[1]; }).join(', ');
+  snaps.push(mkSnap('expand',
+    'Initialize: need={' + needStr + '}, want=' + want + '. left=0, have=0/' + want + '. Start expanding right pointer through s.',
+    3, -1));
 
-      /* init */
-      var needStr = Object.keys(need).sort().map(function(k){ return k+':'+need[k]; }).join(', ');
-      snaps.push({
-        l: 0, r: -1, wmap: {}, need: cloneNeed(), have: 0, required: required,
-        result: null, phase: 'init', activeIdx: -1, activeType: null, codeLine: 2,
-        desc: 'Initialize: need={' + needStr + '}, have=0, required=' + required + ', l=0'
-      });
+  for (let right = 0; right < s.length; right++) {
+    const c = s[right];
+    win[c] = (win[c] || 0) + 1;
+    const haveChanged = !!(need[c] && win[c] === need[c]);
+    if (haveChanged) have++;
 
-      for (var r = 0; r < s.length; r++) {
-        var c = s[r];
-        win[c] = (win[c] || 0) + 1;
-        var sat = (c in need) && win[c] === need[c];
-        if (sat) have++;
+    snaps.push(mkSnap('expand',
+      'Expand right=' + right + ': add s[' + right + ']=' + JSON.stringify(c) + '. window[' + JSON.stringify(c) + ']=' + win[c] + '. ' +
+        (haveChanged
+          ? JSON.stringify(c) + ' count satisfied (' + win[c] + '/' + need[c] + ') → have=' + have + '/' + want + '.'
+          : 'have=' + have + '/' + want + '.'),
+      haveChanged ? 11 : 9, right));
 
-        snaps.push({
-          l: l, r: r, wmap: cloneWin(), need: cloneNeed(), have: have, required: required,
-          result: res ? [res[0], res[1]] : null,
-          phase: 'expand', activeIdx: r, activeType: 'expand',
-          codeLine: sat ? 11 : 9,
-          desc: 'Expand r=' + r + ': add \'' + c + '\'' +
-                (sat ? ' — satisfied ' + c + ':' + win[c] + '==' + need[c] + ', have=' + have + '/' + required
-                     : ' — have=' + have + '/' + required)
-        });
-
-        while (have === required) {
-          var wl = r - l + 1;
-          var newBest = wl < resLen;
-          if (newBest) { resLen = wl; res = [l, r]; }
-
-          var lc = s[l];
-          var prevL = l;
-          win[lc]--;
-          var drop = (lc in need) && win[lc] < need[lc];
-          if (drop) have--;
-          l++;
-
-          var d = newBest
-            ? 'New best "' + s.slice(res[0], res[1]+1) + '" (len=' + resLen + '). '
-            : '';
-          d += 'Shrink: remove s[' + prevL + ']=\'' + lc + '\'';
-          d += drop
-            ? ' — have ' + (have+1) + '→' + have + '/' + required + ' (window broken)'
-            : ' — have=' + have + '/' + required + ' (still valid)';
-
-          snaps.push({
-            l: l, r: r, wmap: cloneWin(), need: cloneNeed(), have: have, required: required,
-            result: res ? [res[0], res[1]] : null,
-            phase: 'shrink', activeIdx: prevL, activeType: 'shrink',
-            codeLine: drop ? 18 : 16,
-            desc: d
-          });
-        }
+    while (have === want) {
+      const winLen = right - left + 1;
+      const winSub = s.slice(left, right + 1);
+      const isBest = winLen < resLen;
+      if (isBest) {
+        resLen = winLen;
+        resLeft = left;
+        resRight = right;
       }
 
-      /* done */
-      snaps.push({
-        l: l, r: s.length - 1, wmap: cloneWin(), need: cloneNeed(), have: have, required: required,
-        result: res ? [res[0], res[1]] : null,
-        phase: 'done', activeIdx: -1, activeType: null, codeLine: 20,
-        desc: 'Done! Minimum window = "' + (res ? s.slice(res[0], res[1]+1) : '(none)') + '"' +
-              (res ? ' at indices [' + res[0] + ', ' + res[1] + ']' : '')
-      });
+      snaps.push(mkSnap('shrink',
+        'have=' + have + '=want. Window "' + winSub + '" (len=' + winLen + '). ' +
+          (isBest
+            ? 'New best! Record res=[' + left + ',' + right + '] "' + winSub + '".'
+            : 'Not better than "' + s.slice(resLeft, resRight + 1) + '" (len=' + resLen + ').'),
+        isBest ? 14 : 13, right));
 
-      return snaps;
+      const lc = s[left];
+      win[lc]--;
+      const haveDrop = !!(need[lc] && win[lc] < need[lc]);
+      if (haveDrop) have--;
+      left++;
+
+      snaps.push(mkSnap(have === want ? 'shrink' : 'expand',
+        'Shrink: remove s[' + (left - 1) + ']=' + JSON.stringify(lc) + '. window[' + JSON.stringify(lc) + ']=' + win[lc] + '. ' +
+          (haveDrop
+            ? JSON.stringify(lc) + ' count dropped below need → have=' + have + '/' + want + '. Exit shrink loop.'
+            : 'have=' + have + '/' + want + '. Continue shrinking.'),
+        haveDrop ? 18 : 16, right));
     }
+  }
 
-    var snapshots = buildSnapshots(S, T);
+  const finalSub = resLen === Infinity ? '""' : '"' + s.slice(resLeft, resRight + 1) + '"';
+  snaps.push(mkSnap('done',
+    'Done! Minimum window: ' + finalSub +
+      (resLen !== Infinity ? ' (len=' + resLen + ', indices [' + resLeft + ',' + resRight + ']).' : ' — no valid window found.'),
+    21, s.length - 1));
 
-    /* ── Code lines ──────────────────────────────────────────────────── */
-    var CODE = [
-      'def min_window(s, t):',
-      '    if not t: return ""',
-      '    need = Counter(t)',
-      '    window = {}',
-      '    have, required = 0, len(need)',
-      '    res, resLen = [-1, -1], float("inf")',
-      '    l = 0',
-      '    for r in range(len(s)):',
-      '        c = s[r]',
-      '        window[c] = window.get(c, 0) + 1',
-      '        if c in need and window[c] == need[c]:',
-      '            have += 1',
-      '        while have == required:',
-      '            if r - l + 1 < resLen:',
-      '                res = [l, r]',
-      '                resLen = r - l + 1',
-      '            window[s[l]] -= 1',
-      '            if s[l] in need and window[s[l]] < need[s[l]]:',
-      '                have -= 1',
-      '            l += 1',
-      '    return s[res[0]:res[1]+1] if resLen != float("inf") else ""',
-    ];
+  return snaps;
+}
 
-    /* ── Build static DOM ────────────────────────────────────────────── */
-    var strCellsEl = document.getElementById('strCells');
-    var ptrRowEl   = document.getElementById('ptrRow');
-    var codeBodyEl = document.getElementById('codeBody');
+// ─── Render helpers ────────────────────────────────────────────────────────
+function renderNeedRow(snap) {
+  const { need, window: win } = snap;
+  let html = '<span class="need-label">t needs:</span>';
+  const entries = Object.entries(need);
+  for (let i = 0; i < entries.length; i++) {
+    const ch = entries[i][0], cnt = entries[i][1];
+    const got = win[ch] || 0;
+    const cls = got >= cnt ? 'need-pill satisfied' : (got > 0 ? 'need-pill partial' : 'need-pill');
+    html += '<div class="' + cls + '"><span>' + ch + '</span><span style="font-size:10px;opacity:.8">' + got + '/' + cnt + '</span></div>';
+  }
+  document.getElementById('need-row').innerHTML = html;
+}
 
-    for (var i = 0; i < S.length; i++) {
-      var cell = document.createElement('div');
-      cell.className = 'cell';
-      cell.id = 'cell' + i;
-      cell.textContent = S[i];
-      strCellsEl.appendChild(cell);
+function renderCharRow(snap) {
+  const { s, left, right, best, phase, need, window: win } = snap;
+  let html = '';
+  for (let i = 0; i < s.length; i++) {
+    const ch = s[i];
+    const inWindow = right >= 0 && i >= left && i <= right;
+    const isLeft = right >= 0 && i === left;
+    const isRight = right >= 0 && i === right;
+    const isNeeded = need[ch] !== undefined;
+    const got = win[ch] || 0;
+    const needCnt = need[ch] || 0;
 
-      var ptr = document.createElement('div');
-      ptr.className = 'ptr-c';
-      ptr.id = 'ptr' + i;
-      ptrRowEl.appendChild(ptr);
-    }
-
-    for (var li = 0; li < CODE.length; li++) {
-      var clEl = document.createElement('div');
-      clEl.className = 'cl';
-      clEl.id = 'cl' + li;
-      clEl.textContent = CODE[li];
-      codeBodyEl.appendChild(clEl);
-    }
-
-    /* ── Render ──────────────────────────────────────────────────────── */
-    function applyStep(snap, animate) {
-      var l         = snap.l;
-      var r         = snap.r;
-      var wmap      = snap.wmap;
-      var need      = snap.need;
-      var have      = snap.have;
-      var required  = snap.required;
-      var result    = snap.result;
-      var phase     = snap.phase;
-      var activeIdx = snap.activeIdx;
-      var activeType= snap.activeType;
-      var codeLine  = snap.codeLine;
-      var desc      = snap.desc;
-
-      /* phase pill */
-      var pill = document.getElementById('phasePill');
-      var phaseLabels = { init: 'INIT', expand: '→ EXPAND', shrink: '← SHRINK', done: '✓ DONE' };
-      pill.className = 'phase-pill phase-' + phase;
-      pill.textContent = phaseLabels[phase] || phase.toUpperCase();
-
-      /* cells */
-      for (var i = 0; i < S.length; i++) {
-        var cellEl = document.getElementById('cell' + i);
-        cellEl.className = 'cell';
-        if (phase === 'done') {
-          if (result && i >= result[0] && i <= result[1]) cellEl.classList.add('is-best');
-        } else {
-          var inWin   = r >= 0 && i >= l && i <= r;
-          var isActive = i === activeIdx;
-          if (isActive && activeType === 'expand')      cellEl.classList.add('is-active-expand');
-          else if (isActive && activeType === 'shrink') cellEl.classList.add('is-active-shrink');
-          else if (inWin)                               cellEl.classList.add('in-window');
-        }
-      }
-
-      /* pointer labels */
-      for (var pi = 0; pi < S.length; pi++) {
-        var ptrEl = document.getElementById('ptr' + pi);
-        var isL = pi === l;
-        var isR = pi === r && r >= 0;
-        if (isL && isR)   { ptrEl.textContent = 'L/R'; ptrEl.className = 'ptr-c LR'; }
-        else if (isL)     { ptrEl.textContent = 'L';   ptrEl.className = 'ptr-c L';  }
-        else if (isR)     { ptrEl.textContent = 'R';   ptrEl.className = 'ptr-c R';  }
-        else              { ptrEl.textContent = '';     ptrEl.className = 'ptr-c';    }
-      }
-
-      /* have badge */
-      var badge = document.getElementById('haveBadge');
-      badge.textContent = have + '/' + required;
-      badge.className = 'have-badge' + (have === required ? ' full' : '');
-
-      /* window map */
-      var winMapEl = document.getElementById('windowMap');
-      winMapEl.innerHTML = '';
-      var winKeys = Object.keys(wmap).filter(function(k){ return wmap[k] > 0; }).sort();
-      if (winKeys.length === 0) {
-        var em = document.createElement('span');
-        em.className = 'empty-msg';
-        em.textContent = '(empty)';
-        winMapEl.appendChild(em);
-      } else {
-        winKeys.forEach(function(ch) {
-          var cnt = wmap[ch];
-          var e = document.createElement('span');
-          var isSat  = (ch in need) && cnt >= need[ch];
-          var isOver = (ch in need) && cnt > need[ch];
-          e.className = 'entry' + (isOver ? ' over' : isSat ? ' sat' : '');
-          e.textContent = ch + ':' + cnt;
-          winMapEl.appendChild(e);
-        });
-      }
-
-      /* need map */
-      var needMapEl = document.getElementById('needMap');
-      needMapEl.innerHTML = '';
-      Object.keys(need).sort().forEach(function(ch) {
-        var cnt = need[ch];
-        var e = document.createElement('span');
-        var isSat = (wmap[ch] || 0) >= cnt;
-        e.className = 'entry' + (isSat ? ' sat' : '');
-        e.textContent = ch + ':' + cnt;
-        needMapEl.appendChild(e);
-      });
-
-      /* description */
-      document.getElementById('stepDesc').textContent = desc;
-
-      /* result */
-      var resEl = document.getElementById('resultVal');
-      if (result) {
-        resEl.textContent = '"' + S.slice(result[0], result[1]+1) + '" (len=' + (result[1]-result[0]+1) + ')';
-        resEl.className = 'result-val';
-      } else {
-        resEl.innerHTML = '&#8212;';
-        resEl.className = 'result-none';
-      }
-
-      /* code highlight */
-      var allCl = document.querySelectorAll('.cl');
-      for (var ci = 0; ci < allCl.length; ci++) allCl[ci].classList.remove('hl');
-      if (codeLine >= 0 && codeLine < CODE.length) {
-        var hlEl = document.getElementById('cl' + codeLine);
-        if (hlEl) {
-          hlEl.classList.add('hl');
-          hlEl.scrollIntoView({ block: 'nearest' });
-        }
+    let cls = 'char-box';
+    if (phase === 'done' && best && i >= best.left && i <= best.right) {
+      cls += ' in-best';
+    } else {
+      if (inWindow) cls += ' in-window';
+      if (isLeft && isRight) cls += ' at-both';
+      else if (isLeft) cls += ' at-left';
+      else if (isRight) cls += ' at-right';
+      if (inWindow && isNeeded) {
+        cls += (got >= needCnt ? ' needed-sat' : ' needed-part');
       }
     }
 
-    function updateStatus(snap, cur, total) {
-      document.getElementById('stepCtr').textContent = 'Step ' + cur + ' / ' + total;
+    let badge = '';
+    if (right >= 0) {
+      if (isLeft && isRight) badge = '<span class="ptr-b ptr-lr">l=r</span>';
+      else if (isLeft) badge = '<span class="ptr-b ptr-l">l</span>';
+      else if (isRight) badge = '<span class="ptr-b ptr-r">r</span>';
     }
 
-    /* ── VizNav init ─────────────────────────────────────────────────── */
-    var nav;
-    document.addEventListener('DOMContentLoaded', function() {
-      nav = VizNav({
-        btnPrev:  document.getElementById('prevBtn'),
-        btnNext:  document.getElementById('stepBtn'),
-        btnPlay:  document.getElementById('playBtn'),
-        speedSel: document.getElementById('speedSel'),
-        render: function(snap, cur, total) {
-          applyStep(snap, cur > 0);
-          updateStatus(snap, cur, total);
-        }
-      });
-      document.getElementById('resetBtn').addEventListener('click', function() { nav.reset(); });
-      nav.load(snapshots);
-    });
-  </script>
+    html += '<div class="char-wrap">' +
+      '<div class="' + cls + '">' + ch + '</div>' +
+      '<div class="char-idx">' + i + '</div>' +
+      '<div class="ptr-badges">' + badge + '</div>' +
+      '</div>';
+  }
+  document.getElementById('char-row').innerHTML = html;
+}
+
+function updateSidebar(snap) {
+  const { left, right, have, want, window: win, need, best, s } = snap;
+
+  // Pointer table
+  const tbody = document.querySelector('#ptr-table tbody');
+  const winStr = (right >= 0 && right >= left) ? s.slice(left, right + 1) : '';
+  const winLen = winStr.length;
+  let rows = '<tr><td>left</td><td>' + left + '</td></tr>';
+  rows += '<tr><td>right</td><td>' + (right >= 0 ? right : '—') + '</td></tr>';
+  rows += '<tr><td>have</td><td>' + have + ' / ' + want + '</td></tr>';
+  if (right >= 0) {
+    rows += '<tr><td>window</td><td>"' + winStr + '"</td></tr>';
+    rows += '<tr><td>len</td><td>' + winLen + '</td></tr>';
+  }
+  tbody.innerHTML = rows;
+
+  // Window counts
+  let whtml = '';
+  const entries = Object.entries(need);
+  for (let i = 0; i < entries.length; i++) {
+    const ch = entries[i][0], cnt = entries[i][1];
+    const got = win[ch] || 0;
+    const cls = got >= cnt ? 'wc-pill sat' : (got > 0 ? 'wc-pill part' : 'wc-pill');
+    whtml += '<span class="' + cls + '">' + ch + ': ' + got + '/' + cnt + '</span>';
+  }
+  document.getElementById('window-counts').innerHTML = whtml;
+
+  // Result
+  const ri = document.getElementById('result-info');
+  if (best) {
+    ri.innerHTML = 'Best: <span style="color:#8b5cf6;font-weight:700;">"' + best.sub + '"</span><br>len=' + best.sub.length + '<br>indices [' + best.left + ', ' + best.right + ']';
+  } else {
+    ri.innerHTML = '<span style="color:var(--text-dim)">No result yet</span>';
+  }
+}
+
+function renderCode(activeLine) {
+  const pre = document.getElementById('code-pre');
+  pre.innerHTML = CODE_LINES.map(function(l) {
+    const cls = l.n === activeLine ? 'code-line active' : 'code-line';
+    return '<span class="' + cls + '">' + l.t + '</span>';
+  }).join('');
+  const active = pre.querySelector('.active');
+  if (active) active.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+}
+
+// ─── Phase badge colors ────────────────────────────────────────────────────
+const PHASE_META = {
+  expand: { label: 'Expand',  bg: '#1e3a5f', color: '#3b82f6' },
+  shrink: { label: 'Shrink',  bg: '#431407', color: '#f97316' },
+  done:   { label: 'Done',    bg: '#14532d', color: '#22c55e' },
+};
+
+function applyStep(snap) {
+  const meta = PHASE_META[snap.phase] || PHASE_META.expand;
+  const badge = document.getElementById('phase-badge');
+  badge.textContent = meta.label;
+  badge.style.background = meta.bg;
+  badge.style.color = meta.color;
+  badge.style.borderColor = meta.color;
+
+  document.getElementById('desc').textContent = snap.description;
+  renderNeedRow(snap);
+  renderCharRow(snap);
+  updateSidebar(snap);
+  renderCode(snap.active_line);
+}
+
+function updateStatus(snap, cur, total) {
+  document.getElementById('step-counter').textContent = 'Step ' + cur + ' / ' + total;
+}
+
+// ─── Code toggle ──────────────────────────────────────────────────────────
+let codeExpanded = true;
+document.getElementById('code-toggle').addEventListener('click', function() {
+  codeExpanded = !codeExpanded;
+  document.getElementById('code-body').style.display = codeExpanded ? 'block' : 'none';
+  document.getElementById('code-toggle').textContent =
+    (codeExpanded ? '\u25bc' : '\u25b6') + ' Code (click to ' + (codeExpanded ? 'collapse' : 'expand') + ')';
+});
+
+document.getElementById('resetBtn').addEventListener('click', function() {
+  if (window.nav) window.nav.reset();
+});
+
+// ─── viz-inputs handlers ──────────────────────────────────────────────────
+function loadPreset() {
+  var val = document.getElementById('presetSel').value;
+  if (!val) return;
+  var parts = val.split('|');
+  document.getElementById('inputS').value = parts[0];
+  document.getElementById('inputT').value = parts[1];
+  buildAndRun();
+}
+
+function buildAndRun() {
+  var s = document.getElementById('inputS').value.trim();
+  var t = document.getElementById('inputT').value.trim();
+  if (!s || !t) return;
+  var snaps = buildSnapshots(s, t);
+  if (window.nav) window.nav.load(snaps);
+}
+
+var RANDOM_EXAMPLES = [
+  ['OUZODYXAZV', 'XYZ'],
+  ['BANCDCBC', 'ABC'],
+  ['AABCBAB', 'AB'],
+  ['XYZYX', 'XYZ'],
+  ['abcabdebac', 'cda'],
+  ['timetopractice', 'toc'],
+];
+
+function randomExample() {
+  var ex = RANDOM_EXAMPLES[Math.floor(Math.random() * RANDOM_EXAMPLES.length)];
+  document.getElementById('inputS').value = ex[0];
+  document.getElementById('inputT').value = ex[1];
+  document.getElementById('presetSel').value = '';
+  buildAndRun();
+}
+
+// ─── Init ─────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', function() {
+  var snaps = buildSnapshots('ADOBECODEBANC', 'ABC');
+  window.nav = VizNav({
+    btnPrev:  document.getElementById('prevBtn'),
+    btnNext:  document.getElementById('stepBtn'),
+    btnPlay:  document.getElementById('playBtn'),
+    speedSel: document.getElementById('speedSel'),
+    render: function(snap, cur, total) {
+      applyStep(snap);
+      updateStatus(snap, cur, total);
+    }
+  });
+  window.nav.load(snaps);
+});
+</script>
 </body>
 </html>

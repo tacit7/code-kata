@@ -3,428 +3,455 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Two Sum II – Input Array Is Sorted</title>
+<title>Two Sum II</title>
 <link rel="stylesheet" href="../shared/style.css" />
 <script src="../shared/gsap.min.js"></script>
 <script src="../shared/viz.js"></script>
 <style>
-  /* ── layout ── */
-  body { display:flex; flex-direction:column; height:100vh; overflow:hidden; background:var(--bg); color:var(--text); font-family:monospace; }
-  #main { display:flex; flex:1; overflow:hidden; gap:0; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: "Fira Code", "Cascadia Code", monospace; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
 
-  /* ── left: code panel ── */
-  #code-panel {
-    width:280px; min-width:220px; background:var(--surface); border-right:1px solid var(--border);
-    display:flex; flex-direction:column; overflow:hidden;
+  /* viz-inputs bar */
+  .viz-inputs { padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; flex-shrink: 0; }
+  .vi-label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); display: block; margin-bottom: 4px; }
+  .vi-input { background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px; font-size: 0.85rem; font-family: inherit; }
+  .vi-select { background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px; font-size: 0.85rem; font-family: inherit; cursor: pointer; }
+  .vi-btn { padding: 7px 18px; border-radius: 6px; border: none; font-weight: 600; cursor: pointer; font-size: 0.85rem; font-family: inherit; }
+  .vi-btn-run { background: var(--accent); color: #fff; }
+  .vi-btn-rand { background: var(--bg); color: var(--text); border: 1px solid var(--border); }
+
+  /* Header */
+  #header { padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+  #phase-badge { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; padding: 3px 10px; border-radius: var(--radius-sm); background: #1e3a5f; color: var(--blue); border: 1px solid var(--blue); }
+  #step-counter { font-size: 12px; color: var(--text-muted); margin-left: auto; }
+
+  /* Main layout */
+  #main { display: flex; flex: 1; overflow: hidden; }
+
+  /* Viz area */
+  #viz-area { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; gap: 24px; overflow: hidden; }
+
+  /* Description */
+  #desc { font-size: 13px; color: var(--text-muted); text-align: center; max-width: 560px; min-height: 36px; line-height: 1.5; }
+
+  /* Array canvas */
+  #array-canvas { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+  .array-row { display: flex; align-items: flex-start; flex-wrap: wrap; gap: 0; }
+
+  /* Node */
+  .node-wrap { display: flex; flex-direction: column; align-items: center; }
+  .node-box {
+    width: 48px; height: 48px; border-radius: 8px;
+    background: #1e293b; border: 2px solid #334155; color: #f1f5f9;
+    font-size: 17px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    transition: border-color .25s, background .25s, opacity .25s;
+    margin: 0 4px;
   }
-  #code-panel h3 { margin:0; padding:10px 14px; font-size:.8rem; color:var(--text-muted); border-bottom:1px solid var(--border); letter-spacing:.06em; text-transform:uppercase; }
-  #code-lines { flex:1; overflow-y:auto; padding:8px 0; }
-  .code-line { display:flex; gap:8px; padding:2px 10px; font-size:.78rem; line-height:1.65; white-space:pre; }
-  .code-line .ln { color:var(--text-dim); width:18px; text-align:right; flex-shrink:0; user-select:none; }
-  .code-line .code { color:var(--text-muted); }
-  .code-line.active { background:rgba(59,130,246,.18); }
-  .code-line.active .code { color:var(--text); }
+  .node-box.highlight-left  { border-color: #3b82f6; box-shadow: 0 0 0 3px #3b82f620; }
+  .node-box.highlight-right { border-color: #f97316; box-shadow: 0 0 0 3px #f9731620; }
+  .node-box.highlight-match { border-color: #22c55e; background: #14532d40; color: #4ade80; box-shadow: 0 0 0 3px #22c55e30; }
+  .node-box.faded { opacity: 0.3; }
+  .node-box.pulse { animation: nodePulse .5s ease; }
+  @keyframes nodePulse { 0%,100%{box-shadow:0 0 0 0 #10b98140} 50%{box-shadow:0 0 0 8px #10b98130} }
 
-  /* ── center: array + sum display ── */
-  #center { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:24px; padding:24px; overflow:hidden; }
-  #preset-row { display:flex; gap:8px; align-items:center; font-size:.78rem; color:var(--text-muted); }
-  #preset-row button { background:var(--surface); border:1px solid var(--border); color:var(--text); padding:3px 10px; border-radius:var(--radius-sm); cursor:pointer; font-size:.78rem; }
-  #preset-row button.active { border-color:var(--accent); color:var(--accent); }
+  /* Index labels */
+  .index-label { font-size: 9px; color: var(--text-dim); margin-top: 2px; }
 
-  #array-wrap { display:flex; flex-direction:column; align-items:center; gap:16px; }
-  #pointer-row { display:flex; gap:8px; position:relative; height:28px; }
-  .ptr-label {
-    width:56px; text-align:center; font-weight:700; font-size:.85rem;
-    border-radius:var(--radius-sm); padding:2px 0; line-height:1.4;
-    transition:opacity .25s;
-  }
-  .ptr-label.ptr-L { color:#3b82f6; background:rgba(59,130,246,.12); }
-  .ptr-label.ptr-R { color:#f97316; background:rgba(249,115,22,.12); }
-  .ptr-label.ptr-hidden { opacity:0; }
+  /* Pointer badges */
+  .badges { display: flex; flex-wrap: wrap; gap: 3px; justify-content: center; margin-top: 4px; min-height: 18px; }
+  .badge { font-size: 9px; font-weight: 700; padding: 1px 5px; border-radius: 4px; letter-spacing: .05em; }
+  .badge-left  { background: #1e3a5f; color: #3b82f6; border: 1px solid #3b82f6; }
+  .badge-right { background: #431407; color: #f97316; border: 1px solid #f97316; }
+  .badge-match { background: #1a2e1a; color: #22c55e; border: 1px solid #22c55e; }
 
-  #array-row { display:flex; gap:8px; }
-  .cell {
-    width:56px; height:56px; display:flex; align-items:center; justify-content:center;
-    border:2px solid var(--border); border-radius:8px; font-size:1.2rem; font-weight:700;
-    background:var(--surface); position:relative; transition:border-color .25s, background .25s;
-  }
-  .cell .idx { position:absolute; bottom:-22px; font-size:.7rem; color:var(--text-dim); width:100%; text-align:center; }
-  .cell.active-L { border-color:#3b82f6; background:rgba(59,130,246,.1); }
-  .cell.active-R { border-color:#f97316; background:rgba(249,115,22,.1); }
-  .cell.active-LR { border-color:#22c55e; background:rgba(34,197,94,.15); color:#22c55e; }
+  /* Sum display */
+  #sum-display { display: none; align-items: center; gap: 16px; padding: 12px 20px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; font-size: 14px; }
+  .sum-part { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+  .sum-val { font-size: 20px; font-weight: 700; }
+  .sum-lbl { font-size: 9px; text-transform: uppercase; letter-spacing: .08em; color: var(--text-dim); }
+  .sum-op { font-size: 18px; color: var(--text-dim); }
+  .sum-result { font-size: 20px; font-weight: 700; }
+  .sum-cmp { font-size: 12px; padding: 3px 10px; border-radius: 20px; font-weight: 700; }
+  .sum-cmp.lt { background: #451a03; color: #f97316; }
+  .sum-cmp.gt { background: #1e1b4b; color: #818cf8; }
+  .sum-cmp.eq { background: #14532d; color: #4ade80; }
 
-  #sum-display {
-    margin-top:28px; padding:14px 24px; background:var(--surface); border:1px solid var(--border);
-    border-radius:var(--radius-lg); font-size:.9rem; text-align:center; min-width:340px; min-height:48px;
-    line-height:1.5;
-  }
-  #sum-display .sum-eq { color:var(--text-muted); }
-  #sum-display .sum-val { color:var(--accent); font-weight:700; }
-  #sum-display .cmp-gt { color:var(--red); }
-  #sum-display .cmp-lt { color:var(--blue); }
-  #sum-display .cmp-eq { color:var(--green); }
+  /* Sidebar */
+  #sidebar { width: 260px; flex-shrink: 0; background: var(--surface); border-left: 1px solid var(--border); overflow-y: auto; padding: 14px 12px; display: flex; flex-direction: column; gap: 12px; }
+  .sidebar-section { font-size: 11px; }
+  .sidebar-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--text-dim); margin-bottom: 6px; }
+  .ptr-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+  .ptr-table td { padding: 3px 5px; border-bottom: 1px solid var(--border); }
+  .ptr-table td:first-child { color: var(--text-muted); width: 54px; }
+  .ptr-table td:last-child { color: var(--text); font-weight: 600; }
+  .list-text { font-size: 11px; color: var(--text-muted); line-height: 1.6; }
 
-  /* ── right panel ── */
-  #right-panel { width:260px; min-width:200px; background:var(--surface); border-left:1px solid var(--border); display:flex; flex-direction:column; overflow:hidden; }
-  .rp-section { display:flex; flex-direction:column; overflow:hidden; }
-  .rp-section:first-child { flex:0 0 auto; border-bottom:1px solid var(--border); }
-  .rp-section:last-child { flex:1; }
-  .rp-title { font-size:.75rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:.06em; padding:8px 12px; border-bottom:1px solid var(--border); }
+  /* Code panel */
+  #code-wrap { flex-shrink: 0; background: #0d1117; border-top: 1px solid var(--border); }
+  #code-toggle { width: 100%; background: #161b22; color: var(--text-muted); border: none; border-bottom: 1px solid var(--border); padding: 5px 12px; font-size: 11px; text-align: left; cursor: pointer; font-family: inherit; }
+  #code-toggle:hover { color: var(--text); }
+  #code-body { overflow: auto; max-height: 180px; padding: 10px 14px; }
+  pre { font-size: 11px; line-height: 1.7; font-family: inherit; }
+  .code-line { padding: 0 4px; border-radius: 3px; display: block; transition: background .2s; white-space: pre; }
+  .code-line.active { background: #451a0350; color: #fbbf24; }
+  .kw { color: #c792ea; } .fn { color: #82aaff; } .cm { color: #546e7a; font-style: italic; }
+  .str { color: #c3e88d; } .num { color: #f78c6c; }
 
-  #state-table { width:100%; border-collapse:collapse; font-size:.78rem; }
-  #state-table td { padding:5px 12px; border-bottom:1px solid rgba(51,65,85,.5); }
-  #state-table td:first-child { color:var(--text-dim); width:50%; }
-  #state-table td:last-child { color:var(--text); font-weight:600; text-align:right; }
-  #state-table td.val-changed { color:var(--accent); }
-
-  #log-list { flex:1; overflow-y:auto; padding:8px; display:flex; flex-direction:column; gap:4px; }
-  .log-entry { font-size:.72rem; padding:5px 8px; border-radius:var(--radius-sm); background:rgba(15,23,42,.4); border-left:2px solid var(--border); color:var(--text-muted); }
-  .log-entry.latest { border-left-color:var(--accent); color:var(--text); }
-  .log-entry .log-cmp-gt { color:var(--red); }
-  .log-entry .log-cmp-lt { color:var(--blue); }
-  .log-entry .log-cmp-eq { color:var(--green); }
-
-  /* ── status bar ── */
-  #status-bar { background:var(--surface); border-top:1px solid var(--border); padding:8px 14px; font-size:.8rem; color:var(--text-muted); display:flex; align-items:center; gap:8px; }
-  #step-counter { margin-left:auto; }
-
-  /* ── nav row ── */
-  .nav-row { display:flex; gap:8px; align-items:center; padding:8px 12px; background:var(--surface); border-top:1px solid var(--border); }
+  /* Nav */
+  #nav-row { flex-shrink: 0; display: flex; align-items: center; gap: 8px; padding: 10px 16px; background: var(--surface); border-top: 1px solid var(--border); }
+  .btn-step, .btn-play { padding: 6px 14px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--surface); color: var(--text); font-family: inherit; font-size: 12px; cursor: pointer; transition: background .15s; }
+  .btn-step:hover { background: #334155; }
+  .btn-play { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn-play:hover { background: var(--accent-hover); }
+  select { padding: 5px 8px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: #1e293b; color: var(--text); font-size: 12px; font-family: inherit; cursor: pointer; }
 </style>
 </head>
 <body>
 
+<div class="viz-inputs">
+  <div>
+    <label class="vi-label">Preset</label>
+    <select id="presetSel" class="vi-select" onchange="loadPreset()">
+      <option value="">— pick a preset —</option>
+      <option value="2,7,11,15|9">[2,7,11,15] target=9</option>
+      <option value="2,3,4|6">[2,3,4] target=6</option>
+      <option value="-1,0|-1">[-1,0] target=-1</option>
+      <option value="1,2,3,4,5|8">[1,2,3,4,5] target=8</option>
+      <option value="3,3|6">[3,3] target=6</option>
+    </select>
+  </div>
+  <div>
+    <label class="vi-label">Array (sorted, comma-sep)</label>
+    <input id="numsInput" class="vi-input" type="text" value="2,7,11,15" style="width:200px;" />
+  </div>
+  <div>
+    <label class="vi-label">Target</label>
+    <input id="targetInput" class="vi-input" type="number" value="9" style="width:80px;" />
+  </div>
+  <button class="vi-btn vi-btn-run" onclick="buildAndRun()">Run</button>
+  <button class="vi-btn vi-btn-rand" onclick="randomExample()">&#127922; Random</button>
+</div>
+
+<div id="header">
+  <span id="phase-badge">Init</span>
+  <span style="font-size:13px;font-weight:700;">Two Sum II</span>
+  <span id="step-counter">Step 0 / 0</span>
+</div>
+
 <div id="main">
-  <!-- Left: code panel -->
-  <div id="code-panel">
-    <h3>Python</h3>
-    <div id="code-lines"></div>
+  <div id="viz-area">
+    <div id="desc">Initializing...</div>
+    <div id="array-canvas"></div>
+    <div id="sum-display"></div>
   </div>
 
-  <!-- Center -->
-  <div id="center">
-    <div id="preset-row">
-      <span>Preset:</span>
-      <button id="p1" class="active" onclick="loadPreset(0)">A: [2,7,11,15] t=9</button>
-      <button id="p2" onclick="loadPreset(1)">B: [1,3,4,5,7,11] t=9</button>
-    </div>
-
-    <div id="array-wrap">
-      <div id="pointer-row"></div>
-      <div id="array-row"></div>
-    </div>
-
-    <div id="sum-display">—</div>
-  </div>
-
-  <!-- Right panel -->
-  <div id="right-panel">
-    <div class="rp-section">
-      <div class="rp-title">Pointer State</div>
-      <table id="state-table">
-        <tr><td>left</td><td id="st-left">—</td></tr>
-        <tr><td>right</td><td id="st-right">—</td></tr>
-        <tr><td>numbers[left]</td><td id="st-nl">—</td></tr>
-        <tr><td>numbers[right]</td><td id="st-nr">—</td></tr>
-        <tr><td>sum</td><td id="st-sum">—</td></tr>
-        <tr><td>target</td><td id="st-target">—</td></tr>
+  <div id="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-title">Pointers</div>
+      <table class="ptr-table" id="ptr-table">
+        <tbody></tbody>
       </table>
     </div>
-    <div class="rp-section">
-      <div class="rp-title">Decision Log</div>
-      <div id="log-list"></div>
+    <div class="sidebar-section">
+      <div class="sidebar-title">State</div>
+      <div class="list-text" id="list-state"></div>
     </div>
   </div>
 </div>
 
-<!-- Status bar -->
-<div id="status-bar">
-  <span id="status-msg">Ready</span>
-  <span id="step-counter"></span>
+<div id="code-wrap">
+  <button id="code-toggle">&#9660; Code (click to collapse)</button>
+  <div id="code-body">
+    <pre id="code-pre"></pre>
+  </div>
 </div>
 
-<!-- Nav controls -->
-<div class="nav-row">
-  <button id="prevBtn" class="btn-step">← Prev</button>
-  <button id="stepBtn" class="btn-step">Step →</button>
+<div id="nav-row">
+  <button id="prevBtn" class="btn-step">&#8592; Prev</button>
+  <button id="stepBtn" class="btn-step">Step &#8594;</button>
   <button id="playBtn" class="btn-play">Play</button>
-  <button id="resetBtn" class="btn-step">↺ Reset</button>
+  <button id="resetBtn" class="btn-step">&#8634; Reset</button>
   <select id="speedSel">
-    <option value="800">0.5×</option>
-    <option value="400" selected>1×</option>
-    <option value="200">2×</option>
-    <option value="100">4×</option>
+    <option value="800">0.5x</option>
+    <option value="400" selected>1x</option>
+    <option value="200">2x</option>
+    <option value="100">4x</option>
   </select>
 </div>
 
 <script>
-// ── Code lines ──────────────────────────────────────────────────────────────
-const CODE = [
-  'def twoSum(numbers, target):',
-  '    left, right = 0, len(numbers) - 1',
-  '',
-  '    while left < right:',
-  '        current_sum = numbers[left] + numbers[right]',
-  '',
-  '        if current_sum == target:',
-  '            return [left + 1, right + 1]',
-  '        elif current_sum < target:',
-  '            left += 1',
-  '        else:',
-  '            right -= 1',
+// ─── Code lines ────────────────────────────────────────────────────────────
+const CODE_LINES = [
+  { n: 1, t: '<span class="kw">def</span> <span class="fn">twoSum</span>(numbers, target):' },
+  { n: 2, t: '    left, right = <span class="num">0</span>, <span class="fn">len</span>(numbers) - <span class="num">1</span>' },
+  { n: 3, t: '    <span class="kw">while</span> left &lt; right:' },
+  { n: 4, t: '        s = numbers[left] + numbers[right]' },
+  { n: 5, t: '        <span class="kw">if</span> s == target:' },
+  { n: 6, t: '            <span class="kw">return</span> [left+<span class="num">1</span>, right+<span class="num">1</span>]' },
+  { n: 7, t: '        <span class="kw">elif</span> s &lt; target:' },
+  { n: 8, t: '            left += <span class="num">1</span>' },
+  { n: 9, t: '        <span class="kw">else</span>:' },
+  { n: 10, t: '            right -= <span class="num">1</span>' },
 ];
 
-function buildCode() {
-  const container = document.getElementById('code-lines');
-  container.innerHTML = '';
-  CODE.forEach((line, i) => {
-    const div = document.createElement('div');
-    div.className = 'code-line';
-    div.id = 'cl-' + (i + 1);
-    div.innerHTML = '<span class="ln">' + (i + 1) + '</span><span class="code">' + escHtml(line) + '</span>';
-    container.appendChild(div);
-  });
-}
-
-function escHtml(s) {
-  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-}
-
-function setActiveLines(lines) {
-  document.querySelectorAll('.code-line.active').forEach(el => el.classList.remove('active'));
-  (lines || []).forEach(n => {
-    const el = document.getElementById('cl-' + n);
-    if (el) el.classList.add('active');
-  });
-}
-
-// ── Snapshot generator ──────────────────────────────────────────────────────
-function buildSnapshots(numbers, target) {
+// ─── Build snapshots ───────────────────────────────────────────────────────
+function buildSnapshots(nums, target) {
   const snaps = [];
-  const log = [];
 
-  function addSnap(phase, left, right, sum, comparison, action, result, message, activeLines) {
-    snaps.push({ phase, left, right, sum, comparison, action, result, message, activeLines, log: log.map(e => ({...e})) });
+  function snap(phase, description, left, right, activeLine, sumVal, cmp) {
+    return {
+      phase, description,
+      nums: [...nums],
+      target,
+      left, right,
+      activeLine,
+      sumVal: (sumVal !== undefined && sumVal !== null) ? sumVal : null,
+      cmp: cmp || 'none'
+    };
   }
 
-  // INIT
-  addSnap('init', 0, numbers.length - 1, null, null, null, null,
-    'Initialize left=0, right=' + (numbers.length - 1),
-    [2]);
+  // Init step
+  snaps.push(snap(
+    'init',
+    'Initialize: left = 0 (nums[0]=' + nums[0] + '), right = ' + (nums.length-1) + ' (nums[' + (nums.length-1) + ']=' + nums[nums.length-1] + '). Converge inward to find the pair.',
+    0, nums.length - 1, 2, null, 'none'
+  ));
 
-  let left = 0;
-  let right = numbers.length - 1;
-
+  let left = 0, right = nums.length - 1;
   while (left < right) {
-    const sum = numbers[left] + numbers[right];
-    let comparison, action, message, moveMsg;
+    const s = nums[left] + nums[right];
+    const cmp = s === target ? 'eq' : s < target ? 'lt' : 'gt';
 
-    if (sum === target) {
-      comparison = 'eq';
-      action = 'found';
-      message = 'numbers[' + left + ']+numbers[' + right + '] = ' + numbers[left] + '+' + numbers[right] + ' = ' + sum + ' == ' + target + ' → FOUND! Return [' + (left+1) + ', ' + (right+1) + ']';
-      addSnap('found', left, right, sum, comparison, action, [left+1, right+1], message, [5, 7, 8]);
-      log.push({ step: snaps.length, left, right, sum, comparison, action });
-      addSnap('done', left, right, sum, 'eq', 'found', [left+1, right+1], 'Answer: [' + (left+1) + ', ' + (right+1) + '] (1-indexed)', [8]);
+    // Compute sum step
+    snaps.push(snap(
+      'search',
+      'Compute: nums[' + left + '] + nums[' + right + '] = ' + nums[left] + ' + ' + nums[right] + ' = ' + s + '. Compare to target ' + target + '.',
+      left, right, 4, s, cmp
+    ));
+
+    if (s === target) {
+      snaps.push(snap(
+        'found',
+        'Found! ' + nums[left] + ' + ' + nums[right] + ' = ' + s + ' == target ' + target + '. Answer (1-indexed): [' + (left+1) + ', ' + (right+1) + '].',
+        left, right, 6, s, 'eq'
+      ));
       break;
-    } else if (sum < target) {
-      comparison = 'lt';
-      action = 'move_left';
-      message = 'numbers[' + left + ']+numbers[' + right + '] = ' + numbers[left] + '+' + numbers[right] + ' = ' + sum + ' < ' + target + ' → move left pointer right';
-      addSnap('check', left, right, sum, comparison, action, null, message, [5, 7, 9]);
-      log.push({ step: snaps.length, left, right, sum, comparison, action });
-      moveMsg = 'Sum too small: increment left to ' + (left + 1);
-      left += 1;
-      addSnap('move', left, right, null, comparison, action, null, moveMsg, [10]);
+    } else if (s < target) {
+      snaps.push(snap(
+        'search',
+        'Sum ' + s + ' < target ' + target + ': move left pointer right to increase the sum.',
+        left, right, 8, s, 'lt'
+      ));
+      left++;
     } else {
-      comparison = 'gt';
-      action = 'move_right';
-      message = 'numbers[' + left + ']+numbers[' + right + '] = ' + numbers[left] + '+' + numbers[right] + ' = ' + sum + ' > ' + target + ' → move right pointer left';
-      addSnap('check', left, right, sum, comparison, action, null, message, [5, 7, 9, 11]);
-      log.push({ step: snaps.length, left, right, sum, comparison, action });
-      moveMsg = 'Sum too large: decrement right to ' + (right - 1);
-      right -= 1;
-      addSnap('move', left, right, null, comparison, action, null, moveMsg, [12]);
+      snaps.push(snap(
+        'search',
+        'Sum ' + s + ' > target ' + target + ': move right pointer left to decrease the sum.',
+        left, right, 10, s, 'gt'
+      ));
+      right--;
     }
   }
 
   return snaps;
 }
 
-// ── Presets ─────────────────────────────────────────────────────────────────
-const PRESETS = [
-  { numbers: [2, 7, 11, 15], target: 9 },
-  { numbers: [1, 3, 4, 5, 7, 11], target: 9 },
-];
-let currentPreset = 0;
-let snapshots = [];
-let nav;
+// ─── Render array canvas ───────────────────────────────────────────────────
+function renderArrayCanvas(snap) {
+  const { nums, left, right, phase, sumVal, cmp, target } = snap;
+  const canvas = document.getElementById('array-canvas');
 
-function loadPreset(idx) {
-  currentPreset = idx;
-  document.querySelectorAll('#preset-row button').forEach((b, i) => b.classList.toggle('active', i === idx));
-  const { numbers, target } = PRESETS[idx];
-  snapshots = buildSnapshots(numbers, target);
-  buildArray(numbers);
-  buildPointers(numbers.length);
-  if (nav) nav.reset(snapshots);
-}
-
-// ── Array DOM ────────────────────────────────────────────────────────────────
-function buildArray(numbers) {
-  const row = document.getElementById('array-row');
-  row.innerHTML = '';
-  numbers.forEach((v, i) => {
-    const cell = document.createElement('div');
-    cell.className = 'cell';
-    cell.id = 'cell-' + i;
-    cell.innerHTML = v + '<span class="idx">' + i + '</span>';
-    row.appendChild(cell);
-  });
-}
-
-function buildPointers(n) {
-  const row = document.getElementById('pointer-row');
-  row.innerHTML = '';
-  for (let i = 0; i < n; i++) {
-    const lbl = document.createElement('div');
-    lbl.className = 'ptr-label ptr-hidden';
-    lbl.id = 'ptr-' + i;
-    lbl.style.width = '56px';
-    row.appendChild(lbl);
-    if (i < n - 1) {
-      const gap = document.createElement('div');
-      gap.style.width = '8px';
-      row.appendChild(gap);
+  let rowHtml = '<div class="array-row">';
+  nums.forEach(function(val, i) {
+    var cls = 'node-box';
+    if (phase === 'found' && (i === left || i === right)) {
+      cls += ' highlight-match';
+    } else if (i === left) {
+      cls += ' highlight-left';
+    } else if (i === right) {
+      cls += ' highlight-right';
+    } else if (i < left || i > right) {
+      cls += ' faded';
     }
-  }
-}
 
-// ── Render step ──────────────────────────────────────────────────────────────
-function applyStep(snap, animate) {
-  const { numbers, target } = PRESETS[currentPreset];
-  const { phase, left, right, sum, comparison, activeLines, log, result } = snap;
+    var badges = '';
+    if (i === left && phase === 'found') badges += '<span class="badge badge-match">L</span>';
+    else if (i === left) badges += '<span class="badge badge-left">L</span>';
+    if (i === right && phase === 'found') badges += '<span class="badge badge-match">R</span>';
+    else if (i === right) badges += '<span class="badge badge-right">R</span>';
 
-  // Array cell classes
-  document.querySelectorAll('.cell').forEach((c, i) => {
-    c.classList.remove('active-L', 'active-R', 'active-LR');
-    if (phase === 'found' || phase === 'done') {
-      if (i === left && i === right) c.classList.add('active-LR');
-      else if (i === left) c.classList.add('active-LR');
-      else if (i === right) c.classList.add('active-LR');
-    } else {
-      if (i === left && i === right) c.classList.add('active-LR');
-      else if (i === left) c.classList.add('active-L');
-      else if (i === right) c.classList.add('active-R');
-    }
+    rowHtml += '<div class="node-wrap">' +
+      '<div class="' + cls + '">' + val + '</div>' +
+      '<div class="badges">' + badges + '</div>' +
+      '<div class="index-label">' + i + '</div>' +
+    '</div>';
   });
-
-  // Pointer labels
-  document.querySelectorAll('.ptr-label').forEach(el => {
-    el.className = 'ptr-label ptr-hidden';
-    el.textContent = '';
-  });
-  const pL = document.getElementById('ptr-' + left);
-  const pR = document.getElementById('ptr-' + right);
-  if (pL) {
-    if (left === right) {
-      pL.className = 'ptr-label ptr-hidden'; // shown as LR below
-    }
-    pL.className = 'ptr-label ptr-L';
-    pL.textContent = 'L';
-  }
-  if (pR && left !== right) {
-    pR.className = 'ptr-label ptr-R';
-    pR.textContent = 'R';
-  } else if (pR && left === right) {
-    pR.className = 'ptr-label ptr-L'; // share L style for same index
-    pR.textContent = 'L=R';
-  }
+  rowHtml += '</div>';
+  canvas.innerHTML = rowHtml;
 
   // Sum display
-  const sd = document.getElementById('sum-display');
-  if (sum === null) {
-    sd.innerHTML = '<span class="sum-eq">—</span>';
+  const sumEl = document.getElementById('sum-display');
+  if (sumVal !== null) {
+    sumEl.style.display = 'flex';
+    var cmpText = '';
+    var sumColor = '#f1f5f9';
+    if (cmp === 'eq') { cmpText = '= ' + target + ' ✓'; sumColor = '#22c55e'; }
+    else if (cmp === 'lt') { cmpText = '< ' + target + ' → left++'; sumColor = '#f97316'; }
+    else if (cmp === 'gt') { cmpText = '> ' + target + ' → right--'; sumColor = '#818cf8'; }
+    sumEl.innerHTML =
+      '<div class="sum-part"><div class="sum-val" style="color:#3b82f6">' + nums[left] + '</div><div class="sum-lbl">nums[L]</div></div>' +
+      '<div class="sum-op">+</div>' +
+      '<div class="sum-part"><div class="sum-val" style="color:#f97316">' + nums[right] + '</div><div class="sum-lbl">nums[R]</div></div>' +
+      '<div class="sum-op">=</div>' +
+      '<div class="sum-part"><div class="sum-result" style="color:' + sumColor + '">' + sumVal + '</div><div class="sum-lbl">sum</div></div>' +
+      '<div class="sum-cmp ' + cmp + '">' + cmpText + '</div>';
   } else {
-    let cmpClass = comparison === 'gt' ? 'cmp-gt' : comparison === 'lt' ? 'cmp-lt' : 'cmp-eq';
-    let cmpSym = comparison === 'gt' ? '&gt;' : comparison === 'lt' ? '&lt;' : '=';
-    let action = comparison === 'gt' ? '→ right--' : comparison === 'lt' ? '→ left++' : '→ FOUND!';
-    sd.innerHTML = 'numbers[' + left + '] + numbers[' + right + '] = ' +
-      '<span class="sum-val">' + numbers[left] + ' + ' + numbers[right] + ' = ' + sum + '</span>' +
-      ' <span class="' + cmpClass + '">' + cmpSym + ' ' + target + ' ' + action + '</span>';
+    sumEl.style.display = 'none';
+  }
+}
+
+// ─── Update sidebar ────────────────────────────────────────────────────────
+function updateSidebar(snap) {
+  const { nums, left, right, target, sumVal, cmp, phase } = snap;
+  const tbody = document.querySelector('#ptr-table tbody');
+
+  function ptrVal(idx) {
+    return '<span style="color:var(--text)">idx=' + idx + ', val=' + nums[idx] + '</span>';
   }
 
-  // State table
-  document.getElementById('st-left').textContent = left;
-  document.getElementById('st-right').textContent = right;
-  document.getElementById('st-nl').textContent = numbers[left];
-  document.getElementById('st-nr').textContent = numbers[right];
-  document.getElementById('st-sum').textContent = sum !== null ? sum : '—';
-  document.getElementById('st-target').textContent = target;
-
-  // Decision log
-  const logEl = document.getElementById('log-list');
-  logEl.innerHTML = '';
-  log.forEach((entry, i) => {
-    const isLatest = i === log.length - 1;
-    const div = document.createElement('div');
-    div.className = 'log-entry' + (isLatest ? ' latest' : '');
-    let cmpClass = entry.comparison === 'gt' ? 'log-cmp-gt' : entry.comparison === 'lt' ? 'log-cmp-lt' : 'log-cmp-eq';
-    let cmpSym = entry.comparison === 'gt' ? '>' : entry.comparison === 'lt' ? '<' : '=';
-    let act = entry.action === 'move_right' ? 'right--' : entry.action === 'move_left' ? 'left++' : 'FOUND';
-    div.innerHTML = '[' + entry.left + ',' + entry.right + '] ' +
-      numbers[entry.left] + '+' + numbers[entry.right] + '=' + entry.sum +
-      ' <span class="' + cmpClass + '">' + cmpSym + target + ' → ' + act + '</span>';
-    logEl.appendChild(div);
-  });
-  if (logEl.lastChild) logEl.lastChild.scrollIntoView({ block: 'nearest' });
-
-  // Code highlight
-  setActiveLines(activeLines);
-
-  // GSAP pulse on active cells
-  if (animate && typeof gsap !== 'undefined') {
-    const cells = [];
-    if (phase === 'found' || phase === 'done') {
-      for (let i = 0; i < numbers.length; i++) {
-        const el = document.getElementById('cell-' + i);
-        if (el && (i === left || i === right)) cells.push(el);
-      }
-    } else {
-      [left, right].forEach(idx => {
-        const el = document.getElementById('cell-' + idx);
-        if (el) cells.push(el);
-      });
-    }
-    if (cells.length) gsap.fromTo(cells, { scale: 1 }, { scale: 1.08, duration: .12, yoyo: true, repeat: 1, ease: 'power1.inOut' });
+  var rows = '';
+  rows += '<tr><td>left</td><td>' + ptrVal(left) + '</td></tr>';
+  rows += '<tr><td>right</td><td>' + ptrVal(right) + '</td></tr>';
+  rows += '<tr><td>target</td><td><span style="color:var(--text)">' + target + '</span></td></tr>';
+  if (sumVal !== null) {
+    var sumColor = cmp === 'eq' ? '#22c55e' : cmp === 'lt' ? '#f97316' : '#818cf8';
+    rows += '<tr><td>sum</td><td><span style="color:' + sumColor + '">' + sumVal + '</span></td></tr>';
   }
+  tbody.innerHTML = rows;
+
+  var stateEl = document.getElementById('list-state');
+  var stateHtml = '<div>Array: [' + nums.join(', ') + ']</div>';
+  if (left <= right) {
+    stateHtml += '<div style="margin-top:4px">Window: [' + nums.slice(left, right+1).join(', ') + ']</div>';
+  }
+  if (phase === 'found') {
+    stateHtml += '<div style="margin-top:6px;color:var(--green);font-weight:700">Answer: [' + (left+1) + ', ' + (right+1) + '] (1-indexed)</div>';
+  }
+  stateEl.innerHTML = stateHtml;
+}
+
+// ─── Render code panel ─────────────────────────────────────────────────────
+function renderCode(activeLine) {
+  var pre = document.getElementById('code-pre');
+  pre.innerHTML = CODE_LINES.map(function(l) {
+    var cls = l.n === activeLine ? 'code-line active' : 'code-line';
+    return '<span class="' + cls + '">' + (l.t || ' ') + '</span>';
+  }).join('');
+  var active = pre.querySelector('.active');
+  if (active) active.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+}
+
+// ─── Phase label map ───────────────────────────────────────────────────────
+const PHASE_LABELS = { init: 'Init', search: 'Searching', found: 'Found' };
+
+// ─── applyStep ─────────────────────────────────────────────────────────────
+function applyStep(snap) {
+  var badge = document.getElementById('phase-badge');
+  badge.textContent = PHASE_LABELS[snap.phase] || snap.phase;
+  if (snap.phase === 'found') {
+    badge.style.background = '#14532d40';
+    badge.style.color = '#22c55e';
+    badge.style.borderColor = '#22c55e';
+  } else {
+    badge.style.background = '#1e3a5f';
+    badge.style.color = 'var(--blue)';
+    badge.style.borderColor = 'var(--blue)';
+  }
+  document.getElementById('desc').textContent = snap.description;
+  renderArrayCanvas(snap);
+  updateSidebar(snap);
+  renderCode(snap.activeLine);
 }
 
 function updateStatus(snap, cur, total) {
-  document.getElementById('status-msg').textContent = snap.message;
-  document.getElementById('step-counter').textContent = 'Step ' + cur + ' / ' + (total - 1);
+  document.getElementById('step-counter').textContent = 'Step ' + cur + ' / ' + total;
 }
 
-// ── Init ─────────────────────────────────────────────────────────────────────
+// ─── Code toggle ───────────────────────────────────────────────────────────
+var codeExpanded = true;
+document.getElementById('code-toggle').addEventListener('click', function() {
+  codeExpanded = !codeExpanded;
+  document.getElementById('code-body').style.display = codeExpanded ? 'block' : 'none';
+  document.getElementById('code-toggle').textContent =
+    (codeExpanded ? '▼' : '▶') + ' Code (click to ' + (codeExpanded ? 'collapse' : 'expand') + ')';
+});
+
+document.getElementById('resetBtn').addEventListener('click', function() {
+  if (window.nav) window.nav.reset();
+});
+
+// ─── viz-inputs handlers ───────────────────────────────────────────────────
+function getCurrentInputs() {
+  var numsStr = document.getElementById('numsInput').value;
+  var target = parseInt(document.getElementById('targetInput').value, 10);
+  var nums = numsStr.split(',').map(function(s) { return parseInt(s.trim(), 10); }).filter(function(n) { return !isNaN(n); });
+  return { nums: nums, target: target };
+}
+
+function buildAndRun() {
+  var inp = getCurrentInputs();
+  if (inp.nums.length < 2 || isNaN(inp.target)) return;
+  var snaps = buildSnapshots(inp.nums, inp.target);
+  if (window.nav) window.nav.load(snaps);
+  document.getElementById('presetSel').value = '';
+}
+
+function loadPreset() {
+  var val = document.getElementById('presetSel').value;
+  if (!val) return;
+  var parts = val.split('|');
+  document.getElementById('numsInput').value = parts[0];
+  document.getElementById('targetInput').value = parts[1];
+  buildAndRun();
+}
+
+function randomExample() {
+  var sizes = [3, 4, 5, 6];
+  var n = sizes[Math.floor(Math.random() * sizes.length)];
+  var nums = [];
+  var cur = Math.floor(Math.random() * 5) - 2;
+  for (var i = 0; i < n; i++) {
+    cur += Math.floor(Math.random() * 5) + 1;
+    nums.push(cur);
+  }
+  // Pick two valid indices for a guaranteed answer
+  var i1 = Math.floor(Math.random() * (n - 1));
+  var i2 = i1 + 1 + Math.floor(Math.random() * (n - i1 - 1));
+  var target = nums[i1] + nums[i2];
+  document.getElementById('numsInput').value = nums.join(',');
+  document.getElementById('targetInput').value = target;
+  document.getElementById('presetSel').value = '';
+  buildAndRun();
+}
+
+// ─── Init ──────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', function() {
-  buildCode();
-  const { numbers, target } = PRESETS[0];
-  snapshots = buildSnapshots(numbers, target);
-  buildArray(numbers);
-  buildPointers(numbers.length);
+  var inp = getCurrentInputs();
+  var snaps = buildSnapshots(inp.nums, inp.target);
 
-  nav = VizNav({
-    btnPrev: document.getElementById('prevBtn'),
-    btnNext: document.getElementById('stepBtn'),
-    btnPlay: document.getElementById('playBtn'),
+  window.nav = VizNav({
+    btnPrev:  document.getElementById('prevBtn'),
+    btnNext:  document.getElementById('stepBtn'),
+    btnPlay:  document.getElementById('playBtn'),
     speedSel: document.getElementById('speedSel'),
-    render: function(snap, cur, total) { applyStep(snap, cur > 0); updateStatus(snap, cur, total); }
+    render: function(snap, cur, total) {
+      applyStep(snap);
+      updateStatus(snap, cur, total);
+    }
   });
-  nav.reset(snapshots);
 
-  document.getElementById('resetBtn').addEventListener('click', function() {
-    nav.reset(snapshots);
-  });
+  window.nav.load(snaps);
 });
 </script>
 </body>

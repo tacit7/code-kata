@@ -1,486 +1,444 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Sliding Window Maximum</title>
-<link rel="stylesheet" href="../shared/style.css"/>
+<link rel="stylesheet" href="../shared/style.css" />
 <script src="../shared/gsap.min.js"></script>
 <script src="../shared/viz.js"></script>
 <style>
-body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,sans-serif;}
-#layout{display:flex;flex-direction:column;height:100vh;padding:10px;gap:7px;box-sizing:border-box;}
-.header{display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
-.header h1{margin:0;font-size:1.05rem;color:var(--text);}
-.nav-row{display:flex;gap:5px;align-items:center;}
-.btn-step,.btn-play{padding:5px 11px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text);cursor:pointer;font-size:0.78rem;}
-.btn-play{background:var(--accent);color:#fff;border-color:var(--accent);}
-select{padding:5px 7px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:0.78rem;}
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Fira Code', 'Cascadia Code', monospace; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
 
-/* Array panel */
-#array-panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:10px 14px;flex-shrink:0;}
-.panel-label{font-size:0.68rem;color:var(--text-muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:.04em;}
-.arr-cells{display:flex;gap:6px;align-items:flex-end;}
-.arr-cell{text-align:center;position:relative;flex-shrink:0;}
-.arr-cell-inner{width:50px;height:50px;border-radius:var(--radius-sm);border:2px solid var(--border);display:flex;flex-direction:column;align-items:center;justify-content:center;transition:background .18s,border-color .18s;background:#0f172a;position:relative;}
-.arr-cell-inner.current{background:#78350f;border-color:#ca8a04;}
-.arr-cell-inner.in-window{background:#1e3a5f;border-color:#3b82f6;}
-.arr-cell-inner.in-deque{box-shadow:0 0 0 2px #0d9488;}
-.arr-cell-inner.popped{animation:cellFlash .4s ease-out;}
-.arr-idx{font-size:0.6rem;color:var(--text-muted);}
-.arr-val{font-size:1rem;font-weight:700;font-family:monospace;color:var(--text);}
-.arr-cell-inner.current .arr-val{color:#fde68a;}
-.deque-dot{width:7px;height:7px;border-radius:50%;background:#0d9488;position:absolute;top:-4px;right:1px;}
-.win-bracket{position:absolute;top:-16px;left:0;right:0;text-align:center;font-size:0.62rem;color:#60a5fa;font-family:monospace;}
+  #header { padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+  #phase-badge { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; padding: 3px 10px; border-radius: var(--radius-sm); background: #1e3a5f; color: var(--blue); border: 1px solid var(--blue); }
+  #step-counter { font-size: 12px; color: var(--text-muted); margin-left: auto; }
 
-/* Middle row */
-.middle-row{display:flex;gap:7px;flex:1;min-height:0;}
+  #main { display: flex; flex: 1; overflow: hidden; }
+  #viz-area { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; gap: 20px; overflow: hidden; }
+  #desc { font-size: 13px; color: var(--text-muted); text-align: center; max-width: 580px; min-height: 36px; line-height: 1.5; }
 
-/* Deque panel */
-#deque-panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:10px 14px;flex:1;display:flex;flex-direction:column;min-width:0;}
-.dq-header{display:flex;justify-content:space-between;margin-bottom:8px;}
-.dq-front-label{font-size:0.68rem;color:#0d9488;font-weight:600;}
-.dq-back-label{font-size:0.68rem;color:#0d9488;font-weight:600;}
-.dq-title{font-size:0.68rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em;}
-.dq-cells{display:flex;gap:4px;align-items:center;flex:1;min-height:70px;}
-.dq-cell{width:68px;height:58px;background:#134e4a;border:2px solid #0d9488;border-radius:var(--radius-sm);display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:monospace;flex-shrink:0;transition:border-color .15s;}
-.dq-cell.pushed{border-color:#22c55e;animation:dqPush .35s ease-out;}
-.dq-idx{font-size:0.65rem;color:#5eead4;}
-.dq-val{font-size:1rem;font-weight:700;color:#fff;}
-.dq-arrow{color:#475569;font-size:0.85rem;flex-shrink:0;}
-.dq-empty{color:var(--text-dim);font-style:italic;font-size:0.82rem;}
-.dq-invariant{font-size:0.62rem;color:#0d9488;text-align:center;margin-top:4px;}
+  .viz-section { width: 100%; max-width: 660px; }
+  .section-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--text-dim); margin-bottom: 8px; }
 
-/* Code panel */
-#code-panel{background:#020617;border:1px solid var(--border);border-radius:var(--radius-lg);padding:8px 0;width:275px;flex-shrink:0;overflow-y:auto;font-family:monospace;font-size:0.76rem;}
-.code-line{display:flex;padding:1px 10px;line-height:1.65;white-space:pre;}
-.code-line.active{background:rgba(202,138,4,.28);}
-.code-ln{color:#374151;width:18px;flex-shrink:0;text-align:right;margin-right:8px;user-select:none;}
-.code-text{color:#94a3b8;}
-.kw{color:#c084fc;}
-.fn{color:#60a5fa;}
-.cm{color:#4b5563;}
-.num{color:#34d399;}
+  /* Array */
+  .arr-row { display: flex; align-items: flex-start; gap: 4px; flex-wrap: wrap; }
+  .arr-cell { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+  .arr-box { width: 48px; height: 48px; border-radius: 8px; background: #1e293b; border: 2px solid #334155; color: #f1f5f9; font-size: 15px; font-weight: 700; display: flex; align-items: center; justify-content: center; transition: border-color .25s, background .25s, box-shadow .25s; }
+  .arr-box.in-window { border-color: #3b82f6; background: #1e3a5f20; }
+  .arr-box.is-right { border-color: #f97316; box-shadow: 0 0 0 3px #f9731620; background: #431a0720; }
+  .arr-box.is-max { border-color: #22c55e; background: #14532d30; box-shadow: 0 0 0 3px #22c55e25; }
+  .arr-box.in-deque { box-shadow: 0 0 0 3px #a855f720; }
+  .arr-box.done { border-color: #22c55e; background: #14532d40; color: #4ade80; }
+  .arr-idx { font-size: 9px; color: var(--text-dim); }
+  .arr-badges { display: flex; flex-wrap: wrap; gap: 2px; justify-content: center; min-height: 16px; }
+  .arr-badge { font-size: 8px; font-weight: 700; padding: 1px 4px; border-radius: 3px; letter-spacing: .05em; }
+  .badge-right { background: #431407; color: #f97316; border: 1px solid #f97316; }
+  .badge-left  { background: #1e3a5f; color: #3b82f6; border: 1px solid #3b82f6; }
+  .badge-max   { background: #1a2e1a; color: #22c55e; border: 1px solid #22c55e; }
+  .badge-deq   { background: #2e1065; color: #a855f7; border: 1px solid #a855f7; }
 
-/* Result panel */
-#result-panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:9px 14px;flex-shrink:0;}
-.result-cells{display:flex;gap:5px;min-height:46px;align-items:center;flex-wrap:wrap;}
-.result-cell{min-width:40px;height:44px;border-radius:var(--radius-sm);border:2px solid var(--green);background:#0a1f0a;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:monospace;}
-.result-cell.new{animation:resultFlash .5s ease-out;}
-.result-widx{font-size:0.58rem;color:var(--text-dim);}
-.result-val{font-size:0.92rem;font-weight:700;color:var(--green);}
-.result-empty{color:var(--text-dim);font-style:italic;font-size:0.8rem;}
+  /* Deque */
+  .dq-row { display: flex; align-items: flex-end; gap: 6px; flex-wrap: wrap; }
+  .dq-cell { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+  .dq-box { width: 54px; height: 46px; border-radius: 6px; background: #1a0a2e; border: 2px solid #6d28d9; color: #c4b5fd; font-size: 12px; font-weight: 700; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; transition: border-color .25s; }
+  .dq-box.is-front { border-color: #22c55e; background: #0a1f12; color: #4ade80; }
+  .dq-idx-label { font-size: 9px; opacity: 0.75; }
+  .dq-val-label { font-size: 16px; font-weight: 800; }
+  .dq-arrow { font-size: 14px; color: #475569; padding-bottom: 20px; }
+  .dq-front-label { font-size: 8px; color: #22c55e; font-weight: 700; }
+  .dq-empty { font-size: 12px; color: var(--text-dim); font-style: italic; }
 
-/* Step bar */
-#step-bar{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:9px 14px;flex-shrink:0;min-height:56px;transition:background .25s;}
-.step-top{display:flex;justify-content:space-between;align-items:flex-start;}
-.step-action{font-size:0.86rem;font-weight:600;color:var(--text);margin-bottom:3px;}
-.step-detail{font-size:0.76rem;color:var(--text-muted);}
-.step-counter{font-size:0.68rem;color:var(--text-dim);white-space:nowrap;margin-left:12px;}
+  /* Result */
+  .res-row { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+  .res-box { width: 44px; height: 38px; border-radius: 6px; background: #0a1f12; border: 2px solid #22c55e; color: #4ade80; font-size: 14px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+  .res-box.latest { box-shadow: 0 0 0 3px #22c55e30; animation: resPulse .5s ease; }
+  @keyframes resPulse { 0%,100%{ box-shadow:0 0 0 0 #22c55e40 } 50%{ box-shadow:0 0 0 8px #22c55e20 } }
+  .res-sep { font-size: 12px; color: #334155; margin: 0 1px; }
 
-/* Phase backgrounds */
-.ph-init,.ph-move{background:#1a2540!important;}
-.ph-pop_front{background:#3a1e05!important;}
-.ph-pop_back{background:#3a0a0a!important;}
-.ph-push{background:#082a14!important;}
-.ph-check{background:#12122e!important;}
-.ph-record{background:#0a2410!important;}
-.ph-done{background:#1a1a30!important;}
+  /* Sidebar */
+  #sidebar { width: 240px; flex-shrink: 0; background: var(--surface); border-left: 1px solid var(--border); overflow-y: auto; padding: 14px 12px; display: flex; flex-direction: column; gap: 12px; }
+  .sidebar-section { font-size: 11px; }
+  .sidebar-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--text-dim); margin-bottom: 6px; }
+  .ptr-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+  .ptr-table td { padding: 3px 5px; border-bottom: 1px solid var(--border); }
+  .ptr-table td:first-child { color: var(--text-muted); width: 60px; }
+  .dq-text { font-size: 11px; line-height: 1.9; }
+  .res-text { font-size: 12px; color: #4ade80; font-weight: 600; }
 
-/* Animations */
-@keyframes cellFlash{0%{background:#7f1d1d;box-shadow:0 0 8px #dc2626;}80%{background:#7f1d1d;}100%{}}
-@keyframes resultFlash{0%{background:#14532d;border-color:#22c55e;}100%{}}
-@keyframes dqPush{0%{opacity:0;transform:translateX(18px);}100%{opacity:1;transform:translateX(0);}}
+  /* Code */
+  #code-wrap { flex-shrink: 0; background: #0d1117; border-top: 1px solid var(--border); }
+  #code-toggle { width: 100%; background: #161b22; color: var(--text-muted); border: none; border-bottom: 1px solid var(--border); padding: 5px 12px; font-size: 11px; text-align: left; cursor: pointer; font-family: inherit; }
+  #code-toggle:hover { color: var(--text); }
+  #code-body { overflow: auto; max-height: 160px; padding: 10px 14px; }
+  pre { font-size: 11px; line-height: 1.7; font-family: inherit; }
+  .code-line { padding: 0 4px; border-radius: 3px; display: block; transition: background .2s; white-space: pre; }
+  .code-line.active { background: #451a0350; color: #fbbf24; }
+  .kw { color: #c792ea; } .fn { color: #82aaff; } .cm { color: #546e7a; font-style: italic; } .num { color: #f78c6c; }
+
+  /* Nav */
+  #nav-row { flex-shrink: 0; display: flex; align-items: center; gap: 8px; padding: 10px 16px; background: var(--surface); border-top: 1px solid var(--border); }
+  .btn-step, .btn-play { padding: 6px 14px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--surface); color: var(--text); font-family: inherit; font-size: 12px; cursor: pointer; transition: background .15s; }
+  .btn-step:hover { background: #334155; }
+  .btn-play { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn-play:hover { background: var(--accent-hover); }
+  select { padding: 5px 8px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: #1e293b; color: var(--text); font-size: 12px; font-family: inherit; cursor: pointer; }
 </style>
 </head>
 <body>
-<div id="layout">
-  <div class="header">
-    <h1>Sliding Window Maximum — Monotonic Deque</h1>
-    <div class="nav-row">
-      <button id="prevBtn" class="btn-step">← Prev</button>
-      <button id="stepBtn" class="btn-step">Step →</button>
-      <button id="playBtn" class="btn-play">Play</button>
-      <button id="resetBtn" class="btn-step">↺ Reset</button>
-      <select id="speedSel">
-        <option value="800">0.5×</option>
-        <option value="400" selected>1×</option>
-        <option value="200">2×</option>
-        <option value="100">4×</option>
-      </select>
+
+<div class="viz-inputs" style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;padding:10px 16px 14px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;">
+  <div style="display:flex;flex-direction:column;gap:4px;">
+    <label style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-dim);">Preset</label>
+    <select id="presetSel" onchange="loadPreset()" style="background:var(--bg-card,#1e293b);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-size:0.85rem;">
+      <option value="">&#8212; pick a preset &#8212;</option>
+      <option value="1,3,-1,-3,5,3,6,7|3">[1,3,-1,-3,5,3,6,7] k=3</option>
+      <option value="1,2,3,4,5|2">[1,2,3,4,5] k=2</option>
+      <option value="5,4,3,2,1|3">[5,4,3,2,1] k=3</option>
+      <option value="1,-1|1">[1,-1] k=1</option>
+      <option value="9,11,8,5,7,10|3">[9,11,8,5,7,10] k=3</option>
+    </select>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:4px;">
+    <label style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-dim);">Array</label>
+    <input id="numsIn" type="text" value="1,3,-1,-3,5,3,6,7" style="background:var(--bg-card,#1e293b);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-size:0.85rem;width:210px;" />
+  </div>
+  <div style="display:flex;flex-direction:column;gap:4px;">
+    <label style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-dim);">k</label>
+    <input id="kIn" type="number" value="3" min="1" style="background:var(--bg-card,#1e293b);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-size:0.85rem;width:60px;" />
+  </div>
+  <button onclick="buildAndRun()" style="padding:7px 18px;background:var(--accent);color:#fff;border:none;border-radius:6px;font-weight:600;cursor:pointer;">Run</button>
+  <button onclick="randomExample()" style="padding:7px 14px;background:var(--bg-card,#1e293b);color:var(--text);border:1px solid var(--border);border-radius:6px;cursor:pointer;">&#127922; Random</button>
+</div>
+
+<div id="header">
+  <span id="phase-badge">Init</span>
+  <span style="font-size:13px;font-weight:700;">Sliding Window Maximum</span>
+  <span id="step-counter">Step 0 / 0</span>
+</div>
+
+<div id="main">
+  <div id="viz-area">
+    <div id="desc">Initializing...</div>
+    <div class="viz-section">
+      <div class="section-label">Input Array</div>
+      <div id="arr-canvas"></div>
+    </div>
+    <div class="viz-section">
+      <div class="section-label">Deque <span style="font-weight:400;font-style:italic;text-transform:none;">(monotonic decreasing &mdash; front = max)</span></div>
+      <div id="dq-canvas"></div>
+    </div>
+    <div class="viz-section">
+      <div class="section-label">Result</div>
+      <div id="res-canvas"></div>
     </div>
   </div>
 
-  <div id="array-panel">
-    <div class="panel-label">Input Array — nums (k = 3)</div>
-    <div class="arr-cells" id="arrCells"></div>
-  </div>
-
-  <div class="middle-row">
-    <div id="deque-panel">
-      <div class="dq-header">
-        <div>
-          <div class="dq-title">Monotonic Deque (indices)</div>
-          <div class="dq-invariant" id="dqInvariant">Values strictly decrease left → right</div>
-        </div>
-      </div>
-      <div style="display:flex;align-items:center;gap:4px;margin-bottom:6px;">
-        <span class="dq-front-label">← FRONT (max)</span>
-        <span style="flex:1"></span>
-        <span class="dq-back-label">BACK (push) →</span>
-      </div>
-      <div class="dq-cells" id="dqCells"></div>
+  <div id="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-title">Pointers</div>
+      <table class="ptr-table" id="ptr-table">
+        <tbody></tbody>
+      </table>
     </div>
-    <div id="code-panel"></div>
-  </div>
-
-  <div id="result-panel">
-    <div class="panel-label">Output — sliding window maxima</div>
-    <div class="result-cells" id="resultCells"></div>
-  </div>
-
-  <div id="step-bar">
-    <div class="step-top">
-      <div class="step-action" id="stepAction">Ready</div>
-      <span class="step-counter" id="stepCounter">0 / 0</span>
+    <div class="sidebar-section">
+      <div class="sidebar-title">Deque (index:val)</div>
+      <div class="dq-text" id="dq-state"><span style="color:var(--text-dim)">empty</span></div>
     </div>
-    <div class="step-detail" id="stepDetail"></div>
+    <div class="sidebar-section">
+      <div class="sidebar-title">Result So Far</div>
+      <div id="res-state"><span style="color:var(--text-dim)">[]</span></div>
+    </div>
   </div>
 </div>
 
-<script>
-const NUMS = [3,1,2,5,4,2,1,3];
-const K = 3;
+<div id="code-wrap">
+  <button id="code-toggle">&#9660; Code (click to collapse)</button>
+  <div id="code-body">
+    <pre id="code-pre"></pre>
+  </div>
+</div>
 
+<div id="nav-row">
+  <button id="prevBtn" class="btn-step">&#8592; Prev</button>
+  <button id="stepBtn" class="btn-step">Step &#8594;</button>
+  <button id="playBtn" class="btn-play">Play</button>
+  <button id="resetBtn" class="btn-step">&#8634; Reset</button>
+  <select id="speedSel">
+    <option value="800">0.5&#215;</option>
+    <option value="400" selected>1&#215;</option>
+    <option value="200">2&#215;</option>
+    <option value="100">4&#215;</option>
+  </select>
+</div>
+
+<script>
+// ── Code lines ─────────────────────────────────────────────────────────────
 const CODE_LINES = [
-  'from collections import deque',
-  '',
-  'def maxSlidingWindow(nums, k):',
-  '    result = []',
-  '    dq = deque()  # stores indices',
-  '',
-  '    for i in range(len(nums)):',
-  '        # Remove out-of-window from front',
-  '        while dq and dq[0] < i - k + 1:',
-  '            dq.popleft()',
-  '',
-  '        # Remove dominated indices from back',
-  '        while dq and nums[dq[-1]] <= nums[i]:',
-  '            dq.pop()',
-  '',
-  '        dq.append(i)',
-  '',
-  '        # Record max when window is full',
-  '        if i >= k - 1:',
-  '            result.append(nums[dq[0]])',
-  '',
-  '    return result',
+  { n: 1, t: '<span class="kw">from</span> collections <span class="kw">import</span> deque' },
+  { n: 2, t: 'dq = deque(); res = []' },
+  { n: 3, t: '<span class="kw">for</span> i <span class="kw">in</span> <span class="fn">range</span>(<span class="fn">len</span>(nums)):' },
+  { n: 4, t: '    <span class="kw">while</span> dq <span class="kw">and</span> nums[dq[-<span class="num">1</span>]] &lt;= nums[i]: dq.pop()' },
+  { n: 5, t: '    dq.append(i)' },
+  { n: 6, t: '    <span class="kw">if</span> dq[<span class="num">0</span>] &lt; i-k+<span class="num">1</span>: dq.popleft()' },
+  { n: 7, t: '    <span class="kw">if</span> i &gt;= k-<span class="num">1</span>: res.append(nums[dq[<span class="num">0</span>]])' },
 ];
 
-// ── Snapshot Builder ────────────────────────────────────────────────────────
-function buildSnapshots() {
-  var snaps = [];
-  var dq = [], result = [];
+const PHASE_LABELS = { init: 'Init', slide: 'Slide', done: 'Done' };
 
-  function push(phase, i, opts) {
-    var minW = i >= 0 ? i - K + 1 : -1;
-    snaps.push(Object.assign({
-      phase: phase,
-      i: i,
-      k: K,
-      nums: NUMS,
-      deque_indices: dq.slice(),
-      window_start: i >= 0 ? Math.max(0, minW) : -1,
-      window_end: i,
-      window_full: i >= K - 1,
-      result: result.slice(),
-      highlighted_index: i,
-      popped_back_index: -1,
-      popped_front_index: -1,
-      pushed_index: -1,
-      recorded_max: -1,
-      active_line: -1,
-      description: '',
-      detail: ''
-    }, opts));
+// ── Build snapshots ─────────────────────────────────────────────────────────
+function buildSnapshots(nums, k) {
+  const snaps = [];
+  const dq = [];
+  const res = [];
+
+  function addSnap(right, desc, activeLine, forcePhase) {
+    const left = right < 0 ? 0 : Math.max(0, right - k + 1);
+    const phase = forcePhase || (right < 0 ? 'init' : (right >= k - 1 ? 'slide' : 'init'));
+    snaps.push({ nums: nums.slice(), k, dq: dq.slice(), res: res.slice(), left, right, phase, desc, activeLine });
   }
 
-  // Initial
-  snaps.push({
-    phase:'init', i:-1, k:K, nums:NUMS, deque_indices:[], window_start:-1, window_end:-1,
-    window_full:false, result:[], highlighted_index:-1, popped_back_index:-1,
-    popped_front_index:-1, pushed_index:-1, recorded_max:-1, active_line:-1,
-    description:'Initial state — ready to begin',
-    detail:'nums = [' + NUMS.join(', ') + '], k = ' + K + '. We will use a monotonic deque to find the max in each window.'
-  });
+  addSnap(-1, 'Initialize: dq = deque(), res = []. We will advance right (i) across each index, maintaining a monotonic decreasing deque.', 2);
 
-  for (var i = 0; i < NUMS.length; i++) {
-    var val = NUMS[i];
-    var minW = i - K + 1;
+  for (let i = 0; i < nums.length; i++) {
+    const left = Math.max(0, i - k + 1);
 
-    // MOVE
-    push('move', i, {
-      active_line: 7,
-      description: 'Process index ' + i + '  (val = ' + val + ')',
-      detail: 'Advance to i = ' + i + '; window spans [' + Math.max(0,minW) + ', ' + i + ']'
-    });
-
-    // POP FRONT — remove expired indices
-    var poppedFront = false;
-    while (dq.length && dq[0] < minW) {
-      var exp = dq.shift();
-      poppedFront = true;
-      push('pop_front', i, {
-        popped_front_index: exp, active_line: 10,
-        description: 'Pop index ' + exp + ' (val=' + NUMS[exp] + ') from front — expired',
-        detail: 'dq[0]=' + exp + ' < i−k+1=' + minW + ', index has left the window'
-      });
-    }
-    // show stopping condition
-    if (!poppedFront || dq.length) {
-      push('pop_front', i, {
-        active_line: 9,
-        description: dq.length === 0
-          ? 'Front check: deque empty — nothing to expire'
-          : 'Front index ' + dq[0] + ' (val=' + NUMS[dq[0]] + ') is still in window',
-        detail: dq.length === 0
-          ? 'Skip front removal; proceed to back'
-          : 'dq[0]=' + dq[0] + ' ≥ i−k+1=' + minW + ' → valid, stop'
-      });
-    }
-
-    // POP BACK — remove dominated indices
-    var poppedBack = false;
-    while (dq.length && NUMS[dq[dq.length-1]] <= val) {
-      var dom = dq.pop();
-      poppedBack = true;
-      push('pop_back', i, {
-        popped_back_index: dom, active_line: 14,
-        description: 'Pop index ' + dom + ' (val=' + NUMS[dom] + ') from back — dominated',
-        detail: 'nums[dq[-1]]=' + NUMS[dom] + ' ≤ nums[i]=' + val + ' → can never be a future max while ' + val + ' is in the window'
-      });
-    }
-    if (!poppedBack || dq.length) {
-      push('pop_back', i, {
-        active_line: 13,
-        description: dq.length === 0
-          ? 'Back check: deque empty — stop'
-          : 'Back index ' + dq[dq.length-1] + ' (val=' + NUMS[dq[dq.length-1]] + ') stays — not dominated',
-        detail: dq.length === 0
-          ? 'Deque is empty; proceed to push'
-          : 'nums[dq[-1]]=' + NUMS[dq[dq.length-1]] + ' > nums[i]=' + val + ' → stop popping'
-      });
-    }
-
-    // PUSH
-    dq.push(i);
-    push('push', i, {
-      pushed_index: i, active_line: 16,
-      description: 'Push index ' + i + ' (val=' + val + ') onto back of deque',
-      detail: 'Deque: [' + dq.map(function(x){return x+'('+NUMS[x]+')';}).join(' → ') + ']'
-    });
-
-    // CHECK / RECORD
-    if (i >= K - 1) {
-      var maxVal = NUMS[dq[0]];
-      result.push(maxVal);
-      var isFirst = result.length === 1;
-      push('record', i, {
-        recorded_max: maxVal, active_line: 20,
-        description: 'Window [' + Math.max(0,minW) + '..' + i + '] → max = ' + maxVal + ' → output[' + (result.length-1) + ']',
-        detail: isFirst
-          ? 'Monotonic invariant: front (index ' + dq[0] + ') holds the max because deque values strictly decrease left→right'
-          : 'Front of deque (index ' + dq[0] + ', val=' + maxVal + ') is always the current window max'
-      });
+    // Describe the while-check entry
+    if (dq.length === 0) {
+      addSnap(i, 'i=' + i + ', nums[i]=' + nums[i] + '. Deque is empty — skip pop loop, go straight to append.', 4);
     } else {
-      push('check', i, {
-        active_line: 19,
-        description: 'Window not yet full (i=' + i + ' < k−1=' + (K-1) + ')',
-        detail: 'Need ' + (K-1-i) + ' more element(s) before the first max is recorded'
-      });
+      const back = dq[dq.length - 1];
+      if (nums[back] <= nums[i]) {
+        addSnap(i, 'i=' + i + ', nums[i]=' + nums[i] + '. Deque back: index ' + back + ' (val=' + nums[back] + ') ≤ ' + nums[i] + ' → pop it (current element dominates, back is not useful).', 4);
+      } else {
+        addSnap(i, 'i=' + i + ', nums[i]=' + nums[i] + '. Deque back: index ' + back + ' (val=' + nums[back] + ') > ' + nums[i] + ' → keep it. No pop needed.', 4);
+      }
+    }
+
+    // Pop loop
+    while (dq.length && nums[dq[dq.length - 1]] <= nums[i]) {
+      const popped = dq.pop();
+      if (dq.length > 0 && nums[dq[dq.length - 1]] <= nums[i]) {
+        addSnap(i, 'Popped index ' + popped + ' (val=' + nums[popped] + ') — not useful. Next back: index ' + dq[dq.length - 1] + ' (val=' + nums[dq[dq.length - 1]] + ') ≤ ' + nums[i] + ' → pop again.', 4);
+      } else if (dq.length > 0) {
+        addSnap(i, 'Popped index ' + popped + ' (val=' + nums[popped] + ') — not useful. Next back val=' + nums[dq[dq.length - 1]] + ' > ' + nums[i] + ' → stop popping.', 4);
+      } else {
+        addSnap(i, 'Popped index ' + popped + ' (val=' + nums[popped] + ') — not useful. Deque now empty → stop.', 4);
+      }
+    }
+
+    // Append current index
+    dq.push(i);
+    addSnap(i, 'Append index ' + i + ' (val=' + nums[i] + ') to deque back. Deque: [' + dq.map(function(x) { return x + ':' + nums[x]; }).join(', ') + '].', 5);
+
+    // Front eviction
+    if (dq[0] < left) {
+      const evicted = dq.shift();
+      addSnap(i, 'Front index ' + evicted + ' < left=' + left + ' (slid out of window) → popleft. Remove stale index.', 6);
+    }
+
+    // Record result
+    if (i >= k - 1) {
+      res.push(nums[dq[0]]);
+      addSnap(i, 'Window [' + left + '..' + i + '] is full (size ' + k + '). Max = nums[' + dq[0] + '] = ' + nums[dq[0]] + '. Append to result → [' + res.join(', ') + '].', 7);
     }
   }
 
-  // DONE
-  snaps.push({
-    phase:'done', i:NUMS.length-1, k:K, nums:NUMS, deque_indices:dq.slice(),
-    window_start:-1, window_end:-1, window_full:false, result:result.slice(),
-    highlighted_index:-1, popped_back_index:-1, popped_front_index:-1,
-    pushed_index:-1, recorded_max:-1, active_line:22,
-    description: 'Complete!  Output = [' + result.join(', ') + ']',
-    detail: 'Scanned all ' + NUMS.length + ' elements; produced ' + result.length + ' window maxima in O(n) time'
-  });
-
+  addSnap(nums.length - 1, 'Done! Result: [' + res.join(', ') + ']. Each entry is the maximum of its k=' + k + '-element sliding window.', 0, 'done');
   return snaps;
 }
 
-var SNAPSHOTS = buildSnapshots();
+// ── Render array ────────────────────────────────────────────────────────────
+function renderArr(snap) {
+  var nums = snap.nums, left = snap.left, right = snap.right, dq = snap.dq, phase = snap.phase;
+  var html = '<div class="arr-row">';
+  for (var idx = 0; idx < nums.length; idx++) {
+    var inWindow = right >= 0 && idx >= left && idx <= right;
+    var isRight = idx === right;
+    var isLeft = idx === left && right >= 0;
+    var inDq = dq.indexOf(idx) >= 0;
+    var isMax = dq.length > 0 && idx === dq[0] && right >= 0;
+    var isDone = phase === 'done';
 
-// ── Code Panel ───────────────────────────────────────────────────────────────
-function buildCodePanel() {
-  var el = document.getElementById('code-panel');
-  el.innerHTML = CODE_LINES.map(function(line, idx) {
-    var ln = idx + 1;
-    var esc = line.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-    var html = esc
-      .replace(/(#.*)$/, '<span class="cm">$1</span>')
-      .replace(/\b(from|import|def|for|while|if|return|in|and|not)\b/g, '<span class="kw">$1</span>')
-      .replace(/\b(maxSlidingWindow|deque|range|len|append|popleft|pop)\b/g, '<span class="fn">$1</span>')
-      .replace(/\b(\d+)\b/g, '<span class="num">$1</span>');
-    return '<div class="code-line" data-line="'+ln+'"><span class="code-ln">'+ln+'</span><span class="code-text">'+html+'</span></div>';
-  }).join('');
-}
+    var boxCls = 'arr-box';
+    if (isDone) { boxCls += ' done'; }
+    else if (isMax) { boxCls += ' is-max'; }
+    else if (isRight) { boxCls += ' is-right'; }
+    else if (inWindow) { boxCls += ' in-window'; }
+    if (inDq && !isDone && !isMax) { boxCls += ' in-deque'; }
 
-// ── Render Functions ─────────────────────────────────────────────────────────
-var arrBuilt = false;
-var prevResultLen = 0;
-var prevPushedIdx = -1;
+    var badges = [];
+    if (isLeft && isRight) { badges.push('<span class="arr-badge badge-right">i</span>'); }
+    else {
+      if (isLeft) { badges.push('<span class="arr-badge badge-left">left</span>'); }
+      if (isRight) { badges.push('<span class="arr-badge badge-right">i</span>'); }
+    }
+    if (isMax) { badges.push('<span class="arr-badge badge-max">max</span>'); }
+    else if (inDq && !isDone) { badges.push('<span class="arr-badge badge-deq">dq</span>'); }
 
-function renderArray(snap) {
-  var el = document.getElementById('arrCells');
-  if (!arrBuilt) {
-    el.innerHTML = snap.nums.map(function(v, idx) {
-      return '<div class="arr-cell" id="ac'+idx+'">'
-        + '<div class="win-bracket" id="wb'+idx+'"></div>'
-        + '<div class="arr-cell-inner" id="ai'+idx+'">'
-        + '<span class="arr-idx">'+idx+'</span>'
-        + '<span class="arr-val">'+v+'</span>'
-        + '</div>'
-        + '<div class="deque-dot" id="dd'+idx+'" style="display:none"></div>'
-        + '</div>';
-    }).join('');
-    arrBuilt = true;
+    html += '<div class="arr-cell"><div class="' + boxCls + '">' + nums[idx] + '</div>';
+    html += '<div class="arr-badges">' + badges.join('') + '</div>';
+    html += '<div class="arr-idx">' + idx + '</div></div>';
   }
-  snap.nums.forEach(function(v, idx) {
-    var inner = document.getElementById('ai'+idx);
-    var dot   = document.getElementById('dd'+idx);
-    var wb    = document.getElementById('wb'+idx);
-    inner.className = 'arr-cell-inner';
-    if (idx === snap.highlighted_index) {
-      inner.classList.add('current');
-    } else if (snap.window_start >= 0 && idx >= snap.window_start && idx <= snap.window_end) {
-      inner.classList.add('in-window');
-    }
-    if (snap.deque_indices.indexOf(idx) !== -1) inner.classList.add('in-deque');
-    if (idx === snap.popped_front_index || idx === snap.popped_back_index) {
-      // force reflow to replay animation
-      inner.classList.remove('popped');
-      void inner.offsetWidth;
-      inner.classList.add('popped');
-    }
-    dot.style.display = snap.deque_indices.indexOf(idx) !== -1 ? 'block' : 'none';
-    if (snap.window_start >= 0 && idx === snap.window_start && snap.window_start === snap.window_end) {
-      wb.textContent = '[ ]';
-    } else if (snap.window_start >= 0 && idx === snap.window_start) {
-      wb.textContent = '[';
-    } else if (snap.window_end >= 0 && idx === snap.window_end) {
-      wb.textContent = ']';
-    } else if (snap.window_start >= 0 && idx > snap.window_start && idx < snap.window_end) {
-      wb.textContent = '─';
-    } else {
-      wb.textContent = '';
-    }
-  });
+  html += '</div>';
+  return html;
 }
 
-function renderDeque(snap, animate) {
-  var el = document.getElementById('dqCells');
-  var ids = snap.deque_indices;
-  el.innerHTML = '';
-  if (ids.length === 0) {
-    var em = document.createElement('span');
-    em.className = 'dq-empty';
-    em.textContent = '[ empty ]';
-    el.appendChild(em);
+// ── Render deque ────────────────────────────────────────────────────────────
+function renderDq(snap) {
+  var nums = snap.nums, dq = snap.dq;
+  if (dq.length === 0) { return '<div class="dq-row"><span class="dq-empty">(empty)</span></div>'; }
+  var html = '<div class="dq-row">';
+  for (var pos = 0; pos < dq.length; pos++) {
+    var idx = dq[pos];
+    var isFront = pos === 0;
+    html += '<div class="dq-cell">';
+    html += '<div class="dq-box' + (isFront ? ' is-front' : '') + '">';
+    html += '<span class="dq-idx-label">[' + idx + ']</span>';
+    html += '<span class="dq-val-label">' + nums[idx] + '</span>';
+    html += '</div>';
+    if (isFront) { html += '<div class="dq-front-label">&#9650; front/max</div>'; }
+    html += '</div>';
+    if (pos < dq.length - 1) { html += '<span class="dq-arrow">&#8594;</span>'; }
+  }
+  html += '</div>';
+  return html;
+}
+
+// ── Render result ───────────────────────────────────────────────────────────
+function renderRes(snap) {
+  var res = snap.res;
+  if (res.length === 0) { return '<div class="res-row"><span class="dq-empty">(empty)</span></div>'; }
+  var html = '<div class="res-row">';
+  for (var pos = 0; pos < res.length; pos++) {
+    var isLatest = pos === res.length - 1;
+    html += '<div class="res-box' + (isLatest ? ' latest' : '') + '">' + res[pos] + '</div>';
+    if (pos < res.length - 1) { html += '<span class="res-sep">,</span>'; }
+  }
+  html += '</div>';
+  return html;
+}
+
+// ── Sidebar ─────────────────────────────────────────────────────────────────
+function updateSidebar(snap) {
+  var nums = snap.nums, k = snap.k, left = snap.left, right = snap.right, dq = snap.dq, res = snap.res;
+  var tbody = document.querySelector('#ptr-table tbody');
+
+  function tdVal(v) {
+    if (v === null || v === undefined || (typeof v === 'number' && v < 0)) {
+      return '<span style="color:var(--text-dim)">—</span>';
+    }
+    return '<span style="color:var(--text);font-weight:600">' + v + '</span>';
+  }
+
+  var rows = '';
+  rows += '<tr><td>i / right</td><td>' + tdVal(right >= 0 ? right : null) + '</td></tr>';
+  rows += '<tr><td>left</td><td>' + tdVal(right >= 0 ? left : null) + '</td></tr>';
+  rows += '<tr><td>k</td><td>' + tdVal(k) + '</td></tr>';
+  if (dq.length > 0 && right >= 0) {
+    rows += '<tr><td>max</td><td><span style="color:#22c55e;font-weight:700">' + nums[dq[0]] + '</span></td></tr>';
+  }
+  tbody.innerHTML = rows;
+
+  var dqEl = document.getElementById('dq-state');
+  if (dq.length === 0) {
+    dqEl.innerHTML = '<span style="color:var(--text-dim)">empty</span>';
   } else {
-    ids.forEach(function(idx, pos) {
-      if (pos > 0) {
-        var arr = document.createElement('span');
-        arr.className = 'dq-arrow';
-        arr.textContent = '→';
-        el.appendChild(arr);
-      }
-      var cell = document.createElement('div');
-      cell.className = 'dq-cell';
-      if (animate && snap.pushed_index === idx && idx !== prevPushedIdx) {
-        cell.classList.add('pushed');
-      }
-      cell.innerHTML = '<span class="dq-idx">idx ' + idx + '</span><span class="dq-val">' + NUMS[idx] + '</span>';
-      el.appendChild(cell);
-    });
+    dqEl.innerHTML = dq.map(function(idx, pos) {
+      var color = pos === 0 ? '#4ade80' : '#c4b5fd';
+      return '<span style="color:' + color + '">[' + idx + ']=' + nums[idx] + '</span>';
+    }).join(' → ');
   }
-  prevPushedIdx = snap.pushed_index;
-}
 
-function renderResult(snap, animate) {
-  var el = document.getElementById('resultCells');
-  var res = snap.result;
-  el.innerHTML = '';
+  var resEl = document.getElementById('res-state');
   if (res.length === 0) {
-    var em = document.createElement('span');
-    em.className = 'result-empty';
-    em.textContent = '[ empty ]';
-    el.appendChild(em);
+    resEl.innerHTML = '<span style="color:var(--text-dim)">[]</span>';
   } else {
-    res.forEach(function(v, idx) {
-      var cell = document.createElement('div');
-      cell.className = 'result-cell';
-      if (animate && idx >= prevResultLen) {
-        void cell.offsetWidth;
-        cell.classList.add('new');
-      }
-      cell.innerHTML = '<span class="result-widx">w' + idx + '</span><span class="result-val">' + v + '</span>';
-      el.appendChild(cell);
-    });
-  }
-  prevResultLen = res.length;
-}
-
-function renderCode(snap) {
-  document.querySelectorAll('.code-line').forEach(function(el) { el.classList.remove('active'); });
-  if (snap.active_line > 0) {
-    var el = document.querySelector('.code-line[data-line="' + snap.active_line + '"]');
-    if (el) { el.classList.add('active'); el.scrollIntoView({block:'nearest'}); }
+    resEl.innerHTML = '<span class="res-text">[' + res.join(', ') + ']</span>';
   }
 }
 
-var PHASE_BG = {
-  init:'#1a2540', move:'#1a2540',
-  pop_front:'#3a1e05', pop_back:'#3a0a0a',
-  push:'#082a14', check:'#12122e',
-  record:'#0a2410', done:'#1a1a30'
-};
+// ── Code panel ──────────────────────────────────────────────────────────────
+function renderCode(activeLine) {
+  var pre = document.getElementById('code-pre');
+  pre.innerHTML = CODE_LINES.map(function(l) {
+    var cls = l.n === activeLine ? 'code-line active' : 'code-line';
+    return '<span class="' + cls + '">' + (l.t || ' ') + '</span>';
+  }).join('');
+  var active = pre.querySelector('.active');
+  if (active) { active.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }
+}
 
-function applyStep(snap, animate) {
-  renderArray(snap);
-  renderDeque(snap, animate);
-  renderResult(snap, animate);
-  renderCode(snap);
-  var bar = document.getElementById('step-bar');
-  bar.style.background = PHASE_BG[snap.phase] || '#1a2540';
-  document.getElementById('stepAction').textContent = snap.description || '';
-  document.getElementById('stepDetail').textContent = snap.detail || '';
+// ── Apply step ──────────────────────────────────────────────────────────────
+function applyStep(snap, animated) {
+  document.getElementById('phase-badge').textContent = PHASE_LABELS[snap.phase] || snap.phase;
+  document.getElementById('desc').textContent = snap.desc;
+  document.getElementById('arr-canvas').innerHTML = renderArr(snap);
+  document.getElementById('dq-canvas').innerHTML = renderDq(snap);
+  document.getElementById('res-canvas').innerHTML = renderRes(snap);
+  updateSidebar(snap);
+  renderCode(snap.activeLine);
 }
 
 function updateStatus(snap, cur, total) {
-  document.getElementById('stepCounter').textContent = cur + ' / ' + total;
+  document.getElementById('step-counter').textContent = 'Step ' + cur + ' / ' + total;
 }
 
-// ── Init ──────────────────────────────────────────────────────────────────────
-var nav;
+// ── Viz-inputs ──────────────────────────────────────────────────────────────
+function loadPreset() {
+  var val = document.getElementById('presetSel').value;
+  if (!val) { return; }
+  var parts = val.split('|');
+  document.getElementById('numsIn').value = parts[0];
+  document.getElementById('kIn').value = parts[1];
+  buildAndRun();
+}
+
+function randomExample() {
+  var len = 5 + Math.floor(Math.random() * 5);
+  var nums = [];
+  for (var i = 0; i < len; i++) { nums.push(Math.floor(Math.random() * 20) - 4); }
+  var maxK = Math.min(5, len);
+  var k = 2 + Math.floor(Math.random() * (maxK - 1));
+  document.getElementById('numsIn').value = nums.join(',');
+  document.getElementById('kIn').value = k;
+  document.getElementById('presetSel').value = '';
+  buildAndRun();
+}
+
+function buildAndRun() {
+  var numsStr = document.getElementById('numsIn').value.trim();
+  var k = parseInt(document.getElementById('kIn').value, 10);
+  var nums = numsStr.split(',').map(function(s) { return parseInt(s.trim(), 10); }).filter(function(n) { return !isNaN(n); });
+  if (nums.length === 0 || isNaN(k) || k < 1 || k > nums.length) { return; }
+  var snaps = buildSnapshots(nums, k);
+  if (window.nav) { window.nav.load(snaps); }
+}
+
+// ── Code toggle ─────────────────────────────────────────────────────────────
+var codeExpanded = true;
+document.getElementById('code-toggle').addEventListener('click', function() {
+  codeExpanded = !codeExpanded;
+  document.getElementById('code-body').style.display = codeExpanded ? 'block' : 'none';
+  document.getElementById('code-toggle').textContent = (codeExpanded ? '▼' : '▶') + ' Code (click to ' + (codeExpanded ? 'collapse' : 'expand') + ')';
+});
+
+document.getElementById('resetBtn').addEventListener('click', function() {
+  if (window.nav) { window.nav.reset(); }
+});
+
+// ── Init ─────────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', function() {
-  buildCodePanel();
-  nav = VizNav({
-    btnPrev:  document.getElementById('prevBtn'),
-    btnNext:  document.getElementById('stepBtn'),
-    btnPlay:  document.getElementById('playBtn'),
+  var snaps = buildSnapshots([1, 3, -1, -3, 5, 3, 6, 7], 3);
+  window.nav = VizNav({
+    btnPrev: document.getElementById('prevBtn'),
+    btnNext: document.getElementById('stepBtn'),
+    btnPlay: document.getElementById('playBtn'),
     speedSel: document.getElementById('speedSel'),
-    render: function(snap, cur, total) {
-      applyStep(snap, cur > 0);
-      updateStatus(snap, cur, total);
-    }
+    render: function(snap, cur, total) { applyStep(snap, cur > 0); updateStatus(snap, cur, total); }
   });
-  document.getElementById('resetBtn').addEventListener('click', function() { nav.reset(); });
-  nav.load(SNAPSHOTS);
+  window.nav.load(snaps);
 });
 </script>
 </body>

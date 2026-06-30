@@ -1,400 +1,628 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Floyd's Cycle Detection</title>
-  <link rel="stylesheet" href="../shared/style.css" />
-  <script src="../shared/viz.js"></script>
-  <style>
-    #viz { height: 300px; }
-    .viz-inputs {
-      display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end;
-      padding: 10px 0 14px; width: 100%; max-width: 90%;
-    }
-    .viz-inputs .field {
-      display: flex; flex-direction: column; gap: 4px;
-    }
-    .viz-inputs label {
-      font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
-      letter-spacing: 0.08em; color: var(--text-dim);
-    }
-    .viz-inputs input[type="text"],
-    .viz-inputs input[type="number"] {
-      background: var(--surface); border: 1px solid var(--border);
-      color: var(--text); border-radius: var(--radius-sm);
-      padding: 6px 10px; font-size: 0.85rem;
-    }
-    .viz-inputs input[type="number"] { width: 80px; }
-    .viz-inputs select {
-      background: var(--surface); border: 1px solid var(--border);
-      color: var(--text); border-radius: var(--radius-sm);
-      padding: 6px 10px; font-size: 0.85rem; cursor: pointer;
-    }
-  </style>
-</head>
-<body class="page">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Floyd's Cycle Detection</title>
+<link rel="stylesheet" href="../shared/style.css" />
+<script src="../shared/gsap.min.js"></script>
+<script src="../shared/viz.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Fira Code', 'Cascadia Code', monospace; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
 
-<div class="page-header">
-  <a class="back-link" href="../index.html">← All Algorithms</a>
-  <h1 class="page-title">Floyd's Cycle Detection</h1>
-</div>
+  /* viz-inputs bar */
+  .viz-inputs { padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; flex-shrink: 0; }
+  .viz-inputs label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--text-dim); display: block; margin-bottom: 3px; }
+  .viz-inputs input, .viz-inputs select { background: #1e293b; color: #f1f5f9; border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px; font-size: 0.85rem; font-family: inherit; }
+  .viz-inputs input { width: 200px; }
+  .viz-inputs .vi-btn { padding: 7px 18px; border-radius: 6px; font-weight: 600; cursor: pointer; font-family: inherit; font-size: 0.85rem; border: none; }
+  .vi-run { background: var(--accent, #6366f1); color: #fff; }
+  .vi-rand { background: #1e293b; color: #f1f5f9; border: 1px solid var(--border) !important; }
+
+  /* Header */
+  #header { padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+  #phase-badge { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; padding: 3px 10px; border-radius: var(--radius-sm); background: #1e3a5f; color: #3b82f6; border: 1px solid #3b82f6; transition: all .3s; }
+  #step-counter { font-size: 12px; color: var(--text-muted); margin-left: auto; }
+
+  /* Main */
+  #main { display: flex; flex: 1; overflow: hidden; }
+
+  /* Viz area */
+  #viz-area { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; gap: 20px; overflow: hidden; }
+
+  /* Description */
+  #desc { font-size: 13px; color: var(--text-muted); text-align: center; max-width: 620px; min-height: 36px; line-height: 1.5; }
+
+  /* List canvas */
+  #list-canvas { width: 100%; max-width: 740px; position: relative; }
+
+  /* Node row */
+  .list-row { display: flex; align-items: center; flex-wrap: nowrap; gap: 0; min-height: 70px; }
+
+  /* Node */
+  .node-wrap { display: flex; flex-direction: column; align-items: center; flex-shrink: 0; }
+  .node-box {
+    width: 48px; height: 48px; border-radius: 8px;
+    background: #1e293b; border: 2px solid #334155; color: #f1f5f9;
+    font-size: 17px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    transition: border-color .25s, background .25s, box-shadow .25s;
+    position: relative; z-index: 1;
+  }
+  .node-box.hl-slow { border-color: #3b82f6; box-shadow: 0 0 0 3px #3b82f620; }
+  .node-box.hl-fast { border-color: #f97316; box-shadow: 0 0 0 3px #f9731620; }
+  .node-box.hl-both { border-color: #22c55e; background: #14532d40; box-shadow: 0 0 0 5px #22c55e30; }
+  .node-box.hl-entry { border-color: #a855f7; box-shadow: 0 0 0 3px #a855f720; }
+  .node-box.hl-done { border-color: #22c55e; background: #14532d40; color: #4ade80; }
+  .node-box.hl-nocycle { border-color: #f97316; background: #431407; }
+  .node-box.pulse { animation: nodePulse .6s ease; }
+  @keyframes nodePulse { 0%,100%{box-shadow:0 0 0 0 #22c55e40} 50%{box-shadow:0 0 0 12px #22c55e20} }
+
+  /* Badges */
+  .badges { display: flex; flex-wrap: wrap; gap: 3px; justify-content: center; margin-top: 4px; min-height: 18px; }
+  .badge { font-size: 9px; font-weight: 700; padding: 1px 5px; border-radius: 4px; letter-spacing: .05em; }
+  .badge-slow { background: #1e3a5f; color: #3b82f6; border: 1px solid #3b82f6; }
+  .badge-fast { background: #431407; color: #f97316; border: 1px solid #f97316; }
+  .badge-meet { background: #14532d; color: #22c55e; border: 1px solid #22c55e; }
+  .badge-head { background: #1a2e1a; color: #22c55e; border: 1px solid #22c55e; }
+  .badge-entry { background: #2e1065; color: #a855f7; border: 1px solid #a855f7; }
+
+  /* Arrow */
+  .arrow { display: flex; align-items: center; width: 28px; flex-shrink: 0; }
+  .arrow svg { width: 28px; height: 16px; }
+  .null-marker { font-size: 10px; color: var(--text-dim); margin-left: 6px; white-space: nowrap; }
+
+  /* Cycle arc */
+  #cycle-arc { display: block; width: 100%; overflow: visible; }
+
+  /* Sidebar */
+  #sidebar { width: 240px; flex-shrink: 0; background: var(--surface); border-left: 1px solid var(--border); overflow-y: auto; padding: 14px 12px; display: flex; flex-direction: column; gap: 14px; }
+  .sidebar-section { font-size: 11px; }
+  .sidebar-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--text-dim); margin-bottom: 6px; }
+  .ptr-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+  .ptr-table td { padding: 3px 5px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  .ptr-table td:first-child { color: var(--text-muted); width: 44px; }
+  .ptr-table td:last-child { color: var(--text); font-weight: 600; }
+  .status-badge { display: inline-block; padding: 3px 10px; border-radius: 4px; font-size: 11px; font-weight: 700; margin-top: 2px; }
+  .st-searching { background: #1e3a5f; color: #3b82f6; }
+  .st-cycle { background: #14532d; color: #22c55e; }
+  .st-nocycle { background: #431407; color: #f97316; }
+
+  /* Code panel */
+  #code-wrap { flex-shrink: 0; background: #0d1117; border-top: 1px solid var(--border); }
+  #code-toggle { width: 100%; background: #161b22; color: var(--text-muted); border: none; border-bottom: 1px solid var(--border); padding: 5px 12px; font-size: 11px; text-align: left; cursor: pointer; font-family: inherit; }
+  #code-toggle:hover { color: var(--text); }
+  #code-body { overflow: auto; max-height: 160px; padding: 10px 14px; }
+  pre { font-size: 11px; line-height: 1.7; font-family: inherit; }
+  .code-line { padding: 0 4px; border-radius: 3px; display: block; transition: background .2s; white-space: pre; }
+  .code-line.active { background: #451a0350; color: #fbbf24; }
+  .kw { color: #c792ea; } .fn { color: #82aaff; } .cm { color: #546e7a; font-style: italic; }
+  .str { color: #c3e88d; } .num { color: #f78c6c; }
+
+  /* Nav */
+  #nav-row { flex-shrink: 0; display: flex; align-items: center; gap: 8px; padding: 10px 16px; background: var(--surface); border-top: 1px solid var(--border); }
+  .btn-step, .btn-play { padding: 6px 14px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--surface); color: var(--text); font-family: inherit; font-size: 12px; cursor: pointer; transition: background .15s; }
+  .btn-step:hover { background: #334155; }
+  .btn-play { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn-play:hover { background: var(--accent-hover); }
+  select { padding: 5px 8px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: #1e293b; color: var(--text); font-size: 12px; font-family: inherit; cursor: pointer; }
+</style>
+</head>
+<body>
 
 <div class="viz-inputs">
-  <div class="field">
+  <div>
     <label>Preset</label>
     <select id="presetSel" onchange="loadPreset()">
       <option value="">— pick a preset —</option>
-      <option value='{"len":"5","from":"4","to":"-1"}'>No cycle (5 nodes)</option>
-      <option value='{"len":"5","from":"4","to":"4"}'>Cycle at end (self-loop)</option>
-      <option value='{"len":"6","from":"5","to":"2"}'>Cycle mid-list (5→2)</option>
-      <option value='{"len":"5","from":"3","to":"0"}'>Cycle to head (3→0)</option>
-      <option value='{"len":"8","from":"7","to":"-1"}'>No cycle (8 nodes)</option>
-      <option value='{"len":"9","from":"7","to":"3"}'>Complex cycle (9 nodes)</option>
+      <option value="3,1,2,4,1">Cycle at index 1 (3→1→2→4↩1)</option>
+      <option value="1,2,3,4,5,0">Cycle at index 0 (full cycle)</option>
+      <option value="1,2,3,4,-1">No cycle (1→2→3→4→null)</option>
+      <option value="1,0">Single node, self-loop</option>
+      <option value="1,2,0">Two-node cycle (1→2↩0)</option>
+      <option value="5,3,7,2,9,1,-1">No cycle, longer list</option>
     </select>
   </div>
-  <div class="field">
-    <label>List length (2–12)</label>
-    <input id="inp-len" type="number" min="2" max="12" value="8" />
+  <div>
+    <label>List values (comma-sep)</label>
+    <input id="listInput" type="text" value="3,1,2,4" />
   </div>
-  <div class="field">
-    <label>Cycle from (node)</label>
-    <input id="inp-from" type="number" min="0" max="11" value="7" />
+  <div>
+    <label>Cycle index (-1 = none)</label>
+    <input id="cycleInput" type="text" value="1" style="width:120px;" />
   </div>
-  <div class="field">
-    <label>Cycle to (−1 = none)</label>
-    <input id="inp-to" type="number" min="-1" max="11" value="3" />
+  <button class="vi-btn vi-run" onclick="buildAndRun()">Run</button>
+  <button class="vi-btn vi-rand" onclick="randomExample()">🎲 Random</button>
+</div>
+
+<div id="header">
+  <span id="phase-badge">Detect</span>
+  <span style="font-size:13px;font-weight:700;">Floyd's Cycle Detection</span>
+  <span id="step-counter">Step 0 / 0</span>
+</div>
+
+<div id="main">
+  <div id="viz-area">
+    <div id="desc">Initializing...</div>
+    <div id="list-canvas"></div>
   </div>
-  <button onclick="buildAndRun()" style="padding:7px 18px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);font-weight:600;cursor:pointer;">Run</button>
-  <button onclick="randomExample()" style="padding:7px 14px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;">🎲 Random</button>
+
+  <div id="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-title">Pointers</div>
+      <table class="ptr-table" id="ptr-table"><tbody></tbody></table>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-title">Status</div>
+      <div id="status-display"><span class="status-badge st-searching">Searching…</span></div>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-title">Steps Taken</div>
+      <div id="step-display" style="font-size:22px;font-weight:700;color:var(--text);">0</div>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-title">Complexity</div>
+      <div style="font-size:11px;color:var(--text-muted);line-height:1.8;">
+        Time: O(n)<br/>
+        Space: O(1)<br/>
+        <span style="color:var(--text-dim);">slow moves n steps,<br/>fast meets in ≤2n</span>
+      </div>
+    </div>
+  </div>
 </div>
 
-<div class="status-bar">
-  <span class="phase-label" id="phase-label">—</span>
-  <span class="step-desc"   id="step-desc">Click Build to start.</span>
-  <span class="result-badge" id="result-badge"></span>
+<div id="code-wrap">
+  <button id="code-toggle">▼ Code (click to collapse)</button>
+  <div id="code-body">
+    <pre id="code-pre"></pre>
+  </div>
 </div>
 
-<div class="canvas-wrap">
-  <canvas id="viz"></canvas>
-</div>
-
-<div class="legend">
-  <div class="leg-item"><div class="leg-swatch" style="background:var(--orange)"></div>Slow (tortoise)</div>
-  <div class="leg-item"><div class="leg-swatch" style="background:#a855f7"></div>Fast (hare)</div>
-  <div class="leg-item"><div class="leg-swatch" style="background:#22d3ee"></div>Both on same node</div>
-  <div class="leg-item"><div class="leg-swatch square" style="background:var(--yellow)"></div>Cycle entry</div>
-</div>
-
-<div class="controls">
-  <button class="stepBtn" id="prevBtn" disabled>← Back</button>
-  <button class="stepBtn" id="stepBtn" disabled>Next →</button>
-  <button id="playBtn" style="background:#15803d;color:#fff;border:none;border-radius:4px;padding:6px 14px;font-weight:600;cursor:pointer;">&#9654; Play</button>
-  <select id="speedSel" style="background:#1a1b26;border:1px solid #2d3148;color:#c0caf5;border-radius:4px;padding:6px 8px;">
-    <option value="900">Slow</option>
-    <option value="400" selected>Medium</option>
-    <option value="150">Fast</option>
+<div class="nav-row" id="nav-row">
+  <button id="prevBtn" class="btn-step">← Prev</button>
+  <button id="stepBtn" class="btn-step">Step →</button>
+  <button id="playBtn" class="btn-play">Play</button>
+  <button id="resetBtn" class="btn-step">↺ Reset</button>
+  <select id="speedSel">
+    <option value="800">0.5×</option>
+    <option value="400" selected>1×</option>
+    <option value="200">2×</option>
+    <option value="100">4×</option>
   </select>
 </div>
 
 <script>
-// ─── Constants ────────────────────────────────────────────────────────────────
-const R   = 26;
-const GAP = 20;
+// ─── Code lines ────────────────────────────────────────────────────────────
+const CODE_LINES = [
+  { n: 1, t: '<span class="kw">def</span> <span class="fn">hasCycle</span>(head):' },
+  { n: 2, t: '    slow, fast = head, head' },
+  { n: 3, t: '    <span class="kw">while</span> fast <span class="kw">and</span> fast.next:' },
+  { n: 4, t: '        slow = slow.next' },
+  { n: 5, t: '        fast = fast.next.next' },
+  { n: 6, t: '        <span class="kw">if</span> slow == fast:' },
+  { n: 7, t: '            <span class="kw">return</span> <span class="num">True</span>   <span class="cm"># cycle detected</span>' },
+  { n: 8, t: '    <span class="kw">return</span> <span class="num">False</span>  <span class="cm"># fast hit null → no cycle</span>' },
+];
 
-const C = {
-  nodeFill:    '#1e2130',
-  nodeBorder:  '#2d3148',
-  nodeDimFill: '#161824',
-  nodeDimBord: '#1e2230',
-  slow:        'var(--orange)',
-  fast:        '#a855f7',
-  both:        '#22d3ee',
-  entry:       'var(--yellow)',
-  arrow:       'var(--text-faint)',
-  cycleArrow:  'var(--yellow)',
-  text:        'var(--text)',
-  textDim:     '#2d3a58',
-  nullColor:   'var(--text-dim)',
-};
+// ─── Arrow SVG ─────────────────────────────────────────────────────────────
+const ARROW_SVG = '<svg viewBox="0 0 28 16" fill="none" xmlns="http://www.w3.org/2000/svg"><line x1="0" y1="8" x2="22" y2="8" stroke="#475569" stroke-width="2"/><polygon points="20,4 28,8 20,12" fill="#475569"/></svg>';
 
-// ─── VizNav init ─────────────────────────────────────────────────────────────
-var nav = VizNav({
-  btnPrev:  document.getElementById('prevBtn'),
-  btnNext:  document.getElementById('stepBtn'),
-  btnPlay:  document.getElementById('playBtn'),
-  speedSel: document.getElementById('speedSel'),
-  render: function(snap, cur, total) {
-    drawSnap(snap);
-    document.getElementById('phase-label').textContent =
-      'Step ' + (cur + 1) + ' / ' + total + '  ·  ' + snap.phase;
-    document.getElementById('step-desc').textContent = snap.desc;
-    var badge = document.getElementById('result-badge');
-    if (snap.done) {
-      badge.textContent = snap.noCycle ? 'No cycle detected' : 'Cycle entry: node ' + snap.cycleEntry;
-      badge.className   = 'result-badge ' + (snap.noCycle ? 'none' : 'found');
-    } else {
-      badge.textContent = '';
-      badge.className   = 'result-badge';
-    }
-  }
-});
+// ─── Global state ──────────────────────────────────────────────────────────
+let gNodes = [];
+let gCycleEntry = -1;
 
-// ─── Build ────────────────────────────────────────────────────────────────────
+// ─── Input / preset ────────────────────────────────────────────────────────
+function parseInput() {
+  const raw = document.getElementById('listInput').value.trim();
+  const vals = raw.split(',').map(s => parseInt(s.trim())).filter(n => !isNaN(n));
+  if (vals.length === 0) return false;
+  const ceStr = document.getElementById('cycleInput').value.trim();
+  const ce = parseInt(ceStr);
+  const validCe = (!isNaN(ce) && ce >= 0 && ce < vals.length) ? ce : -1;
+  gNodes = vals.map((v, i) => ({
+    id: i,
+    value: v,
+    next_id: i < vals.length - 1 ? i + 1 : (validCe >= 0 ? validCe : null)
+  }));
+  gCycleEntry = validCe;
+  return true;
+}
+
 function buildAndRun() {
-  var n         = clamp(parseInt(document.getElementById('inp-len').value)  || 6, 2, 12);
-  var cycleFrom = clamp(parseInt(document.getElementById('inp-from').value) || n-1, 0, n-1);
-  var cycleTo   = parseInt(document.getElementById('inp-to').value);
-  if (isNaN(cycleTo)) cycleTo = -1;
-  if (cycleTo >= 0)   cycleTo = clamp(cycleTo, 0, cycleFrom);
-
-  var steps = simulate(n, cycleFrom, cycleTo);
-  nav.load(steps);
+  if (!parseInput()) return;
+  const snaps = buildSnapshots(gNodes, gCycleEntry);
+  window.nav.load(snaps);
 }
 
-function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
-
-// ─── Preset loader ────────────────────────────────────────────────────────────
 function loadPreset() {
-  var sel = document.getElementById('presetSel');
-  if (!sel.value) return;
-  var d = JSON.parse(sel.value);
-  document.getElementById('inp-len').value = d.len;
-  document.getElementById('inp-from').value = d.from;
-  document.getElementById('inp-to').value = d.to;
-  buildAndRun();
-}
-
-// ─── Random example ───────────────────────────────────────────────────────────
-function randomExample() {
-  var n = Math.floor(Math.random() * 9) + 4; // 4 to 12 nodes
-  var cycleFrom = Math.floor(Math.random() * n);
-  var hasCycle = Math.random() > 0.4; // 60% chance of cycle
-  var cycleTo = hasCycle ? Math.floor(Math.random() * (cycleFrom + 1)) : -1;
-  
-  document.getElementById('inp-len').value = n;
-  document.getElementById('inp-from').value = cycleFrom;
-  document.getElementById('inp-to').value = cycleTo;
+  const val = document.getElementById('presetSel').value;
+  if (!val) return;
+  const parts = val.split(',');
+  // Last element is the cycle index, rest are node values
+  const cycleIdx = parts[parts.length - 1];
+  const listVals = parts.slice(0, parts.length - 1);
+  document.getElementById('listInput').value = listVals.join(',');
+  document.getElementById('cycleInput').value = cycleIdx;
   document.getElementById('presetSel').value = '';
   buildAndRun();
 }
 
-// ─── Linked-list traversal ────────────────────────────────────────────────────
-function nxt(idx, n, cycleFrom, cycleTo) {
-  if (idx === null) return null;
-  if (idx === cycleFrom) return cycleTo >= 0 ? cycleTo : null;
-  if (idx < cycleFrom)   return idx + 1;
-  return null;
+function randomExample() {
+  const len = Math.floor(Math.random() * 4) + 3;
+  const vals = Array.from({length: len}, () => Math.floor(Math.random() * 9) + 1);
+  const hasCycle = Math.random() > 0.4;
+  const ce = hasCycle ? Math.floor(Math.random() * len) : -1;
+  document.getElementById('listInput').value = vals.join(',');
+  document.getElementById('cycleInput').value = ce;
+  buildAndRun();
 }
 
-// ─── Simulate ─────────────────────────────────────────────────────────────────
-function simulate(n, cycleFrom, cycleTo) {
-  const out = [];
-  const snap = (phase, desc, slow, fast, extra) =>
-    out.push(Object.assign({ phase, desc, slow, fast, n, cycleFrom, cycleTo }, extra || {}));
+// ─── Build snapshots ───────────────────────────────────────────────────────
+function buildSnapshots(nodes, cycle_entry_id) {
+  const nodeMap = {};
+  nodes.forEach(n => { nodeMap[n.id] = n; });
+
+  function nxt(id) {
+    if (id === null || id === undefined || id < 0) return null;
+    const node = nodeMap[id];
+    return node ? node.next_id : null;
+  }
+
+  const snaps = [];
+  const has_cycle = cycle_entry_id >= 0;
+
+  function makeSnap(overrides) {
+    return Object.assign({
+      nodes,
+      cycle_entry_id: has_cycle ? cycle_entry_id : -1,
+      slow_id: null,
+      fast_id: null,
+      meeting_id: null,
+      step_count: 0,
+      phase: 'detect',
+      status: 'searching',
+      active_line: 0,
+      description: '',
+    }, overrides);
+  }
+
+  // Step 0 — init
+  snaps.push(makeSnap({
+    description: 'Initialize: slow = fast = head (index 0, val=' + nodes[0].value + '). Fast will advance 2 steps per iteration; slow advances 1.',
+    slow_id: 0,
+    fast_id: 0,
+    active_line: 2,
+  }));
 
   let slow = 0, fast = 0;
-  snap('Phase 1 — Detect', 'Initial state. Slow (S) and Fast (F) both at node 0.', 0, 0);
+  let step = 0;
+  const MAX = nodes.length * (nodes.length + 2) + 6;
 
-  let meetAt = null;
-  const MAX  = n * n + 30;
+  while (step < MAX) {
+    const fNext = nxt(fast);
+    const fNext2 = fNext !== null ? nxt(fNext) : null;
 
-  for (let iter = 0; iter < MAX; iter++) {
-    // Fast hop 1
-    fast = nxt(fast, n, cycleFrom, cycleTo);
-    if (fast === null) {
-      snap('Phase 1 — Detect', 'Fast reaches null (step 1 of 2) — no cycle.', slow, null);
-      snap('Done', 'This list has no cycle.', slow, null, { done: true, noCycle: true });
-      return out;
+    // Check while condition: fast and fast.next must be non-null
+    if (fNext === null) {
+      snaps.push(makeSnap({
+        description: 'fast.next = null → while condition fails. Fast reached the end. No cycle exists.',
+        slow_id: slow,
+        fast_id: fast,
+        phase: 'no_cycle',
+        status: 'no_cycle',
+        step_count: step,
+        active_line: 3,
+      }));
+      snaps.push(makeSnap({
+        description: 'Return False — no cycle detected. Fast pointer hit the end of the list.',
+        slow_id: null,
+        fast_id: null,
+        phase: 'no_cycle',
+        status: 'no_cycle',
+        step_count: step,
+        active_line: 8,
+      }));
+      break;
     }
-    snap('Phase 1 — Detect', `Fast hops to node ${fast}  (step 1 of 2).`, slow, fast);
-
-    // Fast hop 2
-    fast = nxt(fast, n, cycleFrom, cycleTo);
-    if (fast === null) {
-      snap('Phase 1 — Detect', 'Fast reaches null (step 2 of 2) — no cycle.', slow, null);
-      snap('Done', 'This list has no cycle.', slow, null, { done: true, noCycle: true });
-      return out;
+    if (fNext2 === null) {
+      const newSlow = nxt(slow);
+      snaps.push(makeSnap({
+        description: 'fast.next.next = null → while condition fails. Fast reached the last node. No cycle exists.',
+        slow_id: newSlow !== null ? newSlow : slow,
+        fast_id: fNext,
+        phase: 'no_cycle',
+        status: 'no_cycle',
+        step_count: step + 1,
+        active_line: 3,
+      }));
+      snaps.push(makeSnap({
+        description: 'Return False — no cycle detected. Fast pointer reached the tail.',
+        slow_id: null,
+        fast_id: null,
+        phase: 'no_cycle',
+        status: 'no_cycle',
+        step_count: step + 1,
+        active_line: 8,
+      }));
+      break;
     }
-    snap('Phase 1 — Detect', `Fast hops to node ${fast}  (step 2 of 2).`, slow, fast);
 
-    // Slow hop
-    slow = nxt(slow, n, cycleFrom, cycleTo);
-    snap('Phase 1 — Detect', `Slow hops to node ${slow}.`, slow, fast);
+    const newSlow = nxt(slow);
+    const newFast = fNext2;
+    step++;
+    const met = (newSlow === newFast);
 
-    if (slow === fast) {
-      snap('Phase 1 — Detect', `Slow and Fast meet at node ${slow} — cycle confirmed!`,
-        slow, fast, { meetAt: slow });
-      meetAt = slow;
+    snaps.push(makeSnap({
+      description: met
+        ? 'Step ' + step + ': slow → node' + newSlow + ' (val=' + nodes[newSlow].value + '), fast → node' + newFast + ' (val=' + nodes[newFast].value + '). slow == fast — cycle detected!'
+        : 'Step ' + step + ': slow → node' + newSlow + ' (val=' + nodes[newSlow].value + '), fast → node' + newFast + ' (val=' + nodes[newFast].value + '). Pointers differ, continue.',
+      slow_id: newSlow,
+      fast_id: newFast,
+      meeting_id: met ? newSlow : null,
+      phase: met ? 'cycle_found' : 'detect',
+      status: met ? 'cycle_found' : 'searching',
+      step_count: step,
+      active_line: met ? 6 : 4,
+    }));
+
+    slow = newSlow;
+    fast = newFast;
+
+    if (met) {
+      snaps.push(makeSnap({
+        description: 'slow == fast at node' + slow + ' (val=' + nodes[slow].value + '). Return True — cycle confirmed in ' + step + ' step' + (step === 1 ? '' : 's') + '.',
+        slow_id: slow,
+        fast_id: fast,
+        meeting_id: slow,
+        phase: 'cycle_found',
+        status: 'cycle_found',
+        step_count: step,
+        active_line: 7,
+      }));
       break;
     }
   }
 
-  if (meetAt === null) {
-    snap('Done', 'No cycle detected.', slow, fast, { done: true, noCycle: true });
-    return out;
-  }
-
-  // Phase 2 — find entry
-  let p1 = 0, p2 = meetAt;
-  snap('Phase 2 — Find Entry',
-    `Reset p1 to head (node 0). p2 stays at meeting node ${meetAt}. Each advances 1 step.`,
-    p1, p2, { meetAt });
-
-  while (p1 !== p2) {
-    const np1 = nxt(p1, n, cycleFrom, cycleTo);
-    const np2 = nxt(p2, n, cycleFrom, cycleTo);
-    p1 = np1;
-    snap('Phase 2 — Find Entry', `p1 hops to node ${p1}.`, p1, p2, { meetAt });
-    if (p1 === p2) break;
-    p2 = np2;
-    snap('Phase 2 — Find Entry', `p2 hops to node ${p2}.`, p1, p2, { meetAt });
-  }
-
-  snap('Done', `Both pointers meet at node ${p1} — that is the cycle entry point!`,
-    p1, p2, { done: true, cycleEntry: p1 });
-
-  return out;
+  return snaps;
 }
 
-// ─── Canvas ───────────────────────────────────────────────────────────────────
-function computeNX(n, W) {
-  const sp = R * 2 + GAP;
-  const sx = Math.max(R + 16, (W - (n * sp - GAP)) / 2 + R);
-  return Array.from({ length: n }, (_, i) => sx + i * sp);
-}
+// ─── Node classes ──────────────────────────────────────────────────────────
+function nodeClasses(nodeId, snap) {
+  const { slow_id, fast_id, meeting_id, cycle_entry_id, phase } = snap;
+  const cls = ['node-box'];
 
-function nodeX(idx, nx, n) {
-  return idx === null ? nx[n - 1] + R * 2 + GAP + 14 : nx[idx];
-}
-
-function drawSnap(snap) {
-  const canvas = document.getElementById('viz');
-  const W      = canvas.parentElement.clientWidth || 900;
-  const H      = 300;
-  const dpr    = window.devicePixelRatio || 1;
-  canvas.width  = W * dpr; canvas.height = H * dpr;
-  canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
-
-  const ctx = canvas.getContext('2d');
-  ctx.scale(dpr, dpr);
-  ctx.clearRect(0, 0, W, H);
-
-  const { n, cycleFrom, cycleTo } = snap;
-  const nx = computeNX(n, W);
-  const cy = H / 2 - 22;
-
-  const slowX = nodeX(snap.slow, nx, n);
-  const fastX = nodeX(snap.fast, nx, n);
-  const dotY  = cy + R + 24;
-
-  // Forward arrows
-  for (let i = 0; i < cycleFrom; i++) {
-    ctx.strokeStyle = C.arrow; ctx.lineWidth = 1.5; ctx.setLineDash([]);
-    arrowLine(ctx, nx[i] + R + 5, cy, nx[i+1] - R - 5, cy);
+  if (phase === 'cycle_found' || phase === 'no_cycle') {
+    if (nodeId === meeting_id) { cls.push('hl-both'); return cls; }
+    if (phase === 'cycle_found') { cls.push('hl-done'); return cls; }
+    if (phase === 'no_cycle' && snap.fast_id === null && snap.slow_id === null) { return cls; }
   }
 
-  // Back edge or null
-  if (cycleTo >= 0) {
-    ctx.strokeStyle = C.cycleArrow; ctx.lineWidth = 2; ctx.setLineDash([6, 4]);
-    curvedArrow(ctx, nx[cycleFrom], cy, nx[cycleTo], cy, H);
-    ctx.setLineDash([]);
-  } else {
-    const ex = nx[cycleFrom] + R + 28;
-    ctx.strokeStyle = C.arrow; ctx.lineWidth = 1.5; ctx.setLineDash([]);
-    arrowLine(ctx, nx[cycleFrom] + R + 5, cy, ex, cy);
-    ctx.fillStyle = C.nullColor;
-    ctx.font = 'bold 13px Segoe UI,sans-serif';
-    ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-    ctx.fillText('null', ex + 2, cy);
+  if (meeting_id !== null && nodeId === meeting_id) {
+    cls.push('hl-both'); return cls;
   }
 
-  // Nodes
-  for (let i = 0; i < n; i++) {
-    const reachable = i <= cycleFrom;
-    const isEntry   = i === cycleTo && cycleTo >= 0;
-    const isFrom    = i === cycleFrom && cycleTo >= 0;
+  let pushed = false;
+  if (nodeId === slow_id && nodeId === fast_id) {
+    cls.push('hl-slow'); pushed = true;
+    // both at same node — show slow color but both badges
+  } else if (nodeId === slow_id) {
+    cls.push('hl-slow'); pushed = true;
+  } else if (nodeId === fast_id) {
+    cls.push('hl-fast'); pushed = true;
+  }
 
-    ctx.beginPath(); ctx.arc(nx[i], cy, R, 0, Math.PI * 2);
-    ctx.fillStyle = reachable ? C.nodeFill : C.nodeDimFill; ctx.fill();
-    ctx.lineWidth   = isEntry ? 2.5 : 2;
-    ctx.strokeStyle = !reachable ? C.nodeDimBord : isEntry ? C.entry : C.nodeBorder;
-    ctx.stroke();
+  if (!pushed && nodeId === cycle_entry_id && cycle_entry_id >= 0) {
+    cls.push('hl-entry');
+  }
 
-    ctx.fillStyle    = !reachable ? C.textDim : isEntry ? C.entry : C.text;
-    ctx.font         = `bold ${Math.round(R * 0.68)}px Segoe UI,sans-serif`;
-    ctx.textAlign    = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText(i, nx[i], cy);
+  return cls;
+}
 
-    if (isFrom) {
-      ctx.fillStyle = C.cycleArrow; ctx.font = '11px Segoe UI,sans-serif';
-      ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
-      ctx.fillText('↩', nx[i], cy - R - 4);
+// ─── Pointer badges ────────────────────────────────────────────────────────
+function pointerBadges(nodeId, snap) {
+  const { slow_id, fast_id, meeting_id, cycle_entry_id } = snap;
+  const b = [];
+  if (nodeId === 0) b.push('<span class="badge badge-head">head</span>');
+  if (nodeId === slow_id) b.push('<span class="badge badge-slow">slow</span>');
+  if (nodeId === fast_id) b.push('<span class="badge badge-fast">fast</span>');
+  if (nodeId === meeting_id) b.push('<span class="badge badge-meet">meet</span>');
+  if (nodeId === cycle_entry_id && nodeId !== slow_id && nodeId !== fast_id && nodeId !== 0) {
+    b.push('<span class="badge badge-entry">entry</span>');
+  }
+  return b;
+}
+
+// ─── Build list HTML ───────────────────────────────────────────────────────
+function buildListHtml(snap) {
+  const { nodes, cycle_entry_id } = snap;
+  const has_cycle = cycle_entry_id >= 0;
+
+  let html = '<div class="list-row" id="node-row">';
+  nodes.forEach((node, i) => {
+    const cls = nodeClasses(node.id, snap);
+    const badges = pointerBadges(node.id, snap);
+    html += '<div class="node-wrap" data-id="' + node.id + '">';
+    html += '<div class="' + cls.join(' ') + '">' + node.value + '</div>';
+    html += '<div class="badges">' + badges.join('') + '</div>';
+    html += '</div>';
+    if (i < nodes.length - 1) {
+      html += '<div class="arrow">' + ARROW_SVG + '</div>';
+    } else if (!has_cycle) {
+      html += '<span class="null-marker">→ null</span>';
+    } else {
+      // tail has a back-edge — show arrow (arc drawn below in SVG)
+      html += '<div class="arrow" style="opacity:.35;">' + ARROW_SVG + '</div>';
     }
+  });
+  html += '</div>';
+
+  if (has_cycle) {
+    html += '<svg id="cycle-arc" height="56" style="width:100%;overflow:visible;display:block;"></svg>';
   }
 
-  // Pointer dots
-  const bothSame = snap.slow === snap.fast && snap.fast !== null;
-  if (snap.fast === null) {
-    dot(ctx, slowX, dotY, C.slow, 'S');
-    drawCross(ctx, fastX, dotY);
-  } else if (bothSame) {
-    dot(ctx, slowX, dotY, C.both, 'S+F');
+  return html;
+}
+
+// ─── Draw cycle arc (after DOM paint) ─────────────────────────────────────
+function drawCycleArc(snap) {
+  requestAnimationFrame(function() {
+    const svg = document.getElementById('cycle-arc');
+    if (!svg) return;
+    const row = document.getElementById('node-row');
+    if (!row) return;
+    const canvas = document.getElementById('list-canvas');
+    const canvasRect = canvas.getBoundingClientRect();
+
+    const tailId = snap.nodes[snap.nodes.length - 1].id;
+    const tailWrap = row.querySelector('[data-id="' + tailId + '"]');
+    const entryWrap = row.querySelector('[data-id="' + snap.cycle_entry_id + '"]');
+    if (!tailWrap || !entryWrap) return;
+
+    const tailRect = tailWrap.getBoundingClientRect();
+    const entryRect = entryWrap.getBoundingClientRect();
+
+    const x1 = tailRect.left - canvasRect.left + tailRect.width / 2;
+    const x2 = entryRect.left - canvasRect.left + entryRect.width / 2;
+    const y0 = 4;
+    const depth = 42;
+    const col = '#a855f7';
+
+    const markId = 'caM' + Date.now();
+    svg.setAttribute('width', canvasRect.width);
+    svg.innerHTML =
+      '<defs>' +
+        '<marker id="' + markId + '" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto">' +
+          '<path d="M0,0 L0,6 L8,3 z" fill="' + col + '"/>' +
+        '</marker>' +
+      '</defs>' +
+      '<path d="M' + x1 + ',' + y0 + ' C' + x1 + ',' + depth + ' ' + x2 + ',' + depth + ' ' + x2 + ',' + y0 + '" ' +
+            'stroke="' + col + '" stroke-width="2" fill="none" stroke-dasharray="5,3" ' +
+            'marker-end="url(#' + markId + ')"/>' +
+      '<text x="' + ((x1 + x2) / 2) + '" y="' + (depth + 14) + '" text-anchor="middle" ' +
+            'fill="' + col + '" font-size="9" font-family="monospace" opacity="0.75">cycle back-edge → entry node</text>';
+  });
+}
+
+// ─── Sidebar update ────────────────────────────────────────────────────────
+function updateSidebar(snap) {
+  const { slow_id, fast_id, meeting_id, step_count, status, nodes } = snap;
+  const tbody = document.querySelector('#ptr-table tbody');
+
+  function pval(id) {
+    if (id === null || id === undefined) return '<span style="color:var(--text-dim)">None</span>';
+    const v = nodes[id] ? nodes[id].value : '?';
+    return 'node' + id + ' <span style="color:var(--text-dim)">(val=' + v + ')</span>';
+  }
+
+  let rows = '<tr><td>slow</td><td>' + pval(slow_id) + '</td></tr>';
+  rows += '<tr><td>fast</td><td>' + pval(fast_id) + '</td></tr>';
+  if (meeting_id !== null) {
+    rows += '<tr><td>meet</td><td>' + pval(meeting_id) + '</td></tr>';
+  }
+  tbody.innerHTML = rows;
+
+  const statusEl = document.getElementById('status-display');
+  if (status === 'searching') {
+    statusEl.innerHTML = '<span class="status-badge st-searching">Searching…</span>';
+  } else if (status === 'cycle_found') {
+    statusEl.innerHTML = '<span class="status-badge st-cycle">Cycle Found!</span>';
   } else {
-    dot(ctx, slowX, dotY, C.slow, 'S');
-    dot(ctx, fastX, dotY, C.fast, 'F');
+    statusEl.innerHTML = '<span class="status-badge st-nocycle">No Cycle</span>';
   }
+
+  document.getElementById('step-display').textContent = step_count;
 }
 
-function dot(ctx, x, y, color, label) {
-  ctx.beginPath(); ctx.arc(x, y, 13, 0, Math.PI * 2);
-  ctx.fillStyle = color + '28'; ctx.fill();
-  ctx.beginPath(); ctx.arc(x, y, 9, 0, Math.PI * 2);
-  ctx.fillStyle = color; ctx.fill();
-  ctx.fillStyle = '#0f1117';
-  ctx.font = 'bold 7px Segoe UI,sans-serif';
-  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.fillText(label, x, y);
+// ─── Code render ───────────────────────────────────────────────────────────
+function renderCode(activeLine) {
+  const pre = document.getElementById('code-pre');
+  pre.innerHTML = CODE_LINES.map(function(l) {
+    const cls = l.n === activeLine ? 'code-line active' : 'code-line';
+    return '<span class="' + cls + '">' + l.t + '</span>';
+  }).join('');
+  const active = pre.querySelector('.active');
+  if (active) active.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
 }
 
-function drawCross(ctx, x, y) {
-  ctx.strokeStyle = C.nullColor; ctx.lineWidth = 2;
-  const d = 5;
-  ctx.beginPath();
-  ctx.moveTo(x-d, y-d); ctx.lineTo(x+d, y+d);
-  ctx.moveTo(x+d, y-d); ctx.lineTo(x-d, y+d);
-  ctx.stroke();
+// ─── Phase labels & badge colors ───────────────────────────────────────────
+const PHASE_META = {
+  detect:      { label: 'Detect',       bg: '#1e3a5f', color: '#3b82f6', border: '#3b82f6' },
+  cycle_found: { label: 'Cycle Found',  bg: '#14532d', color: '#22c55e', border: '#22c55e' },
+  no_cycle:    { label: 'No Cycle',     bg: '#431407', color: '#f97316', border: '#f97316' },
+};
+
+// ─── Apply step ────────────────────────────────────────────────────────────
+function applyStep(snap, animated) {
+  const meta = PHASE_META[snap.phase] || PHASE_META.detect;
+  const badge = document.getElementById('phase-badge');
+  badge.textContent = meta.label;
+  badge.style.background = meta.bg;
+  badge.style.color = meta.color;
+  badge.style.borderColor = meta.border;
+
+  document.getElementById('desc').textContent = snap.description;
+
+  const canvas = document.getElementById('list-canvas');
+  canvas.innerHTML = buildListHtml(snap);
+
+  if (snap.cycle_entry_id >= 0) {
+    drawCycleArc(snap);
+  }
+
+  if (animated && snap.meeting_id !== null) {
+    requestAnimationFrame(function() {
+      const boxes = canvas.querySelectorAll('.node-box');
+      boxes.forEach(function(box) {
+        if (parseInt(box.textContent.trim()) === snap.nodes[snap.meeting_id].value &&
+            box.classList.contains('hl-both')) {
+          box.classList.add('pulse');
+          setTimeout(function() { box.classList.remove('pulse'); }, 700);
+        }
+      });
+    });
+  }
+
+  updateSidebar(snap);
+  renderCode(snap.active_line);
 }
 
-function arrowLine(ctx, x1, y1, x2, y2) {
-  const hl = 8, a = Math.atan2(y2-y1, x2-x1);
-  ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
-  ctx.beginPath();
-  ctx.moveTo(x2,y2);
-  ctx.lineTo(x2 - hl*Math.cos(a-0.4), y2 - hl*Math.sin(a-0.4));
-  ctx.lineTo(x2 - hl*Math.cos(a+0.4), y2 - hl*Math.sin(a+0.4));
-  ctx.closePath(); ctx.fillStyle = ctx.strokeStyle; ctx.fill();
+function updateStatus(snap, cur, total) {
+  document.getElementById('step-counter').textContent = 'Step ' + cur + ' / ' + total;
 }
 
-function curvedArrow(ctx, x1, cy1, x2, cy2, H) {
-  const cpY = cy1 + H * 0.36;
-  ctx.beginPath(); ctx.moveTo(x1, cy1+R);
-  ctx.bezierCurveTo(x1, cpY, x2, cpY, x2, cy2+R); ctx.stroke();
-  ctx.setLineDash([]);
-  ctx.beginPath(); ctx.moveTo(x2, cy2+R);
-  ctx.lineTo(x2-6, cy2+R+11); ctx.lineTo(x2+6, cy2+R+11);
-  ctx.closePath(); ctx.fillStyle = C.cycleArrow; ctx.fill();
-}
+// ─── Code toggle ───────────────────────────────────────────────────────────
+var codeExpanded = true;
+document.getElementById('code-toggle').addEventListener('click', function() {
+  codeExpanded = !codeExpanded;
+  document.getElementById('code-body').style.display = codeExpanded ? 'block' : 'none';
+  document.getElementById('code-toggle').textContent =
+    (codeExpanded ? '▼' : '▶') + ' Code (click to ' + (codeExpanded ? 'collapse' : 'expand') + ')';
+});
 
-window.addEventListener('resize', function() { if (nav.total()) nav.goTo(nav.cursor()); });
-buildAndRun();
+// ─── Reset ─────────────────────────────────────────────────────────────────
+document.getElementById('resetBtn').addEventListener('click', function() {
+  if (window.nav) window.nav.reset();
+});
+
+// ─── Init ──────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', function() {
+  parseInput();
+  const snaps = buildSnapshots(gNodes, gCycleEntry);
+
+  window.nav = VizNav({
+    btnPrev: document.getElementById('prevBtn'),
+    btnNext: document.getElementById('stepBtn'),
+    btnPlay: document.getElementById('playBtn'),
+    speedSel: document.getElementById('speedSel'),
+    render: function(snap, cur, total) {
+      applyStep(snap, cur > 0);
+      updateStatus(snap, cur, total);
+    }
+  });
+
+  window.nav.load(snaps);
+});
 </script>
-  <script>
-    // Hide back-link when embedded in an iframe
-    if (window.self !== window.top) {
-      var bl = document.querySelector('.back-link');
-      if (bl) bl.style.display = 'none';
-    }
-  </script>
 </body>
 </html>

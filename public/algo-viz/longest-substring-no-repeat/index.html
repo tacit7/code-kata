@@ -1,743 +1,409 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Longest Substring Without Repeating Characters</title>
-  <link rel="stylesheet" href="../shared/style.css" />
-  <script src="../shared/gsap.min.js"></script>
-  <script src="../shared/viz.js"></script>
-  <style>
-    body {
-      margin: 0;
-      background: var(--bg);
-      color: var(--text);
-      font-family: system-ui, sans-serif;
-      height: 100vh;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-    }
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Longest Substring Without Repeating Characters</title>
+<link rel="stylesheet" href="../shared/style.css" />
+<script src="../shared/gsap.min.js"></script>
+<script src="../shared/viz.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Fira Code', 'Cascadia Code', monospace; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
 
-    .main-area {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      padding: 0.6rem 0.75rem;
-      gap: 0.4rem;
-      overflow: hidden;
-      min-height: 0;
-    }
+  #header { padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+  #phase-badge { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; padding: 3px 10px; border-radius: var(--radius-sm); background: #1e3a5f; color: var(--blue); border: 1px solid var(--blue); }
+  #step-counter { font-size: 12px; color: var(--text-muted); margin-left: auto; }
 
-    /* ── String display ────────────────────────────── */
-    .string-panel {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 0.4rem;
-      flex-shrink: 0;
-    }
+  .viz-inputs { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; padding: 10px 16px 14px; background: var(--surface); border-bottom: 1px solid var(--border); flex-shrink: 0; }
+  .viz-label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); display: block; margin-bottom: 4px; }
+  .viz-inputs select, .viz-inputs input[type=text] { background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px; font-size: 0.85rem; font-family: inherit; }
+  .viz-inputs input[type=text] { width: 180px; }
+  .btn-run { padding: 7px 18px; background: var(--accent); color: #fff; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; font-family: inherit; font-size: 0.85rem; }
+  .btn-rand { padding: 7px 14px; background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: 6px; cursor: pointer; font-family: inherit; font-size: 0.85rem; }
 
-    .string-row {
-      display: flex;
-      gap: 0.4rem;
-      position: relative;
-      padding-top: 1.75rem;
-    }
+  #main { display: flex; flex: 1; overflow: hidden; }
+  #viz-area { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; gap: 24px; overflow: hidden; }
+  #desc { font-size: 13px; color: var(--text-muted); text-align: center; max-width: 580px; min-height: 36px; line-height: 1.5; }
 
-    .char-cell {
-      position: relative;
-      min-width: 3rem;
-      height: 3rem;
-      border-radius: 0.5rem;
-      background: var(--surface);
-      border: 2px solid transparent;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1.4rem;
-      font-family: monospace;
-      font-weight: bold;
-      transition: background 200ms ease, border-color 200ms ease, box-shadow 200ms ease;
-      user-select: none;
-    }
+  #str-canvas { display: flex; flex-direction: column; align-items: center; gap: 6px; width: 100%; max-width: 740px; overflow-x: auto; }
+  .idx-row { display: flex; align-items: center; flex-wrap: nowrap; gap: 6px; }
+  .idx-cell { width: 48px; text-align: center; font-size: 10px; color: var(--text-dim); }
+  .char-row { display: flex; align-items: flex-start; flex-wrap: nowrap; gap: 6px; padding: 4px 0; }
 
-    .char-cell .idx {
-      position: absolute;
-      bottom: -1.2rem;
-      left: 50%;
-      transform: translateX(-50%);
-      font-size: 0.6rem;
-      color: var(--text-muted);
-    }
+  .char-wrap { display: flex; flex-direction: column; align-items: center; }
+  .char-box { width: 48px; height: 48px; border-radius: 8px; background: #1e293b; border: 2px solid #334155; color: #f1f5f9; font-size: 20px; font-weight: 700; display: flex; align-items: center; justify-content: center; transition: border-color .25s, background .25s; }
+  .char-box.in-window { background: #14532d25; border-color: #22c55e40; }
+  .char-box.hl-left  { border-color: #3b82f6; box-shadow: 0 0 0 3px #3b82f620; }
+  .char-box.hl-right { border-color: #f97316; box-shadow: 0 0 0 3px #f9731620; }
+  .char-box.hl-both  { border-color: #a855f7; box-shadow: 0 0 0 3px #a855f720; }
+  .char-box.hl-dup   { border-color: #ef4444; background: #7f1d1d30; box-shadow: 0 0 0 3px #ef444420; color: #f87171; }
+  .char-box.hl-done  { border-color: #22c55e; background: #14532d40; color: #4ade80; }
+  .char-box.past { opacity: 0.3; }
 
-    .char-cell .ptr-label {
-      position: absolute;
-      top: -1.5rem;
-      left: 50%;
-      transform: translateX(-50%);
-      font-size: 0.7rem;
-      font-weight: bold;
-      line-height: 1;
-      white-space: nowrap;
-    }
+  .badges { display: flex; flex-wrap: wrap; gap: 3px; justify-content: center; margin-top: 4px; min-height: 18px; }
+  .badge { font-size: 9px; font-weight: 700; padding: 1px 5px; border-radius: 4px; letter-spacing: .05em; }
+  .badge-L { background: #1e3a5f; color: #3b82f6; border: 1px solid #3b82f6; }
+  .badge-R { background: #431407; color: #f97316; border: 1px solid #f97316; }
 
-    .char-cell.in-window {
-      background: #1d4ed8;
-    }
+  #sidebar { width: 240px; flex-shrink: 0; background: var(--surface); border-left: 1px solid var(--border); overflow-y: auto; padding: 14px 12px; display: flex; flex-direction: column; gap: 12px; }
+  .sidebar-section { font-size: 11px; }
+  .sidebar-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--text-dim); margin-bottom: 6px; }
+  .ptr-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+  .ptr-table td { padding: 3px 5px; border-bottom: 1px solid var(--border); }
+  .ptr-table td:first-child { color: var(--text-muted); width: 52px; }
+  .ptr-table td:last-child { color: var(--text); font-weight: 600; }
+  .charset-pills { font-size: 11px; min-height: 24px; }
+  .c-pill { display: inline-block; background: #14532d40; color: #4ade80; border: 1px solid #22c55e60; border-radius: 4px; padding: 1px 7px; margin: 2px; font-weight: 700; }
 
-    .char-cell.best-window {
-      box-shadow: inset 0 0 0 2px rgba(234, 179, 8, 0.45);
-    }
+  #code-wrap { flex-shrink: 0; background: #0d1117; border-top: 1px solid var(--border); }
+  #code-toggle { width: 100%; background: #161b22; color: var(--text-muted); border: none; border-bottom: 1px solid var(--border); padding: 5px 12px; font-size: 11px; text-align: left; cursor: pointer; font-family: inherit; }
+  #code-toggle:hover { color: var(--text); }
+  #code-body { overflow: auto; max-height: 160px; padding: 10px 14px; }
+  pre { font-size: 11px; line-height: 1.7; font-family: inherit; }
+  .code-line { padding: 0 4px; border-radius: 3px; display: block; transition: background .2s; white-space: pre; }
+  .code-line.active { background: #451a0350; color: #fbbf24; }
+  .kw { color: #c792ea; } .fn { color: #82aaff; } .cm { color: #546e7a; font-style: italic; }
+  .str { color: #c3e88d; } .num { color: #f78c6c; }
 
-    .char-cell.in-window.best-window {
-      background: #1d4ed8;
-      box-shadow: inset 0 0 0 2px rgba(234, 179, 8, 0.6);
-    }
-
-    .char-cell.left-ptr { border-left-color: var(--green); }
-    .char-cell.right-ptr { border-right-color: var(--orange); }
-    .char-cell.lr-ptr { border-left-color: var(--green); border-right-color: var(--orange); }
-
-    .char-cell.pulse-red { animation: pulse-red 350ms ease; }
-    .char-cell.pulse-gold { animation: pulse-gold-bg 450ms ease; }
-
-    /* ── Pointer info bar ──────────────────────────── */
-    .ptr-bar {
-      display: flex;
-      gap: 2rem;
-      justify-content: center;
-      font-size: 0.825rem;
-      flex-shrink: 0;
-      margin-top: 0.8rem;
-    }
-
-    .ptr-bar .lbl { color: var(--text-muted); }
-    .ptr-bar .left-val { color: var(--green); font-weight: bold; font-family: monospace; }
-    .ptr-bar .right-val { color: var(--orange); font-weight: bold; font-family: monospace; }
-
-    /* ── Metrics row ───────────────────────────────── */
-    .metrics-row {
-      display: flex;
-      gap: 0.4rem;
-      flex-shrink: 0;
-    }
-
-    .metric-card {
-      flex: 1;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-sm);
-      padding: 0.4rem 0.6rem;
-    }
-
-    .metric-card .label {
-      font-size: 0.65rem;
-      color: var(--text-muted);
-      margin-bottom: 0.2rem;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-    }
-
-    .metric-card .value {
-      font-size: 1.1rem;
-      font-weight: bold;
-      font-family: monospace;
-    }
-
-    .metric-card .value.gold { color: var(--yellow); }
-
-    .metric-card.pulse-max .value {
-      animation: pulse-gold-text 400ms ease;
-    }
-
-    /* ── Message panel ─────────────────────────────── */
-    .message-panel {
-      background: var(--surface);
-      border-left: 4px solid var(--border);
-      border-radius: var(--radius-sm);
-      padding: 0.5rem 0.75rem;
-      font-size: 0.875rem;
-      transition: border-color 200ms ease;
-      display: flex;
-      align-items: center;
-      gap: 1rem;
-      flex-shrink: 0;
-    }
-
-    .message-panel .msg-text { flex: 1; }
-    .message-panel .step-counter {
-      font-size: 0.7rem;
-      color: var(--text-muted);
-      white-space: nowrap;
-    }
-
-    /* ── Bottom two-column row ─────────────────────── */
-    .bottom-row {
-      flex: 1;
-      display: flex;
-      gap: 0.4rem;
-      overflow: hidden;
-      min-height: 0;
-    }
-
-    /* ── Char set panel ────────────────────────────── */
-    .set-panel {
-      width: 190px;
-      flex-shrink: 0;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-sm);
-      padding: 0.5rem;
-      display: flex;
-      flex-direction: column;
-      gap: 0.4rem;
-      overflow: hidden;
-    }
-
-    .panel-title {
-      font-size: 0.7rem;
-      color: var(--text-muted);
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      flex-shrink: 0;
-    }
-
-    .chip-container {
-      flex: 1;
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.3rem;
-      align-content: flex-start;
-      overflow-y: auto;
-    }
-
-    .chip {
-      height: 2rem;
-      padding: 0 0.75rem;
-      border-radius: 9999px;
-      background: #1d4ed8;
-      color: white;
-      font-family: monospace;
-      font-size: 0.875rem;
-      font-weight: bold;
-      display: flex;
-      align-items: center;
-    }
-
-    .chip.entering { animation: chip-enter 200ms ease forwards; }
-    .chip.leaving { animation: chip-leave 150ms ease forwards; }
-
-    .empty-set {
-      color: var(--text-dim, #475569);
-      font-size: 0.8rem;
-      font-style: italic;
-    }
-
-    /* ── Code panel ────────────────────────────────── */
-    .code-panel {
-      flex: 1;
-      background: #0d1117;
-      border: 1px solid #21262d;
-      border-radius: var(--radius-sm);
-      padding: 0.5rem;
-      overflow-y: auto;
-      font-family: monospace;
-      font-size: 0.78rem;
-      display: flex;
-      flex-direction: column;
-    }
-
-    .code-panel .panel-title {
-      color: #6b7280;
-      margin-bottom: 0.25rem;
-    }
-
-    .code-line {
-      display: flex;
-      align-items: center;
-      line-height: 1.7;
-      border-radius: 3px;
-      transition: background 200ms;
-    }
-
-    .code-line .ln {
-      width: 2rem;
-      text-align: right;
-      color: #6b7280;
-      flex-shrink: 0;
-      margin-right: 0.75rem;
-      user-select: none;
-      font-size: 0.7rem;
-    }
-
-    .code-line .code-text {
-      white-space: pre;
-      color: #c9d1d9;
-    }
-
-    .code-line.active {
-      background: rgba(254, 240, 138, 0.13);
-    }
-
-    /* ── Nav row ───────────────────────────────────── */
-    .nav-row {
-      display: flex;
-      gap: 0.5rem;
-      justify-content: center;
-      padding: 0.3rem 0 0.1rem;
-      flex-shrink: 0;
-    }
-
-    /* ── Keyframes ─────────────────────────────────── */
-    @keyframes pulse-red {
-      0%   { background: var(--surface); }
-      40%  { background: #ef4444; }
-      100% { background: var(--surface); }
-    }
-
-    @keyframes pulse-red-in-window {
-      0%   { background: #1d4ed8; }
-      40%  { background: #ef4444; }
-      100% { background: #1d4ed8; }
-    }
-
-    @keyframes pulse-gold-bg {
-      0%   { box-shadow: none; }
-      50%  { box-shadow: 0 0 0 3px var(--yellow); }
-      100% { box-shadow: none; }
-    }
-
-    @keyframes pulse-gold-text {
-      0%, 100% { color: var(--text); }
-      50%       { color: var(--yellow); }
-    }
-
-    @keyframes chip-enter {
-      from { opacity: 0; transform: translateX(16px); }
-      to   { opacity: 1; transform: translateX(0); }
-    }
-
-    @keyframes chip-leave {
-      from { opacity: 1; transform: translateX(0); }
-      to   { opacity: 0; transform: translateX(-16px); }
-    }
-  </style>
+  #nav-row { flex-shrink: 0; display: flex; align-items: center; gap: 8px; padding: 10px 16px; background: var(--surface); border-top: 1px solid var(--border); }
+  .btn-step, .btn-play { padding: 6px 14px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--surface); color: var(--text); font-family: inherit; font-size: 12px; cursor: pointer; transition: background .15s; }
+  .btn-step:hover { background: #334155; }
+  .btn-play { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn-play:hover { background: var(--accent-hover); }
+  select { padding: 5px 8px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: #1e293b; color: var(--text); font-size: 12px; font-family: inherit; cursor: pointer; }
+</style>
 </head>
 <body>
-<div class="main-area">
 
-  <!-- String display -->
-  <div class="string-panel">
-    <div class="string-row" id="stringRow"></div>
-  </div>
+<div id="header">
+  <span id="phase-badge">Init</span>
+  <span style="font-size:13px;font-weight:700;">Longest Substring Without Repeating Characters</span>
+  <span id="step-counter">Step 0 / 0</span>
+</div>
 
-  <!-- Pointer info bar -->
-  <div class="ptr-bar">
-    <span><span class="lbl">left = </span><span class="left-val" id="ptrLeft">0</span></span>
-    <span><span class="lbl">right = </span><span class="right-val" id="ptrRight">&#x2014;</span></span>
-  </div>
-
-  <!-- Metrics row -->
-  <div class="metrics-row">
-    <div class="metric-card">
-      <div class="label">Current Window</div>
-      <div class="value" id="metricWindow">&#x2014;</div>
-    </div>
-    <div class="metric-card">
-      <div class="label">Window Size</div>
-      <div class="value" id="metricSize">0</div>
-    </div>
-    <div class="metric-card" id="cardMax">
-      <div class="label">Max Length</div>
-      <div class="value" id="metricMax">0</div>
-    </div>
-    <div class="metric-card">
-      <div class="label">Best Found</div>
-      <div class="value gold" id="metricBest">&#x2014;</div>
-    </div>
-  </div>
-
-  <!-- Message panel -->
-  <div class="message-panel" id="messagePanel">
-    <span class="msg-text" id="msgText">Initializing&hellip;</span>
-    <span class="step-counter" id="stepCounter">Step 0 / 0</span>
-  </div>
-
-  <!-- Bottom two-column: set + code -->
-  <div class="bottom-row">
-    <div class="set-panel">
-      <div class="panel-title">Window Set</div>
-      <div class="chip-container" id="chipContainer">
-        <span class="empty-set">empty</span>
-      </div>
-    </div>
-    <div class="code-panel" id="codePanel">
-      <div class="panel-title">Python</div>
-    </div>
-  </div>
-
-  <!-- Nav controls -->
-  <div class="nav-row">
-    <button id="prevBtn" class="btn-step">&#8592; Prev</button>
-    <button id="stepBtn" class="btn-step">Step &#8594;</button>
-    <button id="playBtn" class="btn-play">Play</button>
-    <button id="resetBtn" class="btn-step">&#8634; Reset</button>
-    <select id="speedSel">
-      <option value="800">0.5&times;</option>
-      <option value="400" selected>1&times;</option>
-      <option value="200">2&times;</option>
-      <option value="100">4&times;</option>
+<div class="viz-inputs">
+  <div>
+    <span class="viz-label">Preset</span>
+    <select id="presetSel" onchange="loadPreset()">
+      <option value="">&#8212; pick a preset &#8212;</option>
+      <option value="abcabcbb">abcabcbb (ans: 3)</option>
+      <option value="bbbbb">bbbbb (ans: 1)</option>
+      <option value="pwwkew">pwwkew (ans: 3)</option>
+      <option value="dvdf">dvdf (ans: 3)</option>
+      <option value="abcdefg">abcdefg (ans: 7)</option>
     </select>
   </div>
-
+  <div>
+    <span class="viz-label">Input String</span>
+    <input id="strInput" type="text" value="abcabcbb" maxlength="16" />
+  </div>
+  <button class="btn-run" onclick="buildAndRun()">Run</button>
+  <button class="btn-rand" onclick="randomExample()">&#127922; Random</button>
 </div>
+
+<div id="main">
+  <div id="viz-area">
+    <div id="desc">Initializing...</div>
+    <div id="str-canvas"></div>
+  </div>
+  <div id="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-title">Pointers</div>
+      <table class="ptr-table"><tbody id="ptr-body"></tbody></table>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-title">Window (charSet)</div>
+      <div class="charset-pills" id="charset-pills"></div>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-title">Result</div>
+      <div id="result-display"></div>
+    </div>
+  </div>
+</div>
+
+<div id="code-wrap">
+  <button id="code-toggle">&#9660; Code (click to collapse)</button>
+  <div id="code-body"><pre id="code-pre"></pre></div>
+</div>
+
+<div class="controls"></div>
+
+<div id="nav-row">
+  <button id="prevBtn" class="btn-step">&#8592; Prev</button>
+  <button id="stepBtn" class="btn-step">Step &#8594;</button>
+  <button id="playBtn" class="btn-play">Play</button>
+  <button id="resetBtn" class="btn-step">&#8634; Reset</button>
+  <select id="speedSel">
+    <option value="800">0.5&#215;</option>
+    <option value="400" selected>1&#215;</option>
+    <option value="200">2&#215;</option>
+    <option value="100">4&#215;</option>
+  </select>
+</div>
+
 <script>
-(function() {
-  var INPUT = "abcabcbb";
+var CODE_LINES = [
+  { n: 1,  t: '<span class="kw">def</span> <span class="fn">lengthOfLongestSubstring</span>(s):' },
+  { n: 2,  t: '    charSet = <span class="fn">set</span>()' },
+  { n: 3,  t: '    left = maxLen = <span class="num">0</span>' },
+  { n: 4,  t: '    <span class="kw">for</span> right <span class="kw">in</span> <span class="fn">range</span>(<span class="fn">len</span>(s)):' },
+  { n: 5,  t: '        <span class="kw">while</span> s[right] <span class="kw">in</span> charSet:' },
+  { n: 6,  t: '            charSet.remove(s[left])' },
+  { n: 7,  t: '            left += <span class="num">1</span>' },
+  { n: 8,  t: '        charSet.add(s[right])' },
+  { n: 9,  t: '        maxLen = <span class="fn">max</span>(maxLen, right - left + <span class="num">1</span>)' },
+  { n: 10, t: '    <span class="kw">return</span> maxLen' },
+];
 
-  var PHASE_COLORS = {
-    init:      'var(--border)',
-    check:     'var(--blue)',
-    duplicate: 'var(--red)',
-    shrink:    'var(--orange)',
-    add:       'var(--green)',
-    done:      'var(--yellow)'
-  };
+function buildSnapshots(s) {
+  var snaps = [];
+  var charSet = new Set();
+  var left = 0;
+  var maxLen = 0;
 
-  var CODE_LINES = [
-    'def length_of_longest_substring(s: str) -> int:',
-    '    char_set = set()',
-    '    left = 0',
-    '    max_len = 0',
-    '',
-    '    for right in range(len(s)):',
-    '        while s[right] in char_set:',
-    '            char_set.remove(s[left])',
-    '            left += 1',
-    '        char_set.add(s[right])',
-    '        max_len = max(max_len, right - left + 1)',
-    '',
-    '    return max_len',
-  ];
-
-  // ── Build snapshots ─────────────────────────────────────────────────────────
-  function buildSnapshots(s) {
-    var snaps = [];
-
-    function push(phase, message, left, right, char_set_arr, max_len, best_start, best_end, opts) {
-      opts = opts || {};
-      var window_size = (right >= left && right >= 0) ? right - left + 1 : 0;
-      var current_window_str = (right >= 0) ? s.slice(left, right + 1) : '';
-      var best_window_str = (best_end >= best_start && best_end >= 0) ? s.slice(best_start, best_end + 1) : '';
-      snaps.push({
-        step: snaps.length,
-        phase: phase,
-        message: message,
-        left: left,
-        right: right,
-        char_set: char_set_arr.slice(),
-        max_len: max_len,
-        best_start: best_start,
-        best_end: best_end,
-        window_size: window_size,
-        current_window_str: current_window_str,
-        best_window_str: best_window_str,
-        duplicate_char: opts.duplicate_char || null,
-        active_line: opts.active_line || 1,
-        new_max: opts.new_max || false,
-        highlight_best: opts.highlight_best || false
-      });
+  function mkSnap(phase, desc, extra) {
+    var base = {
+      phase: phase,
+      desc: desc,
+      s: s,
+      left: left,
+      right: -1,
+      charSet: Array.from(charSet),
+      maxLen: maxLen,
+      currentLen: 0,
+      dupIdx: null,
+      activeLine: 0,
+    };
+    if (extra) {
+      Object.keys(extra).forEach(function(k) { base[k] = extra[k]; });
     }
-
-    // Step 0 - init
-    push('init',
-      'Initialize: left=0, right=−≈1 (not started), char_set={}, max_len=0.',
-      0, -1, [], 0, 0, -1, { active_line: 2 });
-
-    var left = 0, max_len = 0, best_start = 0, best_end = -1;
-    var char_set = [];
-
-    function setHas(ch) { return char_set.indexOf(ch) !== -1; }
-    function setAdd(ch) { if (!setHas(ch)) char_set.push(ch); }
-    function setRemove(ch) { var i = char_set.indexOf(ch); if (i !== -1) char_set.splice(i, 1); }
-
-    for (var right = 0; right < s.length; right++) {
-      var ch = s[right];
-      var hasDup = setHas(ch);
-
-      // check step
-      push('check',
-        'right=' + right + ', char=\'' + ch + '\'. Is \'' + ch + '\' in set? ' + (hasDup ? 'Yes.' : 'No.'),
-        left, right, char_set, max_len, best_start, best_end,
-        { active_line: 7, duplicate_char: hasDup ? ch : null });
-
-      if (hasDup) {
-        // duplicate step
-        push('duplicate',
-          'right=' + right + ', char=\'' + ch + '\'. \'' + ch + '\' is already in set! Must shrink from left.',
-          left, right, char_set, max_len, best_start, best_end,
-          { active_line: 7, duplicate_char: ch });
-
-        // shrink steps
-        while (setHas(ch)) {
-          var removed = s[left];
-          setRemove(removed);
-          left++;
-          var stillHas = setHas(ch);
-          push('shrink',
-            'Remove s[' + (left - 1) + ']=\'' + removed + '\' from set. Advance left to ' + left + '.' +
-            (stillHas ? ' \'' + ch + '\' still in set.' : ' \'' + ch + '\' cleared.'),
-            left, right, char_set, max_len, best_start, best_end,
-            { active_line: 8, duplicate_char: ch });
-        }
-      }
-
-      // add + update max
-      setAdd(ch);
-      var new_size = right - left + 1;
-      var is_new_max = new_size > max_len;
-      if (is_new_max) {
-        max_len = new_size;
-        best_start = left;
-        best_end = right;
-      }
-      push('add',
-        (is_new_max ? 'New max! ' : '') +
-        'Add \'' + ch + '\' to set. Window=[' + s.slice(left, right + 1) + '], length=' + new_size + '.' +
-        (is_new_max ? ' Max length is now ' + max_len + '.' : ''),
-        left, right, char_set, max_len, best_start, best_end,
-        { active_line: 11, new_max: is_new_max });
-    }
-
-    // done
-    push('done',
-      'Traversal complete. Longest substring without repeating chars: "' +
-      s.slice(best_start, best_end + 1) + '" (length ' + max_len + ').',
-      left, s.length - 1, char_set, max_len, best_start, best_end,
-      { active_line: 13, highlight_best: true });
-
-    return snaps;
+    return base;
   }
 
-  var SNAPS = buildSnapshots(INPUT);
-  var TOTAL = SNAPS.length - 1;
+  snaps.push(mkSnap('init',
+    'Initialize: charSet = {}, left = 0, maxLen = 0. The right pointer will scan each character in "' + s + '".',
+    { right: -1, activeLine: 2 }
+  ));
 
-  // ── Build code panel ────────────────────────────────────────────────────────
-  var codePanel = document.getElementById('codePanel');
-  CODE_LINES.forEach(function(line, i) {
-    var lineEl = document.createElement('div');
-    lineEl.className = 'code-line';
-    lineEl.id = 'cl-' + (i + 1);
-    var lnSpan = document.createElement('span');
-    lnSpan.className = 'ln';
-    lnSpan.textContent = i + 1;
-    var codeSpan = document.createElement('span');
-    codeSpan.className = 'code-text';
-    codeSpan.textContent = line;
-    lineEl.appendChild(lnSpan);
-    lineEl.appendChild(codeSpan);
-    codePanel.appendChild(lineEl);
-  });
+  for (var right = 0; right < s.length; right++) {
+    var c = s[right];
 
-  // ── Build string row ────────────────────────────────────────────────────────
-  var stringRow = document.getElementById('stringRow');
-  INPUT.split('').forEach(function(ch, i) {
-    var cell = document.createElement('div');
-    cell.className = 'char-cell';
-    cell.id = 'cell-' + i;
-    var chSpan = document.createElement('span');
-    chSpan.textContent = ch;
-    var idxSpan = document.createElement('span');
-    idxSpan.className = 'idx';
-    idxSpan.textContent = i;
-    cell.appendChild(chSpan);
-    cell.appendChild(idxSpan);
-    stringRow.appendChild(cell);
-  });
+    if (charSet.has(c)) {
+      snaps.push(mkSnap('shrink',
+        'right=' + right + ': s[' + right + ']="' + c + '" already in charSet {' + Array.from(charSet).join(', ') + '}. Collision! Must shrink window from the left.',
+        { right: right, dupIdx: right, activeLine: 5 }
+      ));
 
-  // ── Apply step ──────────────────────────────────────────────────────────────
-  function applyStep(snap, animate) {
-    // String cells
-    INPUT.split('').forEach(function(ch, i) {
-      var cell = document.getElementById('cell-' + i);
-
-      // Remove animation classes via reflow trick
-      cell.classList.remove('in-window', 'left-ptr', 'right-ptr', 'lr-ptr',
-                            'best-window', 'pulse-red', 'pulse-gold');
-      // Remove old ptr labels
-      var oldLabels = cell.querySelectorAll('.ptr-label');
-      for (var j = 0; j < oldLabels.length; j++) oldLabels[j].remove();
-
-      var inWindow = snap.right >= 0 && i >= snap.left && i <= snap.right;
-      var isBest   = snap.best_end >= snap.best_start && snap.best_end >= 0 &&
-                     i >= snap.best_start && i <= snap.best_end;
-      var isLeft   = snap.right >= 0 && i === snap.left;
-      var isRight  = snap.right >= 0 && i === snap.right;
-
-      if (isBest) cell.classList.add('best-window');
-      if (inWindow) cell.classList.add('in-window');
-
-      if (isLeft && isRight) {
-        cell.classList.add('lr-ptr');
-      } else if (isLeft) {
-        cell.classList.add('left-ptr');
-      } else if (isRight) {
-        cell.classList.add('right-ptr');
+      while (charSet.has(c)) {
+        var removed = s[left];
+        charSet.delete(removed);
+        var stillDup = charSet.has(c);
+        snaps.push(mkSnap('shrink',
+          'Remove s[' + left + ']="' + removed + '" from charSet. left becomes ' + (left + 1) + '. charSet = {' + Array.from(charSet).join(', ') + '}' + (stillDup ? '. Still colliding, continue.' : '. Collision resolved.'),
+          { right: right, left: left + 1, charSet: Array.from(charSet), dupIdx: stillDup ? right : null, activeLine: 6 }
+        ));
+        left++;
       }
-
-      // Pointer labels
-      if (snap.right >= 0) {
-        if (isLeft && isRight) {
-          var lbl = document.createElement('span');
-          lbl.className = 'ptr-label';
-          lbl.innerHTML = '<span style="color:var(--green)">L</span>/<span style="color:var(--orange)">R</span>';
-          cell.appendChild(lbl);
-        } else if (isLeft) {
-          var lbl = document.createElement('span');
-          lbl.className = 'ptr-label';
-          lbl.style.color = 'var(--green)';
-          lbl.textContent = 'L';
-          cell.appendChild(lbl);
-        } else if (isRight) {
-          var lbl = document.createElement('span');
-          lbl.className = 'ptr-label';
-          lbl.style.color = 'var(--orange)';
-          lbl.textContent = 'R';
-          cell.appendChild(lbl);
-        }
-      }
-
-      // Pulse animations
-      if (animate) {
-        if (snap.phase === 'duplicate' && snap.duplicate_char) {
-          // Flash right cell AND the matching char already in window
-          if (i === snap.right) {
-            void cell.offsetWidth;
-            cell.classList.add('pulse-red');
-          } else if (inWindow && ch === snap.duplicate_char) {
-            void cell.offsetWidth;
-            cell.classList.add('pulse-red');
-          }
-        }
-        if (snap.phase === 'shrink' && i === snap.left - 1) {
-          // Cell just evicted
-          void cell.offsetWidth;
-          cell.classList.add('pulse-red');
-        }
-        if (snap.highlight_best && isBest) {
-          void cell.offsetWidth;
-          cell.classList.add('pulse-gold');
-        }
-      }
-    });
-
-    // Pointer bar
-    document.getElementById('ptrLeft').textContent = snap.left;
-    document.getElementById('ptrRight').textContent =
-      snap.right < 0 ? '— (not started)' : snap.right;
-
-    // Metrics
-    document.getElementById('metricWindow').textContent = snap.current_window_str || '—';
-    document.getElementById('metricSize').textContent = snap.window_size;
-    document.getElementById('metricMax').textContent = snap.max_len;
-    document.getElementById('metricBest').textContent = snap.best_window_str || '—';
-
-    // Pulse max card
-    var cardMax = document.getElementById('cardMax');
-    cardMax.classList.remove('pulse-max');
-    if (animate && snap.new_max) {
-      void cardMax.offsetWidth;
-      cardMax.classList.add('pulse-max');
+    } else {
+      snaps.push(mkSnap('expand',
+        'right=' + right + ': s[' + right + ']="' + c + '" not in charSet. Expand window to include it.',
+        { right: right, activeLine: 4 }
+      ));
     }
 
-    // Message panel
-    var msgPanel = document.getElementById('messagePanel');
-    document.getElementById('msgText').textContent = snap.message;
-    document.getElementById('stepCounter').textContent =
-      'Step ' + snap.step + ' / ' + TOTAL;
-    msgPanel.style.borderLeftColor = PHASE_COLORS[snap.phase] || 'var(--border)';
+    charSet.add(c);
+    maxLen = Math.max(maxLen, right - left + 1);
 
-    // Code panel highlight
-    var prevActive = document.querySelector('.code-line.active');
-    if (prevActive) prevActive.classList.remove('active');
-    var activeEl = document.getElementById('cl-' + snap.active_line);
-    if (activeEl) {
-      activeEl.classList.add('active');
-      activeEl.scrollIntoView({ block: 'nearest' });
-    }
-
-    // Chip container
-    var container = document.getElementById('chipContainer');
-    var currentSet = snap.char_set;
-
-    // Remove chips not in current set
-    var existingChips = container.querySelectorAll('.chip');
-    for (var k = 0; k < existingChips.length; k++) {
-      var chip = existingChips[k];
-      if (currentSet.indexOf(chip.dataset.char) === -1) {
-        chip.classList.add('leaving');
-        (function(el) {
-          setTimeout(function() { if (el.parentNode) el.parentNode.removeChild(el); }, 150);
-        })(chip);
-      }
-    }
-
-    // Add new chips (in insertion order)
-    currentSet.forEach(function(c) {
-      var existing = container.querySelector('.chip[data-char="' + c + '"]');
-      if (!existing) {
-        var newChip = document.createElement('span');
-        newChip.className = 'chip entering';
-        newChip.dataset.char = c;
-        newChip.textContent = c;
-        container.appendChild(newChip);
-      }
-    });
-
-    // Empty state
-    var emptyEl = container.querySelector('.empty-set');
-    if (currentSet.length === 0) {
-      if (!emptyEl) {
-        var e = document.createElement('span');
-        e.className = 'empty-set';
-        e.textContent = 'empty';
-        container.appendChild(e);
-      }
-    } else if (emptyEl) {
-      container.removeChild(emptyEl);
-    }
+    snaps.push(mkSnap('expand',
+      'Add "' + c + '" to charSet. Window = "' + s.slice(left, right + 1) + '" (len=' + (right - left + 1) + '). maxLen = ' + maxLen + '.',
+      { right: right, charSet: Array.from(charSet), maxLen: maxLen, currentLen: right - left + 1, activeLine: 8 }
+    ));
   }
 
-  function updateStatus(snap, cur, total) {
-    // handled inside applyStep
+  snaps.push(mkSnap('done',
+    'Done! The longest substring without repeating characters has length ' + maxLen + '.',
+    { right: s.length - 1, charSet: Array.from(charSet), maxLen: maxLen, currentLen: charSet.size, activeLine: 10 }
+  ));
+
+  return snaps;
+}
+
+function buildStrHtml(snap) {
+  var s = snap.s;
+  var left = snap.left;
+  var right = snap.right;
+  var dupIdx = snap.dupIdx;
+  var phase = snap.phase;
+
+  var idxHtml = '<div class="idx-row">';
+  var rowHtml = '<div class="char-row">';
+
+  for (var i = 0; i < s.length; i++) {
+    idxHtml += '<div class="idx-cell">' + i + '</div>';
+
+    var classes = ['char-box'];
+
+    if (phase === 'done') {
+      classes.push('hl-done');
+    } else if (right < 0) {
+      /* init: no window highlighting */
+    } else if (i === dupIdx) {
+      classes.push('hl-dup');
+    } else if (i === left && i === right) {
+      classes.push('hl-both');
+    } else if (i === left) {
+      classes.push('hl-left');
+    } else if (i === right) {
+      classes.push('hl-right');
+    } else if (i > left && i < right) {
+      classes.push('in-window');
+    } else if (i < left) {
+      classes.push('past');
+    }
+
+    var badges = [];
+    if (phase !== 'done' && right >= 0) {
+      if (i === left) badges.push('<span class="badge badge-L">L</span>');
+      if (i === right) badges.push('<span class="badge badge-R">R</span>');
+    }
+
+    rowHtml += '<div class="char-wrap">'
+      + '<div class="' + classes.join(' ') + '">' + s[i] + '</div>'
+      + '<div class="badges">' + badges.join('') + '</div>'
+      + '</div>';
   }
 
-  // ── VizNav init ─────────────────────────────────────────────────────────────
-  var nav;
+  idxHtml += '</div>';
+  rowHtml += '</div>';
 
-  window.addEventListener('DOMContentLoaded', function() {
-    nav = VizNav({
-      btnPrev: document.getElementById('prevBtn'),
-      btnNext: document.getElementById('stepBtn'),
-      btnPlay: document.getElementById('playBtn'),
-      speedSel: document.getElementById('speedSel'),
-      render: function(snap, cur, total) { applyStep(snap, cur > 0); updateStatus(snap, cur, total); }
-    });
+  return '<div style="display:flex;flex-direction:column;align-items:flex-start;gap:4px;">'
+    + idxHtml + rowHtml + '</div>';
+}
 
-    document.getElementById('resetBtn').addEventListener('click', function() {
-      nav.load(SNAPS);
-    });
+function updateSidebar(snap) {
+  var s = snap.s;
+  var left = snap.left;
+  var right = snap.right;
+  var charSet = snap.charSet;
+  var maxLen = snap.maxLen;
+  var currentLen = snap.currentLen;
 
-    nav.load(SNAPS);
+  var tbody = document.getElementById('ptr-body');
+  var rows = '';
+  if (right >= 0) {
+    rows += '<tr><td>left</td><td>' + left + ' &rarr; "' + (s[left] || '') + '"</td></tr>';
+    rows += '<tr><td>right</td><td>' + right + ' &rarr; "' + s[right] + '"</td></tr>';
+    rows += '<tr><td>len</td><td>' + currentLen + '</td></tr>';
+  } else {
+    rows += '<tr><td>left</td><td>0</td></tr>';
+    rows += '<tr><td>right</td><td>&mdash;</td></tr>';
+    rows += '<tr><td>len</td><td>0</td></tr>';
+  }
+  tbody.innerHTML = rows;
 
-    // Hide back-link in iframe context
-    if (window.self !== window.top) {
-      var bl = document.querySelector('.back-link');
-      if (bl) bl.style.display = 'none';
-    }
+  var pills = document.getElementById('charset-pills');
+  if (!charSet || charSet.length === 0) {
+    pills.innerHTML = '<span style="color:var(--text-dim)">{ } empty</span>';
+  } else {
+    pills.innerHTML = charSet.map(function(c) {
+      return '<span class="c-pill">' + c + '</span>';
+    }).join('');
+  }
+
+  document.getElementById('result-display').innerHTML =
+    '<span style="color:var(--text-muted);font-size:11px;">maxLen: </span>'
+    + '<span style="color:#fbbf24;font-weight:700;font-size:16px;">' + maxLen + '</span>';
+}
+
+function renderCode(activeLine) {
+  var pre = document.getElementById('code-pre');
+  pre.innerHTML = CODE_LINES.map(function(l) {
+    var cls = (l.n === activeLine) ? 'code-line active' : 'code-line';
+    return '<span class="' + cls + '">' + (l.t || ' ') + '</span>';
+  }).join('');
+  var active = pre.querySelector('.active');
+  if (active) active.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+}
+
+var PHASE_LABELS = { init: 'Init', expand: 'Expand', shrink: 'Shrink', done: 'Done' };
+var PHASE_STYLES = {
+  init:   { bg: '#1e293b',   color: '#94a3b8', border: '#475569' },
+  expand: { bg: '#0d2d1a',   color: '#4ade80', border: '#22c55e' },
+  shrink: { bg: '#2d1200',   color: '#f97316', border: '#f97316' },
+  done:   { bg: '#14532d',   color: '#4ade80', border: '#22c55e' },
+};
+
+function applyStep(snap) {
+  var badge = document.getElementById('phase-badge');
+  var ps = PHASE_STYLES[snap.phase] || PHASE_STYLES.init;
+  badge.textContent = PHASE_LABELS[snap.phase] || snap.phase;
+  badge.style.background = ps.bg;
+  badge.style.color = ps.color;
+  badge.style.borderColor = ps.border;
+
+  document.getElementById('desc').textContent = snap.desc;
+  document.getElementById('str-canvas').innerHTML = buildStrHtml(snap);
+
+  updateSidebar(snap);
+  renderCode(snap.activeLine);
+}
+
+function updateStatus(snap, cur, total) {
+  document.getElementById('step-counter').textContent = 'Step ' + cur + ' / ' + total;
+}
+
+var codeExpanded = true;
+document.getElementById('code-toggle').addEventListener('click', function() {
+  codeExpanded = !codeExpanded;
+  document.getElementById('code-body').style.display = codeExpanded ? 'block' : 'none';
+  document.getElementById('code-toggle').textContent =
+    (codeExpanded ? '&#9660;' : '&#9658;') + ' Code (click to ' + (codeExpanded ? 'collapse' : 'expand') + ')';
+});
+
+document.getElementById('resetBtn').addEventListener('click', function() {
+  if (window.nav) window.nav.reset();
+});
+
+function loadPreset() {
+  var v = document.getElementById('presetSel').value;
+  if (v) {
+    document.getElementById('strInput').value = v;
+    buildAndRun();
+  }
+}
+
+function buildAndRun() {
+  var s = document.getElementById('strInput').value.trim() || 'abcabcbb';
+  document.getElementById('presetSel').value = '';
+  var snaps = buildSnapshots(s);
+  if (window.nav) window.nav.load(snaps);
+}
+
+function randomExample() {
+  var examples = ['abcabcbb', 'bbbbb', 'pwwkew', 'dvdf', 'abcdefg', 'tmmzuxt', 'aab', 'anvisl', 'ohvhjdml'];
+  var s = examples[Math.floor(Math.random() * examples.length)];
+  document.getElementById('strInput').value = s;
+  document.getElementById('presetSel').value = '';
+  var snaps = buildSnapshots(s);
+  if (window.nav) window.nav.load(snaps);
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  var s = document.getElementById('strInput').value || 'abcabcbb';
+  var snaps = buildSnapshots(s);
+
+  window.nav = VizNav({
+    btnPrev:  document.getElementById('prevBtn'),
+    btnNext:  document.getElementById('stepBtn'),
+    btnPlay:  document.getElementById('playBtn'),
+    speedSel: document.getElementById('speedSel'),
+    render: function(snap, cur, total) { applyStep(snap); updateStatus(snap, cur, total); }
   });
-})();
+
+  window.nav.load(snaps);
+});
 </script>
 </body>
 </html>
