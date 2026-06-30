@@ -148,6 +148,29 @@
     .btn-play.playing              { background: #c2410c; }
     .btn-play.playing:hover        { background: #9a3412; }
     .btn-play:disabled             { opacity: 0.4; cursor: not-allowed; }
+
+    /* Viz Inputs */
+    .viz-inputs {
+      display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end;
+      padding: 10px 0 14px; width: 100%; max-width: 90%;
+    }
+    .viz-inputs .field {
+      display: flex; flex-direction: column; gap: 4px;
+    }
+    .viz-inputs label {
+      font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--text-dim);
+    }
+    .viz-inputs input[type="text"] {
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--text); border-radius: var(--radius-sm);
+      padding: 6px 10px; font-size: 0.85rem; width: 220px;
+    }
+    .viz-inputs select {
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--text); border-radius: var(--radius-sm);
+      padding: 6px 10px; font-size: 0.85rem; cursor: pointer;
+    }
   </style>
 </head>
 <body class="page">
@@ -158,13 +181,28 @@
   <div style="font-size:0.82rem;color:var(--text-dim)">LeetCode 213 &middot; Two-Pass DP &middot; O(n) time &middot; O(1) space</div>
 </div>
 
-<div class="controls">
+<div class="viz-inputs">
+  <div class="field">
+    <label>Preset</label>
+    <select id="presetSel" onchange="loadPreset()">
+      <option value="">— pick a preset —</option>
+      <option value='{"nums":"1, 2, 3, 1"}'>Example 1: [1, 2, 3, 1]</option>
+      <option value='{"nums":"2, 3, 2"}'>Example 2: [2, 3, 2]</option>
+      <option value='{"nums":"5, 3, 4, 11, 2"}'>Example 3: [5, 3, 4, 11, 2]</option>
+      <option value='{"nums":"1, 2, 1, 1, 4"}'>Example 4: [1, 2, 1, 1, 4]</option>
+      <option value='{"nums":"3, 6, 4"}'>Example 5: [3, 6, 4]</option>
+      <option value='{"nums":"10, 1, 1, 10"}'>Example 6: [10, 1, 1, 10]</option>
+    </select>
+  </div>
   <div class="field">
     <label>nums (circular houses)</label>
-    <input id="inp-nums" type="text" value="2, 3, 2" style="width:220px" />
+    <input id="inp-nums" type="text" value="2, 3, 2" />
   </div>
-  <button class="btn-primary" onclick="buildAndRun()">Build &amp; Run</button>
+  <button class="btn-primary" onclick="buildAndRun()">Run</button>
+  <button class="btn-primary" onclick="randomExample()" style="background:var(--surface);color:var(--text);border:1px solid var(--border);">🎲 Random</button>
 </div>
+
+<div class="controls"></div>
 
 <div class="viz-area">
 
@@ -176,7 +214,7 @@
       <span class="pass-result-badge" id="pass1-result-badge"></span>
     </div>
     <div class="houses-wrap" id="houses-row1">
-      <span style="color:var(--text-dim);font-size:0.82rem">Enter nums and click Build &amp; Run.</span>
+      <span style="color:var(--text-dim);font-size:0.82rem">Enter nums and click Run.</span>
     </div>
   </div>
 
@@ -188,7 +226,7 @@
       <span class="pass-result-badge" id="pass2-result-badge"></span>
     </div>
     <div class="houses-wrap" id="houses-row2">
-      <span style="color:var(--text-dim);font-size:0.82rem">Enter nums and click Build &amp; Run.</span>
+      <span style="color:var(--text-dim);font-size:0.82rem">Enter nums and click Run.</span>
     </div>
   </div>
 
@@ -253,7 +291,7 @@
 
 <div class="status-bar">
   <div class="phase-label" id="phase-label">&mdash;</div>
-  <div class="step-desc" id="step-desc">Enter nums and click Build &amp; Run.</div>
+  <div class="step-desc" id="step-desc">Enter nums and click Run.</div>
 </div>
 
 <div class="step-nav">
@@ -293,6 +331,26 @@ function buildAndRun() {
   if (!nums.length) return;
   buildHouseRows(nums);
   nav.load(simulate(nums));
+}
+
+function loadPreset() {
+  var sel = document.getElementById('presetSel');
+  if (!sel.value) return;
+  var d = JSON.parse(sel.value);
+  document.getElementById('inp-nums').value = d.nums;
+  buildAndRun();
+}
+
+function randomExample() {
+  var minLen = 1, maxLen = 6;
+  var len = Math.floor(Math.random() * (maxLen - minLen + 1)) + minLen;
+  var nums = [];
+  for (var i = 0; i < len; i++) {
+    nums.push(Math.floor(Math.random() * 100) + 1);
+  }
+  document.getElementById('presetSel').value = '';
+  document.getElementById('inp-nums').value = nums.join(', ');
+  buildAndRun();
 }
 
 // ── DOM builders ─────────────────────────────────────────────────────────────
@@ -540,7 +598,7 @@ function applyDecision(s) {
       skipCard.className = 'dec-card winner';
       robCard.className  = 'dec-card winner';
     }
-    result.innerHTML = 'current = max(' + s.skipVal + ', ' + s.robVal + ') = <strong>' + s.curVal + '</strong>';
+    result.innerHTML = 'current = max(' + s.skipVal + ', ' + s.robVal + ') = <strong>' + s.curVal + '</strong>';
   }
 }
 
