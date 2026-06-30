@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>287. Find the Duplicate Number</title>
+  <link rel="stylesheet" href="../shared/style.css" />
+  <script src="../shared/viz.js"></script>
+  <style>
+    body { display:flex; flex-direction:column; height:100vh; overflow:hidden; }
+    .page-title {
+      font-size:1rem; font-weight:700; color:var(--text-bright);
+      padding:10px 16px 0; letter-spacing:0.01em; flex-shrink:0;
+    }
+    .viz-root {
+      display:flex; flex:1; gap:12px;
+      padding:8px 16px 12px; min-height:0;
+    }
+    .left-col { display:flex; flex-direction:column; gap:10px; flex:1.4; min-width:0; }
+    .right-col { display:flex; flex-direction:column; gap:10px; flex:1; min-width:0; }
+
+    /* Error banner */
+    .err-banner {
+      display:none; background:rgba(247,118,142,0.12); border:1px solid var(--red);
+      color:var(--red); border-radius:6px; padding:6px 12px; font-size:0.78rem;
+      flex-shrink:0;
+    }
+    .err-banner.show { display:block; }
+
+    /* Phase banner */
+    .phase-banner {
+      border-radius:7px; padding:7px 14px; font-size:0.75rem; font-weight:700;
+      letter-spacing:0.06em; text-transform:uppercase; text-align:center; flex-shrink:0;
+    }
+    .phase-banner.p1 { background:rgba(122,162,247,0.10); border:1px solid rgba(122,162,247,0.28); color:var(--accent); }
+    .phase-banner.p2 { background:rgba(158,206,106,0.10); border:1px solid rgba(158,206,106,0.28); color:var(--green); }
+    .phase-banner.done { background:rgba(224,175,104,0.12); border:1px solid rgba(224,175,104,0.32); color:var(--yellow); }
+
+    /* Array cells */
+    .array-wrap { display:flex; gap:6px; flex-wrap:nowrap; overflow-x:auto; padding:2px 0 6px; }
+    .cell-group { display:flex; flex-direction:column; align-items:center; gap:2px; flex-shrink:0; }
+    .cell-idx { font-size:0.55rem; color:var(--text-dim); font-family:monospace; }
+    .cell {
+      width:42px; height:42px; border-radius:8px; border:2px solid var(--border);
+      display:flex; align-items:center; justify-content:center;
+      font-size:1rem; font-weight:700; color:var(--text-muted);
+      background:var(--surface-dark); transition:border-color 0.15s, background 0.15s;
+      position:relative; flex-shrink:0;
+    }
+    .cell.slow-only  { border-color:var(--accent); color:var(--accent); background:rgba(122,162,247,0.12); }
+    .cell.fast-only  { border-color:var(--blue);   color:var(--blue);   background:rgba(125,207,255,0.10); }
+    .cell.both       { border-color:var(--purple);  color:var(--purple); background:rgba(187,154,247,0.14); }
+    .cell.slow2-only { border-color:var(--orange);  color:var(--orange); background:rgba(255,158,100,0.10); }
+    .cell.dup-found  { border-color:var(--green);   color:var(--green);  background:rgba(158,206,106,0.18); }
+    .ptr-dots { display:flex; gap:3px; margin-top:2px; min-height:12px; }
+    .dot {
+      width:8px; height:8px; border-radius:50%; flex-shrink:0;
+    }
+    .dot.slow  { background:var(--accent); }
+    .dot.fast  { background:var(--blue); }
+    .dot.slow2 { background:var(--orange); }
+
+    /* Graph SVG */
+    .graph-wrap { position:relative; flex-shrink:0; }
+    #graph-svg { width:100%; display:block; }
+
+    /* Tracker table */
+    .tracker-table { width:100%; border-collapse:collapse; font-size:0.78rem; }
+    .tracker-table th {
+      color:var(--text-dim); font-size:0.6rem; text-transform:uppercase;
+      letter-spacing:0.08em; padding:4px 8px; text-align:left;
+      border-bottom:1px solid var(--border-soft);
+    }
+    .tracker-table td { padding:5px 8px; border-bottom:1px solid var(--border-soft); }
+    .tracker-table tr:last-child td { border-bottom:none; }
+    .tr-slow td:first-child { color:var(--accent); font-weight:700; }
+    .tr-fast td:first-child { color:var(--blue);   font-weight:700; }
+    .tr-slow2 td:first-child { color:var(--orange); font-weight:700; }
+
+    /* Step log */
+    .log-panel {
+      flex:1; overflow-y:auto; font-size:0.72rem; font-family:monospace;
+      color:var(--text-muted); line-height:1.6;
+    }
+    .log-line { padding:1px 0; }
+    .log-line.current { color:var(--text-bright); background:rgba(122,162,247,0.07); border-radius:3px; padding:1px 4px; }
+
+    /* Controls */
+    .ctrl-row { display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+    .btn {
+      background:var(--surface); border:1px solid var(--border);
+      color:var(--text); border-radius:6px; padding:5px 10px;
+      cursor:pointer; font-size:0.78rem;
+    }
+    .btn:hover { border-color:var(--accent); }
+    .btn.primary { background:var(--accent); border-color:var(--accent); color:#000; font-weight:700; }
+    .counter { font-size:0.66rem; color:var(--text-dim); }
+    select.spd {
+      background:var(--surface); border:1px solid var(--border);
+      color:var(--text); border-radius:6px; padding:5px 6px; font-size:0.75rem;
+    }
+  </style>
+</head>
+<body>
+
+<div class="page-title">287. Find the Duplicate Number &mdash; Floyd's Cycle Detection</div>
+
+<!-- VIZ INPUTS (visible in iframe) -->
+<div class="viz-inputs" style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;padding:8px 16px 6px;">
+  <div style="display:flex;flex-direction:column;gap:3px;">
+    <label style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-dim);">Preset</label>
+    <select id="presetSel" onchange="loadPreset()" style="background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-size:0.82rem;">
+      <option value="0">Classic [1,3,4,2,2]</option>
+      <option value="1">Simple [3,1,3,4,2]</option>
+      <option value="2">All same [2,2,2,2,2]</option>
+      <option value="3">Tail entry [1,2,3,4,4]</option>
+      <option value="4">Long cycle [2,5,9,6,9,3,8,9,7,1]</option>
+      <option value="5">Minimal [1,1]</option>
+    </select>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:3px;">
+    <label style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-dim);">Array (CSV)</label>
+    <input id="numsInput" type="text" placeholder="e.g. 1,3,4,2,2" style="background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-size:0.82rem;width:200px;" />
+  </div>
+  <button onclick="buildAndRun()" style="padding:7px 18px;background:var(--accent);color:#000;border:none;border-radius:6px;font-weight:700;cursor:pointer;font-size:0.82rem;">Run</button>
+  <button onclick="randomExample()" style="padding:7px 14px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:0.82rem;">&#127922; Random</button>
+</div>
+
+<div class="err-banner" id="errBanner"></div>
+
+<div class="viz-root">
+
+  <!-- LEFT COLUMN -->
+  <div class="left-col">
+
+    <div class="panel-box" style="flex-shrink:0;">
+      <div class="panel-title">Array</div>
+      <div class="array-wrap" id="arrayWrap"></div>
+    </div>
+
+    <div class="panel-box" style="flex-shrink:0;">
+      <div class="panel-title">Functional Graph &mdash; i &#8594; nums[i]</div>
+      <div class="graph-wrap" id="graphWrap">
+        <svg id="graph-svg" height="90"></svg>
+      </div>
+    </div>
+
+    <div class="panel-box" style="flex:1;min-height:0;display:flex;flex-direction:column;">
+      <div class="panel-title">Step Log</div>
+      <div class="log-panel" id="logPanel"></div>
+    </div>
+
+  </div>
+
+  <!-- RIGHT COLUMN -->
+  <div class="right-col">
+
+    <div class="panel-box" style="flex-shrink:0;">
+      <div class="ctrl-row">
+        <button class="btn" id="prevBtn">&#8592;</button>
+        <button class="btn" id="stepBtn">&#8594;</button>
+        <button class="btn primary" id="playBtn">Play</button>
+        <button class="btn" id="resetBtn">&#8635;</button>
+        <select class="spd" id="speedSel">
+          <option value="2000">Slow</option>
+          <option value="1000" selected>Normal</option>
+          <option value="500">Fast</option>
+          <option value="250">Turbo</option>
+        </select>
+      </div>
+      <div class="counter" id="counter" style="margin-top:5px;">Step 0 / 0</div>
+    </div>
+
+    <div class="phase-banner p1" id="phaseBanner">Phase 1: Finding Intersection (slow x1, fast x2)</div>
+
+    <div class="panel-box" style="flex-shrink:0;">
+      <div class="panel-title">Pointer Tracker</div>
+      <table class="tracker-table" id="trackerTable">
+        <thead><tr><th>Pointer</th><th>Index</th><th>Value (next)</th></tr></thead>
+        <tbody id="trackerBody"></tbody>
+      </table>
+    </div>
+
+    <div class="panel-box" style="flex:1;min-height:0;overflow:auto;">
+      <div class="panel-title">Current Step</div>
+      <div id="stepDesc" style="font-size:0.78rem;color:var(--text-muted);line-height:1.55;"></div>
+    </div>
+
+  </div>
+
+</div>
+
+<!-- Hidden controls for VizNav bridge -->
+<div class="controls" style="display:none;"></div>
+
+<script>
+var PRESETS = [
+  { label: "Classic [1,3,4,2,2]",              nums: [1,3,4,2,2] },
+  { label: "Simple [3,1,3,4,2]",               nums: [3,1,3,4,2] },
+  { label: "All same [2,2,2,2,2]",             nums: [2,2,2,2,2] },
+  { label: "Tail entry [1,2,3,4,4]",           nums: [1,2,3,4,4] },
+  { label: "Long cycle [2,5,9,6,9,3,8,9,7,1]", nums: [2,5,9,6,9,3,8,9,7,1] },
+  { label: "Minimal [1,1]",                     nums: [1,1] },
+];
+
+function showErr(msg) {
+  var b = document.getElementById('errBanner');
+  b.textContent = msg;
+  b.classList.add('show');
+}
+function clearErr() {
+  document.getElementById('errBanner').classList.remove('show');
+}
+
+function parseNums() {
+  var raw = document.getElementById('numsInput').value.trim();
+  // Accept [1,2,3] or 1,2,3
+  raw = raw.replace(/^\[|\]$/g, '');
+  var parts = raw.split(',').map(function(s) { return s.trim(); });
+  if (parts.length < 2) { showErr('Need at least 2 elements.'); return null; }
+  var nums = [];
+  for (var i = 0; i < parts.length; i++) {
+    var v = parseInt(parts[i], 10);
+    if (isNaN(v)) { showErr('Non-integer value: ' + parts[i]); return null; }
+    nums.push(v);
+  }
+  var n = nums.length - 1;
+  for (var i = 0; i < nums.length; i++) {
+    if (nums[i] < 1 || nums[i] > n) {
+      showErr('Value ' + nums[i] + ' out of range [1,' + n + '] for array length ' + nums.length + '.');
+      return null;
+    }
+  }
+  return nums;
+}
+
+// ── Build Steps (Floyd's Cycle Detection) ────────────────────────────────
+function buildSteps(nums) {
+  var steps = [];
+  var n = nums.length - 1;
+
+  function mkSnap(o) {
+    return {
+      nums: nums,
+      slow: o.slow,
+      fast: o.fast,
+      slow2: (o.slow2 !== undefined) ? o.slow2 : null,
+      phase: o.phase,
+      duplicate: o.duplicate || null,
+      activeEdges: o.activeEdges || [],
+      intersectionIdx: o.intersectionIdx || null,
+      stepLabel: o.stepLabel,
+      log: o.log.slice(),
+      done: o.done || false,
+    };
+  }
+
+  var log = [];
+  var slow = 0, fast = 0;
+
+  // Init
+  log.push('[0] Initialize: slow=0, fast=0');
+  steps.push(mkSnap({ slow:0, fast:0, phase:1, stepLabel:'Initialize: slow=0, fast=0', log:log, activeEdges:[] }));
+
+  // Phase 1
+  var intersectionIdx = null;
+  var stepNum = 1;
+  var maxIter = nums.length * nums.length + 10; // safety
+  var iters = 0;
+  do {
+    var prevSlow = slow;
+    var prevFast = fast;
+    var prevFastNext = nums[fast];
+    slow = nums[slow];
+    fast = nums[nums[fast]];
+    var label = 'slow → nums[' + prevSlow + '] = ' + slow + '  |  fast → nums[nums[' + prevFast + ']]=nums[' + prevFastNext + '] = ' + fast;
+    log = log.slice(); log.push('[' + stepNum + '] ' + label);
+    var edges = [
+      { from: prevSlow, to: slow, pointer: 'slow' },
+      { from: prevFast, to: prevFastNext, pointer: 'fast' },
+      { from: prevFastNext, to: fast, pointer: 'fast' },
+    ];
+    var phase1Done = (slow === fast);
+    steps.push(mkSnap({ slow:slow, fast:fast, phase:1, stepLabel:label, log:log, activeEdges:edges, done:false }));
+    stepNum++;
+    iters++;
+    if (iters > maxIter) break;
+  } while (slow !== fast);
+
+  intersectionIdx = slow;
+
+  // Phase transition
+  var transLabel = 'Intersection at index ' + intersectionIdx + '! Reset slow=0. Phase 2 begins.';
+  log = log.slice(); log.push('[' + stepNum + '] ' + transLabel);
+  steps.push(mkSnap({ slow:0, fast:fast, slow2:0, phase:'transition', intersectionIdx:intersectionIdx, stepLabel:transLabel, log:log, activeEdges:[], done:false }));
+  stepNum++;
+
+  // Phase 2: reuse slow variable reset to 0, fast stays at intersection
+  var p2slow = 0;
+  var p2fast = fast;
+  iters = 0;
+  while (p2slow !== p2fast) {
+    var prevP2slow = p2slow;
+    var prevP2fast = p2fast;
+    p2slow = nums[p2slow];
+    p2fast = nums[p2fast];
+    var label2 = 'slow → nums[' + prevP2slow + '] = ' + p2slow + '  |  fast → nums[' + prevP2fast + '] = ' + p2fast;
+    log = log.slice(); log.push('[' + stepNum + '] ' + label2);
+    var edges2 = [
+      { from: prevP2slow, to: p2slow, pointer: 'slow' },
+      { from: prevP2fast, to: p2fast, pointer: 'fast' },
+    ];
+    steps.push(mkSnap({ slow:p2slow, fast:p2fast, slow2:p2slow, phase:2, intersectionIdx:intersectionIdx, stepLabel:label2, log:log, activeEdges:edges2, done:(p2slow === p2fast) }));
+    stepNum++;
+    iters++;
+    if (iters > maxIter) break;
+  }
+
+  // Done — mark duplicate
+  var dupLabel = 'Duplicate found: ' + p2slow;
+  log = log.slice(); log.push('[' + stepNum + '] ' + dupLabel);
+  // patch last step as done with duplicate
+  var lastSnap = steps[steps.length - 1];
+  lastSnap.duplicate = p2slow;
+  lastSnap.done = true;
+  lastSnap.log = log;
+
+  return steps;
+}
+
+// ── Graph rendering ──────────────────────────────────────────────────────
+function renderGraph(snap) {
+  var nums = snap.nums;
+  var n = nums.length;
+  var svg = document.getElementById('graph-svg');
+  var wrap = document.getElementById('graphWrap');
+  var W = wrap.clientWidth || 400;
+  var H = 90;
+  svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+  svg.setAttribute('width', W);
+  svg.setAttribute('height', H);
+
+  var pad = 24;
+  var cellW = (W - pad * 2) / n;
+  var nodeY = H - 20;
+  var nodeR = Math.min(16, (cellW / 2) - 2);
+
+  // compute center x of each index
+  function cx(i) { return pad + cellW * i + cellW / 2; }
+
+  // Build activeEdge map for quick lookup
+  var edgeMap = {};
+  (snap.activeEdges || []).forEach(function(e) {
+    var key = e.from + '->' + e.to;
+    edgeMap[key] = e.pointer;
+  });
+
+  var defs = '<defs>' +
+    '<marker id="arr" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#414868"/></marker>' +
+    '<marker id="arr-slow" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#7aa2f7"/></marker>' +
+    '<marker id="arr-fast" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#7dcfff"/></marker>' +
+    '</defs>';
+
+  var arcs = '';
+  var circles = '';
+  var labels = '';
+
+  // Draw edges first (i -> nums[i])
+  for (var i = 0; i < n; i++) {
+    var to = nums[i];
+    var key = i + '->' + to;
+    var isActive = !!edgeMap[key];
+    var pointer = edgeMap[key];
+
+    var x1 = cx(i);
+    var x2 = cx(to);
+    var selfLoop = (i === to);
+
+    var stroke, strokeW, markerId;
+    if (pointer === 'slow') {
+      stroke = '#7aa2f7'; strokeW = 2.2; markerId = 'arr-slow';
+    } else if (pointer === 'fast') {
+      stroke = '#7dcfff'; strokeW = 2.2; markerId = 'arr-fast';
+    } else {
+      stroke = '#292e42'; strokeW = 1; markerId = 'arr';
+    }
+
+    if (selfLoop) {
+      var loopR = nodeR * 1.1;
+      arcs += '<path d="M' + (x1-loopR) + ',' + (nodeY-nodeR) + ' a' + loopR + ',' + loopR*1.4 + ' 0 1,1 ' + (loopR*2) + ',0"' +
+        ' fill="none" stroke="' + stroke + '" stroke-width="' + strokeW + '" marker-end="url(#' + markerId + ')"/>';
+    } else {
+      var dx = x2 - x1;
+      var midX = (x1 + x2) / 2;
+      var arcH = Math.min(50, Math.abs(dx) * 0.55 + 8);
+      var cpY = nodeY - nodeR - arcH;
+      arcs += '<path d="M' + x1 + ',' + (nodeY-nodeR) + ' Q' + midX + ',' + cpY + ' ' + x2 + ',' + (nodeY-nodeR) + '"' +
+        ' fill="none" stroke="' + stroke + '" stroke-width="' + strokeW + '" marker-end="url(#' + markerId + ')"/>';
+    }
+  }
+
+  // Draw nodes
+  for (var i = 0; i < n; i++) {
+    var isSlowNode = (snap.phase === 1 || snap.phase === 'transition') ? (snap.slow === i) : (snap.slow2 === i);
+    var isFastNode = (snap.fast === i);
+    var isDup = snap.done && snap.duplicate === nums[i] && snap.duplicate !== null;
+
+    var fillColor, strokeColor;
+    if (isDup) {
+      fillColor = 'rgba(158,206,106,0.20)'; strokeColor = '#9ece6a';
+    } else if (isSlowNode && isFastNode) {
+      fillColor = 'rgba(187,154,247,0.18)'; strokeColor = '#bb9af7';
+    } else if (isSlowNode) {
+      fillColor = 'rgba(122,162,247,0.15)'; strokeColor = '#7aa2f7';
+    } else if (isFastNode) {
+      fillColor = 'rgba(125,207,255,0.12)'; strokeColor = '#7dcfff';
+    } else {
+      fillColor = '#16161e'; strokeColor = '#414868';
+    }
+
+    circles += '<circle cx="' + cx(i) + '" cy="' + nodeY + '" r="' + nodeR + '" fill="' + fillColor + '" stroke="' + strokeColor + '" stroke-width="1.5"/>';
+    labels += '<text x="' + cx(i) + '" y="' + (nodeY+1) + '" text-anchor="middle" dominant-baseline="middle" font-size="' + Math.max(9,nodeR-1) + '" fill="' + strokeColor + '" font-weight="600">' + i + '</text>';
+  }
+
+  svg.innerHTML = defs + arcs + circles + labels;
+}
+
+// ── Array rendering ──────────────────────────────────────────────────────
+function renderArray(snap) {
+  var wrap = document.getElementById('arrayWrap');
+  wrap.innerHTML = '';
+  var nums = snap.nums;
+
+  // which indices are highlighted
+  var slowIdx = (snap.phase === 1 || snap.phase === 'transition') ? snap.slow : snap.slow2;
+  var fastIdx = snap.fast;
+
+  for (var i = 0; i < nums.length; i++) {
+    var group = document.createElement('div');
+    group.className = 'cell-group';
+
+    var idxEl = document.createElement('div');
+    idxEl.className = 'cell-idx';
+    idxEl.textContent = i;
+    group.appendChild(idxEl);
+
+    var cell = document.createElement('div');
+    cell.className = 'cell';
+
+    var hasSlow = (slowIdx === i);
+    var hasFast = (fastIdx === i);
+    var isDup = snap.done && snap.duplicate !== null && nums[i] === snap.duplicate;
+
+    if (isDup && snap.done) {
+      cell.classList.add('dup-found');
+    } else if (hasSlow && hasFast) {
+      cell.classList.add('both');
+    } else if (hasSlow) {
+      if (snap.phase === 2) cell.classList.add('slow2-only');
+      else cell.classList.add('slow-only');
+    } else if (hasFast) {
+      cell.classList.add('fast-only');
+    }
+    cell.textContent = nums[i];
+    group.appendChild(cell);
+
+    // dots
+    var dots = document.createElement('div');
+    dots.className = 'ptr-dots';
+    if (hasSlow) {
+      var d = document.createElement('div');
+      d.className = (snap.phase === 2) ? 'dot slow2' : 'dot slow';
+      dots.appendChild(d);
+    }
+    if (hasFast) {
+      var d = document.createElement('div');
+      d.className = 'dot fast';
+      dots.appendChild(d);
+    }
+    group.appendChild(dots);
+
+    wrap.appendChild(group);
+  }
+}
+
+// ── Tracker rendering ────────────────────────────────────────────────────
+function renderTracker(snap) {
+  var body = document.getElementById('trackerBody');
+  body.innerHTML = '';
+  var nums = snap.nums;
+
+  function mkRow(cls, name, idx, val) {
+    var tr = document.createElement('tr');
+    tr.className = cls;
+    tr.innerHTML = '<td>' + name + '</td><td>' + idx + '</td><td>' + val + '</td>';
+    body.appendChild(tr);
+  }
+
+  if (snap.phase === 1 || snap.phase === 'transition') {
+    mkRow('tr-slow', 'slow', snap.slow, nums[snap.slow] !== undefined ? nums[snap.slow] : '—');
+    mkRow('tr-fast', 'fast', snap.fast, nums[snap.fast] !== undefined ? nums[snap.fast] : '—');
+  } else {
+    // Phase 2: slow reset to 0, reuses slow2 in snap
+    mkRow('tr-slow2', 'slow', snap.slow2 !== null ? snap.slow2 : '—', snap.slow2 !== null && nums[snap.slow2] !== undefined ? nums[snap.slow2] : '—');
+    mkRow('tr-fast',  'fast', snap.fast, nums[snap.fast] !== undefined ? nums[snap.fast] : '—');
+  }
+}
+
+// ── Phase banner ─────────────────────────────────────────────────────────
+function renderPhaseBanner(snap) {
+  var el = document.getElementById('phaseBanner');
+  if (snap.done) {
+    el.className = 'phase-banner done';
+    el.textContent = 'Duplicate = ' + snap.duplicate;
+  } else if (snap.phase === 2) {
+    el.className = 'phase-banner p2';
+    el.textContent = 'Phase 2: Finding Cycle Entrance (both x1)';
+  } else if (snap.phase === 'transition') {
+    el.className = 'phase-banner p2';
+    el.textContent = 'Intersection Found! Transitioning to Phase 2...';
+  } else {
+    el.className = 'phase-banner p1';
+    el.textContent = 'Phase 1: Finding Intersection (slow x1, fast x2)';
+  }
+}
+
+// ── Log rendering ────────────────────────────────────────────────────────
+function renderLog(snap, cursor) {
+  var panel = document.getElementById('logPanel');
+  panel.innerHTML = '';
+  snap.log.forEach(function(line, i) {
+    var div = document.createElement('div');
+    div.className = 'log-line' + (i === snap.log.length - 1 ? ' current' : '');
+    div.textContent = line;
+    panel.appendChild(div);
+  });
+  panel.scrollTop = panel.scrollHeight;
+}
+
+// ── Main render ──────────────────────────────────────────────────────────
+function render(snap, cursor, total) {
+  document.getElementById('counter').textContent = 'Step ' + (cursor + 1) + ' / ' + total;
+  renderArray(snap);
+  renderGraph(snap);
+  renderTracker(snap);
+  renderPhaseBanner(snap);
+  renderLog(snap, cursor);
+  document.getElementById('stepDesc').textContent = snap.stepLabel;
+}
+
+// ── Nav setup ────────────────────────────────────────────────────────────
+var btnPrev  = document.getElementById('prevBtn');
+var btnStep  = document.getElementById('stepBtn');
+var btnPlay  = document.getElementById('playBtn');
+var btnReset = document.getElementById('resetBtn');
+var speedSel = document.getElementById('speedSel');
+
+var nav = VizNav({ btnPrev: btnPrev, btnNext: btnStep, btnPlay: btnPlay, btnReset: btnReset, speedSel: speedSel, render: render });
+
+function buildAndRun() {
+  clearErr();
+  var nums = parseNums();
+  if (!nums) return;
+  var steps = buildSteps(nums);
+  nav.load(steps);
+}
+
+function loadPreset() {
+  var idx = parseInt(document.getElementById('presetSel').value, 10);
+  var p = PRESETS[idx];
+  document.getElementById('numsInput').value = p.nums.join(',');
+  buildAndRun();
+}
+
+function randomExample() {
+  var n = Math.floor(Math.random() * 7) + 3;
+  var dup = Math.floor(Math.random() * n) + 1;
+  var vals = [];
+  for (var i = 1; i <= n; i++) vals.push(i);
+  vals.push(dup);
+  for (var i = vals.length - 1; i > 0; i--) {
+    var j = Math.floor(Math.random() * (i + 1));
+    var tmp = vals[i]; vals[i] = vals[j]; vals[j] = tmp;
+  }
+  document.getElementById('numsInput').value = vals.join(',');
+  buildAndRun();
+}
+
+window.addEventListener('DOMContentLoaded', function() {
+  loadPreset();
+});
+</script>
+</body>
+</html>
