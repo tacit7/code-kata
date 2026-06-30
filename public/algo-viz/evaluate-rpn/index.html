@@ -16,6 +16,69 @@
       gap: 12px;
     }
 
+    /* Viz inputs */
+    .viz-inputs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: flex-end;
+      padding: 10px 0 14px;
+      width: 100%;
+      max-width: 90%;
+    }
+    .viz-inputs .field {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .viz-inputs label {
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-dim);
+    }
+    .viz-inputs input[type="text"] {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 6px;
+      padding: 6px 10px;
+      font-size: 0.85rem;
+      font-family: monospace;
+      width: 260px;
+    }
+    .viz-inputs select {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 6px;
+      padding: 6px 10px;
+      font-size: 0.85rem;
+      cursor: pointer;
+    }
+    .viz-inputs button {
+      padding: 7px 18px;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .viz-inputs button:hover {
+      background: var(--blue);
+    }
+    .viz-inputs .random-btn {
+      background: var(--surface);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+    .viz-inputs .random-btn:hover {
+      background: var(--border);
+    }
+
     /* Controls */
     .controls {
       margin-bottom: 4px;
@@ -301,13 +364,28 @@
     <div class="page-sub">LeetCode #150 · Stack · O(n) time · O(n) space</div>
   </div>
 
-  <div class="controls">
-    <div class="controls-row">
-      <input type="text" id="tokens-input" placeholder="e.g. 5 1 2 + 4 * + 3 -" value="5 1 2 + 4 * + 3 -" />
-      <button id="build-btn">Build &amp; Run</button>
+  <div class="viz-inputs">
+    <div class="field">
+      <label>Preset</label>
+      <select id="presetSel" onchange="loadPreset()">
+        <option value="">— pick a preset —</option>
+        <option value='{"tokens":"5 1 2 + 4 * + 3 -"}'>Nested operations</option>
+        <option value='{"tokens":"3 4 +"}'>Simple addition (7)</option>
+        <option value='{"tokens":"10 5 /"}'>Division (2)</option>
+        <option value='{"tokens":"2 3 4 + *"}'>Precedence (14)</option>
+        <option value='{"tokens":"6 2 / 3 +"}'>Mixed ops (6)</option>
+        <option value='{"tokens":"-8 3 /"}'>Negative division (-2)</option>
+      </select>
     </div>
-    <div class="hint">Space-separated RPN tokens. Operators: + - * /. Division uses int(a/b) to truncate toward zero (not floor), matching LeetCode spec for negative numbers.</div>
+    <div class="field">
+      <label>Tokens</label>
+      <input type="text" id="tokens-input" placeholder="e.g. 5 1 2 + 4 * + 3 -" value="5 1 2 + 4 * + 3 -" />
+    </div>
+    <button onclick="buildAndRun()">Run</button>
+    <button onclick="randomExample()" class="random-btn">🎲 Random</button>
   </div>
+
+  <div class="controls"></div>
 
   <div class="viz-area">
     <!-- ROW 1: Nav -->
@@ -326,7 +404,7 @@
       </div>
       <div class="panel-box" style="flex:1;min-width:0">
         <div style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--text-dim)" id="phase-label">—</div>
-        <div style="font-size:0.88rem;color:var(--text-muted);margin-top:3px" id="step-desc">Click Build &amp; Run to start.</div>
+        <div style="font-size:0.88rem;color:var(--text-muted);margin-top:3px" id="step-desc">Click Build & Run to start.</div>
       </div>
     </div>
 
@@ -759,7 +837,8 @@
     }
 
     // Build & Run
-    function buildAndRun(tokenStr) {
+    function buildAndRun() {
+      var tokenStr = document.getElementById('tokens-input').value;
       var raw = tokenStr.trim().split(/\s+/).filter(function(s) { return s.length > 0; });
       if (raw.length === 0) return;
       currentTokens = raw;
@@ -778,6 +857,33 @@
       nav.load(steps);
     }
 
+    function loadPreset() {
+      var sel = document.getElementById('presetSel');
+      if (!sel.value) return;
+      var d = JSON.parse(sel.value);
+      document.getElementById('tokens-input').value = d.tokens;
+      buildAndRun();
+    }
+
+    function randomExample() {
+      var operators = ['+', '-', '*', '/'];
+      var numbers = [];
+      var minLen = 3, maxLen = 8;
+      var len = Math.floor(Math.random() * (maxLen - minLen + 1)) + minLen;
+      
+      for (var i = 0; i < len; i++) {
+        if (i < 2 || Math.random() < 0.5) {
+          numbers.push(String(Math.floor(Math.random() * 20) - 10));
+        } else {
+          numbers.push(operators[Math.floor(Math.random() * operators.length)]);
+        }
+      }
+      
+      document.getElementById('presetSel').value = '';
+      document.getElementById('tokens-input').value = numbers.join(' ');
+      buildAndRun();
+    }
+
     // Init
     window.addEventListener('DOMContentLoaded', function() {
       nav = VizNav({
@@ -790,11 +896,7 @@
         }
       });
 
-      document.getElementById('build-btn').addEventListener('click', function() {
-        buildAndRun(document.getElementById('tokens-input').value);
-      });
-
-      buildAndRun('5 1 2 + 4 * + 3 -');
+      buildAndRun();
     });
 
     // Hide back-link in iframe

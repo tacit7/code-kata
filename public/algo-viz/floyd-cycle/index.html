@@ -8,6 +8,29 @@
   <script src="../shared/viz.js"></script>
   <style>
     #viz { height: 300px; }
+    .viz-inputs {
+      display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end;
+      padding: 10px 0 14px; width: 100%; max-width: 90%;
+    }
+    .viz-inputs .field {
+      display: flex; flex-direction: column; gap: 4px;
+    }
+    .viz-inputs label {
+      font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--text-dim);
+    }
+    .viz-inputs input[type="text"],
+    .viz-inputs input[type="number"] {
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--text); border-radius: var(--radius-sm);
+      padding: 6px 10px; font-size: 0.85rem;
+    }
+    .viz-inputs input[type="number"] { width: 80px; }
+    .viz-inputs select {
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--text); border-radius: var(--radius-sm);
+      padding: 6px 10px; font-size: 0.85rem; cursor: pointer;
+    }
   </style>
 </head>
 <body class="page">
@@ -17,7 +40,19 @@
   <h1 class="page-title">Floyd's Cycle Detection</h1>
 </div>
 
-<div class="controls">
+<div class="viz-inputs">
+  <div class="field">
+    <label>Preset</label>
+    <select id="presetSel" onchange="loadPreset()">
+      <option value="">— pick a preset —</option>
+      <option value='{"len":"5","from":"4","to":"-1"}'>No cycle (5 nodes)</option>
+      <option value='{"len":"5","from":"4","to":"4"}'>Cycle at end (self-loop)</option>
+      <option value='{"len":"6","from":"5","to":"2"}'>Cycle mid-list (5→2)</option>
+      <option value='{"len":"5","from":"3","to":"0"}'>Cycle to head (3→0)</option>
+      <option value='{"len":"8","from":"7","to":"-1"}'>No cycle (8 nodes)</option>
+      <option value='{"len":"9","from":"7","to":"3"}'>Complex cycle (9 nodes)</option>
+    </select>
+  </div>
   <div class="field">
     <label>List length (2–12)</label>
     <input id="inp-len" type="number" min="2" max="12" value="8" />
@@ -30,7 +65,8 @@
     <label>Cycle to (−1 = none)</label>
     <input id="inp-to" type="number" min="-1" max="11" value="3" />
   </div>
-  <button class="btn-primary" onclick="build()">Build</button>
+  <button onclick="buildAndRun()" style="padding:7px 18px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);font-weight:600;cursor:pointer;">Run</button>
+  <button onclick="randomExample()" style="padding:7px 14px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;">🎲 Random</button>
 </div>
 
 <div class="status-bar">
@@ -50,7 +86,7 @@
   <div class="leg-item"><div class="leg-swatch square" style="background:var(--yellow)"></div>Cycle entry</div>
 </div>
 
-<div class="step-nav">
+<div class="controls">
   <button class="stepBtn" id="prevBtn" disabled>← Back</button>
   <button class="stepBtn" id="stepBtn" disabled>Next →</button>
   <button id="playBtn" style="background:#15803d;color:#fff;border:none;border-radius:4px;padding:6px 14px;font-weight:600;cursor:pointer;">&#9654; Play</button>
@@ -105,7 +141,7 @@ var nav = VizNav({
 });
 
 // ─── Build ────────────────────────────────────────────────────────────────────
-function build() {
+function buildAndRun() {
   var n         = clamp(parseInt(document.getElementById('inp-len').value)  || 6, 2, 12);
   var cycleFrom = clamp(parseInt(document.getElementById('inp-from').value) || n-1, 0, n-1);
   var cycleTo   = parseInt(document.getElementById('inp-to').value);
@@ -117,6 +153,31 @@ function build() {
 }
 
 function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+
+// ─── Preset loader ────────────────────────────────────────────────────────────
+function loadPreset() {
+  var sel = document.getElementById('presetSel');
+  if (!sel.value) return;
+  var d = JSON.parse(sel.value);
+  document.getElementById('inp-len').value = d.len;
+  document.getElementById('inp-from').value = d.from;
+  document.getElementById('inp-to').value = d.to;
+  buildAndRun();
+}
+
+// ─── Random example ───────────────────────────────────────────────────────────
+function randomExample() {
+  var n = Math.floor(Math.random() * 9) + 4; // 4 to 12 nodes
+  var cycleFrom = Math.floor(Math.random() * n);
+  var hasCycle = Math.random() > 0.4; // 60% chance of cycle
+  var cycleTo = hasCycle ? Math.floor(Math.random() * (cycleFrom + 1)) : -1;
+  
+  document.getElementById('inp-len').value = n;
+  document.getElementById('inp-from').value = cycleFrom;
+  document.getElementById('inp-to').value = cycleTo;
+  document.getElementById('presetSel').value = '';
+  buildAndRun();
+}
 
 // ─── Linked-list traversal ────────────────────────────────────────────────────
 function nxt(idx, n, cycleFrom, cycleTo) {
@@ -326,7 +387,7 @@ function curvedArrow(ctx, x1, cy1, x2, cy2, H) {
 }
 
 window.addEventListener('resize', function() { if (nav.total()) nav.goTo(nav.cursor()); });
-build();
+buildAndRun();
 </script>
   <script>
     // Hide back-link when embedded in an iframe
