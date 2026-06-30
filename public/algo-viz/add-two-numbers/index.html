@@ -1,167 +1,88 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>2. Add Two Numbers</title>
-  <link rel="stylesheet" href="../shared/style.css" />
-  <script src="../shared/viz.js"></script>
-  <style>
-    body { display:flex; flex-direction:column; height:100vh; overflow:hidden; }
-    .page-title {
-      font-size:1rem; font-weight:700; color:var(--text-bright);
-      padding:12px 16px 0; letter-spacing:0.01em; flex-shrink:0;
-    }
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>2. Add Two Numbers</title>
+<link rel="stylesheet" href="../shared/style.css" />
+<script src="../shared/viz.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: "Fira Code", "Cascadia Code", monospace; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
 
-    /* viz-inputs */
-    .viz-inputs {
-      display:flex; flex-wrap:wrap; gap:10px; align-items:flex-end;
-      padding:10px 16px 14px; flex-shrink:0;
-    }
-    .viz-inputs .field { display:flex; flex-direction:column; gap:4px; }
-    .viz-inputs label {
-      font-size:0.7rem; font-weight:700; text-transform:uppercase;
-      letter-spacing:0.08em; color:var(--text-dim);
-    }
-    .viz-inputs input[type="text"] {
-      background:var(--surface); border:1px solid var(--border);
-      color:var(--text); border-radius:6px;
-      padding:6px 10px; font-size:0.85rem; width:160px;
-    }
-    .viz-inputs select {
-      background:var(--surface); border:1px solid var(--border);
-      color:var(--text); border-radius:6px;
-      padding:6px 10px; font-size:0.85rem; cursor:pointer;
-    }
-    .viz-inputs .run-btn {
-      padding:7px 18px; background:var(--accent); color:#fff;
-      border:none; border-radius:6px; font-weight:600; cursor:pointer; font-size:0.85rem;
-    }
-    .viz-inputs .rand-btn {
-      padding:7px 14px; background:var(--surface); color:var(--text);
-      border:1px solid var(--border); border-radius:6px; cursor:pointer; font-size:0.85rem;
-    }
-    .viz-inputs .err-msg { font-size:0.75rem; color:#f87171; align-self:center; }
+  .viz-inputs { width: 100%; max-width: 100%; padding: 10px 16px; background: var(--surface); border: none; border-bottom: 1px solid var(--border); border-radius: 0; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; flex-shrink: 0; }
+  .viz-inputs label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); display: block; margin-bottom: 3px; }
+  .viz-inputs select, .viz-inputs input { background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 0 8px; height: 30px; font-size: 0.82rem; font-family: inherit; appearance: none; -webkit-appearance: none; }
+  .vi-btn-run { padding: 6px 14px; border-radius: 6px; font-size: 0.82rem; font-weight: 600; cursor: pointer; font-family: inherit; background: var(--accent); color: #fff; border: none; }
+  .vi-btn-rand { padding: 6px 14px; border-radius: 6px; font-size: 0.82rem; cursor: pointer; font-family: inherit; background: var(--bg); color: var(--text); border: 1px solid var(--border); }
+  .err-msg { font-size: 0.75rem; color: #f87171; }
 
-    /* two-col layout */
-    .viz-root {
-      display:flex; flex:1; gap:16px; padding:0 16px 16px; min-height:0;
-    }
-    .left-col, .right-col {
-      display:flex; flex-direction:column; gap:12px; flex:1; min-width:0;
-    }
+  #header { padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+  #phase-badge { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; padding: 3px 10px; border-radius: var(--radius-sm); background: rgba(var(--accent-ch),0.08); color: var(--accent); border: 1px solid rgba(var(--accent-ch),0.18); }
+  #step-counter { font-size: 12px; color: var(--text-muted); margin-left: auto; }
 
-    /* list rows */
-    .list-row { display:flex; align-items:center; gap:6px; }
-    .list-lbl {
-      font-size:0.72rem; font-weight:700; color:var(--accent);
-      width:48px; flex-shrink:0; text-align:right; padding-right:8px;
-    }
-    .list-lbl.l2lbl  { color:var(--blue); }
-    .list-lbl.reslbl { color:var(--green); }
-    .list-nodes {
-      display:flex; align-items:center; gap:3px;
-      overflow-x:auto; flex-wrap:nowrap;
-    }
+  #main { display: flex; flex: 1; overflow: hidden; }
+  #viz-area { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; gap: 20px; overflow-y: auto; }
 
-    /* nodes */
-    .ll-node {
-      min-width:40px; height:40px; border-radius:7px;
-      display:flex; align-items:center; justify-content:center;
-      font-size:0.9rem; font-weight:600; flex-shrink:0;
-      border:2px solid transparent;
-      background:var(--surface-dark); color:var(--text-muted);
-      transition:border-color 0.14s, transform 0.14s;
-    }
-    .ll-node.active-l1  { border-color:var(--accent); color:var(--accent-pale); background:rgba(var(--accent-ch),0.13); }
-    .ll-node.active-l2  { border-color:var(--blue);   color:var(--blue-light);  background:rgba(var(--blue-ch),0.13); }
-    .ll-node.done-res   { border-color:var(--green);   color:var(--green-light); background:rgba(var(--green-ch),0.10); }
-    .ll-node.cur-res    { border-color:var(--accent);  color:var(--accent-pale); background:rgba(var(--accent-ch),0.13); transform:scale(1.08); }
-    .ll-node.null-node  { opacity:0.35; border-style:dashed; border-color:var(--border); color:var(--text-ghost); }
-    .ll-node.exh-slot   { opacity:0.35; border-style:dashed; border-color:var(--accent); color:var(--accent); }
-    .ll-node.exh-slot-2 { opacity:0.35; border-style:dashed; border-color:var(--blue);   color:var(--blue); }
-    .ll-arrow { color:var(--text-ghost); font-size:0.85rem; flex-shrink:0; }
+  #resize-handle { width: 5px; flex-shrink: 0; cursor: col-resize; background: transparent; border-left: 1px solid var(--border); transition: background .15s; z-index: 10; }
+  #resize-handle:hover, #resize-handle.dragging { background: var(--accent); }
 
-    /* carry badge */
-    .carry-pill {
-      display:inline-flex; align-items:center; gap:6px;
-      padding:5px 14px; border-radius:999px;
-      border:1px solid var(--border); background:var(--surface-dark);
-      font-size:0.78rem; font-weight:600; color:var(--text-dim);
-      transition:border-color 0.2s, color 0.2s, background 0.2s;
-      flex-shrink:0;
-    }
-    .carry-pill.active {
-      border-color:var(--accent); color:var(--accent);
-      background:rgba(var(--accent-ch),0.10);
-      animation:carry-pulse 0.5s ease;
-    }
-    @keyframes carry-pulse {
-      0%  { transform:scale(1); }
-      40% { transform:scale(1.1); }
-      100%{ transform:scale(1); }
-    }
+  #code-panel { width: 350px; min-width: 120px; max-width: 560px; flex-shrink: 0; background: #0d1117; border-right: 1px solid var(--border); overflow-y: auto; overflow-x: auto; padding: 10px 12px; display: flex; flex-direction: column; }
+  .code-panel-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--text-dim); margin-bottom: 8px; }
+  .cl { display: flex; align-items: stretch; padding: 2px 0; white-space: pre; border-left: 2px solid transparent; padding-left: 6px; color: var(--text-muted); transition: all 0.2s; font-family: 'Fira Code', 'Cascadia Code', monospace; font-size: 0.75rem; line-height: 1.8; }
+  .cl.hl { background: rgba(122,162,247,0.12); border-left-color: var(--accent); color: var(--text); }
+  .ln { display: inline-block; width: 20px; text-align: right; color: var(--text-dim); user-select: none; margin-right: 10px; font-size: 0.7rem; }
+  .kw2 { color: #bb9af7; }
+  .nb2 { color: #9ece6a; }
+  .cm2 { color: var(--text-dim); font-style: italic; }
 
-    /* computation box — fixed height to prevent layout jitter */
-    .comp-box {
-      background:var(--surface-dark); border:1px solid var(--border);
-      border-radius:8px; padding:10px 14px;
-      font-family:"Fira Code","Cascadia Code",monospace;
-      font-size:0.82rem; line-height:1.7; color:var(--text-muted);
-      min-height:70px; white-space:pre-wrap;
-    }
-    .comp-box .hi { color:var(--accent); font-weight:700; }
-    .comp-box .gr { color:var(--green);  font-weight:700; }
+  #sidebar { width: 220px; flex-shrink: 0; background: var(--surface); border-left: 1px solid var(--border); overflow-y: auto; padding: 14px 12px; display: flex; flex-direction: column; gap: 12px; }
+  .sidebar-section { font-size: 11px; }
+  .sidebar-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--text-dim); margin-bottom: 6px; }
+  .var-item { font-size: 11px; font-family: monospace; color: var(--text-muted); padding: 4px 0; border-bottom: 1px solid var(--border-soft); }
+  .var-item:last-child { border-bottom: none; }
+  .var-key { color: var(--text-dim); }
+  .var-val { color: var(--accent); font-weight: 700; }
 
-    /* summary */
-    .summary-box {
-      background:var(--surface-dark); border:1px solid var(--border);
-      border-radius:8px; padding:10px 14px;
-      font-size:0.85rem; color:var(--text-muted); min-height:36px;
-    }
-    .summary-box .eq { color:var(--green); font-weight:700; font-size:0.95rem; }
+  #nav-row { flex-shrink: 0; display: flex; align-items: center; gap: 8px; padding: 10px 16px; background: var(--surface); border-top: 1px solid var(--border); }
+  .btn-step, .btn-play { padding: 6px 14px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--surface); color: var(--text); font-family: inherit; font-size: 12px; cursor: pointer; transition: background .15s; }
+  .btn-step:hover { background: #334155; }
+  .btn-play { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn-play:hover { background: var(--accent-hover); }
 
-    /* nav controls */
-    .ctrl-row { display:flex; align-items:center; gap:6px; }
-    .btn {
-      background:var(--surface); border:1px solid var(--border);
-      color:var(--text); border-radius:6px; padding:5px 10px;
-      cursor:pointer; font-size:0.78rem;
-    }
-    .btn:hover   { border-color:var(--accent); }
-    .btn.primary { background:var(--accent); border-color:var(--accent); color:#fff; }
-    .speed-sel {
-      background:var(--surface); border:1px solid var(--border);
-      color:var(--text); border-radius:6px; padding:5px 6px; font-size:0.75rem; width:78px;
-    }
-    .counter { font-size:0.68rem; color:var(--text-dim); margin-top:4px; }
+  .list-row { display: flex; align-items: center; gap: 6px; }
+  .list-lbl { font-size: 0.72rem; font-weight: 700; color: var(--accent); width: 48px; flex-shrink: 0; text-align: right; padding-right: 8px; }
+  .list-lbl.l2lbl { color: var(--blue); }
+  .list-lbl.reslbl { color: var(--green); }
+  .list-nodes { display: flex; align-items: center; gap: 3px; overflow-x: auto; flex-wrap: nowrap; }
 
-    /* phase badge + status */
-    .phase-badge {
-      font-size:0.6rem; font-weight:700; text-transform:uppercase; letter-spacing:0.1em;
-      color:var(--accent); background:rgba(var(--accent-ch),0.08);
-      border:1px solid rgba(var(--accent-ch),0.18);
-      border-radius:4px; padding:2px 7px; display:inline-block;
-    }
-    .status-desc { font-size:0.76rem; color:var(--text-muted); margin-top:6px; line-height:1.45; }
-    .code-panel { background:var(--surface); border:1px solid var(--border-soft); border-radius:var(--radius-md); padding:10px 12px; overflow-x:auto; }
-    .code-title { font-size:0.65rem; font-weight:700; text-transform:uppercase; letter-spacing:0.1em; color:var(--text-dim); margin-bottom:8px; }
-    #code-body { font-family:'JetBrains Mono','Fira Code',monospace; font-size:0.73rem; line-height:1.75; }
-    .cl { display:flex; align-items:stretch; white-space:pre; border-left:2px solid transparent; padding-left:6px; color:var(--text-muted); transition:all 0.15s; }
-    .cl.hl { background:rgba(122,162,247,0.1); border-left-color:var(--accent); color:var(--text); }
-    .ln { display:inline-block; width:18px; text-align:right; color:var(--text-dim); user-select:none; margin-right:10px; font-size:0.68rem; }
-    .kw2 { color:#bb9af7; } .nb2 { color:#9ece6a; } .cm2 { color:var(--text-dim); font-style:italic; }
-  </style>
+  .ll-node { min-width: 40px; height: 40px; border-radius: 7px; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; font-weight: 600; flex-shrink: 0; border: 2px solid transparent; background: var(--surface-dark); color: var(--text-muted); transition: border-color 0.14s, transform 0.14s; }
+  .ll-node.active-l1 { border-color: var(--accent); color: var(--accent-pale); background: rgba(var(--accent-ch),0.13); }
+  .ll-node.active-l2 { border-color: var(--blue); color: var(--blue-light); background: rgba(var(--blue-ch),0.13); }
+  .ll-node.done-res { border-color: var(--green); color: var(--green-light); background: rgba(var(--green-ch),0.10); }
+  .ll-node.cur-res { border-color: var(--accent); color: var(--accent-pale); background: rgba(var(--accent-ch),0.13); transform: scale(1.08); }
+  .ll-node.null-node { opacity: 0.35; border-style: dashed; border-color: var(--border); color: var(--text-ghost); }
+  .ll-node.exh-slot { opacity: 0.35; border-style: dashed; border-color: var(--accent); color: var(--accent); }
+  .ll-node.exh-slot-2 { opacity: 0.35; border-style: dashed; border-color: var(--blue); color: var(--blue); }
+  .ll-arrow { color: var(--text-ghost); font-size: 0.85rem; flex-shrink: 0; }
+
+  .carry-pill { display: inline-flex; align-items: center; gap: 6px; padding: 5px 14px; border-radius: 999px; border: 1px solid var(--border); background: var(--surface-dark); font-size: 0.78rem; font-weight: 600; color: var(--text-dim); transition: border-color 0.2s, color 0.2s, background 0.2s; flex-shrink: 0; }
+  .carry-pill.active { border-color: var(--accent); color: var(--accent); background: rgba(var(--accent-ch),0.10); animation: carry-pulse 0.5s ease; }
+  @keyframes carry-pulse { 0% { transform: scale(1); } 40% { transform: scale(1.1); } 100% { transform: scale(1); } }
+
+  .comp-box { background: var(--surface-dark); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; font-family: "Fira Code","Cascadia Code",monospace; font-size: 0.82rem; line-height: 1.7; color: var(--text-muted); min-height: 70px; white-space: pre-wrap; }
+  .comp-box .hi { color: var(--accent); font-weight: 700; }
+  .comp-box .gr { color: var(--green); font-weight: 700; }
+
+  .panel-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--text-dim); margin-bottom: 8px; }
+</style>
 </head>
 <body>
 
-<div class="page-title">2. Add Two Numbers &mdash; Linked List Addition</div>
-
-<!-- User inputs (visible) -->
 <div class="viz-inputs">
-  <div class="field">
+  <div>
     <label>Preset</label>
-    <select id="presetSel" onchange="loadPreset()">
+    <select id="presetSel" onchange="loadPreset()" style="width:200px;">
       <option value="0">Basic (342 + 465)</option>
       <option value="1">Long carry chain</option>
       <option value="2">Both zero</option>
@@ -170,26 +91,31 @@
       <option value="5">Unequal lengths</option>
     </select>
   </div>
-  <div class="field">
+  <div>
     <label>L1 digits (LSB first)</label>
-    <input type="text" id="l1Input" value="2,4,3" placeholder="e.g. 2,4,3" />
+    <input type="text" id="l1Input" value="2,4,3" placeholder="e.g. 2,4,3" style="width:140px;" />
   </div>
-  <div class="field">
+  <div>
     <label>L2 digits (LSB first)</label>
-    <input type="text" id="l2Input" value="5,6,4" placeholder="e.g. 5,6,4" />
+    <input type="text" id="l2Input" value="5,6,4" placeholder="e.g. 5,6,4" style="width:140px;" />
   </div>
-  <button class="run-btn" onclick="buildAndRun()">Run</button>
-  <button class="rand-btn" onclick="randomExample()">&#127922; Random</button>
+  <button class="vi-btn-run" onclick="buildAndRun()">Run</button>
+  <button class="vi-btn-rand" onclick="randomExample()">Random</button>
   <span class="err-msg" id="errMsg"></span>
 </div>
 
-<div class="viz-root">
+<div class="controls"></div>
 
-  <!-- LEFT COLUMN: input lists + result -->
-  <div class="left-col">
+<div id="header">
+  <span id="phase-badge">INIT</span>
+  <span style="font-size:13px;font-weight:700;">Add Two Numbers</span>
+  <span id="step-counter">Step 0 / 0</span>
+</div>
 
-    <div class="panel-box">
-      <div class="panel-title">Input Lists</div>
+<div id="main">
+  <div id="viz-area">
+    <div style="width:100%;max-width:620px;">
+      <div class="panel-label">Input Lists</div>
       <div style="display:flex;flex-direction:column;gap:10px;">
         <div class="list-row">
           <div class="list-lbl">L1</div>
@@ -202,79 +128,75 @@
       </div>
     </div>
 
-    <div class="panel-box">
-      <div class="panel-title">Result</div>
+    <div style="width:100%;max-width:620px;">
+      <div class="panel-label">Result</div>
       <div class="list-row">
         <div class="list-lbl reslbl">res</div>
-        <div class="list-nodes" id="row-res" style="overflow-x:auto;"></div>
+        <div class="list-nodes" id="row-res"></div>
       </div>
     </div>
 
-  </div>
-
-  <!-- RIGHT COLUMN: status, carry, computation, summary, nav -->
-  <div class="right-col">
-
-    <div class="panel-box">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
-        <span class="phase-badge" id="phaseBadge">&mdash;</span>
-        <div class="carry-pill" id="carryPill">carry = 0</div>
-      </div>
-      <div class="status-desc" id="statusDesc">Press Play or step forward to begin.</div>
+    <div style="width:100%;max-width:620px;display:flex;align-items:center;gap:12px;">
+      <div class="carry-pill" id="carryPill">carry = 0</div>
+      <div style="font-size:0.76rem;color:var(--text-muted);" id="statusDesc">Press Play or step forward to begin.</div>
     </div>
 
-    <div class="panel-box">
-      <div class="panel-title">Computation</div>
+    <div style="width:100%;max-width:620px;">
+      <div class="panel-label">Computation</div>
       <div class="comp-box" id="compBox">&mdash; start &mdash;</div>
     </div>
+  </div>
 
-    <div class="panel-box">
-      <div class="panel-title">Summary</div>
-      <div class="summary-box" id="summaryBox">&mdash;</div>
+  <div id="resize-handle"></div>
+
+  <div id="code-panel">
+    <div class="code-panel-title">Code</div>
+    <div id="code-body">
+      <div class="cl" id="cl0"><span class="ln">1</span>dummy = ListNode(0); cur = dummy</div>
+      <div class="cl" id="cl1"><span class="ln">2</span>carry = 0</div>
+      <div class="cl" id="cl2"><span class="ln">3</span><span class="kw2">while</span> l1 <span class="kw2">or</span> l2 <span class="kw2">or</span> carry:</div>
+      <div class="cl" id="cl3"><span class="ln">4</span>  a = l1.val <span class="kw2">if</span> l1 <span class="kw2">else</span> 0</div>
+      <div class="cl" id="cl4"><span class="ln">5</span>  b = l2.val <span class="kw2">if</span> l2 <span class="kw2">else</span> 0</div>
+      <div class="cl" id="cl5"><span class="ln">6</span>  total = a + b + carry</div>
+      <div class="cl" id="cl6"><span class="ln">7</span>  carry = total // 10</div>
+      <div class="cl" id="cl7"><span class="ln">8</span>  cur.next = ListNode(total % 10)</div>
+      <div class="cl" id="cl8"><span class="ln">9</span>  cur = cur.next</div>
+      <div class="cl" id="cl9"><span class="ln">10</span>  l1 = l1.next <span class="kw2">if</span> l1 <span class="kw2">else</span> <span class="nb2">None</span></div>
+      <div class="cl" id="cl10"><span class="ln">11</span>  l2 = l2.next <span class="kw2">if</span> l2 <span class="kw2">else</span> <span class="nb2">None</span></div>
+      <div class="cl" id="cl11"><span class="ln">12</span><span class="nb2">return</span> dummy.next</div>
     </div>
+  </div>
 
-    <div class="code-panel">
-      <div class="code-title">Algorithm</div>
-      <div id="code-body">
-        <div class="cl" id="cl0"><span class="ln">1</span>dummy = ListNode(0); cur = dummy</div>
-        <div class="cl" id="cl1"><span class="ln">2</span>carry = 0</div>
-        <div class="cl" id="cl2"><span class="ln">3</span><span class="kw2">while</span> l1 <span class="kw2">or</span> l2 <span class="kw2">or</span> carry:</div>
-        <div class="cl" id="cl3"><span class="ln">4</span>  a = l1.val <span class="kw2">if</span> l1 <span class="kw2">else</span> 0</div>
-        <div class="cl" id="cl4"><span class="ln">5</span>  b = l2.val <span class="kw2">if</span> l2 <span class="kw2">else</span> 0</div>
-        <div class="cl" id="cl5"><span class="ln">6</span>  total = a + b + carry</div>
-        <div class="cl" id="cl6"><span class="ln">7</span>  carry = total // 10</div>
-        <div class="cl" id="cl7"><span class="ln">8</span>  cur.next = ListNode(total % 10)</div>
-        <div class="cl" id="cl8"><span class="ln">9</span>  cur = cur.next</div>
-        <div class="cl" id="cl9"><span class="ln">10</span>  l1 = l1.next <span class="kw2">if</span> l1 <span class="kw2">else</span> <span class="nb2">None</span></div>
-        <div class="cl" id="cl10"><span class="ln">11</span>  l2 = l2.next <span class="kw2">if</span> l2 <span class="kw2">else</span> <span class="nb2">None</span></div>
-        <div class="cl" id="cl11"><span class="ln">12</span><span class="nb2">return</span> dummy.next</div>
-      </div>
+  <div id="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-title">Pointers</div>
+      <div id="vars-pointers"><span style="color:var(--text-dim);">&#8212;</span></div>
     </div>
-
-    <!-- Nav controls in right column (visible) -->
-    <div class="panel-box" style="flex:0 0 auto;">
-      <div class="ctrl-row">
-        <button class="btn" id="prevBtn">&larr;</button>
-        <button class="btn" id="stepBtn">&rarr;</button>
-        <button class="btn primary" id="playBtn">Play</button>
-        <button class="btn" id="resetBtn">Reset</button>
-        <select class="speed-sel" id="speedSel">
-          <option value="1400">Slow</option>
-          <option value="800" selected>Normal</option>
-          <option value="380">Fast</option>
-        </select>
-      </div>
-      <div class="counter" id="counter">Step 0 / 0</div>
+    <div class="sidebar-section">
+      <div class="sidebar-title">Current Step</div>
+      <div id="vars-step"><span style="color:var(--text-dim);">&#8212;</span></div>
     </div>
-
+    <div class="sidebar-section">
+      <div class="sidebar-title">Result</div>
+      <div id="vars-result"><span style="color:var(--text-dim);">&#8212;</span></div>
+    </div>
   </div>
 </div>
 
-<!-- .controls hidden by parent iframe bridge -->
-<div class="controls"></div>
+<div id="nav-row">
+  <button id="prevBtn" class="btn-step">&#8592; Prev</button>
+  <button id="stepBtn" class="btn-step">Step &#8594;</button>
+  <button id="playBtn" class="btn-play">Play</button>
+  <button id="resetBtn" class="btn-step">&#8635; Reset</button>
+  <select id="speedSel">
+    <option value="1400">Slow</option>
+    <option value="800" selected>Normal</option>
+    <option value="380">Fast</option>
+  </select>
+</div>
 
 <script>
-// ── Presets (digits stored LSB-first: [2,4,3] represents 342) ─────────────
+// ── Presets (digits stored LSB-first: [2,4,3] represents 342) ─────────────────────
 var PRESETS = [
   { l1: [2,4,3],         l2: [5,6,4]         },  // 342 + 465 = 807
   { l1: [9,9,9,9,9,9,9], l2: [9,9,9,9]       },  // 9999999 + 9999 = 10009998
@@ -284,9 +206,8 @@ var PRESETS = [
   { l1: [1,0,0,0],       l2: [9,9,9]          },  // 1000 + 999 = 1999
 ];
 
-// ── Helpers ───────────────────────────────────────────────────────────────
+// ── Helpers ─────────────────────────────────────────────────────────────────────────
 function lsbToNum(arr) {
-  // [2,4,3] => reverse => "342" => 342
   return parseInt(arr.slice().reverse().join(''), 10) || 0;
 }
 
@@ -301,7 +222,7 @@ function parseDigits(str) {
   return digits.length > 0 ? digits : null;
 }
 
-// ── Build steps ───────────────────────────────────────────────────────────
+// ── Build steps ─────────────────────────────────────────────────────────────────────────
 function buildSteps(l1, l2) {
   var num1 = lsbToNum(l1);
   var num2 = lsbToNum(l2);
@@ -317,7 +238,6 @@ function buildSteps(l1, l2) {
     };
   }
 
-  // Init
   steps.push(snap('init', 0, 0, 0, [], null, -1,
     'Starting addition. carry = 0. Digits are stored least-significant-first.'));
 
@@ -334,7 +254,6 @@ function buildSteps(l1, l2) {
 
     var comp = { d1: d1, d2: d2, carryIn: carry, sum: sum, digit: digit, carryOut: carryOut };
 
-    // carry-only phase: both lists exhausted, only carry remains
     var phase = (i >= l1.length && j >= l2.length) ? 'carry' : 'process';
 
     steps.push(snap(phase, i, j, carry, result, comp, result.length - 1,
@@ -346,25 +265,23 @@ function buildSteps(l1, l2) {
     if (j < l2.length) j++;
   }
 
-  // Done
   steps.push(snap('done', i, j, 0, result, null, -1,
     'Done! ' + num1 + ' + ' + num2 + ' = ' + (num1 + num2)));
 
   return steps;
 }
 
-// ── DOM refs ──────────────────────────────────────────────────────────────
+// ── DOM refs ────────────────────────────────────────────────────────────────────────────
 var rowL1      = document.getElementById('row-l1');
 var rowL2      = document.getElementById('row-l2');
 var rowRes     = document.getElementById('row-res');
 var compBox    = document.getElementById('compBox');
-var summaryBox = document.getElementById('summaryBox');
-var phaseBadge = document.getElementById('phaseBadge');
+var phaseBadge = document.getElementById('phase-badge');
 var statusDesc = document.getElementById('statusDesc');
 var carryPill  = document.getElementById('carryPill');
-var counterEl  = document.getElementById('counter');
+var counterEl  = document.getElementById('step-counter');
 
-// ── Render helpers ────────────────────────────────────────────────────────
+// ── Render helpers ───────────────────────────────────────────────────────────────────────────
 function mkNode(text, cls) {
   var el = document.createElement('div');
   el.className = 'll-node' + (cls ? ' ' + cls : '');
@@ -385,9 +302,7 @@ function renderList(container, arr, activeIdx, exhClass) {
     container.appendChild(mkNode(d, cls));
     container.appendChild(mkArrow());
   });
-  // Null terminator — active if pointer is exhausted (past end)
   if (activeIdx >= arr.length) {
-    // exhausted: show ∅ highlighted as current position
     var slotCls = (exhClass === 'active-l1') ? 'exh-slot' : 'exh-slot-2';
     container.appendChild(mkNode('∅', slotCls));
   } else {
@@ -410,12 +325,44 @@ function renderResult(container, result, appendingIndex, isDone) {
   }
 }
 
-// ── Main render ───────────────────────────────────────────────────────────
+// ── Sidebar update ──────────────────────────────────────────────────────────────────────────
+function updateSidebar(snap) {
+  var pHtml = '';
+  pHtml += '<div class="var-item"><span class="var-key">i (L1)</span> = <span class="var-val">' + snap.i + '</span></div>';
+  pHtml += '<div class="var-item"><span class="var-key">j (L2)</span> = <span class="var-val">' + snap.j + '</span></div>';
+  document.getElementById('vars-pointers').innerHTML = pHtml;
+
+  var sHtml = '';
+  if (snap.computation) {
+    var c = snap.computation;
+    sHtml += '<div class="var-item"><span class="var-key">a (L1)</span> = <span class="var-val">' + c.d1 + '</span></div>';
+    sHtml += '<div class="var-item"><span class="var-key">b (L2)</span> = <span class="var-val">' + c.d2 + '</span></div>';
+    sHtml += '<div class="var-item"><span class="var-key">carry</span> = <span class="var-val">' + c.carryIn + '</span></div>';
+    sHtml += '<div class="var-item"><span class="var-key">total</span> = <span class="var-val">' + c.sum + '</span></div>';
+    sHtml += '<div class="var-item"><span class="var-key">digit</span> = <span class="var-val">' + c.digit + '</span></div>';
+    sHtml += '<div class="var-item"><span class="var-key">carry_out</span> = <span class="var-val">' + c.carryOut + '</span></div>';
+  } else {
+    sHtml = '<span style="color:var(--text-dim);">&#8212;</span>';
+  }
+  document.getElementById('vars-step').innerHTML = sHtml;
+
+  var rHtml = '';
+  if (snap.result.length > 0) {
+    rHtml += '<div class="var-item"><span class="var-key">digits</span> = <span class="var-val">[' + snap.result.join(',') + ']</span></div>';
+    if (snap.phase === 'done') {
+      rHtml += '<div class="var-item"><span class="var-key">value</span> = <span class="var-val">' + snap.total + '</span></div>';
+    }
+  } else {
+    rHtml = '<span style="color:var(--text-dim);">&#8212;</span>';
+  }
+  document.getElementById('vars-result').innerHTML = rHtml;
+}
+
+// ── Main render ───────────────────────────────────────────────────────────────────────────
 function render(snap, cursor, total) {
   var isDone = snap.phase === 'done';
   var l1 = snap.l1, l2 = snap.l2;
 
-  // Input list rows
   if (snap.phase === 'init') {
     renderList(rowL1, l1, 0, 'active-l1');
     renderList(rowL2, l2, 0, 'active-l2');
@@ -427,15 +374,12 @@ function render(snap, cursor, total) {
     renderList(rowL2, l2, snap.j, 'active-l2');
   }
 
-  // Result row
   renderResult(rowRes, snap.result, snap.appendingIndex, isDone);
 
-  // Carry pill (shows carry BEFORE this step)
   var c = snap.carry;
   carryPill.textContent = 'carry = ' + c;
   carryPill.classList.toggle('active', c > 0);
 
-  // Computation box — always visible
   if (snap.computation) {
     var comp = snap.computation;
     compBox.innerHTML =
@@ -453,26 +397,18 @@ function render(snap, cursor, total) {
     compBox.textContent = '— start —';
   }
 
-  // Summary box
-  if (isDone) {
-    summaryBox.innerHTML = '<span class="eq">' +
-      snap.num1 + ' + ' + snap.num2 + ' = ' + snap.total + '</span>';
-  } else {
-    summaryBox.textContent = lsbToNum(l1) + ' + ' + lsbToNum(l2) + ' = ?';
-  }
-
-  // Code highlight
   var ATN_LINES = { 'init':[0,1], 'process':[2,3,4,5,6,7,8,9,10], 'carry':[2,5,6,7,8], 'done':[11] };
   for (var li = 0; li <= 11; li++) { var ela = document.getElementById('cl'+li); if(ela) ela.classList.remove('hl'); }
   (ATN_LINES[snap.phase] || []).forEach(function(li){ var e=document.getElementById('cl'+li); if(e) e.classList.add('hl'); });
 
-  // Phase + status
   phaseBadge.textContent = snap.phase.toUpperCase();
   statusDesc.textContent = snap.label;
   counterEl.textContent  = 'Step ' + (cursor + 1) + ' / ' + total;
+
+  updateSidebar(snap);
 }
 
-// ── VizNav bootstrap ──────────────────────────────────────────────────────
+// ── VizNav bootstrap ─────────────────────────────────────────────────────────────────────────
 var nav = VizNav({
   btnPrev:  document.getElementById('prevBtn'),
   btnNext:  document.getElementById('stepBtn'),
@@ -481,13 +417,12 @@ var nav = VizNav({
   render:   render,
 });
 
-// Reset button: go back to step 0
 document.getElementById('resetBtn').addEventListener('click', function() {
   nav.stopPlay();
   nav.goTo(0);
 });
 
-// ── Preset / input logic ──────────────────────────────────────────────────
+// ── Preset / input logic ─────────────────────────────────────────────────────────────────────────
 var presetSel = document.getElementById('presetSel');
 var l1Input   = document.getElementById('l1Input');
 var l2Input   = document.getElementById('l2Input');
@@ -523,7 +458,28 @@ function randomExample() {
   buildAndRun();
 }
 
-// ── Auto-load on page ready ───────────────────────────────────────────────
+// ── Resize handle ────────────────────────────────────────────────────────────────────────────
+(function() {
+  var handle = document.getElementById('resize-handle');
+  var panel  = document.getElementById('code-panel');
+  var dragging = false, startX = 0, startW = 0;
+  handle.addEventListener('mousedown', function(e) {
+    dragging = true; startX = e.clientX; startW = panel.offsetWidth;
+    handle.classList.add('dragging');
+    e.preventDefault();
+  });
+  document.addEventListener('mousemove', function(e) {
+    if (!dragging) return;
+    var delta = startX - e.clientX;
+    panel.style.width = Math.min(560, Math.max(120, startW + delta)) + 'px';
+  });
+  document.addEventListener('mouseup', function() {
+    if (!dragging) return;
+    dragging = false; handle.classList.remove('dragging');
+  });
+})();
+
+// ── Auto-load on page ready ───────────────────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', function() { loadPreset(); });
 </script>
 </body>

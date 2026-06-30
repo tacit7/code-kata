@@ -1,165 +1,111 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>981. Time Based Key-Value Store</title>
-  <link rel="stylesheet" href="../shared/style.css" />
-  <script src="../shared/viz.js"></script>
-  <style>
-    body { display:flex; flex-direction:column; height:100vh; overflow:hidden; }
-    .page-title {
-      font-size:1rem; font-weight:700; color:var(--text-bright);
-      padding:12px 16px 0; letter-spacing:0.01em; flex-shrink:0;
-    }
-    .viz-root {
-      display:flex; flex:1; gap:16px;
-      padding:8px 16px 12px; min-height:0;
-    }
-    .left-col, .right-col {
-      display:flex; flex-direction:column; gap:10px; flex:1; min-width:0;
-    }
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>981. Time Based Key-Value Store</title>
+<link rel="stylesheet" href="../shared/style.css" />
+<script src="../shared/viz.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: "Fira Code", "Cascadia Code", monospace; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
 
-    /* viz-inputs */
-    .viz-inputs {
-      display:flex; flex-wrap:wrap; gap:8px; align-items:flex-end;
-      padding:6px 16px 4px; flex-shrink:0;
-    }
-    .vi-group { display:flex; flex-direction:column; gap:3px; }
-    .vi-label {
-      font-size:0.62rem; font-weight:700; text-transform:uppercase;
-      letter-spacing:0.08em; color:var(--text-dim);
-    }
-    select.vi-sel {
-      background:var(--surface); color:var(--text); border:1px solid var(--border);
-      border-radius:6px; padding:5px 8px; font-size:0.8rem; cursor:pointer;
-      min-width:200px;
-    }
-    .vi-btn {
-      padding:6px 14px; border-radius:6px; font-size:0.8rem; font-weight:600;
-      cursor:pointer; border:1px solid var(--border);
-      background:var(--surface); color:var(--text);
-    }
-    .vi-btn.primary { background:var(--accent); border-color:var(--accent); color:#fff; }
-    .vi-btn:hover { border-color:var(--accent); }
+  .viz-inputs { width: 100%; max-width: 100%; padding: 10px 16px; background: var(--surface); border: none; border-bottom: 1px solid var(--border); border-radius: 0; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; flex-shrink: 0; }
+  .viz-inputs label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); display: block; margin-bottom: 3px; }
+  .viz-inputs select { background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 0 8px; height: 30px; font-size: 0.82rem; font-family: inherit; appearance: none; -webkit-appearance: none; }
+  .vi-btn-run { padding: 6px 14px; border-radius: 6px; font-size: 0.82rem; font-weight: 600; cursor: pointer; font-family: inherit; background: var(--accent); color: #fff; border: none; }
+  .vi-btn-rand { padding: 6px 14px; border-radius: 6px; font-size: 0.82rem; cursor: pointer; font-family: inherit; background: var(--bg); color: var(--text); border: 1px solid var(--border); }
 
-    /* panel-box */
-    .panel-box {
-      background:var(--surface); border:1px solid var(--border-soft);
-      border-radius:var(--radius-lg); padding:10px 12px;
-    }
-    .panel-title {
-      font-size:0.62rem; font-weight:700; text-transform:uppercase;
-      letter-spacing:0.1em; color:var(--text-dim); margin-bottom:8px;
-    }
+  #header { padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+  #phase-badge { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; padding: 3px 10px; border-radius: var(--radius-sm); background: #1e3a5f; color: var(--blue); border: 1px solid var(--blue); flex-shrink: 0; }
+  #narration { font-size: 12px; color: var(--text-muted); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-style: italic; }
+  #stepCounter { font-size: 12px; color: var(--text-muted); flex-shrink: 0; white-space: nowrap; }
 
-    /* store panel */
-    .store-empty {
-      color:var(--text-dim); font-size:0.8rem; text-align:center;
-      padding:18px 0; font-style:italic;
-    }
-    .store-keys { display:flex; flex-direction:column; gap:8px; }
-    .key-row {
-      border-radius:8px; border:1px solid var(--border-soft);
-      background:var(--surface-dark); padding:6px 10px;
-      border-left:3px solid transparent; transition:border-color 0.15s;
-    }
-    .key-row.active { border-left-color:var(--accent); }
-    .key-name {
-      font-size:0.72rem; font-weight:700; color:var(--accent);
-      font-family:monospace; margin-bottom:5px;
-    }
-    .timeline-row {
-      display:flex; gap:5px; align-items:center;
-      overflow-x:auto; padding-bottom:2px; flex-wrap:nowrap;
-    }
-    .ts-chip {
-      display:inline-flex; align-items:center;
-      padding:2px 7px; border-radius:5px; font-size:0.7rem;
-      background:var(--surface); border:1px solid var(--border);
-      color:var(--text-muted); white-space:nowrap; flex-shrink:0;
-      transition:background 0.15s, border-color 0.15s, opacity 0.15s;
-    }
-    .ts-chip.dim       { opacity:0.3; }
-    .ts-chip.candidate { border:2px dashed var(--green); color:var(--green); background:rgba(158,206,106,0.06); }
-    .ts-chip.found     { background:var(--green); color:#0d1117; font-weight:700; border-color:var(--green); }
-    .ts-chip.mid-chip  { background:var(--blue); color:#0d1117; font-weight:700; border-color:var(--blue); }
-    .ts-chip.not-found-badge { background:var(--red); color:#fff; font-weight:700; border-color:var(--red); font-size:0.65rem; }
-    .ts-chip.new-chip  { background:rgba(158,206,106,0.15); border-color:var(--green); color:var(--green); }
+  #main { display: flex; flex: 1; overflow: hidden; }
 
-    /* op panel */
-    .op-box { display:flex; align-items:flex-start; gap:10px; }
-    .op-badge {
-      font-size:0.6rem; font-weight:700; text-transform:uppercase;
-      letter-spacing:0.1em; border-radius:5px; padding:3px 8px;
-      flex-shrink:0; margin-top:2px;
-    }
-    .op-badge.set { background:rgba(158,206,106,0.18); color:var(--green); border:1px solid var(--green); }
-    .op-badge.get { background:rgba(122,162,247,0.18); color:var(--accent); border:1px solid var(--accent); }
-    .op-detail { font-size:0.8rem; color:var(--text-muted); line-height:1.6; }
-    .op-key   { color:var(--accent); font-family:monospace; }
-    .op-val   { color:var(--green);  font-family:monospace; }
-    .op-ts    { color:var(--yellow); font-family:monospace; }
+  #viz-area { display: flex; flex: 1; gap: 16px; padding: 8px 16px 12px; min-height: 0; overflow: hidden; }
 
-    /* bsearch panel */
-    .bs-panel { display:flex; flex-direction:column; gap:8px; }
-    .bs-phase {
-      font-size:0.65rem; font-weight:700; text-transform:uppercase;
-      letter-spacing:0.08em; color:var(--text-dim);
-    }
-    .bs-phase.done-found    { color:var(--green); }
-    .bs-phase.done-notfound { color:var(--red); }
+  .left-col, .right-col { display: flex; flex-direction: column; gap: 10px; flex: 1; min-width: 0; }
+  .right-col { overflow-y: auto; }
 
-    .bs-arr-wrap { position:relative; }
-    .bs-arr-row  { display:flex; gap:5px; flex-wrap:nowrap; overflow-x:auto; padding-bottom:24px; }
-    .bs-ptr-zone { position:absolute; bottom:0; left:0; right:0; height:20px; }
-    .bs-ptr-label {
-      position:absolute; font-size:0.58rem; font-weight:700;
-      text-transform:uppercase; letter-spacing:0.06em;
-      padding:1px 5px; border-radius:3px; white-space:nowrap;
-      transform:translateX(-50%);
-    }
-    .bs-ptr-label.lo  { color:var(--green);  background:rgba(158,206,106,0.13); }
-    .bs-ptr-label.mid { color:var(--blue);   background:rgba(125,207,255,0.13); }
-    .bs-ptr-label.hi  { color:var(--orange); background:rgba(255,158,100,0.13); }
+  .panel-box { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; }
+  .panel-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-dim); margin-bottom: 8px; }
 
-    /* result */
-    .result-box { display:flex; align-items:center; gap:10px; }
-    .result-label { font-size:0.65rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.08em; }
-    .result-val { font-size:1.05rem; font-weight:700; font-family:monospace; color:var(--text-bright); }
-    .result-val.found-val { color:var(--green); }
-    .result-val.empty-val { color:var(--red); opacity:0.8; }
+  .store-empty { color: var(--text-dim); font-size: 0.8rem; text-align: center; padding: 18px 0; font-style: italic; }
+  .store-keys { display: flex; flex-direction: column; gap: 8px; }
+  .key-row { border-radius: 8px; border: 1px solid var(--border); background: var(--bg); padding: 6px 10px; border-left: 3px solid transparent; transition: border-color 0.15s; }
+  .key-row.active { border-left-color: var(--accent); }
+  .key-name { font-size: 0.72rem; font-weight: 700; color: var(--accent); font-family: monospace; margin-bottom: 5px; }
+  .timeline-row { display: flex; gap: 5px; align-items: center; overflow-x: auto; padding-bottom: 2px; flex-wrap: nowrap; }
+  .ts-chip { display: inline-flex; align-items: center; padding: 2px 7px; border-radius: 5px; font-size: 0.7rem; background: var(--bg); border: 1px solid var(--border); color: var(--text-muted); white-space: nowrap; flex-shrink: 0; transition: background 0.15s, border-color 0.15s, opacity 0.15s; }
+  .ts-chip.dim { opacity: 0.3; }
+  .ts-chip.candidate { border: 2px dashed var(--green); color: var(--green); background: rgba(158,206,106,0.06); }
+  .ts-chip.found { background: var(--green); color: #0d1117; font-weight: 700; border-color: var(--green); }
+  .ts-chip.mid-chip { background: var(--blue); color: #0d1117; font-weight: 700; border-color: var(--blue); }
+  .ts-chip.not-found-badge { background: var(--red); color: #fff; font-weight: 700; border-color: var(--red); font-size: 0.65rem; }
+  .ts-chip.new-chip { background: rgba(158,206,106,0.15); border-color: var(--green); color: var(--green); }
 
-    /* narration */
-    .narration {
-      font-size:0.76rem; color:var(--text-dim); font-style:italic;
-      padding:5px 0 2px; line-height:1.45; flex-shrink:0;
-      border-top:1px solid var(--border-soft); margin-top:2px;
-    }
+  .op-box { display: flex; align-items: flex-start; gap: 10px; }
+  .op-badge { font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; border-radius: 5px; padding: 3px 8px; flex-shrink: 0; margin-top: 2px; }
+  .op-badge.set { background: rgba(158,206,106,0.18); color: var(--green); border: 1px solid var(--green); }
+  .op-badge.get { background: rgba(122,162,247,0.18); color: var(--accent); border: 1px solid var(--accent); }
+  .op-detail { font-size: 0.8rem; color: var(--text-muted); line-height: 1.6; }
+  .op-key { color: var(--accent); font-family: monospace; }
+  .op-val { color: var(--green); font-family: monospace; }
+  .op-ts { color: var(--yellow); font-family: monospace; }
 
-    .step-counter { font-size:0.65rem; color:var(--text-dim); text-align:right; flex-shrink:0; }
+  .bs-panel { display: flex; flex-direction: column; gap: 8px; }
+  .bs-phase { font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); }
+  .bs-phase.done-found { color: var(--green); }
+  .bs-phase.done-notfound { color: var(--red); }
+  .bs-arr-wrap { position: relative; }
+  .bs-arr-row { display: flex; gap: 5px; flex-wrap: nowrap; overflow-x: auto; padding-bottom: 24px; }
+  .bs-ptr-zone { position: absolute; bottom: 0; left: 0; right: 0; height: 20px; }
+  .bs-ptr-label { position: absolute; font-size: 0.58rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; padding: 1px 5px; border-radius: 3px; white-space: nowrap; transform: translateX(-50%); }
+  .bs-ptr-label.lo { color: var(--green); background: rgba(158,206,106,0.13); }
+  .bs-ptr-label.mid { color: var(--blue); background: rgba(125,207,255,0.13); }
+  .bs-ptr-label.hi { color: var(--orange); background: rgba(255,158,100,0.13); }
 
-    /* VizNav buttons hidden */
-    #prevBtn, #stepBtn, #playBtn, #resetBtn, #speedSel { display:none; }
-    /* ── Code panel ── */
-    .code-panel { background:var(--surface); border:1px solid var(--border-soft); border-radius:var(--radius-md); padding:10px 12px; overflow-x:auto; }
-    .code-title { font-size:0.65rem; font-weight:700; text-transform:uppercase; letter-spacing:0.1em; color:var(--text-dim); margin-bottom:8px; }
-    #code-body { font-family:'JetBrains Mono','Fira Code',monospace; font-size:0.73rem; line-height:1.75; }
-    .cl { display:flex; align-items:stretch; white-space:pre; border-left:2px solid transparent; padding-left:6px; color:var(--text-muted); transition:all 0.15s; }
-    .cl.hl { background:rgba(122,162,247,0.1); border-left-color:var(--accent); color:var(--text); }
-    .ln { display:inline-block; width:18px; text-align:right; color:var(--text-dim); user-select:none; margin-right:10px; font-size:0.68rem; }
-    .kw { color:#bb9af7; } .nb { color:#9ece6a; } .cm { color:var(--text-dim); font-style:italic; }
-  </style>
+  .result-box { display: flex; align-items: center; gap: 10px; }
+  .result-label { font-size: 0.65rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.08em; }
+  .result-val { font-size: 1.05rem; font-weight: 700; font-family: monospace; color: var(--text-bright); }
+  .result-val.found-val { color: var(--green); }
+  .result-val.empty-val { color: var(--red); opacity: 0.8; }
+
+  #resize-handle { width: 5px; flex-shrink: 0; cursor: col-resize; background: transparent; border-left: 1px solid var(--border); transition: background .15s; z-index: 10; }
+  #resize-handle:hover, #resize-handle.dragging { background: var(--accent); }
+
+  #code-panel { width: 350px; min-width: 120px; max-width: 560px; flex-shrink: 0; background: #0d1117; border-right: 1px solid var(--border); overflow-y: auto; overflow-x: auto; padding: 10px 12px; display: flex; flex-direction: column; }
+  .code-panel-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--text-dim); margin-bottom: 8px; }
+  .cl { display: flex; align-items: stretch; padding: 2px 0; white-space: pre; border-left: 2px solid transparent; padding-left: 6px; color: var(--text-muted); transition: all 0.2s; font-family: 'Fira Code', 'Cascadia Code', monospace; font-size: 0.75rem; line-height: 1.8; }
+  .cl.hl { background: rgba(122,162,247,0.12); border-left-color: var(--accent); color: var(--text); }
+  .ln { display: inline-block; width: 20px; text-align: right; color: var(--text-dim); user-select: none; margin-right: 10px; font-size: 0.7rem; }
+  .kw { color: var(--purple); }
+  .nb { color: var(--green); }
+  .cm { color: var(--text-dim); font-style: italic; }
+
+  #sidebar { width: 220px; flex-shrink: 0; background: var(--surface); border-left: 1px solid var(--border); overflow-y: auto; padding: 14px 12px; display: flex; flex-direction: column; gap: 12px; }
+  .sidebar-section { font-size: 11px; }
+  .sidebar-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--text-dim); margin-bottom: 6px; }
+  .var-item { font-size: 11px; font-family: monospace; color: var(--text-muted); padding: 4px 0; border-bottom: 1px solid var(--border); }
+  .var-item:last-child { border-bottom: none; }
+  .var-key { color: var(--text-dim); }
+  .var-val { color: var(--accent); font-weight: 700; }
+
+  #nav-row { flex-shrink: 0; display: flex; align-items: center; gap: 8px; padding: 10px 16px; background: var(--surface); border-top: 1px solid var(--border); }
+  .btn-step, .btn-play { padding: 6px 14px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--surface); color: var(--text); font-family: inherit; font-size: 12px; cursor: pointer; transition: background .15s; }
+  .btn-step:hover { background: #334155; }
+  .btn-play { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn-play:hover { background: var(--accent-hover); }
+  #speedSel { padding: 5px 8px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: #1e293b; color: var(--text); font-size: 12px; font-family: inherit; cursor: pointer; }
+</style>
 </head>
 <body>
 
-<div class="page-title">981. Time Based Key-Value Store</div>
-
-<!-- USER INPUTS (visible in iframe) -->
 <div class="viz-inputs">
-  <div class="vi-group">
-    <div class="vi-label">Preset</div>
-    <select class="vi-sel" id="presetSel" onchange="loadPreset()">
+  <div>
+    <label>Preset</label>
+    <select id="presetSel" onchange="loadPreset()" style="width:220px;">
       <option value="0">Basic two-value key</option>
       <option value="1">Exact vs floor match</option>
       <option value="2">Timestamp before first entry</option>
@@ -168,88 +114,106 @@
       <option value="5">Single entry edge cases</option>
     </select>
   </div>
-  <button class="vi-btn primary" onclick="buildAndRun()">Run</button>
-  <button class="vi-btn" onclick="randomExample()">&#127922; Random</button>
+  <button class="vi-btn-run" onclick="buildAndRun()">Run</button>
+  <button class="vi-btn-rand" onclick="randomExample()">Random</button>
 </div>
 
-<!-- Hidden VizNav controls (bridge listens for postMessage) -->
-<button id="prevBtn">Prev</button>
-<button id="stepBtn">Step</button>
-<button id="playBtn">Play</button>
-<button id="resetBtn">Reset</button>
-<select id="speedSel">
-  <option value="1400">Slow</option>
-  <option value="800" selected>Normal</option>
-  <option value="380">Fast</option>
-</select>
+<div class="controls"></div>
 
-<div class="viz-root">
+<div id="header">
+  <span id="phase-badge">Ready</span>
+  <span style="font-size:13px;font-weight:700;flex-shrink:0;">Time Based Key-Value Store</span>
+  <span id="narration"></span>
+  <span id="stepCounter">Step 0 / 0</span>
+</div>
 
-  <!-- LEFT: Store state -->
-  <div class="left-col">
-    <div class="panel-box" style="flex:1; min-height:0; overflow:hidden; display:flex; flex-direction:column;">
-      <div class="panel-title">TimeMap Store</div>
-      <div id="storePanel" style="flex:1; overflow-y:auto;">
-        <div class="store-empty">Store is empty</div>
-      </div>
-    </div>
-    <div class="narration" id="narration">Ready &mdash; pick a preset or click &#127922; Random</div>
-  </div>
+<div id="main">
+  <div id="viz-area">
 
-  <!-- RIGHT: Op + BS + Result -->
-  <div class="right-col">
-
-    <div class="panel-box">
-      <div class="panel-title">Current Operation</div>
-      <div id="opBox">
-        <div style="color:var(--text-dim); font-size:0.78rem; font-style:italic;">No operation yet</div>
-      </div>
-    </div>
-
-    <div class="panel-box" id="bsPanel" style="display:none;">
-      <div class="panel-title">Binary Search</div>
-      <div class="bs-panel">
-        <div class="bs-phase" id="bsPhaseLabel">Searching&hellip;</div>
-        <div class="bs-arr-wrap">
-          <div class="bs-arr-row" id="bsArrRow"></div>
-          <div class="bs-ptr-zone" id="bsPtrZone"></div>
+    <div class="left-col">
+      <div class="panel-box" style="flex:1;min-height:0;overflow:hidden;display:flex;flex-direction:column;">
+        <div class="panel-title">TimeMap Store</div>
+        <div id="storePanel" style="flex:1;overflow-y:auto;">
+          <div class="store-empty">Store is empty</div>
         </div>
       </div>
     </div>
 
-    <div class="panel-box">
-      <div class="panel-title">Result</div>
-      <div class="result-box">
-        <div class="result-label">get() returns:</div>
-        <div class="result-val" id="resultVal">&mdash;</div>
+    <div class="right-col">
+      <div class="panel-box">
+        <div class="panel-title">Current Operation</div>
+        <div id="opBox">
+          <div style="color:var(--text-dim);font-size:0.78rem;font-style:italic;">No operation yet</div>
+        </div>
       </div>
-    </div>
-
-    <div class="step-counter" id="stepCounter">Step 0 / 0</div>
-
-    <div class="code-panel">
-      <div class="code-title">Algorithm</div>
-      <div id="code-body">
-        <div class="cl" id="cl0"><span class="ln">1</span><span class="cm"># set(key, val, ts): map[key].append((ts, val))</span></div>
-        <div class="cl" id="cl1"><span class="ln">2</span><span class="cm"># get(key, ts):</span></div>
-        <div class="cl" id="cl2"><span class="ln">3</span>  arr = map[key]  <span class="cm"># sorted by timestamp</span></div>
-        <div class="cl" id="cl3"><span class="ln">4</span>  lo, hi = 0, len(arr) - 1</div>
-        <div class="cl" id="cl4"><span class="ln">5</span>  <span class="kw">while</span> lo &lt;= hi:</div>
-        <div class="cl" id="cl5"><span class="ln">6</span>    mid = (lo + hi) // 2</div>
-        <div class="cl" id="cl6"><span class="ln">7</span>    <span class="kw">if</span> arr[mid].ts &lt;= ts:   lo = mid + 1</div>
-        <div class="cl" id="cl7"><span class="ln">8</span>    <span class="kw">else</span>:                   hi = mid - 1</div>
-        <div class="cl" id="cl8"><span class="ln">9</span>  <span class="nb">return</span> arr[lo-1].val <span class="kw">if</span> lo &gt; 0 <span class="kw">else</span> <span class="nb">""</span></div>
+      <div class="panel-box" id="bsPanel" style="display:none;">
+        <div class="panel-title">Binary Search</div>
+        <div class="bs-panel">
+          <div class="bs-phase" id="bsPhaseLabel">Searching&hellip;</div>
+          <div class="bs-arr-wrap">
+            <div class="bs-arr-row" id="bsArrRow"></div>
+            <div class="bs-ptr-zone" id="bsPtrZone"></div>
+          </div>
+        </div>
+      </div>
+      <div class="panel-box">
+        <div class="panel-title">Result</div>
+        <div class="result-box">
+          <div class="result-label">get() returns:</div>
+          <div class="result-val" id="resultVal">&mdash;</div>
+        </div>
       </div>
     </div>
 
   </div>
+
+  <div id="resize-handle"></div>
+
+  <div id="code-panel">
+    <div class="code-panel-title">Code</div>
+    <div id="code-body">
+      <div class="cl" id="cl0"><span class="ln">1</span><span class="cm"># set(key, val, ts): map[key].append((ts, val))</span></div>
+      <div class="cl" id="cl1"><span class="ln">2</span><span class="cm"># get(key, ts):</span></div>
+      <div class="cl" id="cl2"><span class="ln">3</span>  arr = map[key]  <span class="cm"># sorted by ts</span></div>
+      <div class="cl" id="cl3"><span class="ln">4</span>  lo, hi = 0, len(arr) - 1</div>
+      <div class="cl" id="cl4"><span class="ln">5</span>  <span class="kw">while</span> lo &lt;= hi:</div>
+      <div class="cl" id="cl5"><span class="ln">6</span>    mid = (lo + hi) // 2</div>
+      <div class="cl" id="cl6"><span class="ln">7</span>    <span class="kw">if</span> arr[mid].ts &lt;= ts:   lo = mid + 1</div>
+      <div class="cl" id="cl7"><span class="ln">8</span>    <span class="kw">else</span>:                   hi = mid - 1</div>
+      <div class="cl" id="cl8"><span class="ln">9</span>  <span class="nb">return</span> arr[lo-1].val <span class="kw">if</span> lo &gt; 0 <span class="kw">else</span> <span class="nb">""</span></div>
+    </div>
+  </div>
+
+  <div id="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-title">Operation</div>
+      <div id="sb-op"><span style="color:var(--text-dim);">&#8212;</span></div>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-title">Binary Search</div>
+      <div id="sb-bs"><span style="color:var(--text-dim);">&#8212;</span></div>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-title">Result</div>
+      <div id="sb-result"><span style="color:var(--text-dim);">&#8212;</span></div>
+    </div>
+  </div>
 </div>
 
-<!-- .controls required by iframe bridge; must be empty -->
-<div class="controls"></div>
+<div id="nav-row">
+  <button id="prevBtn" class="btn-step">&#8592; Prev</button>
+  <button id="stepBtn" class="btn-step">Step &#8594;</button>
+  <button id="playBtn" class="btn-play">Play</button>
+  <button id="resetBtn" class="btn-step">&#8635; Reset</button>
+  <select id="speedSel">
+    <option value="1400">Slow</option>
+    <option value="800" selected>Normal</option>
+    <option value="380">Fast</option>
+  </select>
+</div>
 
 <script>
-// ── Presets ──────────────────────────────────────────────────────────────────
+// Presets
 var PRESETS = [
   { label: 'Basic two-value key', ops: [
     { type:'set', key:'foo', val:'bar',  ts:1 },
@@ -332,11 +296,11 @@ function randomExample() {
   buildAndRun();
 }
 
-// ── Step builder ─────────────────────────────────────────────────────────────
+// Step builder
 function buildSteps() {
   var ops = currentOps;
   var steps = [];
-  var store = {};  // { key: [{ts,val}] }
+  var store = {};
 
   function cloneStore(s) {
     var out = {};
@@ -358,23 +322,19 @@ function buildSteps() {
     }, extra);
   }
 
-  // Step 0: initial
   steps.push(snap({ label: 'Ready — pick a preset or click Random' }));
 
   ops.forEach(function(op) {
     if (op.type === 'set') {
-      // Announce
       steps.push(snap({
         op: { type:'set', key:op.key, val:op.val, ts:op.ts },
         label: 'SET "' + op.key + '" = "' + op.val + '" at t=' + op.ts,
         activeKey: op.key,
       }));
 
-      // Apply
       if (!store[op.key]) store[op.key] = [];
       store[op.key].push({ ts: op.ts, val: op.val });
 
-      // Chip appears
       steps.push(snap({
         op: { type:'set', key:op.key, val:op.val, ts:op.ts },
         label: 'Stored (t=' + op.ts + ', "' + op.val + '") under key "' + op.key + '"',
@@ -383,18 +343,15 @@ function buildSteps() {
       }));
 
     } else {
-      // GET
       var arr = store[op.key] ? store[op.key].slice() : [];
       var target = op.ts;
 
-      // Announce
       steps.push(snap({
         op: { type:'get', key:op.key, ts:op.ts },
         label: 'GET "' + op.key + '" at t=' + op.ts,
         activeKey: op.key,
       }));
 
-      // Key not in store
       if (arr.length === 0) {
         steps.push(snap({
           op: { type:'get', key:op.key, ts:op.ts },
@@ -406,7 +363,6 @@ function buildSteps() {
         return;
       }
 
-      // BS init
       var lo = 0, hi = arr.length - 1;
       steps.push(snap({
         op: { type:'get', key:op.key, ts:op.ts },
@@ -420,7 +376,6 @@ function buildSteps() {
       while (lo <= hi) {
         var mid = Math.floor((lo + hi) / 2);
 
-        // check-mid
         steps.push(snap({
           op: { type:'get', key:op.key, ts:op.ts },
           bsearch: { active:true, arr:arr.slice(), lo:lo, hi:hi, mid:mid, phase:'check-mid', found:false, foundIdx:null, candidateIdx:candidateIdx },
@@ -429,7 +384,6 @@ function buildSteps() {
         }));
 
         if (arr[mid].ts <= target) {
-          // go-right
           steps.push(snap({
             op: { type:'get', key:op.key, ts:op.ts },
             bsearch: { active:true, arr:arr.slice(), lo:lo, hi:hi, mid:mid, phase:'go-right', found:false, foundIdx:null, candidateIdx:mid },
@@ -438,7 +392,6 @@ function buildSteps() {
           }));
           candidateIdx = mid;
           lo = mid + 1;
-          // advance
           steps.push(snap({
             op: { type:'get', key:op.key, ts:op.ts },
             bsearch: { active:true, arr:arr.slice(), lo:lo, hi:hi, mid:mid, phase:'advance', found:false, foundIdx:null, candidateIdx:candidateIdx },
@@ -446,7 +399,6 @@ function buildSteps() {
             activeKey: op.key,
           }));
         } else {
-          // go-left
           steps.push(snap({
             op: { type:'get', key:op.key, ts:op.ts },
             bsearch: { active:true, arr:arr.slice(), lo:lo, hi:hi, mid:mid, phase:'go-left', found:false, foundIdx:null, candidateIdx:candidateIdx },
@@ -454,7 +406,6 @@ function buildSteps() {
             activeKey: op.key,
           }));
           hi = mid - 1;
-          // advance
           steps.push(snap({
             op: { type:'get', key:op.key, ts:op.ts },
             bsearch: { active:true, arr:arr.slice(), lo:lo, hi:hi, mid:mid, phase:'advance', found:false, foundIdx:null, candidateIdx:candidateIdx },
@@ -483,10 +434,10 @@ function buildSteps() {
   return steps;
 }
 
-// ── Render ───────────────────────────────────────────────────────────────────
+// Render
 function render(snap, cursor, total) {
 
-  // -- Store panel --
+  // Store panel
   var storePanel = document.getElementById('storePanel');
   var keys = Object.keys(snap.store);
 
@@ -526,7 +477,7 @@ function render(snap, cursor, total) {
             if (bs.found && idx === bs.foundIdx) {
               chip.className += ' found';
             } else if (!bs.found) {
-              // all normal on not-found (no dimming)
+              // no dimming on not-found
             } else {
               chip.className += ' dim';
             }
@@ -552,7 +503,6 @@ function render(snap, cursor, total) {
         timeline.appendChild(chip);
       });
 
-      // Not-found badge
       if (isSearchKey && bs && bs.phase === 'done' && !bs.found) {
         var badge = document.createElement('span');
         badge.className = 'ts-chip not-found-badge';
@@ -567,7 +517,7 @@ function render(snap, cursor, total) {
     storePanel.appendChild(keysDiv);
   }
 
-  // -- Op panel --
+  // Op panel
   var opBox = document.getElementById('opBox');
   if (!snap.op) {
     opBox.innerHTML = '<div style="color:var(--text-dim); font-size:0.78rem; font-style:italic;">No operation yet</div>';
@@ -589,7 +539,7 @@ function render(snap, cursor, total) {
       '</div>';
   }
 
-  // -- Binary search panel --
+  // Binary search panel
   var bsPanel = document.getElementById('bsPanel');
   var bsPhaseLabel = document.getElementById('bsPhaseLabel');
   var bsArrRow = document.getElementById('bsArrRow');
@@ -600,7 +550,7 @@ function render(snap, cursor, total) {
     bsPanel.style.display = '';
 
     if (bs.arr.length === 0) {
-      bsArrRow.innerHTML = '<span style="color:var(--text-dim); font-style:italic; font-size:0.75rem;">Empty &mdash; key not in store</span>';
+      bsArrRow.innerHTML = '<span style="color:var(--text-dim); font-style:italic; font-size:0.75rem;">Empty — key not in store</span>';
       bsPtrZone.innerHTML = '';
       bsPhaseLabel.textContent = 'Key not found';
       bsPhaseLabel.className = 'bs-phase done-notfound';
@@ -632,7 +582,6 @@ function render(snap, cursor, total) {
         chipEls.push(chip);
       });
 
-      // Pointer labels (positioned after layout)
       if (bs.phase !== 'done') {
         requestAnimationFrame(function() {
           bsPtrZone.innerHTML = '';
@@ -674,7 +623,7 @@ function render(snap, cursor, total) {
     bsPanel.style.display = 'none';
   }
 
-  // -- Result --
+  // Result
   var resultVal = document.getElementById('resultVal');
   if (snap.resultText === null) {
     resultVal.textContent = '—';
@@ -687,7 +636,7 @@ function render(snap, cursor, total) {
     resultVal.className = 'result-val found-val';
   }
 
-  // -- Code highlight --
+  // Code highlight
   var bs2 = snap.bsearch;
   var bsPhase = bs2 ? bs2.phase : null;
   var BS_LINES = { 'init':[2,3], 'check-mid':[4,5,6], 'go-right':[5,6], 'advance':[4,5], 'go-left':[5,7], 'done':[8] };
@@ -696,14 +645,67 @@ function render(snap, cursor, total) {
   if (isSet) { [0].forEach(function(li){ var e=document.getElementById('cl'+li); if(e) e.classList.add('hl'); }); }
   else { (BS_LINES[bsPhase] || []).forEach(function(li){ var e=document.getElementById('cl'+li); if(e) e.classList.add('hl'); }); }
 
-  // -- Narration --
+  // Narration
   document.getElementById('narration').textContent = snap.label;
 
-  // -- Step counter --
+  // Step counter
   document.getElementById('stepCounter').textContent = 'Step ' + (cursor + 1) + ' / ' + total;
+
+  // Phase badge
+  var phaseBadge = document.getElementById('phase-badge');
+  if (!snap.op) {
+    phaseBadge.textContent = 'Ready';
+  } else if (snap.op.type === 'set') {
+    phaseBadge.textContent = 'SET';
+  } else {
+    var bs3 = snap.bsearch;
+    if (!bs3 || !bs3.active) {
+      phaseBadge.textContent = 'GET';
+    } else if (bs3.phase === 'done') {
+      phaseBadge.textContent = bs3.found ? 'Found' : 'Not Found';
+    } else {
+      phaseBadge.textContent = 'Search';
+    }
+  }
+
+  // Sidebar
+  var sbOp = document.getElementById('sb-op');
+  var sbBs = document.getElementById('sb-bs');
+  var sbResult = document.getElementById('sb-result');
+
+  if (!snap.op) {
+    sbOp.innerHTML = '<span style="color:var(--text-dim);">—</span>';
+  } else {
+    var opHtml = '<div class="var-item"><span class="var-key">type</span> = <span class="var-val">' + snap.op.type.toUpperCase() + '</span></div>';
+    opHtml += '<div class="var-item"><span class="var-key">key</span> = <span class="var-val">"' + snap.op.key + '"</span></div>';
+    if (snap.op.type === 'set') {
+      opHtml += '<div class="var-item"><span class="var-key">val</span> = <span class="var-val">"' + snap.op.val + '"</span></div>';
+    }
+    opHtml += '<div class="var-item"><span class="var-key">ts</span> = <span class="var-val">' + snap.op.ts + '</span></div>';
+    sbOp.innerHTML = opHtml;
+  }
+
+  var bsSide = snap.bsearch;
+  if (!bsSide || !bsSide.active) {
+    sbBs.innerHTML = '<span style="color:var(--text-dim);">—</span>';
+  } else {
+    var bsHtml = '<div class="var-item"><span class="var-key">lo</span> = <span class="var-val">' + bsSide.lo + '</span></div>';
+    bsHtml += '<div class="var-item"><span class="var-key">hi</span> = <span class="var-val">' + bsSide.hi + '</span></div>';
+    bsHtml += '<div class="var-item"><span class="var-key">mid</span> = <span class="var-val">' + (bsSide.mid !== null ? bsSide.mid : '—') + '</span></div>';
+    bsHtml += '<div class="var-item"><span class="var-key">candidate</span> = <span class="var-val">' + (bsSide.candidateIdx !== null ? bsSide.candidateIdx : '—') + '</span></div>';
+    sbBs.innerHTML = bsHtml;
+  }
+
+  if (snap.resultText === null) {
+    sbResult.innerHTML = '<span style="color:var(--text-dim);">—</span>';
+  } else if (snap.resultText === '') {
+    sbResult.innerHTML = '<div class="var-item"><span class="var-val" style="color:var(--red);">""</span></div>';
+  } else {
+    sbResult.innerHTML = '<div class="var-item"><span class="var-val" style="color:var(--green);">"' + snap.resultText + '"</span></div>';
+  }
 }
 
-// ── VizNav ───────────────────────────────────────────────────────────────────
+// VizNav
 var btnPrev  = document.getElementById('prevBtn');
 var btnStep  = document.getElementById('stepBtn');
 var btnPlay  = document.getElementById('playBtn');
@@ -719,6 +721,26 @@ function buildAndRun() {
 window.addEventListener('DOMContentLoaded', function() {
   loadPreset();
 });
+
+(function() {
+  var handle = document.getElementById('resize-handle');
+  var panel  = document.getElementById('code-panel');
+  var dragging = false, startX = 0, startW = 0;
+  handle.addEventListener('mousedown', function(e) {
+    dragging = true; startX = e.clientX; startW = panel.offsetWidth;
+    handle.classList.add('dragging');
+    e.preventDefault();
+  });
+  document.addEventListener('mousemove', function(e) {
+    if (!dragging) return;
+    var delta = startX - e.clientX;
+    panel.style.width = Math.min(560, Math.max(120, startW + delta)) + 'px';
+  });
+  document.addEventListener('mouseup', function() {
+    if (!dragging) return;
+    dragging = false; handle.classList.remove('dragging');
+  });
+})();
 </script>
 </body>
 </html>

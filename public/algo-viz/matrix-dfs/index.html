@@ -1,133 +1,78 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Matrix DFS</title>
-  <link rel="stylesheet" href="../shared/style.css" />
-  <script src="../shared/gsap.min.js"></script>
-  <script src="../shared/viz.js"></script>
-  <style>
-    .viz-inputs {
-      display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end;
-      padding: 10px 0 14px; width: 100%; max-width: 96%;
-    }
-    .viz-inputs .field { display: flex; flex-direction: column; gap: 4px; }
-    .viz-inputs label {
-      font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
-      letter-spacing: 0.08em; color: var(--text-dim);
-    }
-    .viz-inputs input[type="text"] {
-      background: var(--bg-card); border: 1px solid var(--border);
-      color: var(--text-main); border-radius: 6px;
-      padding: 6px 10px; font-size: 0.85rem; width: 200px;
-    }
-    .viz-inputs input[type="number"] {
-      background: var(--bg-card); border: 1px solid var(--border);
-      color: var(--text-main); border-radius: 6px;
-      padding: 6px 10px; font-size: 0.85rem; width: 64px;
-    }
-    .viz-inputs select {
-      background: var(--bg-card); border: 1px solid var(--border);
-      color: var(--text-main); border-radius: 6px;
-      padding: 6px 10px; font-size: 0.85rem; cursor: pointer;
-    }
-    .run-btn {
-      padding: 7px 18px; background: var(--accent); color: #fff;
-      border: none; border-radius: 6px; font-weight: 600; cursor: pointer;
-      font-size: 0.9rem;
-    }
-    .rand-btn {
-      padding: 7px 14px; background: var(--bg-card); color: var(--text-main);
-      border: 1px solid var(--border); border-radius: 6px; cursor: pointer;
-      font-size: 0.9rem;
-    }
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Matrix DFS</title>
+<link rel="stylesheet" href="../shared/style.css" />
+<script src="../shared/gsap.min.js"></script>
+<script src="../shared/viz.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: "Fira Code", "Cascadia Code", monospace; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
 
-    #viz-root {
-      width: 100%; max-width: 96%;
-      display: flex; flex-direction: column; gap: 12px;
-    }
+  #header { padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+  #phase-badge { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; padding: 3px 10px; border-radius: var(--radius-sm); background: #1e3a5f; color: var(--blue); border: 1px solid var(--blue); }
+  #step-counter { font-size: 12px; color: var(--text-muted); margin-left: auto; }
 
-    .step-desc {
-      font-size: 0.88rem; color: var(--text-dim); min-height: 1.4em;
-      padding: 6px 0;
-    }
+  .viz-inputs { width: 100%; max-width: 100%; padding: 10px 16px; background: var(--surface); border: none; border-bottom: 1px solid var(--border); border-radius: 0; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; flex-shrink: 0; }
+  .viz-inputs label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); display: block; margin-bottom: 3px; }
+  .viz-inputs select, .viz-inputs input { background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 0 8px; height: 30px; font-size: 0.82rem; font-family: inherit; appearance: none; -webkit-appearance: none; }
+  .vi-btn-run { padding: 6px 14px; border-radius: 6px; font-size: 0.82rem; font-weight: 600; cursor: pointer; font-family: inherit; background: var(--accent); color: #fff; border: none; }
+  .vi-btn-rand { padding: 6px 14px; border-radius: 6px; font-size: 0.82rem; cursor: pointer; font-family: inherit; background: var(--bg); color: var(--text); border: 1px solid var(--border); }
 
-    .main-row {
-      display: grid;
-      grid-template-columns: auto 1fr 260px;
-      gap: 14px;
-      align-items: start;
-    }
+  #main { display: flex; flex: 1; overflow: hidden; }
 
-    /* Grid */
-    #grid-wrap {
-      display: inline-block;
-    }
-    #grid-table {
-      border-collapse: collapse;
-    }
-    .grid-cell {
-      width: 42px; height: 42px;
-      border: 2px solid var(--border);
-      border-radius: 4px;
-      text-align: center; vertical-align: middle;
-      font-size: 0.75rem; font-weight: 700;
-      cursor: default;
-      transition: background 0.2s, border-color 0.2s;
-      position: relative;
-    }
-    .cell-water  { background: #1a2235; color: var(--text-dim); }
-    .cell-land   { background: #2d3e2b; color: #6fcf5a; border-color: #3e5a3a; }
-    .cell-visiting { background: var(--accent) !important; color: #fff !important; border-color: var(--accent) !important; }
-    .cell-visited  { background: var(--success) !important; color: #fff !important; border-color: var(--success) !important; }
-    .cell-start    { border-color: #f0c040 !important; box-shadow: 0 0 0 2px #f0c04060; }
+  #viz-area { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; gap: 20px; overflow-y: auto; }
 
-    /* Stack panel */
-    #stack-panel {
-      background: var(--bg-card); border: 1px solid var(--border);
-      border-radius: 8px; padding: 12px;
-    }
-    .panel-title {
-      font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
-      letter-spacing: 0.08em; color: var(--text-dim); margin-bottom: 8px;
-    }
-    #stack-list {
-      display: flex; flex-direction: column; gap: 4px;
-      max-height: 260px; overflow-y: auto;
-    }
-    .stack-item {
-      background: var(--bg-card); border: 1px solid var(--border);
-      border-radius: 4px; padding: 4px 8px;
-      font-size: 0.82rem; color: var(--text-main);
-      font-family: monospace;
-    }
-    .stack-item.top {
-      border-color: var(--accent); color: var(--accent); font-weight: 700;
-    }
-    #count-label {
-      font-size: 0.85rem; color: var(--text-main); margin-top: 10px;
-    }
-    #count-val {
-      font-weight: 700; color: var(--success);
-    }
+  #desc { font-size: 13px; color: var(--text-muted); text-align: center; max-width: 560px; min-height: 36px; line-height: 1.5; }
 
-    /* Code panel */
-    #code-panel {
-      background: var(--bg-card); border: 1px solid var(--border);
-      border-radius: 8px; padding: 12px; overflow-x: auto;
-    }
-    #code-body { margin: 0; font-size: 0.78rem; line-height: 1.65; font-family: monospace; }
-    .cl { padding: 0 6px; border-radius: 3px; white-space: pre; color: var(--text-dim); }
-    .cl.hl { background: #f0c04025; color: #f0c040; }
-  </style>
+  #grid-wrap { display: inline-block; }
+  #grid-table { border-collapse: collapse; }
+  .grid-cell { width: 42px; height: 42px; border: 2px solid var(--border); border-radius: 4px; text-align: center; vertical-align: middle; font-size: 0.75rem; font-weight: 700; cursor: default; transition: background 0.2s, border-color 0.2s; }
+  .cell-water   { background: #1a2235; color: var(--text-dim); }
+  .cell-land    { background: #2d3e2b; color: #6fcf5a; border-color: #3e5a3a; }
+  .cell-visiting { background: var(--accent) !important; color: #fff !important; border-color: var(--accent) !important; }
+  .cell-visited  { background: var(--success) !important; color: #fff !important; border-color: var(--success) !important; }
+  .cell-start    { border-color: #f0c040 !important; box-shadow: 0 0 0 2px #f0c04060; }
+
+  #resize-handle { width: 5px; flex-shrink: 0; cursor: col-resize; background: transparent; border-left: 1px solid var(--border); transition: background .15s; z-index: 10; }
+  #resize-handle:hover, #resize-handle.dragging { background: var(--accent); }
+
+  #code-panel { width: 350px; min-width: 120px; max-width: 560px; flex-shrink: 0; background: #0d1117; border-right: 1px solid var(--border); overflow-y: auto; overflow-x: auto; padding: 10px 12px; display: flex; flex-direction: column; }
+  .code-panel-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--text-dim); margin-bottom: 8px; }
+
+  .cl { display: flex; align-items: stretch; padding: 2px 0; white-space: pre; border-left: 2px solid transparent; padding-left: 6px; color: var(--text-muted); transition: all 0.2s; font-family: "Fira Code", "Cascadia Code", monospace; font-size: 0.75rem; line-height: 1.8; }
+  .cl.hl { background: rgba(122,162,247,0.12); border-left-color: var(--accent); color: var(--text); }
+  .ln { display: inline-block; width: 20px; text-align: right; color: var(--text-dim); user-select: none; margin-right: 10px; font-size: 0.7rem; }
+  .kw { color: var(--purple); }
+  .nb { color: var(--green); }
+  .cm { color: var(--text-dim); font-style: italic; }
+
+  #sidebar { width: 220px; flex-shrink: 0; background: var(--surface); border-left: 1px solid var(--border); overflow-y: auto; padding: 14px 12px; display: flex; flex-direction: column; gap: 12px; }
+  .sidebar-section { font-size: 11px; }
+  .sidebar-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--text-dim); margin-bottom: 6px; }
+  .var-item { font-size: 11px; font-family: monospace; color: var(--text-muted); padding: 4px 0; border-bottom: 1px solid var(--border-soft); }
+  .var-item:last-child { border-bottom: none; }
+  .var-key { color: var(--text-dim); }
+  .var-val { color: var(--accent); font-weight: 700; }
+  .stack-item { font-size: 11px; font-family: monospace; color: var(--text-muted); padding: 3px 6px; border-radius: 4px; background: var(--bg); border: 1px solid var(--border); margin-bottom: 3px; }
+  .stack-item.top { border-color: var(--accent); color: var(--accent); font-weight: 700; }
+
+  #nav-row { flex-shrink: 0; display: flex; align-items: center; gap: 8px; padding: 10px 16px; background: var(--surface); border-top: 1px solid var(--border); }
+  .btn-step, .btn-play { padding: 6px 14px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--surface); color: var(--text); font-family: inherit; font-size: 12px; cursor: pointer; transition: background .15s; }
+  .btn-step:hover { background: #334155; }
+  .btn-play { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn-play:hover { background: var(--accent-hover); }
+  .speed-sel { padding: 5px 8px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: #1e293b; color: var(--text); font-size: 12px; font-family: inherit; cursor: pointer; }
+</style>
 </head>
 <body>
 
 <div class="viz-inputs">
-  <div class="field">
+  <div>
     <label>Preset</label>
-    <select id="presetSel" onchange="loadPreset()">
+    <select id="presetSel" onchange="loadPreset()" style="width:200px;">
       <option value="">— pick a preset —</option>
       <option value="island">Island (3x4)</option>
       <option value="full">Full Grid (3x3)</option>
@@ -138,68 +83,106 @@
       <option value="single">Single Cell (3x3)</option>
     </select>
   </div>
-  <div class="field">
+  <div>
     <label>Grid (rows sep by /)</label>
-    <input type="text" id="gridInput" value="1,1,0,0/1,1,0,1/0,0,1,1/0,1,1,0" placeholder="1,1,0/0,1,0/1,1,1" />
+    <input type="text" id="gridInput" value="1,1,0,0/1,1,0,1/0,0,1,1/0,1,1,0" style="width:200px;" />
   </div>
-  <div class="field">
+  <div>
     <label>Start Row</label>
-    <input type="number" id="startRow" value="0" min="0" />
+    <input type="number" id="startRow" value="0" min="0" style="width:60px;" />
   </div>
-  <div class="field">
+  <div>
     <label>Start Col</label>
-    <input type="number" id="startCol" value="0" min="0" />
+    <input type="number" id="startCol" value="0" min="0" style="width:60px;" />
   </div>
-  <button class="run-btn" onclick="buildAndRun()">Run</button>
-  <button class="rand-btn" onclick="randomExample()">🎲 Random</button>
+  <button class="vi-btn-run" onclick="buildAndRun()">Run</button>
+  <button class="vi-btn-rand" onclick="randomExample()">Random</button>
 </div>
 
 <div class="controls"></div>
 
-<div id="viz-root">
-  <div class="step-desc" id="stepDesc">Press Run to start the DFS visualization.</div>
+<div id="header">
+  <span id="phase-badge">Setup</span>
+  <span style="font-size:13px;font-weight:700;">Matrix DFS</span>
+  <span id="step-counter">Step 0 / 0</span>
+</div>
 
-  <div class="main-row">
-    <!-- Grid -->
+<div id="main">
+  <div id="viz-area">
+    <div id="desc">Press Run to start the DFS visualization.</div>
     <div id="grid-wrap">
       <table id="grid-table"></table>
     </div>
+  </div>
 
-    <!-- Stack + count -->
-    <div id="stack-panel">
-      <div class="panel-title">Recursion Stack</div>
-      <div id="stack-list"></div>
-      <div id="count-label">Connected cells: <span id="count-val">0</span></div>
+  <div id="resize-handle"></div>
+
+  <div id="code-panel">
+    <div class="code-panel-title">Code</div>
+    <div id="code-body"></div>
+  </div>
+
+  <div id="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-title">State</div>
+      <div id="vars-items"><span style="color:var(--text-dim);">—</span></div>
     </div>
-
-    <!-- Code panel -->
-    <div id="code-panel">
-      <div class="panel-title">DFS Pseudocode</div>
-      <pre id="code-body">
-<div id="cl0" class="cl">def dfs(grid, r, c):</div>
-<div id="cl1" class="cl">  if out of bounds:</div>
-<div id="cl2" class="cl">    return</div>
-<div id="cl3" class="cl">  if grid[r][c] == 0:</div>
-<div id="cl4" class="cl">    return</div>
-<div id="cl5" class="cl">  if (r,c) in visited:</div>
-<div id="cl6" class="cl">    return</div>
-<div id="cl7" class="cl">  visited.add((r,c))</div>
-<div id="cl8" class="cl">  count += 1</div>
-<div id="cl9" class="cl">  dfs(grid, r-1, c)  # up</div>
-<div id="cl10" class="cl">  dfs(grid, r+1, c)  # down</div>
-<div id="cl11" class="cl">  dfs(grid, r, c-1)  # left</div>
-<div id="cl12" class="cl">  dfs(grid, r, c+1)  # right</div></pre>
+    <div class="sidebar-section">
+      <div class="sidebar-title">Recursion Stack</div>
+      <div id="stack-list"></div>
     </div>
   </div>
 </div>
 
-<div id="prevBtn" style="display:none"></div>
-<div id="stepBtn" style="display:none"></div>
-<div id="playBtn" style="display:none"></div>
-<div id="resetBtn" style="display:none"></div>
-<select id="speedSel" style="display:none"></select>
+<div id="nav-row">
+  <button id="prevBtn" class="btn-step">&#8592; Prev</button>
+  <button id="stepBtn" class="btn-step">Step &#8594;</button>
+  <button id="playBtn" class="btn-play">Play</button>
+  <button id="resetBtn" class="btn-step">&#8635; Reset</button>
+  <select id="speedSel" class="speed-sel">
+    <option value="800">0.5&#215;</option>
+    <option value="600" selected>1&#215;</option>
+    <option value="300">2&#215;</option>
+    <option value="150">4&#215;</option>
+  </select>
+</div>
 
 <script>
+const codeLines = [
+  { n: 1,  t: '<span class="kw">def</span> <span class="nb">dfs</span>(grid, r, c):' },
+  { n: 2,  t: '  <span class="kw">if</span> out_of_bounds(r, c):' },
+  { n: 3,  t: '    <span class="kw">return</span>' },
+  { n: 4,  t: '  <span class="kw">if</span> grid[r][c] == 0:' },
+  { n: 5,  t: '    <span class="kw">return</span>' },
+  { n: 6,  t: '  <span class="kw">if</span> (r, c) <span class="kw">in</span> visited:' },
+  { n: 7,  t: '    <span class="kw">return</span>' },
+  { n: 8,  t: '  visited.add((r, c))' },
+  { n: 9,  t: '  count += 1' },
+  { n: 10, t: '  <span class="nb">dfs</span>(grid, r-1, c)  <span class="cm"># up</span>' },
+  { n: 11, t: '  <span class="nb">dfs</span>(grid, r+1, c)  <span class="cm"># down</span>' },
+  { n: 12, t: '  <span class="nb">dfs</span>(grid, r, c-1)  <span class="cm"># left</span>' },
+  { n: 13, t: '  <span class="nb">dfs</span>(grid, r, c+1)  <span class="cm"># right</span>' },
+];
+
+window.addEventListener('DOMContentLoaded', function() {
+  const codeBody = document.getElementById('code-body');
+  codeLines.forEach(function(line) {
+    const el = document.createElement('div');
+    el.className = 'cl';
+    el.id = 'cl' + (line.n - 1);
+    el.innerHTML = '<span class="ln">' + line.n + '</span>' + line.t;
+    codeBody.appendChild(el);
+  });
+
+  document.getElementById('prevBtn').addEventListener('click', function() { stopPlay(); if (curIdx > 0) render(curIdx - 1); });
+  document.getElementById('stepBtn').addEventListener('click', function() { stopPlay(); if (curIdx < steps.length - 1) render(curIdx + 1); });
+  document.getElementById('playBtn').addEventListener('click', function() { isPlaying ? stopPlay() : startPlay(); });
+  document.getElementById('resetBtn').addEventListener('click', function() { stopPlay(); render(0); });
+  document.getElementById('speedSel').addEventListener('change', function() { playSpeed = parseInt(this.value); });
+
+  buildAndRun();
+});
+
 // ── State ──────────────────────────────────────────────────────────────────
 let steps = [];
 let curIdx = -1;
@@ -248,21 +231,23 @@ function randomExample() {
 
 // ── Parse grid ─────────────────────────────────────────────────────────────
 function parseGrid(str) {
-  return str.trim().split("/").map(row => row.split(",").map(v => parseInt(v.trim(), 10) || 0));
+  return str.trim().split("/").map(function(row) {
+    return row.split(",").map(function(v) { return parseInt(v.trim(), 10) || 0; });
+  });
 }
 
 // ── Build steps ────────────────────────────────────────────────────────────
 function buildSteps(g, sr, sc) {
   const rows = g.length, cols = g[0].length;
-  const visited = Array.from({length: rows}, () => Array(cols).fill(false));
+  const visited = Array.from({length: rows}, function() { return Array(cols).fill(false); });
   const stepsArr = [];
-  const stack = []; // call stack representation
+  const stack = [];
 
   function pushStep(r, c, line, desc, countSoFar, extra) {
     stepsArr.push({
-      r, c, line, desc,
-      visitedSnap: visited.map(row => [...row]),
-      stack: [...stack],
+      r: r, c: c, line: line, desc: desc,
+      visitedSnap: visited.map(function(row) { return row.slice(); }),
+      stack: stack.slice(),
       count: countSoFar,
       visiting: extra && extra.visiting != null ? extra.visiting : null,
     });
@@ -271,59 +256,52 @@ function buildSteps(g, sr, sc) {
   let count = 0;
 
   function dfs(r, c, depth) {
-    // Push onto logical call stack
     stack.push([r, c]);
 
-    // Check bounds
-    pushStep(r, c, [1], `dfs(,): check out-of-bounds`, count, {visiting: null});
+    pushStep(r, c, [1], "dfs(" + r + "," + c + "): check out-of-bounds", count, {visiting: null});
     if (r < 0 || r >= rows || c < 0 || c >= cols) {
-      pushStep(r, c, [2], `(,) is out of bounds — return`, count, {visiting: null});
+      pushStep(r, c, [2], "(" + r + "," + c + ") is out of bounds — return", count, {visiting: null});
       stack.pop();
       return;
     }
 
-    // Check water
-    pushStep(r, c, [3], `dfs(,): grid[][] = `, count, {visiting: [r,c]});
+    pushStep(r, c, [3], "dfs(" + r + "," + c + "): grid[" + r + "][" + c + "] = " + g[r][c], count, {visiting: [r,c]});
     if (g[r][c] === 0) {
-      pushStep(r, c, [4], `Cell (,) is water (0) — return`, count, {visiting: [r,c]});
+      pushStep(r, c, [4], "Cell (" + r + "," + c + ") is water (0) — return", count, {visiting: [r,c]});
       stack.pop();
       return;
     }
 
-    // Check visited
-    pushStep(r, c, [5], `dfs(,): check if visited`, count, {visiting: [r,c]});
+    pushStep(r, c, [5], "dfs(" + r + "," + c + "): check if visited", count, {visiting: [r,c]});
     if (visited[r][c]) {
-      pushStep(r, c, [6], `Cell (,) already visited — return`, count, {visiting: [r,c]});
+      pushStep(r, c, [6], "Cell (" + r + "," + c + ") already visited — return", count, {visiting: [r,c]});
       stack.pop();
       return;
     }
 
-    // Mark visited
     visited[r][c] = true;
     count++;
-    pushStep(r, c, [7, 8], `Visiting (,): mark visited, count = `, count, {visiting: [r,c]});
+    pushStep(r, c, [7, 8], "Visiting (" + r + "," + c + "): mark visited, count = " + count, count, {visiting: [r,c]});
 
-    // Recurse neighbors
     const dirs = [[-1,0,"up"],[1,0,"down"],[0,-1,"left"],[0,1,"right"]];
     const lineNums = [9, 10, 11, 12];
     for (let i = 0; i < dirs.length; i++) {
-      const [dr, dc, dirName] = dirs[i];
+      const dr = dirs[i][0], dc = dirs[i][1], dirName = dirs[i][2];
       const nr = r + dr, nc = c + dc;
-      pushStep(r, c, [lineNums[i]], `Explore  neighbor (,)`, count, {visiting: [r,c]});
+      pushStep(r, c, [lineNums[i]], "Explore " + dirName + " neighbor (" + nr + "," + nc + ")", count, {visiting: [r,c]});
       dfs(nr, nc, depth + 1);
     }
 
     stack.pop();
     if (stepsArr.length > 0) {
-      pushStep(r, c, [7], `Return from dfs(,)`, count, {visiting: null});
+      pushStep(r, c, [7], "Return from dfs(" + r + "," + c + ")", count, {visiting: null});
     }
   }
 
-  // Initial step
   stepsArr.push({
     r: sr, c: sc, line: [0],
-    desc: `Starting DFS at (,)`,
-    visitedSnap: visited.map(row => [...row]),
+    desc: "Starting DFS at (" + sr + "," + sc + ")",
+    visitedSnap: visited.map(function(row) { return row.slice(); }),
     stack: [],
     count: 0,
     visiting: null,
@@ -333,13 +311,12 @@ function buildSteps(g, sr, sc) {
     dfs(sr, sc, 0);
   }
 
-  // Final step
   stepsArr.push({
     r: -1, c: -1, line: [],
-    desc: `DFS complete. Connected land cells: `,
-    visitedSnap: visited.map(row => [...row]),
+    desc: "DFS complete. Connected land cells: " + count,
+    visitedSnap: visited.map(function(row) { return row.slice(); }),
     stack: [],
-    count,
+    count: count,
     visiting: null,
   });
 
@@ -355,13 +332,25 @@ function buildGridTable(g, sr, sc) {
     for (let c = 0; c < g[r].length; c++) {
       const td = document.createElement("td");
       td.className = "grid-cell " + (g[r][c] === 1 ? "cell-land" : "cell-water");
-      td.id = `cell--`;
+      td.id = "cell-" + r + "-" + c;
       td.textContent = g[r][c] === 1 ? "1" : "0";
       if (r === sr && c === sc) td.classList.add("cell-start");
       tr.appendChild(td);
     }
     tbl.appendChild(tr);
   }
+}
+
+// ── Derive phase from step ──────────────────────────────────────────────────
+function getPhase(s) {
+  if (!s.line || s.line.length === 0) return 'Complete';
+  if (s.line.indexOf(0) >= 0) return 'DFS Start';
+  if (s.line.indexOf(1) >= 0 || s.line.indexOf(2) >= 0) return 'Bounds Check';
+  if (s.line.indexOf(3) >= 0 || s.line.indexOf(4) >= 0) return 'Water Check';
+  if (s.line.indexOf(5) >= 0 || s.line.indexOf(6) >= 0) return 'Visited Check';
+  if (s.line.indexOf(7) >= 0 || s.line.indexOf(8) >= 0) return 'Mark Visited';
+  for (let i = 0; i < s.line.length; i++) { if (s.line[i] >= 9 && s.line[i] <= 12) return 'Recurse'; }
+  return 'DFS';
 }
 
 // ── Render step ─────────────────────────────────────────────────────────────
@@ -374,31 +363,47 @@ function render(idx) {
   // Grid cells
   for (let r = 0; r < ROWS; r++) {
     for (let c = 0; c < COLS; c++) {
-      const cell = document.getElementById(`cell--`);
+      const cell = document.getElementById("cell-" + r + "-" + c);
       if (!cell) continue;
       cell.className = "grid-cell " + (grid[r][c] === 1 ? "cell-land" : "cell-water");
       if (r === startR && c === startC) cell.classList.add("cell-start");
       if (s.visitedSnap[r] && s.visitedSnap[r][c]) cell.classList.add("cell-visited");
     }
   }
-  // Highlight currently visiting
   if (s.visiting) {
-    const [vr, vc] = s.visiting;
-    const cell = document.getElementById(`cell--`);
+    const vr = s.visiting[0], vc = s.visiting[1];
+    const cell = document.getElementById("cell-" + vr + "-" + vc);
     if (cell) { cell.classList.remove("cell-visited"); cell.classList.add("cell-visiting"); }
   }
 
   // Description
-  document.getElementById("stepDesc").textContent = s.desc;
+  document.getElementById("desc").textContent = s.desc;
 
-  // Stack
+  // Phase badge + step counter
+  document.getElementById("phase-badge").textContent = getPhase(s);
+  document.getElementById("step-counter").textContent = "Step " + (idx + 1) + " / " + steps.length;
+
+  // Play button label
+  document.getElementById("playBtn").textContent = isPlaying ? "Pause" : "Play";
+
+  // Sidebar vars
+  const varsDiv = document.getElementById("vars-items");
+  let html = '';
+  if (s.visiting) {
+    html += '<div class="var-item"><span class="var-key">cell</span> = <span class="var-val">(' + s.visiting[0] + ', ' + s.visiting[1] + ')</span></div>';
+  }
+  html += '<div class="var-item"><span class="var-key">count</span> = <span class="var-val">' + s.count + '</span></div>';
+  html += '<div class="var-item"><span class="var-key">stack depth</span> = <span class="var-val">' + (s.stack ? s.stack.length : 0) + '</span></div>';
+  varsDiv.innerHTML = html || '<span style="color:var(--text-dim);">—</span>';
+
+  // Stack list
   const stackList = document.getElementById("stack-list");
   stackList.innerHTML = "";
   const stack = s.stack || [];
   for (let i = stack.length - 1; i >= 0; i--) {
     const div = document.createElement("div");
     div.className = "stack-item" + (i === stack.length - 1 ? " top" : "");
-    div.textContent = `(, )`;
+    div.textContent = "(" + stack[i][0] + ", " + stack[i][1] + ")";
     stackList.appendChild(div);
   }
   if (stack.length === 0) {
@@ -409,41 +414,35 @@ function render(idx) {
     stackList.appendChild(div);
   }
 
-  // Count
-  document.getElementById("count-val").textContent = s.count;
-
   // Code highlight
   for (let i = 0; i <= 12; i++) {
-    const el = document.getElementById(`cl`);
+    const el = document.getElementById("cl" + i);
     if (el) el.classList.remove("hl");
   }
   if (s.line) {
-    s.line.forEach(ln => {
-      const el = document.getElementById(`cl`);
+    s.line.forEach(function(ln) {
+      const el = document.getElementById("cl" + ln);
       if (el) el.classList.add("hl");
     });
   }
 }
 
-// ── VizNav bridge (postMessage) ─────────────────────────────────────────────
-// The parent app injects listeners via viz.js — we expose globals it calls.
-window.__vizPrev  = () => { stopPlay(); if (curIdx > 0) render(curIdx - 1); };
-window.__vizStep  = () => { stopPlay(); if (curIdx < steps.length - 1) render(curIdx + 1); };
-window.__vizPlay  = () => { isPlaying ? stopPlay() : startPlay(); };
-window.__vizReset = () => { stopPlay(); render(0); };
-window.__vizSpeed = (v) => { playSpeed = v; };
-
+// ── Play / Stop ─────────────────────────────────────────────────────────────
 function startPlay() {
   if (curIdx >= steps.length - 1) render(0);
   isPlaying = true;
-  playTimer = setInterval(() => {
+  document.getElementById("playBtn").textContent = "Pause";
+  playTimer = setInterval(function() {
     if (curIdx >= steps.length - 1) { stopPlay(); return; }
     render(curIdx + 1);
   }, playSpeed);
 }
+
 function stopPlay() {
   isPlaying = false;
   if (playTimer) { clearInterval(playTimer); playTimer = null; }
+  const btn = document.getElementById("playBtn");
+  if (btn) btn.textContent = "Play";
 }
 
 // ── Main entry ──────────────────────────────────────────────────────────────
@@ -463,8 +462,33 @@ function buildAndRun() {
   render(0);
 }
 
-// Auto-run on load
-buildAndRun();
+// ── VizNav postMessage bridge (for parent iframe controls) ──────────────────
+window.__vizPrev  = function() { stopPlay(); if (curIdx > 0) render(curIdx - 1); };
+window.__vizStep  = function() { stopPlay(); if (curIdx < steps.length - 1) render(curIdx + 1); };
+window.__vizPlay  = function() { isPlaying ? stopPlay() : startPlay(); };
+window.__vizReset = function() { stopPlay(); render(0); };
+window.__vizSpeed = function(v) { playSpeed = v; };
+
+// ── Resize handle ───────────────────────────────────────────────────────────
+(function() {
+  const handle = document.getElementById('resize-handle');
+  const panel  = document.getElementById('code-panel');
+  let dragging = false, startX = 0, startW = 0;
+  handle.addEventListener('mousedown', function(e) {
+    dragging = true; startX = e.clientX; startW = panel.offsetWidth;
+    handle.classList.add('dragging');
+    e.preventDefault();
+  });
+  document.addEventListener('mousemove', function(e) {
+    if (!dragging) return;
+    const delta = startX - e.clientX;
+    panel.style.width = Math.min(560, Math.max(120, startW + delta)) + 'px';
+  });
+  document.addEventListener('mouseup', function() {
+    if (!dragging) return;
+    dragging = false; handle.classList.remove('dragging');
+  });
+})();
 </script>
 </body>
 </html>

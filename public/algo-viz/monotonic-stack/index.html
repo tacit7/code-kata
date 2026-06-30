@@ -1,138 +1,98 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Monotonic Stack</title>
-  <link rel="stylesheet" href="../shared/style.css" />
-  <script src="../shared/gsap.min.js"></script>
-  <script src="../shared/viz.js"></script>
-  <style>
-    .viz-inputs {
-      display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end;
-      padding: 10px 0 14px; width: 100%; max-width: 96%;
-    }
-    .viz-inputs .field { display: flex; flex-direction: column; gap: 4px; }
-    .viz-inputs label {
-      font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
-      letter-spacing: 0.08em; color: var(--text-dim);
-    }
-    .viz-inputs input[type="text"] {
-      background: var(--bg-card); border: 1px solid var(--border);
-      color: var(--text-main); border-radius: 6px;
-      padding: 6px 10px; font-size: 0.85rem; width: 220px;
-    }
-    .viz-inputs select {
-      background: var(--bg-card); border: 1px solid var(--border);
-      color: var(--text-main); border-radius: 6px;
-      padding: 6px 10px; font-size: 0.85rem; cursor: pointer;
-    }
-    .btn-run {
-      padding: 7px 18px; background: var(--accent); color: #fff;
-      border: none; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 0.85rem;
-    }
-    .btn-run:hover { opacity: 0.85; }
-    .btn-rand {
-      padding: 7px 14px; background: var(--bg-card); color: var(--text-main);
-      border: 1px solid var(--border); border-radius: 6px; cursor: pointer; font-size: 0.85rem;
-    }
-    .btn-rand:hover { border-color: var(--accent); }
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Monotonic Stack</title>
+<link rel="stylesheet" href="../shared/style.css" />
+<script src="../shared/gsap.min.js"></script>
+<script src="../shared/viz.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: "Fira Code", "Cascadia Code", monospace; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
 
-    #viz-root {
-      width: 100%; max-width: 96%;
-      display: flex; flex-direction: column; gap: 18px;
-    }
+  #header { padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+  #phase-badge { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; padding: 3px 10px; border-radius: var(--radius-sm); background: #1e3a5f; color: var(--blue); border: 1px solid var(--blue); }
+  #step-desc { font-size: 12px; color: var(--text-muted); flex: 1; text-align: center; }
+  #step-counter { font-size: 12px; color: var(--text-muted); margin-left: auto; }
 
-    #status-bar {
-      font-size: 0.82rem; color: var(--text-dim); min-height: 1.4em; padding: 4px 0;
-    }
-    #status-bar span { color: var(--text-main); font-weight: 600; }
+  .viz-inputs { width: 100%; max-width: 100%; padding: 10px 16px; background: var(--surface); border: none; border-bottom: 1px solid var(--border); border-radius: 0; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; flex-shrink: 0; }
+  .viz-inputs label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); display: block; margin-bottom: 3px; }
+  .viz-inputs select, .viz-inputs input { background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 0 8px; height: 30px; font-size: 0.82rem; font-family: inherit; appearance: none; -webkit-appearance: none; }
+  .vi-btn-run { padding: 6px 14px; border-radius: 6px; font-size: 0.82rem; font-weight: 600; cursor: pointer; font-family: inherit; background: var(--accent); color: #fff; border: none; }
+  .vi-btn-rand { padding: 6px 14px; border-radius: 6px; font-size: 0.82rem; cursor: pointer; font-family: inherit; background: var(--bg); color: var(--text); border: 1px solid var(--border); }
 
-    .main-area { display: flex; gap: 24px; align-items: flex-start; }
-    .left-col  { flex: 1; display: flex; flex-direction: column; gap: 16px; }
-    .right-col { flex: 0 0 145px; display: flex; flex-direction: column; gap: 8px; }
+  #main { display: flex; flex: 1; overflow: hidden; }
+  #viz-area { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; gap: 20px; overflow-y: auto; }
 
-    .array-label {
-      font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
-      letter-spacing: 0.08em; color: var(--text-dim); margin-bottom: 4px;
-    }
-    .array-row { display: flex; gap: 6px; flex-wrap: wrap; }
-    .arr-cell  { display: flex; flex-direction: column; align-items: center; gap: 3px; }
-    .arr-box {
-      width: 46px; height: 46px;
-      display: flex; align-items: center; justify-content: center;
-      border: 2px solid var(--border); border-radius: 8px;
-      background: var(--bg-card); color: var(--text-main);
-      font-size: 1.1rem; font-weight: 700;
-      transition: background 0.2s, border-color 0.2s;
-    }
-    .arr-box.current { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 18%, var(--bg-card)); }
-    .arr-box.popped  { border-color: var(--success); background: color-mix(in srgb, var(--success) 18%, var(--bg-card)); }
-    .arr-box.done    { border-color: var(--text-dim); opacity: 0.5; }
-    .arr-box.stacked { border-color: #a78bfa; background: color-mix(in srgb, #a78bfa 14%, var(--bg-card)); }
-    .arr-idx { font-size: 0.65rem; color: var(--text-dim); font-weight: 600; }
+  .array-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--text-dim); margin-bottom: 8px; }
+  .array-row { display: flex; gap: 6px; flex-wrap: wrap; }
+  .arr-cell { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+  .arr-box { width: 46px; height: 46px; display: flex; align-items: center; justify-content: center; border: 2px solid var(--border); border-radius: 8px; background: var(--bg); color: var(--text); font-size: 1.1rem; font-weight: 700; transition: background 0.2s, border-color 0.2s; }
+  .arr-box.current { border-color: var(--accent); background: rgba(122,162,247,0.15); }
+  .arr-box.popped  { border-color: var(--green); background: rgba(158,206,106,0.15); }
+  .arr-box.done    { border-color: var(--text-dim); opacity: 0.5; }
+  .arr-box.stacked { border-color: #a78bfa; background: rgba(167,139,250,0.14); }
+  .arr-idx { font-size: 0.65rem; color: var(--text-dim); font-weight: 600; }
 
-    .res-box {
-      width: 46px; height: 36px;
-      display: flex; align-items: center; justify-content: center;
-      border: 2px solid var(--border); border-radius: 6px;
-      background: var(--bg-card); color: var(--text-dim);
-      font-size: 0.95rem; font-weight: 700;
-      transition: background 0.2s, color 0.2s, border-color 0.2s;
-    }
-    .res-box.filled { border-color: var(--success); color: var(--success); background: color-mix(in srgb, var(--success) 14%, var(--bg-card)); }
-    .res-box.minus  { border-color: var(--error); color: var(--error); }
+  .res-box { width: 46px; height: 36px; display: flex; align-items: center; justify-content: center; border: 2px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--text-dim); font-size: 0.95rem; font-weight: 700; transition: background 0.2s, color 0.2s, border-color 0.2s; }
+  .res-box.filled { border-color: var(--green); color: var(--green); background: rgba(158,206,106,0.14); }
+  .res-box.minus  { border-color: var(--red, #f7768e); color: var(--red, #f7768e); }
 
-    .stack-label {
-      font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
-      letter-spacing: 0.08em; color: var(--text-dim); text-align: center;
-    }
-    .stack-col {
-      display: flex; flex-direction: column-reverse; align-items: center; gap: 5px;
-      min-height: 200px; padding: 8px 4px;
-      border: 2px dashed var(--border); border-radius: 8px;
-      background: color-mix(in srgb, var(--bg-card) 60%, transparent);
-    }
-    .stack-item {
-      width: 120px; height: 40px;
-      display: flex; align-items: center; justify-content: center; gap: 8px;
-      border: 2px solid #a78bfa; border-radius: 6px;
-      background: color-mix(in srgb, #a78bfa 16%, var(--bg-card));
-      color: var(--text-main); font-size: 0.9rem; font-weight: 700;
-      transition: all 0.25s;
-    }
-    .stack-item .si-val { font-size: 1rem; }
-    .stack-item .si-idx { font-size: 0.7rem; color: var(--text-dim); }
-    .stack-item.top     { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 20%, var(--bg-card)); }
-    .stack-item.popping { border-color: var(--error); background: color-mix(in srgb, var(--error) 20%, var(--bg-card)); animation: pop-flash 0.35s; }
-    @keyframes pop-flash { 0%,100%{opacity:1} 50%{opacity:0.3} }
-    .stack-empty-hint { font-size: 0.72rem; color: var(--text-dim); text-align: center; opacity: 0.6; padding: 10px 4px; }
+  .main-viz { display: flex; gap: 24px; align-items: flex-start; width: 100%; max-width: 700px; }
+  .left-col  { flex: 1; display: flex; flex-direction: column; gap: 16px; }
+  .right-col { flex: 0 0 145px; display: flex; flex-direction: column; gap: 8px; }
 
-    .legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 0.72rem; color: var(--text-dim); }
-    .leg-item { display: flex; align-items: center; gap: 5px; }
-    .leg-swatch { width: 14px; height: 14px; border-radius: 3px; border: 2px solid; }
+  .stack-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--text-dim); text-align: center; margin-bottom: 4px; }
+  .stack-col { display: flex; flex-direction: column-reverse; align-items: center; gap: 5px; min-height: 200px; padding: 8px 4px; border: 2px dashed var(--border); border-radius: 8px; }
+  .stack-item { width: 120px; height: 40px; display: flex; align-items: center; justify-content: center; gap: 8px; border: 2px solid #a78bfa; border-radius: 6px; background: rgba(167,139,250,0.16); color: var(--text); font-size: 0.9rem; font-weight: 700; transition: all 0.25s; }
+  .stack-item .si-val { font-size: 1rem; }
+  .stack-item .si-idx { font-size: 0.7rem; color: var(--text-dim); }
+  .stack-item.top     { border-color: var(--accent); background: rgba(122,162,247,0.2); }
+  .stack-item.popping { border-color: var(--red, #f7768e); background: rgba(247,118,142,0.2); animation: pop-flash 0.35s; }
+  @keyframes pop-flash { 0%,100%{opacity:1} 50%{opacity:0.3} }
+  .stack-empty-hint { font-size: 0.72rem; color: var(--text-dim); text-align: center; opacity: 0.6; padding: 10px 4px; }
 
-    #code-panel {
-      background: var(--bg-card); border: 1px solid var(--border);
-      border-radius: 8px; padding: 12px 16px; font-size: 0.78rem;
-      font-family: monospace; line-height: 1.75; overflow-x: auto;
-    }
-    #code-panel pre { margin: 0; }
-    .cl { padding: 1px 6px; border-radius: 4px; transition: background 0.15s; white-space: pre; display: block; }
-    .cl.hl { background: color-mix(in srgb, var(--accent) 25%, transparent); color: var(--text-main); }
-    .code-toggle {
-      font-size: 0.72rem; cursor: pointer; color: var(--accent);
-      user-select: none; margin-bottom: 6px; display: inline-block;
-    }
-  </style>
+  .legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 0.72rem; color: var(--text-dim); }
+  .leg-item { display: flex; align-items: center; gap: 5px; }
+  .leg-swatch { width: 14px; height: 14px; border-radius: 3px; border: 2px solid; }
+
+  #resize-handle { width: 5px; flex-shrink: 0; cursor: col-resize; background: transparent; border-left: 1px solid var(--border); transition: background .15s; z-index: 10; }
+  #resize-handle:hover, #resize-handle.dragging { background: var(--accent); }
+
+  #code-panel { width: 350px; min-width: 120px; max-width: 560px; flex-shrink: 0; background: #0d1117; border-right: 1px solid var(--border); overflow-y: auto; overflow-x: auto; padding: 10px 12px; display: flex; flex-direction: column; }
+  .code-panel-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--text-dim); margin-bottom: 8px; }
+
+  .cl { display: flex; align-items: stretch; white-space: pre; border-left: 2px solid transparent; padding-left: 6px; color: var(--text-muted); transition: all 0.2s; font-family: "Fira Code", "Cascadia Code", monospace; font-size: 0.75rem; line-height: 1.8; }
+  .cl.hl { background: rgba(122,162,247,0.12); border-left-color: var(--accent); color: var(--text); }
+  .ln { display: inline-block; width: 20px; text-align: right; color: var(--text-dim); user-select: none; margin-right: 10px; font-size: 0.7rem; }
+  .kw { color: var(--purple); }
+  .nb { color: var(--green); }
+  .cm { color: var(--text-dim); font-style: italic; }
+
+  #sidebar { width: 220px; flex-shrink: 0; background: var(--surface); border-left: 1px solid var(--border); overflow-y: auto; padding: 14px 12px; display: flex; flex-direction: column; gap: 12px; }
+  .sidebar-section { font-size: 11px; }
+  .sidebar-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--text-dim); margin-bottom: 6px; }
+  .var-item { font-size: 11px; font-family: monospace; color: var(--text-muted); padding: 4px 0; border-bottom: 1px solid var(--border-soft, rgba(255,255,255,0.06)); }
+  .var-item:last-child { border-bottom: none; }
+  .var-key { color: var(--text-dim); }
+  .var-val { color: var(--accent); font-weight: 700; }
+
+  #nav-row { flex-shrink: 0; display: flex; align-items: center; gap: 8px; padding: 10px 16px; background: var(--surface); border-top: 1px solid var(--border); }
+  .btn-step { padding: 6px 14px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--surface); color: var(--text); font-family: inherit; font-size: 12px; cursor: pointer; transition: background .15s; }
+  .btn-step:hover { background: #334155; }
+  .btn-play { padding: 6px 14px; border-radius: var(--radius-sm); background: var(--accent); border: 1px solid var(--accent); color: #fff; font-family: inherit; font-size: 12px; cursor: pointer; }
+  .btn-play:hover { opacity: 0.9; }
+  #nav-row select { padding: 5px 8px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: #1e293b; color: var(--text); font-size: 12px; font-family: inherit; cursor: pointer; }
+</style>
 </head>
 <body>
 
 <div class="viz-inputs">
-  <div class="field">
+  <div>
     <label>Preset</label>
-    <select id="presetSel" onchange="loadPreset()">
-      <option value="">— pick a preset —</option>
+    <select id="presetSel" onchange="loadPreset()" style="width:200px;">
+      <option value="">&#8212; pick a preset &#8212;</option>
       <option value="mixed">Mixed [2,1,2,4,3,1,5,3]</option>
       <option value="ascending">Ascending [1,2,3,4,5,6]</option>
       <option value="descending">Descending [6,5,4,3,2,1]</option>
@@ -143,101 +103,120 @@
       <option value="single">Single [7]</option>
     </select>
   </div>
-  <div class="field">
+  <div>
     <label>Array (comma-separated)</label>
-    <input type="text" id="arrInput" value="2,1,2,4,3,1,5,3" placeholder="e.g. 2,1,2,4,3" />
+    <input type="text" id="arrInput" value="2,1,2,4,3,1,5,3" style="width:200px;" />
   </div>
-  <div class="field">
+  <div>
     <label>Mode</label>
-    <select id="modeSel" onchange="buildAndRun()">
+    <select id="modeSel" onchange="buildAndRun()" style="width:180px;">
       <option value="nge">Next Greater Element</option>
       <option value="nse">Next Smaller Element</option>
     </select>
   </div>
-  <button class="btn-run" onclick="buildAndRun()">Run</button>
-  <button class="btn-rand" onclick="randomExample()">&#x1F3B2; Random</button>
+  <button class="vi-btn-run" onclick="buildAndRun()">Run</button>
+  <button class="vi-btn-rand" onclick="randomExample()">Random</button>
 </div>
 
 <div class="controls"></div>
 
-<div id="viz-root">
-  <div id="status-bar">Press Run to start.</div>
+<div id="header">
+  <span id="phase-badge">Init</span>
+  <span style="font-size:13px;font-weight:700;">Monotonic Stack</span>
+  <span id="step-desc"></span>
+  <span id="step-counter">Step 0 / 0</span>
+</div>
 
-  <div class="main-area">
-    <div class="left-col">
-      <div>
-        <div class="array-label">Input Array</div>
-        <div class="array-row" id="arr-row"></div>
+<div id="main">
+  <div id="viz-area">
+    <div class="main-viz">
+      <div class="left-col">
+        <div>
+          <div class="array-label">Input Array</div>
+          <div class="array-row" id="arr-row"></div>
+        </div>
+        <div>
+          <div class="array-label">Result</div>
+          <div class="array-row" id="res-row"></div>
+        </div>
+        <div class="legend">
+          <div class="leg-item">
+            <div class="leg-swatch" style="border-color:var(--accent);background:rgba(122,162,247,0.15)"></div>
+            Current
+          </div>
+          <div class="leg-item">
+            <div class="leg-swatch" style="border-color:#a78bfa;background:rgba(167,139,250,0.14)"></div>
+            In stack
+          </div>
+          <div class="leg-item">
+            <div class="leg-swatch" style="border-color:var(--green);background:rgba(158,206,106,0.14)"></div>
+            Answer found
+          </div>
+          <div class="leg-item">
+            <div class="leg-swatch" style="border-color:var(--text-dim);background:transparent;opacity:0.5"></div>
+            Done
+          </div>
+        </div>
       </div>
-      <div>
-        <div class="array-label">Result</div>
-        <div class="array-row" id="res-row"></div>
-      </div>
-      <div class="legend">
-        <div class="leg-item">
-          <div class="leg-swatch" style="border-color:var(--accent);background:color-mix(in srgb,var(--accent) 18%,transparent)"></div>
-          Current
+      <div class="right-col">
+        <div class="stack-label">Stack (top &#8593;)</div>
+        <div class="stack-col" id="stack-col">
+          <div class="stack-empty-hint">empty</div>
         </div>
-        <div class="leg-item">
-          <div class="leg-swatch" style="border-color:#a78bfa;background:color-mix(in srgb,#a78bfa 14%,transparent)"></div>
-          In stack
-        </div>
-        <div class="leg-item">
-          <div class="leg-swatch" style="border-color:var(--success);background:color-mix(in srgb,var(--success) 18%,transparent)"></div>
-          Answer found
-        </div>
-        <div class="leg-item">
-          <div class="leg-swatch" style="border-color:var(--text-dim);background:transparent;opacity:0.5"></div>
-          Done
-        </div>
-      </div>
-    </div>
-    <div class="right-col">
-      <div class="stack-label">Stack (top &uarr;)</div>
-      <div class="stack-col" id="stack-col">
-        <div class="stack-empty-hint">empty</div>
       </div>
     </div>
   </div>
 
-  <div>
-    <span class="code-toggle" onclick="toggleCode()">&#9658; Show pseudocode</span>
-    <div id="code-panel" style="display:none">
-      <pre id="code-body"><span id="cl0" class="cl">def next_greater_element(nums):</span>
-<span id="cl1" class="cl">    n = len(nums)</span>
-<span id="cl2" class="cl">    result = [-1] * n</span>
-<span id="cl3" class="cl">    stack = []  # stores indices</span>
-<span id="cl4" class="cl"> </span>
-<span id="cl5" class="cl">    for i in range(n):</span>
-<span id="cl6" class="cl">        # pop while stack top &lt; current (NGE)</span>
-<span id="cl7" class="cl">        while stack and nums[stack[-1]] &lt; nums[i]:</span>
-<span id="cl8" class="cl">            idx = stack.pop()</span>
-<span id="cl9" class="cl">            result[idx] = nums[i]</span>
-<span id="cl10" class="cl">        stack.append(i)</span>
-<span id="cl11" class="cl"> </span>
-<span id="cl12" class="cl">    # remaining have no next greater element</span>
-<span id="cl13" class="cl">    # result[idx] stays -1</span>
-<span id="cl14" class="cl">    return result</span></pre>
+  <div id="resize-handle"></div>
+
+  <div id="code-panel">
+    <div class="code-panel-title">Code</div>
+    <div id="code-body">
+      <div class="cl" id="cl0"><span class="ln">1</span>def next_greater_element(nums):</div>
+      <div class="cl" id="cl1"><span class="ln">2</span>  n = len(nums)</div>
+      <div class="cl" id="cl2"><span class="ln">3</span>  result = [-1] * n</div>
+      <div class="cl" id="cl3"><span class="ln">4</span>  stack = []  # stores indices</div>
+      <div class="cl" id="cl4"><span class="ln">5</span> </div>
+      <div class="cl" id="cl5"><span class="ln">6</span>  for i in range(n):</div>
+      <div class="cl" id="cl6"><span class="ln">7</span>    # pop while stack top &lt; current (NGE)</div>
+      <div class="cl" id="cl7"><span class="ln">8</span>    while stack and nums[stack[-1]] &lt; nums[i]:</div>
+      <div class="cl" id="cl8"><span class="ln">9</span>      idx = stack.pop()</div>
+      <div class="cl" id="cl9"><span class="ln">10</span>      result[idx] = nums[i]</div>
+      <div class="cl" id="cl10"><span class="ln">11</span>    stack.append(i)</div>
+      <div class="cl" id="cl11"><span class="ln">12</span> </div>
+      <div class="cl" id="cl12"><span class="ln">13</span>  # remaining have no next greater element</div>
+      <div class="cl" id="cl13"><span class="ln">14</span>  # result[idx] stays -1</div>
+      <div class="cl" id="cl14"><span class="ln">15</span>  return result</div>
+    </div>
+  </div>
+
+  <div id="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-title">Variables</div>
+      <div id="vars-items"><span style="color:var(--text-dim);">&#8212;</span></div>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-title">Stack Contents</div>
+      <div id="stack-vars"><span style="color:var(--text-dim);">empty</span></div>
     </div>
   </div>
 </div>
 
-<!-- hidden nav buttons required by VizNav bridge -->
-<div style="display:none">
-  <button id="prevBtn"></button>
-  <button id="stepBtn"></button>
-  <button id="playBtn"></button>
-  <button id="resetBtn"></button>
+<div id="nav-row">
+  <button id="prevBtn" class="btn-step">&#8592; Prev</button>
+  <button id="stepBtn" class="btn-step">Step &#8594;</button>
+  <button id="playBtn" class="btn-play">Play</button>
+  <button id="resetBtn" class="btn-step">&#8635; Reset</button>
   <select id="speedSel">
-    <option value="1200">0.5x</option>
-    <option value="700" selected>1x</option>
-    <option value="400">2x</option>
-    <option value="200">4x</option>
+    <option value="1200">0.5&#215;</option>
+    <option value="700" selected>1&#215;</option>
+    <option value="400">2&#215;</option>
+    <option value="200">4&#215;</option>
   </select>
 </div>
 
 <script>
-// ─── State ────────────────────────────────────────────────────────────────────
+// State
 var steps = [];
 var currentStep = -1;
 var playTimer = null;
@@ -256,7 +235,7 @@ var PRESETS = {
   single:     [7],
 };
 
-// ─── Input helpers ────────────────────────────────────────────────────────────
+// Input helpers
 function loadPreset() {
   var key = document.getElementById('presetSel').value;
   if (!key) return;
@@ -278,12 +257,12 @@ function parseInput() {
   return raw.split(',').map(function(s){ return parseInt(s.trim(), 10); }).filter(function(n){ return !isNaN(n); });
 }
 
-// ─── Simulation builder ───────────────────────────────────────────────────────
+// Simulation builder
 function buildSteps(nums, mode) {
   var n = nums.length;
   var result = [];
-  for (var k = 0; k < n; k++) result.push(null); // null = not yet known
-  var stack = []; // stores indices
+  for (var k = 0; k < n; k++) result.push(null);
+  var stack = [];
   var stepList = [];
 
   stepList.push({
@@ -298,7 +277,6 @@ function buildSteps(nums, mode) {
   });
 
   for (var i = 0; i < n; i++) {
-    // visit step
     stepList.push({
       phase: 'visit',
       i: i,
@@ -310,7 +288,6 @@ function buildSteps(nums, mode) {
       codeLines: [5,7],
     });
 
-    // pop loop
     while (stack.length > 0) {
       var top = stack[stack.length - 1];
       var shouldPop = mode === 'nge' ? (nums[top] < nums[i]) : (nums[top] > nums[i]);
@@ -335,7 +312,6 @@ function buildSteps(nums, mode) {
       });
     }
 
-    // push step
     stack.push(i);
     stepList.push({
       phase: 'push',
@@ -349,7 +325,6 @@ function buildSteps(nums, mode) {
     });
   }
 
-  // finalize: remaining items in stack get -1
   while (stack.length > 0) {
     var idx = stack.pop();
     result[idx] = -1;
@@ -385,7 +360,7 @@ function getCellStates(currentI, stack, result, n) {
   return states;
 }
 
-// ─── DOM build ────────────────────────────────────────────────────────────────
+// DOM build
 function buildDOM(nums) {
   var arrRow = document.getElementById('arr-row');
   var resRow = document.getElementById('res-row');
@@ -397,11 +372,18 @@ function buildDOM(nums) {
   }
 }
 
-// ─── Render ───────────────────────────────────────────────────────────────────
+// Render
 function render(idx) {
   if (!steps.length) return;
   var s = steps[idx];
   var nums = _nums;
+
+  // header
+  var phase = s.phase || 'init';
+  document.getElementById('phase-badge').textContent = phase.charAt(0).toUpperCase() + phase.slice(1);
+  document.getElementById('step-counter').textContent = 'Step ' + (idx + 1) + ' / ' + steps.length;
+  var descEl = document.getElementById('step-desc');
+  if (descEl) descEl.textContent = s.desc || '';
 
   // cell states
   for (var i = 0; i < s.cellStates.length; i++) {
@@ -443,9 +425,29 @@ function render(idx) {
     }
   }
 
-  // status
-  document.getElementById('status-bar').innerHTML =
-    'Step ' + (idx + 1) + ' / ' + steps.length + ' &mdash; ' + s.desc;
+  // sidebar vars
+  var varsHtml = '';
+  if (s.i >= 0) {
+    varsHtml += '<div class="var-item"><span class="var-key">i</span> = <span class="var-val">' + s.i + '</span></div>';
+    varsHtml += '<div class="var-item"><span class="var-key">nums[i]</span> = <span class="var-val">' + nums[s.i] + '</span></div>';
+  }
+  varsHtml += '<div class="var-item"><span class="var-key">stack.size</span> = <span class="var-val">' + s.stackSnap.length + '</span></div>';
+  if (s.poppingIdx >= 0) {
+    varsHtml += '<div class="var-item"><span class="var-key">popping</span> = <span class="var-val">i=' + s.poppingIdx + '</span></div>';
+  }
+  document.getElementById('vars-items').innerHTML = varsHtml || '<span style="color:var(--text-dim);">&#8212;</span>';
+
+  var stackVarsHtml = '';
+  if (s.stackSnap.length === 0) {
+    stackVarsHtml = '<span style="color:var(--text-dim);">empty</span>';
+  } else {
+    for (var k = s.stackSnap.length - 1; k >= 0; k--) {
+      var si = s.stackSnap[k];
+      var isTopK = (k === s.stackSnap.length - 1);
+      stackVarsHtml += '<div class="var-item"><span class="var-key">' + (isTopK ? '&#9654; ' : '  ') + 'i=' + si + '</span> &#8594; <span class="var-val">' + nums[si] + '</span></div>';
+    }
+  }
+  document.getElementById('stack-vars').innerHTML = stackVarsHtml;
 
   // code highlight
   for (var cl = 0; cl <= 14; cl++) {
@@ -459,19 +461,21 @@ function render(idx) {
   }
 }
 
-// ─── Code panel update ────────────────────────────────────────────────────────
+// Code panel update
 function updateCodePseudo(mode) {
   var fn  = mode === 'nge' ? 'next_greater_element' : 'next_smaller_element';
-  var cmt = mode === 'nge' ? '# pop while stack top < current (NGE)' : '# pop while stack top > current (NSE)';
+  var cmt = mode === 'nge'
+    ? '    # pop while stack top &lt; current (NGE)'
+    : '    # pop while stack top &gt; current (NSE)';
   var cnd = mode === 'nge'
-    ? '        while stack and nums[stack[-1]] &lt; nums[i]:'
-    : '        while stack and nums[stack[-1]] &gt; nums[i]:';
-  document.getElementById('cl0').textContent  = 'def ' + fn + '(nums):';
-  document.getElementById('cl6').textContent  = '        ' + cmt;
-  document.getElementById('cl7').innerHTML    = cnd;
+    ? '    while stack and nums[stack[-1]] &lt; nums[i]:'
+    : '    while stack and nums[stack[-1]] &gt; nums[i]:';
+  document.getElementById('cl0').innerHTML = '<span class="ln">1</span>def ' + fn + '(nums):';
+  document.getElementById('cl6').innerHTML = '<span class="ln">7</span>' + cmt;
+  document.getElementById('cl7').innerHTML = '<span class="ln">8</span>' + cnd;
 }
 
-// ─── Build & Run ──────────────────────────────────────────────────────────────
+// Build & Run
 function buildAndRun() {
   clearPlay();
   _nums = parseInput();
@@ -484,7 +488,7 @@ function buildAndRun() {
   render(0);
 }
 
-// ─── Playback ─────────────────────────────────────────────────────────────────
+// Playback
 function clearPlay() {
   if (playTimer) { clearInterval(playTimer); playTimer = null; }
   isPlaying = false;
@@ -504,7 +508,7 @@ function doPlay() {
   }, speedMs);
 }
 
-// ─── VizNav button wiring ─────────────────────────────────────────────────────
+// Button wiring + resize handle
 document.addEventListener('DOMContentLoaded', function() {
   var prev  = document.getElementById('prevBtn');
   var step  = document.getElementById('stepBtn');
@@ -516,19 +520,29 @@ document.addEventListener('DOMContentLoaded', function() {
   if (play)  play.onclick  = doPlay;
   if (reset) reset.onclick = function(){ clearPlay(); currentStep = 0; render(0); };
   if (speed) speed.onchange = function(e){ speedMs = parseInt(e.target.value,10) || 700; };
+
+  (function() {
+    var handle = document.getElementById('resize-handle');
+    var panel  = document.getElementById('code-panel');
+    var dragging = false, startX = 0, startW = 0;
+    handle.addEventListener('mousedown', function(e) {
+      dragging = true; startX = e.clientX; startW = panel.offsetWidth;
+      handle.classList.add('dragging');
+      e.preventDefault();
+    });
+    document.addEventListener('mousemove', function(e) {
+      if (!dragging) return;
+      var delta = startX - e.clientX;
+      panel.style.width = Math.min(560, Math.max(120, startW + delta)) + 'px';
+    });
+    document.addEventListener('mouseup', function() {
+      if (!dragging) return;
+      dragging = false; handle.classList.remove('dragging');
+    });
+  })();
+
+  buildAndRun();
 });
-
-// ─── Code toggle ──────────────────────────────────────────────────────────────
-function toggleCode() {
-  var panel  = document.getElementById('code-panel');
-  var toggle = document.querySelector('.code-toggle');
-  var vis    = panel.style.display !== 'none';
-  panel.style.display = vis ? 'none' : 'block';
-  toggle.innerHTML = (vis ? '&#9658;' : '&#9660;') + ' ' + (vis ? 'Show' : 'Hide') + ' pseudocode';
-}
-
-// ─── Boot ─────────────────────────────────────────────────────────────────────
-buildAndRun();
 </script>
 </body>
 </html>
