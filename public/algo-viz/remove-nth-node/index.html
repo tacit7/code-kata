@@ -471,9 +471,14 @@ function render(snap, cursor, total) {
     var isRemoved = (deleted && isTarget);
     var isBypassSrc = (deleted && slowIdx === i);
 
+    // Skip the removed node entirely — it's gone
+    if (isRemoved) {
+      // If there's a next node, the arrow connecting bypass-src to next is added below
+      continue;
+    }
+
     var cls = '';
-    if (isRemoved)            cls = 'removed-node';
-    else if (isBypassSrc)     cls = 'bypass-src';
+    if (isBypassSrc)          cls = 'bypass-src';
     else if (isTarget)        cls = 'target-node';
     else if (isFast && isSlow) cls = 'both-active';
     else if (isFast)          cls = 'fast-active';
@@ -486,24 +491,21 @@ function render(snap, cursor, total) {
 
     listCanvas.appendChild(makeNodeEl(String(vals[i]), cls, badges));
 
-    // Arrow after this node (not after last)
-    if (i < len - 1) {
-      var nextIsRemoved = (deleted && removeIdx === i + 1);
-      var thisIsRemoved = (deleted && removeIdx === i);
-      var thisIsBypass  = (deleted && slowIdx === i);
-      var aCls = '';
-      if (thisIsBypass && nextIsRemoved) aCls = 'bypass-arrow';
-      else if (thisIsRemoved)            aCls = 'removed-arrow';
-      listCanvas.appendChild(makeArrow(aCls));
+    // Arrow after this node — skip if next node is the removed one (bypass handled by next iteration)
+    var nextIdx = i + 1;
+    var nextIsRemoved = (deleted && removeIdx === nextIdx);
+    if (nextIdx < len && !nextIsRemoved) {
+      listCanvas.appendChild(makeArrow(''));
+    } else if (nextIdx < len && nextIsRemoved) {
+      // bypass: connect this node directly to the node after the removed one
+      listCanvas.appendChild(makeArrow('bypass-arrow'));
+      // skip the removed node (handled by continue above)
     }
   }
 
   // Arrow before null sentinel
-  var lastIsRemoved  = (deleted && removeIdx === len - 1);
-  var lastIsBypassSrc = (deleted && slowIdx === len - 1);
-  var preNullCls = '';
-  if (lastIsRemoved && !lastIsBypassSrc) preNullCls = 'removed-arrow';
-  listCanvas.appendChild(makeArrow(preNullCls));
+  var lastIsRemoved = (deleted && removeIdx === len - 1);
+  listCanvas.appendChild(makeArrow(''));
 
   // Null sentinel
   var nullIsFast = (fastIdx === len);
