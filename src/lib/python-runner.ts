@@ -46,11 +46,18 @@ function extractUsefulTraceback(msg: string): string {
   return meaningful.slice(start).join("\n");
 }
 
+const WATCHDOG_MS = 5000;
+
 export async function runPythonTests(
   userCode: string,
   testCode: string,
 ): Promise<TestResult[]> {
   const pyodide = await getPyodide();
+
+  // Set up interrupt buffer so we can signal a KeyboardInterrupt from JS
+  // when a test times out (e.g. infinite loop).
+  const interruptBuffer = new Uint8Array(new SharedArrayBuffer(1));
+  pyodide.setInterruptBuffer(interruptBuffer);
 
   const testNames = [
     ...testCode.matchAll(/def\s+(test_\w+)\s*\(/g),
@@ -73,14 +80,25 @@ export async function runPythonTests(
     pyodide.setStdout({
       batched: (line) => { captured += line + "\n"; },
     });
+
+    interruptBuffer[0] = 0; // clear any prior signal
+    const watchdog = setTimeout(() => {
+      interruptBuffer[0] = 2; // SIGINT → Pyodide raises KeyboardInterrupt
+    }, WATCHDOG_MS);
+
     try {
       const script = `${PYTHON_ASSERT_HELPERS}\n${userCode}\n${testCode}\n${name}()`;
       await pyodide.runPythonAsync(script);
+      clearTimeout(watchdog);
       const output = captured.trim() || undefined;
       results.push({ name, passed: true, output });
     } catch (err) {
+      clearTimeout(watchdog);
       const msg = err instanceof Error ? err.message : String(err);
-      const error = extractUsefulTraceback(msg);
+      const isTimeout = interruptBuffer[0] === 2 || msg.includes("KeyboardInterrupt");
+      const error = isTimeout
+        ? `Execution exceeded ${WATCHDOG_MS / 1000}s — possible infinite loop`
+        : extractUsefulTraceback(msg);
       const output = captured.trim() || undefined;
       results.push({ name, passed: false, error, output });
     }
