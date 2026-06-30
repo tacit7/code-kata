@@ -150,7 +150,17 @@ type VizKataName =
   | "Min Stack"
   | "Evaluate Reverse Polish Notation"
   | "Daily Temperatures"
-  | "Reverse Linked List";
+  | "Reverse Linked List"
+  | "Longest Substring Without Repeating Characters"
+  | "Longest Repeating Character Replacement"
+  | "Minimum Window Substring"
+  | "Sliding Window Maximum"
+  | "Two Sum II - Input Array Is Sorted"
+  | "Search in Rotated Sorted Array"
+  | "Find Minimum in Rotated Sorted Array"
+  | "Koko Eating Bananas"
+  | "Reorder List"
+  | "Car Fleet";
 
 // Kata name → algo-viz subfolder served from /algo-viz/<folder>/index.html
 const VIZ_MAP: Partial<Record<VizKataName, string>> = {
@@ -288,6 +298,16 @@ const VIZ_MAP: Partial<Record<VizKataName, string>> = {
   "Evaluate Reverse Polish Notation": "evaluate-rpn",
   "Daily Temperatures":           "daily-temperatures",
   "Reverse Linked List":          "reverse-linked-list",
+  "Longest Substring Without Repeating Characters": "longest-substring-no-repeat",
+  "Longest Repeating Character Replacement": "longest-repeating-char-replacement",
+  "Minimum Window Substring":     "minimum-window-substring",
+  "Sliding Window Maximum":       "sliding-window-max",
+  "Two Sum II - Input Array Is Sorted": "two-sum-ii",
+  "Search in Rotated Sorted Array": "search-rotated-array",
+  "Find Minimum in Rotated Sorted Array": "find-min-rotated",
+  "Koko Eating Bananas":          "koko-eating-bananas",
+  "Reorder List":                 "reorder-list",
+  "Car Fleet":                    "car-fleet",
 };
 
 // Overrides for slugs that can't be reliably derived from the display name
