@@ -213,24 +213,22 @@ async function migrateTagsIfEmpty(db: Database) {
   );
   if (rows[0].count > 0) return; // tags already populated
   // All tags are empty defaults — reseed to pick up tag data
-  await db.execute("PRAGMA foreign_keys = OFF");
   await db.execute("DELETE FROM user_code");
+  await db.execute("DELETE FROM attempts");
   await db.execute("DELETE FROM katas");
   await db.execute("DELETE FROM sqlite_sequence WHERE name = 'katas'");
-  await db.execute("PRAGMA foreign_keys = ON");
   await seedKatasForce(db);
 }
 
-/** Drop all katas and reseed from source arrays. Destructive: orphans attempts/user_code/dailyKataIds. */
+/** Drop all katas and reseed from source arrays. Destructive: clears attempts/user_code. */
 export async function reseedKatas(): Promise<string> {
   const db = await getDb();
-  await db.execute("PRAGMA foreign_keys = OFF");
   await db.execute("DELETE FROM user_code");
+  await db.execute("DELETE FROM attempts");
   await db.execute("DELETE FROM katas");
   await db.execute("DELETE FROM sqlite_sequence WHERE name = 'katas'");
-  await db.execute("PRAGMA foreign_keys = ON");
   await seedKatasForce(db);
-  return "Reseeded all katas. Previous attempt/user_code references are now orphaned.";
+  return "Reseeded all katas.";
 }
 
 async function seedKatasForce(db: Database) {
