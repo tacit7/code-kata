@@ -119,16 +119,16 @@
     .desc-phase { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); }
     .desc-text  { font-size: 0.83rem; color: var(--text-muted); }
 
-    .btn-play {
+    .playBtn {
       background: #15803d; border: none; border-radius: var(--radius-sm);
       color: #fff; cursor: pointer; font-size: 0.88rem; font-weight: 600;
       padding: 9px 16px; transition: background 0.2s;
     }
-    .btn-play:hover { background: #166534; }
-    .btn-play.playing { background: #c2410c; }
-    .btn-play.playing:hover { background: #9a3412; }
-    .btn-play:disabled { opacity: 0.4; cursor: not-allowed; }
-    .speed-select {
+    .playBtn:hover { background: #166534; }
+    .playBtn.playing { background: #c2410c; }
+    .playBtn.playing:hover { background: #9a3412; }
+    .playBtn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .speedSel {
       background: var(--bg); border: 1px solid var(--border);
       border-radius: var(--radius-sm); color: var(--text);
       font-size: 0.85rem; padding: 8px 10px; outline: none; width: 80px;
@@ -212,10 +212,10 @@
 
   <div class="nav-desc-row">
     <div class="nav-box">
-      <button class="btn-step" id="btn-back" disabled>&larr;</button>
-      <button class="btn-step" id="btn-next" disabled>&rarr;</button>
-      <button class="btn-play" id="btn-play" disabled>&#9654; Play</button>
-      <select class="speed-select" id="speed-select">
+      <button class="stepBtn" id="prevBtn" disabled>&larr;</button>
+      <button class="stepBtn" id="stepBtn" disabled>&rarr;</button>
+      <button class="playBtn" id="playBtn" disabled>&#9654; Play</button>
+      <select class="speedSel" id="speedSel">
         <option value="700">Slow</option>
         <option value="350" selected>Medium</option>
         <option value="120">Fast</option>
@@ -245,10 +245,10 @@ var PART_COLORS = [
 
 window.addEventListener('DOMContentLoaded', function() {
   nav = VizNav({
-    btnPrev:  document.getElementById('btn-back'),
-    btnNext:  document.getElementById('btn-next'),
-    btnPlay:  document.getElementById('btn-play'),
-    speedSel: document.getElementById('speed-select'),
+    btnPrev:  document.getElementById('prevBtn'),
+    btnNext:  document.getElementById('stepBtn'),
+    btnPlay:  document.getElementById('playBtn'),
+    speedSel: document.getElementById('speedSel'),
     render: function(snap, cur, total) {
       applyStep(snap, cur > 0);
       document.getElementById('phase-label').textContent =

@@ -153,17 +153,17 @@
       border-top: 1px solid var(--border);
     }
 
-    .btn-play {
+    .playBtn {
       background: #15803d; border: none; border-radius: var(--radius-sm);
       color: #fff; cursor: pointer; font-size: 0.88rem; font-weight: 600;
       padding: 8px 14px; transition: background 0.2s; white-space: nowrap;
     }
-    .btn-play:hover { background: #166534; }
-    .btn-play.playing { background: #c2410c; }
-    .btn-play.playing:hover { background: #9a3412; }
-    .btn-play:disabled { opacity: 0.4; cursor: not-allowed; }
+    .playBtn:hover { background: #166534; }
+    .playBtn.playing { background: #c2410c; }
+    .playBtn.playing:hover { background: #9a3412; }
+    .playBtn:disabled { opacity: 0.4; cursor: not-allowed; }
 
-    .speed-select {
+    .speedSel {
       background: var(--bg); border: 1px solid var(--border);
       border-radius: var(--radius-sm); color: var(--text);
       font-size: 0.82rem; padding: 6px 8px; outline: none;
@@ -318,10 +318,10 @@
 
 <!-- Bottom nav bar -->
 <div class="bottom-bar">
-  <button class="btn-step" id="btn-back" disabled>&larr;</button>
-  <button class="btn-step" id="btn-next" disabled>&rarr;</button>
-  <button class="btn-play" id="btn-play" disabled>&#9654; Play</button>
-  <select class="speed-select" id="speed-select">
+  <button class="stepBtn" id="prevBtn" disabled>&larr;</button>
+  <button class="stepBtn" id="stepBtn" disabled>&rarr;</button>
+  <button class="playBtn" id="playBtn" disabled>&#9654; Play</button>
+  <select class="speedSel" id="speedSel">
     <option value="900">Slow</option>
     <option value="450" selected>Medium</option>
     <option value="150">Fast</option>
@@ -585,10 +585,10 @@ function renderStep(s, animate, cur, total) {
 // ── Build & run ───────────────────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', function() {
   nav = VizNav({
-    btnPrev:  document.getElementById('btn-back'),
-    btnNext:  document.getElementById('btn-next'),
-    btnPlay:  document.getElementById('btn-play'),
-    speedSel: document.getElementById('speed-select'),
+    btnPrev:  document.getElementById('prevBtn'),
+    btnNext:  document.getElementById('stepBtn'),
+    btnPlay:  document.getElementById('playBtn'),
+    speedSel: document.getElementById('speedSel'),
     render: function(s, cur, total) { renderStep(s, true, cur, total); },
   });
   buildAndRun();

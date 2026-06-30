@@ -51,10 +51,10 @@
 </div>
 
 <div class="step-nav">
-  <button class="btn-step" id="btn-back" disabled>← Back</button>
-  <button class="btn-step" id="btn-next" disabled>Next →</button>
-  <button id="btn-play" style="background:#15803d;color:#fff;border:none;border-radius:4px;padding:6px 14px;font-weight:600;cursor:pointer;">&#9654; Play</button>
-  <select id="speed-select" style="background:#1a1b26;border:1px solid #2d3148;color:#c0caf5;border-radius:4px;padding:6px 8px;">
+  <button class="stepBtn" id="prevBtn" disabled>← Back</button>
+  <button class="stepBtn" id="stepBtn" disabled>Next →</button>
+  <button id="playBtn" style="background:#15803d;color:#fff;border:none;border-radius:4px;padding:6px 14px;font-weight:600;cursor:pointer;">&#9654; Play</button>
+  <select id="speedSel" style="background:#1a1b26;border:1px solid #2d3148;color:#c0caf5;border-radius:4px;padding:6px 8px;">
     <option value="900">Slow</option>
     <option value="400" selected>Medium</option>
     <option value="150">Fast</option>
@@ -84,10 +84,10 @@ const C = {
 
 // ─── VizNav init ─────────────────────────────────────────────────────────────
 var nav = VizNav({
-  btnPrev:  document.getElementById('btn-back'),
-  btnNext:  document.getElementById('btn-next'),
-  btnPlay:  document.getElementById('btn-play'),
-  speedSel: document.getElementById('speed-select'),
+  btnPrev:  document.getElementById('prevBtn'),
+  btnNext:  document.getElementById('stepBtn'),
+  btnPlay:  document.getElementById('playBtn'),
+  speedSel: document.getElementById('speedSel'),
   render: function(snap, cur, total) {
     drawSnap(snap);
     document.getElementById('phase-label').textContent =

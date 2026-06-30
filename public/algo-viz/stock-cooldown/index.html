@@ -151,10 +151,10 @@
 <!-- Bottom nav -->
 <div class="bottom-bar">
   <div class="nav-row">
-    <button class="nav-btn" id="btn-prev">&#8592; Prev</button>
-    <button class="nav-btn" id="btn-play">Play</button>
-    <button class="nav-btn" id="btn-next">Next &#8594;</button>
-    <select class="speed-sel" id="speed-sel">
+    <button class="nav-btn" id="prevBtn">&#8592; Prev</button>
+    <button class="nav-btn" id="playBtn">Play</button>
+    <button class="nav-btn" id="stepBtn">Next &#8594;</button>
+    <select class="speedSel" id="speedSel">
       <option value="1200">Slow</option>
       <option value="700" selected>Normal</option>
       <option value="350">Fast</option>
@@ -551,10 +551,10 @@ function hexToRgb(hex) {
 
 // ── VizNav wiring ─────────────────────────────────────────────────────────────
 var nav = VizNav({
-  btnPrev:  document.getElementById('btn-prev'),
-  btnNext:  document.getElementById('btn-next'),
-  btnPlay:  document.getElementById('btn-play'),
-  speedSel: document.getElementById('speed-sel'),
+  btnPrev:  document.getElementById('prevBtn'),
+  btnNext:  document.getElementById('stepBtn'),
+  btnPlay:  document.getElementById('playBtn'),
+  speedSel: document.getElementById('speedSel'),
   render:   render,
 });
 

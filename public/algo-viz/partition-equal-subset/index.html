@@ -151,7 +151,7 @@
     .result-badge.yes { background: var(--green-bg); color: var(--green); border: 1px solid var(--green-border); display: block; }
     .result-badge.no  { background: #1c0000; color: #f87171; border: 1px solid #7f1d1d; display: block; }
 
-    .speed-select {
+    .speedSel {
       background: var(--bg); border: 1px solid var(--border);
       border-radius: var(--radius-sm); color: var(--text);
       font-size: 0.85rem; padding: 8px 10px; outline: none; width: 80px;
@@ -202,10 +202,10 @@
 
   <div class="bottom-section">
     <div class="nav-panel">
-      <button class="btn-step" id="btn-back" disabled>&larr;</button>
-      <button class="btn-step" id="btn-next" disabled>&rarr;</button>
-      <button class="btn-play" id="btn-play" disabled>&#9654; Play</button>
-      <select class="speed-select" id="speed-select">
+      <button class="stepBtn" id="prevBtn" disabled>&larr;</button>
+      <button class="stepBtn" id="stepBtn" disabled>&rarr;</button>
+      <button class="playBtn" id="playBtn" disabled>&#9654; Play</button>
+      <select class="speedSel" id="speedSel">
         <option value="700">Slow</option>
         <option value="350" selected>Med</option>
         <option value="100">Fast</option>
@@ -260,10 +260,10 @@ function loadPreset(idx) {
 
 window.addEventListener('DOMContentLoaded', function() {
   nav = VizNav({
-    btnPrev:  document.getElementById('btn-back'),
-    btnNext:  document.getElementById('btn-next'),
-    btnPlay:  document.getElementById('btn-play'),
-    speedSel: document.getElementById('speed-select'),
+    btnPrev:  document.getElementById('prevBtn'),
+    btnNext:  document.getElementById('stepBtn'),
+    btnPlay:  document.getElementById('playBtn'),
+    speedSel: document.getElementById('speedSel'),
     render: function(snap, cur, total) {
       renderSnap(snap, cur > 0);
       document.getElementById('phase-label').textContent =

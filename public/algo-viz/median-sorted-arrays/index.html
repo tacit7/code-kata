@@ -226,10 +226,10 @@
     <div style="display:flex;gap:10px">
       <div class="panel-box" style="flex:0 0 auto">
         <div class="ctrl-row">
-          <button class="btn" id="btn-prev">&larr;</button>
-          <button class="btn" id="btn-next">&rarr;</button>
-          <button class="btn primary" id="btn-play">Play</button>
-          <select class="speed-select" id="speed-select">
+          <button class="btn" id="prevBtn">&larr;</button>
+          <button class="btn" id="stepBtn">&rarr;</button>
+          <button class="btn primary" id="playBtn">Play</button>
+          <select class="speedSel" id="speedSel">
             <option value="1400">Slow</option>
             <option value="800" selected>Normal</option>
             <option value="380">Fast</option>
@@ -537,10 +537,10 @@ var phBadge   = document.getElementById('phase-badge');
 var statusDesc = document.getElementById('status-desc');
 var counter   = document.getElementById('counter');
 var bsInfo    = document.getElementById('bs-info');
-var btnPrev   = document.getElementById('btn-prev');
-var btnNext   = document.getElementById('btn-next');
-var btnPlay   = document.getElementById('btn-play');
-var speedSel  = document.getElementById('speed-select');
+var btnPrev   = document.getElementById('prevBtn');
+var btnNext   = document.getElementById('stepBtn');
+var btnPlay   = document.getElementById('playBtn');
+var speedSel  = document.getElementById('speedSel');
 var presetSel = document.getElementById('preset-select');
 
 var valLo = document.getElementById('val-lo');

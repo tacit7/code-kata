@@ -185,10 +185,10 @@
 <!-- BOTTOM NAV -->
 <div id="nav-bar">
   <div id="nav-controls">
-    <button class="nav-btn" id="btn-prev">&#8592; Prev</button>
-    <button class="nav-btn" id="btn-next">Next &#8594;</button>
-    <button class="nav-btn" id="btn-play">Play</button>
-    <select id="speed-sel">
+    <button class="nav-btn" id="prevBtn">&#8592; Prev</button>
+    <button class="nav-btn" id="stepBtn">Next &#8594;</button>
+    <button class="nav-btn" id="playBtn">Play</button>
+    <select id="speedSel">
       <option value="1200">0.8×</option>
       <option value="800" selected>1×</option>
       <option value="500">1.5×</option>
@@ -476,10 +476,10 @@ function setupHandDisplay(hand) {
 
 // ── wire up ────────────────────────────────────────────────────────────────
 var nav = VizNav({
-  btnPrev:  document.getElementById('btn-prev'),
-  btnNext:  document.getElementById('btn-next'),
-  btnPlay:  document.getElementById('btn-play'),
-  speedSel: document.getElementById('speed-sel'),
+  btnPrev:  document.getElementById('prevBtn'),
+  btnNext:  document.getElementById('stepBtn'),
+  btnPlay:  document.getElementById('playBtn'),
+  speedSel: document.getElementById('speedSel'),
   render:   render,
 });
 

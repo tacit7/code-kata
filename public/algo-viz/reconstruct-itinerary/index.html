@@ -122,22 +122,22 @@
       padding: 8px 12px; border-top: 1px solid var(--border);
       background: var(--bg); flex-shrink: 0;
     }
-    .btn-step {
+    .stepBtn {
       background: var(--surface); border: 1px solid var(--border);
       border-radius: var(--radius-sm); color: var(--text);
       cursor: pointer; font-size: 0.88rem; padding: 6px 12px;
     }
-    .btn-step:hover:not(:disabled) { border-color: var(--accent); }
-    .btn-step:disabled { opacity: 0.3; cursor: not-allowed; }
-    .btn-play {
+    .stepBtn:hover:not(:disabled) { border-color: var(--accent); }
+    .stepBtn:disabled { opacity: 0.3; cursor: not-allowed; }
+    .playBtn {
       background: #15803d; border: none; border-radius: var(--radius-sm);
       color: #fff; cursor: pointer; font-size: 0.82rem; font-weight: 600;
       padding: 7px 13px; transition: background 0.2s;
     }
-    .btn-play:hover { background: #166534; }
-    .btn-play.playing { background: #c2410c; }
-    .btn-play:disabled { opacity: 0.4; cursor: not-allowed; }
-    .speed-sel {
+    .playBtn:hover { background: #166534; }
+    .playBtn.playing { background: #c2410c; }
+    .playBtn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .speedSel {
       background: var(--bg); border: 1px solid var(--border);
       border-radius: var(--radius-sm); color: var(--text);
       font-size: 0.8rem; padding: 6px 8px; outline: none;
@@ -220,10 +220,10 @@
 </div>
 
 <div class="nav-bar">
-  <button class="btn-step" id="btn-prev" disabled>&#8592;</button>
-  <button class="btn-play" id="btn-play" disabled>&#9654; Play</button>
-  <button class="btn-step" id="btn-next" disabled>&#8594;</button>
-  <select class="speed-sel" id="speed-sel">
+  <button class="stepBtn" id="prevBtn" disabled>&#8592;</button>
+  <button class="playBtn" id="playBtn" disabled>&#9654; Play</button>
+  <button class="stepBtn" id="stepBtn" disabled>&#8594;</button>
+  <select class="speedSel" id="speedSel">
     <option value="900">Slow</option>
     <option value="450" selected>Medium</option>
     <option value="150">Fast</option>
@@ -593,10 +593,10 @@ function loadAndBuild() {
 
 // ── VizNav ────────────────────────────────────────────────────────────────
 var nav = VizNav({
-  btnPrev:  document.getElementById('btn-prev'),
-  btnNext:  document.getElementById('btn-next'),
-  btnPlay:  document.getElementById('btn-play'),
-  speedSel: document.getElementById('speed-sel'),
+  btnPrev:  document.getElementById('prevBtn'),
+  btnNext:  document.getElementById('stepBtn'),
+  btnPlay:  document.getElementById('playBtn'),
+  speedSel: document.getElementById('speedSel'),
   render:   render
 });
 

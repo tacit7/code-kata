@@ -261,8 +261,8 @@
         <div class="panel-box">
           <div class="panel-title">Controls</div>
           <div class="nav-row">
-            <button class="btn-play" id="btn-play" onclick="togglePlay()">▶ Play</button>
-            <button class="btn-sm" id="btn-step" onclick="stepFwd()">Step</button>
+            <button class="playBtn" id="playBtn" onclick="togglePlay()">▶ Play</button>
+            <button class="btn-sm" id="stepBtn" onclick="stepFwd()">Step</button>
             <button class="btn-sm" onclick="buildViz()">Reset</button>
           </div>
           <div class="nav-row">
@@ -579,8 +579,8 @@ function startPlay() {
     logMessages.length = 0;
   }
   playing = true;
-  document.getElementById('btn-play').textContent = '⏸ Pause';
-  document.getElementById('btn-play').classList.add('paused');
+  document.getElementById('playBtn').textContent = '⏸ Pause';
+  document.getElementById('playBtn').classList.add('paused');
   advance();
 }
 
@@ -594,7 +594,7 @@ function advance() {
 function stopPlay() {
   playing = false;
   clearTimeout(playTimer);
-  const btn = document.getElementById('btn-play');
+  const btn = document.getElementById('playBtn');
   btn.textContent = '▶ Play';
   btn.classList.remove('paused');
   updateControls();
@@ -603,7 +603,7 @@ function stopPlay() {
 function setSpeed(ms) { speed = ms; }
 
 function updateControls() {
-  document.getElementById('btn-step').disabled = stepIdx >= steps.length-1;
+  document.getElementById('stepBtn').disabled = stepIdx >= steps.length-1;
 }
 
 // ─── Init ─────────────────────────────────────────────────────────────────────

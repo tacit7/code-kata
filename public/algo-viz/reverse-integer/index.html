@@ -135,8 +135,8 @@
       color: var(--text-bright); cursor: pointer; font-size: 0.85rem;
     }
     .nav-row button:hover { border-color: var(--accent); color: var(--accent); }
-    #btn-play { border-color: var(--accent); color: var(--accent); font-weight: 600; }
-    #speed-select {
+    #playBtn { border-color: var(--accent); color: var(--accent); font-weight: 600; }
+    #speedSel {
       padding: 4px 8px; border-radius: 6px; border: 1px solid var(--border);
       background: var(--surface-dark); color: var(--text-dim); font-size: 0.82rem;
     }
@@ -193,10 +193,10 @@
     <span class="step-desc" id="step-desc">Press Build to start.</span>
   </div>
   <div class="nav-row">
-    <button id="btn-back">&#8592; Prev</button>
-    <button id="btn-play">&#9654; Play</button>
-    <button id="btn-next">Next &#8594;</button>
-    <select id="speed-select">
+    <button id="prevBtn">&#8592; Prev</button>
+    <button id="playBtn">&#9654; Play</button>
+    <button id="stepBtn">Next &#8594;</button>
+    <select id="speedSel">
       <option value="1200">0.5×</option>
       <option value="700" selected>1×</option>
       <option value="350">2×</option>
@@ -473,10 +473,10 @@ function buildAndRun() {
   steps = simulate(x);
 
   nav = VizNav({
-    btnPrev:  document.getElementById('btn-back'),
-    btnNext:  document.getElementById('btn-next'),
-    btnPlay:  document.getElementById('btn-play'),
-    speedSel: document.getElementById('speed-select'),
+    btnPrev:  document.getElementById('prevBtn'),
+    btnNext:  document.getElementById('stepBtn'),
+    btnPlay:  document.getElementById('playBtn'),
+    speedSel: document.getElementById('speedSel'),
     render: function(snap, cur, total) {
       applyStep(snap);
       document.getElementById('phase-label').textContent = 'Step ' + (cur + 1) + ' / ' + total + '  ·  ' + snap.phase;

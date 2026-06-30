@@ -164,7 +164,7 @@
     <button class="ctrl-btn search-btn" id="btn-search-word">Search</button>
   </div>
   <div class="ctrl-sep"></div>
-  <button class="ctrl-btn reset-btn" id="btn-reset">↺ Reset</button>
+  <button class="ctrl-btn reset-btn" id="resetBtn">↺ Reset</button>
 </div>
 
 <div class="viz-area">
@@ -229,10 +229,10 @@
 </div>
 
 <div class="step-nav">
-  <button class="btn-step" id="btn-back" disabled>← Back</button>
-  <button class="btn-step" id="btn-next" disabled>Next →</button>
-  <button id="btn-play" style="background:#15803d;color:#fff;border:none;border-radius:4px;padding:6px 14px;font-weight:600;cursor:pointer">&#9654; Play</button>
-  <select id="speed-select" style="background:var(--bg);border:1px solid var(--border);color:var(--text);border-radius:4px;padding:6px 8px;font-size:0.85rem">
+  <button class="stepBtn" id="prevBtn" disabled>← Back</button>
+  <button class="stepBtn" id="stepBtn" disabled>Next →</button>
+  <button id="playBtn" style="background:#15803d;color:#fff;border:none;border-radius:4px;padding:6px 14px;font-weight:600;cursor:pointer">&#9654; Play</button>
+  <select id="speedSel" style="background:var(--bg);border:1px solid var(--border);color:var(--text);border-radius:4px;padding:6px 8px;font-size:0.85rem">
     <option value="700">Slow</option>
     <option value="350" selected>Medium</option>
     <option value="120">Fast</option>
@@ -931,10 +931,10 @@ function handleReset() {
 
 // ─── Boot ─────────────────────────────────────────────────────────────────────
 nav = VizNav({
-  btnPrev: document.getElementById('btn-back'),
-  btnNext: document.getElementById('btn-next'),
-  btnPlay: document.getElementById('btn-play'),
-  speedSel: document.getElementById('speed-select'),
+  btnPrev: document.getElementById('prevBtn'),
+  btnNext: document.getElementById('stepBtn'),
+  btnPlay: document.getElementById('playBtn'),
+  speedSel: document.getElementById('speedSel'),
   render: function(snap, cur, total) {
     applyStep(snap, cur > 0);
     var phaseEl = document.getElementById('phase-label');
@@ -946,7 +946,7 @@ nav = VizNav({
 
 document.getElementById('btn-add-word').addEventListener('click', handleAddWord);
 document.getElementById('btn-search-word').addEventListener('click', handleSearch);
-document.getElementById('btn-reset').addEventListener('click', handleReset);
+document.getElementById('resetBtn').addEventListener('click', handleReset);
 document.getElementById('add-input').addEventListener('keydown', function(e) {
   if (e.key === 'Enter') handleAddWord();
 });

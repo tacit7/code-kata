@@ -243,10 +243,10 @@
 
 <!-- Nav bar -->
 <div class="nav-bar">
-  <button class="nav-btn" id="btnPrev">&#8592; Prev</button>
-  <button class="nav-btn" id="btnPlay">Play</button>
-  <button class="nav-btn" id="btnNext">Next &#8594;</button>
-  <select class="speed-sel" id="speedSel">
+  <button class="nav-btn" id="prevBtn">&#8592; Prev</button>
+  <button class="nav-btn" id="playBtn">Play</button>
+  <button class="nav-btn" id="stepBtn">Next &#8594;</button>
+  <select class="speedSel" id="speedSel">
     <option value="1400">0.8×</option>
     <option value="900" selected>1×</option>
     <option value="450">2×</option>
@@ -625,9 +625,9 @@ function render(snap, cursor, total) {
 // ── Boot ─────────────────────────────────────────────────────────────────────
 
 var nav = VizNav({
-  btnPrev:  document.getElementById('btnPrev'),
-  btnNext:  document.getElementById('btnNext'),
-  btnPlay:  document.getElementById('btnPlay'),
+  btnPrev:  document.getElementById('prevBtn'),
+  btnNext:  document.getElementById('stepBtn'),
+  btnPlay:  document.getElementById('playBtn'),
   speedSel: document.getElementById('speedSel'),
   render:   render,
 });
