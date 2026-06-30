@@ -12,6 +12,35 @@
     .main-row { display: grid; grid-template-columns: 1fr 320px; gap: 20px; align-items: start; }
     @media (max-width: 820px) { .main-row { grid-template-columns: 1fr; } }
 
+    /* Viz Inputs */
+    .viz-inputs {
+      display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end;
+      padding: 10px 0 14px; width: 100%; max-width: 90%;
+    }
+    .viz-inputs .field {
+      display: flex; flex-direction: column; gap: 4px;
+    }
+    .viz-inputs label {
+      font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--text-dim);
+    }
+    .viz-inputs input[type="text"] {
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--text); border-radius: var(--radius-sm);
+      padding: 6px 10px; font-size: 0.85rem; width: 130px;
+    }
+    .viz-inputs select {
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--text); border-radius: var(--radius-sm);
+      padding: 6px 10px; font-size: 0.85rem; cursor: pointer;
+    }
+    .viz-inputs button {
+      padding: 7px 14px; background: var(--accent); color: #fff;
+      border: none; border-radius: var(--radius-sm); font-weight: 600;
+      cursor: pointer; font-size: 0.85rem;
+    }
+    .viz-inputs button:hover { opacity: 0.9; }
+
     /* DP Table */
     .table-section {
       padding: 16px;
@@ -178,16 +207,40 @@
   <div class="page-sub">LeetCode 115 &middot; 2-D DP: dp[i][j] = ways to form t[0..j-1] in s[0..i-1] &mdash; always take dp[i-1][j] (skip s[i-1]); add dp[i-1][j-1] on match &middot; O(m&times;n)</div>
 </div>
 
-<div class="controls">
+<div class="viz-inputs">
+  <div class="field">
+    <label>Preset</label>
+    <select id="presetSel" onchange="loadPreset()">
+      <option value="">— pick a preset —</option>
+      <option value='{"s":"rabbbit","t":"rabbit"}'>Default: rabbbit / rabbit</option>
+      <option value='{"s":"babgbag","t":"bag"}'>Multiple: babgbag / bag</option>
+      <option value='{"s":"aabb","t":"ab"}'>Short: aabb / ab</option>
+      <option value='{"s":"ab","t":"b"}'>Simple: ab / b</option>
+      <option value='{"s":"aaaa","t":"a"}'>Repeating: aaaa / a</option>
+      <option value='{"s":"abc","t":"xyz"}'>No match: abc / xyz</option>
+    </select>
+  </div>
   <div class="field">
     <label>s (source)</label>
-    <input id="inp-s" type="text" value="rabbbit" maxlength="10" style="width:130px;font-family:monospace" />
+    <input id="inp-s" type="text" value="rabbbit" maxlength="10" style="font-family:monospace" />
   </div>
   <div class="field">
     <label>t (target)</label>
-    <input id="inp-t" type="text" value="rabbit" maxlength="8" style="width:110px;font-family:monospace" />
+    <input id="inp-t" type="text" value="rabbit" maxlength="8" style="font-family:monospace" />
   </div>
-  <button class="btn-primary" onclick="buildAndRun()">Build &amp; Run</button>
+  <button onclick="buildAndRun()">Run</button>
+  <button onclick="randomExample()" style="background:var(--bg-card);color:var(--text-main);border:1px solid var(--border);">🎲 Random</button>
+</div>
+
+<div class="controls">
+  <button id="prevBtn" class="stepBtn" disabled>&larr;</button>
+  <button id="stepBtn" class="stepBtn" disabled>&rarr;</button>
+  <button id="playBtn" class="playBtn" disabled>&#9654; Play</button>
+  <select id="speedSel" class="speed-select">
+    <option value="700">Slow</option>
+    <option value="350" selected>Medium</option>
+    <option value="100">Fast</option>
+  </select>
 </div>
 
 <div class="viz-area">
@@ -199,7 +252,7 @@
         <div class="preset-row" id="preset-row"></div>
       </div>
       <div class="table-section" id="table-section">
-        <span style="color:var(--text-dim);font-size:0.82rem">Set strings and click Build &amp; Run.</span>
+        <span style="color:var(--text-dim);font-size:0.82rem">Set strings and click Run.</span>
       </div>
       <div class="code-panel">
         <div class="code-header">Python</div>
@@ -223,7 +276,7 @@
         </div>
         <div class="panel-box" style="flex:1;min-width:0">
           <div class="panel-title" id="phase-label">&mdash;</div>
-          <div style="font-size:0.8rem;color:var(--text-muted);margin-top:2px;line-height:1.45" id="step-desc">Set strings and click Build &amp; Run.</div>
+          <div style="font-size:0.8rem;color:var(--text-muted);margin-top:2px;line-height:1.45" id="step-desc">Set strings and click Run.</div>
         </div>
       </div>
 
@@ -307,8 +360,11 @@ var curS = '', curT = '';
 
 var PRESETS = [
   { s: 'rabbbit', t: 'rabbit', label: 'Default' },
-  { s: 'babgbag', t: 'bag',    label: 'bag' },
+  { s: 'babgbag', t: 'bag',    label: 'Multiple' },
   { s: 'aabb',   t: 'ab',     label: 'Short' },
+  { s: 'ab',     t: 'b',      label: 'Simple' },
+  { s: 'aaaa',   t: 'a',      label: 'Repeating' },
+  { s: 'abc',    t: 'xyz',    label: 'No match' },
 ];
 
 var CODE = [
@@ -362,6 +418,33 @@ function setPreset(idx) {
   });
   document.getElementById('inp-s').value = PRESETS[idx].s;
   document.getElementById('inp-t').value = PRESETS[idx].t;
+  buildAndRun();
+}
+
+function loadPreset() {
+  var sel = document.getElementById('presetSel');
+  if (!sel.value) return;
+  var d = JSON.parse(sel.value);
+  document.getElementById('inp-s').value = d.s;
+  document.getElementById('inp-t').value = d.t;
+  buildAndRun();
+}
+
+function randomExample() {
+  var chars = 'abcdefghijklmnopqrstuvwxyz';
+  var s = '';
+  var t = '';
+  var tLen = Math.floor(Math.random() * 4) + 2;
+  var sLen = tLen + Math.floor(Math.random() * 5) + 1;
+  for (var i = 0; i < tLen; i++) {
+    t += chars[Math.floor(Math.random() * 26)];
+  }
+  for (var i = 0; i < sLen; i++) {
+    s += chars[Math.floor(Math.random() * 26)];
+  }
+  document.getElementById('inp-s').value = s.slice(0, 10);
+  document.getElementById('inp-t').value = t.slice(0, 8);
+  document.getElementById('presetSel').value = '';
   buildAndRun();
 }
 
