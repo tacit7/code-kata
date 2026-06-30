@@ -204,6 +204,14 @@
       background:rgba(247,118,142,0.10); border:1px solid rgba(247,118,142,0.28);
       color:var(--red-light);
     }
+    /* ── Code panel ── */
+    .code-panel { background:var(--surface); border:1px solid var(--border-soft); border-radius:var(--radius-md); padding:10px 12px; overflow-x:auto; }
+    .code-title { font-size:0.65rem; font-weight:700; text-transform:uppercase; letter-spacing:0.1em; color:var(--text-dim); margin-bottom:8px; }
+    #code-body { font-family:'JetBrains Mono','Fira Code',monospace; font-size:0.73rem; line-height:1.75; }
+    .cl { display:flex; align-items:stretch; white-space:pre; border-left:2px solid transparent; padding-left:6px; color:var(--text-muted); transition:all 0.15s; }
+    .cl.hl { background:rgba(122,162,247,0.1); border-left-color:var(--accent); color:var(--text); }
+    .ln { display:inline-block; width:18px; text-align:right; color:var(--text-dim); user-select:none; margin-right:10px; font-size:0.68rem; }
+    .kw { color:#bb9af7; } .nb { color:#9ece6a; } .cm { color:var(--text-dim); font-style:italic; }
   </style>
 </head>
 <body>
@@ -318,6 +326,22 @@
     </div>
 
     <div id="resultBanner" style="display:none;"></div>
+
+    <div class="code-panel">
+      <div class="code-title">Algorithm</div>
+      <div id="code-body">
+        <div class="cl" id="cl0"><span class="ln">1</span><span class="kw">lo</span>, <span class="kw">hi</span> = 0, rows*cols - 1</div>
+        <div class="cl" id="cl1"><span class="ln">2</span><span class="kw">while</span> lo &lt;= hi:</div>
+        <div class="cl" id="cl2"><span class="ln">3</span>  mid = (lo + hi) // 2</div>
+        <div class="cl" id="cl3"><span class="ln">4</span>  row = mid // cols</div>
+        <div class="cl" id="cl4"><span class="ln">5</span>  col = mid % cols</div>
+        <div class="cl" id="cl5"><span class="ln">6</span>  val = matrix[row][col]</div>
+        <div class="cl" id="cl6"><span class="ln">7</span>  <span class="kw">if</span> val == target:   <span class="nb">return True</span></div>
+        <div class="cl" id="cl7"><span class="ln">8</span>  <span class="kw">elif</span> val &lt; target:  lo = mid + 1</div>
+        <div class="cl" id="cl8"><span class="ln">9</span>  <span class="kw">else</span>:               hi = mid - 1</div>
+        <div class="cl" id="cl9"><span class="ln">10</span><span class="nb">return False</span></div>
+      </div>
+    </div>
 
   </div>
 </div>
@@ -644,6 +668,11 @@ function render(snap, cursor, total) {
   } else {
     cmpEl.innerHTML = '<span style="color:var(--text-dim)">\u2014</span>';
   }
+
+  // Code highlight
+  var PHASE_LINES = { 'init':[0], 'check':[1,2,3,4,5], 'found':[6], 'adjust-lo':[7], 'adjust-hi':[8], 'not-found':[9] };
+  for (var li = 0; li <= 9; li++) { var el = document.getElementById('cl'+li); if(el) el.classList.remove('hl'); }
+  (PHASE_LINES[phase] || []).forEach(function(li){ var el = document.getElementById('cl'+li); if(el) el.classList.add('hl'); });
 
   // Result banner
   var bannerEl = document.getElementById('resultBanner');

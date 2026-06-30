@@ -176,6 +176,33 @@
 
 <div class="page-title">19. Remove Nth Node From End of List &mdash; Two-Pointer Dummy</div>
 
+<div class="viz-inputs">
+  <div class="inp-group">
+    <label class="inp-label">Preset</label>
+    <select class="inp-sel" id="presetSel" onchange="loadPreset()">
+      <option value="">— pick a preset —</option>
+      <option value="0">[1,2,3,4,5], n=2 → remove 4th</option>
+      <option value="1">[1], n=1 → empty list</option>
+      <option value="2">[1,2], n=1 → remove tail</option>
+      <option value="3">[1,2], n=2 → remove head</option>
+      <option value="4">[1,2,3,4,5,6,7], n=3 → middle</option>
+      <option value="5">[10,20,30,40,50], n=5 → remove head</option>
+    </select>
+  </div>
+  <div class="inp-group">
+    <label class="inp-label">List (comma-separated)</label>
+    <input class="inp-text" id="listInput" type="text" value="1,2,3,4,5" placeholder="e.g. 1,2,3,4,5" />
+  </div>
+  <div class="inp-group">
+    <label class="inp-label">n</label>
+    <input class="inp-num" id="nInput" type="number" min="1" value="2" />
+  </div>
+  <button class="run-btn" onclick="buildAndRun()">Run</button>
+  <button class="rand-btn" onclick="randomExample()">&#127922; Random</button>
+</div>
+
+<div class="controls"></div>
+
 <div class="viz-root">
 
   <!-- LEFT COLUMN -->
@@ -240,33 +267,6 @@
 
   </div>
 </div>
-
-<div class="viz-inputs">
-  <div class="inp-group">
-    <label class="inp-label">Preset</label>
-    <select class="inp-sel" id="presetSel" onchange="loadPreset()">
-      <option value="">— pick a preset —</option>
-      <option value="0">[1,2,3,4,5], n=2 → remove 4th</option>
-      <option value="1">[1], n=1 → empty list</option>
-      <option value="2">[1,2], n=1 → remove tail</option>
-      <option value="3">[1,2], n=2 → remove head</option>
-      <option value="4">[1,2,3,4,5,6,7], n=3 → middle</option>
-      <option value="5">[10,20,30,40,50], n=5 → remove head</option>
-    </select>
-  </div>
-  <div class="inp-group">
-    <label class="inp-label">List (comma-separated)</label>
-    <input class="inp-text" id="listInput" type="text" value="1,2,3,4,5" placeholder="e.g. 1,2,3,4,5" />
-  </div>
-  <div class="inp-group">
-    <label class="inp-label">n</label>
-    <input class="inp-num" id="nInput" type="number" min="1" value="2" />
-  </div>
-  <button class="run-btn" onclick="buildAndRun()">Run</button>
-  <button class="rand-btn" onclick="randomExample()">&#127922; Random</button>
-</div>
-
-<div class="controls"></div>
 
 <script>
 // pseudocode lines: id is the activeLine key (-1 = comment, not highlighted)
@@ -514,7 +514,7 @@ function render(snap, cursor, total) {
   if (!codeBody.dataset.built) {
     var html = '';
     CODE_LINES.forEach(function(l) {
-      html += '<span class="code-line" data-lid="' + l.id + '">' + l.html + '</span>\n';
+      html += '<span class="code-line" data-lid="' + l.id + '">' + l.html + '</span>';
     });
     codeBody.innerHTML = html;
     codeBody.dataset.built = '1';

@@ -99,6 +99,13 @@
       background:var(--surface); border:1px solid var(--border);
       color:var(--text); border-radius:6px; padding:5px 6px; font-size:0.75rem;
     }
+    .code-panel { background:var(--surface); border:1px solid var(--border-soft); border-radius:var(--radius-md); padding:10px 12px; overflow-x:auto; flex-shrink:0; }
+    .code-title { font-size:0.65rem; font-weight:700; text-transform:uppercase; letter-spacing:0.1em; color:var(--text-dim); margin-bottom:8px; }
+    #code-body { font-family:'JetBrains Mono','Fira Code',monospace; font-size:0.73rem; line-height:1.75; }
+    .cl { display:flex; align-items:stretch; white-space:pre; border-left:2px solid transparent; padding-left:6px; color:var(--text-muted); transition:all 0.15s; }
+    .cl.hl { background:rgba(122,162,247,0.1); border-left-color:var(--accent); color:var(--text); }
+    .ln { display:inline-block; width:18px; text-align:right; color:var(--text-dim); user-select:none; margin-right:10px; font-size:0.68rem; }
+    .kw2 { color:#bb9af7; } .nb2 { color:#9ece6a; } .cm2 { color:var(--text-dim); font-style:italic; }
   </style>
 </head>
 <body>
@@ -184,6 +191,24 @@
     <div class="panel-box" style="flex:1;min-height:0;overflow:auto;">
       <div class="panel-title">Current Step</div>
       <div id="stepDesc" style="font-size:0.78rem;color:var(--text-muted);line-height:1.55;"></div>
+    </div>
+
+    <div class="code-panel">
+      <div class="code-title">Floyd's Cycle Detection</div>
+      <div id="code-body">
+        <div class="cl" id="cl0"><span class="ln">1</span><span class="cm2"># Phase 1: find intersection</span></div>
+        <div class="cl" id="cl1"><span class="ln">2</span>slow = fast = nums[0]</div>
+        <div class="cl" id="cl2"><span class="ln">3</span><span class="kw2">while True</span>:</div>
+        <div class="cl" id="cl3"><span class="ln">4</span>  slow = nums[slow]</div>
+        <div class="cl" id="cl4"><span class="ln">5</span>  fast = nums[nums[fast]]</div>
+        <div class="cl" id="cl5"><span class="ln">6</span>  <span class="kw2">if</span> slow == fast: <span class="kw2">break</span></div>
+        <div class="cl" id="cl6"><span class="ln">7</span><span class="cm2"># Phase 2: find cycle entrance</span></div>
+        <div class="cl" id="cl7"><span class="ln">8</span>slow = nums[0]</div>
+        <div class="cl" id="cl8"><span class="ln">9</span><span class="kw2">while</span> slow != fast:</div>
+        <div class="cl" id="cl9"><span class="ln">10</span>  slow = nums[slow]</div>
+        <div class="cl" id="cl10"><span class="ln">11</span>  fast = nums[fast]</div>
+        <div class="cl" id="cl11"><span class="ln">12</span><span class="nb2">return</span> slow  <span class="cm2"># duplicate</span></div>
+      </div>
     </div>
 
   </div>
@@ -546,6 +571,13 @@ function render(snap, cursor, total) {
   renderPhaseBanner(snap);
   renderLog(snap, cursor);
   document.getElementById('stepDesc').textContent = snap.stepLabel;
+
+  // Code highlight
+  var FD_LINES = { 1:[0,1,2,3,4,5,6], 'transition':[6,7], 2:[6,7,8,9,10,11] };
+  var isDone2 = snap.done;
+  for (var li = 0; li <= 11; li++) { var efd = document.getElementById('cl'+li); if(efd) efd.classList.remove('hl'); }
+  if (isDone2) { [11].forEach(function(li){ var e=document.getElementById('cl'+li); if(e) e.classList.add('hl'); }); }
+  else { (FD_LINES[snap.phase] || []).forEach(function(li){ var e=document.getElementById('cl'+li); if(e) e.classList.add('hl'); }); }
 }
 
 // ── Nav setup ────────────────────────────────────────────────────────────

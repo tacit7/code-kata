@@ -141,6 +141,14 @@
 
     /* VizNav buttons hidden */
     #prevBtn, #stepBtn, #playBtn, #resetBtn, #speedSel { display:none; }
+    /* ── Code panel ── */
+    .code-panel { background:var(--surface); border:1px solid var(--border-soft); border-radius:var(--radius-md); padding:10px 12px; overflow-x:auto; }
+    .code-title { font-size:0.65rem; font-weight:700; text-transform:uppercase; letter-spacing:0.1em; color:var(--text-dim); margin-bottom:8px; }
+    #code-body { font-family:'JetBrains Mono','Fira Code',monospace; font-size:0.73rem; line-height:1.75; }
+    .cl { display:flex; align-items:stretch; white-space:pre; border-left:2px solid transparent; padding-left:6px; color:var(--text-muted); transition:all 0.15s; }
+    .cl.hl { background:rgba(122,162,247,0.1); border-left-color:var(--accent); color:var(--text); }
+    .ln { display:inline-block; width:18px; text-align:right; color:var(--text-dim); user-select:none; margin-right:10px; font-size:0.68rem; }
+    .kw { color:#bb9af7; } .nb { color:#9ece6a; } .cm { color:var(--text-dim); font-style:italic; }
   </style>
 </head>
 <body>
@@ -218,6 +226,21 @@
     </div>
 
     <div class="step-counter" id="stepCounter">Step 0 / 0</div>
+
+    <div class="code-panel">
+      <div class="code-title">Algorithm</div>
+      <div id="code-body">
+        <div class="cl" id="cl0"><span class="ln">1</span><span class="cm"># set(key, val, ts): map[key].append((ts, val))</span></div>
+        <div class="cl" id="cl1"><span class="ln">2</span><span class="cm"># get(key, ts):</span></div>
+        <div class="cl" id="cl2"><span class="ln">3</span>  arr = map[key]  <span class="cm"># sorted by timestamp</span></div>
+        <div class="cl" id="cl3"><span class="ln">4</span>  lo, hi = 0, len(arr) - 1</div>
+        <div class="cl" id="cl4"><span class="ln">5</span>  <span class="kw">while</span> lo &lt;= hi:</div>
+        <div class="cl" id="cl5"><span class="ln">6</span>    mid = (lo + hi) // 2</div>
+        <div class="cl" id="cl6"><span class="ln">7</span>    <span class="kw">if</span> arr[mid].ts &lt;= ts:   lo = mid + 1</div>
+        <div class="cl" id="cl7"><span class="ln">8</span>    <span class="kw">else</span>:                   hi = mid - 1</div>
+        <div class="cl" id="cl8"><span class="ln">9</span>  <span class="nb">return</span> arr[lo-1].val <span class="kw">if</span> lo &gt; 0 <span class="kw">else</span> <span class="nb">""</span></div>
+      </div>
+    </div>
 
   </div>
 </div>
@@ -663,6 +686,15 @@ function render(snap, cursor, total) {
     resultVal.textContent = '"' + snap.resultText + '"';
     resultVal.className = 'result-val found-val';
   }
+
+  // -- Code highlight --
+  var bs2 = snap.bsearch;
+  var bsPhase = bs2 ? bs2.phase : null;
+  var BS_LINES = { 'init':[2,3], 'check-mid':[4,5,6], 'go-right':[5,6], 'advance':[4,5], 'go-left':[5,7], 'done':[8] };
+  var isSet = snap.op && snap.op.type === 'set';
+  for (var li = 0; li <= 8; li++) { var el2 = document.getElementById('cl'+li); if(el2) el2.classList.remove('hl'); }
+  if (isSet) { [0].forEach(function(li){ var e=document.getElementById('cl'+li); if(e) e.classList.add('hl'); }); }
+  else { (BS_LINES[bsPhase] || []).forEach(function(li){ var e=document.getElementById('cl'+li); if(e) e.classList.add('hl'); }); }
 
   // -- Narration --
   document.getElementById('narration').textContent = snap.label;
