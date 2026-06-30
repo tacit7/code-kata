@@ -2714,4 +2714,528 @@ function test_negatives() {
     usage: `Merging sorted arrays is the fundamental operation behind external sorting, LSM-tree compaction, and distributed query processing. Databases like LevelDB, RocksDB, and Cassandra write sorted SSTables to disk and then run background k-way merge compaction to consolidate them, directly applying the merge-sorted-arrays primitive with a min-heap to maintain O(n log k) efficiency. When PostgreSQL or MySQL execute merge-join query plans, they merge two sorted streams from index scans using the same two-pointer merge logic. Git's merge machinery for combining sorted diff hunks across branches also relies on sorted-sequence merging. In distributed search engines like Elasticsearch, each shard returns sorted results that the coordinating node must merge into a single globally-sorted response. The two-array merge variant is a staple interview question at companies like Google, Apple, and Microsoft because it tests pointer management, boundary handling, and the candidate's ability to reason about sorted invariants under pressure.`,
     tags: ["two-pointers","sorting"],
   },
+
+  {
+    name: "Permutation in String",
+    category: "sliding-window",
+    language: "javascript",
+    difficulty: "medium",
+    description: `Given two strings s1 and s2, return true if s2 contains a permutation of s1. In other words, return true if one of s1's permutations is a substring of s2.
+
+A permutation is a rearrangement of all characters. So you need to find a window in s2 of exactly length s1.length that has the same character frequencies as s1.
+
+Example 1:
+  Input: s1 = "ab", s2 = "eidbaooo"
+  Output: true
+  Explanation: s2 contains one permutation of s1 ("ba").
+
+Example 2:
+  Input: s1 = "ab", s2 = "eidboaoo"
+  Output: false
+
+Constraints:
+  - 1 <= s1.length, s2.length <= 10^4
+  - s1 and s2 consist of lowercase English letters only
+
+Ref: LeetCode #567 Permutation in String`,
+    code: `function checkInclusion(s1, s2) {
+  // TODO: sliding window of fixed size s1.length
+  // track char frequency matches
+}`,
+    testCode: `function test_basic_true() {
+  assertEqual(checkInclusion("ab", "eidbaooo"), true, "basic true - ba found");
+}
+
+function test_basic_false() {
+  assertEqual(checkInclusion("ab", "eidboaoo"), false, "basic false");
+}
+
+function test_exact_match() {
+  assertEqual(checkInclusion("abc", "bca"), true, "s2 is exactly a permutation of s1");
+}
+
+function test_s1_longer_than_s2() {
+  assertEqual(checkInclusion("hello", "oo"), false, "s1 longer than s2");
+}
+
+function test_single_char() {
+  assertEqual(checkInclusion("a", "ab"), true, "single char match");
+}
+
+function test_repeated_chars() {
+  assertEqual(checkInclusion("aab", "eidbaabooo"), true, "repeated chars permutation found");
+}`,
+    solution: `function checkInclusion(s1, s2) {
+  if (s1.length > s2.length) return false;
+
+  const count = new Array(26).fill(0);
+  const a = 'a'.charCodeAt(0);
+
+  for (let i = 0; i < s1.length; i++) {
+    count[s1.charCodeAt(i) - a]++;
+    count[s2.charCodeAt(i) - a]--;
+  }
+
+  if (count.every(c => c === 0)) return true;
+
+  for (let i = s1.length; i < s2.length; i++) {
+    count[s2.charCodeAt(i) - a]--;
+    count[s2.charCodeAt(i - s1.length) - a]++;
+    if (count.every(c => c === 0)) return true;
+  }
+
+  return false;
+}`,
+    usage: `Permutation-in-string is the core primitive behind substring anagram search, which shows up in full-text search engines when matching morphological variants and in bioinformatics for finding sequence motifs regardless of base ordering within a window. Security tools use fixed-size sliding window frequency matching to detect scrambled signatures in network payloads. The fixed-window variant of sliding window is also the building block for DNA pattern matching tools like BLAST when searching for short-read k-mers against a reference genome.`,
+    tags: ["sliding-window", "hash-map", "strings"],
+  },
+  {
+    name: "Search a 2D Matrix",
+    category: "binary-search",
+    language: "javascript",
+    difficulty: "medium",
+    description: `You are given an m x n integer matrix where:
+  - Each row is sorted in non-decreasing order.
+  - The first integer of each row is greater than the last integer of the previous row.
+
+Given an integer target, return true if target is in matrix or false otherwise. You must write a solution in O(log(m * n)) time.
+
+Example 1:
+  Input: matrix = [[1,3,5,7],[10,11,16,20],[23,30,34,60]], target = 3
+  Output: true
+
+Example 2:
+  Input: matrix = [[1,3,5,7],[10,11,16,20],[23,30,34,60]], target = 13
+  Output: false
+
+Constraints:
+  - m == matrix.length, n == matrix[0].length
+  - 1 <= m, n <= 100
+  - -10^4 <= matrix[i][j], target <= 10^4
+
+Ref: LeetCode #74 Search a 2D Matrix`,
+    code: `function searchMatrix(matrix, target) {
+  // TODO: treat as 1D sorted array, binary search
+  // mid index -> row = Math.floor(mid / cols), col = mid % cols
+}`,
+    testCode: `function test_found() {
+  assertEqual(searchMatrix([[1,3,5,7],[10,11,16,20],[23,30,34,60]], 3), true, "target found");
+}
+
+function test_not_found() {
+  assertEqual(searchMatrix([[1,3,5,7],[10,11,16,20],[23,30,34,60]], 13), false, "target not found");
+}
+
+function test_single_element_found() {
+  assertEqual(searchMatrix([[5]], 5), true, "single element found");
+}
+
+function test_single_element_not_found() {
+  assertEqual(searchMatrix([[5]], 3), false, "single element not found");
+}
+
+function test_target_at_end() {
+  assertEqual(searchMatrix([[1,3,5,7],[10,11,16,20],[23,30,34,60]], 60), true, "target at last cell");
+}
+
+function test_target_at_start() {
+  assertEqual(searchMatrix([[1,3,5,7],[10,11,16,20],[23,30,34,60]], 1), true, "target at first cell");
+}`,
+    solution: `function searchMatrix(matrix, target) {
+  const rows = matrix.length;
+  const cols = matrix[0].length;
+  let lo = 0;
+  let hi = rows * cols - 1;
+
+  while (lo <= hi) {
+    const mid = Math.floor((lo + hi) / 2);
+    const val = matrix[Math.floor(mid / cols)][mid % cols];
+    if (val === target) return true;
+    if (val < target) lo = mid + 1;
+    else hi = mid - 1;
+  }
+
+  return false;
+}`,
+    usage: `Treating a row-sorted, globally-sorted 2D matrix as a virtual 1D array is a common pattern in database storage engines where pages of sorted records are laid out in row-major order on disk — a binary search over the page directory gives O(log n) lookup without loading every page. Embedded systems with flat memory arrays representing sensor grids use the same index math (row*cols + col) to do range searches without materializing a pointer-based structure. The technique also appears in columnar databases like Parquet where row groups are sorted, and a binary search over row-group min/max metadata allows skipping entire chunks.`,
+    tags: ["binary-search", "matrix"],
+  },
+  {
+    name: "Time Based Key-Value Store",
+    category: "binary-search",
+    language: "javascript",
+    difficulty: "medium",
+    description: `Design a time-based key-value data structure that can store multiple values for the same key at different time stamps and retrieve the key's value at a certain timestamp.
+
+Implement the TimeMap class:
+  - TimeMap() Initializes the object.
+  - set(key, value, timestamp) Stores the value with key at the given timestamp.
+  - get(key, timestamp) Returns a value such that set was called previously with timestamp_prev <= timestamp. If there are multiple such values, return the one with the largest timestamp_prev. If no such value exists, return "".
+
+All timestamps passed to set are strictly increasing.
+
+Example:
+  Input: ["TimeMap","set","get","get","set","get","get"]
+         [[],["foo","bar",1],["foo",1],["foo",3],["foo","bar2",4],["foo",4],["foo",5]]
+  Output: [null,null,"bar","bar",null,"bar2","bar2"]
+
+Constraints:
+  - 1 <= key.length, value.length <= 100
+  - 1 <= timestamp <= 10^7
+  - At most 2 * 10^5 calls to set and get
+
+Ref: LeetCode #981 Time Based Key-Value Store`,
+    code: `class TimeMap {
+  constructor() {
+    // TODO: map of key -> [{timestamp, value}] sorted by timestamp
+  }
+
+  set(key, value, timestamp) {
+    // TODO
+  }
+
+  get(key, timestamp) {
+    // TODO: binary search for largest ts <= timestamp
+    // return "" if none found
+  }
+}`,
+    testCode: `function test_basic() {
+  const tm = new TimeMap();
+  tm.set("foo", "bar", 1);
+  assertEqual(tm.get("foo", 1), "bar", "exact timestamp");
+  assertEqual(tm.get("foo", 3), "bar", "timestamp after set");
+}
+
+function test_two_values() {
+  const tm = new TimeMap();
+  tm.set("foo", "bar", 1);
+  tm.set("foo", "bar2", 4);
+  assertEqual(tm.get("foo", 4), "bar2", "exact second timestamp");
+  assertEqual(tm.get("foo", 5), "bar2", "after second timestamp");
+}
+
+function test_before_any_set() {
+  const tm = new TimeMap();
+  tm.set("foo", "bar", 2);
+  assertEqual(tm.get("foo", 1), "", "timestamp before any entry");
+}
+
+function test_missing_key() {
+  const tm = new TimeMap();
+  assertEqual(tm.get("missing", 1), "", "key never set");
+}
+
+function test_multiple_keys() {
+  const tm = new TimeMap();
+  tm.set("a", "val1", 1);
+  tm.set("b", "val2", 1);
+  assertEqual(tm.get("a", 1), "val1", "key a");
+  assertEqual(tm.get("b", 1), "val2", "key b");
+}`,
+    solution: `class TimeMap {
+  constructor() {
+    this.store = new Map();
+  }
+
+  set(key, value, timestamp) {
+    if (!this.store.has(key)) this.store.set(key, []);
+    this.store.get(key).push([timestamp, value]);
+  }
+
+  get(key, timestamp) {
+    const entries = this.store.get(key);
+    if (!entries || entries.length === 0) return "";
+
+    let lo = 0;
+    let hi = entries.length - 1;
+    let result = "";
+
+    while (lo <= hi) {
+      const mid = Math.floor((lo + hi) / 2);
+      if (entries[mid][0] <= timestamp) {
+        result = entries[mid][1];
+        lo = mid + 1;
+      } else {
+        hi = mid - 1;
+      }
+    }
+
+    return result;
+  }
+}`,
+    usage: `Time-based key-value stores are the foundation of multi-version concurrency control (MVCC) in databases like PostgreSQL and CockroachDB, where each write creates a new version stamped with the transaction timestamp and reads binary-search for the latest version visible at a given snapshot timestamp. This same pattern appears in distributed systems like Apache Cassandra where cells carry a timestamp and reads always return the highest-timestamped value. Event-sourcing architectures use timestamp-indexed stores to reconstruct aggregate state at any point in time by seeking to the largest event timestamp not exceeding the query time.`,
+    tags: ["binary-search", "design", "hash-map"],
+  },
+  {
+    name: "Remove Nth Node From End of List",
+    category: "linked-list",
+    language: "javascript",
+    difficulty: "medium",
+    description: `Given the head of a linked list, remove the nth node from the end of the list and return its head.
+
+Example 1:
+  Input: head = [1,2,3,4,5], n = 2
+  Output: [1,2,3,5]
+  Explanation: The 2nd node from the end is 4.
+
+Example 2:
+  Input: head = [1], n = 1
+  Output: []
+
+Example 3:
+  Input: head = [1,2], n = 1
+  Output: [1]
+
+Constraints:
+  - The number of nodes in the list is sz.
+  - 1 <= sz <= 30
+  - 0 <= Node.val <= 100
+  - 1 <= n <= sz
+
+Note: The kata represents linked lists as plain JS arrays for simplicity.
+
+Ref: LeetCode #19 Remove Nth Node From End of List`,
+    code: `function removeNthFromEnd(vals, n) {
+  // vals is an array representing the linked list
+  // return array with nth-from-end element removed
+  // TODO: two-pointer approach with n-step gap
+}`,
+    testCode: `function test_remove_second_from_end() {
+  assertEqual(removeNthFromEnd([1,2,3,4,5], 2), [1,2,3,5], "remove 2nd from end");
+}
+
+function test_remove_last() {
+  assertEqual(removeNthFromEnd([1,2,3], 1), [1,2], "remove last element");
+}
+
+function test_remove_first() {
+  assertEqual(removeNthFromEnd([1,2,3], 3), [2,3], "remove first element");
+}
+
+function test_single_element() {
+  assertEqual(removeNthFromEnd([1], 1), [], "single element list");
+}
+
+function test_two_elements_remove_last() {
+  assertEqual(removeNthFromEnd([1,2], 1), [1], "two elements remove last");
+}
+
+function test_two_elements_remove_first() {
+  assertEqual(removeNthFromEnd([1,2], 2), [2], "two elements remove first");
+}`,
+    solution: `function removeNthFromEnd(vals, n) {
+  const dummy = [0, ...vals];
+  let fast = n + 1;
+  let slow = 0;
+
+  while (fast < dummy.length) {
+    fast++;
+    slow++;
+  }
+
+  dummy.splice(slow + 1, 1);
+  return dummy.slice(1);
+}`,
+    usage: `The two-pointer gap technique for nth-from-end removal is the canonical pattern for single-pass linked list manipulation without knowing the total length upfront, which matters in streaming contexts where you can't buffer the entire sequence. Network packet processing pipelines use sliding-window pointer pairs to trim trailing elements from packet queues under memory constraints. The pattern generalizes to any scenario where you need a relative-from-end position in a single pass: sliding log buffers that discard the oldest entry after N new ones arrive, or audio/video codec ring buffers that evict frames N positions behind the write head.`,
+    tags: ["linked-list", "two-pointers"],
+  },
+  {
+    name: "Copy List with Random Pointer",
+    category: "linked-list",
+    language: "javascript",
+    difficulty: "medium",
+    description: `A linked list of length n is given such that each node contains an additional random pointer, which could point to any node in the list, or null.
+
+Construct a deep copy of the list. The deep copy should consist of exactly n brand new nodes, where each new node has its value set to the value of its corresponding original node. Both the next and random pointer of the new nodes should point to new nodes in the copied list such that the pointers represent the same list state. None of the pointers in the new list should point to nodes in the original list.
+
+Example:
+  Input: head = [[7,null],[13,0],[11,4],[10,2],[1,0]]
+  Output: [[7,null],[13,0],[11,4],[10,2],[1,0]]
+  Explanation: Each element is [val, randomIdx] where randomIdx is the index of the random pointer target (or null).
+
+Note: This kata represents nodes as [val, randomIdx|null] pairs in an array.
+
+Ref: LeetCode #138 Copy List with Random Pointer`,
+    code: `function copyRandomList(nodes) {
+  // nodes: array of [val, randomIdx|null]
+  // return deep copy as same format
+  // TODO: two-pass hash map approach
+}`,
+    testCode: `function test_example() {
+  const input = [[7,null],[13,0],[11,4],[10,2],[1,0]];
+  assertEqual(copyRandomList(input), [[7,null],[13,0],[11,4],[10,2],[1,0]], "example case");
+}
+
+function test_single_node_no_random() {
+  assertEqual(copyRandomList([[1,null]]), [[1,null]], "single node null random");
+}
+
+function test_single_node_self_random() {
+  assertEqual(copyRandomList([[1,0]]), [[1,0]], "single node points to itself");
+}
+
+function test_two_nodes() {
+  assertEqual(copyRandomList([[1,1],[2,0]]), [[1,1],[2,0]], "two nodes cross-pointing");
+}
+
+function test_all_null_randoms() {
+  const input = [[3,null],[7,null],[4,null]];
+  assertEqual(copyRandomList(input), [[3,null],[7,null],[4,null]], "all null randoms");
+}`,
+    solution: `function copyRandomList(nodes) {
+  if (!nodes || nodes.length === 0) return [];
+
+  // Deep copy: each element is [val, randomIdx]
+  return nodes.map(([val, randomIdx]) => [val, randomIdx]);
+}`,
+    usage: `Deep-copying object graphs with arbitrary cross-references is a fundamental challenge in serialization, undo/redo systems, and state persistence. Game engines implement scene graph deep copy with this two-pass pattern — first create all new nodes, then wire up references — to snapshot scene state for replay or save files without pointer aliasing bugs. React's immutable state update pattern and Immer's structural sharing rely on the same "old→new mapping" approach to clone only the changed subtree while preserving references to unchanged nodes. Browser DevTools use graph-walking copy algorithms to serialize the live DOM into JSON for timeline snapshots.`,
+    tags: ["linked-list", "hash-map"],
+  },
+  {
+    name: "Add Two Numbers",
+    category: "linked-list",
+    language: "javascript",
+    difficulty: "medium",
+    description: `You are given two non-empty linked lists representing two non-negative integers. The digits are stored in reverse order, and each of their nodes contains a single digit. Add the two numbers and return the sum as a linked list (also in reverse order).
+
+You may assume the two numbers do not contain any leading zero, except the number 0 itself.
+
+Example 1:
+  Input: l1 = [2,4,3], l2 = [5,6,4]
+  Output: [7,0,8]
+  Explanation: 342 + 465 = 807, stored in reverse as [7,0,8].
+
+Example 2:
+  Input: l1 = [0], l2 = [0]
+  Output: [0]
+
+Example 3:
+  Input: l1 = [9,9,9,9,9,9,9], l2 = [9,9,9,9]
+  Output: [8,9,9,9,0,0,0,1]
+
+Constraints:
+  - The number of nodes in each list is in [1, 100].
+  - 0 <= Node.val <= 9
+  - It is guaranteed that the list represents a number that does not have leading zeros.
+
+Note: This kata uses arrays (LSB first) in place of linked list nodes.
+
+Ref: LeetCode #2 Add Two Numbers`,
+    code: `function addTwoNumbers(l1, l2) {
+  // l1, l2: arrays of digits, least significant digit first
+  // return array of digits (sum), least significant first
+  // TODO: digit-by-digit addition with carry
+}`,
+    testCode: `function test_basic() {
+  assertEqual(addTwoNumbers([2,4,3], [5,6,4]), [7,0,8], "342 + 465 = 807");
+}
+
+function test_zeros() {
+  assertEqual(addTwoNumbers([0], [0]), [0], "0 + 0 = 0");
+}
+
+function test_carry_overflow() {
+  assertEqual(addTwoNumbers([9,9,9,9,9,9,9], [9,9,9,9]), [8,9,9,9,0,0,0,1], "carry across all digits");
+}
+
+function test_different_lengths() {
+  assertEqual(addTwoNumbers([1], [9,9]), [0,0,1], "1 + 99 = 100");
+}
+
+function test_single_digit_carry() {
+  assertEqual(addTwoNumbers([5], [5]), [0,1], "5 + 5 = 10");
+}`,
+    solution: `function addTwoNumbers(l1, l2) {
+  const result = [];
+  let carry = 0;
+  let i = 0;
+  let j = 0;
+
+  while (i < l1.length || j < l2.length || carry) {
+    const sum = (l1[i] || 0) + (l2[j] || 0) + carry;
+    result.push(sum % 10);
+    carry = Math.floor(sum / 10);
+    i++;
+    j++;
+  }
+
+  return result;
+}`,
+    usage: `Digit-by-digit addition with carry propagation is the hardware algorithm inside every CPU's ALU for arbitrary-precision arithmetic. Big integer libraries like Java's BigInteger and Python's built-in int use this exact column-addition loop over digit arrays to implement addition for numbers larger than 64 bits. Cryptographic libraries implement modular arithmetic for RSA and elliptic-curve operations on 256–4096-bit integers using the same carry-propagation loop at the limb level. Financial systems that require exact decimal arithmetic (avoiding floating-point rounding) process cent-level values as integer digit sequences using carry-based addition.`,
+    tags: ["linked-list", "math", "simulation"],
+  },
+  {
+    name: "Find the Duplicate Number",
+    category: "linked-list",
+    language: "javascript",
+    difficulty: "medium",
+    description: `Given an array of integers nums containing n + 1 integers where each integer is in the range [1, n] inclusive.
+
+There is only one repeated number in nums. Return this repeated number.
+
+You must solve the problem without modifying the array nums and uses only constant extra space.
+
+Example 1:
+  Input: nums = [1,3,4,2,2]
+  Output: 2
+
+Example 2:
+  Input: nums = [3,1,3,4,2]
+  Output: 3
+
+Constraints:
+  - 1 <= n <= 10^5
+  - nums.length == n + 1
+  - 1 <= nums[i] <= n
+  - There is only one repeated number in nums.
+
+Hint: Treat each value as a "next pointer" to detect a cycle via Floyd's algorithm.
+
+Ref: LeetCode #287 Find the Duplicate Number`,
+    code: `function findDuplicate(nums) {
+  // TODO: Floyd's cycle detection
+  // treat index i as a node, nums[i] as the next pointer
+  // the duplicate creates a cycle entry point
+}`,
+    testCode: `function test_basic_1() {
+  assertEqual(findDuplicate([1,3,4,2,2]), 2, "duplicate is 2");
+}
+
+function test_basic_2() {
+  assertEqual(findDuplicate([3,1,3,4,2]), 3, "duplicate is 3");
+}
+
+function test_duplicate_at_start() {
+  assertEqual(findDuplicate([1,1]), 1, "duplicate is 1");
+}
+
+function test_larger_array() {
+  assertEqual(findDuplicate([2,5,9,6,9,3,8,9,7,1]), 9, "duplicate is 9 in larger array");
+}
+
+function test_duplicate_last_value() {
+  assertEqual(findDuplicate([1,2,3,4,4]), 4, "duplicate is last value");
+}`,
+    solution: `function findDuplicate(nums) {
+  // Phase 1: detect cycle
+  let slow = nums[0];
+  let fast = nums[0];
+
+  do {
+    slow = nums[slow];
+    fast = nums[nums[fast]];
+  } while (slow !== fast);
+
+  // Phase 2: find cycle entry (the duplicate)
+  slow = nums[0];
+  while (slow !== fast) {
+    slow = nums[slow];
+    fast = nums[fast];
+  }
+
+  return slow;
+}`,
+    usage: `Floyd's cycle detection ("tortoise and hare") is used beyond linked lists anywhere a sequence can be modeled as a functional graph — each element maps to exactly one successor. Database index corruption detectors use cycle checks to validate B-tree page pointer chains. Pseudorandom number generators are analyzed for period length using Floyd's algorithm to find when the sequence loops. Memory leak detectors in garbage collectors detect reference cycles in object graphs using the same two-pointer phase structure. In distributed systems, detecting repeated states in a Raft or Paxos log can be framed as cycle detection over state machine transitions.`,
+    tags: ["linked-list", "two-pointers", "cycle-detection"],
+  },
 ];
