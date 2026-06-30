@@ -27,6 +27,68 @@
       .main-row { grid-template-columns: 1fr; }
     }
 
+    /* User inputs container */
+    .viz-inputs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: flex-end;
+      padding: 10px 0 14px;
+      width: 100%;
+      max-width: 90%;
+    }
+
+    .viz-inputs .field {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .viz-inputs label {
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-dim);
+    }
+
+    .viz-inputs input[type="text"] {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: var(--radius-sm);
+      padding: 6px 10px;
+      font-size: 0.85rem;
+      width: 180px;
+    }
+
+    .viz-inputs select {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: var(--radius-sm);
+      padding: 6px 10px;
+      font-size: 0.85rem;
+      cursor: pointer;
+    }
+
+    .viz-inputs button {
+      padding: 7px 14px;
+      background: var(--surface);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.85rem;
+    }
+
+    .viz-inputs button[onclick="buildAndRun()"] {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+    }
+
     /* Linked list canvas */
     #list-container {
       padding: 24px 16px 16px;
@@ -378,29 +440,41 @@
     </div>
   </div>
 
-  <div class="controls">
+  <div class="viz-inputs">
+    <div class="field">
+      <label>Preset</label>
+      <select id="presetSel" onchange="loadPreset()">
+        <option value="">— pick a preset —</option>
+        <option value='{"nums":"1,2,3"}'>Small List (1→2→3)</option>
+        <option value='{"nums":"5"}'>Single Element (5)</option>
+        <option value='{"nums":"1,2"}'>Two Elements (1→2)</option>
+        <option value='{"nums":"1,2,3,4,5"}'>Medium List (1→2→3→4→5)</option>
+        <option value='{"nums":"10,20,30,40"}'>Larger Values (10→20→30→40)</option>
+        <option value='{"nums":"1,2,3,4,5,6,7"}'>Seven Elements (1→2→...→7)</option>
+      </select>
+    </div>
     <div class="field">
       <label for="numsInput">Node values (comma-separated):</label>
       <input type="text" id="numsInput" value="1,2,3,4,5" />
     </div>
-    <button class="btn-primary" id="buildBtn">Build &amp; Run</button>
+    <button onclick="buildAndRun()" style="padding:7px 18px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);font-weight:600;cursor:pointer;">Run</button>
+    <button onclick="randomExample()" style="padding:7px 14px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;">🎲 Random</button>
+  </div>
+
+  <div class="controls">
+    <button id="prevBtn" class="btn-step" disabled>← Prev</button>
+    <button id="stepBtn" class="btn-step" disabled>Step →</button>
+    <button id="playBtn" class="btn-play" disabled>Play</button>
+    <button id="resetBtn" class="btn-step" disabled>↺ Reset</button>
+    <select id="speedSel">
+      <option value="800">0.5×</option>
+      <option value="400" selected>1×</option>
+      <option value="200">2×</option>
+      <option value="100">4×</option>
+    </select>
   </div>
 
   <div class="viz-area">
-    <div class="panel-box" style="display:inline-flex;align-self:flex-start">
-      <div class="nav-row">
-        <button id="prevBtn" class="btn-step" disabled>← Prev</button>
-        <button id="stepBtn" class="btn-step" disabled>Step →</button>
-        <button id="playBtn" class="btn-play" disabled>Play</button>
-        <button id="resetBtn" class="btn-step" disabled>↺ Reset</button>
-        <select id="speedSel">
-          <option value="800">0.5×</option>
-          <option value="400" selected>1×</option>
-          <option value="200">2×</option>
-          <option value="100">4×</option>
-        </select>
-      </div>
-    </div>
 
     <div class="main-row">
       <!-- Left: list + vars + status -->
@@ -428,7 +502,7 @@
 
         <div class="status-panel">
           <div class="status-phase" id="phase-label">—</div>
-          <div class="status-desc" id="step-desc">Click Build &amp; Run to start.</div>
+          <div class="status-desc" id="step-desc">Click Run to start.</div>
           <div class="status-result" id="result-msg" style="display:none"></div>
         </div>
       </div>
@@ -707,6 +781,31 @@
       // VizNav calls render(snap, cur, total) — applyStep handles display
     }
 
+    function loadPreset() {
+      var sel = document.getElementById('presetSel');
+      if (!sel.value) return;
+      var d = JSON.parse(sel.value);
+      document.getElementById('numsInput').value = d.nums;
+      buildAndRun();
+    }
+
+    function randomExample() {
+      const presets = [
+        [1, 2, 3],
+        [5],
+        [1, 2],
+        [1, 2, 3, 4, 5],
+        [10, 20, 30, 40],
+        [1, 2, 3, 4, 5, 6, 7],
+        [7, 3, 9, 1],
+        [100, 200],
+      ];
+      const chosen = presets[Math.floor(Math.random() * presets.length)];
+      document.getElementById('numsInput').value = chosen.join(',');
+      document.getElementById('presetSel').value = '';
+      buildAndRun();
+    }
+
     function buildAndRun() {
       const raw = document.getElementById('numsInput').value;
       const vals = raw.split(',').map(x => {
@@ -741,7 +840,6 @@
       });
 
       document.getElementById('resetBtn').addEventListener('click', buildAndRun);
-      document.getElementById('buildBtn').addEventListener('click', buildAndRun);
 
       buildAndRun();
 
