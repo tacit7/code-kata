@@ -160,7 +160,14 @@ type VizKataName =
   | "Find Minimum in Rotated Sorted Array"
   | "Koko Eating Bananas"
   | "Reorder List"
-  | "Car Fleet";
+  | "Car Fleet"
+  | "Permutation in String"
+  | "Search a 2D Matrix"
+  | "Time Based Key-Value Store"
+  | "Remove Nth Node From End of List"
+  | "Copy List With Random Pointer"
+  | "Add Two Numbers"
+  | "Find the Duplicate Number";
 
 // Kata name → algo-viz subfolder served from /algo-viz/<folder>/index.html
 const VIZ_MAP: Partial<Record<VizKataName, string>> = {
@@ -308,6 +315,13 @@ const VIZ_MAP: Partial<Record<VizKataName, string>> = {
   "Koko Eating Bananas":          "koko-eating-bananas",
   "Reorder List":                 "reorder-list",
   "Car Fleet":                    "car-fleet",
+  "Permutation in String":        "permutation-in-string",
+  "Search a 2D Matrix":           "search-2d-matrix",
+  "Time Based Key-Value Store":   "time-based-key-value",
+  "Remove Nth Node From End of List": "remove-nth-node",
+  "Copy List With Random Pointer": "copy-list-random-pointer",
+  "Add Two Numbers":              "add-two-numbers",
+  "Find the Duplicate Number":    "find-duplicate",
 };
 
 // Overrides for slugs that can't be reliably derived from the display name

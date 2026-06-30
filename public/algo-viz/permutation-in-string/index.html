@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>567. Permutation in String</title>
+  <link rel="stylesheet" href="../shared/style.css" />
+  <script src="../shared/viz.js"></script>
+  <style>
+    body { display:flex; flex-direction:column; height:100vh; overflow:hidden; }
+    .page-title {
+      font-size:1rem; font-weight:700; color:var(--text-bright);
+      padding:12px 16px 0; letter-spacing:0.01em; flex-shrink:0;
+    }
+    .viz-root {
+      display:flex; flex:1; gap:16px;
+      padding:12px 16px 16px; min-height:0;
+    }
+    .left-col  { display:flex; flex-direction:column; gap:12px; flex:0 0 55%; min-width:0; }
+    .right-col { display:flex; flex-direction:column; gap:12px; flex:1; min-width:0; }
+
+    /* string rows */
+    .str-label {
+      font-size:0.7rem; font-weight:700; text-transform:uppercase;
+      letter-spacing:0.08em; color:var(--text-dim); margin-bottom:6px;
+    }
+    .char-row { display:flex; flex-wrap:nowrap; gap:4px; align-items:center; min-height:46px; }
+    .char-cell {
+      width:38px; height:38px; border-radius:6px;
+      display:flex; align-items:center; justify-content:center;
+      font-size:1rem; font-weight:700;
+      border:2px solid var(--border); background:var(--surface-dark);
+      color:var(--text-muted); flex-shrink:0;
+      transition:background 0.12s, border-color 0.12s;
+      position:relative;
+    }
+    .char-cell.in-window  { border-color:var(--accent); background:rgba(var(--accent-ch),0.12); color:var(--text-bright); }
+    .char-cell.entering   { border-color:var(--green);  background:rgba(var(--green-ch),0.22);  color:var(--green-light); }
+    .char-cell.exiting    { border-color:var(--bad);    background:rgba(var(--bad-ch),0.14);    color:var(--bad); }
+    .char-cell.found      { border-color:var(--green);  border-width:3px; background:rgba(var(--green-ch),0.28); color:var(--green-light); }
+    .char-idx {
+      position:absolute; bottom:-16px; left:50%; transform:translateX(-50%);
+      font-size:0.5rem; color:var(--text-ghost); font-family:monospace;
+    }
+    .window-brackets {
+      display:flex; flex-wrap:nowrap; gap:4px; align-items:center;
+      min-height:20px; padding-left:0;
+    }
+    .bracket-cell {
+      width:38px; flex-shrink:0; text-align:center;
+      font-size:0.72rem; color:transparent; font-weight:700;
+    }
+    .bracket-cell.left  { color:var(--accent); }
+    .bracket-cell.right { color:var(--accent); }
+    .bracket-cell.found { color:var(--green); }
+
+    /* freq table */
+    .freq-grid {
+      display:grid; gap:2px 6px;
+      grid-template-columns:auto 1fr 1fr;
+      align-items:center; font-size:0.78rem;
+    }
+    .freq-header {
+      font-size:0.6rem; text-transform:uppercase; letter-spacing:0.1em;
+      color:var(--text-dim); font-weight:700; text-align:center;
+    }
+    .freq-char  { font-weight:700; color:var(--text-muted); font-family:monospace; }
+    .freq-val   {
+      text-align:center; padding:1px 6px; border-radius:4px;
+      background:var(--surface-dark); border:1px solid var(--border);
+      font-family:monospace; color:var(--text-muted);
+      min-width:28px;
+    }
+    .freq-val.match { background:rgba(var(--green-ch),0.18); border-color:var(--green); color:var(--green-light); }
+    .freq-val.zero  { color:var(--text-ghost); }
+
+    /* match counter */
+    .match-row {
+      display:flex; align-items:center; gap:10px; margin-top:6px;
+    }
+    .match-label { font-size:0.7rem; color:var(--text-dim); }
+    .match-bar-wrap {
+      flex:1; height:8px; border-radius:4px;
+      background:var(--surface-dark); border:1px solid var(--border); overflow:hidden;
+    }
+    .match-bar { height:100%; border-radius:4px; transition:width 0.18s; background:var(--accent); }
+    .match-bar.full { background:var(--green); }
+    .match-count { font-size:0.75rem; font-weight:700; color:var(--text-bright); min-width:48px; }
+
+    /* phase badge + status */
+    .phase-badge {
+      font-size:0.6rem; font-weight:700; text-transform:uppercase; letter-spacing:0.1em;
+      color:var(--accent); background:rgba(var(--accent-ch),0.08); border:1px solid rgba(var(--accent-ch),0.18);
+      border-radius:4px; padding:2px 7px; display:inline-block;
+    }
+    .phase-badge.found-badge { color:var(--green); background:rgba(var(--green-ch),0.1); border-color:rgba(var(--green-ch),0.25); }
+    .phase-badge.bad-badge   { color:var(--bad);   background:rgba(var(--bad-ch),0.1);   border-color:rgba(var(--bad-ch),0.25); }
+    .status-desc { font-size:0.76rem; color:var(--text-muted); margin-top:6px; line-height:1.45; }
+
+    /* controls */
+    .ctrl-row { display:flex; align-items:center; gap:6px; }
+    .btn {
+      background:var(--surface); border:1px solid var(--border);
+      color:var(--text); border-radius:6px; padding:5px 10px;
+      cursor:pointer; font-size:0.78rem;
+    }
+    .btn:hover   { border-color:var(--accent); }
+    .btn.primary { background:var(--accent); border-color:var(--accent); color:#fff; }
+    .speed-sel {
+      background:var(--surface); border:1px solid var(--border);
+      color:var(--text); border-radius:6px; padding:5px 6px; font-size:0.75rem; width:78px;
+    }
+    .counter { font-size:0.68rem; color:var(--text-dim); margin-top:4px; }
+
+    .viz-inputs input {
+      background:var(--surface-dark); border:1px solid var(--border); color:var(--text);
+      border-radius:6px; padding:6px 10px; font-size:0.85rem; width:100px;
+    }
+    .viz-inputs label {
+      font-size:0.7rem; font-weight:700; text-transform:uppercase;
+      letter-spacing:0.08em; color:var(--text-dim);
+    }
+    .inp-group { display:flex; flex-direction:column; gap:4px; }
+    .inp-hint  { font-size:0.6rem; color:var(--text-ghost); margin-top:2px; }
+    .inp-error { font-size:0.7rem; color:var(--bad); margin-top:4px; display:none; }
+  </style>
+</head>
+<body>
+
+<div class="page-title">567. Permutation in String &mdash; Sliding Window</div>
+
+<!-- user inputs -->
+<div class="viz-inputs" style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;padding:10px 16px 0;">
+  <div class="inp-group">
+    <label>Preset</label>
+    <select id="presetSel" onchange="loadPreset()" style="background:var(--surface-dark);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-size:0.85rem;">
+      <option value="0">ab in eidbaooo</option>
+      <option value="1">abc in cbaebabacd</option>
+      <option value="2">ab in hello (no match)</option>
+      <option value="3">aaa in aaabbaaa</option>
+      <option value="4">dc in xyzcd</option>
+      <option value="5">z in abcz</option>
+    </select>
+  </div>
+  <div class="inp-group">
+    <label>s1</label>
+    <input id="s1Input" type="text" value="ab" maxlength="8" />
+  </div>
+  <div class="inp-group">
+    <label>s2 <span class="inp-hint">(max 15 chars)</span></label>
+    <input id="s2Input" type="text" value="eidbaooo" maxlength="15" />
+    <div class="inp-error" id="inputError"></div>
+  </div>
+  <button onclick="buildAndRun()" style="padding:7px 18px;background:var(--accent);color:#fff;border:none;border-radius:6px;font-weight:600;cursor:pointer;">Run</button>
+  <button onclick="randomExample()" style="padding:7px 14px;background:var(--surface-dark);color:var(--text);border:1px solid var(--border);border-radius:6px;cursor:pointer;">&#127922; Random</button>
+</div>
+<div class="controls"></div>
+
+<div class="viz-root">
+
+  <!-- LEFT -->
+  <div class="left-col">
+
+    <div class="panel-box">
+      <div class="panel-title">Strings</div>
+      <div class="str-label">s1 (pattern)</div>
+      <div class="char-row" id="row-s1"></div>
+
+      <div style="margin-top:16px;">
+        <div class="str-label">s2 (search string)</div>
+        <div class="char-row" id="row-s2" style="padding-bottom:22px;"></div>
+        <div class="window-brackets" id="brackets"></div>
+      </div>
+
+      <div style="margin-top:10px;font-size:0.72rem;color:var(--text-dim);" id="window-info">
+        Window: &mdash;
+      </div>
+    </div>
+
+    <div class="panel-box" style="flex:1;">
+      <div class="panel-title">Frequency Maps</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div>
+          <div style="font-size:0.65rem;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px;">s1 freq</div>
+          <div class="freq-grid" id="freq-s1"></div>
+        </div>
+        <div>
+          <div style="font-size:0.65rem;font-weight:700;color:var(--blue);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px;">window freq</div>
+          <div class="freq-grid" id="freq-win"></div>
+        </div>
+      </div>
+
+      <div class="match-row" style="margin-top:10px;">
+        <div class="match-label">Matches:</div>
+        <div class="match-bar-wrap">
+          <div class="match-bar" id="match-bar" style="width:0%;"></div>
+        </div>
+        <div class="match-count" id="match-count">0 / 26</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- RIGHT -->
+  <div class="right-col">
+
+    <div class="panel-box">
+      <div class="ctrl-row">
+        <button class="btn" id="prevBtn">&larr;</button>
+        <button class="btn" id="stepBtn">&rarr;</button>
+        <button class="btn primary" id="playBtn">Play</button>
+        <button class="btn" id="resetBtn">&#8635;</button>
+        <select class="speed-sel" id="speedSel">
+          <option value="1400">Slow</option>
+          <option value="800" selected>Normal</option>
+          <option value="380">Fast</option>
+        </select>
+      </div>
+      <div class="counter" id="counter">Step 0 / 0</div>
+    </div>
+
+    <div class="panel-box" style="flex:1;">
+      <span class="phase-badge" id="phase-badge">&mdash;</span>
+      <div class="status-desc" id="status-desc">Press Play or step forward to begin.</div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ── Presets ───────────────────────────────────────────────────────────────
+var PRESETS = [
+  { s1: "ab",  s2: "eidbaooo"   },
+  { s1: "abc", s2: "cbaebabacd" },
+  { s1: "ab",  s2: "hello"      },
+  { s1: "aaa", s2: "aaabbaaa"   },
+  { s1: "dc",  s2: "xyzcd"      },
+  { s1: "z",   s2: "abcz"       },
+];
+
+function loadPreset() {
+  var idx = parseInt(document.getElementById("presetSel").value) || 0;
+  var p = PRESETS[idx];
+  document.getElementById("s1Input").value = p.s1;
+  document.getElementById("s2Input").value = p.s2;
+  buildAndRun();
+}
+
+// ── Build steps ───────────────────────────────────────────────────────────
+function charCode(c) { return c.charCodeAt(0) - 97; }
+
+function freqOf(str) {
+  var f = new Array(26).fill(0);
+  for (var i = 0; i < str.length; i++) f[charCode(str[i])]++;
+  return f;
+}
+
+function countMatches(f1, f2) {
+  var m = 0;
+  for (var i = 0; i < 26; i++) if (f1[i] === f2[i]) m++;
+  return m;
+}
+
+function buildSteps(s1, s2) {
+  var winSize = s1.length;
+  var steps = [];
+
+  function snap(phase, desc, left, right, s1Freq, winFreq, matches, enterIdx, exitIdx, foundAt, result) {
+    return {
+      phase: phase, description: desc,
+      s1: s1, s2: s2, winSize: winSize,
+      left: left, right: right,
+      s1Freq: s1Freq.slice(), winFreq: winFreq.slice(),
+      matches: matches,
+      enterIdx: enterIdx, exitIdx: exitIdx,
+      foundAt: foundAt, result: result,
+    };
+  }
+
+  // edge: empty
+  if (!s1 || !s2) {
+    steps.push(snap("Error", "s1 and s2 must both be non-empty.", -1, -1, new Array(26).fill(0), new Array(26).fill(0), 0, -1, -1, -1, false));
+    return steps;
+  }
+
+  // edge: s1 longer than s2
+  if (winSize > s2.length) {
+    steps.push(snap("Init", "s1 (len " + winSize + ") is longer than s2 (len " + s2.length + "): no permutation possible.", -1, -1, new Array(26).fill(0), new Array(26).fill(0), 0, -1, -1, -1, false));
+    steps.push(snap("Done", "Result: false — s1 cannot fit in s2.", -1, -1, new Array(26).fill(0), new Array(26).fill(0), 0, -1, -1, -1, false));
+    return steps;
+  }
+
+  var s1Freq = freqOf(s1);
+  var winFreq = new Array(26).fill(0);
+
+  // Step 1: init — show s1 freq
+  var initMatches = countMatches(s1Freq, winFreq);
+  steps.push(snap("Init",
+    "Build frequency map for s1 = "" + s1 + "". Pattern has " + winSize + " char(s).",
+    -1, -1, s1Freq, winFreq, initMatches, -1, -1, -1, null));
+
+  // Step 2: fill initial window s2[0..winSize-1]
+  for (var i = 0; i < winSize; i++) winFreq[charCode(s2[i])]++;
+  var m = countMatches(s1Freq, winFreq);
+  steps.push(snap("Init",
+    "Initialize window s2[0.."+( winSize-1)+"] = "" + s2.slice(0, winSize) + "". " + m + "/26 freq positions match.",
+    0, winSize - 1, s1Freq, winFreq, m, -1, -1, -1, null));
+
+  // Step 3: check first window
+  if (m === 26) {
+    steps.push(snap("Found",
+      "First window "" + s2.slice(0, winSize) + "" is a permutation of s1! Found at index 0.",
+      0, winSize - 1, s1Freq, winFreq, m, -1, -1, 0, true));
+    return steps;
+  } else {
+    steps.push(snap("Check",
+      "Window "" + s2.slice(0, winSize) + "" at [0, " + (winSize-1) + "]: " + m + "/26 match — not a permutation.",
+      0, winSize - 1, s1Freq, winFreq, m, -1, -1, -1, null));
+  }
+
+  var left = 0;
+  var right = winSize - 1;
+
+  // Slide
+  for (var r = winSize; r < s2.length; r++) {
+    // Remove left char first (shrink), then add right char (grow)
+    // This keeps window at size W between steps
+
+    var exitChar = s2[left];
+    var exitCode = charCode(exitChar);
+    var enterChar = s2[r];
+    var enterCode = charCode(enterChar);
+
+    // Atomic slide: remove left, add right
+    if (s1Freq[exitCode] === winFreq[exitCode]) m--;
+    winFreq[exitCode]--;
+    if (s1Freq[exitCode] === winFreq[exitCode]) m++;
+
+    if (s1Freq[enterCode] === winFreq[enterCode]) m--;
+    winFreq[enterCode]++;
+    if (s1Freq[enterCode] === winFreq[enterCode]) m++;
+
+    left++;
+    right = r;
+
+    var winStr = s2.slice(left, right + 1);
+
+    if (m === 26) {
+      steps.push(snap("Found",
+        "Slide: remove '" + exitChar + "', add '" + enterChar + "'. Window "" + winStr + "" at [" + left + "," + right + "] is a permutation! " + m + "/26 match.",
+        left, right, s1Freq, winFreq, m, r, left - 1, left, true));
+      return steps;
+    } else {
+      steps.push(snap("Slide",
+        "Slide: remove '" + exitChar + "' (idx " + (left-1) + "), add '" + enterChar + "' (idx " + right + "). Window [" + left + "," + right + "]: " + m + "/26 match.",
+        left, right, s1Freq, winFreq, m, r, left - 1, -1, null));
+    }
+  }
+
+  // Not found
+  steps.push(snap("Done",
+    "Exhausted s2 with no matching window. No permutation of s1 found in s2.",
+    -1, -1, s1Freq, winFreq, m, -1, -1, -1, false));
+
+  return steps;
+}
+
+// ── Render ────────────────────────────────────────────────────────────────
+function render(snap, cursor, total) {
+  var s1 = snap.s1, s2 = snap.s2;
+  var left = snap.left, right = snap.right;
+  var rowS1 = document.getElementById("row-s1");
+  var rowS2 = document.getElementById("row-s2");
+  var brackets = document.getElementById("brackets");
+
+  // Render s1
+  rowS1.innerHTML = "";
+  for (var i = 0; i < s1.length; i++) {
+    var cell = document.createElement("div");
+    cell.className = "char-cell";
+    cell.textContent = s1[i];
+    rowS1.appendChild(cell);
+  }
+
+  // Render s2
+  rowS2.innerHTML = "";
+  for (var i = 0; i < s2.length; i++) {
+    var cell = document.createElement("div");
+    var cls = "char-cell";
+    if (snap.foundAt >= 0 && i >= snap.foundAt && i <= snap.foundAt + snap.winSize - 1) {
+      cls += " found";
+    } else if (left >= 0 && i >= left && i <= right) {
+      if (i === snap.enterIdx) cls += " entering";
+      else if (i === snap.exitIdx) cls += " exiting";
+      else cls += " in-window";
+    }
+    cell.className = cls;
+    cell.textContent = s2[i];
+    var idx = document.createElement("span");
+    idx.className = "char-idx";
+    idx.textContent = i;
+    cell.appendChild(idx);
+    rowS2.appendChild(cell);
+  }
+
+  // Brackets
+  brackets.innerHTML = "";
+  for (var i = 0; i < s2.length; i++) {
+    var bc = document.createElement("div");
+    bc.className = "bracket-cell";
+    if (snap.foundAt >= 0) {
+      if (i === snap.foundAt) bc.textContent = "[";
+      else if (i === snap.foundAt + snap.winSize - 1) bc.textContent = "]";
+      bc.className += " found";
+    } else if (left >= 0) {
+      if (i === left) { bc.textContent = "["; bc.className += " left"; }
+      else if (i === right) { bc.textContent = "]"; bc.className += " right"; }
+    }
+    brackets.appendChild(bc);
+  }
+
+  // Window info
+  var winInfo = document.getElementById("window-info");
+  if (snap.foundAt >= 0) {
+    winInfo.innerHTML = "<span style="color:var(--green);font-weight:700;">&#10003; FOUND at index " + snap.foundAt + "!</span>";
+  } else if (left >= 0) {
+    winInfo.textContent = "Window [" + left + ", " + right + "]: "" + s2.slice(left, right + 1) + """;
+  } else if (snap.result === false) {
+    winInfo.innerHTML = "<span style="color:var(--bad);">&#10007; No permutation found</span>";
+  } else {
+    winInfo.textContent = "Window: —";
+  }
+
+  // Freq maps — show letters where s1Freq[i] > 0 || winFreq[i] > 0
+  var freqS1El  = document.getElementById("freq-s1");
+  var freqWinEl = document.getElementById("freq-win");
+  freqS1El.innerHTML = "";
+  freqWinEl.innerHTML = "";
+
+  var activeCols = [];
+  for (var i = 0; i < 26; i++) {
+    if (snap.s1Freq[i] > 0 || snap.winFreq[i] > 0) activeCols.push(i);
+  }
+  if (activeCols.length === 0) {
+    freqS1El.innerHTML = "<div style="color:var(--text-ghost);font-size:0.72rem;">—</div>";
+    freqWinEl.innerHTML = "<div style="color:var(--text-ghost);font-size:0.72rem;">—</div>";
+  } else {
+    // headers
+    var hdr1a = document.createElement("div"); hdr1a.className="freq-header"; hdr1a.textContent="char"; freqS1El.appendChild(hdr1a);
+    var hdr1b = document.createElement("div"); hdr1b.className="freq-header"; hdr1b.textContent="s1"; freqS1El.appendChild(hdr1b);
+    var hdr2a = document.createElement("div"); hdr2a.className="freq-header"; hdr2a.textContent="char"; freqWinEl.appendChild(hdr2a);
+    var hdr2b = document.createElement("div"); hdr2b.className="freq-header"; hdr2b.textContent="win"; freqWinEl.appendChild(hdr2b);
+
+    for (var ci = 0; ci < activeCols.length; ci++) {
+      var idx = activeCols[ci];
+      var ch = String.fromCharCode(97 + idx);
+      var s1v = snap.s1Freq[idx];
+      var wv  = snap.winFreq[idx];
+      var isMatch = s1v === wv;
+
+      var c1 = document.createElement("div"); c1.className="freq-char"; c1.textContent=ch; freqS1El.appendChild(c1);
+      var v1 = document.createElement("div"); v1.className="freq-val" + (isMatch ? " match" : "") + (s1v===0 ? " zero" : ""); v1.textContent=s1v; freqS1El.appendChild(v1);
+
+      var c2 = document.createElement("div"); c2.className="freq-char"; c2.textContent=ch; freqWinEl.appendChild(c2);
+      var v2 = document.createElement("div"); v2.className="freq-val" + (isMatch ? " match" : "") + (wv===0 ? " zero" : ""); v2.textContent=wv; freqWinEl.appendChild(v2);
+    }
+  }
+
+  // Match bar
+  var pct = Math.round((snap.matches / 26) * 100);
+  var bar = document.getElementById("match-bar");
+  bar.style.width = pct + "%";
+  bar.className = "match-bar" + (snap.matches === 26 ? " full" : "");
+  document.getElementById("match-count").textContent = snap.matches + " / 26";
+
+  // Phase badge + status
+  var badge = document.getElementById("phase-badge");
+  badge.textContent = snap.phase;
+  badge.className = "phase-badge" + (snap.phase === "Found" ? " found-badge" : snap.phase === "Done" && snap.result === false ? " bad-badge" : "");
+  document.getElementById("status-desc").textContent = snap.description;
+  document.getElementById("counter").textContent = "Step " + (cursor + 1) + " / " + total;
+}
+
+// ── Bootstrap ─────────────────────────────────────────────────────────────
+var btnPrev  = document.getElementById("prevBtn");
+var btnStep  = document.getElementById("stepBtn");
+var btnPlay  = document.getElementById("playBtn");
+var btnReset = document.getElementById("resetBtn");
+var speedSel = document.getElementById("speedSel");
+
+var nav = VizNav({ btnPrev: btnPrev, btnNext: btnStep, btnPlay: btnPlay, btnReset: btnReset, speedSel: speedSel, render: render });
+
+function buildAndRun() {
+  var errEl = document.getElementById("inputError");
+  errEl.style.display = "none";
+  var s1 = document.getElementById("s1Input").value.trim().toLowerCase();
+  var s2 = document.getElementById("s2Input").value.trim().toLowerCase();
+
+  if (!s1 || !s2) {
+    errEl.textContent = "Both s1 and s2 are required.";
+    errEl.style.display = "block";
+    return;
+  }
+  if (!/^[a-z]+$/.test(s1) || !/^[a-z]+$/.test(s2)) {
+    errEl.textContent = "Use lowercase letters only.";
+    errEl.style.display = "block";
+    return;
+  }
+  if (s2.length > 15) {
+    s2 = s2.slice(0, 15);
+    document.getElementById("s2Input").value = s2;
+  }
+
+  var steps = buildSteps(s1, s2);
+  nav.load(steps);
+}
+
+function randomExample() {
+  var CHARS = "abcde";
+  var s1Len = 2 + Math.floor(Math.random() * 3); // 2-4
+  var s2Len = Math.min(15, s1Len + 3 + Math.floor(Math.random() * 5));
+
+  function randomStr(len, alpha) {
+    var out = "";
+    for (var i = 0; i < len; i++) out += alpha[Math.floor(Math.random() * alpha.length)];
+    return out;
+  }
+
+  function shuffle(arr) {
+    for (var i = arr.length - 1; i > 0; i--) {
+      var j = Math.floor(Math.random() * (i + 1));
+      var tmp = arr[i]; arr[i] = arr[j]; arr[j] = tmp;
+    }
+    return arr;
+  }
+
+  var s1 = randomStr(s1Len, CHARS);
+
+  var s2;
+  if (Math.random() < 0.5) {
+    // embed a permutation
+    var maxPad = s2Len - s1Len;
+    var padLeft = Math.min(Math.floor(Math.random() * 3), maxPad);
+    var padRight = maxPad - padLeft;
+    var perm = shuffle(s1.split("")).join("");
+    s2 = randomStr(padLeft, CHARS) + perm + randomStr(padRight, CHARS);
+  } else {
+    // no guaranteed match: exclude s1 chars when possible
+    var s1Set = new Set(s1.split(""));
+    var filtered = CHARS.split("").filter(function(c) { return !s1Set.has(c); }).join("");
+    var alpha = filtered.length > 0 ? filtered : CHARS;
+    s2 = randomStr(s2Len, alpha);
+  }
+
+  document.getElementById("s1Input").value = s1;
+  document.getElementById("s2Input").value = s2;
+  document.getElementById("presetSel").value = "-1";
+  buildAndRun();
+}
+
+window.addEventListener("DOMContentLoaded", function() {
+  loadPreset();
+});
+</script>
+</body>
+</html>

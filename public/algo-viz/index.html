@@ -828,6 +828,20 @@
 
   <a href='word-ladder/index.html'><div class='card'><span class='card-tag'>Graph</span><div class='card-name'>Word Ladder</div><div class='card-desc'>BFS on an implicit word graph &mdash; each node is a word, edges connect words differing by one letter. BFS guarantees the first time endWord is dequeued, the level equals the shortest transformation sequence length.</div></div></a>
 
+  <a href='permutation-in-string/index.html'><div class='card'><span class='card-tag'>Sliding Window</span><div class='card-name'>Permutation in String</div><div class='card-desc'>Fixed-size sliding window with frequency map comparison &mdash; maintain s1&rsquo;s char counts and a window count over s2. Track how many of 26 char counts match; when all 26 match the window is a permutation.</div></div></a>
+
+  <a href='search-2d-matrix/index.html'><div class='card'><span class='card-tag'>Binary Search</span><div class='card-name'>Search a 2D Matrix</div><div class='card-desc'>Treat the sorted matrix as a flattened sorted array &mdash; binary search on virtual index mid, convert to (row, col) = (mid/cols, mid%cols). Watch the search range narrow to a single cell.</div></div></a>
+
+  <a href='time-based-key-value/index.html'><div class='card'><span class='card-tag'>Binary Search</span><div class='card-name'>Time Based Key-Value Store</div><div class='card-desc'>Binary search on sorted timestamps per key &mdash; set() appends (timestamp, value) in order, get() bisects to find the rightmost entry with timestamp &le; target. Watch the search converge on the correct version.</div></div></a>
+
+  <a href='remove-nth-node/index.html'><div class='card'><span class='card-tag'>Linked List</span><div class='card-name'>Remove Nth Node From End of List</div><div class='card-desc'>Two-pointer gap trick &mdash; advance fast n steps ahead, then move both until fast hits the tail. slow is now just before the target node. One pass, constant space.</div></div></a>
+
+  <a href='copy-list-random-pointer/index.html'><div class='card'><span class='card-tag'>Linked List</span><div class='card-name'>Copy List with Random Pointer</div><div class='card-desc'>Hash-map cloning in two passes &mdash; first create all clones, then wire next and random pointers using the original&rarr;clone map. Watch the random pointers connect across the list.</div></div></a>
+
+  <a href='add-two-numbers/index.html'><div class='card'><span class='card-tag'>Linked List</span><div class='card-name'>Add Two Numbers</div><div class='card-desc'>Digit-by-digit addition on reversed linked lists &mdash; sum two nodes and a carry at each step, creating a new result node. Watch carry propagate and a final node appear if the last sum exceeds 9.</div></div></a>
+
+  <a href='find-duplicate/index.html'><div class='card'><span class='card-tag'>Linked List</span><div class='card-name'>Find the Duplicate Number</div><div class='card-desc'>Floyd&rsquo;s cycle detection on an implicit linked list &mdash; treat each value as a &ldquo;next pointer&rdquo; index. A cycle must exist because one value appears twice. The cycle entrance is the duplicate.</div></div></a>
+
 </div>
 
 </div>

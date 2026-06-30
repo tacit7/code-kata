@@ -3,716 +3,692 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Search a 2D Matrix</title>
+  <title>74. Search a 2D Matrix</title>
   <link rel="stylesheet" href="../shared/style.css" />
+  <script src="../shared/viz.js"></script>
   <style>
+    body { display:flex; flex-direction:column; height:100vh; overflow:hidden; }
+
+    .page-header {
+      flex-shrink:0;
+      padding:10px 16px 0;
+    }
+    .page-title {
+      font-size:1rem; font-weight:700; color:var(--text-bright); letter-spacing:0.01em;
+    }
+    .page-sub {
+      font-size:0.72rem; color:var(--text-dim); margin-top:2px;
+    }
+
+    /* ── viz-inputs ── */
     .viz-inputs {
-      display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end;
-      padding: 10px 0 14px; width: 100%; max-width: 96%;
+      display:flex; flex-wrap:wrap; gap:10px; align-items:flex-end;
+      padding:8px 16px 10px; flex-shrink:0; border-bottom:1px solid var(--border-soft);
     }
-    .viz-inputs .field {
-      display: flex; flex-direction: column; gap: 4px;
-    }
+    .viz-inputs .field { display:flex; flex-direction:column; gap:4px; }
     .viz-inputs label {
-      font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
-      letter-spacing: 0.08em; color: var(--text-dim);
+      font-size:0.68rem; font-weight:700; text-transform:uppercase;
+      letter-spacing:0.08em; color:var(--text-dim);
     }
-    .viz-inputs select, .viz-inputs textarea, .viz-inputs input[type="number"] {
-      background: var(--surface); border: 1px solid var(--border);
-      color: var(--text); border-radius: var(--radius-sm);
-      padding: 6px 10px; font-size: 0.85rem;
+    .viz-inputs select, .viz-inputs textarea, .viz-inputs input {
+      background:var(--surface); color:var(--text); border:1px solid var(--border);
+      border-radius:6px; font-size:0.82rem; padding:5px 8px;
     }
-    .viz-inputs textarea {
-      font-family: monospace; resize: vertical; min-height: 58px; width: 200px;
+    .viz-inputs textarea { resize:none; font-family:monospace; width:180px; height:62px; }
+    .viz-inputs input[type="number"] { width:72px; }
+    .viz-inputs select { min-width:200px; }
+    .btn-run {
+      padding:7px 18px; background:var(--accent); color:#fff;
+      border:none; border-radius:6px; font-weight:600; cursor:pointer; font-size:0.82rem;
     }
-    .viz-inputs input[type="number"] { width: 80px; }
-    .error-msg {
-      color: #f7768e; font-size: 0.78rem; margin-top: 4px;
-      display: none; align-self: flex-end;
+    .btn-run:hover { background:var(--accent-hover); }
+    .btn-rand {
+      padding:7px 14px; background:var(--surface); color:var(--text);
+      border:1px solid var(--border); border-radius:6px; cursor:pointer; font-size:0.82rem;
     }
-    .error-msg.visible { display: block; }
+    .btn-rand:hover { border-color:var(--accent); }
+    .input-error { color:var(--red); font-size:0.73rem; align-self:center; max-width:220px; }
 
-    .viz-area {
-      width: 100%; max-width: 96%;
-      display: flex; flex-direction: column; gap: 14px;
+    /* ── main layout ── */
+    .viz-root {
+      display:flex; flex:1; gap:14px;
+      padding:10px 16px 14px; min-height:0;
     }
-    .nav-row {
-      display: flex; gap: 12px; align-items: stretch;
+    .left-col, .right-col {
+      display:flex; flex-direction:column; gap:10px; min-width:0;
     }
-    .controls-panel {
-      flex: 0 0 auto; display: flex; gap: 8px; align-items: center;
-    }
-    .btn-step {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--radius-sm); color: var(--text);
-      cursor: pointer; font-size: 0.9rem; font-weight: 700;
-      padding: 8px 16px; transition: all 0.15s;
-    }
-    .btn-step:hover:not(:disabled) { background: var(--border); border-color: var(--accent); }
-    .btn-step:disabled { opacity: 0.35; cursor: not-allowed; }
-    .btn-play {
-      background: var(--accent); border: none;
-      border-radius: var(--radius-sm); color: #fff;
-      cursor: pointer; font-size: 0.9rem; font-weight: 700;
-      padding: 8px 18px; transition: background 0.15s;
-    }
-    .btn-play:hover:not(:disabled) { opacity: 0.85; }
-    .btn-play:disabled { opacity: 0.35; cursor: not-allowed; }
-    #speedSel {
-      background: var(--surface); border: 1px solid var(--border);
-      color: var(--text); border-radius: var(--radius-sm);
-      padding: 6px 10px; font-size: 0.85rem; cursor: pointer;
-    }
-    .status-panel {
-      flex: 1; min-width: 0; background: var(--surface);
-      border: 1px solid var(--border); border-radius: var(--radius-sm);
-      padding: 10px 14px; display: flex; flex-direction: column; justify-content: center;
-    }
-    .phase-label {
-      font-size: 0.68rem; font-weight: 700;
-      text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-dim);
-    }
-    .step-desc {
-      font-size: 0.88rem; color: var(--text); margin-top: 4px; min-height: 1.4em;
-    }
+    .left-col  { flex:1.1; }
+    .right-col { flex:1; }
 
-    .main-row {
-      display: grid;
-      grid-template-columns: 1fr 300px;
-      gap: 14px;
-      align-items: start;
-    }
-    @media (max-width: 860px) { .main-row { grid-template-columns: 1fr; } }
-
+    /* ── panel-box (from shared style via CSS vars) ── */
     .panel-box {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--radius-lg); padding: 14px 16px;
+      background:var(--surface); border:1px solid var(--border-soft);
+      border-radius:var(--radius-md); padding:10px 12px;
     }
     .panel-title {
-      font-size: 0.68rem; font-weight: 700; text-transform: uppercase;
-      letter-spacing: 0.1em; color: var(--text-dim); margin-bottom: 12px;
+      font-size:0.65rem; font-weight:700; text-transform:uppercase;
+      letter-spacing:0.1em; color:var(--text-dim); margin-bottom:8px;
     }
 
-    /* Matrix grid */
+    /* ── Matrix grid ── */
     #matrixGrid {
-      display: grid;
-      gap: 6px;
-      margin-bottom: 16px;
+      display:grid; gap:5px;
     }
-    .m-cell {
-      width: 56px; height: 56px;
-      display: flex; flex-direction: column; align-items: center; justify-content: center;
-      background: var(--bg-card); border: 2px solid var(--border);
-      border-radius: 6px;
-      font-family: monospace; font-size: 1rem; font-weight: 700;
-      color: var(--text-main);
-      position: relative;
-      transition: background 0.15s, border-color 0.15s, opacity 0.15s, color 0.15s;
+    .cell {
+      display:flex; flex-direction:column; align-items:center; justify-content:center;
+      border-radius:6px; border:2px solid var(--border);
+      background:var(--surface-dark); cursor:default; position:relative;
+      transition:border-color 0.1s, background 0.1s, opacity 0.1s;
     }
-    .m-cell.small { width: 44px; height: 44px; font-size: 0.82rem; }
-    .m-cell.eliminated { opacity: 0.28; text-decoration: line-through; }
-    .m-cell.active {
-      background: rgba(122, 162, 247, 0.18);
-      border-color: var(--accent);
-      color: var(--accent);
+    .cell-val {
+      font-size:0.92rem; font-weight:700; color:var(--text-bright);
     }
-    .m-cell.found {
-      background: rgba(158, 206, 106, 0.2);
-      border-color: #9ece6a;
-      color: #9ece6a;
+    .cell-idx {
+      font-size:0.52rem; color:var(--text-dim); margin-top:1px; font-family:monospace;
     }
-    .m-cell.not-found {
-      background: rgba(247, 118, 142, 0.12);
-      border-color: #f7768e;
-      color: #f7768e;
+    .cell.eliminated {
+      opacity:0.28; border-color:var(--border-soft);
     }
-    .m-cell-rc {
-      font-size: 0.52rem; color: var(--text-dim); margin-top: 2px; font-weight: 400;
+    .cell.eliminated .cell-val { text-decoration:line-through; color:var(--text-ghost); }
+    .cell.active {
+      border-color:var(--yellow); background:rgba(224,175,104,0.12);
+    }
+    .cell.active .cell-val { color:var(--yellow-light); }
+    .cell.found {
+      border-color:var(--green); background:rgba(158,206,106,0.15);
+    }
+    .cell.found .cell-val { color:var(--green-light); }
+    .cell.not-found-cell {
+      opacity:0.22; border-color:var(--red);
     }
 
-    /* Flat index bar */
-    .flat-bar-wrap {
-      position: relative; margin-top: 8px;
-    }
-    .flat-bar-label {
-      font-size: 0.62rem; color: var(--text-dim); text-transform: uppercase;
-      letter-spacing: 0.08em; margin-bottom: 6px;
+    /* ── Flattened index bar ── */
+    .flat-container { position:relative; padding-top:6px; overflow:hidden; }
+    .flat-bracket {
+      position:absolute; top:0; height:6px;
+      background:rgba(122,162,247,0.35); border-radius:3px 3px 0 0;
+      border-top:2px solid var(--accent);
+      pointer-events:none; transition:left 0.15s, width 0.15s;
     }
     #flatBar {
-      display: flex; gap: 4px; flex-wrap: wrap;
+      display:flex; gap:3px; flex-wrap:wrap;
     }
-    .f-cell {
-      width: 32px; height: 32px;
-      display: flex; align-items: center; justify-content: center;
-      background: var(--bg-card); border: 1px solid var(--border);
-      border-radius: 4px;
-      font-family: monospace; font-size: 0.7rem; font-weight: 600;
-      color: var(--text-dim);
-      transition: background 0.15s, border-color 0.15s, opacity 0.15s, color 0.15s;
+    .flat-cell {
+      width:28px; height:28px; border-radius:4px;
+      border:1px solid var(--border); background:var(--surface-dark);
+      display:flex; align-items:center; justify-content:center;
+      font-size:0.62rem; font-family:monospace; color:var(--text-dim);
+      transition:border-color 0.1s, background 0.1s, opacity 0.1s;
     }
-    .f-cell.eliminated { opacity: 0.25; }
-    .f-cell.in-range {
-      background: rgba(122, 162, 247, 0.08);
-      border-color: var(--border);
-      color: var(--text-main);
+    .flat-cell.flat-eliminated { opacity:0.2; border-color:var(--border-soft); }
+    .flat-cell.flat-active {
+      border-color:var(--yellow); background:rgba(224,175,104,0.15); color:var(--yellow-light);
     }
-    .f-cell.active {
-      background: rgba(122, 162, 247, 0.22);
-      border-color: var(--accent);
-      color: var(--accent);
-      font-weight: 800;
+    .flat-cell.flat-found {
+      border-color:var(--green); background:rgba(158,206,106,0.18); color:var(--green-light);
     }
-    .f-cell.found {
-      background: rgba(158, 206, 106, 0.2);
-      border-color: #9ece6a;
-      color: #9ece6a;
-    }
-    .f-cell.not-found { opacity: 0.2; }
+    .flat-cell.flat-not-found { opacity:0.2; border-color:var(--red); }
 
-    /* Bracket below flat bar */
-    .bracket-wrap {
-      position: relative; height: 14px; margin-top: 4px;
+    /* ── Nav row ── */
+    .nav-row { display:flex; align-items:center; gap:6px; }
+    .nav-btn {
+      background:var(--surface-dark); border:1px solid var(--border);
+      color:var(--text); border-radius:6px; padding:5px 10px;
+      cursor:pointer; font-size:0.78rem;
     }
-    #loBracket, #hiBracket {
-      position: absolute; top: 0;
-      font-size: 0.62rem; font-weight: 700; color: var(--accent);
-      transition: left 0.2s;
+    .nav-btn:hover { border-color:var(--accent); }
+    .nav-btn:disabled { opacity:0.35; cursor:default; }
+    .nav-btn.primary { background:var(--accent); border-color:var(--accent); color:#fff; font-weight:600; }
+    .nav-btn.primary:hover { background:var(--accent-hover); }
+    .nav-speed {
+      background:var(--surface-dark); border:1px solid var(--border);
+      color:var(--text); border-radius:6px; padding:5px 6px; font-size:0.75rem;
     }
-    #midBracket {
-      position: absolute; top: 0;
-      font-size: 0.62rem; font-weight: 700; color: #ff9e64;
-      transition: left 0.2s;
+    .step-counter { font-size:0.65rem; color:var(--text-dim); margin-top:5px; }
+    .phase-badge {
+      display:inline-block; font-size:0.6rem; font-weight:700;
+      text-transform:uppercase; letter-spacing:0.1em;
+      color:var(--accent); background:rgba(122,162,247,0.08);
+      border:1px solid rgba(122,162,247,0.2);
+      border-radius:4px; padding:2px 8px; margin-bottom:6px;
     }
+    .phase-badge.found-badge { color:var(--green); background:rgba(158,206,106,0.08); border-color:rgba(158,206,106,0.25); }
+    .phase-badge.notfound-badge { color:var(--red); background:rgba(247,118,142,0.08); border-color:rgba(247,118,142,0.25); }
+    .step-desc { font-size:0.78rem; color:var(--text-muted); line-height:1.45; }
 
-    /* Right panel */
-    .right-col {
-      display: flex; flex-direction: column; gap: 12px;
+    /* ── Pointer boxes ── */
+    .ptr-row { display:flex; gap:7px; }
+    .ptr-box {
+      flex:1; display:flex; flex-direction:column; align-items:center; gap:2px;
+      padding:7px 4px; border-radius:7px;
+      background:var(--surface-dark); border:1px solid var(--border);
+      transition:border-color 0.1s;
     }
-    .info-row {
-      display: flex; gap: 8px; align-items: center;
-      font-family: monospace; font-size: 0.85rem;
-    }
-    .badge {
-      padding: 4px 10px; border-radius: 4px;
-      font-size: 0.78rem; font-weight: 700;
-      background: var(--bg-card); border: 1px solid var(--border);
-      color: var(--text-main);
-    }
-    .badge.accent { background: rgba(122,162,247,0.15); border-color: var(--accent); color: var(--accent); }
-    .badge.orange { background: rgba(255,158,100,0.15); border-color: #ff9e64; color: #ff9e64; }
-    .badge.green { background: rgba(158,206,106,0.15); border-color: #9ece6a; color: #9ece6a; }
-    .badge.red { background: rgba(247,118,142,0.15); border-color: #f7768e; color: #f7768e; }
+    .ptr-box.active-ptr { border-color:var(--accent); }
+    .ptr-label { font-size:0.56rem; text-transform:uppercase; letter-spacing:0.09em; color:var(--text-dim); }
+    .ptr-value { font-size:1.05rem; font-weight:700; color:var(--text-bright); font-family:monospace; }
+    .ptr-box.lo-box.active-ptr .ptr-value { color:var(--orange); }
+    .ptr-box.hi-box.active-ptr .ptr-value { color:var(--blue); }
+    .ptr-box.mid-box .ptr-value { color:var(--yellow); }
+    .ptr-box.target-box .ptr-value { color:var(--purple); }
 
-    .ptr-row {
-      display: flex; flex-direction: column; gap: 6px;
+    /* ── Decomposition ── */
+    .decomp-line {
+      font-size:0.8rem; color:var(--text-muted); font-family:monospace;
+      padding:2px 0; display:flex; align-items:center; gap:5px;
     }
-    .ptr-item {
-      display: flex; align-items: center; gap: 8px;
-      font-family: monospace; font-size: 0.85rem;
-    }
-    .ptr-key {
-      color: var(--text-dim); font-size: 0.78rem; font-weight: 700;
-      text-transform: uppercase; letter-spacing: 0.05em;
-      min-width: 36px;
-    }
-    .ptr-val {
-      font-weight: 700; color: var(--text-main);
-    }
-    .ptr-val.accent { color: var(--accent); }
-    .ptr-val.orange { color: #ff9e64; }
+    .decomp-key { color:var(--accent); font-weight:700; min-width:28px; }
+    .decomp-num { color:var(--yellow-light); font-weight:700; }
 
-    .decomp-box {
-      background: var(--bg-card); border: 1px solid var(--border);
-      border-radius: 6px; padding: 10px 12px;
-      font-family: monospace; font-size: 0.8rem; line-height: 1.8;
-      color: var(--text-dim);
+    /* ── Comparison ── */
+    .cmp-expr {
+      font-size:0.86rem; font-weight:600; font-family:monospace;
+      line-height:1.5;
     }
-    .decomp-box .hl { color: var(--accent); font-weight: 700; }
-    .decomp-box .hl-orange { color: #ff9e64; font-weight: 700; }
+    .cmp-lt { color:var(--orange); }
+    .cmp-gt { color:var(--blue); }
+    .cmp-eq { color:var(--green); }
 
-    .cmp-box {
-      background: var(--bg-card); border: 1px solid var(--border);
-      border-radius: 6px; padding: 10px 12px;
-      font-family: monospace; font-size: 0.8rem; line-height: 1.8;
-      color: var(--text-dim);
-    }
-    .cmp-box .hl { color: var(--accent); font-weight: 700; }
-
+    /* ── Result banner ── */
     .result-banner {
-      padding: 12px 14px; border-radius: 8px;
-      font-size: 0.9rem; font-weight: 700; text-align: center;
-      display: none;
+      display:flex; align-items:center; justify-content:center;
+      font-size:0.88rem; font-weight:700;
+      padding:10px 14px; border-radius:7px;
+      letter-spacing:0.02em;
     }
-    .result-banner.found {
-      display: block;
-      background: rgba(158,206,106,0.15);
-      border: 1px solid #9ece6a;
-      color: #9ece6a;
+    .result-banner.found-banner {
+      background:rgba(158,206,106,0.12); border:1px solid rgba(158,206,106,0.3);
+      color:var(--green-light);
     }
-    .result-banner.not-found {
-      display: block;
-      background: rgba(247,118,142,0.12);
-      border: 1px solid #f7768e;
-      color: #f7768e;
+    .result-banner.notfound-banner {
+      background:rgba(247,118,142,0.10); border:1px solid rgba(247,118,142,0.28);
+      color:var(--red-light);
     }
   </style>
 </head>
+<body>
 
-<body class="page">
-  <div class="page-header">
-    <a class="back-link" href="../index.html">← All Algorithms</a>
-    <div>
-      <div class="page-title">Search a 2D Matrix</div>
-      <div style="font-size:0.78rem;color:var(--text-dim);margin-top:4px;">LeetCode #74 · Binary Search · O(log m·n) time · O(1) space</div>
-    </div>
+<div class="page-header">
+  <div class="page-title">74. Search a 2D Matrix</div>
+  <div class="page-sub">Binary search on flat index &middot; O(log m&middot;n) time &middot; O(1) space</div>
+</div>
+
+<div class="viz-inputs">
+  <div class="field">
+    <label>Preset</label>
+    <select id="presetSel" onchange="loadPreset()">
+      <option value="">&#8212; pick a preset &#8212;</option>
+      <option value="0">3&times;4 matrix &mdash; target=3 (Found 0,1)</option>
+      <option value="1">3&times;4 matrix &mdash; target=13 (Not found)</option>
+      <option value="2">3&times;4 matrix &mdash; target=60 (Found 2,3 last cell)</option>
+      <option value="3">3&times;4 matrix &mdash; target=1 (Found 0,0 first cell)</option>
+      <option value="4">2&times;2 matrix &mdash; target=6 (Found 1,0)</option>
+      <option value="5">1&times;1 matrix &mdash; target=1 (Found 0,0 edge case)</option>
+    </select>
   </div>
-
-  <div class="viz-inputs">
-    <div class="field">
-      <label>Preset</label>
-      <select id="presetSel" onchange="loadPreset()">
-        <option value="">— custom —</option>
-        <option value="1,3,5,7|10,11,16,20|23,30,34,60|3" selected>3×4 matrix → target 3 (found 0,1)</option>
-        <option value="1,3,5,7|10,11,16,20|23,30,34,60|13">3×4 matrix → target 13 (not found)</option>
-        <option value="1,3,5,7|10,11,16,20|23,30,34,60|60">3×4 matrix → target 60 (last cell)</option>
-        <option value="1,3,5,7|10,11,16,20|23,30,34,60|1">3×4 matrix → target 1 (first cell)</option>
-        <option value="1,4|6,8|6">2×2 matrix → target 6 (found 1,0)</option>
-        <option value="1|1">1×1 matrix → target 1 (edge case)</option>
-      </select>
-    </div>
-    <div class="field">
-      <label>Matrix (one row per line, comma-separated)</label>
-      <textarea id="matrixInput" rows="3">1,3,5,7
+  <div class="field">
+    <label>Matrix rows (comma-separated)</label>
+    <textarea id="matrixInput" rows="3" spellcheck="false">1,3,5,7
 10,11,16,20
 23,30,34,60</textarea>
+  </div>
+  <div class="field">
+    <label>Target</label>
+    <input id="targetInput" type="number" value="3" />
+  </div>
+  <button class="btn-run" onclick="buildAndRun()">Run</button>
+  <button class="btn-rand" onclick="randomExample()">&#127922; Random</button>
+  <div id="inputError" class="input-error" style="display:none;"></div>
+</div>
+
+<div class="viz-root">
+
+  <!-- LEFT COLUMN -->
+  <div class="left-col">
+
+    <div class="panel-box">
+      <div class="panel-title" id="gridLabel">Matrix</div>
+      <div id="matrixGrid"></div>
     </div>
-    <div class="field">
-      <label>Target</label>
-      <input type="number" id="targetInput" value="3" />
+
+    <div class="panel-box">
+      <div class="panel-title">Flat Index View &mdash; treat as 1D array [0 &hellip; m&middot;n&minus;1]</div>
+      <div class="flat-container" id="flatContainer">
+        <div class="flat-bracket" id="flatBracket" style="display:none;"></div>
+        <div id="flatBar"></div>
+      </div>
     </div>
-    <button onclick="buildAndRun()" style="background:var(--accent);border:none;color:#fff;border-radius:var(--radius-sm);padding:8px 16px;cursor:pointer;font-size:0.85rem;font-weight:700;">Run</button>
-    <button onclick="randomExample()" style="background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:var(--radius-sm);padding:8px 14px;cursor:pointer;font-size:0.85rem;">🎲 Random</button>
-    <span class="error-msg" id="errorMsg"></span>
+
   </div>
 
-  <div class="controls"></div>
+  <!-- RIGHT COLUMN -->
+  <div class="right-col">
 
-  <div class="viz-area">
-    <div class="nav-row">
-      <div class="panel-box controls-panel">
-        <button class="btn-step" id="prevBtn" disabled>&#8592;</button>
-        <button class="btn-step" id="stepBtn" disabled>&#8594;</button>
-        <button class="btn-play" id="playBtn" disabled>&#9654; Play</button>
-        <select id="speedSel">
-          <option value="900">Slow</option>
-          <option value="350" selected>Medium</option>
-          <option value="100">Fast</option>
-        </select>
+    <div style="display:flex;gap:10px;">
+      <div class="panel-box" style="flex:0 0 auto;">
+        <div class="nav-row">
+          <button class="nav-btn" id="prevBtn">&larr;</button>
+          <button class="nav-btn" id="stepBtn">&rarr;</button>
+          <button class="nav-btn primary" id="playBtn">Play</button>
+          <button class="nav-btn" id="resetBtn" onclick="buildAndRun()">&#8635;</button>
+          <select class="nav-speed" id="speedSel">
+            <option value="1200">Slow</option>
+            <option value="650" selected>Normal</option>
+            <option value="280">Fast</option>
+          </select>
+        </div>
+        <div class="step-counter" id="counter">Step 0 / 0</div>
       </div>
-      <div class="status-panel">
-        <div class="phase-label" id="phase-label">—</div>
-        <div class="step-desc" id="step-desc">Set up inputs and click Run to start.</div>
+      <div class="panel-box" style="flex:1;min-width:0;">
+        <div class="phase-badge" id="phaseBadge">&#8212;</div>
+        <div class="step-desc" id="stepDesc">Load a preset or enter values to begin.</div>
+      </div>
+    </div>
+
+    <div class="panel-box">
+      <div class="panel-title">Search Pointers</div>
+      <div class="ptr-row">
+        <div class="ptr-box lo-box">
+          <div class="ptr-label">lo</div>
+          <div class="ptr-value" id="ptrLo">&#8212;</div>
+        </div>
+        <div class="ptr-box mid-box">
+          <div class="ptr-label">mid</div>
+          <div class="ptr-value" id="ptrMid">&#8212;</div>
+        </div>
+        <div class="ptr-box hi-box">
+          <div class="ptr-label">hi</div>
+          <div class="ptr-value" id="ptrHi">&#8212;</div>
+        </div>
+        <div class="ptr-box target-box">
+          <div class="ptr-label">target</div>
+          <div class="ptr-value" id="ptrTarget">&#8212;</div>
+        </div>
       </div>
     </div>
 
-    <div class="main-row">
-      <!-- Left: matrix + flat bar -->
-      <div style="display:flex;flex-direction:column;gap:14px;">
-        <div class="panel-box">
-          <div class="panel-title" id="matrixPanelTitle">Matrix</div>
-          <div id="matrixGrid"></div>
-          <div class="flat-bar-label">Flat Index (treat as 1D array)</div>
-          <div id="flatBar"></div>
-          <div class="bracket-wrap" id="bracketWrap">
-            <span id="loBracket" style="display:none"></span>
-            <span id="midBracket" style="display:none"></span>
-            <span id="hiBracket" style="display:none"></span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Right: info panel -->
-      <div class="right-col">
-        <div class="panel-box">
-          <div class="panel-title">Search State</div>
-          <div style="margin-bottom:12px;">
-            <div style="font-size:0.7rem;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px;">Target</div>
-            <span class="badge accent" id="targetBadge">—</span>
-          </div>
-          <div class="ptr-row" style="margin-bottom:12px;">
-            <div class="ptr-item">
-              <span class="ptr-key">lo</span>
-              <span class="ptr-val" id="loVal">—</span>
-            </div>
-            <div class="ptr-item">
-              <span class="ptr-key">hi</span>
-              <span class="ptr-val" id="hiVal">—</span>
-            </div>
-            <div class="ptr-item">
-              <span class="ptr-key">mid</span>
-              <span class="ptr-val orange" id="midVal">—</span>
-            </div>
-          </div>
-        </div>
-
-        <div class="panel-box" id="decompPanel">
-          <div class="panel-title">mid → (row, col)</div>
-          <div class="decomp-box" id="decompBox">
-            <div>mid = ?</div>
-            <div>row = mid ÷ cols = ?</div>
-            <div>col = mid mod cols = ?</div>
-          </div>
-        </div>
-
-        <div class="panel-box" id="cmpPanel">
-          <div class="panel-title">Comparison</div>
-          <div class="cmp-box" id="cmpBox">
-            <div>matrix[?][?] = ?</div>
-            <div>target = ?</div>
-            <div id="cmpResult" style="margin-top:6px;font-weight:700;">—</div>
-          </div>
-        </div>
-
-        <div class="result-banner" id="resultBanner"></div>
-      </div>
+    <div class="panel-box">
+      <div class="panel-title">Mid &rarr; (row, col) Decomposition</div>
+      <div id="decompContent"><span style="color:var(--text-dim)">&#8212;</span></div>
     </div>
+
+    <div class="panel-box">
+      <div class="panel-title">Comparison</div>
+      <div id="cmpContent"><span style="color:var(--text-dim)">&#8212;</span></div>
+    </div>
+
+    <div id="resultBanner" style="display:none;"></div>
+
   </div>
+</div>
 
-  <script src="../shared/viz.js"></script>
-  <script>
-    var nav;
-    var currentMatrix = [];
-    var currentTarget = 0;
+<div class="controls"></div>
 
-    // ── Preset loader ──────────────────────────────────────────────
-    function loadPreset() {
-      var sel = document.getElementById('presetSel');
-      if (!sel.value) return;
-      // Format: "r0c0,r0c1,...|r1c0,...|target"
-      var parts = sel.value.split('|');
-      var target = parts[parts.length - 1];
-      var rows = parts.slice(0, parts.length - 1);
-      document.getElementById('matrixInput').value = rows.join('\n');
-      document.getElementById('targetInput').value = target;
-      buildAndRun();
+<script>
+// ── Presets ──────────────────────────────────────────────────────────────────
+var PRESETS = [
+  { matrix: [[1,3,5,7],[10,11,16,20],[23,30,34,60]], target: 3  },
+  { matrix: [[1,3,5,7],[10,11,16,20],[23,30,34,60]], target: 13 },
+  { matrix: [[1,3,5,7],[10,11,16,20],[23,30,34,60]], target: 60 },
+  { matrix: [[1,3,5,7],[10,11,16,20],[23,30,34,60]], target: 1  },
+  { matrix: [[1,4],[6,8]],                           target: 6  },
+  { matrix: [[1]],                                   target: 1  }
+];
+
+function loadPreset() {
+  var sel = document.getElementById('presetSel');
+  if (sel.value === '') return;
+  var p = PRESETS[parseInt(sel.value)];
+  document.getElementById('matrixInput').value = p.matrix.map(function(r){ return r.join(','); }).join('\n');
+  document.getElementById('targetInput').value = p.target;
+  buildAndRun();
+}
+
+// ── randomExample ─────────────────────────────────────────────────────────────
+function randInt(a, b) { return Math.floor(Math.random() * (b - a + 1)) + a; }
+
+function randomExample() {
+  var rows = randInt(2, 4);
+  var cols = randInt(2, 5);
+  var total = rows * cols;
+  var vals = [];
+  var cur = randInt(1, 5);
+  for (var i = 0; i < total; i++) {
+    vals.push(cur);
+    cur += randInt(1, 8);
+  }
+  var matrix = [];
+  for (var r = 0; r < rows; r++) {
+    matrix.push(vals.slice(r * cols, (r + 1) * cols));
+  }
+  var target;
+  if (Math.random() < 0.6) {
+    target = vals[randInt(0, total - 1)];
+  } else {
+    // Find a gap where a missing value can hide
+    var gapIdx = -1;
+    for (var k = 0; k < total - 1; k++) {
+      if (vals[k + 1] - vals[k] > 1) { gapIdx = k; break; }
     }
-
-    // ── Random example ─────────────────────────────────────────────
-    function randInt(a, b) { return a + Math.floor(Math.random() * (b - a + 1)); }
-
-    function randomExample() {
-      var rows = randInt(2, 4);
-      var cols = randInt(2, 5);
-      var total = rows * cols;
-      var vals = [];
-      var cur = randInt(1, 5);
-      for (var i = 0; i < total; i++) {
-        vals.push(cur);
-        cur += randInt(1, 8);
-      }
-      var matrix = [];
-      for (var r = 0; r < rows; r++) {
-        matrix.push(vals.slice(r * cols, (r + 1) * cols));
-      }
-      var target;
-      if (Math.random() < 0.6) {
-        target = vals[randInt(0, total - 1)];
-      } else {
-        // Pick a value NOT in the matrix
-        var idx = randInt(0, total - 2);
-        if (vals[idx + 1] - vals[idx] <= 1) {
-          target = vals[total - 1] + randInt(1, 10);
-        } else {
-          target = randInt(vals[idx] + 1, vals[idx + 1] - 1);
-        }
-      }
-      document.getElementById('matrixInput').value = matrix.map(function(r) { return r.join(','); }).join('\n');
-      document.getElementById('targetInput').value = target;
-      document.getElementById('presetSel').value = '';
-      buildAndRun();
+    if (gapIdx >= 0) {
+      target = randInt(vals[gapIdx] + 1, vals[gapIdx + 1] - 1);
+    } else {
+      // All adjacent values differ by 1 — go outside the range
+      target = vals[total - 1] + randInt(1, 10);
     }
+  }
+  document.getElementById('matrixInput').value = matrix.map(function(r){ return r.join(','); }).join('\n');
+  document.getElementById('targetInput').value = target;
+  buildAndRun();
+}
 
-    // ── Input parsing ──────────────────────────────────────────────
-    function showError(msg) {
-      var el = document.getElementById('errorMsg');
-      el.textContent = msg;
-      el.classList.add('visible');
-    }
-    function clearError() {
-      var el = document.getElementById('errorMsg');
-      el.textContent = '';
-      el.classList.remove('visible');
-    }
+// ── Input parsing ──────────────────────────────────────────────────────────────
+function parseInputs() {
+  var errEl = document.getElementById('inputError');
+  errEl.style.display = 'none';
 
-    function parseMatrix(raw) {
-      var lines = raw.trim().split('\n').map(function(l) { return l.trim(); }).filter(Boolean);
-      if (!lines.length) throw new Error('Matrix is empty');
-      var matrix = lines.map(function(line) {
-        return line.split(',').map(function(x) {
-          var v = parseInt(x.trim(), 10);
-          if (isNaN(v)) throw new Error('Non-integer value: ' + x.trim());
-          return v;
-        });
-      });
-      var cols = matrix[0].length;
-      for (var r = 1; r < matrix.length; r++) {
-        if (matrix[r].length !== cols) throw new Error('Row ' + r + ' has wrong length (expected ' + cols + ')');
-      }
-      // Validate strictly increasing across flattened array
-      var flat = [].concat.apply([], matrix);
-      for (var i = 1; i < flat.length; i++) {
-        if (flat[i] <= flat[i - 1]) throw new Error('Matrix must be strictly increasing (flat[' + (i-1) + ']=' + flat[i-1] + ' >= flat[' + i + ']=' + flat[i] + ')');
-      }
-      return matrix;
-    }
+  function err(msg) {
+    errEl.textContent = msg;
+    errEl.style.display = 'block';
+    return null;
+  }
 
-    // ── Step builder ───────────────────────────────────────────────
-    function buildSteps(matrix, target) {
-      var rows = matrix.length;
-      var cols = matrix[0].length;
-      var total = rows * cols;
-      var steps = [];
+  var rawTarget = document.getElementById('targetInput').value.trim();
+  var target = parseInt(rawTarget);
+  if (isNaN(target)) return err('Target must be an integer.');
 
-      var lo = 0, hi = total - 1;
+  var rawRows = document.getElementById('matrixInput').value.trim().split('\n');
+  if (!rawRows.length || (rawRows.length === 1 && rawRows[0] === ''))
+    return err('Matrix cannot be empty.');
 
-      // INIT step
-      steps.push({
-        lo: lo, hi: hi, mid: null, midRow: null, midCol: null, midVal: null,
-        phase: 'init', found: null,
-        matrix: matrix, target: target, rows: rows, cols: cols,
-        label: 'Start: lo=0, hi=' + hi + ', searching for target=' + target
-      });
+  var matrix = [];
+  var cols = -1;
+  for (var r = 0; r < rawRows.length; r++) {
+    var trimmed = rawRows[r].trim();
+    if (!trimmed) continue;
+    var parts = trimmed.split(',').map(function(s){ return parseInt(s.trim()); });
+    if (parts.some(isNaN)) return err('Row ' + (r+1) + ' contains non-integer values.');
+    if (cols < 0) cols = parts.length;
+    else if (parts.length !== cols) return err('Row ' + (r+1) + ' has ' + parts.length + ' values but row 1 has ' + cols + '.');
+    matrix.push(parts);
+  }
+  if (!matrix.length) return err('Matrix cannot be empty.');
 
-      while (lo <= hi) {
-        var mid = Math.floor((lo + hi) / 2);
-        var midRow = Math.floor(mid / cols);
-        var midCol = mid % cols;
-        var midVal = matrix[midRow][midCol];
+  // Validate strictly increasing
+  var flat = [];
+  for (var i = 0; i < matrix.length; i++) for (var j = 0; j < matrix[i].length; j++) flat.push(matrix[i][j]);
+  for (var i = 1; i < flat.length; i++) {
+    if (flat[i] <= flat[i-1])
+      return err('Matrix must be strictly increasing. flat[' + i + ']=' + flat[i] + ' ≤ flat[' + (i-1) + ']=' + flat[i-1]);
+  }
 
-        // CHECK step
-        steps.push({
-          lo: lo, hi: hi, mid: mid, midRow: midRow, midCol: midCol, midVal: midVal,
-          phase: 'check', found: null,
-          matrix: matrix, target: target, rows: rows, cols: cols,
-          label: 'mid = (' + lo + '+' + hi + ')÷2 = ' + mid + ' → (row=' + midRow + ', col=' + midCol + '), matrix[' + midRow + '][' + midCol + '] = ' + midVal
-        });
+  return { matrix: matrix, target: target };
+}
 
-        if (midVal === target) {
-          steps.push({
-            lo: lo, hi: hi, mid: mid, midRow: midRow, midCol: midCol, midVal: midVal,
-            phase: 'found', found: true,
-            matrix: matrix, target: target, rows: rows, cols: cols,
-            label: midVal + ' == ' + target + ' → FOUND at (' + midRow + ', ' + midCol + ')!'
-          });
-          return steps;
-        } else if (midVal < target) {
-          lo = mid + 1;
-          steps.push({
-            lo: lo, hi: hi, mid: null, midRow: null, midCol: null, midVal: null,
-            phase: 'adjust-lo', found: null,
-            matrix: matrix, target: target, rows: rows, cols: cols,
-            label: midVal + ' < ' + target + ' → search right half, lo = ' + lo
-          });
-        } else {
-          hi = mid - 1;
-          steps.push({
-            lo: lo, hi: hi, mid: null, midRow: null, midCol: null, midVal: null,
-            phase: 'adjust-hi', found: null,
-            matrix: matrix, target: target, rows: rows, cols: cols,
-            label: midVal + ' > ' + target + ' → search left half, hi = ' + hi
-          });
-        }
-      }
+// ── buildSteps ────────────────────────────────────────────────────────────────
+function buildSteps(matrix, target) {
+  var rows = matrix.length;
+  var cols = matrix[0].length;
+  var total = rows * cols;
+  var steps = [];
 
-      // NOT-FOUND
-      steps.push({
-        lo: lo, hi: hi, mid: null, midRow: null, midCol: null, midVal: null,
-        phase: 'not-found', found: false,
-        matrix: matrix, target: target, rows: rows, cols: cols,
-        label: 'lo (' + lo + ') > hi (' + hi + ') — target ' + target + ' not in matrix'
-      });
+  steps.push({
+    lo: 0, hi: total - 1, mid: null, midRow: null, midCol: null, midVal: null,
+    phase: 'init', found: null, matrix: matrix, target: target, rows: rows, cols: cols,
+    label: 'Start: lo=0, hi=' + (total-1) + ', searching for target=' + target
+  });
 
-      return steps;
-    }
+  var lo = 0, hi = total - 1;
 
-    // ── Build & Run ────────────────────────────────────────────────
-    function buildAndRun() {
-      clearError();
-      var rawMatrix = document.getElementById('matrixInput').value;
-      var rawTarget = document.getElementById('targetInput').value;
-      try {
-        var matrix = parseMatrix(rawMatrix);
-        var target = parseInt(rawTarget, 10);
-        if (isNaN(target)) throw new Error('Target must be an integer');
-        currentMatrix = matrix;
-        currentTarget = target;
-        buildGrid(matrix);
-        var steps = buildSteps(matrix, target);
-        nav.load(steps);
-      } catch (e) {
-        showError(e.message);
-      }
-    }
+  while (lo <= hi) {
+    var mid = Math.floor((lo + hi) / 2);
+    var midRow = Math.floor(mid / cols);
+    var midCol = mid % cols;
+    var midVal = matrix[midRow][midCol];
 
-    // ── Grid renderer ──────────────────────────────────────────────
-    function buildGrid(matrix) {
-      var rows = matrix.length;
-      var cols = matrix[0].length;
-      var total = rows * cols;
-      var small = total > 12;
-
-      // Matrix grid
-      var grid = document.getElementById('matrixGrid');
-      grid.innerHTML = '';
-      grid.style.gridTemplateColumns = 'repeat(' + cols + ', auto)';
-      for (var r = 0; r < rows; r++) {
-        for (var c = 0; c < cols; c++) {
-          var cell = document.createElement('div');
-          cell.className = 'm-cell' + (small ? ' small' : '');
-          cell.id = 'mc-' + r + '-' + c;
-          cell.innerHTML = '<div>' + matrix[r][c] + '</div><div class="m-cell-rc">(' + r + ',' + c + ')</div>';
-          grid.appendChild(cell);
-        }
-      }
-
-      // Title
-      document.getElementById('matrixPanelTitle').textContent = 'Matrix (' + rows + '×' + cols + ')';
-
-      // Flat bar
-      var bar = document.getElementById('flatBar');
-      bar.innerHTML = '';
-      for (var i = 0; i < total; i++) {
-        var fc = document.createElement('div');
-        fc.className = 'f-cell';
-        fc.id = 'fc-' + i;
-        var flatRow = Math.floor(i / cols);
-        var flatVal = matrix[flatRow][i % cols];
-        fc.textContent = flatVal;
-        bar.appendChild(fc);
-      }
-    }
-
-    // ── Render step ────────────────────────────────────────────────
-    function applyStep(snap, cur, total) {
-      var rows = snap.rows, cols = snap.cols;
-      var flatTotal = rows * cols;
-
-      // Matrix cells
-      for (var r = 0; r < rows; r++) {
-        for (var c = 0; c < cols; c++) {
-          var flatIdx = r * cols + c;
-          var cell = document.getElementById('mc-' + r + '-' + c);
-          if (!cell) continue;
-          cell.className = cell.className.replace(/\s*(eliminated|active|found|not-found)/g, '');
-          if (snap.phase === 'found') {
-            if (r === snap.midRow && c === snap.midCol) {
-              cell.classList.add('found');
-            } else {
-              cell.classList.add('eliminated');
-            }
-          } else if (snap.phase === 'not-found') {
-            cell.classList.add('not-found');
-          } else if (snap.mid !== null && r === snap.midRow && c === snap.midCol) {
-            cell.classList.add('active');
-          } else if (flatIdx < snap.lo || flatIdx > snap.hi) {
-            cell.classList.add('eliminated');
-          }
-        }
-      }
-
-      // Flat bar
-      for (var i = 0; i < flatTotal; i++) {
-        var fc = document.getElementById('fc-' + i);
-        if (!fc) continue;
-        fc.className = 'f-cell';
-        if (snap.phase === 'found') {
-          var midFlat = snap.midRow * cols + snap.midCol;
-          if (i === midFlat) fc.classList.add('found');
-          else fc.classList.add('eliminated');
-        } else if (snap.phase === 'not-found') {
-          fc.classList.add('not-found');
-        } else if (snap.mid !== null && i === snap.mid) {
-          fc.classList.add('active');
-        } else if (i < snap.lo || i > snap.hi) {
-          fc.classList.add('eliminated');
-        } else {
-          fc.classList.add('in-range');
-        }
-      }
-
-      // Pointer labels
-      document.getElementById('targetBadge').textContent = snap.target;
-      document.getElementById('loVal').textContent = snap.lo;
-      document.getElementById('hiVal').textContent = snap.hi;
-      document.getElementById('midVal').textContent = snap.mid !== null ? snap.mid : '—';
-
-      // Decomp box
-      var decompBox = document.getElementById('decompBox');
-      if (snap.mid !== null) {
-        decompBox.innerHTML =
-          '<div>mid = <span class="hl-orange">' + snap.mid + '</span></div>' +
-          '<div>row = ' + snap.mid + ' ÷ ' + cols + ' = <span class="hl">' + snap.midRow + '</span></div>' +
-          '<div>col = ' + snap.mid + ' mod ' + cols + ' = <span class="hl">' + snap.midCol + '</span></div>';
-      } else {
-        decompBox.innerHTML = '<div style="color:var(--text-dim)">—</div>';
-      }
-
-      // Comparison box
-      var cmpBox = document.getElementById('cmpBox');
-      if (snap.mid !== null && snap.midVal !== null) {
-        var cmpTxt = '';
-        if (snap.midVal < snap.target) cmpTxt = '<span style="color:#ff9e64;font-weight:700">' + snap.midVal + ' &lt; ' + snap.target + ' → lo = mid + 1</span>';
-        else if (snap.midVal > snap.target) cmpTxt = '<span style="color:#bb9af7;font-weight:700">' + snap.midVal + ' &gt; ' + snap.target + ' → hi = mid − 1</span>';
-        else cmpTxt = '<span style="color:#9ece6a;font-weight:700">' + snap.midVal + ' == ' + snap.target + ' → FOUND!</span>';
-        cmpBox.innerHTML =
-          '<div>matrix[<span class="hl">' + snap.midRow + '</span>][<span class="hl">' + snap.midCol + '</span>] = <span class="hl">' + snap.midVal + '</span></div>' +
-          '<div>target = <span class="hl">' + snap.target + '</span></div>' +
-          '<div style="margin-top:6px;">' + cmpTxt + '</div>';
-      } else {
-        cmpBox.innerHTML = '<div style="color:var(--text-dim)">—</div>';
-      }
-
-      // Result banner
-      var banner = document.getElementById('resultBanner');
-      banner.className = 'result-banner';
-      if (snap.phase === 'found') {
-        banner.classList.add('found');
-        banner.textContent = '✓ FOUND at (' + snap.midRow + ', ' + snap.midCol + ')';
-      } else if (snap.phase === 'not-found') {
-        banner.classList.add('not-found');
-        banner.textContent = '✗ NOT FOUND — target ' + snap.target + ' is not in the matrix';
-      }
-
-      // Status bar
-      var phaseNames = {
-        'init': 'Initialize', 'check': 'Check mid',
-        'adjust-lo': 'Adjust lo', 'adjust-hi': 'Adjust hi',
-        'found': 'Found!', 'not-found': 'Not Found'
-      };
-      document.getElementById('phase-label').textContent =
-        (phaseNames[snap.phase] || snap.phase) + ' — Step ' + (cur + 1) + ' / ' + total;
-      document.getElementById('step-desc').textContent = snap.label;
-    }
-
-    // ── Init ───────────────────────────────────────────────────────
-    window.addEventListener('DOMContentLoaded', function() {
-      nav = VizNav({
-        btnPrev: document.getElementById('prevBtn'),
-        btnNext: document.getElementById('stepBtn'),
-        btnPlay: document.getElementById('playBtn'),
-        speedSel: document.getElementById('speedSel'),
-        render: function(snap, cur, total) {
-          applyStep(snap, cur, total);
-        }
-      });
-
-      if (window.self !== window.top) {
-        var bl = document.querySelector('.back-link');
-        if (bl) bl.style.display = 'none';
-      }
-
-      buildAndRun();
+    steps.push({
+      lo: lo, hi: hi, mid: mid, midRow: midRow, midCol: midCol, midVal: midVal,
+      phase: 'check', found: null, matrix: matrix, target: target, rows: rows, cols: cols,
+      label: 'mid = (' + lo + '+' + hi + ')\u00F72 = ' + mid + ' \u2192 (row=' + midRow + ', col=' + midCol + '), matrix[' + midRow + '][' + midCol + '] = ' + midVal
     });
-  </script>
+
+    if (midVal === target) {
+      steps.push({
+        lo: lo, hi: hi, mid: mid, midRow: midRow, midCol: midCol, midVal: midVal,
+        phase: 'found', found: true, matrix: matrix, target: target, rows: rows, cols: cols,
+        label: midVal + ' == ' + target + ' \u2192 FOUND at (' + midRow + ', ' + midCol + ')!'
+      });
+      return steps;
+    } else if (midVal < target) {
+      var newLo = mid + 1;
+      steps.push({
+        lo: newLo, hi: hi, mid: mid, midRow: midRow, midCol: midCol, midVal: midVal,
+        phase: 'adjust-lo', found: null, matrix: matrix, target: target, rows: rows, cols: cols,
+        label: midVal + ' < ' + target + ' \u2192 search right half, lo: ' + lo + ' \u2192 ' + newLo
+      });
+      lo = newLo;
+    } else {
+      var newHi = mid - 1;
+      steps.push({
+        lo: lo, hi: newHi, mid: mid, midRow: midRow, midCol: midCol, midVal: midVal,
+        phase: 'adjust-hi', found: null, matrix: matrix, target: target, rows: rows, cols: cols,
+        label: midVal + ' > ' + target + ' \u2192 search left half, hi: ' + hi + ' \u2192 ' + newHi
+      });
+      hi = newHi;
+    }
+  }
+
+  // not-found: clear mid so no stale highlight
+  steps.push({
+    lo: lo, hi: hi, mid: null, midRow: null, midCol: null, midVal: null,
+    phase: 'not-found', found: false, matrix: matrix, target: target, rows: rows, cols: cols,
+    label: 'lo (' + lo + ') > hi (' + hi + ') \u2192 target ' + target + ' not in matrix'
+  });
+
+  return steps;
+}
+
+// ── render ────────────────────────────────────────────────────────────────────
+function render(snap, cursor, total) {
+  var lo = snap.lo, hi = snap.hi, mid = snap.mid;
+  var midRow = snap.midRow, midCol = snap.midCol, midVal = snap.midVal;
+  var phase = snap.phase, target = snap.target;
+  var rows = snap.rows, cols = snap.cols;
+  var matrix = snap.matrix;
+  var totalCells = rows * cols;
+
+  var cellSize = totalCells > 12 ? 44 : 56;
+  var cellFont = totalCells > 12 ? '0.78rem' : '0.92rem';
+
+  // Counter
+  document.getElementById('counter').textContent = 'Step ' + (cursor + 1) + ' / ' + total;
+
+  // Phase badge
+  var phaseLabels = {
+    'init': 'Init',
+    'check': 'Check',
+    'adjust-lo': 'Adjust lo',
+    'adjust-hi': 'Adjust hi',
+    'found': 'Found ✓',
+    'not-found': 'Not Found ✗'
+  };
+  var badge = document.getElementById('phaseBadge');
+  badge.textContent = phaseLabels[phase] || phase;
+  badge.className = 'phase-badge' +
+    (phase === 'found' ? ' found-badge' : phase === 'not-found' ? ' notfound-badge' : '');
+  document.getElementById('stepDesc').textContent = snap.label;
+
+  // Grid label
+  document.getElementById('gridLabel').textContent =
+    'Matrix (' + rows + '\u00D7' + cols + ' = ' + totalCells + ' cells)';
+
+  // Matrix grid
+  var gridEl = document.getElementById('matrixGrid');
+  gridEl.style.gridTemplateColumns = 'repeat(' + cols + ', ' + cellSize + 'px)';
+  gridEl.innerHTML = '';
+
+  for (var r = 0; r < rows; r++) {
+    for (var c = 0; c < cols; c++) {
+      var flatIdx = r * cols + c;
+      var val = matrix[r][c];
+      var cell = document.createElement('div');
+      cell.className = 'cell';
+      cell.style.width = cellSize + 'px';
+      cell.style.height = cellSize + 'px';
+
+      if (phase === 'found' && r === midRow && c === midCol) {
+        cell.classList.add('found');
+      } else if (phase === 'not-found') {
+        cell.classList.add('not-found-cell');
+      } else if (mid !== null && r === midRow && c === midCol) {
+        cell.classList.add('active');
+      } else if (flatIdx < lo || flatIdx > hi) {
+        cell.classList.add('eliminated');
+      }
+
+      var valEl = document.createElement('div');
+      valEl.className = 'cell-val';
+      valEl.style.fontSize = cellFont;
+      valEl.textContent = val;
+      cell.appendChild(valEl);
+
+      var idxEl = document.createElement('div');
+      idxEl.className = 'cell-idx';
+      idxEl.textContent = flatIdx;
+      cell.appendChild(idxEl);
+
+      gridEl.appendChild(cell);
+    }
+  }
+
+  // Flattened bar
+  var barEl = document.getElementById('flatBar');
+  barEl.innerHTML = '';
+
+  for (var i = 0; i < totalCells; i++) {
+    var box = document.createElement('div');
+    box.className = 'flat-cell';
+
+    if (phase === 'found' && i === mid) {
+      box.classList.add('flat-found');
+    } else if (phase === 'not-found') {
+      box.classList.add('flat-not-found');
+    } else if (i === mid) {
+      box.classList.add('flat-active');
+    } else if (i < lo || i > hi) {
+      box.classList.add('flat-eliminated');
+    }
+
+    box.textContent = i;
+    barEl.appendChild(box);
+  }
+
+  // Bracket: position using flex item widths
+  var bracketEl = document.getElementById('flatBracket');
+  var containerEl = document.getElementById('flatContainer');
+  if (phase !== 'not-found' && lo <= hi && totalCells > 0) {
+    // Each flat-cell is 28px + 3px gap = 31px; container offset-based positioning
+    var cellW = 31; // 28px cell + 3px gap
+    var bracketLeft = lo * cellW;
+    var bracketWidth = (hi - lo + 1) * cellW - 3;
+    bracketEl.style.display = 'block';
+    bracketEl.style.left = bracketLeft + 'px';
+    bracketEl.style.width = bracketWidth + 'px';
+  } else {
+    bracketEl.style.display = 'none';
+  }
+
+  // Pointer boxes
+  document.getElementById('ptrLo').textContent = lo;
+  document.getElementById('ptrMid').textContent = mid !== null ? mid : '\u2014';
+  document.getElementById('ptrHi').textContent = hi;
+  document.getElementById('ptrTarget').textContent = target;
+
+  // Highlight active pointer
+  document.querySelectorAll('.ptr-box').forEach(function(b){ b.classList.remove('active-ptr'); });
+  if (phase === 'adjust-lo') document.querySelector('.lo-box').classList.add('active-ptr');
+  else if (phase === 'adjust-hi') document.querySelector('.hi-box').classList.add('active-ptr');
+  else if (phase === 'check' || phase === 'found') document.querySelector('.mid-box').classList.add('active-ptr');
+
+  // Decomposition panel
+  var decompEl = document.getElementById('decompContent');
+  if (mid !== null) {
+    decompEl.innerHTML =
+      '<div class="decomp-line"><span class="decomp-key">mid</span> = (' + lo + ' + ' + hi + ') \u00F7 2 = <span class="decomp-num">' + mid + '</span></div>' +
+      '<div class="decomp-line"><span class="decomp-key">row</span> = ' + mid + ' \u00F7 ' + cols + ' = <span class="decomp-num">' + midRow + '</span></div>' +
+      '<div class="decomp-line"><span class="decomp-key">col</span> = ' + mid + ' % ' + cols + ' = <span class="decomp-num">' + midCol + '</span></div>';
+  } else {
+    decompEl.innerHTML = '<span style="color:var(--text-dim)">\u2014</span>';
+  }
+
+  // Comparison panel
+  var cmpEl = document.getElementById('cmpContent');
+  if (midVal !== null) {
+    var cmpClass, cmpSymbol, cmpNote;
+    if (midVal < target) {
+      cmpClass = 'cmp-lt';
+      cmpSymbol = ' < ';
+      cmpNote = ' \u2192 move lo right';
+    } else if (midVal > target) {
+      cmpClass = 'cmp-gt';
+      cmpSymbol = ' > ';
+      cmpNote = ' \u2192 move hi left';
+    } else {
+      cmpClass = 'cmp-eq';
+      cmpSymbol = ' == ';
+      cmpNote = ' \u2192 FOUND!';
+    }
+    cmpEl.innerHTML = '<div class="cmp-expr ' + cmpClass + '">' +
+      'matrix[' + midRow + '][' + midCol + '] = ' + midVal + cmpSymbol + target + cmpNote +
+      '</div>';
+  } else {
+    cmpEl.innerHTML = '<span style="color:var(--text-dim)">\u2014</span>';
+  }
+
+  // Result banner
+  var bannerEl = document.getElementById('resultBanner');
+  if (phase === 'found') {
+    bannerEl.style.display = 'flex';
+    bannerEl.className = 'result-banner found-banner';
+    bannerEl.textContent = '\u2713 FOUND at (' + midRow + ', ' + midCol + ') \u2014 matrix[' + midRow + '][' + midCol + '] = ' + midVal;
+  } else if (phase === 'not-found') {
+    bannerEl.style.display = 'flex';
+    bannerEl.className = 'result-banner notfound-banner';
+    bannerEl.textContent = '\u2717 NOT FOUND \u2014 target ' + target + ' is not in the matrix';
+  } else {
+    bannerEl.style.display = 'none';
+  }
+}
+
+// ── Bootstrap ──────────────────────────────────────────────────────────────────
+var btnPrev  = document.getElementById('prevBtn');
+var btnNext  = document.getElementById('stepBtn');
+var btnPlay  = document.getElementById('playBtn');
+var speedSel = document.getElementById('speedSel');
+
+var nav = VizNav({ btnPrev: btnPrev, btnNext: btnNext, btnPlay: btnPlay, speedSel: speedSel, render: render });
+
+function buildAndRun() {
+  var parsed = parseInputs();
+  if (!parsed) return;
+  var steps = buildSteps(parsed.matrix, parsed.target);
+  nav.load(steps);
+}
+
+// postMessage bridge for parent app control
+window.addEventListener('message', function(e) {
+  var msg = e.data;
+  if (msg === 'prev')  btnPrev.click();
+  else if (msg === 'step')  btnNext.click();
+  else if (msg === 'play')  btnPlay.click();
+  else if (msg === 'reset') buildAndRun();
+  else if (msg && msg.type === 'speed') speedSel.value = msg.value;
+});
+
+window.addEventListener('DOMContentLoaded', function() {
+  document.getElementById('presetSel').value = '0';
+  loadPreset();
+});
+</script>
 </body>
 </html>
