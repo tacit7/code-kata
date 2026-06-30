@@ -209,17 +209,34 @@
   <div class="page-sub">LeetCode #242 · string · O(n) time · O(1) space</div>
 </div>
 
-<div class="controls">
-  <div class="field">
-    <label>String s:</label>
-    <input type="text" id="sInput" value="anagram" />
+<div class="viz-inputs" style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;padding:10px 0 14px;">
+  <div style="display:flex;flex-direction:column;gap:4px;">
+    <label style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-dim);">Preset</label>
+    <select id="presetSel" onchange="loadPreset()" style="background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:var(--radius-sm);padding:6px 10px;font-size:0.85rem;cursor:pointer;">
+      <option value="">— custom —</option>
+      <option value="anagram|nagaram" selected>anagram / nagaram ✓</option>
+      <option value="rat|car">rat / car ✓</option>
+      <option value="listen|silent">listen / silent ✓</option>
+      <option value="hello|world">hello / world ✗</option>
+      <option value="cat|act">cat / act ✓</option>
+      <option value="aab|baa">aab / baa ✓</option>
+      <option value="ab|a">ab / a ✗ (diff length)</option>
+      <option value="aacc|ccac">aacc / ccac ✗ (wrong freq)</option>
+    </select>
   </div>
-  <div class="field">
-    <label>String t:</label>
-    <input type="text" id="tInput" value="nagaram" />
+  <div style="display:flex;flex-direction:column;gap:4px;">
+    <label style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-dim);">String s</label>
+    <input type="text" id="sInput" value="anagram" style="background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:var(--radius-sm);padding:6px 10px;font-size:0.85rem;width:140px;" />
   </div>
-  <button class="btn-primary" id="buildBtn">Build &amp; Run</button>
+  <div style="display:flex;flex-direction:column;gap:4px;">
+    <label style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-dim);">String t</label>
+    <input type="text" id="tInput" value="nagaram" style="background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:var(--radius-sm);padding:6px 10px;font-size:0.85rem;width:140px;" />
+  </div>
+  <button id="buildBtn" style="background:var(--accent);border:none;color:#fff;border-radius:var(--radius-sm);padding:8px 16px;cursor:pointer;font-size:0.85rem;font-weight:700;">Run</button>
+  <button onclick="randomExample()" style="background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:var(--radius-sm);padding:8px 14px;cursor:pointer;font-size:0.85rem;">🎲 Random</button>
 </div>
+
+<div class="controls"></div>
 
 <div class="viz-area">
   <div class="nav-row" style="display:flex;gap:12px;margin-bottom:14px">
@@ -511,6 +528,33 @@ function buildAndRun() {
 if (window.self !== window.top) {
   const bl = document.querySelector('.back-link');
   if (bl) bl.style.display = 'none';
+}
+
+function loadPreset() {
+  const sel = document.getElementById('presetSel');
+  if (!sel.value) return;
+  const [s, t] = sel.value.split('|');
+  document.getElementById('sInput').value = s;
+  document.getElementById('tInput').value = t;
+  buildAndRun();
+}
+
+function randomExample() {
+  const chars = 'abcdefghijklmnop';
+  const len = 3 + Math.floor(Math.random() * 5);
+  const arr = Array.from({length: len}, () => chars[Math.floor(Math.random() * chars.length)]);
+  const s = arr.join('');
+  // 50% chance: valid anagram (shuffle), 50% chance: invalid (replace one char)
+  const shuffled = [...arr].sort(() => Math.random() - 0.5);
+  if (Math.random() < 0.5) {
+    // invalid: swap one char for something else
+    const idx = Math.floor(Math.random() * len);
+    shuffled[idx] = chars[Math.floor(Math.random() * chars.length)];
+  }
+  document.getElementById('sInput').value = s;
+  document.getElementById('tInput').value = shuffled.join('');
+  document.getElementById('presetSel').value = '';
+  buildAndRun();
 }
 </script>
 
