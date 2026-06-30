@@ -470,9 +470,6 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
       (iframeRef.current?.contentWindow as Window & { eval: (s: string) => void } | null)?.eval(`
         if (!window.__vizBridge) {
           window.__vizBridge = true;
-          var style = document.createElement('style');
-          style.textContent = '.controls, .input-row { display: none !important; }';
-          document.head.appendChild(style);
           window.addEventListener('message', function(e) {
             var d = e.data;
             if (d === 'prev') document.getElementById('prevBtn')?.click();
