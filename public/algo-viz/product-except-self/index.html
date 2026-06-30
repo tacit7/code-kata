@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Product of Array Except Self</title>
+  <link rel="stylesheet" href="../shared/style.css" />
+  <script src="../shared/gsap.min.js"></script>
+  <script src="../shared/viz.js"></script>
+  <style>
+    .viz-area { width: 100%; max-width: 90%; }
+    .main-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
+    .left-col, .right-col { display: flex; flex-direction: column; gap: 12px; }
+    @media (max-width: 700px) { .main-row { grid-template-columns: 1fr; } }
+
+    .array-section {
+      padding: 20px 16px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      display: flex; flex-direction: column; gap: 14px;
+      min-height: 240px;
+    }
+
+    .array-group {
+      display: flex; flex-direction: column; gap: 8px;
+    }
+
+    .array-label {
+      font-size: 0.68rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.08em;
+      color: var(--text-dim);
+    }
+
+    .arr-row { display: flex; gap: 8px; flex-wrap: nowrap; }
+    .arr-cell {
+      width: 56px; height: 64px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      border: 2px solid var(--border-soft); border-radius: 6px;
+      background: #0f0f0f;
+      font-size: 1.3rem; font-weight: 700; font-family: monospace;
+      color: var(--text-ghost);
+      position: relative;
+      transition: all 0.2s ease;
+    }
+    .arr-cell[data-state="ready"]     { color: var(--text-bright); border-color: #2d3148; }
+    .arr-cell[data-state="current"]   { color: var(--accent-pale); border-color: var(--accent); background: var(--surface-dark); box-shadow: 0 0 0 3px rgba(var(--accent-ch), 0.12); }
+    .arr-cell[data-state="computed"]  { color: #86efac; border-color: #15803d; background: #052e16; }
+
+    .arr-indices { display: flex; gap: 8px; }
+    .arr-idx {
+      width: 56px; flex-shrink: 0;
+      text-align: center; font-size: 0.65rem;
+      color: var(--text-ghost); font-family: monospace;
+    }
+
+    .panel-box {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 14px 16px;
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .panel-title {
+      font-size: 0.72rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim);
+    }
+
+    .var-main { display: flex; gap: 10px; }
+    .var-box {
+      flex: 1; padding: 10px 8px;
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      display: flex; flex-direction: column; align-items: center; gap: 3px;
+    }
+    .var-label  { font-size: 0.65rem; font-family: monospace; color: var(--text-faint); }
+    .var-val    { font-size: 1.4rem; font-weight: 700; color: var(--text-bright); }
+
+    .code-panel {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); overflow: hidden;
+    }
+    .code-header {
+      padding: 8px 14px; font-size: 0.72rem; font-weight: 600;
+      color: var(--text-dim); border-bottom: 1px solid var(--border); background: var(--bg);
+    }
+    .code-body { padding: 10px 0; font-size: 0.78rem; line-height: 1.75; white-space: pre; }
+    .code-line { display: flex; align-items: center; padding: 0 14px; }
+    .code-line.hl { background: rgba(122,162,247,0.12); border-left: 2px solid var(--accent); padding-left: 12px; }
+    .ln { min-width: 24px; color: var(--text-ghost); user-select: none; font-size: 0.7rem; }
+
+    .stepBtn {
+      background: var(--bg); border: 1px solid var(--border);
+      color: var(--text-bright); cursor: pointer; font-size: 0.9rem;
+      padding: 8px 12px; border-radius: var(--radius-sm);
+      transition: all 0.2s;
+    }
+    .stepBtn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent-pale); }
+    .stepBtn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+    .btn-step { width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; }
+
+    .btn-play {
+      background: #15803d; border: none; border-radius: var(--radius-sm);
+      color: #fff; cursor: pointer; font-size: 0.88rem; font-weight: 600;
+      padding: 8px 14px; transition: background 0.2s;
+    }
+    .btn-play:hover { background: #166534; }
+    .btn-play.playing { background: #c2410c; }
+    .btn-play.playing:hover { background: #9a3412; }
+    .btn-play:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .speedSel {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); color: var(--text);
+      font-size: 0.85rem; padding: 8px 10px; outline: none;
+    }
+
+    .preset-row { display: flex; gap: 8px; flex-wrap: wrap; }
+    .preset-btn {
+      background: var(--bg); border: 1px solid var(--border);
+      color: var(--text-dim); border-radius: var(--radius-sm);
+      padding: 4px 10px; font-size: 0.78rem; font-family: monospace; cursor: pointer;
+    }
+    .preset-btn:hover { color: var(--text-bright); border-color: var(--accent); }
+
+    .kw { color: var(--purple); }
+    .fn { color: var(--blue); }
+    .bi { color: var(--orange); }
+    .op { color: var(--text); }
+    .nb { color: var(--green); }
+  </style>
+</head>
+<body class="page">
+
+<div class="page-header">
+  <a class="back-link" href="../index.html">&larr; All Algorithms</a>
+  <div class="page-title">Product of Array Except Self</div>
+  <div class="page-sub">LeetCode 238 &middot; Prefix and suffix product passes &middot; O(n) time &middot; O(1) extra space</div>
+</div>
+
+<div class="controls">
+  <div class="field">
+    <label>nums</label>
+    <input id="inp-nums" type="text" value="1, 2, 3, 4" style="width:220px" />
+  </div>
+  <button class="btn-primary" onclick="buildAndRun()">Build &amp; Run</button>
+  <div class="preset-row">
+    <button class="preset-btn" onclick="preset('1,2,3,4')">[1,2,3,4]</button>
+    <button class="preset-btn" onclick="preset('2,3,4,5')">[2,3,4,5]</button>
+    <button class="preset-btn" onclick="preset('1,0')">[1,0]</button>
+    <button class="preset-btn" onclick="preset('5,2')">[5,2]</button>
+  </div>
+</div>
+
+<div class="viz-area">
+  <div class="main-row">
+    <div class="left-col">
+      <div class="array-section" id="array-section">
+        <span style="color:var(--text-dim);font-size:0.82rem">Enter nums and click Build &amp; Run.</span>
+      </div>
+      <div class="code-panel">
+        <div class="code-header">Python</div>
+        <div class="code-body" id="code-body"></div>
+      </div>
+    </div>
+
+    <div class="right-col">
+      <div style="display:flex;gap:12px">
+        <div class="panel-box" style="flex:0 0 auto">
+          <div style="display:flex;gap:8px;align-items:center">
+            <button class="btn-step" id="prevBtn" disabled>&#8592;</button>
+            <button class="btn-step" id="stepBtn" disabled>&#8594;</button>
+            <button class="btn-play" id="playBtn" disabled>&#9654; Play</button>
+            <select id="speedSel" style="background:var(--bg);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:6px 10px;font-size:0.85rem">
+              <option value="700">Slow</option>
+              <option value="250" selected>Medium</option>
+              <option value="80">Fast</option>
+            </select>
+          </div>
+        </div>
+        <div class="panel-box" style="flex:1;min-width:0">
+          <div style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--text-dim)" id="phase-label">&mdash;</div>
+          <div style="font-size:0.88rem;color:var(--text-muted);margin-top:3px" id="step-desc">Click Build &amp; Run to start.</div>
+        </div>
+      </div>
+
+      <div class="panel-box">
+        <div class="panel-title">Variables</div>
+        <div class="var-main">
+          <div class="var-box">
+            <div class="var-label">i</div>
+            <div class="var-val" id="vv-i">&mdash;</div>
+          </div>
+          <div class="var-box">
+            <div class="var-label">prefix</div>
+            <div class="var-val" id="vv-prefix">&mdash;</div>
+          </div>
+          <div class="var-box">
+            <div class="var-label">suffix</div>
+            <div class="var-val" id="vv-suffix">&mdash;</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel-box">
+        <div class="panel-title">How it works</div>
+        <div style="font-size:0.82rem;color:var(--text-muted);line-height:1.55">
+          First pass (left to right): Build prefix products. At each position i, result[i] stores the product of all elements to the left.
+          <br><br>
+          Second pass (right to left): Multiply by suffix products. result[i] *= the product of all elements to the right.
+          <br><br>
+          No division needed—no zeros issues!
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+var simSteps = [], nav;
+
+var CODE = [
+  [1,  '<span class="kw">def</span> <span class="fn">product_except_self</span><span class="op">(</span>nums<span class="op">):</span>'],
+  [2,  '    n      <span class="op">=</span> <span class="bi">len</span><span class="op">(</span>nums<span class="op">)</span>'],
+  [3,  '    result <span class="op">=</span> <span class="op">[</span><span class="nb">1</span><span class="op">]</span> <span class="op">*</span> n'],
+  [0,  ''],
+  [5,  '    <span class="kw">for</span> i <span class="op">in</span> <span class="bi">range</span><span class="op">(</span>n<span class="op">):</span>'],
+  [6,  '        result<span class="op">[</span>i<span class="op">]</span> <span class="op">=</span> prefix'],
+  [7,  '        prefix <span class="op">*=</span> nums<span class="op">[</span>i<span class="op">]</span>'],
+  [0,  ''],
+  [9,  '    suffix <span class="op">=</span> <span class="nb">1</span>'],
+  [10, '    <span class="kw">for</span> i <span class="op">in</span> <span class="bi">range</span><span class="op">(</span>n <span class="op">-</span> <span class="nb">1</span><span class="op">,</span> <span class="op">-</span><span class="nb">1</span><span class="op">,</span> <span class="op">-</span><span class="nb">1</span><span class="op">):</span>'],
+  [11, '        result<span class="op">[</span>i<span class="op">]</span> <span class="op">*=</span> suffix'],
+  [12, '        suffix <span class="op">*=</span> nums<span class="op">[</span>i<span class="op">]</span>'],
+  [0,  ''],
+  [14, '    <span class="kw">return</span> result'],
+];
+
+window.addEventListener('DOMContentLoaded', function() {
+  buildCodePanel();
+  nav = VizNav({
+    btnPrev: document.getElementById('prevBtn'),
+    btnNext: document.getElementById('stepBtn'),
+    btnPlay: document.getElementById('playBtn'),
+    speedSel: document.getElementById('speedSel'),
+    render: function(snap, cur, total) {
+      applyStep(snap, cur > 0);
+      var phaseEl = document.getElementById('phase-label');
+      var descEl  = document.getElementById('step-desc');
+      if (phaseEl) phaseEl.textContent = 'Step ' + (cur + 1) + ' / ' + total + '  ·  ' + snap.phase;
+      if (descEl)  descEl.textContent  = snap.desc;
+    }
+  });
+  buildAndRun();
+});
+
+function buildCodePanel() {
+  var body = document.getElementById('code-body');
+  body.innerHTML = CODE.map(function(e) {
+    var ln = e[0], html = e[1];
+    var id = ln > 0 ? ' id="cl-' + ln + '"' : '';
+    return '<div class="code-line"' + id + '><span class="ln">' + (ln || '') + '</span><span>' + html + '</span></div>';
+  }).join('');
+}
+
+function preset(s) {
+  document.getElementById('inp-nums').value = s;
+  buildAndRun();
+}
+
+function buildAndRun() {
+  var raw = document.getElementById('inp-nums').value;
+  var nums = raw.split(/[,\s]+/).map(function(x) { return parseInt(x.trim()); }).filter(function(x) { return !isNaN(x); });
+  if (nums.length < 1) return;
+  simSteps = simulate(nums);
+  buildArraySection(simSteps);
+  nav.load(simSteps);
+}
+
+function buildArraySection(steps) {
+  var sec = document.getElementById('array-section');
+  var maxLen = steps.length > 0 ? steps[0].nums.length : 0;
+
+  sec.innerHTML = '';
+
+  // Nums row (static)
+  var numsDiv = document.createElement('div');
+  numsDiv.className = 'array-group';
+  numsDiv.innerHTML = '<div class="array-label">nums (input)</div><div class="arr-row" id="nums-row"></div><div class="arr-indices" id="nums-indices"></div>';
+  sec.appendChild(numsDiv);
+
+  var numsRow = numsDiv.querySelector('#nums-row');
+  var numsIdx = numsDiv.querySelector('#nums-indices');
+  for (var k = 0; k < maxLen; k++) {
+    var cell = document.createElement('div');
+    cell.className = 'arr-cell'; cell.id = 'nums-' + k; cell.dataset.state = 'ready';
+    cell.textContent = steps[0].nums[k];
+    numsRow.appendChild(cell);
+
+    var idx = document.createElement('div');
+    idx.className = 'arr-idx'; idx.textContent = k;
+    numsIdx.appendChild(idx);
+  }
+
+  // Prefix row
+  var prefixDiv = document.createElement('div');
+  prefixDiv.className = 'array-group';
+  prefixDiv.innerHTML = '<div class="array-label">Prefix Products (left to right)</div><div class="arr-row" id="prefix-row"></div><div class="arr-indices" id="prefix-indices"></div>';
+  sec.appendChild(prefixDiv);
+
+  var prefixRow = prefixDiv.querySelector('#prefix-row');
+  var prefixIdx = prefixDiv.querySelector('#prefix-indices');
+  for (var k = 0; k < maxLen; k++) {
+    var cell = document.createElement('div');
+    cell.className = 'arr-cell'; cell.id = 'prefix-' + k; cell.dataset.state = 'idle';
+    cell.textContent = '';
+    prefixRow.appendChild(cell);
+
+    var idx = document.createElement('div');
+    idx.className = 'arr-idx'; idx.textContent = k;
+    prefixIdx.appendChild(idx);
+  }
+
+  // Result row
+  var resultDiv = document.createElement('div');
+  resultDiv.className = 'array-group';
+  resultDiv.innerHTML = '<div class="array-label">Result (after both passes)</div><div class="arr-row" id="result-row"></div><div class="arr-indices" id="result-indices"></div>';
+  sec.appendChild(resultDiv);
+
+  var resultRow = resultDiv.querySelector('#result-row');
+  var resultIdx = resultDiv.querySelector('#result-indices');
+  for (var k = 0; k < maxLen; k++) {
+    var cell = document.createElement('div');
+    cell.className = 'arr-cell'; cell.id = 'result-' + k; cell.dataset.state = 'idle';
+    cell.textContent = '';
+    resultRow.appendChild(cell);
+
+    var idx = document.createElement('div');
+    idx.className = 'arr-idx'; idx.textContent = k;
+    resultIdx.appendChild(idx);
+  }
+}
+
+function simulate(nums) {
+  var n = nums.length;
+  var result = new Array(n).fill(1);
+  var steps = [];
+  var prefix = 1;
+  var suffix = 1;
+
+  function snap(phase, desc, lines, i, p, s) {
+    steps.push({
+      phase: phase,
+      desc: desc,
+      lines: lines || [],
+      nums: nums.slice(),
+      result: result.slice(),
+      prefix: p === undefined ? prefix : p,
+      suffix: s === undefined ? suffix : s,
+      i: i,
+      phaseType: phase.indexOf('Prefix') >= 0 ? 'prefix' : (phase.indexOf('Suffix') >= 0 ? 'suffix' : 'init')
+    });
+  }
+
+  // Init
+  snap('Init', 'Initialize: n = ' + n + ', result = [1, 1, ..., 1], prefix = 1. Now scan left-to-right.', [1, 2, 3], -1, 1, 0);
+
+  // Prefix pass
+  for (var i = 0; i < n; i++) {
+    snap('Prefix Pass', 'i = ' + i + ': Store current prefix ' + prefix + ' into result[' + i + '].', [5, 6], i, prefix, 0);
+    result[i] = prefix;
+    prefix *= nums[i];
+    snap('Prefix Pass', 'i = ' + i + ': Multiply prefix by nums[' + i + '] = ' + nums[i] + '. prefix = ' + prefix + '.', [7], i, prefix, 0);
+  }
+
+  // Suffix pass
+  suffix = 1;
+  snap('Suffix Pass Init', 'Prefix pass done. Now scan right-to-left. suffix = 1.', [9], -1, prefix, 1);
+
+  for (var i = n - 1; i >= 0; i--) {
+    snap('Suffix Pass', 'i = ' + i + ': Multiply result[' + i + '] by current suffix ' + suffix + '. result[' + i + '] = ' + result[i] + ' * ' + suffix + ' = ' + (result[i] * suffix) + '.', [10], i, prefix, suffix);
+    result[i] *= suffix;
+    suffix *= nums[i];
+    snap('Suffix Pass', 'i = ' + i + ': Multiply suffix by nums[' + i + '] = ' + nums[i] + '. suffix = ' + suffix + '.', [12], i, prefix, suffix);
+  }
+
+  // Done
+  snap('Done', 'result = [' + result.join(', ') + ']. Each cell is the product of all other elements.', [14], -1, prefix, suffix);
+
+  return steps;
+}
+
+function applyStep(s, animate) {
+  applyArrays(s, animate);
+  applyVars(s, animate);
+  setCodeLines(s.lines);
+}
+
+function applyArrays(s, animate) {
+  // Update prefix row based on current result state
+  for (var k = 0; k < s.result.length; k++) {
+    var prefixEl = document.getElementById('prefix-' + k);
+    if (!prefixEl) continue;
+
+    var phaseType = s.phaseType;
+    var resultVal = s.result[k];
+
+    // Highlight the current cell during prefix or suffix
+    var state = 'idle';
+    if (phaseType === 'prefix' && k === s.i) {
+      state = 'current';
+    } else if (phaseType === 'prefix' && k < s.i) {
+      state = 'computed';
+    } else if (phaseType === 'suffix' && k <= s.i) {
+      state = 'computed';
+    } else if (phaseType === 'suffix' && k === s.i) {
+      state = 'current';
+    } else if (s.phase === 'Done') {
+      state = 'computed';
+    }
+
+    prefixEl.dataset.state = state;
+    prefixEl.textContent = resultVal;
+
+    if (animate && state === 'current') {
+      gsap.fromTo(prefixEl, { scale: 0.8, opacity: 0.4 }, { scale: 1, opacity: 1, duration: 0.22, ease: 'back.out(1.7)' });
+    }
+  }
+
+  // Update result row (shows final state)
+  for (var k = 0; k < s.result.length; k++) {
+    var resultEl = document.getElementById('result-' + k);
+    if (!resultEl) continue;
+
+    var state = s.phase === 'Done' ? 'computed' : 'idle';
+    resultEl.dataset.state = state;
+
+    if (s.phase === 'Done') {
+      resultEl.textContent = s.result[k];
+      if (animate) {
+        gsap.fromTo(resultEl, { scale: 0.8, opacity: 0.4 }, { scale: 1, opacity: 1, duration: 0.22, ease: 'back.out(1.7)' });
+      }
+    }
+  }
+}
+
+function applyVars(s, animate) {
+  function setVal(id, val) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    var text = val === null || val === undefined ? '—' : String(val);
+    if (animate && el.textContent !== text) {
+      gsap.fromTo(el, { scale: 0.8, opacity: 0.4 }, { scale: 1, opacity: 1, duration: 0.22, ease: 'back.out(1.7)' });
+    }
+    el.textContent = text;
+  }
+  setVal('vv-i', s.i < 0 ? '—' : s.i);
+  setVal('vv-prefix', s.prefix);
+  setVal('vv-suffix', s.suffix);
+}
+
+function setCodeLines(lines) {
+  CODE.forEach(function(e) {
+    var ln = e[0]; if (!ln) return;
+    var el = document.getElementById('cl-' + ln);
+    if (!el) return;
+    if (lines.indexOf(ln) >= 0) el.classList.add('hl');
+    else el.classList.remove('hl');
+  });
+}
+</script>
+
+<script>
+  if (window.self !== window.top) {
+    var bl = document.querySelector('.back-link');
+    if (bl) bl.style.display = 'none';
+  }
+</script>
+
+</body>
+</html>

@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Valid Parentheses</title>
+  <link rel="stylesheet" href="../shared/style.css" />
+  <script src="../shared/gsap.min.js"></script>
+  <script src="../shared/viz.js"></script>
+  <style>
+    .controls {
+      margin-bottom: 20px;
+      padding: 12px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+    }
+    .controls-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .controls input {
+      flex: 1;
+      min-width: 200px;
+      padding: 8px 10px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 6px;
+      font-family: monospace;
+      font-size: 0.85rem;
+    }
+    .controls button {
+      padding: 8px 16px;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .controls button:hover {
+      background: var(--blue);
+    }
+
+    .string-cells {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+      padding: 12px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+    }
+    .char-cell {
+      min-width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      font-weight: 600;
+      color: var(--text);
+      font-size: 0.9rem;
+      font-family: monospace;
+      transition: all 0.3s ease;
+    }
+    .char-cell.current {
+      background: var(--accent);
+      color: #fff;
+      border: 1px solid var(--accent);
+      box-shadow: 0 0 12px rgba(122, 162, 247, 0.4);
+    }
+    .char-cell.done {
+      background: var(--surface);
+      color: var(--text-muted);
+      opacity: 0.6;
+    }
+
+    .stack-area {
+      display: flex;
+      gap: 12px;
+      align-items: flex-end;
+      padding: 12px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      min-height: 120px;
+      margin-bottom: 16px;
+    }
+
+    .stack-visual {
+      display: flex;
+      flex-direction: column-reverse;
+      gap: 6px;
+      align-items: center;
+    }
+    .stack-item {
+      min-width: 44px;
+      height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--blue);
+      color: #fff;
+      border: 1px solid var(--blue);
+      border-radius: 6px;
+      font-weight: 700;
+      font-family: monospace;
+      font-size: 1rem;
+      transition: all 0.3s ease;
+    }
+    .stack-item.match {
+      background: var(--green);
+      border: 1px solid var(--green);
+      box-shadow: 0 0 12px rgba(76, 175, 80, 0.4);
+    }
+    .stack-item.mismatch {
+      background: var(--red);
+      border: 1px solid var(--red);
+      box-shadow: 0 0 12px rgba(244, 67, 54, 0.4);
+    }
+
+    .stack-label {
+      font-size: 0.67rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-dim);
+      text-align: center;
+      margin-top: 8px;
+    }
+
+    .variables-panel {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 8px;
+      margin-bottom: 16px;
+      padding: 12px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+    }
+    .var-box {
+      padding: 10px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+    }
+    .var-label {
+      font-size: 0.65rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-dim);
+      margin-bottom: 4px;
+    }
+    .var-value {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--text);
+      font-family: monospace;
+    }
+    .var-value.accent {
+      color: var(--accent);
+    }
+    .var-value.green {
+      color: var(--green);
+    }
+    .var-value.red {
+      color: var(--red);
+    }
+
+    .result-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 16px;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 0.9rem;
+      margin-bottom: 16px;
+    }
+    .result-badge.true {
+      background: rgba(76, 175, 80, 0.15);
+      color: var(--green);
+      border: 1px solid var(--green);
+    }
+    .result-badge.false {
+      background: rgba(244, 67, 54, 0.15);
+      color: var(--red);
+      border: 1px solid var(--red);
+    }
+
+    .code-panel {
+      background: #0a0d14;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      margin-bottom: 16px;
+    }
+    .code-header {
+      padding: 9px 14px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      font-size: 0.67rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.11em;
+      color: var(--text-dim);
+    }
+    .code-body {
+      padding: 10px 0;
+      flex: 1;
+      font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+      font-size: 0.78rem;
+      line-height: 1.75;
+      overflow-x: auto;
+    }
+    .cl {
+      display: flex;
+      align-items: stretch;
+      border-left: 3px solid transparent;
+      padding: 0 14px 0 0;
+      transition: background-color 0.01s;
+      white-space: pre;
+    }
+    .cl.hl {
+      background: rgba(122, 162, 247, 0.12);
+      border-left: 2px solid var(--accent);
+      padding-left: 6px;
+    }
+    .cl .ln {
+      width: 28px;
+      min-width: 28px;
+      text-align: right;
+      color: #3d4468;
+      user-select: none;
+      padding-right: 14px;
+      font-size: 0.72rem;
+      line-height: 1.75;
+    }
+    .cl .code {
+      color: var(--text-muted);
+    }
+
+    /* Python syntax colors */
+    .kw  { color: var(--purple); }
+    .fn  { color: var(--blue); }
+    .bi  { color: var(--orange); }
+    .str { color: var(--green); }
+    .cm  { color: #3d4468; font-style: italic; }
+    .op  { color: var(--text); }
+
+    .panel-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 13px 18px;
+    }
+
+    .viz-area {
+      width: 100%;
+      max-width: 90%;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+  </style>
+</head>
+<body class="page">
+  <div class="page-header">
+    <a class="back-link" href="../index.html">← All Algorithms</a>
+    <div class="page-title">Valid Parentheses</div>
+    <div class="page-sub">LeetCode #20 · Stack · O(n) time · O(n) space</div>
+  </div>
+
+  <div class="controls">
+    <div class="controls-row">
+      <input type="text" id="string-input" placeholder="Enter string with brackets (e.g., ()[]{})" value="()[]{}">
+      <button id="build-btn">Build & Run</button>
+    </div>
+  </div>
+
+  <div class="viz-area">
+    <div style="display:flex;gap:12px;margin-bottom:14px">
+      <div class="panel-box" style="flex:0 0 auto">
+        <div style="display:flex;gap:8px;align-items:center">
+          <button class="btn-step" id="prevBtn" disabled>&#8592;</button>
+          <button class="btn-step" id="stepBtn" disabled>&#8594;</button>
+          <button class="btn-play" id="playBtn" disabled>&#9654; Play</button>
+          <select id="speedSel" style="background:var(--bg);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:6px 10px;font-size:0.85rem">
+            <option value="700">Slow</option>
+            <option value="250" selected>Medium</option>
+            <option value="80">Fast</option>
+          </select>
+        </div>
+      </div>
+      <div class="panel-box" style="flex:1;min-width:0">
+        <div style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--text-dim)" id="phase-label">—</div>
+        <div style="font-size:0.88rem;color:var(--text-muted);margin-top:3px" id="step-desc">Click Build &amp; Run to start.</div>
+      </div>
+    </div>
+
+    <div class="panel-box">
+      <div style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--text-dim);margin-bottom:8px">Input String</div>
+      <div class="string-cells" id="string-cells"></div>
+    </div>
+
+    <div class="panel-box">
+      <div style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--text-dim);margin-bottom:8px">Stack</div>
+      <div class="stack-area">
+        <div>
+          <div class="stack-visual" id="stack-visual"></div>
+          <div class="stack-label">Stack</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="variables-panel">
+      <div class="var-box">
+        <div class="var-label">Current Char</div>
+        <div class="var-value" id="var-char">—</div>
+      </div>
+      <div class="var-box">
+        <div class="var-label">Stack Top</div>
+        <div class="var-value" id="var-top">—</div>
+      </div>
+      <div class="var-box">
+        <div class="var-label">Expected</div>
+        <div class="var-value" id="var-expected">—</div>
+      </div>
+      <div class="var-box">
+        <div class="var-label">Result</div>
+        <div class="var-value" id="var-result">—</div>
+      </div>
+    </div>
+
+    <div id="result-container" style="margin-bottom:16px"></div>
+
+    <div class="code-panel">
+      <div class="code-header">Python</div>
+      <div class="code-body" id="code-body">
+        <div class="cl" id="cl-1"><span class="ln">1</span><span class="code"><span class="kw">def</span> <span class="fn">is_valid</span>(<span class="str">s</span>):</span></div>
+        <div class="cl" id="cl-2"><span class="ln">2</span><span class="code">    <span class="str">stack</span> <span class="op">=</span> []</span></div>
+        <div class="cl" id="cl-3"><span class="ln">3</span><span class="code">    <span class="str">pairs</span> <span class="op">=</span> {<span class="str">')'</span>: <span class="str">'('</span>, <span class="str">']'</span>: <span class="str">'['</span>, <span class="str">'}'</span>: <span class="str">'{'</span>}</span></div>
+        <div class="cl" id="cl-4"><span class="ln">4</span><span class="code">    <span class="kw">for</span> <span class="str">char</span> <span class="kw">in</span> <span class="str">s</span>:</span></div>
+        <div class="cl" id="cl-5"><span class="ln">5</span><span class="code">        <span class="kw">if</span> <span class="str">char</span> <span class="kw">in</span> <span class="str">'([{'</span>:</span></div>
+        <div class="cl" id="cl-6"><span class="ln">6</span><span class="code">            <span class="str">stack</span>.<span class="fn">append</span>(<span class="str">char</span>)</span></div>
+        <div class="cl" id="cl-7"><span class="ln">7</span><span class="code">        <span class="kw">elif</span> <span class="str">char</span> <span class="kw">in</span> <span class="str">')]}'</span>:</span></div>
+        <div class="cl" id="cl-8"><span class="ln">8</span><span class="code">            <span class="kw">if</span> <span class="kw">not</span> <span class="str">stack</span> <span class="kw">or</span> <span class="str">stack</span>[<span class="op">-</span>1] <span class="op">!=</span> <span class="str">pairs</span>[<span class="str">char</span>]:</span></div>
+        <div class="cl" id="cl-9"><span class="ln">9</span><span class="code">                <span class="kw">return</span> <span class="bi">False</span></span></div>
+        <div class="cl" id="cl-10"><span class="ln">10</span><span class="code">            <span class="str">stack</span>.<span class="fn">pop</span>()</span></div>
+        <div class="cl" id="cl-11"><span class="ln">11</span><span class="code">    <span class="kw">return</span> <span class="bi">len</span>(<span class="str">stack</span>) <span class="op">==</span> 0</span></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    var nav;
+    var currentInput = "()[]{}";
+
+    window.addEventListener('DOMContentLoaded', function() {
+      nav = VizNav({
+        btnPrev: document.getElementById('prevBtn'),
+        btnNext: document.getElementById('stepBtn'),
+        btnPlay: document.getElementById('playBtn'),
+        speedSel: document.getElementById('speedSel'),
+        render: function(snap, cur, total) {
+          applyStep(snap, cur > 0);
+          updateStatus(snap, cur, total);
+        }
+      });
+
+      document.getElementById('build-btn').addEventListener('click', function() {
+        var input = document.getElementById('string-input').value;
+        currentInput = input;
+        buildAndRun(input);
+      });
+
+      buildAndRun("()[]{}");
+    });
+
+    function updateStatus(snap, cur, total) {
+      document.getElementById('phase-label').textContent = snap.phase || '—';
+      document.getElementById('step-desc').textContent = snap.desc || '—';
+    }
+
+    function buildAndRun(input) {
+      var steps = simulate(input);
+      nav.load(steps);
+    }
+
+    function simulate(s) {
+      var steps = [];
+      var stack = [];
+      var pairs = { ')': '(', ']': '[', '}': '{' };
+
+      // Initial state
+      steps.push({
+        phase: 'INIT',
+        desc: 'Initialize stack and pairs dictionary. Ready to iterate.',
+        stack: [],
+        index: -1,
+        char: '',
+        result: null,
+        lines: [1, 2, 3]
+      });
+
+      // Iterate through each character
+      for (var i = 0; i < s.length; i++) {
+        var char = s[i];
+        var isOpener = '([{'.indexOf(char) >= 0;
+        var isCloser = ')]}' .indexOf(char) >= 0;
+
+        // Step: current character
+        steps.push({
+          phase: 'ITERATE',
+          desc: 'Processing character: "' + char + '"',
+          stack: stack.slice(),
+          index: i,
+          char: char,
+          action: null,
+          result: null,
+          lines: [4]
+        });
+
+        if (isOpener) {
+          // Step: push
+          steps.push({
+            phase: 'PUSH',
+            desc: 'Opening bracket "' + char + '" → push to stack',
+            stack: stack.concat([char]),
+            index: i,
+            char: char,
+            action: 'push',
+            result: null,
+            lines: [5, 6]
+          });
+          stack.push(char);
+        } else if (isCloser) {
+          var expectedOpener = pairs[char];
+          var stackTop = stack.length > 0 ? stack[stack.length - 1] : null;
+          var isMatch = stackTop === expectedOpener;
+
+          // Step: check match
+          steps.push({
+            phase: 'CHECK',
+            desc: 'Closing bracket "' + char + '" → check if stack top "' + (stackTop || 'empty') + '" matches "' + expectedOpener + '"',
+            stack: stack.slice(),
+            index: i,
+            char: char,
+            stackTop: stackTop,
+            expected: expectedOpener,
+            isMatch: isMatch,
+            result: null,
+            lines: [7, 8]
+          });
+
+          if (!isMatch) {
+            // Mismatch - return false
+            steps.push({
+              phase: 'FAIL',
+              desc: 'Mismatch! Expected "' + expectedOpener + '" but got "' + (stackTop || 'empty stack') + '". Return False.',
+              stack: stack.slice(),
+              index: i,
+              char: char,
+              stackTop: stackTop,
+              expected: expectedOpener,
+              isMatch: false,
+              result: false,
+              lines: [8, 9]
+            });
+            return steps;
+          } else {
+            // Match - pop
+            steps.push({
+              phase: 'POP',
+              desc: 'Match! Closing bracket "' + char + '" matches opening "' + stackTop + '" → pop from stack',
+              stack: stack.slice(0, -1),
+              index: i,
+              char: char,
+              stackTop: stackTop,
+              expected: expectedOpener,
+              isMatch: true,
+              action: 'pop',
+              result: null,
+              lines: [8, 10]
+            });
+            stack.pop();
+          }
+        }
+      }
+
+      // Final check
+      var finalResult = stack.length === 0;
+      steps.push({
+        phase: 'DONE',
+        desc: finalResult ? 'Stack is empty. Return True ✓' : 'Stack is not empty. Return False ✗',
+        stack: stack.slice(),
+        index: -1,
+        char: '',
+        result: finalResult,
+        lines: [11]
+      });
+
+      return steps;
+    }
+
+    function clearCodeHighlight() {
+      for (var i = 1; i <= 11; i++) {
+        var line = document.getElementById('cl-' + i);
+        if (line) line.classList.remove('hl');
+      }
+    }
+
+    function setCodeLines(lineNums) {
+      clearCodeHighlight();
+      if (lineNums) {
+        for (var j = 0; j < lineNums.length; j++) {
+          var line = document.getElementById('cl-' + lineNums[j]);
+          if (line) line.classList.add('hl');
+        }
+      }
+    }
+
+    function applyStep(snap, animate) {
+      // Update code
+      setCodeLines(snap.lines || []);
+
+      // Update string cells
+      var cellsHtml = '';
+      for (var i = 0; i < currentInput.length; i++) {
+        var cls = 'char-cell';
+        if (snap.index === i) {
+          cls += ' current';
+        } else if (snap.index > i) {
+          cls += ' done';
+        }
+        cellsHtml += '<div class="' + cls + '">' + currentInput[i] + '</div>';
+      }
+      document.getElementById('string-cells').innerHTML = cellsHtml;
+
+      // Update stack
+      var stackHtml = '';
+      var stackItems = snap.stack || [];
+      for (var s = 0; s < stackItems.length; s++) {
+        var itemCls = 'stack-item';
+        // Highlight last item if checking/popping
+        if (s === stackItems.length - 1 && snap.phase === 'CHECK') {
+          itemCls += snap.isMatch ? ' match' : ' mismatch';
+        } else if (s === stackItems.length - 1 && snap.phase === 'POP') {
+          itemCls += ' match';
+        }
+        stackHtml += '<div class="' + itemCls + '">' + stackItems[s] + '</div>';
+      }
+      if (stackItems.length === 0) {
+        stackHtml = '<div style="color:var(--text-muted);font-size:0.85rem">empty</div>';
+      }
+      document.getElementById('stack-visual').innerHTML = stackHtml;
+
+      // Update variables
+      var charDisplay = snap.char || '—';
+      document.getElementById('var-char').textContent = charDisplay === '' ? '—' : '"' + charDisplay + '"';
+
+      var topDisplay = snap.stackTop ? '"' + snap.stackTop + '"' : '—';
+      document.getElementById('var-top').textContent = topDisplay;
+
+      var expectedDisplay = snap.expected ? '"' + snap.expected + '"' : '—';
+      document.getElementById('var-expected').textContent = expectedDisplay;
+
+      var resultDisplay = snap.result !== null ? (snap.result ? 'True' : 'False') : '—';
+      var resultCls = snap.result !== null ? (snap.result ? 'green' : 'red') : '';
+      var resultElem = document.getElementById('var-result');
+      resultElem.textContent = resultDisplay;
+      resultElem.className = 'var-value ' + resultCls;
+
+      // Update result badge
+      var resultContainer = document.getElementById('result-container');
+      if (snap.result !== null) {
+        var badgeCls = snap.result ? 'true' : 'false';
+        var badgeText = snap.result ? '✓ True' : '✗ False';
+        resultContainer.innerHTML = '<div class="result-badge ' + badgeCls + '">' + badgeText + '</div>';
+      } else {
+        resultContainer.innerHTML = '';
+      }
+    }
+
+    // Hide back-link in iframe
+    if (window.self !== window.top) {
+      var bl = document.querySelector('.back-link');
+      if (bl) bl.style.display = 'none';
+    }
+  </script>
+</body>
+</html>

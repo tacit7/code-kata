@@ -130,7 +130,17 @@ type VizKataName =
   | "Set Matrix Zeroes"
   | "Pow(x, n)"
   | "Multiply Strings"
-  | "Detect Squares";
+  | "Detect Squares"
+  | "Two Sum"
+  | "Contains Duplicate"
+  | "Valid Anagram"
+  | "Valid Palindrome"
+  | "Container With Most Water"
+  | "3Sum"
+  | "Product of Array Except Self"
+  | "Longest Consecutive Sequence"
+  | "Valid Parentheses"
+  | "Binary Search";
 
 // Kata name → algo-viz subfolder served from /algo-viz/<folder>/index.html
 const VIZ_MAP: Partial<Record<VizKataName, string>> = {
@@ -248,6 +258,16 @@ const VIZ_MAP: Partial<Record<VizKataName, string>> = {
   "Pow(x, n)":                    "pow-xn",
   "Multiply Strings":             "multiply-strings",
   "Detect Squares":               "detect-squares",
+  "Two Sum":                      "two-sum",
+  "Contains Duplicate":           "contains-duplicate",
+  "Valid Anagram":                "valid-anagram",
+  "Valid Palindrome":             "valid-palindrome",
+  "Container With Most Water":    "container-most-water",
+  "3Sum":                         "three-sum",
+  "Product of Array Except Self": "product-except-self",
+  "Longest Consecutive Sequence": "longest-consecutive",
+  "Valid Parentheses":            "valid-parentheses",
+  "Binary Search":                "binary-search",
 };
 
 // Overrides for slugs that can't be reliably derived from the display name

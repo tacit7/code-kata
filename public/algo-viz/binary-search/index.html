@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Binary Search</title>
+  <link rel="stylesheet" href="../shared/style.css" />
+  <script src="../shared/gsap.min.js"></script>
+  <script src="../shared/viz.js"></script>
+  <style>
+    .viz-area {
+      width: 100%;
+      max-width: 90%;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .main-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      align-items: start;
+    }
+
+    @media (max-width: 800px) {
+      .main-row {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Array visualization */
+    #array-container {
+      display: flex;
+      gap: 4px;
+      align-items: flex-end;
+      min-height: 120px;
+      padding: 20px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      flex-wrap: wrap;
+    }
+
+    .array-cell {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      font-family: monospace;
+      font-weight: 600;
+      font-size: 0.85rem;
+      transition: all 0.3s ease;
+    }
+
+    .cell-bar {
+      width: 48px;
+      background: var(--accent);
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      border: 2px solid transparent;
+      font-weight: 700;
+    }
+
+    .cell-idx {
+      font-size: 0.65rem;
+      color: var(--text-dim);
+    }
+
+    /* Cell states */
+    .cell-bar.active {
+      background: var(--yellow);
+      color: #000;
+      border-color: var(--yellow-light);
+      box-shadow: 0 0 8px rgba(224, 175, 104, 0.4);
+    }
+
+    .cell-bar.found {
+      background: var(--green);
+      color: #fff;
+      border-color: var(--green-light);
+      box-shadow: 0 0 12px rgba(158, 206, 106, 0.5);
+    }
+
+    .cell-bar.eliminated {
+      background: #3d3d3d;
+      border-color: #555;
+      color: var(--text-dim);
+    }
+
+    .cell-bar.boundary {
+      border: 2px solid var(--blue);
+    }
+
+    .boundary-label {
+      font-size: 0.6rem;
+      color: var(--text-faint);
+      white-space: nowrap;
+      margin-top: 2px;
+    }
+
+    /* Variables panel */
+    .var-panel {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 14px 16px;
+    }
+
+    .var-item {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .var-label {
+      font-size: 0.65rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-dim);
+    }
+
+    .var-value {
+      font-size: 1rem;
+      font-weight: 700;
+      font-family: monospace;
+      color: var(--text-bright);
+    }
+
+    /* Code panel */
+    .code-panel {
+      background: #0a0d14;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .code-header {
+      padding: 9px 14px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      font-size: 0.67rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.11em;
+      color: var(--text-dim);
+    }
+
+    .code-body {
+      padding: 10px 0;
+      font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+      font-size: 0.75rem;
+      line-height: 1.7;
+      overflow-x: auto;
+      flex: 1;
+    }
+
+    .code-line {
+      display: flex;
+      align-items: stretch;
+      border-left: 3px solid transparent;
+      padding: 0 14px 0 0;
+      white-space: pre;
+      transition: background 0.2s, border-color 0.2s;
+    }
+
+    .code-line.hl {
+      background: rgba(122, 162, 247, 0.12);
+      border-left-color: var(--accent);
+      padding-left: 6px;
+    }
+
+    .code-line .ln {
+      width: 28px;
+      min-width: 28px;
+      text-align: right;
+      color: #3d4468;
+      user-select: none;
+      padding-right: 14px;
+      font-size: 0.7rem;
+    }
+
+    .code-line .code {
+      color: var(--text-muted);
+    }
+
+    .kw {
+      color: var(--purple);
+    }
+
+    .fn {
+      color: var(--blue);
+    }
+
+    .nb {
+      color: var(--green);
+    }
+
+    .op {
+      color: var(--text);
+    }
+
+    /* Status/description panel */
+    .status-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 12px 16px;
+    }
+
+    .status-phase {
+      font-size: 0.65rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-dim);
+    }
+
+    .status-desc {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    .status-result {
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: var(--green);
+      margin-top: 4px;
+    }
+
+    .status-result.not-found {
+      color: var(--red);
+    }
+
+    /* Button styles from shared */
+    .btn-step {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      cursor: pointer;
+      font-size: 0.9rem;
+      font-weight: 600;
+      padding: 7px 12px;
+      transition: background 0.2s, border-color 0.2s;
+    }
+
+    .btn-step:hover:not(:disabled) {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+    }
+
+    .btn-step:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    .btn-play {
+      background: #15803d;
+      border: none;
+      border-radius: var(--radius-sm);
+      color: #fff;
+      cursor: pointer;
+      font-size: 0.88rem;
+      font-weight: 600;
+      padding: 7px 16px;
+      transition: background 0.2s;
+    }
+
+    .btn-play:hover:not(:disabled) {
+      background: #16a34a;
+    }
+
+    .btn-play:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    /* Controls row */
+    .controls-row {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .control-group {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .speed-label {
+      font-size: 0.75rem;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+    }
+
+    #speedSel {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: var(--radius-sm);
+      padding: 6px 10px;
+      font-size: 0.85rem;
+      cursor: pointer;
+    }
+
+    .page-sub {
+      color: var(--text-dim);
+      font-size: 0.85rem;
+    }
+  </style>
+</head>
+<body class="page">
+  <div class="page-header">
+    <a class="back-link" href="../index.html">← All Algorithms</a>
+    <div>
+      <div class="page-title">Binary Search</div>
+      <div class="page-sub">LeetCode #704 · search algorithm · O(log n) time · O(1) space</div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <div class="field">
+      <label for="numsInput">Array (comma-separated):</label>
+      <input type="text" id="numsInput" value="-1,0,3,5,9,12" />
+    </div>
+    <div class="field">
+      <label for="targetInput">Target:</label>
+      <input type="number" id="targetInput" value="9" />
+    </div>
+    <button class="btn-primary" id="buildBtn">Build &amp; Run</button>
+  </div>
+
+  <div class="viz-area">
+    <!-- Controls row -->
+    <div style="display:flex;gap:12px;margin-bottom:6px;flex-wrap:wrap">
+      <div class="panel-box" style="flex:0 0 auto">
+        <div class="controls-row">
+          <div class="control-group">
+            <button class="btn-step" id="prevBtn" disabled>&#8592;</button>
+            <button class="btn-step" id="stepBtn" disabled>&#8594;</button>
+            <button class="btn-play" id="playBtn" disabled>&#9654; Play</button>
+          </div>
+          <div class="control-group">
+            <span class="speed-label">Speed:</span>
+            <select id="speedSel">
+              <option value="900">Slow</option>
+              <option value="400" selected>Medium</option>
+              <option value="150">Fast</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="main-row">
+      <!-- Left column: Array and Variables -->
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <!-- Array -->
+        <div class="panel-box">
+          <div style="font-size:0.67rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--text-dim);margin-bottom:10px">Array</div>
+          <div id="array-container"></div>
+        </div>
+
+        <!-- Variables -->
+        <div class="var-panel">
+          <div class="var-item">
+            <div class="var-label">Left (l)</div>
+            <div class="var-value" id="varL">—</div>
+          </div>
+          <div class="var-item">
+            <div class="var-label">Right (r)</div>
+            <div class="var-value" id="varR">—</div>
+          </div>
+          <div class="var-item">
+            <div class="var-label">Mid (m)</div>
+            <div class="var-value" id="varMid">—</div>
+          </div>
+          <div class="var-item">
+            <div class="var-label">nums[mid]</div>
+            <div class="var-value" id="varNumMid">—</div>
+          </div>
+        </div>
+
+        <!-- Status -->
+        <div class="status-panel">
+          <div class="status-phase" id="phase-label">—</div>
+          <div class="status-desc" id="step-desc">Click Build &amp; Run to start.</div>
+          <div class="status-result" id="result-msg" style="display:none"></div>
+        </div>
+      </div>
+
+      <!-- Right column: Code -->
+      <div class="code-panel">
+        <div class="code-header">Python Solution</div>
+        <div class="code-body" id="code-body"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    var nav;
+
+    // Python solution
+    const pythonCode = [
+      'def search(nums, target):',
+      '    l, r = 0, len(nums) - 1',
+      '    while l <= r:',
+      '        mid = (l + r) // 2',
+      '        if nums[mid] == target:',
+      '            return mid',
+      '        elif nums[mid] < target:',
+      '            l = mid + 1',
+      '        else:',
+      '            r = mid - 1',
+      '    return -1'
+    ];
+
+    // Build code panel on load
+    function buildCodePanel() {
+      const codeBody = document.getElementById('code-body');
+      codeBody.innerHTML = pythonCode.map((line, idx) => {
+        return `<div class="code-line" id="cl-${idx}"><span class="ln">${idx + 1}</span><span class="code">${escapeHtml(line)}</span></div>`;
+      }).join('');
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    function setCodeLines(activeLines) {
+      for (let i = 0; i < pythonCode.length; i++) {
+        const el = document.getElementById(`cl-${i}`);
+        if (activeLines.includes(i)) {
+          el.classList.add('hl');
+        } else {
+          el.classList.remove('hl');
+        }
+      }
+    }
+
+    // Simulation function
+    function simulate(nums, target) {
+      const steps = [];
+
+      // Initial state
+      steps.push({
+        phase: 'Initialize',
+        desc: `l = 0, r = ${nums.length - 1}, target = ${target}`,
+        l: 0,
+        r: nums.length - 1,
+        mid: null,
+        comparison: null,
+        lines: [0, 1],
+        found: false,
+        result: null
+      });
+
+      let l = 0;
+      let r = nums.length - 1;
+      let iterations = 0;
+      const maxIters = 50; // safety limit
+
+      while (l <= r && iterations < maxIters) {
+        iterations++;
+        const mid = Math.floor((l + r) / 2);
+        const numsMid = nums[mid];
+
+        // Step: compute mid
+        steps.push({
+          phase: 'Compute Mid',
+          desc: `mid = (${l} + ${r}) // 2 = ${mid}. Check nums[${mid}] = ${numsMid}`,
+          l,
+          r,
+          mid,
+          comparison: null,
+          lines: [2, 3],
+          found: false,
+          result: null
+        });
+
+        if (numsMid === target) {
+          // Found!
+          steps.push({
+            phase: 'Found!',
+            desc: `nums[${mid}] == ${target}. Return ${mid}`,
+            l,
+            r,
+            mid,
+            comparison: '=',
+            lines: [4, 5],
+            found: true,
+            result: mid
+          });
+          break;
+        } else if (numsMid < target) {
+          // Search right
+          steps.push({
+            phase: 'Go Right',
+            desc: `nums[${mid}] (${numsMid}) < ${target}. Move l to ${mid + 1}`,
+            l,
+            r,
+            mid,
+            comparison: '<',
+            lines: [6, 7],
+            found: false,
+            result: null
+          });
+          l = mid + 1;
+        } else {
+          // Search left
+          steps.push({
+            phase: 'Go Left',
+            desc: `nums[${mid}] (${numsMid}) > ${target}. Move r to ${mid - 1}`,
+            l,
+            r,
+            mid,
+            comparison: '>',
+            lines: [8, 9],
+            found: false,
+            result: null
+          });
+          r = mid - 1;
+        }
+      }
+
+      // Final: not found
+      if (!steps[steps.length - 1].found) {
+        steps.push({
+          phase: 'Not Found',
+          desc: `l > r. Target ${target} not in array. Return -1`,
+          l,
+          r,
+          mid: null,
+          comparison: null,
+          lines: [2, 10],
+          found: false,
+          result: -1
+        });
+      }
+
+      return steps;
+    }
+
+    // Render a step
+    function applyStep(snap, animate) {
+      const { nums, target, l, r, mid, comparison, found, result, phase, desc } = snap;
+
+      // Update code highlighting
+      setCodeLines(snap.lines);
+
+      // Update variables
+      document.getElementById('varL').textContent = l !== null ? l : '—';
+      document.getElementById('varR').textContent = r !== null ? r : '—';
+      document.getElementById('varMid').textContent = mid !== null ? mid : '—';
+      document.getElementById('varNumMid').textContent = mid !== null ? nums[mid] : '—';
+
+      // Update array visualization
+      const container = document.getElementById('array-container');
+      container.innerHTML = '';
+      for (let i = 0; i < nums.length; i++) {
+        const cellDiv = document.createElement('div');
+        cellDiv.className = 'array-cell';
+
+        const bar = document.createElement('div');
+        bar.className = 'cell-bar';
+
+        // Determine state
+        if (found && mid === i) {
+          bar.classList.add('found');
+        } else if (mid === i) {
+          bar.classList.add('active');
+        } else if (i < l || i > r) {
+          bar.classList.add('eliminated');
+        } else if (i === l || i === r) {
+          bar.classList.add('boundary');
+        }
+
+        bar.textContent = nums[i];
+        cellDiv.appendChild(bar);
+
+        const idx = document.createElement('div');
+        idx.className = 'cell-idx';
+        idx.textContent = `[${i}]`;
+        cellDiv.appendChild(idx);
+
+        if (i === l) {
+          const lbl = document.createElement('div');
+          lbl.className = 'boundary-label';
+          lbl.textContent = 'l';
+          cellDiv.appendChild(lbl);
+        }
+        if (i === r) {
+          const lbl = document.createElement('div');
+          lbl.className = 'boundary-label';
+          lbl.textContent = 'r';
+          cellDiv.appendChild(lbl);
+        }
+
+        container.appendChild(cellDiv);
+      }
+
+      // Update status
+      document.getElementById('phase-label').textContent = phase;
+      document.getElementById('step-desc').textContent = desc;
+
+      const resultEl = document.getElementById('result-msg');
+      if (result !== null) {
+        resultEl.style.display = '';
+        if (result >= 0) {
+          resultEl.className = 'status-result';
+          resultEl.textContent = `✓ Found at index ${result}`;
+        } else {
+          resultEl.className = 'status-result not-found';
+          resultEl.textContent = `✗ Not found (return -1)`;
+        }
+      } else {
+        resultEl.style.display = 'none';
+      }
+    }
+
+    function buildAndRun() {
+      const numsStr = document.getElementById('numsInput').value;
+      const targetStr = document.getElementById('targetInput').value;
+
+      const nums = numsStr.split(',').map(x => {
+        const n = parseInt(x.trim());
+        return isNaN(n) ? 0 : n;
+      });
+
+      const target = parseInt(targetStr);
+      if (isNaN(target) || nums.length === 0) {
+        alert('Invalid input. Please enter a valid array and target.');
+        return;
+      }
+
+      const steps = simulate(nums, target);
+
+      // Enrich steps with nums and target
+      steps.forEach(step => {
+        step.nums = nums;
+        step.target = target;
+      });
+
+      nav.load(steps);
+    }
+
+    window.addEventListener('DOMContentLoaded', function() {
+      buildCodePanel();
+
+      nav = VizNav({
+        btnPrev: document.getElementById('prevBtn'),
+        btnNext: document.getElementById('stepBtn'),
+        btnPlay: document.getElementById('playBtn'),
+        speedSel: document.getElementById('speedSel'),
+        render: function(snap, cur, total) {
+          applyStep(snap, cur > 0);
+        }
+      });
+
+      document.getElementById('buildBtn').addEventListener('click', buildAndRun);
+
+      // Auto-run default
+      buildAndRun();
+
+      // Hide back-link in iframe
+      if (window.self !== window.top) {
+        const bl = document.querySelector('.back-link');
+        if (bl) bl.style.display = 'none';
+      }
+    });
+  </script>
+</body>
+</html>

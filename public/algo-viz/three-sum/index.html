@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>3Sum</title>
+  <link rel="stylesheet" href="../shared/style.css" />
+  <script src="../shared/gsap.min.js"></script>
+  <script src="../shared/viz.js"></script>
+  <style>
+    .viz-area { width: 100%; max-width: 90%; }
+    .main-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
+    .left-col, .right-col { display: flex; flex-direction: column; gap: 12px; }
+    @media (max-width: 900px) { .main-row { grid-template-columns: 1fr; } }
+
+    .array-panel {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 16px;
+    }
+    .panel-title {
+      font-size: 0.72rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim);
+      margin-bottom: 12px;
+    }
+
+    .array-row { display: flex; gap: 6px; flex-wrap: wrap; align-items: flex-end; margin-bottom: 16px; }
+    .array-cell {
+      background: var(--bg); border: 2px solid var(--border);
+      border-radius: var(--radius-sm); width: 40px; height: 40px;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 700; font-size: 0.95rem; position: relative;
+      transition: background 0.2s, border-color 0.2s;
+    }
+    .array-cell.i-ptr { border-color: var(--yellow); background: #2b2407; }
+    .array-cell.l-ptr { border-color: var(--blue); background: #1a2b3c; }
+    .array-cell.r-ptr { border-color: var(--orange); background: #2b1a07; }
+    .array-cell.il-ptr { border-color: var(--yellow); background: #2d2c1a; }
+    .array-cell.ir-ptr { border-color: var(--orange); background: #2d1f1a; }
+    .array-cell.lr-ptr { border-color: var(--blue); background: #1a2d2c; }
+    .array-cell.ilr-ptr { border-color: var(--accent); background: #1a2a2b; }
+
+    .pointer-label { position: absolute; bottom: -18px; left: 50%; transform: translateX(-50%); font-size: 0.65rem; font-weight: 600; white-space: nowrap; }
+    .label-i { color: var(--yellow); }
+    .label-l { color: var(--blue); }
+    .label-r { color: var(--orange); }
+
+    .panel-box {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 14px 16px;
+    }
+
+    .var-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+    .var-box {
+      padding: 10px 8px; background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      display: flex; flex-direction: column; align-items: center; gap: 3px;
+    }
+    .var-label { font-size: 0.65rem; font-family: monospace; color: var(--text-faint); text-align: center; }
+    .var-val { font-size: 1.1rem; font-weight: 700; color: var(--text-bright); font-family: monospace; }
+
+    .sum-box {
+      background: var(--bg); border: 1px solid var(--border-soft);
+      border-radius: var(--radius-sm); padding: 12px;
+      display: flex; flex-direction: column; gap: 6px;
+      margin-bottom: 12px;
+    }
+    .sum-display {
+      font-family: monospace; font-size: 0.9rem;
+      display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    }
+    .sum-badge {
+      padding: 3px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: 700;
+      display: none; font-family: monospace;
+    }
+    .sum-badge.found { display: inline-block; background: #1a2b14; color: #9ece6a; border: 1px solid #4d7a23; }
+    .sum-badge.low { display: inline-block; background: #1a2b3c; color: #7dcfff; border: 1px solid #2d6a9f; }
+    .sum-badge.high { display: inline-block; background: #2b1420; color: #f7768e; border: 1px solid #8b3a4a; }
+
+    .triplets-panel {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 14px 16px;
+    }
+    .triplets-row { display: flex; gap: 8px; flex-wrap: wrap; }
+    .triplet-chip {
+      background: var(--accent-pale); color: var(--bg);
+      padding: 6px 12px; border-radius: 20px; font-size: 0.78rem;
+      font-weight: 600; font-family: monospace;
+    }
+    .no-triplets { color: var(--text-dim); font-size: 0.85rem; }
+
+    .code-panel {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); overflow: hidden;
+    }
+    .code-header { padding: 8px 14px; font-size: 0.72rem; font-weight: 600; color: var(--text-dim); border-bottom: 1px solid var(--border); background: var(--bg); }
+    .code-body { padding: 10px 0; font-size: 0.78rem; line-height: 1.75; white-space: pre; font-family: monospace; }
+    .code-line { display: flex; align-items: center; padding: 0 14px; transition: background 0.15s; }
+    .code-line.hl { background: rgba(122,162,247,0.12); border-left: 2px solid var(--accent); padding-left: 12px; }
+    .ln { min-width: 24px; color: var(--text-ghost); user-select: none; font-size: 0.7rem; }
+
+    .btn-step {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); color: var(--text);
+      cursor: pointer; font-size: 0.88rem; font-weight: 600;
+      padding: 9px 16px; transition: background 0.15s, border-color 0.15s;
+    }
+    .btn-step:hover:not(:disabled) { background: var(--border); border-color: var(--accent); }
+    .btn-step:disabled { opacity: 0.35; cursor: not-allowed; }
+
+    .btn-play {
+      background: #15803d; border: none; border-radius: var(--radius-sm);
+      color: #fff; cursor: pointer; font-size: 0.88rem; font-weight: 600;
+      padding: 9px 16px; transition: background 0.2s;
+    }
+    .btn-play:hover { background: #166534; }
+    .btn-play.playing { background: #c2410c; }
+    .btn-play.playing:hover { background: #9a3412; }
+    .btn-play:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .speed-select {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); color: var(--text);
+      font-size: 0.85rem; padding: 8px 10px; outline: none;
+    }
+
+    .preset-row { display: flex; gap: 8px; flex-wrap: wrap; }
+    .btn-preset {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); color: var(--text-dim);
+      font-size: 0.78rem; padding: 5px 10px; cursor: pointer;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .btn-preset:hover { border-color: var(--accent); color: var(--accent-pale); }
+    .btn-preset.active { border-color: var(--accent); color: var(--accent-pale); background: var(--surface-dark); }
+
+    .kw { color: #bb9af7; }
+    .fn { color: #7dcfff; }
+    .bi { color: #ff9e64; }
+    .op { color: #c0caf5; }
+    .nb { color: #9ece6a; }
+    .cm { color: #3b4261; }
+  </style>
+</head>
+<body class="page">
+
+<div class="page-header">
+  <a class="back-link" href="../index.html">&larr; All Algorithms</a>
+  <div class="page-title">3Sum</div>
+  <div class="page-sub">LeetCode #15 &middot; Sort + two pointers &middot; O(n²) time &middot; O(n) space</div>
+</div>
+
+<div class="controls">
+  <div class="field">
+    <label>Preset</label>
+    <div class="preset-row" id="preset-row">
+      <button class="btn-preset active" onclick="loadPreset(0,this)">Example</button>
+      <button class="btn-preset" onclick="loadPreset(1,this)">All zeros</button>
+      <button class="btn-preset" onclick="loadPreset(2,this)">No triplets</button>
+      <button class="btn-preset" onclick="loadPreset(3,this)">Duplicates</button>
+    </div>
+  </div>
+  <div class="field">
+    <label>Numbers (comma-separated)</label>
+    <input id="inp-nums" type="text" value="-1,0,1,2,-1,-4" style="width:280px" />
+  </div>
+  <button class="btn-primary" onclick="buildAndRun()">Build &amp; Run</button>
+</div>
+
+<div class="viz-area">
+  <div class="main-row">
+    <div class="left-col">
+      <div class="array-panel">
+        <div class="panel-title">Array (sorted)</div>
+        <div class="array-row" id="array-row"></div>
+      </div>
+
+      <div class="code-panel">
+        <div class="code-header">Python</div>
+        <div class="code-body" id="code-body"></div>
+      </div>
+    </div>
+
+    <div class="right-col">
+      <div style="display:flex;gap:12px;margin-bottom:12px">
+        <div class="panel-box" style="flex:0 0 auto">
+          <div style="display:flex;gap:8px;align-items:center">
+            <button class="btn-step" id="prevBtn" disabled>&larr;</button>
+            <button class="btn-step" id="stepBtn" disabled>&rarr;</button>
+            <button class="btn-play" id="playBtn" disabled>&#9654; Play</button>
+            <select class="speed-select" id="speedSel">
+              <option value="700">Slow</option>
+              <option value="250" selected>Medium</option>
+              <option value="80">Fast</option>
+            </select>
+          </div>
+        </div>
+        <div class="panel-box" style="flex:1;min-width:0">
+          <div style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--text-dim)" id="phase-label">—</div>
+          <div style="font-size:0.88rem;color:var(--text-muted);margin-top:3px" id="step-desc">Click Build &amp; Run to start.</div>
+        </div>
+      </div>
+
+      <div class="panel-box">
+        <div class="panel-title">Variables</div>
+        <div class="var-grid">
+          <div class="var-box" style="border-color:var(--yellow)">
+            <div class="var-label">i (fixed)</div>
+            <div class="var-val" id="vv-i">—</div>
+          </div>
+          <div class="var-box" style="border-color:var(--blue)">
+            <div class="var-label">l (left)</div>
+            <div class="var-val" id="vv-l">—</div>
+          </div>
+          <div class="var-box" style="border-color:var(--orange)">
+            <div class="var-label">r (right)</div>
+            <div class="var-val" id="vv-r">—</div>
+          </div>
+          <div class="var-box" style="border-color:var(--accent)">
+            <div class="var-label">sum</div>
+            <div class="var-val" id="vv-sum">—</div>
+          </div>
+        </div>
+
+        <div class="sum-box">
+          <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text-dim);margin-bottom:6px">Current Sum Check</div>
+          <div class="sum-display" id="sum-display">nums[i] + nums[l] + nums[r] = ?</div>
+          <div id="sum-badge" class="sum-badge"></div>
+        </div>
+      </div>
+
+      <div class="triplets-panel">
+        <div class="panel-title">Found Triplets</div>
+        <div class="triplets-row" id="triplets-row">
+          <span class="no-triplets">None yet</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+var nav;
+var currentNums = [];
+var allSteps = [];
+var currentStep = null;
+
+// ── Presets ────────────────────────────────────────────────────────────────
+const presets = [
+  { name: "Example", nums: [-1, 0, 1, 2, -1, -4] },
+  { name: "All zeros", nums: [0, 0, 0, 0] },
+  { name: "No triplets", nums: [1, 2, -2, -1] },
+  { name: "Duplicates", nums: [-4, -2, -2, -1, 0, 1, 2, 2, 3] },
+];
+
+function loadPreset(idx, btn) {
+  document.querySelectorAll('.btn-preset').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const p = presets[idx];
+  document.getElementById('inp-nums').value = p.nums.join(',');
+  buildAndRun();
+}
+
+// ── Simulate 3Sum ────────────────────────────────────────────────────────────
+function simulate(nums) {
+  const steps = [];
+  const sorted = [...nums].sort((a,b) => a - b);
+  const result = [];
+
+  // Step 0: initial
+  steps.push({
+    phase: 'Start',
+    desc: 'Array sorted. Initialize outer loop.',
+    i: -1, l: -1, r: -1, sum: null,
+    triplets: [],
+    lines: [1, 2]
+  });
+
+  for (let i = 0; i < sorted.length - 2; i++) {
+    // Skip duplicates in i
+    if (i > 0 && sorted[i] === sorted[i-1]) {
+      steps.push({
+        phase: `i=${i} (skip dup)`,
+        desc: `nums[${i}] = ${sorted[i]} already processed, skip.`,
+        i, l: -1, r: -1, sum: null,
+        triplets: [...result],
+        lines: [4, 5]
+      });
+      continue;
+    }
+
+    // Start inner loop for this i
+    steps.push({
+      phase: `i=${i}`,
+      desc: `Fixed nums[i]=${sorted[i]}. Start two-pointer search from i+1 to n-1.`,
+      i, l: i + 1, r: sorted.length - 1, sum: null,
+      triplets: [...result],
+      lines: [6, 7]
+    });
+
+    let l = i + 1, r = sorted.length - 1;
+    while (l < r) {
+      const s = sorted[i] + sorted[l] + sorted[r];
+
+      steps.push({
+        phase: `i=${i}, l=${l}, r=${r}`,
+        desc: `Calculate: ${sorted[i]} + ${sorted[l]} + ${sorted[r]} = ${s}`,
+        i, l, r, sum: s,
+        triplets: [...result],
+        lines: [8, 9]
+      });
+
+      if (s === 0) {
+        // Found triplet
+        result.push([sorted[i], sorted[l], sorted[r]]);
+
+        steps.push({
+          phase: `Found!`,
+          desc: `Sum = 0. Add triplet [${sorted[i]}, ${sorted[l]}, ${sorted[r]}] to result.`,
+          i, l, r, sum: s,
+          triplets: [...result],
+          lines: [10, 11]
+        });
+
+        // Skip duplicates for l
+        while (l < r && sorted[l] === sorted[l+1]) {
+          l++;
+          steps.push({
+            phase: `Skip l dup`,
+            desc: `nums[${l}] = ${sorted[l]} duplicate, skip.`,
+            i, l, r, sum: s,
+            triplets: [...result],
+            lines: [12, 13]
+          });
+        }
+
+        // Skip duplicates for r
+        while (l < r && sorted[r] === sorted[r-1]) {
+          r--;
+          steps.push({
+            phase: `Skip r dup`,
+            desc: `nums[${r}] = ${sorted[r]} duplicate, skip.`,
+            i, l, r, sum: s,
+            triplets: [...result],
+            lines: [14, 15]
+          });
+        }
+
+        l++;
+        r--;
+
+        steps.push({
+          phase: `Move pointers`,
+          desc: `Move l right and r left to search for more triplets.`,
+          i, l, r, sum: null,
+          triplets: [...result],
+          lines: [16, 17]
+        });
+      } else if (s < 0) {
+        l++;
+        steps.push({
+          phase: `s < 0`,
+          desc: `Sum too small. Move l right to increase sum.`,
+          i, l, r, sum: s,
+          triplets: [...result],
+          lines: [18, 19]
+        });
+      } else {
+        r--;
+        steps.push({
+          phase: `s > 0`,
+          desc: `Sum too large. Move r left to decrease sum.`,
+          i, l, r, sum: s,
+          triplets: [...result],
+          lines: [20, 21]
+        });
+      }
+    }
+  }
+
+  // Final
+  steps.push({
+    phase: 'Done',
+    desc: `Found ${result.length} triplet${result.length === 1 ? '' : 's'}.`,
+    i: -1, l: -1, r: -1, sum: null,
+    triplets: result,
+    lines: [22]
+  });
+
+  return steps;
+}
+
+// ── Build & Run ────────────────────────────────────────────────────────────
+function buildAndRun() {
+  const raw = document.getElementById('inp-nums').value
+    .split(',')
+    .map(s => parseInt(s.trim()))
+    .filter(n => !isNaN(n));
+
+  if (raw.length < 3) {
+    alert('Need at least 3 numbers');
+    return;
+  }
+
+  currentNums = raw;
+  allSteps = simulate(currentNums);
+  nav.load(allSteps);
+}
+
+// ── Rendering ────────────────────────────────────────────────────────────────
+function applyStep(snap, animate) {
+  currentStep = snap;
+
+  // Update phase & description
+  document.getElementById('phase-label').textContent = snap.phase || '—';
+  document.getElementById('step-desc').textContent = snap.desc || '';
+
+  // Draw sorted array with pointer highlights
+  const sorted = [...currentNums].sort((a,b) => a - b);
+  const row = document.getElementById('array-row');
+  row.innerHTML = '';
+
+  sorted.forEach((val, idx) => {
+    const cell = document.createElement('div');
+    cell.className = 'array-cell';
+    cell.style.marginBottom = '20px'; // space for labels
+
+    let isI = idx === snap.i;
+    let isL = idx === snap.l;
+    let isR = idx === snap.r;
+
+    if (isI && isL && isR) cell.classList.add('ilr-ptr');
+    else if (isI && isL) cell.classList.add('il-ptr');
+    else if (isI && isR) cell.classList.add('ir-ptr');
+    else if (isL && isR) cell.classList.add('lr-ptr');
+    else if (isI) cell.classList.add('i-ptr');
+    else if (isL) cell.classList.add('l-ptr');
+    else if (isR) cell.classList.add('r-ptr');
+
+    cell.textContent = val;
+
+    // Add pointer labels
+    if (isI) {
+      const lbl = document.createElement('div');
+      lbl.className = 'pointer-label label-i';
+      lbl.textContent = 'i';
+      cell.appendChild(lbl);
+    }
+    if (isL) {
+      const lbl = document.createElement('div');
+      lbl.className = 'pointer-label label-l';
+      lbl.textContent = 'l';
+      cell.appendChild(lbl);
+    }
+    if (isR) {
+      const lbl = document.createElement('div');
+      lbl.className = 'pointer-label label-r';
+      lbl.textContent = 'r';
+      cell.appendChild(lbl);
+    }
+
+    row.appendChild(cell);
+  });
+
+  // Update variables
+  document.getElementById('vv-i').textContent = snap.i >= 0 ? snap.i : '—';
+  document.getElementById('vv-l').textContent = snap.l >= 0 ? snap.l : '—';
+  document.getElementById('vv-r').textContent = snap.r >= 0 ? snap.r : '—';
+  document.getElementById('vv-sum').textContent = snap.sum !== null ? snap.sum : '—';
+
+  // Update sum display
+  const sumDisp = document.getElementById('sum-display');
+  if (snap.i >= 0 && snap.l >= 0 && snap.r >= 0 && snap.sum !== null) {
+    const i_val = sorted[snap.i];
+    const l_val = sorted[snap.l];
+    const r_val = sorted[snap.r];
+    sumDisp.textContent = `${i_val} + ${l_val} + ${r_val} = ${snap.sum}`;
+  } else {
+    sumDisp.textContent = 'nums[i] + nums[l] + nums[r] = ?';
+  }
+
+  // Update sum badge
+  const badge = document.getElementById('sum-badge');
+  badge.className = 'sum-badge';
+  if (snap.sum === 0) {
+    badge.classList.add('found');
+    badge.textContent = '✓ Found';
+  } else if (snap.sum !== null && snap.sum < 0) {
+    badge.classList.add('low');
+    badge.textContent = 'Too small ↑';
+  } else if (snap.sum !== null && snap.sum > 0) {
+    badge.classList.add('high');
+    badge.textContent = 'Too large ↓';
+  }
+
+  // Update triplets
+  const tripRow = document.getElementById('triplets-row');
+  if (snap.triplets.length === 0) {
+    tripRow.innerHTML = '<span class="no-triplets">None yet</span>';
+  } else {
+    tripRow.innerHTML = snap.triplets
+      .map(t => `<div class="triplet-chip">[${t[0]}, ${t[1]}, ${t[2]}]</div>`)
+      .join('');
+  }
+
+  // Code highlighting
+  setCodeLines(snap.lines || []);
+}
+
+function setCodeLines(activeLines) {
+  document.querySelectorAll('.code-line').forEach((el, idx) => {
+    if (activeLines.includes(idx + 1)) {
+      el.classList.add('hl');
+    } else {
+      el.classList.remove('hl');
+    }
+  });
+}
+
+// ── Initialize ────────────────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', function() {
+  // Setup VizNav
+  nav = VizNav({
+    btnPrev: document.getElementById('prevBtn'),
+    btnNext: document.getElementById('stepBtn'),
+    btnPlay: document.getElementById('playBtn'),
+    speedSel: document.getElementById('speedSel'),
+    render: function(snap, cur, total) {
+      applyStep(snap, cur > 0);
+    }
+  });
+
+  // Setup code panel
+  const codeLines = [
+    `<span class="kw">def</span> <span class="fn">three_sum</span>(<span class="nb">nums</span>):`,
+    `&nbsp;&nbsp;<span class="nb">nums</span>.<span class="fn">sort</span>()`,
+    `&nbsp;&nbsp;<span class="nb">result</span> = []`,
+    `&nbsp;&nbsp;<span class="kw">for</span> <span class="bi">i</span> <span class="kw">in</span> <span class="fn">range</span>(<span class="fn">len</span>(<span class="nb">nums</span>) - 2):`,
+    `&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">if</span> <span class="bi">i</span> > 0 <span class="op">and</span> <span class="nb">nums</span>[<span class="bi">i</span>] == <span class="nb">nums</span>[<span class="bi">i</span>-1]:`,
+    `&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">continue</span>`,
+    `&nbsp;&nbsp;&nbsp;&nbsp;<span class="bi">l</span>, <span class="bi">r</span> = <span class="bi">i</span> + 1, <span class="fn">len</span>(<span class="nb">nums</span>) - 1`,
+    `&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">while</span> <span class="bi">l</span> < <span class="bi">r</span>:`,
+    `&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="bi">s</span> = <span class="nb">nums</span>[<span class="bi">i</span>] + <span class="nb">nums</span>[<span class="bi">l</span>] + <span class="nb">nums</span>[<span class="bi">r</span>]`,
+    `&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">if</span> <span class="bi">s</span> == 0:`,
+    `&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="nb">result</span>.<span class="fn">append</span>([<span class="nb">nums</span>[<span class="bi">i</span>], <span class="nb">nums</span>[<span class="bi">l</span>], <span class="nb">nums</span>[<span class="bi">r</span>]])`,
+    `&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">while</span> <span class="bi">l</span> < <span class="bi">r</span> <span class="op">and</span> <span class="nb">nums</span>[<span class="bi">l</span>] == <span class="nb">nums</span>[<span class="bi">l</span>+1]: <span class="bi">l</span> += 1`,
+    `&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">while</span> <span class="bi">l</span> < <span class="bi">r</span> <span class="op">and</span> <span class="nb">nums</span>[<span class="bi">r</span>] == <span class="nb">nums</span>[<span class="bi">r</span>-1]: <span class="bi">r</span> -= 1`,
+    `&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="bi">l</span> += 1; <span class="bi">r</span> -= 1`,
+    `&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">elif</span> <span class="bi">s</span> < 0:`,
+    `&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="bi">l</span> += 1`,
+    `&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">else</span>:`,
+    `&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="bi">r</span> -= 1`,
+    `&nbsp;&nbsp;<span class="kw">return</span> <span class="nb">result</span>`,
+  ];
+
+  const codeBody = document.getElementById('code-body');
+  codeBody.innerHTML = codeLines
+    .map((line, idx) => `<div class="code-line"><span class="ln">${idx+1}</span>&nbsp;&nbsp;${line}</div>`)
+    .join('');
+
+  // Auto-run default
+  buildAndRun();
+});
+
+// Hide back-link in iframe
+if (window.self !== window.top) {
+  const bl = document.querySelector('.back-link');
+  if (bl) bl.style.display = 'none';
+}
+</script>
+</body>
+</html>

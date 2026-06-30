@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Valid Anagram</title>
+  <link rel="stylesheet" href="../shared/style.css" />
+  <script src="../shared/gsap.min.js"></script>
+  <script src="../shared/viz.js"></script>
+  <style>
+    .viz-area {
+      width: 100%; max-width: 90%;
+      display: flex; flex-direction: column; gap: 12px;
+    }
+
+    .string-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .string-panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 14px;
+    }
+
+    .string-label {
+      font-size: 0.68rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.1em;
+      color: var(--text-dim); margin-bottom: 10px;
+    }
+
+    .string-display {
+      font-family: 'JetBrains Mono', 'Fira Code', monospace;
+      font-size: 1.2rem; letter-spacing: 0.3em;
+      color: var(--text);
+      display: flex; gap: 8px; flex-wrap: wrap;
+    }
+
+    .char {
+      display: flex; align-items: center; justify-content: center;
+      width: 32px; height: 40px;
+      background: #0a0d14;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      transition: all 0.25s ease;
+    }
+
+    .char.current {
+      background: #4338ca;
+      border-color: var(--accent);
+      color: #fff;
+      font-weight: 700;
+    }
+
+    .char.processed {
+      background: var(--green-bg);
+      border-color: var(--green-border);
+      color: var(--green);
+    }
+
+    .freq-panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 14px;
+    }
+
+    .freq-label {
+      font-size: 0.68rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.1em;
+      color: var(--text-dim); margin-bottom: 12px;
+    }
+
+    .freq-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
+      gap: 10px;
+    }
+
+    .freq-cell {
+      background: #0a0d14;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 8px;
+      text-align: center;
+      font-family: 'JetBrains Mono', monospace;
+      transition: all 0.25s ease;
+    }
+
+    .freq-cell .char-label {
+      font-size: 0.85rem; font-weight: 600;
+      color: var(--text-muted); margin-bottom: 4px;
+    }
+
+    .freq-cell .count-val {
+      font-size: 1.4rem; font-weight: 700;
+      color: var(--text-bright);
+    }
+
+    .freq-cell.positive {
+      background: var(--green-bg);
+      border-color: var(--green-border);
+    }
+
+    .freq-cell.positive .count-val {
+      color: var(--green);
+    }
+
+    .freq-cell.negative {
+      background: #2a0f14;
+      border-color: #6b2030;
+    }
+
+    .freq-cell.negative .count-val {
+      color: var(--red);
+    }
+
+    .freq-cell.active {
+      border-color: var(--accent);
+      box-shadow: 0 0 8px rgba(122, 162, 247, 0.3);
+    }
+
+    .code-panel {
+      background: #0a0d14;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      display: flex; flex-direction: column;
+    }
+
+    .code-header {
+      padding: 9px 14px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      font-size: 0.67rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.11em;
+      color: var(--text-dim);
+    }
+
+    .code-body {
+      padding: 12px 0;
+      flex: 1;
+      font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+      font-size: 0.78rem;
+      line-height: 1.75;
+      overflow-x: auto;
+    }
+
+    .cl {
+      display: flex; align-items: stretch;
+      border-left: 3px solid transparent;
+      padding: 0 14px 0 0;
+      transition: background-color 0.01s;
+      white-space: pre;
+    }
+
+    .cl .ln {
+      width: 28px; min-width: 28px;
+      text-align: right; color: #3d4468;
+      user-select: none; padding-right: 14px;
+      font-size: 0.72rem; line-height: 1.75;
+    }
+
+    .cl .code { color: var(--text-muted); }
+
+    .cl.hl {
+      background: rgba(122, 162, 247, 0.12);
+      border-left-color: var(--accent);
+    }
+
+    .kw  { color: var(--purple); }
+    .fn  { color: var(--blue); }
+    .bi  { color: var(--orange); }
+    .cm  { color: #3d4468; font-style: italic; }
+    .op  { color: var(--text); }
+    .str { color: var(--green); }
+    .num { color: var(--yellow); }
+
+    .result-banner {
+      font-size: 0.95rem; font-weight: 700;
+      padding: 8px 16px; border-radius: 6px;
+      display: none; width: fit-content;
+    }
+
+    .result-banner.true {
+      background: var(--green-bg); color: var(--green);
+      border: 1px solid var(--green-border); display: block;
+    }
+
+    .result-banner.false {
+      background: #2a0f14; color: var(--red);
+      border: 1px solid #6b2030; display: block;
+    }
+
+    @media (max-width: 900px) {
+      .string-row { grid-template-columns: 1fr; }
+      .freq-grid { grid-template-columns: repeat(auto-fill, minmax(50px, 1fr)); }
+    }
+  </style>
+</head>
+<body class="page">
+
+<div class="page-header">
+  <a class="back-link" href="../index.html">← All Algorithms</a>
+  <div class="page-title">Valid Anagram</div>
+  <div class="page-sub">LeetCode #242 · string · O(n) time · O(1) space</div>
+</div>
+
+<div class="controls">
+  <div class="field">
+    <label>String s:</label>
+    <input type="text" id="sInput" value="anagram" />
+  </div>
+  <div class="field">
+    <label>String t:</label>
+    <input type="text" id="tInput" value="nagaram" />
+  </div>
+  <button class="btn-primary" id="buildBtn">Build &amp; Run</button>
+</div>
+
+<div class="viz-area">
+  <div style="display:flex;gap:12px;margin-bottom:14px">
+    <div class="panel-box" style="flex:0 0 auto">
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="btn-step" id="prevBtn" disabled>&#8592;</button>
+        <button class="btn-step" id="stepBtn" disabled>&#8594;</button>
+        <button class="btn-play" id="playBtn" disabled>&#9654; Play</button>
+        <select id="speedSel" style="background:var(--bg);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:6px 10px;font-size:0.85rem">
+          <option value="700">Slow</option>
+          <option value="250" selected>Medium</option>
+          <option value="80">Fast</option>
+        </select>
+      </div>
+    </div>
+    <div class="panel-box" style="flex:1;min-width:0">
+      <div style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--text-dim)" id="phase-label">—</div>
+      <div style="font-size:0.88rem;color:var(--text-muted);margin-top:3px" id="step-desc">Click Build &amp; Run to start.</div>
+    </div>
+  </div>
+
+  <div class="string-row">
+    <div class="string-panel">
+      <div class="string-label">String s (building)</div>
+      <div class="string-display" id="stringS"></div>
+    </div>
+    <div class="string-panel">
+      <div class="string-label">String t (matching)</div>
+      <div class="string-display" id="stringT"></div>
+    </div>
+  </div>
+
+  <div class="freq-panel">
+    <div class="freq-label">Character Frequency</div>
+    <div class="freq-grid" id="freqGrid"></div>
+    <div id="resultBanner" class="result-banner" style="margin-top:12px"></div>
+  </div>
+
+  <div class="code-panel">
+    <div class="code-header">Python</div>
+    <div class="code-body" id="code-body"></div>
+  </div>
+</div>
+
+<script>
+var nav;
+
+const pythonCode = [
+  '<span class="kw">def</span> <span class="fn">is_anagram</span>(<span class="bi">s</span>, <span class="bi">t</span>):',
+  '    <span class="kw">if</span> <span class="fn">len</span>(<span class="bi">s</span>) != <span class="fn">len</span>(<span class="bi">t</span>):',
+  '        <span class="kw">return</span> <span class="num">False</span>',
+  '    <span class="bi">count</span> = {}',
+  '    <span class="kw">for</span> <span class="bi">c</span> <span class="kw">in</span> <span class="bi">s</span>:',
+  '        <span class="bi">count</span>[<span class="bi">c</span>] = <span class="bi">count</span>.<span class="fn">get</span>(<span class="bi">c</span>, <span class="num">0</span>) + <span class="num">1</span>',
+  '    <span class="kw">for</span> <span class="bi">c</span> <span class="kw">in</span> <span class="bi">t</span>:',
+  '        <span class="bi">count</span>[<span class="bi">c</span>] = <span class="bi">count</span>.<span class="fn">get</span>(<span class="bi">c</span>, <span class="num">0</span>) - <span class="num">1</span>',
+  '        <span class="kw">if</span> <span class="bi">count</span>[<span class="bi">c</span>] &lt; <span class="num">0</span>:',
+  '            <span class="kw">return</span> <span class="num">False</span>',
+  '    <span class="kw">return</span> <span class="num">True</span>'
+];
+
+function renderCodePanel() {
+  const body = document.getElementById('code-body');
+  body.innerHTML = pythonCode.map((line, i) =>
+    `<div class="cl" id="cl-${i}"><div class="ln">${i + 1}</div><div class="code">${line}</div></div>`
+  ).join('');
+}
+
+function setCodeLines(activeLines) {
+  document.querySelectorAll('.cl').forEach((el, i) => {
+    if (activeLines.includes(i)) {
+      el.classList.add('hl');
+    } else {
+      el.classList.remove('hl');
+    }
+  });
+}
+
+function buildFreqGrid(chars) {
+  const grid = document.getElementById('freqGrid');
+  grid.innerHTML = chars.map(char =>
+    `<div class="freq-cell" id="freq-${char}">
+       <div class="char-label">${char}</div>
+       <div class="count-val" id="count-${char}">0</div>
+     </div>`
+  ).join('');
+}
+
+function updateFreqCell(char, value) {
+  const cell = document.getElementById(`freq-${char}`);
+  const countEl = document.getElementById(`count-${char}`);
+  if (!cell) return;
+
+  countEl.textContent = value;
+  cell.classList.remove('positive', 'negative', 'active');
+
+  if (value > 0) {
+    cell.classList.add('positive');
+  } else if (value < 0) {
+    cell.classList.add('negative');
+  }
+}
+
+function markFreqCellActive(char) {
+  document.querySelectorAll('.freq-cell').forEach(c => c.classList.remove('active'));
+  const cell = document.getElementById(`freq-${char}`);
+  if (cell) cell.classList.add('active');
+}
+
+function renderStringDisplay(id, str, currentIdx) {
+  const display = document.getElementById(id);
+  display.innerHTML = str.split('').map((char, i) => {
+    let cls = '';
+    if (i === currentIdx) cls = 'current';
+    else if (i < currentIdx) cls = 'processed';
+    return `<div class="char ${cls}">${char}</div>`;
+  }).join('');
+}
+
+function simulate(s, t) {
+  const steps = [];
+
+  // Step 0: Initial state (length check)
+  steps.push({
+    phase: 'Length Check',
+    desc: `Comparing lengths: s="${s}" (len ${s.length}) vs t="${t}" (len ${t.length})`,
+    sIdx: -1,
+    tIdx: -1,
+    count: {},
+    activeChar: '',
+    activeLines: [1, 2]
+  });
+
+  if (s.length !== t.length) {
+    steps.push({
+      phase: 'Invalid',
+      desc: `Strings have different lengths! Result: false`,
+      sIdx: -1,
+      tIdx: -1,
+      count: {},
+      activeChar: '',
+      result: false,
+      activeLines: [2, 3]
+    });
+    return steps;
+  }
+
+  // Phase 1: Build frequency map from s
+  const count = {};
+  for (let i = 0; i < s.length; i++) {
+    const c = s[i];
+    count[c] = (count[c] || 0) + 1;
+    steps.push({
+      phase: 'Phase 1: Build Count',
+      desc: `Processing s[${i}]='${c}': count['${c}'] = ${count[c]}`,
+      sIdx: i,
+      tIdx: -1,
+      count: {...count},
+      activeChar: c,
+      activeLines: [4, 5, 6]
+    });
+  }
+
+  // Phase 2: Match against t
+  for (let i = 0; i < t.length; i++) {
+    const c = t[i];
+    count[c] = (count[c] || 0) - 1;
+
+    if (count[c] < 0) {
+      steps.push({
+        phase: 'Phase 2: Match (FAILED)',
+        desc: `Processing t[${i}]='${c}': count['${c}'] = ${count[c]} (negative!)`,
+        sIdx: -1,
+        tIdx: i,
+        count: {...count},
+        activeChar: c,
+        result: false,
+        activeLines: [7, 8, 9, 10]
+      });
+      return steps;
+    } else {
+      steps.push({
+        phase: 'Phase 2: Match',
+        desc: `Processing t[${i}]='${c}': count['${c}'] = ${count[c]}`,
+        sIdx: -1,
+        tIdx: i,
+        count: {...count},
+        activeChar: c,
+        activeLines: [7, 8]
+      });
+    }
+  }
+
+  // Final: Check if all counts are zero
+  const allZero = Object.values(count).every(v => v === 0);
+  steps.push({
+    phase: 'Complete',
+    desc: `All characters matched! Result: true`,
+    sIdx: -1,
+    tIdx: -1,
+    count: {...count},
+    activeChar: '',
+    result: true,
+    activeLines: [11]
+  });
+
+  return steps;
+}
+
+function applyStep(snap, animate) {
+  const count = snap.count || {};
+
+  // Update strings
+  renderStringDisplay('stringS', document.getElementById('sInput').value, snap.sIdx);
+  renderStringDisplay('stringT', document.getElementById('tInput').value, snap.tIdx);
+
+  // Get unique characters for freq grid
+  const chars = Object.keys(count).sort();
+  if (chars.length === 0 && snap.sIdx === -1 && snap.tIdx === -1) {
+    const s = document.getElementById('sInput').value;
+    const t = document.getElementById('tInput').value;
+    const all = new Set([...s, ...t]);
+    buildFreqGrid(Array.from(all).sort());
+    chars.forEach(c => {
+      updateFreqCell(c, count[c] || 0);
+    });
+  } else if (chars.length > 0) {
+    buildFreqGrid(chars);
+    chars.forEach(c => {
+      updateFreqCell(c, count[c] || 0);
+    });
+    if (snap.activeChar) {
+      markFreqCellActive(snap.activeChar);
+    }
+  }
+
+  // Update code highlighting
+  setCodeLines(snap.activeLines || []);
+
+  // Update result banner
+  const banner = document.getElementById('resultBanner');
+  if (snap.result !== undefined) {
+    banner.textContent = snap.result ? 'Valid Anagram (true)' : 'Not an Anagram (false)';
+    banner.className = 'result-banner ' + (snap.result ? 'true' : 'false');
+  } else {
+    banner.className = 'result-banner';
+  }
+}
+
+function updateStatus(snap, cur, total) {
+  document.getElementById('phase-label').textContent = snap.phase || '—';
+  document.getElementById('step-desc').textContent = snap.desc || '';
+}
+
+window.addEventListener('DOMContentLoaded', function() {
+  renderCodePanel();
+
+  nav = VizNav({
+    btnPrev: document.getElementById('prevBtn'),
+    btnNext: document.getElementById('stepBtn'),
+    btnPlay: document.getElementById('playBtn'),
+    speedSel: document.getElementById('speedSel'),
+    render: function(snap, cur, total) {
+      applyStep(snap, cur > 0);
+      updateStatus(snap, cur, total);
+    }
+  });
+
+  document.getElementById('buildBtn').addEventListener('click', buildAndRun);
+
+  // Auto-run on load
+  buildAndRun();
+});
+
+function buildAndRun() {
+  const s = document.getElementById('sInput').value.trim();
+  const t = document.getElementById('tInput').value.trim();
+
+  if (!s || !t) {
+    alert('Please enter both strings');
+    return;
+  }
+
+  const steps = simulate(s, t);
+  nav.load(steps);
+}
+
+// Hide back-link when in iframe
+if (window.self !== window.top) {
+  const bl = document.querySelector('.back-link');
+  if (bl) bl.style.display = 'none';
+}
+</script>
+
+</body>
+</html>

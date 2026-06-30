@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Contains Duplicate</title>
+  <link rel="stylesheet" href="../shared/style.css" />
+  <script src="../shared/gsap.min.js"></script>
+  <script src="../shared/viz.js"></script>
+  <style>
+    .viz-area {
+      width: 100%; max-width: 90%;
+      display: flex; flex-direction: column; gap: 12px;
+    }
+
+    .nav-row {
+      display: flex; gap: 12px; margin-bottom: 0px;
+    }
+
+    .btn-step {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); color: var(--text);
+      cursor: pointer; font-size: 0.88rem; font-weight: 600;
+      padding: 9px 20px; transition: background 0.15s, border-color 0.15s;
+    }
+    .btn-step:hover:not(:disabled) { background: var(--border); border-color: var(--accent); }
+    .btn-step:disabled { opacity: 0.35; cursor: not-allowed; }
+
+    .btn-play {
+      background: var(--accent); border: none;
+      border-radius: var(--radius-sm); color: #fff;
+      cursor: pointer; font-size: 0.88rem; font-weight: 600;
+      padding: 9px 20px; transition: background 0.15s;
+    }
+    .btn-play:hover:not(:disabled) { background: var(--accent-hover); }
+    .btn-play:disabled { opacity: 0.35; cursor: not-allowed; }
+
+    .array-wrap {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 16px 14px;
+      min-height: 120px;
+      display: flex; flex-direction: column; gap: 12px;
+    }
+
+    .array-row {
+      display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+    }
+
+    .array-cell {
+      width: 48px; height: 48px;
+      background: var(--surface-dark);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 600; font-size: 1rem;
+      color: var(--text);
+      transition: background 0.3s, border-color 0.3s, box-shadow 0.3s;
+    }
+
+    .array-cell.current {
+      background: var(--orange);
+      border-color: var(--orange);
+      color: #fff;
+      box-shadow: 0 0 12px rgba(255, 158, 100, 0.3);
+    }
+
+    .array-cell.duplicate {
+      background: var(--red);
+      border-color: var(--red);
+      color: #fff;
+      box-shadow: 0 0 12px rgba(247, 118, 142, 0.3);
+      animation: pulse-red 0.5s ease-out;
+    }
+
+    .array-cell.visited {
+      background: var(--green);
+      border-color: var(--green);
+      color: #fff;
+      opacity: 0.6;
+    }
+
+    @keyframes pulse-red {
+      0% { box-shadow: 0 0 0 0 rgba(247, 118, 142, 0.7); }
+      100% { box-shadow: 0 0 0 12px rgba(247, 118, 142, 0); }
+    }
+
+    .set-wrap {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 14px 16px;
+      flex: 1; min-width: 0;
+    }
+
+    .set-label {
+      font-size: 0.68rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.1em;
+      color: var(--text-dim); margin-bottom: 10px;
+    }
+
+    .set-items {
+      display: flex; gap: 8px; flex-wrap: wrap; min-height: 40px;
+      align-content: flex-start;
+    }
+
+    .set-badge {
+      background: var(--blue-bg);
+      border: 1px solid var(--blue-border);
+      color: var(--blue);
+      padding: 4px 11px; border-radius: 6px;
+      font-size: 0.85rem; font-weight: 600;
+      transition: all 0.3s;
+    }
+
+    .set-badge.duplicate {
+      background: var(--red);
+      border-color: var(--red);
+      color: #fff;
+      box-shadow: 0 0 12px rgba(247, 118, 142, 0.3);
+      animation: pulse-red-badge 0.5s ease-out;
+    }
+
+    @keyframes pulse-red-badge {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.15); }
+      100% { transform: scale(1); }
+    }
+
+    .bottom-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      align-items: start;
+    }
+    @media (max-width: 800px) { .bottom-row { grid-template-columns: 1fr; } }
+
+    .code-panel {
+      background: #0a0d14;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      display: flex; flex-direction: column;
+    }
+    .code-header {
+      padding: 9px 14px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      font-size: 0.67rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.11em;
+      color: var(--text-dim);
+    }
+    .code-body {
+      padding: 10px 0;
+      flex: 1;
+      font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+      font-size: 0.78rem;
+      line-height: 1.7;
+      overflow-x: auto;
+    }
+    .cl {
+      display: flex; align-items: stretch;
+      border-left: 3px solid transparent;
+      padding: 0 14px 0 0;
+      transition: background-color 0.15s;
+      white-space: pre;
+    }
+    .cl .ln {
+      width: 28px; min-width: 28px;
+      text-align: right; color: #3d4468;
+      user-select: none; padding-right: 14px;
+      font-size: 0.72rem; line-height: 1.7;
+    }
+    .cl .code { color: var(--text-muted); }
+
+    .cl.hl {
+      background-color: rgba(var(--accent-ch), 0.12);
+      border-left-color: var(--accent);
+      padding-left: 6px;
+    }
+    .cl.hl .ln { color: var(--accent); }
+
+    .kw  { color: var(--purple); }
+    .fn  { color: var(--blue); }
+    .bi  { color: var(--orange); }
+    .str { color: var(--green); }
+    .cm  { color: #3d4468; font-style: italic; }
+    .op  { color: var(--text); }
+
+    .panel-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 13px 18px;
+    }
+    .panel-title {
+      font-size: 0.67rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.11em;
+      color: var(--text-dim); margin-bottom: 10px;
+    }
+
+    .legend {
+      display: flex; gap: 20px; flex-wrap: wrap; justify-content: center;
+    }
+    .leg-item {
+      display: flex; align-items: center; gap: 7px;
+      font-size: 0.78rem; color: var(--text-muted);
+    }
+    .leg-swatch {
+      width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0;
+    }
+  </style>
+</head>
+<body class="page">
+
+<div class="page-header">
+  <a class="back-link" href="../index.html">← All Algorithms</a>
+  <div class="page-title">Contains Duplicate</div>
+  <div class="page-sub">LeetCode #217 · hash set · O(n) time · O(n) space</div>
+</div>
+
+<div class="controls">
+  <div class="field">
+    <label>Array (comma-separated)</label>
+    <input id="inp-nums" type="text" value="1,2,3,1" />
+  </div>
+  <button class="btn-primary" onclick="build()">Build & Run</button>
+</div>
+
+<div class="viz-area">
+
+  <div class="nav-row">
+    <div class="panel-box" style="flex:0 0 auto">
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="btn-step" id="prevBtn" disabled>&#8592;</button>
+        <button class="btn-step" id="stepBtn" disabled>&#8594;</button>
+        <button class="btn-play" id="playBtn" disabled>&#9654; Play</button>
+        <select id="speedSel" style="background:var(--bg);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:6px 10px;font-size:0.85rem">
+          <option value="700">Slow</option>
+          <option value="250" selected>Medium</option>
+          <option value="80">Fast</option>
+        </select>
+      </div>
+    </div>
+    <div class="panel-box" style="flex:1;min-width:0">
+      <div style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--text-dim)" id="phase-label">—</div>
+      <div style="font-size:0.88rem;color:var(--text-muted);margin-top:3px" id="step-desc">Click Build & Run to start.</div>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start">
+    <div class="array-wrap">
+      <div style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--text-dim)">Input Array</div>
+      <div class="array-row" id="array-row"></div>
+    </div>
+    <div class="set-wrap">
+      <div class="set-label">Seen Set</div>
+      <div class="set-items" id="set-items"></div>
+    </div>
+  </div>
+
+  <div class="bottom-row">
+
+    <div class="code-panel">
+      <div class="code-header">Python</div>
+      <div class="code-body" id="code-body"></div>
+    </div>
+
+    <div class="panel-box">
+      <div class="panel-title">Result</div>
+      <div id="result-box" style="font-size:1.1rem;font-weight:700;color:var(--text);min-height:60px;display:flex;align-items:center">—</div>
+    </div>
+
+  </div>
+
+</div>
+
+<div class="legend">
+  <div class="leg-item">
+    <div class="leg-swatch" style="background:var(--orange)"></div>
+    Current element
+  </div>
+  <div class="leg-item">
+    <div class="leg-swatch" style="background:var(--blue)"></div>
+    In set
+  </div>
+  <div class="leg-item">
+    <div class="leg-swatch" style="background:var(--red)"></div>
+    Duplicate found
+  </div>
+</div>
+
+<script>
+// ─── Code lines ───────────────────────────────────────────────────────────────
+const CODE_LINES = [
+  [1, `<span class="kw">def</span> <span class="fn">contains_duplicate</span><span class="op">(</span>nums<span class="op">):</span>`],
+  [2, `    seen <span class="op">=</span> <span class="fn">set</span><span class="op">()</span>`],
+  [3, `    <span class="kw">for</span> i<span class="op">,</span> num <span class="kw">in</span> <span class="fn">enumerate</span><span class="op">(</span>nums<span class="op">):</span>`],
+  [4, `        <span class="kw">if</span> num <span class="kw">in</span> seen<span class="op">:</span>`],
+  [5, `            <span class="kw">return</span> <span class="bi">True</span>`],
+  [6, `        seen<span class="op">.</span><span class="fn">add</span><span class="op">(</span>num<span class="op">)</span>`],
+  [7, `    <span class="kw">return</span> <span class="bi">False</span>`],
+];
+
+function buildCodePanel() {
+  const body = document.getElementById('code-body');
+  body.innerHTML = '';
+  CODE_LINES.forEach(([ln, html]) => {
+    const row = document.createElement('div');
+    row.className = 'cl';
+    if (ln > 0) row.id = `cl-${ln}`;
+    row.innerHTML =
+      `<span class="ln">${ln > 0 ? ln : ''}</span>` +
+      `<span class="code">${html}</span>`;
+    body.appendChild(row);
+  });
+}
+
+// ─── Global state ─────────────────────────────────────────────────────────────
+let nums = [1, 2, 3, 1];
+let steps = [];
+
+// ─── Simulation ────────────────────────────────────────────────────────────────
+// Each step is: { phase, desc, lines, arrayStates, setItems, result }
+// arrayStates = [{ val, state: 'idle'|'current'|'visited'|'duplicate' }, ...]
+// setItems = [{val, state: 'normal'|'duplicate'}, ...]
+function simulate(arr) {
+  const out = [];
+  const seen = new Set();
+  const arrayStates = arr.map(v => ({ val: v, state: 'idle' }));
+  const setItems = [];
+
+  function snap(phase, desc, lines, resultText) {
+    out.push({
+      phase, desc, lines: lines || [],
+      arrayStates: JSON.parse(JSON.stringify(arrayStates)),
+      setItems: JSON.parse(JSON.stringify(setItems)),
+      result: resultText || null,
+    });
+  }
+
+  // Initial: empty set
+  snap('Start', 'Initialize empty set and iterate through array.', [1, 2, 3]);
+
+  // Iterate each number
+  for (let i = 0; i < arr.length; i++) {
+    const num = arr[i];
+
+    // Current element
+    arrayStates[i].state = 'current';
+    snap('Check', `Check num = ${num} at index ${i}. Is ${num} in seen?`, [3, 4], null);
+
+    // Check if duplicate
+    if (seen.has(num)) {
+      // Mark duplicate in both array and set
+      arrayStates[i].state = 'duplicate';
+      const dupItem = setItems.find(x => x.val === num);
+      if (dupItem) dupItem.state = 'duplicate';
+      snap('Duplicate', `Found duplicate! ${num} is already in the set. Return True.`, [4, 5], 'True');
+      return out;
+    }
+
+    // Add to seen
+    arrayStates[i].state = 'visited';
+    setItems.push({ val: num, state: 'normal' });
+    snap('Add', `${num} not in set. Add ${num} to seen.`, [6], null);
+  }
+
+  // No duplicates found
+  snap('Done', 'Finished iterating. No duplicates found. Return False.', [7], 'False');
+  return out;
+}
+
+// ─── Apply step ───────────────────────────────────────────────────────────────
+function applyStep(snap, animate) {
+  renderArray(snap.arrayStates);
+  renderSet(snap.setItems, animate);
+  setCodeLines(prevLines, snap.lines, animate);
+  prevLines = snap.lines || [];
+  renderResult(snap.result);
+}
+
+let prevLines = [];
+
+// ─── Render array ─────────────────────────────────────────────────────────────
+function renderArray(states) {
+  const row = document.getElementById('array-row');
+  row.innerHTML = '';
+  states.forEach((s, i) => {
+    const cell = document.createElement('div');
+    cell.className = 'array-cell';
+    cell.textContent = s.val;
+    cell.classList.add(s.state);
+    row.appendChild(cell);
+  });
+}
+
+// ─── Render set ───────────────────────────────────────────────────────────────
+function renderSet(items, animate) {
+  const container = document.getElementById('set-items');
+  if (!animate) {
+    container.innerHTML = '';
+    items.forEach(item => {
+      const badge = document.createElement('div');
+      badge.className = 'set-badge';
+      if (item.state === 'duplicate') badge.classList.add('duplicate');
+      badge.textContent = item.val;
+      container.appendChild(badge);
+    });
+  } else {
+    // Animate in new items
+    const existingVals = new Set(
+      Array.from(container.querySelectorAll('.set-badge')).map(b => parseInt(b.textContent))
+    );
+    const newVals = items.map(x => x.val);
+    const toAdd = newVals.filter(v => !existingVals.has(v));
+
+    // Remove old ones that shouldn't be there
+    Array.from(container.querySelectorAll('.set-badge')).forEach(b => {
+      const v = parseInt(b.textContent);
+      if (!newVals.includes(v)) b.remove();
+    });
+
+    // Update existing with state changes
+    items.forEach(item => {
+      let badge = Array.from(container.querySelectorAll('.set-badge')).find(
+        b => parseInt(b.textContent) === item.val
+      );
+      if (badge) {
+        badge.classList.remove('duplicate');
+        if (item.state === 'duplicate') badge.classList.add('duplicate');
+      }
+    });
+
+    // Add new badges
+    toAdd.forEach(v => {
+      const badge = document.createElement('div');
+      badge.className = 'set-badge';
+      badge.textContent = v;
+      container.appendChild(badge);
+      gsap.from(badge, { opacity: 0, scale: 0.8, duration: 0.2 });
+    });
+  }
+}
+
+// ─── Code line highlighting ───────────────────────────────────────────────────
+function setCodeLines(oldLines, newLines, animate) {
+  const DUR = 0.22;
+  (oldLines || []).filter(n => !(newLines || []).includes(n)).forEach(n => {
+    const el = document.getElementById(`cl-${n}`);
+    if (!el) return;
+    if (animate) {
+      gsap.to(el, { backgroundColor: 'transparent', duration: DUR });
+      el.classList.remove('hl');
+    } else {
+      el.classList.remove('hl');
+    }
+  });
+  (newLines || []).filter(n => !(oldLines || []).includes(n)).forEach(n => {
+    const el = document.getElementById(`cl-${n}`);
+    if (!el) return;
+    if (animate) {
+      gsap.to(el, { backgroundColor: 'rgba(var(--accent-ch), 0.12)', duration: DUR, delay: 0.08 });
+      el.classList.add('hl');
+    } else {
+      el.classList.add('hl');
+    }
+  });
+}
+
+// ─── Render result ────────────────────────────────────────────────────────────
+function renderResult(result) {
+  const box = document.getElementById('result-box');
+  if (result === null) {
+    box.innerHTML = '—';
+    box.style.color = 'var(--text)';
+  } else if (result === 'True') {
+    box.innerHTML = '<span style="color:var(--red)">True</span> (duplicate found!)';
+    box.style.color = 'var(--red)';
+  } else {
+    box.innerHTML = '<span style="color:var(--green)">False</span> (no duplicates)';
+    box.style.color = 'var(--green)';
+  }
+}
+
+// ─── Build / Run ──────────────────────────────────────────────────────────────
+function build() {
+  const txt = document.getElementById('inp-nums').value.trim();
+  const parsed = txt.split(',').map(s => parseInt(s.trim())).filter(n => !isNaN(n));
+  if (parsed.length < 1) return;
+  nums = parsed;
+  buildCodePanel();
+  steps = simulate(nums);
+  nav.load(steps);
+}
+
+// ─── Init VizNav ──────────────────────────────────────────────────────────────
+var nav = VizNav({
+  btnPrev: document.getElementById('prevBtn'),
+  btnNext: document.getElementById('stepBtn'),
+  btnPlay: document.getElementById('playBtn'),
+  speedSel: document.getElementById('speedSel'),
+  render: function(snap, cur, total) {
+    applyStep(snap, cur > 0);
+    var el = document.getElementById('phase-label');
+    if (el) el.textContent = 'Step ' + (cur + 1) + ' / ' + total + '  ·  ' + snap.phase;
+    var d = document.getElementById('step-desc');
+    if (d) d.textContent = snap.desc;
+  }
+});
+
+// Auto-run default on load
+window.addEventListener('DOMContentLoaded', function() {
+  build();
+});
+</script>
+
+<script>
+  if (window.self !== window.top) {
+    var bl = document.querySelector('.back-link');
+    if (bl) bl.style.display = 'none';
+  }
+</script>
+
+</body>
+</html>
