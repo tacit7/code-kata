@@ -13,6 +13,28 @@
       display: flex; flex-direction: column; gap: 12px;
     }
 
+    .viz-inputs {
+      display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end;
+      padding: 10px 0 14px; width: 100%; max-width: 90%;
+    }
+    .viz-inputs .field {
+      display: flex; flex-direction: column; gap: 4px;
+    }
+    .viz-inputs label {
+      font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--text-dim);
+    }
+    .viz-inputs select {
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--text); border-radius: var(--radius-sm);
+      padding: 6px 10px; font-size: 0.85rem; cursor: pointer;
+    }
+    .viz-inputs input[type="number"] {
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--text); border-radius: var(--radius-sm);
+      padding: 6px 10px; font-size: 0.85rem; width: 80px;
+    }
+
     .grid-wrap {
       background: #0a0a0a;
       border: 1px solid var(--border);
@@ -226,7 +248,19 @@
   <h1 class="page-title">BFS &mdash; Grid Traversal</h1>
 </div>
 
-<div class="controls">
+<div class="viz-inputs">
+  <div class="field">
+    <label>Preset</label>
+    <select id="presetSel" onchange="loadPreset()">
+      <option value="">— pick a preset —</option>
+      <option value='{"size":3,"sr":0,"sc":0}'>Tiny corner</option>
+      <option value='{"size":5,"sr":2,"sc":2}'>Small center</option>
+      <option value='{"size":8,"sr":3,"sc":3}'>Medium (default)</option>
+      <option value='{"size":10,"sr":5,"sc":5}'>Large center</option>
+      <option value='{"size":6,"sr":0,"sc":5}'>Edge case</option>
+      <option value='{"size":15,"sr":7,"sc":7}'>XL grid</option>
+    </select>
+  </div>
   <div class="field">
     <label>Size (N&times;N)</label>
     <input id="inp-size" type="number" min="3" max="18" value="8" />
@@ -239,8 +273,21 @@
     <label>Start col</label>
     <input id="inp-sc" type="number" min="0" value="3" />
   </div>
-  <button class="btn-primary" onclick="buildGrid()">Build</button>
-  <button class="btn-primary" onclick="runBFS()">Run BFS</button>
+  <button onclick="buildAndRun()" style="padding:7px 18px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);font-weight:600;cursor:pointer;">Run</button>
+  <button onclick="randomExample()" style="padding:7px 14px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;">🎲 Random</button>
+</div>
+
+<div class="controls">
+  <div class="nav-row">
+    <button class="stepBtn" id="prevBtn" disabled>&larr;</button>
+    <button class="stepBtn" id="stepBtn" disabled>&rarr;</button>
+    <button class="playBtn" id="playBtn" disabled>&#9654; Play</button>
+    <select class="speedSel" id="speedSel">
+      <option value="500">Slow</option>
+      <option value="150" selected>Medium</option>
+      <option value="40">Fast</option>
+    </select>
+  </div>
 </div>
 
 <div class="viz-area">
@@ -279,7 +326,7 @@
         </div>
         <div class="panel-box" style="flex:1;min-width:0">
           <div class="panel-title" id="phase-label">&mdash;</div>
-          <div style="font-size:0.85rem;color:var(--text-muted);margin-top:4px" id="step-desc">Set a start cell and click Run BFS.</div>
+          <div style="font-size:0.85rem;color:var(--text-muted);margin-top:4px" id="step-desc">Set a start cell and click Run.</div>
         </div>
       </div>
       <div class="panel-box">
@@ -668,11 +715,40 @@ function setCodeLines(oldLines, newLines, animate) {
 function resetStatus() {
   if (nav) nav.load([]);
   document.getElementById('phase-label').textContent = '—';
-  document.getElementById('step-desc').textContent = 'Set a start cell and click Run BFS.';
+  document.getElementById('step-desc').textContent = 'Set a start cell and click Run.';
   document.getElementById('queue-items').innerHTML = '<span class="q-empty">not started</span>';
   document.getElementById('visited-items').innerHTML = '<span class="v-empty">none yet</span>';
   document.getElementById('visited-count').textContent = '';
   buildCodePanel();
+}
+
+// --- Presets and Random ---
+function loadPreset() {
+  var sel = document.getElementById('presetSel');
+  if (!sel.value) return;
+  var d = JSON.parse(sel.value);
+  document.getElementById('inp-size').value = d.size;
+  document.getElementById('inp-sr').value = d.sr;
+  document.getElementById('inp-sc').value = d.sc;
+  buildGrid();
+  runBFS();
+}
+
+function randomExample() {
+  var size = Math.floor(Math.random() * 13) + 3;
+  var sr = Math.floor(Math.random() * size);
+  var sc = Math.floor(Math.random() * size);
+  document.getElementById('inp-size').value = size;
+  document.getElementById('inp-sr').value = sr;
+  document.getElementById('inp-sc').value = sc;
+  document.getElementById('presetSel').value = '';
+  buildGrid();
+  runBFS();
+}
+
+function buildAndRun() {
+  buildGrid();
+  runBFS();
 }
 
 // --- Init ---

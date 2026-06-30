@@ -15,6 +15,41 @@
       padding: 12px 20px; border-bottom: 1px solid var(--border);
       background: var(--bg); flex-shrink: 0;
     }
+
+    /* ── viz-inputs ── */
+    .viz-inputs {
+      display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end;
+      padding: 10px 0 14px; width: 100%; max-width: 90%;
+    }
+    .viz-inputs .field {
+      display: flex; flex-direction: column; gap: 4px;
+    }
+    .viz-inputs label {
+      font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--text-dim);
+    }
+    .viz-inputs input[type="number"] {
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--text); border-radius: var(--radius-sm);
+      padding: 6px 10px; font-size: 0.85rem; width: 140px;
+    }
+    .viz-inputs select {
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--text); border-radius: var(--radius-sm);
+      padding: 6px 10px; font-size: 0.85rem; cursor: pointer;
+    }
+    .viz-inputs button {
+      padding: 7px 18px; background: var(--accent); color: #fff;
+      border: none; border-radius: var(--radius-sm); font-weight: 600;
+      cursor: pointer; font-size: 0.85rem;
+    }
+    .viz-inputs button:hover { opacity: 0.9; }
+    .viz-inputs .random-btn {
+      padding: 7px 14px; background: var(--surface); color: var(--text);
+      border: 1px solid var(--border);
+    }
+    .viz-inputs .random-btn:hover { border-color: var(--accent); color: var(--accent); }
+
     .top-bar label { font-size: 0.85rem; color: var(--text-dim); }
     .top-bar input[type=number] {
       width: 120px; padding: 5px 8px; border-radius: 6px;
@@ -144,11 +179,28 @@
 </head>
 <body>
 
-<!-- TOP -->
+<!-- TOP: viz-inputs with presets and random button -->
 <div class="top-bar">
-  <label>x =</label>
-  <input type="number" id="x-input" value="123" />
-  <button id="btn-build">Build</button>
+  <div class="viz-inputs">
+    <div class="field">
+      <label>Preset</label>
+      <select id="presetSel" onchange="loadPreset()">
+        <option value="">— pick a preset —</option>
+        <option value='{"x":"123"}'>Simple (123)</option>
+        <option value='{"x":"0"}'>Zero (0)</option>
+        <option value='{"x":"-123"}'>Negative (-123)</option>
+        <option value='{"x":"120"}'>Trailing zeros (120)</option>
+        <option value='{"x":"1534236469"}'>Large positive (near max)</option>
+        <option value='{"x":"1534236470"}'>Overflow positive</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>x =</label>
+      <input type="number" id="x-input" value="123" />
+    </div>
+    <button id="btn-build" onclick="buildAndRun()">Run</button>
+    <button class="random-btn" id="btn-random" onclick="randomExample()">🎲 Random</button>
+  </div>
   <span class="result-badge" id="result-badge"></span>
 </div>
 
@@ -489,8 +541,32 @@ function buildAndRun() {
   nav.load(steps);
 }
 
+function loadPreset() {
+  var sel = document.getElementById('presetSel');
+  if (!sel.value) return;
+  var d = JSON.parse(sel.value);
+  document.getElementById('x-input').value = d.x;
+  buildAndRun();
+}
+
+function randomExample() {
+  var examples = [
+    100,
+    -456,
+    9999,
+    1,
+    0,
+    -2147483648,
+    2147483647,
+    534236469
+  ];
+  var x = examples[Math.floor(Math.random() * examples.length)];
+  document.getElementById('x-input').value = x;
+  document.getElementById('presetSel').value = '';
+  buildAndRun();
+}
+
 document.addEventListener('DOMContentLoaded', function() {
-  document.getElementById('btn-build').addEventListener('click', buildAndRun);
   document.getElementById('x-input').addEventListener('keydown', function(e) {
     if (e.key === 'Enter') buildAndRun();
   });

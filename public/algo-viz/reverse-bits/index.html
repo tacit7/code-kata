@@ -113,6 +113,33 @@
     }
     .step-nav { display: flex; gap: 8px; align-items: center; }
 
+    .viz-inputs {
+      display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end;
+      padding: 10px 0 14px; width: 100%; max-width: 90%;
+    }
+    .viz-inputs .field {
+      display: flex; flex-direction: column; gap: 4px;
+    }
+    .viz-inputs label {
+      font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--text-dim);
+    }
+    .viz-inputs input[type="text"] {
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--text); border-radius: var(--radius-sm);
+      padding: 6px 10px; font-size: 0.85rem; width: 180px;
+    }
+    .viz-inputs input[type="number"] {
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--text); border-radius: var(--radius-sm);
+      padding: 6px 10px; font-size: 0.85rem; width: 80px;
+    }
+    .viz-inputs select {
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--text); border-radius: var(--radius-sm);
+      padding: 6px 10px; font-size: 0.85rem; cursor: pointer;
+    }
+
     .kw { color: var(--purple); }
     .fn { color: var(--blue); }
     .op { color: var(--text); }
@@ -127,13 +154,28 @@
   <div class="page-sub">LeetCode 190 &middot; Bit Manipulation &middot; O(32) time &middot; O(1) space</div>
 </div>
 
-<div class="controls">
+<div class="viz-inputs">
+  <div class="field">
+    <label>Preset</label>
+    <select id="presetSel" onchange="loadPreset()">
+      <option value="">— pick a preset —</option>
+      <option value='{"n":"0"}'>All zeros</option>
+      <option value='{"n":"1"}'>Single LSB</option>
+      <option value='{"n":"2147483647"}'>Max (0x7FFFFFFF)</option>
+      <option value='{"n":"4294967295"}'>All ones (0xFFFFFFFF)</option>
+      <option value='{"n":"43261596"}'>Example (0x2928D18C)</option>
+      <option value='{"n":"268435456"}'>Single MSB (0x10000000)</option>
+    </select>
+  </div>
   <div class="field">
     <label>n (decimal)</label>
-    <input id="inp-n" type="number" value="43261596" style="width:180px" />
+    <input id="inp-n" type="number" value="43261596" />
   </div>
-  <button class="btn-primary" onclick="loadAndRun()">Build</button>
+  <button class="btn-primary" onclick="buildAndRun()" style="padding:7px 18px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);font-weight:600;cursor:pointer;">Run</button>
+  <button class="btn-primary" onclick="randomExample()" style="padding:7px 14px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;">🎲 Random</button>
 </div>
+
+<div class="controls"></div>
 
 <div class="viz-area">
   <div class="main-row">
@@ -142,7 +184,7 @@
       <div class="register-section">
         <div class="register-label">n &mdash; input register (MSB left · LSB right)</div>
         <div class="register-row" id="n-reg-row">
-          <span style="color:var(--text-dim);font-size:0.82rem">Enter a number and click Build.</span>
+          <span style="color:var(--text-dim);font-size:0.82rem">Enter a number and click Run.</span>
         </div>
         <div class="register-indices" id="n-reg-idx"></div>
         <div class="legend-row">
@@ -212,7 +254,7 @@
 
       <div class="status-bar">
         <div class="phase-label" id="phase-label">&mdash;</div>
-        <div class="step-desc" id="step-desc">Enter a number and click Build.</div>
+        <div class="step-desc" id="step-desc">Enter a number and click Run.</div>
       </div>
 
       <div class="code-panel">
@@ -263,7 +305,7 @@ window.addEventListener('DOMContentLoaded', function() {
       if (descEl)  descEl.textContent  = snap.desc;
     }
   });
-  loadAndRun();
+  buildAndRun();
 });
 
 function buildCodePanel() {
@@ -284,6 +326,26 @@ function loadAndRun() {
   buildRegister('r', toBits(0));
   simSteps = simulate(n);
   nav.load(simSteps);
+}
+
+function buildAndRun() {
+  loadAndRun();
+}
+
+function loadPreset() {
+  var sel = document.getElementById('presetSel');
+  if (!sel.value) return;
+  var d = JSON.parse(sel.value);
+  document.getElementById('inp-n').value = d.n;
+  buildAndRun();
+}
+
+function randomExample() {
+  var maxVal = 4294967295;
+  var rand = Math.floor(Math.random() * (maxVal + 1));
+  document.getElementById('inp-n').value = rand;
+  document.getElementById('presetSel').value = '';
+  buildAndRun();
 }
 
 function buildRegister(prefix, bits) {

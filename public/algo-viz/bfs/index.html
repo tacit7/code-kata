@@ -130,6 +130,38 @@
       border: 1px solid #16a34a; border-radius: 6px;
       padding: 4px 11px; font-size: 0.85rem; font-weight: 700;
     }
+
+    /* ── User inputs (presets + depth + buttons) ── */
+    .viz-inputs {
+      display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end;
+      padding: 10px 0 14px; width: 100%; max-width: 90%;
+    }
+    .viz-inputs .field {
+      display: flex; flex-direction: column; gap: 4px;
+    }
+    .viz-inputs label {
+      font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--text-dim);
+    }
+    .viz-inputs select {
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--text); border-radius: var(--radius-sm);
+      padding: 6px 10px; font-size: 0.85rem; cursor: pointer;
+    }
+    .viz-inputs input[type="number"] {
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--text); border-radius: var(--radius-sm);
+      padding: 6px 10px; font-size: 0.85rem; width: 80px;
+    }
+    .viz-inputs button {
+      padding: 7px 18px; background: var(--accent); color: #fff;
+      border: none; border-radius: var(--radius-sm);
+      font-weight: 600; cursor: pointer; font-size: 0.85rem;
+    }
+    .viz-inputs .btn-random {
+      background: var(--surface); color: var(--text);
+      border: 1px solid var(--border);
+    }
   </style>
 </head>
 <body class="page">
@@ -139,14 +171,26 @@
   <h1 class="page-title">BFS — Breadth-First Search</h1>
 </div>
 
-<div class="controls">
+<div class="viz-inputs">
+  <div class="field">
+    <label>Preset</label>
+    <select id="presetSel" onchange="loadPreset()">
+      <option value="">— pick a preset —</option>
+      <option value='{"depth":1}'>Shallow (depth 1)</option>
+      <option value='{"depth":2}'>Simple (depth 2)</option>
+      <option value='{"depth":3}'>Medium (depth 3)</option>
+      <option value='{"depth":4}'>Deep (depth 4)</option>
+    </select>
+  </div>
   <div class="field">
     <label>Tree depth (1–4)</label>
     <input id="inp-depth" type="number" min="1" max="4" value="3" />
   </div>
-  <button class="btn-primary" onclick="build()">Build</button>
+  <button onclick="build()">Build</button>
+  <button class="btn-random" onclick="randomExample()">🎲 Random</button>
 </div>
 
+<div class="controls"></div>
 
 <div class="viz-area">
 
@@ -556,6 +600,22 @@ function renderVisited(newV, oldV, animate) {
   });
   if (!newV.length && !container.querySelector('.v-chip'))
     container.innerHTML = '<span class="v-empty">none yet</span>';
+}
+
+// ─── Preset and Random ─────────────────────────────────────────────────────────
+function loadPreset() {
+  var sel = document.getElementById('presetSel');
+  if (!sel.value) return;
+  var d = JSON.parse(sel.value);
+  document.getElementById('inp-depth').value = d.depth;
+  build();
+}
+
+function randomExample() {
+  var depth = Math.floor(Math.random() * 4) + 1;
+  document.getElementById('inp-depth').value = depth;
+  document.getElementById('presetSel').value = '';
+  build();
 }
 
 // ─── Init ─────────────────────────────────────────────────────────────────────

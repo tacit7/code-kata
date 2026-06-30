@@ -117,6 +117,42 @@
     .bi { color: var(--orange); }
     .op { color: var(--text); }
     .nb { color: var(--green); }
+
+    .viz-inputs {
+      display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end;
+      padding: 10px 0 14px; width: 100%; max-width: 90%;
+    }
+    .viz-inputs .field {
+      display: flex; flex-direction: column; gap: 4px;
+    }
+    .viz-inputs label {
+      font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--text-dim);
+    }
+    .viz-inputs input[type="text"] {
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--text); border-radius: var(--radius-sm);
+      padding: 6px 10px; font-size: 0.85rem; width: 200px;
+    }
+    .viz-inputs select {
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--text); border-radius: var(--radius-sm);
+      padding: 6px 10px; font-size: 0.85rem; cursor: pointer;
+    }
+    .viz-inputs button {
+      padding: 7px 18px; background: var(--accent); color: #fff;
+      border: none; border-radius: var(--radius-sm); font-weight: 600;
+      cursor: pointer; font-size: 0.85rem; transition: background 0.2s;
+    }
+    .viz-inputs button:hover {
+      background: var(--accent-bright);
+    }
+    .viz-inputs .btn-random {
+      background: var(--surface); color: var(--text); border: 1px solid var(--border);
+    }
+    .viz-inputs .btn-random:hover {
+      background: var(--bg-hover);
+    }
   </style>
 </head>
 <body class="page">
@@ -127,19 +163,35 @@
   <div class="page-sub">LeetCode 198 &middot; Space-Optimized DP &middot; O(n) time &middot; O(1) space</div>
 </div>
 
-<div class="controls">
+<div class="viz-inputs">
+  <div class="field">
+    <label>Preset</label>
+    <select id="presetSel" onchange="loadPreset()">
+      <option value="">— pick a preset —</option>
+      <option value='{"nums":"1, 2, 3, 4, 5"}'>Ascending</option>
+      <option value='{"nums":"1, 5, 1, 3, 9"}'>Mixed with Gap</option>
+      <option value='{"nums":"5, 3, 4, 11, 2"}'>Large Numbers</option>
+      <option value='{"nums":"10"}'>Single House</option>
+      <option value='{"nums":"2, 7"}'>Two Houses</option>
+      <option value='{"nums":"5, 5, 5, 5"}'>All Same</option>
+    </select>
+  </div>
   <div class="field">
     <label>nums</label>
-    <input id="inp-nums" type="text" value="2, 7, 9, 3, 1" style="width:200px" />
+    <input id="inp-nums" type="text" value="2, 7, 9, 3, 1" />
   </div>
-  <button class="btn-primary" onclick="buildAndRun()">Build &amp; Run</button>
+  <button onclick="buildAndRun()">Run</button>
+  <button class="btn-random" onclick="randomExample()">🎲 Random</button>
+</div>
+
+<div class="controls">
 </div>
 
 <div class="viz-area">
   <div class="main-row">
     <div class="left-col">
       <div class="houses-wrap" id="houses-row">
-        <span style="color:var(--text-dim);font-size:0.82rem">Enter nums and click Build &amp; Run.</span>
+        <span style="color:var(--text-dim);font-size:0.82rem">Enter nums and click Run.</span>
       </div>
       <div class="code-panel">
         <div class="code-header">Python</div>
@@ -163,7 +215,7 @@
         </div>
         <div class="panel-box" style="flex:1;min-width:0">
           <div class="panel-title" id="phase-label">&mdash;</div>
-          <div style="font-size:0.82rem;color:var(--text-muted);margin-top:2px" id="step-desc">Enter nums and click Build &amp; Run.</div>
+          <div style="font-size:0.82rem;color:var(--text-muted);margin-top:2px" id="step-desc">Enter nums and click Run.</div>
         </div>
       </div>
 
@@ -412,6 +464,25 @@ function setCodeLines(lines) {
   });
 }
 
+function loadPreset() {
+  var sel = document.getElementById('presetSel');
+  if (!sel.value) return;
+  var d = JSON.parse(sel.value);
+  document.getElementById('inp-nums').value = d.nums;
+  buildAndRun();
+}
+
+function randomExample() {
+  var lengths = [3, 4, 5, 6];
+  var len = lengths[Math.floor(Math.random() * lengths.length)];
+  var nums = [];
+  for (var i = 0; i < len; i++) {
+    nums.push(Math.floor(Math.random() * 20) + 1);
+  }
+  document.getElementById('inp-nums').value = nums.join(', ');
+  document.getElementById('presetSel').value = '';
+  buildAndRun();
+}
 </script>
   <script>
     // Hide back-link when embedded in an iframe

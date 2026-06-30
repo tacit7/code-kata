@@ -8,6 +8,60 @@
   <script src="../shared/gsap.min.js"></script>
   <script src="../shared/viz.js"></script>
   <style>
+    .viz-inputs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: flex-end;
+      padding: 10px 0 14px;
+      width: 100%;
+      max-width: 90%;
+    }
+
+    .viz-inputs .field {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .viz-inputs label {
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-dim);
+    }
+
+    .viz-inputs input[type="text"] {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: var(--radius-sm);
+      padding: 6px 10px;
+      font-size: 0.85rem;
+      width: 180px;
+    }
+
+    .viz-inputs input[type="number"] {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: var(--radius-sm);
+      padding: 6px 10px;
+      font-size: 0.85rem;
+      width: 80px;
+    }
+
+    .viz-inputs select {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: var(--radius-sm);
+      padding: 6px 10px;
+      font-size: 0.85rem;
+      cursor: pointer;
+    }
+
     .viz-area {
       width: 100%;
       max-width: 92%;
@@ -360,7 +414,20 @@
     </div>
   </div>
 
-  <div class="controls">
+  <div class="viz-inputs">
+    <div class="field">
+      <label for="presetSel">Preset</label>
+      <select id="presetSel" onchange="loadPreset()">
+        <option value="">— pick a preset —</option>
+        <option value='{"nums":"4,5,6,7,0,1,2","target":"0"}'>Find 0 in rotated array</option>
+        <option value='{"nums":"4,5,6,7,0,1,2","target":"4"}'>Find 4 (left half)</option>
+        <option value='{"nums":"4,5,6,7,0,1,2","target":"1"}'>Find 1 (right half)</option>
+        <option value='{"nums":"1,3,5,7,9","target":"5"}'>No rotation (sorted)</option>
+        <option value='{"nums":"3","target":"3"}'>Single element (found)</option>
+        <option value='{"nums":"3","target":"1"}'>Single element (not found)</option>
+        <option value='{"nums":"1,3","target":"3"}'>Two elements (right)</option>
+      </select>
+    </div>
     <div class="field">
       <label for="numsInput">Array (rotated sorted):</label>
       <input type="text" id="numsInput" value="4,5,6,7,0,1,2" />
@@ -369,21 +436,25 @@
       <label for="targetInput">Target:</label>
       <input type="number" id="targetInput" value="0" />
     </div>
-    <button class="btn-primary" id="buildBtn">Build &amp; Run</button>
+    <button onclick="buildAndRun()" style="padding:7px 18px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);font-weight:600;cursor:pointer;">Run</button>
+    <button onclick="randomExample()" style="padding:7px 14px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;">🎲 Random</button>
+  </div>
+
+  <div class="controls">
+    <button id="prevBtn" class="btn-step">← Prev</button>
+    <button id="stepBtn" class="btn-step">Step →</button>
+    <button id="playBtn" class="btn-play">Play</button>
+    <button id="resetBtn" class="btn-step">↺ Reset</button>
+    <select id="speedSel">
+      <option value="800">0.5×</option>
+      <option value="400" selected>1×</option>
+      <option value="200">2×</option>
+      <option value="100">4×</option>
+    </select>
   </div>
 
   <div class="viz-area">
     <div class="nav-row">
-      <button id="prevBtn" class="btn-step">← Prev</button>
-      <button id="stepBtn" class="btn-step">Step →</button>
-      <button id="playBtn" class="btn-play">Play</button>
-      <button id="resetBtn" class="btn-step">↺ Reset</button>
-      <select id="speedSel">
-        <option value="800">0.5×</option>
-        <option value="400" selected>1×</option>
-        <option value="200">2×</option>
-        <option value="100">4×</option>
-      </select>
       <span class="step-counter" id="stepCounter">Step 0 / 0</span>
     </div>
 
@@ -433,7 +504,7 @@
         <div class="status-panel">
           <div class="status-phase" id="phaseLabel">—</div>
           <div class="intuition-note" id="intuitionNote" style="display:none"></div>
-          <div class="status-desc" id="stepDesc">Click Build &amp; Run to start.</div>
+          <div class="status-desc" id="stepDesc">Click Run to start.</div>
           <div class="status-result" id="resultMsg" style="display:none"></div>
         </div>
       </div>
@@ -691,6 +762,37 @@
       nav.load(steps);
     }
 
+    function loadPreset() {
+      var sel = document.getElementById('presetSel');
+      if (!sel.value) return;
+      var d = JSON.parse(sel.value);
+      document.getElementById('numsInput').value = d.nums;
+      document.getElementById('targetInput').value = d.target;
+      buildAndRun();
+    }
+
+    function randomExample() {
+      // Generate random rotated sorted array
+      var size = Math.floor(Math.random() * 5) + 3;
+      var arr = [];
+      for (var i = 0; i < size; i++) {
+        arr.push(Math.floor(Math.random() * 100));
+      }
+      arr.sort((a, b) => a - b);
+      
+      // Random rotation point
+      var rotIdx = Math.floor(Math.random() * arr.length);
+      var rotated = arr.slice(rotIdx).concat(arr.slice(0, rotIdx));
+      
+      // Pick random target (could be in array or not)
+      var target = rotated[Math.floor(Math.random() * rotated.length)];
+      
+      document.getElementById('numsInput').value = rotated.join(',');
+      document.getElementById('targetInput').value = target;
+      document.getElementById('presetSel').value = '';
+      buildAndRun();
+    }
+
     window.addEventListener('DOMContentLoaded', function () {
       buildCodePanel();
 
@@ -703,7 +805,6 @@
       });
 
       document.getElementById('resetBtn').addEventListener('click', function () { nav.reset(); });
-      document.getElementById('buildBtn').addEventListener('click', buildAndRun);
 
       buildAndRun();
 

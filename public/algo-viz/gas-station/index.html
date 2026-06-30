@@ -145,6 +145,41 @@
     .legend-item { display: flex; align-items: center; gap: 5px; font-size: 0.68rem; color: var(--text-faint); }
     .legend-dot { width: 10px; height: 10px; border-radius: 2px; border: 1px solid var(--border-soft); }
 
+    .viz-inputs {
+      display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end;
+      padding: 10px 0 14px; width: 100%; max-width: 90%;
+    }
+    .viz-inputs .field {
+      display: flex; flex-direction: column; gap: 4px;
+    }
+    .viz-inputs label {
+      font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--text-dim);
+    }
+    .viz-inputs input[type="text"] {
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--text); border-radius: var(--radius-sm);
+      padding: 6px 10px; font-size: 0.85rem; width: 180px;
+    }
+    .viz-inputs input[type="number"] {
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--text); border-radius: var(--radius-sm);
+      padding: 6px 10px; font-size: 0.85rem; width: 80px;
+    }
+    .viz-inputs select {
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--text); border-radius: var(--radius-sm);
+      padding: 6px 10px; font-size: 0.85rem; cursor: pointer;
+    }
+    .viz-inputs button {
+      padding: 7px 18px; background: var(--accent); color: #fff;
+      border: none; border-radius: var(--radius-sm); font-weight: 600; cursor: pointer;
+    }
+    .viz-inputs button:hover { opacity: 0.9; }
+    .viz-inputs .btn-random {
+      background: var(--surface); color: var(--text); border: 1px solid var(--border);
+    }
+
     .inputs-pair { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
     .inputs-pair label { font-size: 0.8rem; color: var(--text-dim); white-space: nowrap; }
     .inputs-pair input { width: 220px; }
@@ -158,17 +193,42 @@
   <div class="page-sub">LeetCode 134 &middot; Greedy single pass &middot; O(n) time &middot; O(1) space</div>
 </div>
 
-<div class="controls">
-  <div class="field inputs-pair">
-    <label>gas</label>
-    <input id="inp-gas" type="text" value="1, 2, 3, 4, 5" style="width:220px" />
-    <label>cost</label>
-    <input id="inp-cost" type="text" value="3, 4, 5, 1, 2" style="width:220px" />
+<div class="viz-inputs">
+  <div class="field">
+    <label>Preset</label>
+    <select id="presetSel" onchange="loadPreset()">
+      <option value="">— pick a preset —</option>
+      <option value='{"gas":"1,2,3,4,5","cost":"3,4,5,1,2"}'>Solvable (simple)</option>
+      <option value='{"gas":"3,3,4","cost":"3,4,4"}'>Solvable (start at 1)</option>
+      <option value='{"gas":"2,3,4","cost":"3,4,3"}'>Impossible (not enough gas)</option>
+      <option value='{"gas":"5,1,2,3,4","cost":"4,4,1,5,1"}'>Edge case (reset required)</option>
+      <option value='{"gas":"5","cost":"4"}'>Single station (solvable)</option>
+      <option value='{"gas":"1,2","cost":"2,1"}'>Two stations (solvable)</option>
+    </select>
   </div>
-  <button class="btn-primary" onclick="buildAndRun()">Build &amp; Run</button>
-  <button class="btn-primary" onclick="loadPreset('solvable')" style="background:var(--surface)">Solvable</button>
-  <button class="btn-primary" onclick="loadPreset('impossible')" style="background:var(--surface)">Impossible</button>
-  <button class="btn-primary" onclick="loadPreset('edge')" style="background:var(--surface)">Edge</button>
+  <div class="field">
+    <label>Gas</label>
+    <input id="inp-gas" type="text" value="1,2,3,4,5" />
+  </div>
+  <div class="field">
+    <label>Cost</label>
+    <input id="inp-cost" type="text" value="3,4,5,1,2" />
+  </div>
+  <button onclick="buildAndRun()">Run</button>
+  <button class="btn-random" onclick="randomExample()">🎲 Random</button>
+</div>
+
+<div class="controls">
+  <div class="nav-row">
+    <button class="stepBtn" id="prevBtn" disabled>&larr;</button>
+    <button class="stepBtn" id="stepBtn" disabled>&rarr;</button>
+    <button class="playBtn" id="playBtn" disabled>&#9654; Play</button>
+    <select class="speedSel" id="speedSel">
+      <option value="700">Slow</option>
+      <option value="350" selected>Medium</option>
+      <option value="120">Fast</option>
+    </select>
+  </div>
 </div>
 
 <div class="viz-area">
@@ -187,10 +247,10 @@
       <div style="display:flex;gap:12px">
         <div class="panel-box" style="flex:0 0 auto">
           <div class="nav-row">
-            <button class="stepBtn" id="prevBtn" disabled>&larr;</button>
-            <button class="stepBtn" id="stepBtn" disabled>&rarr;</button>
-            <button class="playBtn" id="playBtn" disabled>&#9654; Play</button>
-            <select class="speedSel" id="speedSel">
+            <button class="stepBtn" id="prevBtn2" disabled>&larr;</button>
+            <button class="stepBtn" id="stepBtn2" disabled>&rarr;</button>
+            <button class="playBtn" id="playBtn2" disabled>&#9654; Play</button>
+            <select class="speedSel" id="speedSel2">
               <option value="700">Slow</option>
               <option value="350" selected>Medium</option>
               <option value="120">Fast</option>
@@ -258,12 +318,6 @@
 var simSteps = [], nav;
 var stationCount = 0;
 
-var PRESETS = {
-  solvable:   { gas: '1,2,3,4,5',   cost: '3,4,5,1,2' },
-  impossible: { gas: '2,3,4',        cost: '3,4,3' },
-  edge:       { gas: '5,1,2,3,4',   cost: '4,4,1,5,1' },
-};
-
 var CODE = [
   [1,  '<span class="kw">def</span> <span class="fn">can_complete_circuit</span><span class="op">(</span>gas, cost<span class="op">):</span>'],
   [2,  '    total_gain <span class="op">=</span> current_tank <span class="op">=</span> start <span class="op">=</span> <span class="nb">0</span>'],
@@ -307,11 +361,17 @@ function buildCodePanel() {
   }).join('');
 }
 
-function loadPreset(key) {
-  var p = PRESETS[key];
-  document.getElementById('inp-gas').value  = p.gas;
-  document.getElementById('inp-cost').value = p.cost;
-  buildAndRun();
+function loadPreset() {
+  var sel = document.getElementById('presetSel');
+  if (!sel.value) return;
+  try {
+    var d = JSON.parse(sel.value);
+    document.getElementById('inp-gas').value = d.gas;
+    document.getElementById('inp-cost').value = d.cost;
+    buildAndRun();
+  } catch (e) {
+    console.error('Error loading preset:', e);
+  }
 }
 
 function parseArr(id) {
@@ -329,6 +389,19 @@ function buildAndRun() {
   buildArraySection(gas, cost);
   simSteps = simulate(gas, cost);
   nav.load(simSteps);
+}
+
+function randomExample() {
+  var n = Math.floor(Math.random() * 7) + 2;
+  var gas = [], cost = [];
+  for (var i = 0; i < n; i++) {
+    gas.push(Math.floor(Math.random() * 10) + 1);
+    cost.push(Math.floor(Math.random() * 10) + 1);
+  }
+  document.getElementById('inp-gas').value = gas.join(',');
+  document.getElementById('inp-cost').value = cost.join(',');
+  document.getElementById('presetSel').value = '';
+  buildAndRun();
 }
 
 function buildArraySection(gas, cost) {
@@ -419,7 +492,6 @@ function simulate(gas, cost) {
     }
   }
 
-  // mark start as winner or fail
   var answer = totalGain >= 0 ? start : -1;
   if (answer >= 0 && answer < n) {
     for (var j = 0; j < n; j++) {

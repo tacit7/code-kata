@@ -185,6 +185,29 @@
     .nb { color: var(--green); }
     .cm { color: var(--text-ghost); }
     .str { color: var(--yellow); }
+
+    /* Viz Inputs */
+    .viz-inputs {
+      display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end;
+      padding: 10px 0 14px; width: 100%; max-width: 90%;
+    }
+    .viz-inputs .field {
+      display: flex; flex-direction: column; gap: 4px;
+    }
+    .viz-inputs label {
+      font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--text-dim);
+    }
+    .viz-inputs input[type="text"] {
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--text); border-radius: var(--radius-sm);
+      padding: 6px 10px; font-size: 0.85rem; width: 90px; font-family: monospace;
+    }
+    .viz-inputs select {
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--text); border-radius: var(--radius-sm);
+      padding: 6px 10px; font-size: 0.85rem; cursor: pointer;
+    }
   </style>
 </head>
 <body class="page">
@@ -195,20 +218,36 @@
   <div class="page-sub">LeetCode 97 &middot; 2-D DP: dp[i][j] = can s3[0..i+j-1] be formed by interleaving s1[0..i-1] and s2[0..j-1] &middot; O(m&times;n) time</div>
 </div>
 
-<div class="controls">
+<div class="viz-inputs">
+  <div class="field">
+    <label>Preset</label>
+    <select id="presetSel" onchange="loadPreset()" style="width:140px">
+      <option value="">— pick a preset —</option>
+      <option value='{"s1":"aab","s2":"axy","s3":"aaxaby"}'>True: aab/axy/aaxaby</option>
+      <option value='{"s1":"aab","s2":"axy","s3":"aayxabb"}'>False: aab/axy/aayxabb</option>
+      <option value='{"s1":"abc","s2":"def","s3":"adbecf"}'>Alt: abc/def/adbecf</option>
+      <option value='{"s1":"ab","s2":"cd","s3":"abdc"}'>Short: ab/cd/abdc</option>
+      <option value='{"s1":"a","s2":"b","s3":"ab"}'>Minimal: a/b/ab</option>
+      <option value='{"s1":"ab","s2":"ba","s3":"baba"}'>Reverse: ab/ba/baba</option>
+    </select>
+  </div>
   <div class="field">
     <label>s1</label>
-    <input id="inp-s1" type="text" value="aab" maxlength="8" style="width:90px;font-family:monospace" />
+    <input id="inp-s1" type="text" value="aab" maxlength="8" />
   </div>
   <div class="field">
     <label>s2</label>
-    <input id="inp-s2" type="text" value="axy" maxlength="8" style="width:90px;font-family:monospace" />
+    <input id="inp-s2" type="text" value="axy" maxlength="8" />
   </div>
   <div class="field">
     <label>s3</label>
-    <input id="inp-s3" type="text" value="aaxaby" maxlength="16" style="width:120px;font-family:monospace" />
+    <input id="inp-s3" type="text" value="aaxaby" maxlength="16" style="width:120px" />
   </div>
-  <button class="btn-primary" onclick="buildAndRun()">Build &amp; Run</button>
+  <button class="btn-primary" onclick="buildAndRun()" style="padding:7px 18px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);font-weight:600;cursor:pointer;">Run</button>
+  <button onclick="randomExample()" style="padding:7px 14px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;font-weight:600">🎲 Random</button>
+</div>
+
+<div class="controls">
 </div>
 
 <div class="viz-area">
@@ -671,6 +710,52 @@ function setCodeLines(lines) {
     var bl = document.querySelector('.back-link');
     if (bl) bl.style.display = 'none';
   }
+
+function loadPreset() {
+  var sel = document.getElementById('presetSel');
+  if (!sel.value) return;
+  var d = JSON.parse(sel.value);
+  document.getElementById('inp-s1').value = d.s1;
+  document.getElementById('inp-s2').value = d.s2;
+  document.getElementById('inp-s3').value = d.s3;
+  buildAndRun();
+}
+
+function randomExample() {
+  // Generate random valid interleaving examples
+  var chars1 = 'abcdefghijk'.split('');
+  var chars2 = 'xyzvwut'.split('');
+  var len1 = Math.floor(Math.random() * 6) + 1;  // 1-6
+  var len2 = Math.floor(Math.random() * 6) + 1;  // 1-6
+  
+  var s1 = '', s2 = '';
+  for (var i = 0; i < len1; i++) {
+    s1 += chars1[Math.floor(Math.random() * chars1.length)];
+  }
+  for (var i = 0; i < len2; i++) {
+    s2 += chars2[Math.floor(Math.random() * chars2.length)];
+  }
+  
+  // Generate interleaved s3
+  var s3 = '';
+  var i = 0, j = 0;
+  while (i < s1.length && j < s2.length) {
+    if (Math.random() < 0.5) {
+      s3 += s1[i++];
+    } else {
+      s3 += s2[j++];
+    }
+  }
+  while (i < s1.length) s3 += s1[i++];
+  while (j < s2.length) s3 += s2[j++];
+  
+  document.getElementById('presetSel').value = '';
+  document.getElementById('inp-s1').value = s1;
+  document.getElementById('inp-s2').value = s2;
+  document.getElementById('inp-s3').value = s3;
+  buildAndRun();
+}
+
 </script>
 </body>
 </html>

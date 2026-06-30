@@ -30,6 +30,80 @@
       color: var(--text);
     }
 
+    .viz-inputs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: flex-end;
+      padding: 10px 0 14px;
+      width: 100%;
+      max-width: 90%;
+    }
+
+    .viz-inputs .field {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .viz-inputs label {
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-dim);
+    }
+
+    .viz-inputs input[type="text"] {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: var(--radius-sm);
+      padding: 6px 10px;
+      font-size: 0.85rem;
+      width: 220px;
+      font-family: inherit;
+    }
+
+    .viz-inputs select {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: var(--radius-sm);
+      padding: 6px 10px;
+      font-size: 0.85rem;
+      cursor: pointer;
+      font-family: inherit;
+    }
+
+    .viz-inputs button {
+      padding: 7px 18px;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius-sm);
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 0.85rem;
+    }
+
+    .viz-inputs button:hover {
+      background: var(--accent-hover);
+    }
+
+    .viz-inputs .random-btn {
+      padding: 7px 14px;
+      background: var(--surface);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+
+    .viz-inputs .random-btn:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
     .input-row {
       display: flex;
       align-items: center;
@@ -350,10 +424,26 @@
 
 <div class="viz-header">
   <h2>Largest Rectangle in Histogram <span id="phaseTag" class="phase-tag"></span></h2>
-  <div class="input-row">
-    <label>Heights:</label>
-    <input id="heightsInput" type="text" value="2,1,5,6,2,3" />
-    <button onclick="rebuildFromInput()">Apply</button>
+  <div class="viz-inputs">
+    <div class="field">
+      <label>Preset</label>
+      <select id="presetSel" onchange="loadPreset()">
+        <option value="">— pick a preset —</option>
+        <option value='{"heights":"2,1,5,6,2,3"}'>Classic example</option>
+        <option value='{"heights":"5,5,5,5,5,5"}'>All same height</option>
+        <option value='{"heights":"1,3,1,1"}'>Single peak</option>
+        <option value='{"heights":"2,3,2,1,4,3"}'>Multiple peaks</option>
+        <option value='{"heights":"0,2,0,3,1,0"}'>With zeros</option>
+        <option value='{"heights":"10,5,3,7"}'>Large values</option>
+        <option value='{"heights":"2,1,9,1,2"}'>One tall bar</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Heights</label>
+      <input id="heightsInput" type="text" value="2,1,5,6,2,3" />
+    </div>
+    <button onclick="buildAndRun()">Run</button>
+    <button onclick="randomExample()" class="random-btn">🎲 Random</button>
   </div>
   <div class="nav-row">
     <button id="prevBtn" class="btn-step">← Prev</button>
@@ -656,12 +746,32 @@ function updateStatus(snap, cur, total) {
   }
 }
 
-function rebuildFromInput() {
+function buildAndRun() {
   const raw = document.getElementById('heightsInput').value;
   const parsed = raw.split(',').map(s => parseInt(s.trim(), 10)).filter(n => !isNaN(n) && n >= 0);
   if (parsed.length === 0) return;
   heights = parsed;
   reset();
+}
+
+function loadPreset() {
+  var sel = document.getElementById('presetSel');
+  if (!sel.value) return;
+  var d = JSON.parse(sel.value);
+  document.getElementById('heightsInput').value = d.heights;
+  buildAndRun();
+}
+
+function randomExample() {
+  // Generate random heights: 3-8 bars, heights 1-10
+  const len = Math.floor(Math.random() * 6) + 3;
+  const vals = [];
+  for (let i = 0; i < len; i++) {
+    vals.push(Math.floor(Math.random() * 10) + 1);
+  }
+  document.getElementById('heightsInput').value = vals.join(',');
+  document.getElementById('presetSel').value = '';
+  buildAndRun();
 }
 
 function reset() {

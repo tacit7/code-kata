@@ -139,6 +139,41 @@
       white-space: nowrap; align-self: flex-end;
     }
     .btn-preset:hover { background: var(--border); border-color: var(--accent); color: var(--text); }
+
+    .viz-inputs {
+      display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end;
+      padding: 10px 0 14px; width: 100%; max-width: 90%;
+    }
+    .viz-inputs .field {
+      display: flex; flex-direction: column; gap: 4px;
+    }
+    .viz-inputs label {
+      font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--text-dim);
+    }
+    .viz-inputs input[type="text"] {
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--text); border-radius: var(--radius-sm);
+      padding: 6px 10px; font-size: 0.85rem; width: 280px;
+    }
+    .viz-inputs select {
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--text); border-radius: var(--radius-sm);
+      padding: 6px 10px; font-size: 0.85rem; cursor: pointer;
+    }
+    .viz-inputs button {
+      padding: 7px 18px; border: none; border-radius: var(--radius-sm);
+      font-weight: 600; cursor: pointer; font-size: 0.85rem;
+      transition: background 0.15s;
+    }
+    .viz-inputs .btn-run {
+      background: var(--accent); color: #fff;
+    }
+    .viz-inputs .btn-run:hover { opacity: 0.9; }
+    .viz-inputs .btn-random {
+      background: var(--surface); color: var(--text); border: 1px solid var(--border);
+    }
+    .viz-inputs .btn-random:hover { background: var(--border); }
   </style>
 </head>
 <body class="page">
@@ -148,14 +183,28 @@
   <h1 class="page-title">Balanced Binary Tree</h1>
 </div>
 
-<div class="controls">
+<div class="viz-inputs">
+  <div class="field">
+    <label>Preset</label>
+    <select id="presetSel" onchange="loadPreset()">
+      <option value="">— pick a preset —</option>
+      <option value='{"tree":"3,9,20,null,null,15,7"}'>Classic Balanced</option>
+      <option value='{"tree":"1,2,2,3,3,null,null,4,4"}'>Unbalanced (heights differ by 2)</option>
+      <option value='{"tree":"1"}'>Single Node</option>
+      <option value='{"tree":"1,2,3,4,5,6,7"}'>Perfect Tree (2 levels)</option>
+      <option value='{"tree":"1,2,3,4,5,6,7,8,9,10,11,12,13,14,15"}'>Perfect Tree (3 levels)</option>
+      <option value='{"tree":"1,null,2,null,3"}'>Skewed Right</option>
+    </select>
+  </div>
   <div class="field">
     <label>Level-order (use null for empty)</label>
-    <input id="inp-tree" type="text" value="3,9,20,null,null,15,7" style="width:300px" />
+    <input id="inp-tree" type="text" value="3,9,20,null,null,15,7" />
   </div>
-  <button class="btn-preset" onclick="setPreset('3,9,20,null,null,15,7')">Balanced</button>
-  <button class="btn-preset" onclick="setPreset('1,2,2,3,3,null,null,4,4')">Unbalanced</button>
-  <button class="btn-primary" onclick="build()">Build</button>
+  <button class="btn-run" onclick="build()">Run</button>
+  <button class="btn-random" onclick="randomExample()">🎲 Random</button>
+</div>
+
+<div class="controls">
 </div>
 
 <div class="viz-area">
@@ -167,7 +216,7 @@
 
   <div class="status-bar" style="max-width:100%">
     <span class="phase-label" id="phase-label">—</span>
-    <span class="step-desc"   id="step-desc">Click Build to start.</span>
+    <span class="step-desc"   id="step-desc">Click Run to start.</span>
     <div class="result-banner" id="result-banner"></div>
   </div>
 
@@ -622,8 +671,27 @@ function renderCallStack(stack, animate) {
 }
 
 // ── Presets ───────────────────────────────────────────────────────────────────
-function setPreset(val) {
-  document.getElementById('inp-tree').value = val;
+function loadPreset() {
+  var sel = document.getElementById('presetSel');
+  if (!sel.value) return;
+  var d = JSON.parse(sel.value);
+  document.getElementById('inp-tree').value = d.tree;
+  build();
+}
+
+// ── Random example ────────────────────────────────────────────────────────────
+function randomExample() {
+  const presets = [
+    "3,9,20,null,null,15,7",
+    "1,2,2,3,3,null,null,4,4",
+    "1",
+    "1,2,3,4,5,6,7",
+    "5,3,6,2,4,null,7",
+    "10,5,15,2,7,null,20",
+  ];
+  const idx = Math.floor(Math.random() * presets.length);
+  document.getElementById('inp-tree').value = presets[idx];
+  document.getElementById('presetSel').value = '';
   build();
 }
 

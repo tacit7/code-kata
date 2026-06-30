@@ -90,15 +90,42 @@
     }
     .nav-row { display: flex; gap: 8px; align-items: center; }
 
-    .preset-row { display: flex; gap: 8px; flex-wrap: wrap; }
-    .btn-preset {
-      background: var(--bg); border: 1px solid var(--border);
-      border-radius: var(--radius-sm); color: var(--text-dim);
-      font-size: 0.78rem; padding: 5px 10px; cursor: pointer;
-      transition: border-color 0.15s, color 0.15s;
+    .viz-inputs {
+      display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end;
+      padding: 10px 0 14px; width: 100%; max-width: 90%;
     }
-    .btn-preset:hover { border-color: var(--accent); color: var(--accent-pale); }
-    .btn-preset.active { border-color: var(--accent); color: var(--accent-pale); background: var(--surface-dark); }
+    .viz-inputs .field {
+      display: flex; flex-direction: column; gap: 4px;
+    }
+    .viz-inputs label {
+      font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--text-dim);
+    }
+    .viz-inputs input[type="text"] {
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--text); border-radius: var(--radius-sm);
+      padding: 6px 10px; font-size: 0.85rem; width: 180px;
+    }
+    .viz-inputs input[type="number"] {
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--text); border-radius: var(--radius-sm);
+      padding: 6px 10px; font-size: 0.85rem; width: 80px;
+    }
+    .viz-inputs select {
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--text); border-radius: var(--radius-sm);
+      padding: 6px 10px; font-size: 0.85rem; cursor: pointer;
+    }
+    .viz-inputs button {
+      padding: 7px 18px; background: var(--accent); color: #fff; border: none;
+      border-radius: var(--radius-sm); font-weight: 600; cursor: pointer;
+      font-size: 0.85rem;
+    }
+    .viz-inputs button:hover { opacity: 0.9; }
+    .viz-inputs .btn-random {
+      padding: 7px 14px; background: var(--surface); color: var(--text);
+      border: 1px solid var(--border);
+    }
 
     .legend-row { display: flex; align-items: center; gap: 8px; font-size: 0.78rem; color: var(--text-muted); }
     .legend-swatch { width: 28px; height: 14px; border-radius: 3px; flex-shrink: 0; }
@@ -120,20 +147,38 @@
   <div class="page-sub">LeetCode 252 &middot; Sort by start time, check each adjacent pair for overlap &middot; O(n log n) time &middot; O(1) extra space</div>
 </div>
 
-<div class="controls">
+<div class="viz-inputs">
   <div class="field">
     <label>Preset</label>
-    <div class="preset-row" id="preset-row">
-      <button class="btn-preset active" onclick="loadPreset(0,this)">Has conflict</button>
-      <button class="btn-preset" onclick="loadPreset(1,this)">No conflict</button>
-      <button class="btn-preset" onclick="loadPreset(2,this)">Touching only</button>
-    </div>
+    <select id="presetSel" onchange="loadPreset()">
+      <option value="">— pick a preset —</option>
+      <option value='{"intervals":"0,30;5,10;15,20"}'>Has conflict</option>
+      <option value='{"intervals":"7,10;2,4"}'>No conflict</option>
+      <option value='{"intervals":"0,5;5,10;10,15"}'>Touching only</option>
+      <option value='{"intervals":"1,5;2,3;4,6"}'>Nested intervals</option>
+      <option value='{"intervals":"10,20;30,40;50,60"}'>Far apart</option>
+      <option value='{"intervals":"5,10;5,15;10,20"}'>Complex overlaps</option>
+    </select>
   </div>
   <div class="field">
-    <label>Intervals (start,end pairs separated by semicolons)</label>
-    <input id="inp-intervals" type="text" value="0,30;5,10;15,20" style="width:260px" />
+    <label>Intervals (start,end)</label>
+    <input id="inp-intervals" type="text" value="0,30;5,10;15,20" />
   </div>
-  <button class="btn-primary" onclick="buildAndRun()">Build &amp; Run</button>
+  <button onclick="buildAndRun()">Run</button>
+  <button class="btn-random" onclick="randomExample()">🎲 Random</button>
+</div>
+
+<div class="controls">
+  <div class="nav-row">
+    <button class="stepBtn" id="prevBtn" disabled>&larr;</button>
+    <button class="stepBtn" id="stepBtn" disabled>&rarr;</button>
+    <button class="playBtn" id="playBtn" disabled">&#9654; Play</button>
+    <select class="speedSel" id="speedSel">
+      <option value="900">Slow</option>
+      <option value="450" selected>Medium</option>
+      <option value="150">Fast</option>
+    </select>
+  </div>
 </div>
 
 <div class="viz-area">
@@ -155,10 +200,10 @@
       <div style="display:flex;gap:12px">
         <div class="panel-box" style="flex:0 0 auto">
           <div class="nav-row">
-            <button class="stepBtn" id="prevBtn" disabled>&larr;</button>
-            <button class="stepBtn" id="stepBtn" disabled>&rarr;</button>
-            <button class="playBtn" id="playBtn" disabled>&#9654; Play</button>
-            <select class="speedSel" id="speedSel">
+            <button class="stepBtn" id="prevBtn2" disabled>&larr;</button>
+            <button class="stepBtn" id="stepBtn2" disabled>&rarr;</button>
+            <button class="playBtn" id="playBtn2" disabled">&#9654; Play</button>
+            <select class="speedSel" id="speedSel2">
               <option value="900">Slow</option>
               <option value="450" selected>Medium</option>
               <option value="150">Fast</option>
@@ -167,7 +212,7 @@
         </div>
         <div class="panel-box" style="flex:1;min-width:0">
           <div class="panel-title" id="phase-label">&mdash;</div>
-          <div style="font-size:0.82rem;color:var(--text-muted);margin-top:2px" id="step-desc">Choose a preset and click Build &amp; Run.</div>
+          <div style="font-size:0.82rem;color:var(--text-muted);margin-top:2px" id="step-desc">Choose a preset and click Run.</div>
           <div class="result-badge" id="result-badge"></div>
         </div>
       </div>
@@ -229,6 +274,9 @@ var PRESETS = [
   { label: 'Has conflict',  raw: '0,30;5,10;15,20' },
   { label: 'No conflict',   raw: '7,10;2,4' },
   { label: 'Touching only', raw: '0,5;5,10;10,15' },
+  { label: 'Nested intervals', raw: '1,5;2,3;4,6' },
+  { label: 'Far apart', raw: '10,20;30,40;50,60' },
+  { label: 'Complex overlaps', raw: '5,10;5,15;10,20' },
 ];
 
 var simSteps = [], nav;
@@ -244,7 +292,7 @@ var CODE = [
 
 window.addEventListener('DOMContentLoaded', function() {
   buildCodePanel();
-  loadPreset(0, document.querySelector('.btn-preset'));
+  loadPreset();
 
   nav = VizNav({
     btnPrev: document.getElementById('prevBtn'),
@@ -285,10 +333,27 @@ function buildCodePanel() {
   }).join('');
 }
 
-function loadPreset(idx, btn) {
-  document.querySelectorAll('.btn-preset').forEach(function(b) { b.classList.remove('active'); });
-  if (btn) btn.classList.add('active');
-  document.getElementById('inp-intervals').value = PRESETS[idx].raw;
+function loadPreset() {
+  var sel = document.getElementById('presetSel');
+  if (!sel.value) {
+    document.getElementById('inp-intervals').value = '0,30;5,10;15,20';
+    return;
+  }
+  var d = JSON.parse(sel.value);
+  document.getElementById('inp-intervals').value = d.intervals;
+}
+
+function randomExample() {
+  var min = Math.floor(Math.random() * 5);
+  var intervals = [];
+  var numIntervals = Math.floor(Math.random() * 4) + 2;
+  for (var i = 0; i < numIntervals; i++) {
+    var start = Math.floor(Math.random() * 40);
+    var end = start + Math.floor(Math.random() * 30) + 5;
+    intervals.push(start + ',' + end);
+  }
+  document.getElementById('presetSel').value = '';
+  document.getElementById('inp-intervals').value = intervals.join(';');
 }
 
 function parseIntervals(raw) {
