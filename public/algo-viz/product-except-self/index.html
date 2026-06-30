@@ -113,13 +113,37 @@
       font-size: 0.85rem; padding: 8px 10px; outline: none;
     }
 
-    .preset-row { display: flex; gap: 8px; flex-wrap: wrap; }
-    .preset-btn {
-      background: var(--bg); border: 1px solid var(--border);
-      color: var(--text-dim); border-radius: var(--radius-sm);
-      padding: 4px 10px; font-size: 0.78rem; font-family: monospace; cursor: pointer;
+    .viz-inputs {
+      display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end;
+      padding: 10px 0 14px; width: 100%; max-width: 90%;
     }
-    .preset-btn:hover { color: var(--text-bright); border-color: var(--accent); }
+    .viz-inputs .field {
+      display: flex; flex-direction: column; gap: 4px;
+    }
+    .viz-inputs label {
+      font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--text-dim);
+    }
+    .viz-inputs input[type="text"] {
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--text); border-radius: var(--radius-sm);
+      padding: 6px 10px; font-size: 0.85rem; width: 180px;
+    }
+    .viz-inputs select {
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--text); border-radius: var(--radius-sm);
+      padding: 6px 10px; font-size: 0.85rem; cursor: pointer;
+    }
+    .viz-inputs button {
+      padding: 7px 18px; border: none; border-radius: var(--radius-sm);
+      font-weight: 600; cursor: pointer; font-size: 0.85rem;
+    }
+    .viz-inputs .btn-run {
+      background: var(--accent); color: #fff;
+    }
+    .viz-inputs .btn-random {
+      background: var(--surface); color: var(--text); border: 1px solid var(--border);
+    }
 
     .kw { color: var(--purple); }
     .fn { color: var(--blue); }
@@ -136,17 +160,37 @@
   <div class="page-sub">LeetCode 238 &middot; Prefix and suffix product passes &middot; O(n) time &middot; O(1) extra space</div>
 </div>
 
-<div class="controls">
+<div class="viz-inputs">
+  <div class="field">
+    <label>Preset</label>
+    <select id="presetSel" onchange="loadPreset()">
+      <option value="">— pick a preset —</option>
+      <option value='{"nums":"1,2,3,4"}'>Basic [1,2,3,4]</option>
+      <option value='{"nums":"2,3,4,5"}'>Basic [2,3,4,5]</option>
+      <option value='{"nums":"1,0"}'>With Zero [1,0]</option>
+      <option value='{"nums":"5,2"}'>Small [5,2]</option>
+      <option value='{"nums":"1,1,1,1"}'>All Ones</option>
+      <option value='{"nums":"-1,1,0,-3,3"}'>Mixed with Negative</option>
+    </select>
+  </div>
   <div class="field">
     <label>nums</label>
-    <input id="inp-nums" type="text" value="1, 2, 3, 4" style="width:220px" />
+    <input id="inp-nums" type="text" value="1, 2, 3, 4" />
   </div>
-  <button class="btn-primary" onclick="buildAndRun()">Build &amp; Run</button>
-  <div class="preset-row">
-    <button class="preset-btn" onclick="preset('1,2,3,4')">[1,2,3,4]</button>
-    <button class="preset-btn" onclick="preset('2,3,4,5')">[2,3,4,5]</button>
-    <button class="preset-btn" onclick="preset('1,0')">[1,0]</button>
-    <button class="preset-btn" onclick="preset('5,2')">[5,2]</button>
+  <button class="btn-run" onclick="buildAndRun()">Run</button>
+  <button class="btn-random" onclick="randomExample()">🎲 Random</button>
+</div>
+
+<div class="controls">
+  <div style="display:flex;gap:8px;align-items:center">
+    <button class="btn-step" id="prevBtn" disabled>&#8592;</button>
+    <button class="btn-step" id="stepBtn" disabled>&#8594;</button>
+    <button class="btn-play" id="playBtn" disabled>&#9654; Play</button>
+    <select id="speedSel" style="background:var(--bg);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:6px 10px;font-size:0.85rem">
+      <option value="700">Slow</option>
+      <option value="250" selected>Medium</option>
+      <option value="80">Fast</option>
+    </select>
   </div>
 </div>
 
@@ -154,7 +198,7 @@
   <div class="main-row">
     <div class="left-col">
       <div class="array-section" id="array-section">
-        <span style="color:var(--text-dim);font-size:0.82rem">Enter nums and click Build &amp; Run.</span>
+        <span style="color:var(--text-dim);font-size:0.82rem">Enter nums and click Run.</span>
       </div>
       <div class="code-panel">
         <div class="code-header">Python</div>
@@ -178,7 +222,7 @@
         </div>
         <div class="panel-box" style="flex:1;min-width:0">
           <div style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--text-dim)" id="phase-label">&mdash;</div>
-          <div style="font-size:0.88rem;color:var(--text-muted);margin-top:3px" id="step-desc">Click Build &amp; Run to start.</div>
+          <div style="font-size:0.88rem;color:var(--text-muted);margin-top:3px" id="step-desc">Click Run to start.</div>
         </div>
       </div>
 
@@ -261,8 +305,22 @@ function buildCodePanel() {
   }).join('');
 }
 
-function preset(s) {
-  document.getElementById('inp-nums').value = s;
+function loadPreset() {
+  var sel = document.getElementById('presetSel');
+  if (!sel.value) return;
+  var d = JSON.parse(sel.value);
+  document.getElementById('inp-nums').value = d.nums;
+  buildAndRun();
+}
+
+function randomExample() {
+  var len = Math.floor(Math.random() * 5) + 2;
+  var nums = [];
+  for (var i = 0; i < len; i++) {
+    nums.push(Math.floor(Math.random() * 10) - 2);
+  }
+  document.getElementById('inp-nums').value = nums.join(', ');
+  document.getElementById('presetSel').value = '';
   buildAndRun();
 }
 
