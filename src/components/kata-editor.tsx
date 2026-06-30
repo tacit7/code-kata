@@ -167,7 +167,63 @@ type VizKataName =
   | "Remove Nth Node From End of List"
   | "Copy List With Random Pointer"
   | "Add Two Numbers"
-  | "Find the Duplicate Number";
+  | "Find the Duplicate Number"
+  | "Copy List with Random Pointer"
+  | "Trie"
+  | "Kth Largest Element In An Array"
+  | "Validate Binary Search Tree"
+  | "Maximum Depth of Binary Tree"
+  | "Binary Tree Level Order Traversal"
+  | "Reverse Linked List (Iterative)"
+  | "Reverse Linked List (Recursive)"
+  | "Binary Search (Iterative)"
+  | "Binary Search (Recursive)"
+  | "Binary Search Find First"
+  | "Binary Search Find Last"
+  | "Climbing Stairs (Iterative)"
+  | "Climbing Stairs (Recursive)"
+  | "Sliding Window Max Sum"
+  | "Merge Sorted Arrays"
+  | "Merge Two Sorted Arrays"
+  | "Linked List Traversal"
+  | "Linked List Traversal (Iterative)"
+  | "Linked List Traversal (Recursive)"
+  | "Balanced Parentheses"
+  | "Count Set Bits"
+  | "Topological Sort"
+  | "Combination Sum IV"
+  | "Build Adjacency List"
+  | "Most Frequent Element"
+  | "Graph DFS"
+  | "Graph DFS (Iterative)"
+  | "Graph DFS (Recursive)"
+  | "Matrix DFS"
+  | "Matrix DFS (Iterative)"
+  | "Matrix DFS (Recursive)"
+  | "Binary Tree Inorder (Iterative)"
+  | "Binary Tree Inorder (Recursive)"
+  | "Binary Tree Preorder (Iterative)"
+  | "Binary Tree Preorder (Recursive)"
+  | "Binary Tree Postorder (Iterative)"
+  | "Binary Tree Postorder (Recursive)"
+  | "DFS Inorder Traversal"
+  | "DFS Preorder Traversal"
+  | "DFS Postorder Traversal"
+  | "Monotonic Stack"
+  | "Merge Sort"
+  | "Quick Sort"
+  | "Lomuto Partition"
+  | "Min Heap"
+  | "Union Find"
+  | "Build Prefix Sum"
+  | "Range Sum Query"
+  | "Two Pointer Remove Dupes"
+  | "Two Pointer Remove Duplicates"
+  | "Queue from Stacks"
+  | "Queue from Two Stacks"
+  | "Frequency Count"
+  | "Merge K Sorted Lists"
+  | "FizzBuzz";
 
 // Kata name → algo-viz subfolder served from /algo-viz/<folder>/index.html
 const VIZ_MAP: Partial<Record<VizKataName, string>> = {
@@ -322,6 +378,65 @@ const VIZ_MAP: Partial<Record<VizKataName, string>> = {
   "Copy List With Random Pointer": "copy-list-random-pointer",
   "Add Two Numbers":              "add-two-numbers",
   "Find the Duplicate Number":    "find-duplicate",
+  // Name variants — point to same viz folder as canonical name
+  "Copy List with Random Pointer":      "copy-list-random-pointer",
+  "Trie":                               "trie",
+  "Kth Largest Element In An Array":    "kth-largest",
+  "Validate Binary Search Tree":        "validate-bst",
+  "Maximum Depth of Binary Tree":       "max-depth-tree",
+  "Binary Tree Level Order Traversal":  "level-order",
+  "Reverse Linked List (Iterative)":    "reverse-linked-list",
+  "Reverse Linked List (Recursive)":    "reverse-linked-list",
+  "Binary Search (Iterative)":          "binary-search",
+  "Binary Search (Recursive)":          "binary-search",
+  "Binary Search Find First":           "binary-search",
+  "Binary Search Find Last":            "binary-search",
+  "Climbing Stairs (Iterative)":        "climbing-stairs",
+  "Climbing Stairs (Recursive)":        "climbing-stairs",
+  "Sliding Window Max Sum":             "sliding-window-max",
+  "Merge Sorted Arrays":                "merge-sorted-lists",
+  "Merge Two Sorted Arrays":            "merge-sorted-lists",
+  "Linked List Traversal":              "reverse-linked-list",
+  "Linked List Traversal (Iterative)":  "reverse-linked-list",
+  "Linked List Traversal (Recursive)":  "reverse-linked-list",
+  // Semantically equivalent — reuse existing viz
+  "Balanced Parentheses":               "valid-parentheses",
+  "Count Set Bits":                     "number-1-bits",
+  "Topological Sort":                   "course-schedule",
+  "Combination Sum IV":                 "combination-sum",
+  "Build Adjacency List":               "clone-graph",
+  "Most Frequent Element":              "top-k-frequent",
+  // New viz folders (built separately)
+  "Graph DFS":                          "graph-dfs",
+  "Graph DFS (Iterative)":              "graph-dfs",
+  "Graph DFS (Recursive)":              "graph-dfs",
+  "Matrix DFS":                         "matrix-dfs",
+  "Matrix DFS (Iterative)":             "matrix-dfs",
+  "Matrix DFS (Recursive)":             "matrix-dfs",
+  "Binary Tree Inorder (Iterative)":    "dfs-traversal",
+  "Binary Tree Inorder (Recursive)":    "dfs-traversal",
+  "Binary Tree Preorder (Iterative)":   "dfs-traversal",
+  "Binary Tree Preorder (Recursive)":   "dfs-traversal",
+  "Binary Tree Postorder (Iterative)":  "dfs-traversal",
+  "Binary Tree Postorder (Recursive)":  "dfs-traversal",
+  "DFS Inorder Traversal":              "dfs-traversal",
+  "DFS Preorder Traversal":             "dfs-traversal",
+  "DFS Postorder Traversal":            "dfs-traversal",
+  "Monotonic Stack":                    "monotonic-stack",
+  "Merge Sort":                         "merge-sort",
+  "Quick Sort":                         "quick-sort",
+  "Lomuto Partition":                   "quick-sort",
+  "Min Heap":                           "min-heap",
+  "Union Find":                         "union-find",
+  "Build Prefix Sum":                   "prefix-sum",
+  "Range Sum Query":                    "prefix-sum",
+  "Two Pointer Remove Dupes":           "two-pointer",
+  "Two Pointer Remove Duplicates":      "two-pointer",
+  "Queue from Stacks":                  "queue-from-stacks",
+  "Queue from Two Stacks":              "queue-from-stacks",
+  "Frequency Count":                    "frequency-count",
+  "Merge K Sorted Lists":               "merge-k-sorted",
+  "FizzBuzz":                           "fizzbuzz",
 };
 
 // Overrides for slugs that can't be reliably derived from the display name
