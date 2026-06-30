@@ -167,6 +167,29 @@
     }
     .nav-row { display: flex; gap: 8px; align-items: center; }
 
+    /* Viz inputs */
+    .viz-inputs {
+      display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end;
+      padding: 10px 0 14px; width: 100%; max-width: 90%;
+    }
+    .viz-inputs .field {
+      display: flex; flex-direction: column; gap: 4px;
+    }
+    .viz-inputs label {
+      font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--text-dim);
+    }
+    .viz-inputs input[type="text"] {
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--text); border-radius: var(--radius-sm);
+      padding: 6px 10px; font-size: 0.85rem; width: 130px;
+    }
+    .viz-inputs select {
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--text); border-radius: var(--radius-sm);
+      padding: 6px 10px; font-size: 0.85rem; cursor: pointer;
+    }
+
     /* Syntax colors */
     .kw { color: var(--purple); }
     .fn { color: var(--blue); }
@@ -184,12 +207,28 @@
   <div class="page-sub">LeetCode 91 &middot; 1-D DP on string &middot; O(n) time &middot; O(n) space</div>
 </div>
 
-<div class="controls">
+<div class="viz-inputs">
+  <div class="field">
+    <label>Preset</label>
+    <select id="presetSel" onchange="loadPreset()">
+      <option value="">— pick a preset —</option>
+      <option value='{"s":"226"}'>226 (Multiple decodings)</option>
+      <option value='{"s":"12"}'>12 (2-char, two ways)</option>
+      <option value='{"s":"123"}'>123 (3-char)</option>
+      <option value='{"s":"111"}'>111 (All same digit)</option>
+      <option value='{"s":"10"}'>10 (Has zero)</option>
+      <option value='{"s":"206"}'>206 (Zero in middle)</option>
+    </select>
+  </div>
   <div class="field">
     <label>String s (digits only)</label>
-    <input id="inp-s" type="text" value="226" maxlength="12" style="width:130px" />
+    <input id="inp-s" type="text" value="226" maxlength="12" />
   </div>
-  <button class="btn-primary" onclick="buildAndRun()">Build &amp; Run</button>
+  <button onclick="buildAndRun()" style="padding:7px 18px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);font-weight:600;cursor:pointer;">Run</button>
+  <button onclick="randomExample()" style="padding:7px 14px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;">🎲 Random</button>
+</div>
+
+<div class="controls">
 </div>
 
 <div class="viz-area">
@@ -197,7 +236,7 @@
     <div class="left-col" style="display:flex;flex-direction:column;gap:12px">
 
       <div class="decode-track" id="decode-track">
-        <span style="color:var(--text-dim);font-size:0.82rem">Enter a digit string and click Build &amp; Run.</span>
+        <span style="color:var(--text-dim);font-size:0.82rem">Enter a digit string and click Run.</span>
       </div>
 
       <div class="code-panel">
@@ -223,7 +262,7 @@
         </div>
         <div class="panel-box" style="flex:1;min-width:0">
           <div class="panel-title" id="phase-label">&mdash;</div>
-          <div style="font-size:0.82rem;color:var(--text-muted);margin-top:2px" id="step-desc">Enter a digit string and click Build &amp; Run.</div>
+          <div style="font-size:0.82rem;color:var(--text-muted);margin-top:2px" id="step-desc">Enter a digit string and click Run.</div>
         </div>
       </div>
 
@@ -249,10 +288,10 @@ var CODE = [
   [2,  '    n <span class="op">=</span> <span class="bi">len</span><span class="op">(</span>s<span class="op">)</span>'],
   [3,  '    dp <span class="op">=</span> <span class="op">[</span><span class="nb">0</span><span class="op">]</span> <span class="op">*</span> <span class="op">(</span>n <span class="op">+</span> <span class="nb">1</span><span class="op">)</span>'],
   [4,  '    dp<span class="op">[</span><span class="nb">0</span><span class="op">]</span> <span class="op">=</span> <span class="nb">1</span>'],
-  [5,  '    dp<span class="op">[</span><span class="nb">1</span><span class="op">]</span> <span class="op">=</span> <span class="nb">1</span> <span class="kw">if</span> s<span class="op">[</span><span class="nb">0</span><span class="op">]</span> <span class="op">!=</span> <span class="st">\'0\'</span> <span class="kw">else</span> <span class="nb">0</span>'],
+  [5,  '    dp<span class="op">[</span><span class="nb">1</span><span class="op">]</span> <span class="op">=</span> <span class="nb">1</span> <span class="kw">if</span> s<span class="op">[</span><span class="nb">0</span><span class="op">]</span> <span class="op">!=</span> <span class="st">'0'</span> <span class="kw">else</span> <span class="nb">0</span>'],
   [0,  ''],
   [7,  '    <span class="kw">for</span> i <span class="kw">in</span> <span class="bi">range</span><span class="op">(</span><span class="nb">2</span><span class="op">,</span> n <span class="op">+</span> <span class="nb">1</span><span class="op">):</span>'],
-  [8,  '        <span class="kw">if</span> s<span class="op">[</span>i<span class="op">-</span><span class="nb">1</span><span class="op">]</span> <span class="op">!=</span> <span class="st">\'0\'</span><span class="op">:</span>'],
+  [8,  '        <span class="kw">if</span> s<span class="op">[</span>i<span class="op">-</span><span class="nb">1</span><span class="op">]</span> <span class="op">!=</span> <span class="st">'0'</span><span class="op">:</span>'],
   [9,  '            dp<span class="op">[</span>i<span class="op">]</span> <span class="op">+=</span> dp<span class="op">[</span>i<span class="op">-</span><span class="nb">1</span><span class="op">]</span>'],
   [10, '        two <span class="op">=</span> <span class="bi">int</span><span class="op">(</span>s<span class="op">[</span>i<span class="op">-</span><span class="nb">2</span><span class="op">:</span>i<span class="op">])</span>'],
   [11, '        <span class="kw">if</span> <span class="nb">10</span> <span class="op">&lt;=</span> two <span class="op">&lt;=</span> <span class="nb">26</span><span class="op">:</span>'],
@@ -264,10 +303,10 @@ var CODE = [
 var PSEUDO = [
   [1,  'numDecodings(s):'],
   [2,  '  dp[0] = 1              // empty prefix'],
-  [3,  '  dp[1] = s[0]!=\'0\' ? 1 : 0'],
+  [3,  '  dp[1] = s[0]!='0' ? 1 : 0'],
   [0,  ''],
   [5,  '  for i = 2 to n:'],
-  [6,  '    if s[i-1] != \'0\':'],
+  [6,  '    if s[i-1] != '0':'],
   [7,  '      dp[i] += dp[i-1]  // 1-digit ok'],
   [8,  '    two = s[i-2..i-1]'],
   [9,  '    if 10 <= two <= 26:'],
@@ -314,6 +353,26 @@ function buildAndRun() {
   buildTrack(raw);
   simSteps = buildSteps(raw);
   nav.load(simSteps);
+}
+
+function loadPreset() {
+  var sel = document.getElementById('presetSel');
+  if (!sel.value) return;
+  var d = JSON.parse(sel.value);
+  document.getElementById('inp-s').value = d.s;
+  buildAndRun();
+}
+
+function randomExample() {
+  var lengths = [2, 3, 4, 5, 6];
+  var len = lengths[Math.floor(Math.random() * lengths.length)];
+  var s = '';
+  for (var i = 0; i < len; i++) {
+    s += Math.floor(Math.random() * 10);
+  }
+  document.getElementById('inp-s').value = s;
+  document.getElementById('presetSel').value = '';
+  buildAndRun();
 }
 
 // ── Build the two-row grid (string chars + dp cells) ────────────────────────
