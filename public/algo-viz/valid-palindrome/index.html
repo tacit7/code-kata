@@ -80,6 +80,62 @@
       color: var(--text);
       font-weight: 600;
     }
+    .viz-inputs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: flex-end;
+      padding: 10px 0 14px;
+      width: 100%;
+      max-width: 90%;
+    }
+    .viz-inputs .field {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .viz-inputs label {
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-dim);
+    }
+    .viz-inputs select {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 6px;
+      padding: 6px 10px;
+      font-size: 0.85rem;
+      cursor: pointer;
+    }
+    .viz-inputs input[type="text"] {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 6px;
+      padding: 6px 10px;
+      font-size: 0.85rem;
+      width: 200px;
+    }
+    .viz-inputs .btn-run {
+      padding: 7px 18px;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .viz-inputs .btn-random {
+      padding: 7px 14px;
+      background: var(--surface);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      cursor: pointer;
+    }
     .controls {
       background: var(--surface);
       border: 1px solid var(--border);
@@ -148,11 +204,24 @@
   </div>
 
   <div class="viz-inputs">
-    <div class="control-row">
-      <span class="control-label">Input string:</span>
-      <input type="text" class="control-input" id="input-string" value="A man, a plan, a canal: Panama" />
-      <button class="btn-build" id="build-btn">Build &amp; Run</button>
+    <div class="field">
+      <label>Preset</label>
+      <select id="presetSel" onchange="loadPreset()">
+        <option value="">— pick a preset —</option>
+        <option value='{"s":"A man, a plan, a canal: Panama"}'>Classic Palindrome</option>
+        <option value='{"s":"race a car"}'>Not Palindrome</option>
+        <option value='{"s":"0P"}'>Short Mixed</option>
+        <option value='{"s":".,;: "}'>Only Punctuation</option>
+        <option value='{"s":"12321"}'>Numeric Palindrome</option>
+        <option value='{"s":"a."}'>Letter &amp; Punct</option>
+      </select>
     </div>
+    <div class="field">
+      <label>Input string:</label>
+      <input type="text" id="input-string" value="A man, a plan, a canal: Panama" />
+    </div>
+    <button class="btn-run" onclick="buildAndRun()">Run</button>
+    <button class="btn-random" onclick="randomExample()">🎲 Random</button>
     <div class="error-message" id="error-msg"></div>
   </div>
 
@@ -194,7 +263,7 @@
           —
         </div>
         <div style="font-size: 0.88rem; color: var(--text-muted); margin-top: 3px;" id="step-desc">
-          Click Build &amp; Run to start.
+          Click Run to start.
         </div>
       </div>
     </div>
@@ -526,6 +595,33 @@
       nav.load(allSteps);
     }
 
+    function loadPreset() {
+      var sel = document.getElementById('presetSel');
+      if (!sel.value) return;
+      var d = JSON.parse(sel.value);
+      document.getElementById('input-string').value = d.s;
+      buildAndRun();
+    }
+
+    function randomExample() {
+      const examples = [
+        'A man, a plan, a canal: Panama',
+        'race a car',
+        '0P',
+        '.,; ',
+        '12321',
+        'a.',
+        'Was it a car or a cat I saw?',
+        'Madam, I'm Adam',
+        'hello',
+        'racecar',
+      ];
+      const idx = Math.floor(Math.random() * examples.length);
+      document.getElementById('input-string').value = examples[idx];
+      document.getElementById('presetSel').value = '';
+      buildAndRun();
+    }
+
     window.addEventListener('DOMContentLoaded', function () {
       initializeCodeLines();
 
@@ -538,8 +634,6 @@
           applyStep(snap, cur > 0);
         },
       });
-
-      document.getElementById('build-btn').addEventListener('click', buildAndRun);
 
       // Auto-run default example
       buildAndRun();
