@@ -471,7 +471,7 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
         if (!window.__vizBridge) {
           window.__vizBridge = true;
           var style = document.createElement('style');
-          style.textContent = '.controls, .input-row { display: none !important; }';
+          style.textContent = '.controls, .input-row, .step-nav, .nav-bar, .nav-row, .nav-strip, .nav-box, .nav-panel, .bottom-bar, .ctrl-row, .controls-row, #nav-bar { display: none !important; }';
           document.head.appendChild(style);
           window.addEventListener('message', function(e) {
             var d = e.data;
