@@ -7,6 +7,65 @@
   <link rel="stylesheet" href="../shared/style.css" />
   <script src="../shared/viz.js"></script>
   <style>
+    .viz-inputs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: flex-end;
+      padding: 10px 0 14px;
+      width: 100%;
+      max-width: 90%;
+    }
+    .viz-inputs .field {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .viz-inputs label {
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-dim);
+    }
+    .viz-inputs input[type="text"] {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: var(--radius-sm);
+      padding: 6px 10px;
+      font-size: 0.85rem;
+      width: 220px;
+      font-family: monospace;
+    }
+    .viz-inputs select {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: var(--radius-sm);
+      padding: 6px 10px;
+      font-size: 0.85rem;
+      cursor: pointer;
+    }
+    .viz-inputs button {
+      padding: 7px 18px;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius-sm);
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 0.85rem;
+    }
+    .viz-inputs button:hover {
+      opacity: 0.9;
+    }
+    .viz-inputs .btn-random {
+      background: var(--surface);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+
     .controls {
       display: flex;
       gap: 10px;
@@ -223,10 +282,28 @@
   <div class="viz-subtitle">BFS serialize builds a level-order token string. Deserialize replays the queue to reconstruct the tree.</div>
 </div>
 
+<div class="viz-inputs">
+  <div class="field">
+    <label>Preset</label>
+    <select id="presetSel" onchange="loadPreset()">
+      <option value="">— pick a preset —</option>
+      <option value='{"input":"1,2,3,4,5,6,7"}'>Balanced Tree (7 nodes)</option>
+      <option value='{"input":"1"}'>Single Node</option>
+      <option value='{"input":"1,2,null,3,null,4"}'>Left-Skewed Tree</option>
+      <option value='{"input":"1,null,2,null,3,null,4"}'>Right-Skewed Tree</option>
+      <option value='{"input":"1,2,3,null,null,4,5"}'>Mixed Tree with Nulls</option>
+      <option value='{"input":"3,9,20,null,null,15,7"}'>Complex Structure</option>
+    </select>
+  </div>
+  <div class="field">
+    <label>Level-order input:</label>
+    <input type="text" id="tree-input" value="1,2,3,null,null,4,5" placeholder="e.g. 1,2,3,null,null,4,5" />
+  </div>
+  <button onclick="buildAndRun()" style="padding:7px 18px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);font-weight:600;cursor:pointer;font-size:0.85rem;">Run</button>
+  <button onclick="randomExample()" class="btn-random" style="padding:7px 14px;font-size:0.85rem;">🎲 Random</button>
+</div>
+
 <div class="controls">
-  <label>Level-order input:</label>
-  <input type="text" id="tree-input" value="1,2,3,null,null,4,5" placeholder="e.g. 1,2,3,null,null,4,5" />
-  <button class="btn-build" id="btn-build">Build</button>
 </div>
 
 <div class="main-row">
@@ -275,7 +352,7 @@
 </div>
 
 <div class="viz-nav" id="viz-nav"></div>
-<div class="step-desc" id="step-desc">Press Build to generate steps.</div>
+<div class="step-desc" id="step-desc">Press Run to generate steps.</div>
 
 <script>
 // ─── Tree building from level-order ──────────────────────────────────────────
@@ -653,13 +730,53 @@ function applyStep(idx) {
   document.getElementById('step-desc').textContent = step.desc;
 }
 
-function rebuild() {
+function buildAndRun() {
   const input = document.getElementById('tree-input').value.trim();
   generateSteps(input);
   currentStep = 0;
   applyStep(0);
   nav.setSteps(steps.length);
   nav.setStep(0);
+}
+
+function loadPreset() {
+  const sel = document.getElementById('presetSel');
+  if (!sel.value) return;
+  const d = JSON.parse(sel.value);
+  document.getElementById('tree-input').value = d.input;
+  buildAndRun();
+}
+
+function randomExample() {
+  // Generate a random but valid level-order tree
+  // Create 3-7 nodes with random values 1-9
+  const numNodes = Math.floor(Math.random() * 5) + 3; // 3 to 7 nodes
+  const values = [];
+  
+  // Build a roughly balanced random tree by randomly deciding left/right children
+  const queue = [{ depth: 0, idx: 0 }];
+  let nodeCount = 0;
+  const result = [];
+  
+  // Simple generation: create level-order array
+  for (let i = 0; i < 15; i++) {
+    if (nodeCount < numNodes && Math.random() > 0.3) {
+      result.push(String(Math.floor(Math.random() * 9) + 1));
+      nodeCount++;
+    } else if (i < 10) {
+      result.push('null');
+    }
+  }
+  
+  // Trim trailing nulls
+  while (result.length && result[result.length - 1] === 'null') {
+    result.pop();
+  }
+  
+  const input = result.join(',');
+  document.getElementById('tree-input').value = input;
+  document.getElementById('presetSel').value = '';
+  buildAndRun();
 }
 
 // VizNav integration
@@ -671,13 +788,12 @@ const nav = VizNav({
   },
 });
 
-document.getElementById('btn-build').addEventListener('click', rebuild);
 document.getElementById('tree-input').addEventListener('keydown', e => {
-  if (e.key === 'Enter') rebuild();
+  if (e.key === 'Enter') buildAndRun();
 });
 
 // Init
-rebuild();
+buildAndRun();
 </script>
 
 </body>
