@@ -8,6 +8,41 @@
   <script src="../shared/gsap.min.js"></script>
   <script src="../shared/viz.js"></script>
   <style>
+    .viz-inputs {
+      display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end;
+      padding: 10px 0 14px; width: 100%; max-width: 90%;
+    }
+    .viz-inputs .field {
+      display: flex; flex-direction: column; gap: 4px;
+    }
+    .viz-inputs label {
+      font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--text-dim);
+    }
+    .viz-inputs input[type="text"] {
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--text); border-radius: var(--radius-sm);
+      padding: 6px 10px; font-size: 0.85rem; width: 240px;
+    }
+    .viz-inputs select {
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--text); border-radius: var(--radius-sm);
+      padding: 6px 10px; font-size: 0.85rem; cursor: pointer;
+    }
+    .viz-inputs button {
+      padding: 7px 18px; border-radius: var(--radius-sm);
+      font-weight: 600; cursor: pointer; border: none;
+    }
+    .viz-inputs .btn-run {
+      background: var(--accent); color: #fff;
+    }
+    .viz-inputs .btn-run:hover { background: var(--accent-hover); }
+    .viz-inputs .btn-random {
+      background: var(--surface); color: var(--text);
+      border: 1px solid var(--border);
+    }
+    .viz-inputs .btn-random:hover { background: var(--border); }
+
     .viz-area {
       width: 100%; max-width: 90%;
       display: flex; flex-direction: column; gap: 14px;
@@ -281,13 +316,28 @@
     </div>
   </div>
 
-  <div class="controls">
+  <div class="viz-inputs">
+    <div class="field">
+      <label>Preset</label>
+      <select id="presetSel" onchange="loadPreset()">
+        <option value="">— pick a preset —</option>
+        <option value='{"words":"eat,tea,ate"}'>Simple anagrams</option>
+        <option value='{"words":"tan,nat,bat"}'>Mixed group</option>
+        <option value='{"words":"abc,bca,cab,xyz,zyx,yxz"}'>Two groups (3 each)</option>
+        <option value='{"words":"listen,silent,enlist,hello,world"}'>Multiple anagrams</option>
+        <option value='{"words":"a,b,c"}'>Single chars</option>
+        <option value='{"words":"eat,tea,tan,ate,nat,bat"}'>Classic example</option>
+      </select>
+    </div>
     <div class="field">
       <label>Words (comma-separated)</label>
       <input type="text" id="wordsInput" value="eat,tea,tan,ate,nat,bat" />
     </div>
-    <button class="btn-primary" onclick="buildAndRun()">Build &amp; Run</button>
+    <button class="btn-run" onclick="buildAndRun()">Run</button>
+    <button class="btn-random" onclick="randomExample()">🎲 Random</button>
   </div>
+
+  <div class="controls"></div>
 
   <div class="viz-area">
     <div class="nav-row">
@@ -390,6 +440,29 @@
 
       buildAndRun();
     });
+
+    function loadPreset() {
+      var sel = document.getElementById('presetSel');
+      if (!sel.value) return;
+      var d = JSON.parse(sel.value);
+      document.getElementById('wordsInput').value = d.words;
+      buildAndRun();
+    }
+
+    function randomExample() {
+      var wordLists = [
+        ['cat', 'act', 'tac'],
+        ['listen', 'silent', 'enlist'],
+        ['hello', 'world'],
+        ['a', 'b', 'c', 'd'],
+        ['race', 'care', 'acre', 'arc'],
+        ['post', 'stop', 'tops'],
+      ];
+      var chosen = wordLists[Math.floor(Math.random() * wordLists.length)];
+      document.getElementById('wordsInput').value = chosen.join(',');
+      document.getElementById('presetSel').value = '';
+      buildAndRun();
+    }
 
     function buildAndRun() {
       const raw = document.getElementById('wordsInput').value;
