@@ -128,6 +128,41 @@
     .op { color: var(--text); }
     .nb { color: var(--green); }
     .cm { color: var(--text-ghost); font-style: italic; }
+    .viz-inputs {
+      display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end;
+      padding: 10px 0 14px; width: 100%; max-width: 90%;
+    }
+    .viz-inputs .field {
+      display: flex; flex-direction: column; gap: 4px;
+    }
+    .viz-inputs label {
+      font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--text-dim);
+    }
+    .viz-inputs input[type="text"] {
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--text); border-radius: var(--radius-sm);
+      padding: 6px 10px; font-size: 0.85rem; width: 260px;
+    }
+    .viz-inputs select {
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--text); border-radius: var(--radius-sm);
+      padding: 6px 10px; font-size: 0.85rem; cursor: pointer;
+    }
+    .viz-inputs button {
+      padding: 7px 18px; border: none; border-radius: var(--radius-sm);
+      font-weight: 600; cursor: pointer; font-size: 0.85rem;
+    }
+    .viz-inputs .btn-run {
+      background: #15803d; color: #fff;
+    }
+    .viz-inputs .btn-run:hover { background: #166534; }
+    .viz-inputs .btn-random {
+      background: var(--surface); color: var(--text);
+      border: 1px solid var(--border);
+    }
+    .viz-inputs .btn-random:hover { background: var(--border); }
+
   </style>
 </head>
 <body class="page">
@@ -138,24 +173,28 @@
   <div class="page-sub">LeetCode 152 &middot; Track max &amp; min products &middot; O(n) time &middot; O(1) space</div>
 </div>
 
-<div class="controls">
+<div class="viz-inputs">
   <div class="field">
-    <label>nums</label>
-    <input id="inp-nums" type="text" value="2, 3, -2, 4" style="width:260px" />
-  </div>
-  <button class="btn-primary" onclick="buildAndRun()">Build &amp; Run</button>
-  <div class="field">
-    <label>Presets</label>
-    <select onchange="document.getElementById('inp-nums').value=this.value;buildAndRun()">
-      <option value="">— pick —</option>
-      <option value="2, 3, -2, 4">2,3,-2,4 (classic)</option>
-      <option value="-2, 0, -1">-2,0,-1 (zero reset)</option>
-      <option value="-2, 3, -4">-2,3,-4 (neg×neg flip)</option>
-      <option value="2, -5, -2, -4, 3">2,-5,-2,-4,3 (multiple negatives)</option>
-      <option value="-1, -2, -9, -6">all negatives</option>
+    <label>Preset</label>
+    <select id="presetSel" onchange="loadPreset()">
+      <option value="">— pick a preset —</option>
+      <option value='{"nums":"2,3,-2,4"}'>2,3,-2,4 (classic)</option>
+      <option value='{"nums":"-2,0,-1"}'>-2,0,-1 (zero reset)</option>
+      <option value='{"nums":"-2,3,-4"}'>-2,3,-4 (neg×neg flip)</option>
+      <option value='{"nums":"2,-5,-2,-4,3"}'>2,-5,-2,-4,3 (multiple negatives)</option>
+      <option value='{"nums":"-1,-2,-9,-6"}'>-1,-2,-9,-6 (all negatives)</option>
+      <option value='{"nums":"0,2"}'>0,2 (zero first)</option>
     </select>
   </div>
+  <div class="field">
+    <label>nums</label>
+    <input id="inp-nums" type="text" value="2, 3, -2, 4" />
+  </div>
+  <button class="btn-run" onclick="buildAndRun()">Build &amp; Run</button>
+  <button class="btn-random" onclick="randomExample()">🎲 Random</button>
 </div>
+
+<div class="controls"></div>
 
 <div class="viz-area">
   <div class="main-row">
@@ -507,6 +546,41 @@ function setCodeLines(lines) {
     else el.classList.remove('hl');
   });
 }
+
+function loadPreset() {
+  var sel = document.getElementById('presetSel');
+  if (!sel.value) return;
+  try {
+    var data = JSON.parse(sel.value);
+    if (data.nums) {
+      document.getElementById('inp-nums').value = data.nums;
+    }
+    buildAndRun();
+  } catch(e) {
+    console.error('Failed to load preset:', e);
+  }
+}
+
+function randomExample() {
+  document.getElementById('presetSel').value = '';
+  // Generate random array for Maximum Product Subarray
+  // Mix of positive, negative, and zero values
+  var len = Math.floor(Math.random() * 4) + 2; // 2-5 elements
+  var nums = [];
+  for (var i = 0; i < len; i++) {
+    var r = Math.random();
+    if (r < 0.4) {
+      nums.push(Math.floor(Math.random() * 8) + 1); // positive 1-8
+    } else if (r < 0.7) {
+      nums.push(-(Math.floor(Math.random() * 8) + 1)); // negative -1 to -8
+    } else {
+      nums.push(0); // zero
+    }
+  }
+  document.getElementById('inp-nums').value = nums.join(', ');
+  buildAndRun();
+}
+
 </script>
 <script>
   if (window.self !== window.top) {
