@@ -3238,4 +3238,131 @@ function test_duplicate_last_value() {
     usage: `Floyd's cycle detection ("tortoise and hare") is used beyond linked lists anywhere a sequence can be modeled as a functional graph — each element maps to exactly one successor. Database index corruption detectors use cycle checks to validate B-tree page pointer chains. Pseudorandom number generators are analyzed for period length using Floyd's algorithm to find when the sequence loops. Memory leak detectors in garbage collectors detect reference cycles in object graphs using the same two-pointer phase structure. In distributed systems, detecting repeated states in a Raft or Paxos log can be framed as cycle detection over state machine transitions.`,
     tags: ["linked-list", "two-pointers", "cycle-detection"],
   },
+  {
+    name: "3Sum",
+    category: "arrays",
+    language: "javascript",
+    difficulty: "medium",
+    description: `Given an integer array nums, return all unique triplets [nums[i], nums[j], nums[k]] such that i, j, k are distinct and their sum equals zero.
+
+Example 1:
+Input: nums = [-1,0,1,2,-1,-4]
+Output: [[-1,-1,2],[-1,0,1]]
+
+Example 2:
+Input: nums = [0,1,1]
+Output: []
+
+Example 3:
+Input: nums = [0,0,0]
+Output: [[0,0,0]]
+
+Constraints:
+- 3 <= nums.length <= 3000
+- -10^5 <= nums[i] <= 10^5
+
+Ref: LeetCode #15 3Sum`,
+    code: `function threeSum(nums) {
+  // Sort then fix i, two-pointer for left/right
+}`,
+    testCode: `function test_basic_case() {
+  const result = threeSum([-1, 0, 1, 2, -1, -4]);
+  const sorted = result.map(t => t.slice().sort((a,b)=>a-b)).sort((a,b)=>a[0]-b[0]||a[1]-b[1]);
+  assertEqual(sorted, [[-1,-1,2],[-1,0,1]], "basic case");
+}
+function test_no_triplets() {
+  assertEqual(threeSum([0,1,1]), [], "no triplets");
+}
+function test_all_zeros() {
+  assertEqual(threeSum([0,0,0]), [[0,0,0]], "all zeros");
+}
+function test_no_valid_combination() {
+  assertEqual(threeSum([1,2,3]), [], "no valid combination");
+}
+function test_duplicates() {
+  const result = threeSum([-2,0,0,2,2]);
+  const sorted = result.map(t => t.slice().sort((a,b)=>a-b)).sort((a,b)=>a[0]-b[0]||a[1]-b[1]);
+  assertEqual(sorted, [[-2,0,2]], "handles duplicates");
+}`,
+    solution: `function threeSum(nums) {
+  nums.sort((a, b) => a - b);
+  const result = [];
+  for (let i = 0; i < nums.length - 2; i++) {
+    if (i > 0 && nums[i] === nums[i - 1]) continue;
+    let left = i + 1, right = nums.length - 1;
+    while (left < right) {
+      const sum = nums[i] + nums[left] + nums[right];
+      if (sum === 0) {
+        result.push([nums[i], nums[left], nums[right]]);
+        while (left < right && nums[left] === nums[left + 1]) left++;
+        while (left < right && nums[right] === nums[right - 1]) right--;
+        left++; right--;
+      } else if (sum < 0) {
+        left++;
+      } else {
+        right--;
+      }
+    }
+  }
+  return result;
+}`,
+    usage: `3Sum is the canonical extension of two-pointer technique to three variables. Fixing one element reduces it to Two Sum II. Duplicate skipping is the key detail. Variants: 3Sum Closest (minimize |sum - target|), 4Sum (two fixed + two-pointer), k-Sum (recursive reduction).`,
+    tags: ["array", "two-pointers", "sorting", "neetcode"],
+  },
+  {
+    name: "Two Sum II - Input Array Is Sorted",
+    category: "arrays",
+    language: "javascript",
+    difficulty: "medium",
+    description: `Given a 1-indexed sorted array, find two numbers that add up to target. Return their 1-indexed positions. Exactly one solution exists.
+
+Example 1:
+Input: numbers = [2,7,11,15], target = 9
+Output: [1,2]
+
+Example 2:
+Input: numbers = [2,3,4], target = 6
+Output: [1,3]
+
+Example 3:
+Input: numbers = [-1,0], target = -1
+Output: [1,2]
+
+Constraints:
+- 2 <= numbers.length <= 3 * 10^4
+- Array is sorted in non-decreasing order
+- Exactly one solution exists
+
+Ref: LeetCode #167 Two Sum II`,
+    code: `function twoSumII(numbers, target) {
+  // Use left/right two pointers — O(n) time, O(1) space
+}`,
+    testCode: `function test_basic() {
+  assertEqual(twoSumII([2,7,11,15], 9), [1,2], "basic");
+}
+function test_middle() {
+  assertEqual(twoSumII([2,3,4], 6), [1,3], "middle");
+}
+function test_two_elements() {
+  assertEqual(twoSumII([-1,0], -1), [1,2], "two elements");
+}
+function test_end_pair() {
+  assertEqual(twoSumII([1,2,3,4,4,9,56,90], 8), [4,5], "end pair");
+}
+function test_negatives() {
+  assertEqual(twoSumII([-3,-2,0,1,4], -2), [1,3], "negatives");
+}`,
+    solution: `function twoSumII(numbers, target) {
+  let left = 0, right = numbers.length - 1;
+  while (left < right) {
+    const sum = numbers[left] + numbers[right];
+    if (sum === target) return [left + 1, right + 1];
+    else if (sum < target) left++;
+    else right--;
+  }
+  return [];
+}`,
+    usage: `Two Sum II leverages the sorted property to avoid the O(n) hash map lookup of Two Sum I. The two-pointer guarantee: if sum < target, we need a larger value so left++; if sum > target, we need smaller so right--. This pattern extends to 3Sum, 4Sum, and any problem on a sorted structure where you're searching for a target combination.`,
+    tags: ["array", "two-pointers", "binary-search", "neetcode"],
+  },
 ];
