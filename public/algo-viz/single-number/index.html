@@ -13,6 +13,40 @@
     .left-col, .right-col { display: flex; flex-direction: column; gap: 12px; }
     @media (max-width: 700px) { .main-row { grid-template-columns: 1fr; } }
 
+    /* viz-inputs */
+    .viz-inputs {
+      display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end;
+      padding: 10px 0 14px; width: 100%; max-width: 90%;
+    }
+    .viz-inputs .field {
+      display: flex; flex-direction: column; gap: 4px;
+    }
+    .viz-inputs label {
+      font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--text-dim);
+    }
+    .viz-inputs input[type="text"] {
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--text); border-radius: var(--radius-sm);
+      padding: 6px 10px; font-size: 0.85rem; width: 180px;
+    }
+    .viz-inputs select {
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--text); border-radius: var(--radius-sm);
+      padding: 6px 10px; font-size: 0.85rem; cursor: pointer;
+    }
+    .viz-inputs button {
+      padding: 7px 14px; border-radius: var(--radius-sm);
+      font-weight: 600; cursor: pointer; border: none; font-size: 0.85rem;
+    }
+    .viz-inputs .btn-run {
+      background: var(--accent); color: #fff;
+    }
+    .viz-inputs .btn-random {
+      background: var(--surface); color: var(--text);
+      border: 1px solid var(--border);
+    }
+
     /* array section */
     .array-section {
       padding: 16px;
@@ -158,19 +192,45 @@
   <div class="page-sub">LeetCode 136 &middot; Bit Manipulation &middot; O(n) time &middot; O(1) space</div>
 </div>
 
-<div class="controls">
+<div class="viz-inputs">
+  <div class="field">
+    <label>Preset</label>
+    <select id="presetSel" onchange="loadPreset()">
+      <option value="">— pick a preset —</option>
+      <option value='{"nums":"4,1,2,1,2"}'>Two pairs + single</option>
+      <option value='{"nums":"1"}'>Single element</option>
+      <option value='{"nums":"2,2,3,3,5"}'>Multiple pairs + single</option>
+      <option value='{"nums":"0,1,0,1,99"}'>Zeros and unique</option>
+      <option value='{"nums":"7,7,7,7,7,7,8"}'>Many duplicates</option>
+      <option value='{"nums":"10,1,10,2,1"}'>Unsorted pairs</option>
+    </select>
+  </div>
   <div class="field">
     <label>nums</label>
-    <input id="inp-nums" type="text" value="4,1,2,1,2" style="width:220px" />
+    <input id="inp-nums" type="text" value="4,1,2,1,2" />
   </div>
-  <button class="btn-primary" onclick="buildAndRun()">Build &amp; Run</button>
+  <button class="btn-run" onclick="buildAndRun()">Run</button>
+  <button class="btn-random" onclick="randomExample()">🎲 Random</button>
+</div>
+
+<div class="controls">
+  <div class="nav-row">
+    <button class="stepBtn" id="prevBtn" disabled>&larr;</button>
+    <button class="stepBtn" id="stepBtn" disabled>&rarr;</button>
+    <button class="playBtn" id="playBtn" disabled>&#9654; Play</button>
+    <select class="speedSel" id="speedSel">
+      <option value="700">Slow</option>
+      <option value="350" selected>Medium</option>
+      <option value="100">Fast</option>
+    </select>
+  </div>
 </div>
 
 <div class="viz-area">
   <div class="main-row">
     <div class="left-col">
       <div class="array-section" id="array-section">
-        <span style="color:var(--text-dim);font-size:0.82rem">Enter nums and click Build &amp; Run.</span>
+        <span style="color:var(--text-dim);font-size:0.82rem">Enter nums and click Run.</span>
       </div>
       <div class="code-panel">
         <div class="code-header">Python</div>
@@ -182,10 +242,10 @@
       <div style="display:flex;gap:12px">
         <div class="panel-box" style="flex:0 0 auto">
           <div class="nav-row">
-            <button class="stepBtn" id="prevBtn" disabled>&larr;</button>
-            <button class="stepBtn" id="stepBtn" disabled>&rarr;</button>
-            <button class="playBtn" id="playBtn" disabled>&#9654; Play</button>
-            <select class="speedSel" id="speedSel">
+            <button class="stepBtn" id="prevBtn2" disabled>&larr;</button>
+            <button class="stepBtn" id="stepBtn2" disabled>&rarr;</button>
+            <button class="playBtn" id="playBtn2" disabled>&#9654; Play</button>
+            <select class="speedSel" id="speedSel2">
               <option value="700">Slow</option>
               <option value="350" selected>Medium</option>
               <option value="100">Fast</option>
@@ -194,7 +254,7 @@
         </div>
         <div class="panel-box" style="flex:1;min-width:0">
           <div class="panel-title" id="phase-label">&mdash;</div>
-          <div style="font-size:0.82rem;color:var(--text-muted);margin-top:2px" id="step-desc">Enter nums and click Build &amp; Run.</div>
+          <div style="font-size:0.82rem;color:var(--text-muted);margin-top:2px" id="step-desc">Enter nums and click Run.</div>
         </div>
       </div>
 
@@ -254,6 +314,37 @@ function buildCodePanel() {
     var id = ln > 0 ? ' id="cl-' + ln + '"' : '';
     return '<div class="code-line"' + id + '><span class="ln">' + (ln || '') + '</span><span>' + html + '</span></div>';
   }).join('');
+}
+
+function loadPreset() {
+  var sel = document.getElementById('presetSel');
+  if (!sel.value) return;
+  var d = JSON.parse(sel.value);
+  document.getElementById('inp-nums').value = d.nums;
+  buildAndRun();
+}
+
+function randomExample() {
+  var count = Math.floor(Math.random() * 8) + 2;
+  var nums = [];
+  for (var i = 0; i < count; i++) {
+    nums.push(Math.floor(Math.random() * 100) - 50);
+  }
+  var uniqueIdx = Math.floor(Math.random() * nums.length);
+  nums[uniqueIdx] = Math.floor(Math.random() * 100) - 50;
+  for (var j = 0; j < nums.length; j++) {
+    if (j !== uniqueIdx) {
+      var pair = Math.floor(Math.random() * 100) - 50;
+      if (j + 1 < nums.length) {
+        nums[j] = pair;
+        nums[j + 1] = pair;
+        j++;
+      }
+    }
+  }
+  document.getElementById('inp-nums').value = nums.join(',');
+  document.getElementById('presetSel').value = '';
+  buildAndRun();
 }
 
 function buildAndRun() {
