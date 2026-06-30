@@ -131,6 +131,37 @@
     .nb { color: var(--green); }
     .cm { color: var(--text-ghost); }
     .st { color: var(--yellow-light); }
+
+    /* viz-inputs */
+    .viz-inputs {
+      display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end;
+      padding: 10px 0 14px; width: 100%; max-width: 90%;
+    }
+    .viz-inputs .field {
+      display: flex; flex-direction: column; gap: 4px;
+    }
+    .viz-inputs label {
+      font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--text-dim);
+    }
+    .viz-inputs input[type="text"] {
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--text); border-radius: var(--radius-sm);
+      padding: 6px 10px; font-size: 0.85rem; width: 200px; font-family: monospace;
+    }
+    .viz-inputs select {
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--text); border-radius: var(--radius-sm);
+      padding: 6px 10px; font-size: 0.85rem; cursor: pointer;
+    }
+    .viz-inputs .btn-primary {
+      padding: 7px 18px; background: var(--accent); color: #fff;
+      border: none; border-radius: var(--radius-sm); font-weight: 600; cursor: pointer;
+    }
+    .viz-inputs button:not(.btn-primary) {
+      padding: 7px 14px; background: var(--surface); color: var(--text);
+      border: 1px solid var(--border); border-radius: var(--radius-sm); cursor: pointer;
+    }
   </style>
 </head>
 <body class="page">
@@ -143,14 +174,27 @@
 
 <div class="viz-inputs">
   <div class="field">
+    <label>Preset</label>
+    <select id="presetSel" onchange="loadPreset()">
+      <option value="">— pick a preset —</option>
+      <option value='{"board":"oaan;etae;ihkr;iflv","words":"oath,pea,eat,rain"}'>Example: 4x4 multi-word</option>
+      <option value='{"board":"abcd;efgh;ijkl;mnop","words":"ace,fhk,beg"}'>Example: No matches</option>
+      <option value='{"board":"aab;aab;aab","words":"aaab,abab,baa"}'>Example: Repeated chars</option>
+      <option value='{"board":"oa;at;th","words":"oath"}'>Example: Diagonal-like</option>
+      <option value='{"board":"cat;art;tar","words":"car,cat,tar,rat"}'>Example: Circular path</option>
+      <option value='{"board":"x;y;z","words":"xyz,yx"}'>Example: 3x1 tall board</option>
+    </select>
+  </div>
+  <div class="field">
     <label>Board rows (semicolon-separated)</label>
-    <input id="inp-board" type="text" value="oaan;etae;ihkr;iflv" style="width:200px;font-family:monospace;font-size:0.9rem" />
+    <input id="inp-board" type="text" value="oaan;etae;ihkr;iflv" />
   </div>
   <div class="field">
     <label>Words (comma-separated)</label>
-    <input id="inp-words" type="text" value="oath,pea,eat,rain" style="width:200px;font-family:monospace;font-size:0.9rem" />
+    <input id="inp-words" type="text" value="oath,pea,eat,rain" />
   </div>
   <button class="btn-primary" onclick="buildAndRun()">Build</button>
+  <button onclick="randomExample()">🎲 Random</button>
 </div>
 
 <div class="viz-area">
@@ -638,6 +682,49 @@ function buildAndRun() {
     });
   }
   nav.load(STEPS);
+}
+
+function loadPreset() {
+  var sel = document.getElementById('presetSel');
+  if (!sel.value) return;
+  var d = JSON.parse(sel.value);
+  document.getElementById('inp-board').value = d.board;
+  document.getElementById('inp-words').value = d.words;
+  buildAndRun();
+}
+
+function randomExample() {
+  var chars = 'abcdefghijklmnopqrstuvwxyz'.split('');
+  var getRandomChar = function() { return chars[Math.floor(Math.random() * chars.length)]; };
+  
+  // Random board: 2-5 x 2-5
+  var rows = 2 + Math.floor(Math.random() * 4);
+  var cols = 2 + Math.floor(Math.random() * 4);
+  var board = [];
+  for (var r = 0; r < rows; r++) {
+    var row = '';
+    for (var c = 0; c < cols; c++) {
+      row += getRandomChar();
+    }
+    board.push(row);
+  }
+  
+  // Random words: 2-4 words, 2-4 chars each
+  var numWords = 2 + Math.floor(Math.random() * 3);
+  var words = [];
+  for (var w = 0; w < numWords; w++) {
+    var len = 2 + Math.floor(Math.random() * 3);
+    var word = '';
+    for (var i = 0; i < len; i++) {
+      word += getRandomChar();
+    }
+    words.push(word);
+  }
+  
+  document.getElementById('inp-board').value = board.join(';');
+  document.getElementById('inp-words').value = words.join(',');
+  document.getElementById('presetSel').value = '';
+  buildAndRun();
 }
 
 renderCode([]);
