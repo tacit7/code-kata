@@ -8,6 +8,33 @@
   <script src="../shared/gsap.min.js"></script>
   <script src="../shared/viz.js"></script>
   <style>
+    .viz-inputs {
+      display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end;
+      padding: 10px 0 14px; width: 100%; max-width: 90%;
+    }
+    .viz-inputs .field {
+      display: flex; flex-direction: column; gap: 4px;
+    }
+    .viz-inputs label {
+      font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--text-dim);
+    }
+    .viz-inputs input[type="text"] {
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--text); border-radius: var(--radius-sm);
+      padding: 6px 10px; font-size: 0.85rem; width: 180px;
+    }
+    .viz-inputs input[type="number"] {
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--text); border-radius: var(--radius-sm);
+      padding: 6px 10px; font-size: 0.85rem; width: 80px;
+    }
+    .viz-inputs select {
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--text); border-radius: var(--radius-sm);
+      padding: 6px 10px; font-size: 0.85rem; cursor: pointer;
+    }
+
     .viz-area {
       width: 100%; max-width: 90%;
       display: flex; flex-direction: column; gap: 14px;
@@ -237,31 +264,33 @@
     </div>
   </div>
 
-  <div class="controls">
+  <div class="viz-inputs">
     <div class="field">
       <label>Preset</label>
       <select id="presetSel" onchange="loadPreset()">
         <option value="">— custom —</option>
         <option value="2,7,11,15|9" selected>2,7,11,15 → target 9</option>
         <option value="3,2,4|6">3,2,4 → target 6</option>
-        <option value="3,3|6">3,3 → target 6</option>
+        <option value="3,3|6">3,3 → target 6 (duplicates)</option>
         <option value="1,5,3,8,2|10">1,5,3,8,2 → target 10</option>
-        <option value="-1,-2,-3,-4,-5|-8">-1,-2,-3,-4,-5 → target -8</option>
-        <option value="0,4,3,0|0">0,4,3,0 → target 0</option>
+        <option value="-1,-2,-3,-4,-5|-8">-1,-2,-3,-4,-5 → target -8 (negatives)</option>
+        <option value="0,4,3,0|0">0,4,3,0 → target 0 (zeros)</option>
         <option value="1,2,3,4,5,6,7,8,9,10|19">1..10 → target 19</option>
       </select>
     </div>
     <div class="field">
-      <label>Array (comma-separated)</label>
+      <label>Array</label>
       <input type="text" id="arrayInput" value="2,7,11,15" />
     </div>
     <div class="field">
       <label>Target</label>
       <input type="number" id="targetInput" value="9" />
     </div>
-    <button class="btn-primary" onclick="buildAndRun()">Build &amp; Run</button>
-    <button class="btn-secondary" onclick="randomExample()" style="background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:var(--radius-sm);padding:8px 14px;cursor:pointer;font-size:0.85rem;">🎲 Random</button>
+    <button onclick="buildAndRun()" style="background:var(--accent);border:none;color:#fff;border-radius:var(--radius-sm);padding:8px 16px;cursor:pointer;font-size:0.85rem;font-weight:700;">Run</button>
+    <button onclick="randomExample()" style="background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:var(--radius-sm);padding:8px 14px;cursor:pointer;font-size:0.85rem;">🎲 Random</button>
   </div>
+
+  <div class="controls"></div>
 
   <div class="viz-area">
     <div class="nav-row">
