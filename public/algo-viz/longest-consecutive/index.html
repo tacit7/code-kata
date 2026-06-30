@@ -106,6 +106,48 @@
       color: var(--accent);
     }
 
+    .viz-inputs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: flex-end;
+      padding: 10px 0 14px;
+      width: 100%;
+      max-width: 90%;
+      margin-bottom: 16px;
+    }
+    .viz-inputs .field {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .viz-inputs label {
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-dim);
+    }
+    .viz-inputs input[type="text"] {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 6px;
+      padding: 6px 10px;
+      font-size: 0.85rem;
+      width: 220px;
+      font-family: monospace;
+    }
+    .viz-inputs select {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 6px;
+      padding: 6px 10px;
+      font-size: 0.85rem;
+      cursor: pointer;
+    }
+
     .controls {
       margin-bottom: 20px;
       padding: 12px;
@@ -152,10 +194,39 @@
     <div class="page-sub">LeetCode #128 · Hash Set · O(n) time · O(n) space</div>
   </div>
 
+  <div class="viz-inputs">
+    <div class="field">
+      <label>Preset</label>
+      <select id="presetSel" onchange="loadPreset()">
+        <option value="">— pick a preset —</option>
+        <option value='{"nums":"100, 4, 200, 1, 3, 2"}'>Simple sequence [1-4]</option>
+        <option value='{"nums":"1, 2, 3, 4, 5"}'>All consecutive</option>
+        <option value='{"nums":"9, 1, 4, 7, 3, 2, 8, 5, 6"}'>Full range [1-9]</option>
+        <option value='{"nums":"42"}'>Single element</option>
+        <option value='{"nums":"0, 3, 7, 2, 5, 8, 4, 6, 1"}'>Disjoint sequences</option>
+        <option value='{"nums":"-5, -4, -3, -2, -1, 0, 1"}'>Negative numbers</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Numbers</label>
+      <input type="text" id="nums-input" placeholder="Enter numbers separated by commas (e.g., 100, 4, 200, 1, 3, 2)" value="100, 4, 200, 1, 3, 2">
+    </div>
+    <button onclick="buildAndRun()" style="padding:7px 18px;background:var(--accent);color:#fff;border:none;border-radius:6px;font-weight:600;cursor:pointer;">Run</button>
+    <button onclick="randomExample()" style="padding:7px 14px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:6px;cursor:pointer;">🎲 Random</button>
+  </div>
+
   <div class="controls">
     <div class="controls-row">
-      <input type="text" id="nums-input" placeholder="Enter numbers separated by commas (e.g., 100, 4, 200, 1, 3, 2)" value="100, 4, 200, 1, 3, 2">
-      <button id="build-btn">Build & Run</button>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="btn-step" id="prevBtn" disabled>&#8592;</button>
+        <button class="btn-step" id="stepBtn" disabled>&#8594;</button>
+        <button class="btn-play" id="playBtn" disabled>&#9654; Play</button>
+        <select id="speedSel" style="background:var(--bg);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:6px 10px;font-size:0.85rem">
+          <option value="700">Slow</option>
+          <option value="250" selected>Medium</option>
+          <option value="80">Fast</option>
+        </select>
+      </div>
     </div>
   </div>
 
@@ -163,10 +234,10 @@
     <div style="display:flex;gap:12px;margin-bottom:14px">
       <div class="panel-box" style="flex:0 0 auto">
         <div style="display:flex;gap:8px;align-items:center">
-          <button class="btn-step" id="prevBtn" disabled>&#8592;</button>
-          <button class="btn-step" id="stepBtn" disabled>&#8594;</button>
-          <button class="btn-play" id="playBtn" disabled>&#9654; Play</button>
-          <select id="speedSel" style="background:var(--bg);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:6px 10px;font-size:0.85rem">
+          <button class="btn-step" id="prevBtn2" disabled>&#8592;</button>
+          <button class="btn-step" id="stepBtn2" disabled>&#8594;</button>
+          <button class="btn-play" id="playBtn2" disabled>&#9654; Play</button>
+          <select id="speedSel2" style="background:var(--bg);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:6px 10px;font-size:0.85rem">
             <option value="700">Slow</option>
             <option value="250" selected>Medium</option>
             <option value="80">Fast</option>
@@ -175,7 +246,7 @@
       </div>
       <div class="panel-box" style="flex:1;min-width:0">
         <div style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--text-dim)" id="phase-label">—</div>
-        <div style="font-size:0.88rem;color:var(--text-muted);margin-top:3px" id="step-desc">Click Build &amp; Run to start.</div>
+        <div style="font-size:0.88rem;color:var(--text-muted);margin-top:3px" id="step-desc">Click Run to start.</div>
       </div>
     </div>
 
@@ -470,6 +541,34 @@
       nav.load(currentSteps);
     }
 
+    function loadPreset() {
+      var sel = document.getElementById('presetSel');
+      if (!sel.value) return;
+      var d = JSON.parse(sel.value);
+      document.getElementById('nums-input').value = d.nums;
+      buildAndRun();
+    }
+
+    function randomExample() {
+      var presetExamples = [
+        [100, 4, 200, 1, 3, 2],
+        [1, 2, 3, 4, 5],
+        [9, 1, 4, 7, 3, 2, 8, 5, 6],
+        [42],
+        [0, 3, 7, 2, 5, 8, 4, 6, 1],
+        [-5, -4, -3, -2, -1, 0, 1],
+        [5, 15, 10, 20, 25],
+        [1],
+        [10, 8, 9, 11, 12],
+        [99, 1, 50, 2, 49, 3, 48]
+      ];
+      var randomIdx = Math.floor(Math.random() * presetExamples.length);
+      var randomNums = presetExamples[randomIdx].join(', ');
+      document.getElementById('nums-input').value = randomNums;
+      document.getElementById('presetSel').value = '';
+      buildAndRun();
+    }
+
     window.addEventListener('DOMContentLoaded', function() {
       setCodeLines([0]);
 
@@ -483,8 +582,6 @@
           updateStatus(snap, cur, total);
         }
       });
-
-      document.getElementById('build-btn').addEventListener('click', buildAndRun);
 
       buildAndRun();
     });
