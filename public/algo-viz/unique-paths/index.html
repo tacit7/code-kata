@@ -13,6 +13,34 @@
     .left-col, .right-col { display: flex; flex-direction: column; gap: 12px; }
     @media (max-width: 700px) { .main-row { grid-template-columns: 1fr; } }
 
+    /* viz-inputs */
+    .viz-inputs {
+      display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end;
+      padding: 10px 0 14px; width: 100%; max-width: 90%;
+    }
+    .viz-inputs .field {
+      display: flex; flex-direction: column; gap: 4px;
+    }
+    .viz-inputs label {
+      font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--text-dim);
+    }
+    .viz-inputs input[type="text"] {
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--text); border-radius: var(--radius-sm);
+      padding: 6px 10px; font-size: 0.85rem; width: 180px;
+    }
+    .viz-inputs input[type="number"] {
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--text); border-radius: var(--radius-sm);
+      padding: 6px 10px; font-size: 0.85rem; width: 80px;
+    }
+    .viz-inputs select {
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--text); border-radius: var(--radius-sm);
+      padding: 6px 10px; font-size: 0.85rem; cursor: pointer;
+    }
+
     /* grid section */
     .grid-section {
       padding: 16px;
@@ -167,22 +195,27 @@
 
 <div class="viz-inputs">
   <div class="field">
+    <label>Preset</label>
+    <select id="presetSel" onchange="loadPreset()">
+      <option value="">— pick a preset —</option>
+      <option value='{"m":"3","n":"7"}'>3×7 (default)</option>
+      <option value='{"m":"3","n":"3"}'>3×3 (small square)</option>
+      <option value='{"m":"4","n":"4"}'>4×4 (medium)</option>
+      <option value='{"m":"5","n":"5"}'>5×5 (larger)</option>
+      <option value='{"m":"2","n":"10"}'>2×10 (wide)</option>
+      <option value='{"m":"10","n":"2"}'>10×2 (tall)</option>
+    </select>
+  </div>
+  <div class="field">
     <label>Rows (m)</label>
-    <input id="inp-m" type="number" value="3" min="1" max="7" style="width:70px" />
+    <input id="inp-m" type="number" value="3" min="1" max="7" />
   </div>
   <div class="field">
     <label>Cols (n)</label>
-    <input id="inp-n" type="number" value="7" min="1" max="10" style="width:70px" />
+    <input id="inp-n" type="number" value="7" min="1" max="10" />
   </div>
-  <div class="field">
-    <label>Preset</label>
-    <div style="display:flex;gap:6px">
-      <button class="btn-preset" onclick="setPreset(3,7)">3&times;7</button>
-      <button class="btn-preset" onclick="setPreset(3,3)">3&times;3</button>
-      <button class="btn-preset" onclick="setPreset(4,4)">4&times;4</button>
-    </div>
-  </div>
-  <button class="btn-primary" onclick="buildAndRun()">Build &amp; Run</button>
+  <button onclick="buildAndRun()" style="padding:7px 18px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);font-weight:600;cursor:pointer;">Run</button>
+  <button onclick="randomExample()" style="padding:7px 14px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;">🎲 Random</button>
 </div>
 
 <div class="viz-area">
@@ -330,6 +363,24 @@ function setPreset(m, n) {
   document.getElementById('inp-n').value = n;
 }
 
+function loadPreset() {
+  var sel = document.getElementById('presetSel');
+  if (!sel.value) return;
+  var d = JSON.parse(sel.value);
+  document.getElementById('inp-m').value = d.m;
+  document.getElementById('inp-n').value = d.n;
+  buildAndRun();
+}
+
+function randomExample() {
+  var m = Math.floor(Math.random() * 6) + 2;
+  var n = Math.floor(Math.random() * 8) + 2;
+  document.getElementById('presetSel').value = '';
+  document.getElementById('inp-m').value = m;
+  document.getElementById('inp-n').value = n;
+  buildAndRun();
+}
+
 function buildAndRun() {
   var m = parseInt(document.getElementById('inp-m').value, 10);
   var n = parseInt(document.getElementById('inp-n').value, 10);
@@ -365,7 +416,6 @@ function buildGrid(m, n) {
 
 function simulate(m, n) {
   var steps = [];
-  // -1 = unfilled sentinel
   var dp = [];
   for (var i = 0; i < m; i++) dp.push(new Array(n).fill(-1));
 
@@ -392,7 +442,7 @@ function simulate(m, n) {
       if (i === 0 || j === 0) {
         dp[i][j] = 1;
         var edgeMsg = i === 0 && j === 0
-          ? 'dp[0][0] = 1. Starting cell — one path (we\'re already here).'
+          ? 'dp[0][0] = 1. Starting cell — one path (we're already here).'
           : i === 0
             ? 'dp[0][' + j + '] = 1. First row — can only move right, exactly one path.'
             : 'dp[' + i + '][0] = 1. First column — can only move down, exactly one path.';
