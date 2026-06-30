@@ -35,6 +35,34 @@
     .result-badge.happy  { background: rgba(34,197,94,0.15);  border: 1px solid rgba(34,197,94,0.4);  color: #22c55e; }
     .result-badge.sad    { background: rgba(239,68,68,0.12);   border: 1px solid rgba(239,68,68,0.35);  color: #f87171; }
 
+    /* ── viz-inputs ── */
+    .viz-inputs {
+      display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end;
+      padding: 10px 0 14px; width: 100%; max-width: 90%;
+    }
+    .viz-inputs .field {
+      display: flex; flex-direction: column; gap: 4px;
+    }
+    .viz-inputs label {
+      font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--text-dim);
+    }
+    .viz-inputs input[type="text"] {
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--text); border-radius: var(--radius-sm);
+      padding: 6px 10px; font-size: 0.85rem; width: 180px;
+    }
+    .viz-inputs input[type="number"] {
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--text); border-radius: var(--radius-sm);
+      padding: 6px 10px; font-size: 0.85rem; width: 80px;
+    }
+    .viz-inputs select {
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--text); border-radius: var(--radius-sm);
+      padding: 6px 10px; font-size: 0.85rem; cursor: pointer;
+    }
+
     /* ── middle ── */
     .middle {
       flex: 1; display: grid; grid-template-columns: 1fr 1fr;
@@ -159,12 +187,27 @@
 </head>
 <body>
 
-<!-- TOP -->
-<div class="top-bar">
-  <label>n =</label>
-  <input type="number" id="n-input" value="19" min="1" max="9999" />
-  <button id="btn-build">Build</button>
-  <span class="result-badge" id="result-badge"></span>
+<!-- VIZ INPUTS -->
+<div class="viz-inputs" style="padding: 12px 20px; border-bottom: 1px solid var(--border); background: var(--bg);">
+  <div class="field">
+    <label>Preset</label>
+    <select id="presetSel" onchange="loadPreset()">
+      <option value="">— pick a preset —</option>
+      <option value='{"n":"19"}'>19 (Happy)</option>
+      <option value='{"n":"7"}'>7 (Happy)</option>
+      <option value='{"n":"10"}'>10 (Cycle)</option>
+      <option value='{"n":"23"}'>23 (Happy)</option>
+      <option value='{"n":"86"}'>86 (Cycle)</option>
+      <option value='{"n":"100"}'>100 (Happy)</option>
+    </select>
+  </div>
+  <div class="field">
+    <label>n</label>
+    <input type="number" id="n-input" value="19" min="1" max="9999" />
+  </div>
+  <button onclick="buildAndRun()" style="padding:7px 18px;background:var(--accent);color:#fff;border:none;border-radius:6px;font-weight:600;cursor:pointer;">Run</button>
+  <button onclick="randomExample()" style="padding:7px 14px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:6px;cursor:pointer;">🎲 Random</button>
+  <span class="result-badge" id="result-badge" style="margin-left: auto;"></span>
 </div>
 
 <!-- MIDDLE -->
@@ -204,7 +247,7 @@
 <div class="bottom-bar">
   <div class="step-info">
     <span class="phase-label" id="phase-label">Step 0 / 0</span>
-    <span class="step-desc" id="step-desc">Press Build to start.</span>
+    <span class="step-desc" id="step-desc">Press Run to start.</span>
   </div>
   <div class="nav-row">
     <button id="prevBtn">&#8592; Prev</button>
@@ -529,8 +572,22 @@ function buildAndRun() {
   nav.load(steps);
 }
 
+function loadPreset() {
+  var sel = document.getElementById('presetSel');
+  if (!sel.value) return;
+  var d = JSON.parse(sel.value);
+  document.getElementById('n-input').value = d.n;
+  buildAndRun();
+}
+
+function randomExample() {
+  var n = Math.floor(Math.random() * 9980) + 1;
+  document.getElementById('n-input').value = n;
+  document.getElementById('presetSel').value = '';
+  buildAndRun();
+}
+
 document.addEventListener('DOMContentLoaded', function() {
-  document.getElementById('btn-build').addEventListener('click', buildAndRun);
   document.getElementById('n-input').addEventListener('keydown', function(e) {
     if (e.key === 'Enter') buildAndRun();
   });
