@@ -93,6 +93,51 @@
       padding-left: 6px;
     }
 
+    .viz-inputs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: flex-end;
+      padding: 10px 0 14px;
+      width: 100%;
+      max-width: 90%;
+      margin: 0 auto;
+    }
+
+    .viz-inputs .field {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .viz-inputs label {
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-dim);
+    }
+
+    .viz-inputs input[type="text"] {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 6px;
+      padding: 6px 10px;
+      font-size: 0.85rem;
+      width: 200px;
+    }
+
+    .viz-inputs select {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 6px;
+      padding: 6px 10px;
+      font-size: 0.85rem;
+      cursor: pointer;
+    }
+
     .controls input {
       background: var(--bg);
       border: 1px solid var(--border);
@@ -125,10 +170,28 @@
     <div class="page-sub">LeetCode #11 · Two Pointers · O(n) time · O(1) space</div>
   </div>
 
-  <div class="controls" style="display: flex; gap: 12px; margin: 20px auto; width: 100%; max-width: 90%; align-items: center;">
-    <input type="text" id="inputField" placeholder="e.g., 1,8,6,2,5,4,8,3,7" value="1,8,6,2,5,4,8,3,7" style="flex: 1; min-width: 200px;">
-    <button onclick="buildAndRun()">Build &amp; Run</button>
+  <div class="viz-inputs">
+    <div class="field">
+      <label>Preset</label>
+      <select id="presetSel" onchange="loadPreset()">
+        <option value="">— pick a preset —</option>
+        <option value='{"heights":"1,8,6,2,5,4,8,3,7"}'>Classic: max water 49</option>
+        <option value='{"heights":"2,3,4,5,18,17,6"}'>Peak: tall container</option>
+        <option value='{"heights":"2,2,2,2,2"}'>Equal heights: 8</option>
+        <option value='{"heights":"1,2,4,3,2"}'>Varied: max 6</option>
+        <option value='{"heights":"9,8,6,2,3,5,20,2,6,5"}'>Large array</option>
+        <option value='{"heights":"1,1"}'>Minimum case</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Heights</label>
+      <input type="text" id="inputField" placeholder="e.g., 1,8,6,2,5,4,8,3,7" value="1,8,6,2,5,4,8,3,7" style="width: 200px;">
+    </div>
+    <button onclick="buildAndRun()" style="padding:7px 18px;background:var(--accent);color:#fff;border:none;border-radius:6px;font-weight:600;cursor:pointer;">Run</button>
+    <button onclick="randomExample()" style="padding:7px 14px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:6px;cursor:pointer;">🎲 Random</button>
   </div>
+
+  <div class="controls"></div>
 
   <div class="viz-area" style="width: 100%; max-width: 90%; margin: 0 auto;">
     <!-- Navigation & Status Row -->
@@ -147,7 +210,7 @@
       </div>
       <div class="panel-box" style="flex: 1; min-width: 0;">
         <div style="font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-dim);" id="phase-label">—</div>
-        <div style="font-size: 0.88rem; color: var(--text-muted); margin-top: 3px;" id="step-desc">Click Build &amp; Run to start.</div>
+        <div style="font-size: 0.88rem; color: var(--text-muted); margin-top: 3px;" id="step-desc">Click Run to start.</div>
       </div>
     </div>
 
@@ -235,6 +298,25 @@
         const el = document.getElementById(`cl-${lineNum}`);
         if (el) el.classList.add('hl');
       });
+    }
+
+    function loadPreset() {
+      var sel = document.getElementById('presetSel');
+      if (!sel.value) return;
+      var d = JSON.parse(sel.value);
+      document.getElementById('inputField').value = d.heights;
+      buildAndRun();
+    }
+
+    function randomExample() {
+      var len = Math.floor(Math.random() * 6) + 3;
+      var heights = [];
+      for (var i = 0; i < len; i++) {
+        heights.push(Math.floor(Math.random() * 10) + 1);
+      }
+      document.getElementById('inputField').value = heights.join(',');
+      document.getElementById('presetSel').value = '';
+      buildAndRun();
     }
 
     function buildAndRun() {
@@ -367,7 +449,7 @@
     function updateStatus(snap, cur, total) {
       const { phase, desc, lines } = snap;
       document.getElementById('phase-label').textContent = phase || '—';
-      document.getElementById('step-desc').textContent = desc || 'Click Build & Run to start.';
+      document.getElementById('step-desc').textContent = desc || 'Click Run to start.';
     }
 
     // Hide back-link in iframe
