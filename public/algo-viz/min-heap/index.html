@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Min Heap</title>
+  <link rel="stylesheet" href="../shared/style.css" />
+  <script src="../shared/gsap.min.js"></script>
+  <script src="../shared/viz.js"></script>
+  <style>
+    .viz-area {
+      width: 100%; max-width: 96%;
+      display: flex; flex-direction: column; gap: 14px;
+    }
+    .main-row {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 14px;
+      align-items: start;
+    }
+    @media (max-width: 900px) { .main-row { grid-template-columns: 1fr; } }
+    .tree-panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 14px;
+      min-height: 280px;
+    }
+    .tree-label {
+      font-size: 0.68rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.1em;
+      color: var(--text-dim); margin-bottom: 12px;
+    }
+    #heap-svg { width: 100%; display: block; }
+    .heap-edge { stroke: var(--border); stroke-width: 1.5; }
+    .array-panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 14px;
+    }
+    .array-label {
+      font-size: 0.68rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.1em;
+      color: var(--text-dim); margin-bottom: 10px;
+    }
+    .array-row { display: flex; gap: 4px; flex-wrap: wrap; }
+    .arr-cell { display: flex; flex-direction: column; align-items: center; min-width: 36px; }
+    .arr-val {
+      width: 36px; height: 36px;
+      display: flex; align-items: center; justify-content: center;
+      background: #0a0d14; border: 1px solid var(--border);
+      border-radius: 6px;
+      font-family: monospace; font-size: 0.9rem; font-weight: 700;
+      color: var(--text-bright);
+      transition: all 0.2s;
+    }
+    .arr-val.moving   { background: #1e2a4a; border-color: var(--accent); color: var(--accent); }
+    .arr-val.settled  { background: #0f2a1e; border-color: #4ade80; color: #4ade80; }
+    .arr-val.violated { background: #2a0f14; border-color: #f87171; color: #f87171; }
+    .arr-val.swapping { background: #2a1f0a; border-color: #fb923c; color: #fb923c; }
+    .arr-idx { font-size: 0.65rem; color: var(--text-dim); margin-top: 3px; font-family: monospace; }
+    .code-panel {
+      background: #0a0d14;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      display: flex; flex-direction: column;
+    }
+    .code-header {
+      padding: 9px 14px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      font-size: 0.67rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.11em;
+      color: var(--text-dim);
+    }
+    .code-body {
+      padding: 12px 0; flex: 1;
+      font-family: "JetBrains Mono", "Fira Code", monospace;
+      font-size: 0.77rem; line-height: 1.75;
+      overflow-x: auto;
+    }
+    .cl {
+      display: flex; align-items: stretch;
+      border-left: 3px solid transparent;
+      padding: 0 14px 0 0;
+      transition: background-color 0.01s;
+      white-space: pre;
+    }
+    .cl .ln {
+      width: 28px; min-width: 28px;
+      text-align: right; color: #3d4468;
+      user-select: none; padding-right: 14px;
+      font-size: 0.72rem; line-height: 1.75;
+    }
+    .cl .code { color: var(--text-muted); }
+    .cl.hl {
+      background: rgba(122, 162, 247, 0.12);
+      border-left-color: var(--accent);
+    }
+    .kw  { color: var(--purple); }
+    .fn  { color: var(--blue); }
+    .bi  { color: var(--orange); }
+    .cm  { color: #3d4468; font-style: italic; }
+    .num { color: var(--yellow); }
+    .legend { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 4px; }
+    .leg-item { display: flex; align-items: center; gap: 6px; font-size: 0.75rem; color: var(--text-dim); }
+    .leg-dot { width: 12px; height: 12px; border-radius: 50%; border: 2px solid; }
+  </style>
+</head>
+<body class="page">
+
+<div class="page-header">
+  <a class="back-link" href="../index.html">&larr; All Algorithms</a>
+  <div class="page-title">Min Heap</div>
+  <div class="page-sub">Data Structure &middot; insert O(log n) &middot; extract-min O(log n)</div>
+</div>
+
+<div class="viz-inputs" style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;padding:10px 0 14px;">
+  <div style="display:flex;flex-direction:column;gap:4px;">
+    <label style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-dim);">Preset</label>
+    <select id="presetSel" onchange="loadPreset()" style="background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:var(--radius-sm);padding:6px 10px;font-size:0.85rem;cursor:pointer;">
+      <option value="">— custom —</option>
+      <option value="insert:3 insert:1 insert:6 insert:2 insert:5">Build [3,1,6,2,5]</option>
+      <option value="insert:5 insert:3 insert:8 insert:1 insert:4 extract extract">Insert then extract x2</option>
+      <option value="insert:10 insert:4 insert:7 insert:2 insert:9 insert:1 extract extract extract">Extract sequence</option>
+      <option value="insert:3 insert:1 insert:6 extract insert:2 extract insert:5">Mixed ops</option>
+      <option value="insert:1 insert:2 insert:3 insert:4 insert:5 insert:6">Sorted inserts (best case)</option>
+      <option value="insert:6 insert:5 insert:4 insert:3 insert:2 insert:1">Reverse sorted (worst case)</option>
+      <option value="insert:4 insert:8 insert:2 insert:9 insert:3 insert:7 insert:1 extract extract extract extract">Build and drain</option>
+    </select>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:4px;">
+    <label style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-dim);">Operations</label>
+    <input type="text" id="opsInput" value="insert:3 insert:1 insert:6 insert:2 insert:5"
+      style="background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:var(--radius-sm);padding:6px 10px;font-size:0.85rem;width:320px;"
+      placeholder="insert:5 insert:3 extract insert:2" />
+  </div>
+  <button onclick="buildAndRun()" style="padding:7px 18px;background:var(--accent);color:#fff;border:none;border-radius:6px;font-weight:600;cursor:pointer;">Run</button>
+  <button onclick="randomExample()" style="padding:7px 14px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:6px;cursor:pointer;">&#127922; Random</button>
+</div>
+
+<div class="controls"></div>
+
+<div class="viz-area">
+  <div class="nav-row" style="display:flex;gap:12px;margin-bottom:0">
+    <div class="panel-box" style="flex:0 0 auto">
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="btn-step" id="prevBtn" disabled>&#8592;</button>
+        <button class="btn-step" id="stepBtn" disabled>&#8594;</button>
+        <button class="btn-play" id="playBtn" disabled>&#9654; Play</button>
+        <select id="speedSel" style="background:var(--bg);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:6px 10px;font-size:0.85rem">
+          <option value="900">Slow</option>
+          <option value="350" selected>Medium</option>
+          <option value="100">Fast</option>
+        </select>
+      </div>
+    </div>
+    <div class="panel-box" style="flex:1;min-width:0">
+      <div style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--text-dim)" id="phase-label">&mdash;</div>
+      <div style="font-size:0.88rem;color:var(--text-muted);margin-top:3px" id="step-desc">Enter operations and click Run.</div>
+    </div>
+  </div>
+
+  <div class="legend">
+    <div class="leg-item"><div class="leg-dot" style="background:#1e2a4a;border-color:var(--accent)"></div> Moving / Active</div>
+    <div class="leg-item"><div class="leg-dot" style="background:#2a1f0a;border-color:#fb923c"></div> Swapping</div>
+    <div class="leg-item"><div class="leg-dot" style="background:#2a0f14;border-color:#f87171"></div> Violation</div>
+    <div class="leg-item"><div class="leg-dot" style="background:#0f2a1e;border-color:#4ade80"></div> Settled</div>
+  </div>
+
+  <div class="main-row">
+    <div style="display:flex;flex-direction:column;gap:14px;">
+      <div class="tree-panel">
+        <div class="tree-label">Heap Tree</div>
+        <svg id="heap-svg" height="260"></svg>
+      </div>
+      <div class="array-panel">
+        <div class="array-label">Heap Array (0-indexed)</div>
+        <div class="array-row" id="heap-array"></div>
+      </div>
+    </div>
+    <div class="code-panel">
+      <div class="code-header">Pseudocode</div>
+      <div class="code-body" id="code-body"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+var nav;
+
+var CODE_LINES = [
+  '<span class="kw">class</span> <span class="fn">MinHeap</span>:',
+  '    heap = []',
+  '',
+  '    <span class="kw">def</span> <span class="fn">insert</span>(<span class="bi">val</span>):',
+  '        heap.append(val)         <span class="cm"># add at end</span>',
+  '        i = len(heap) - <span class="num">1</span>',
+  '        <span class="kw">while</span> i > <span class="num">0</span>:           <span class="cm"># bubble up</span>',
+  '            parent = (i-<span class="num">1</span>) // <span class="num">2</span>',
+  '            <span class="kw">if</span> heap[i] < heap[parent]:',
+  '                swap(i, parent)',
+  '                i = parent',
+  '            <span class="kw">else</span>: <span class="kw">break</span>',
+  '',
+  '    <span class="kw">def</span> <span class="fn">extract_min</span>():',
+  '        root = heap[<span class="num">0</span>]',
+  '        heap[<span class="num">0</span>] = heap.pop()    <span class="cm"># last to root</span>',
+  '        i = <span class="num">0</span>',
+  '        <span class="kw">while</span> <span class="kw">True</span>:          <span class="cm"># bubble down</span>',
+  '            l,r = <span class="num">2</span>*i+<span class="num">1</span>, <span class="num">2</span>*i+<span class="num">2</span>',
+  '            s = i',
+  '            <span class="kw">if</span> l<len(heap) <span class="kw">and</span> heap[l]<heap[s]: s=l',
+  '            <span class="kw">if</span> r<len(heap) <span class="kw">and</span> heap[r]<heap[s]: s=r',
+  '            <span class="kw">if</span> s == i: <span class="kw">break</span>',
+  '            swap(i, s); i = s'
+];
+
+function renderCodePanel() {
+  var body = document.getElementById('code-body');
+  body.innerHTML = CODE_LINES.map(function(line, i) {
+    return '<div class="cl" id="cl' + i + '"><div class="ln">' + (i+1) + '</div><div class="code">' + (line || ' ') + '</div></div>';
+  }).join('');
+}
+
+function setCodeLines(active) {
+  document.querySelectorAll('.cl').forEach(function(el, i) {
+    el.classList.toggle('hl', active.indexOf(i) !== -1);
+  });
+}
+
+function treePositions(n) {
+  if (n === 0) return [];
+  var SVG_H = 260;
+  var LEVELS = Math.floor(Math.log2(n)) + 1;
+  var LEVEL_H = Math.min(70, (SVG_H - 40) / LEVELS);
+  var positions = [];
+  for (var i = 0; i < n; i++) {
+    var level = Math.floor(Math.log2(i + 1));
+    var nodesInLevel = Math.pow(2, level);
+    var posInLevel = i - (nodesInLevel - 1);
+    var xStep = 560 / (nodesInLevel + 1);
+    var x = xStep * (posInLevel + 1);
+    var y = 30 + level * LEVEL_H;
+    positions.push({ x: x, y: y });
+  }
+  return positions;
+}
+
+function renderTree(heap, hl) {
+  hl = hl || {};
+  var svg = document.getElementById('heap-svg');
+  var n = heap.length;
+  var pos = treePositions(n);
+  var R = 22;
+  var lines = '', circles = '';
+
+  for (var i = 0; i < n; i++) {
+    if (i > 0) {
+      var p = Math.floor((i - 1) / 2);
+      lines += '<line class="heap-edge" x1="' + pos[i].x + '" y1="' + pos[i].y + '" x2="' + pos[p].x + '" y2="' + pos[p].y + '" />';
+    }
+  }
+  for (var i = 0; i < n; i++) {
+    var state = hl[i] || '';
+    var fillMap = { moving: '#1e2a4a', settled: '#0f2a1e', violated: '#2a0f14', swapping: '#2a1f0a' };
+    var strokeMap = { moving: 'var(--accent)', settled: '#4ade80', violated: '#f87171', swapping: '#fb923c' };
+    var fill = fillMap[state] || 'var(--surface)';
+    var stroke = strokeMap[state] || 'var(--border)';
+    var sw = state ? '3' : '2';
+    var x = pos[i].x, y = pos[i].y;
+    circles += '<circle cx="' + x + '" cy="' + y + '" r="' + R + '" fill="' + fill + '" stroke="' + stroke + '" stroke-width="' + sw + '" />';
+    circles += '<text x="' + x + '" y="' + (y+1) + '" text-anchor="middle" dominant-baseline="middle" font-size="13" font-weight="700" fill="var(--text-bright)" font-family="monospace">' + heap[i] + '</text>';
+  }
+  svg.innerHTML = lines + circles;
+}
+
+function renderArray(heap, hl) {
+  hl = hl || {};
+  var container = document.getElementById('heap-array');
+  if (heap.length === 0) {
+    container.innerHTML = '<span style="color:var(--text-dim);font-size:0.8rem">(empty)</span>';
+    return;
+  }
+  container.innerHTML = heap.map(function(v, i) {
+    var state = hl[i] || '';
+    var cls = 'arr-val' + (state ? ' ' + state : '');
+    return '<div class="arr-cell"><div class="' + cls + '">' + v + '</div><div class="arr-idx">' + i + '</div></div>';
+  }).join('');
+}
+
+function simulate(opsStr) {
+  var steps = [];
+  var ops = opsStr.trim().split(/\s+/).filter(Boolean);
+  var heap = [];
+
+  function snap(phase, desc, hl, codeLines) {
+    steps.push({
+      phase: phase,
+      desc: desc,
+      heap: heap.slice(),
+      highlights: Object.assign({}, hl),
+      codeLines: codeLines || []
+    });
+  }
+
+  snap('Ready', 'Initial empty heap.', {}, [0, 1]);
+
+  for (var opIdx = 0; opIdx < ops.length; opIdx++) {
+    var op = ops[opIdx];
+    if (op.indexOf('insert:') === 0) {
+      var val = parseInt(op.split(':')[1]);
+      if (isNaN(val)) continue;
+
+      heap.push(val);
+      var insertIdx = heap.length - 1;
+      var h0 = {}; h0[insertIdx] = 'moving';
+      snap('Insert', 'insert(' + val + ') → append at index ' + insertIdx, h0, [3, 4, 5]);
+
+      var i = insertIdx;
+      while (i > 0) {
+        var parent = Math.floor((i - 1) / 2);
+        if (heap[i] < heap[parent]) {
+          var hv = {}; hv[i] = 'violated'; hv[parent] = 'violated';
+          snap('Bubble Up', 'heap[' + i + ']=' + heap[i] + ' < heap[' + parent + ']=' + heap[parent] + ' → violation', hv, [6, 7, 8]);
+          var tmp = heap[i]; heap[i] = heap[parent]; heap[parent] = tmp;
+          var hs = {}; hs[i] = 'swapping'; hs[parent] = 'swapping';
+          snap('Bubble Up', 'Swapped ↔ indices ' + i + ' and ' + parent, hs, [9, 10]);
+          i = parent;
+        } else {
+          var hok = {}; hok[i] = 'settled';
+          snap('Bubble Up', 'heap[' + i + ']=' + heap[i] + ' >= parent → heap property satisfied', hok, [11]);
+          break;
+        }
+      }
+      if (i === 0) {
+        var hr = {}; hr[0] = 'settled';
+        snap('Insert Done', 'Reached root. insert(' + val + ') complete. Size: ' + heap.length, hr, [6]);
+      } else {
+        var hd = {}; hd[i] = 'settled';
+        snap('Insert Done', 'insert(' + val + ') complete. Size: ' + heap.length, hd, [3]);
+      }
+
+    } else if (op === 'extract' || op === 'extract_min') {
+      if (heap.length === 0) {
+        snap('Extract', 'Heap is empty — nothing to extract.', {}, [13]);
+        continue;
+      }
+      var minVal = heap[0];
+      var hm = {}; hm[0] = 'moving';
+      snap('Extract Min', 'extract_min() → root = ' + minVal, hm, [13, 14]);
+
+      if (heap.length === 1) {
+        heap.pop();
+        snap('Extract Min', 'Only element removed. Heap now empty.', {}, [15]);
+        continue;
+      }
+
+      var last = heap.pop();
+      heap[0] = last;
+      var hm2 = {}; hm2[0] = 'moving';
+      snap('Extract Min', 'Move last (' + last + ') to root, remove min (' + minVal + ')', hm2, [15, 16]);
+
+      var i = 0;
+      while (true) {
+        var l = 2 * i + 1;
+        var r = 2 * i + 2;
+        var smallest = i;
+        if (l < heap.length && heap[l] < heap[smallest]) smallest = l;
+        if (r < heap.length && heap[r] < heap[smallest]) smallest = r;
+
+        if (smallest === i) {
+          var hok2 = {}; hok2[i] = 'settled';
+          snap('Bubble Down', 'heap[' + i + ']=' + heap[i] + ' is min among children — done.', hok2, [22]);
+          break;
+        }
+
+        var hv2 = {}; hv2[i] = 'violated'; hv2[smallest] = 'violated';
+        snap('Bubble Down', 'heap[' + i + ']=' + heap[i] + ' > child heap[' + smallest + ']=' + heap[smallest] + ' → swap', hv2, [17, 18, 19, 20, 21]);
+        var tmp2 = heap[i]; heap[i] = heap[smallest]; heap[smallest] = tmp2;
+        var hs2 = {}; hs2[i] = 'swapping'; hs2[smallest] = 'swapping';
+        snap('Bubble Down', 'Swapped indices ' + i + ' ↔ ' + smallest, hs2, [23]);
+        i = smallest;
+      }
+      snap('Extract Done', 'Extracted min = ' + minVal + '. Heap size: ' + heap.length, {}, [13]);
+    }
+  }
+
+  snap('Done', 'All operations complete. Final heap size: ' + heap.length, {}, []);
+  return steps;
+}
+
+function applyStep(snap) {
+  renderTree(snap.heap, snap.highlights);
+  renderArray(snap.heap, snap.highlights);
+  setCodeLines(snap.codeLines || []);
+}
+
+function updateStatus(snap) {
+  document.getElementById('phase-label').textContent = snap.phase || '—';
+  document.getElementById('step-desc').textContent = snap.desc || '';
+}
+
+window.addEventListener('DOMContentLoaded', function() {
+  renderCodePanel();
+
+  nav = VizNav({
+    btnPrev: document.getElementById('prevBtn'),
+    btnNext: document.getElementById('stepBtn'),
+    btnPlay: document.getElementById('playBtn'),
+    speedSel: document.getElementById('speedSel'),
+    render: function(snap) {
+      applyStep(snap);
+      updateStatus(snap);
+    }
+  });
+
+  buildAndRun();
+});
+
+function buildAndRun() {
+  var ops = document.getElementById('opsInput').value.trim();
+  if (!ops) { alert('Enter at least one operation.'); return; }
+  var steps = simulate(ops);
+  nav.load(steps);
+}
+
+if (window.self !== window.top) {
+  var bl = document.querySelector('.back-link');
+  if (bl) bl.style.display = 'none';
+}
+
+function loadPreset() {
+  var sel = document.getElementById('presetSel');
+  if (!sel.value) return;
+  document.getElementById('opsInput').value = sel.value;
+  buildAndRun();
+}
+
+function randomExample() {
+  var ops = [];
+  var count = 4 + Math.floor(Math.random() * 5);
+  for (var i = 0; i < count; i++) {
+    ops.push('insert:' + (1 + Math.floor(Math.random() * 20)));
+  }
+  var extracts = 1 + Math.floor(Math.random() * 3);
+  for (var i = 0; i < extracts; i++) ops.push('extract');
+  document.getElementById('opsInput').value = ops.join(' ');
+  document.getElementById('presetSel').value = '';
+  buildAndRun();
+}
+</script>
+
+</body>
+</html>

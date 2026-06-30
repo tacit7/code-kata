@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Monotonic Stack</title>
+  <link rel="stylesheet" href="../shared/style.css" />
+  <script src="../shared/gsap.min.js"></script>
+  <script src="../shared/viz.js"></script>
+  <style>
+    .viz-inputs {
+      display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end;
+      padding: 10px 0 14px; width: 100%; max-width: 96%;
+    }
+    .viz-inputs .field { display: flex; flex-direction: column; gap: 4px; }
+    .viz-inputs label {
+      font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--text-dim);
+    }
+    .viz-inputs input[type="text"] {
+      background: var(--bg-card); border: 1px solid var(--border);
+      color: var(--text-main); border-radius: 6px;
+      padding: 6px 10px; font-size: 0.85rem; width: 220px;
+    }
+    .viz-inputs select {
+      background: var(--bg-card); border: 1px solid var(--border);
+      color: var(--text-main); border-radius: 6px;
+      padding: 6px 10px; font-size: 0.85rem; cursor: pointer;
+    }
+    .btn-run {
+      padding: 7px 18px; background: var(--accent); color: #fff;
+      border: none; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 0.85rem;
+    }
+    .btn-run:hover { opacity: 0.85; }
+    .btn-rand {
+      padding: 7px 14px; background: var(--bg-card); color: var(--text-main);
+      border: 1px solid var(--border); border-radius: 6px; cursor: pointer; font-size: 0.85rem;
+    }
+    .btn-rand:hover { border-color: var(--accent); }
+
+    #viz-root {
+      width: 100%; max-width: 96%;
+      display: flex; flex-direction: column; gap: 18px;
+    }
+
+    #status-bar {
+      font-size: 0.82rem; color: var(--text-dim); min-height: 1.4em; padding: 4px 0;
+    }
+    #status-bar span { color: var(--text-main); font-weight: 600; }
+
+    .main-area { display: flex; gap: 24px; align-items: flex-start; }
+    .left-col  { flex: 1; display: flex; flex-direction: column; gap: 16px; }
+    .right-col { flex: 0 0 145px; display: flex; flex-direction: column; gap: 8px; }
+
+    .array-label {
+      font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--text-dim); margin-bottom: 4px;
+    }
+    .array-row { display: flex; gap: 6px; flex-wrap: wrap; }
+    .arr-cell  { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+    .arr-box {
+      width: 46px; height: 46px;
+      display: flex; align-items: center; justify-content: center;
+      border: 2px solid var(--border); border-radius: 8px;
+      background: var(--bg-card); color: var(--text-main);
+      font-size: 1.1rem; font-weight: 700;
+      transition: background 0.2s, border-color 0.2s;
+    }
+    .arr-box.current { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 18%, var(--bg-card)); }
+    .arr-box.popped  { border-color: var(--success); background: color-mix(in srgb, var(--success) 18%, var(--bg-card)); }
+    .arr-box.done    { border-color: var(--text-dim); opacity: 0.5; }
+    .arr-box.stacked { border-color: #a78bfa; background: color-mix(in srgb, #a78bfa 14%, var(--bg-card)); }
+    .arr-idx { font-size: 0.65rem; color: var(--text-dim); font-weight: 600; }
+
+    .res-box {
+      width: 46px; height: 36px;
+      display: flex; align-items: center; justify-content: center;
+      border: 2px solid var(--border); border-radius: 6px;
+      background: var(--bg-card); color: var(--text-dim);
+      font-size: 0.95rem; font-weight: 700;
+      transition: background 0.2s, color 0.2s, border-color 0.2s;
+    }
+    .res-box.filled { border-color: var(--success); color: var(--success); background: color-mix(in srgb, var(--success) 14%, var(--bg-card)); }
+    .res-box.minus  { border-color: var(--error); color: var(--error); }
+
+    .stack-label {
+      font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--text-dim); text-align: center;
+    }
+    .stack-col {
+      display: flex; flex-direction: column-reverse; align-items: center; gap: 5px;
+      min-height: 200px; padding: 8px 4px;
+      border: 2px dashed var(--border); border-radius: 8px;
+      background: color-mix(in srgb, var(--bg-card) 60%, transparent);
+    }
+    .stack-item {
+      width: 120px; height: 40px;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      border: 2px solid #a78bfa; border-radius: 6px;
+      background: color-mix(in srgb, #a78bfa 16%, var(--bg-card));
+      color: var(--text-main); font-size: 0.9rem; font-weight: 700;
+      transition: all 0.25s;
+    }
+    .stack-item .si-val { font-size: 1rem; }
+    .stack-item .si-idx { font-size: 0.7rem; color: var(--text-dim); }
+    .stack-item.top     { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 20%, var(--bg-card)); }
+    .stack-item.popping { border-color: var(--error); background: color-mix(in srgb, var(--error) 20%, var(--bg-card)); animation: pop-flash 0.35s; }
+    @keyframes pop-flash { 0%,100%{opacity:1} 50%{opacity:0.3} }
+    .stack-empty-hint { font-size: 0.72rem; color: var(--text-dim); text-align: center; opacity: 0.6; padding: 10px 4px; }
+
+    .legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 0.72rem; color: var(--text-dim); }
+    .leg-item { display: flex; align-items: center; gap: 5px; }
+    .leg-swatch { width: 14px; height: 14px; border-radius: 3px; border: 2px solid; }
+
+    #code-panel {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: 8px; padding: 12px 16px; font-size: 0.78rem;
+      font-family: monospace; line-height: 1.75; overflow-x: auto;
+    }
+    #code-panel pre { margin: 0; }
+    .cl { padding: 1px 6px; border-radius: 4px; transition: background 0.15s; white-space: pre; display: block; }
+    .cl.hl { background: color-mix(in srgb, var(--accent) 25%, transparent); color: var(--text-main); }
+    .code-toggle {
+      font-size: 0.72rem; cursor: pointer; color: var(--accent);
+      user-select: none; margin-bottom: 6px; display: inline-block;
+    }
+  </style>
+</head>
+<body>
+
+<div class="viz-inputs">
+  <div class="field">
+    <label>Preset</label>
+    <select id="presetSel" onchange="loadPreset()">
+      <option value="">— pick a preset —</option>
+      <option value="mixed">Mixed [2,1,2,4,3,1,5,3]</option>
+      <option value="ascending">Ascending [1,2,3,4,5,6]</option>
+      <option value="descending">Descending [6,5,4,3,2,1]</option>
+      <option value="zigzag">Zigzag [3,1,4,1,5,9,2,6]</option>
+      <option value="same">All Same [3,3,3,3,3]</option>
+      <option value="valley">Valley [5,3,1,2,4,6]</option>
+      <option value="peak">Peak [1,3,5,4,2]</option>
+      <option value="single">Single [7]</option>
+    </select>
+  </div>
+  <div class="field">
+    <label>Array (comma-separated)</label>
+    <input type="text" id="arrInput" value="2,1,2,4,3,1,5,3" placeholder="e.g. 2,1,2,4,3" />
+  </div>
+  <div class="field">
+    <label>Mode</label>
+    <select id="modeSel" onchange="buildAndRun()">
+      <option value="nge">Next Greater Element</option>
+      <option value="nse">Next Smaller Element</option>
+    </select>
+  </div>
+  <button class="btn-run" onclick="buildAndRun()">Run</button>
+  <button class="btn-rand" onclick="randomExample()">&#x1F3B2; Random</button>
+</div>
+
+<div class="controls"></div>
+
+<div id="viz-root">
+  <div id="status-bar">Press Run to start.</div>
+
+  <div class="main-area">
+    <div class="left-col">
+      <div>
+        <div class="array-label">Input Array</div>
+        <div class="array-row" id="arr-row"></div>
+      </div>
+      <div>
+        <div class="array-label">Result</div>
+        <div class="array-row" id="res-row"></div>
+      </div>
+      <div class="legend">
+        <div class="leg-item">
+          <div class="leg-swatch" style="border-color:var(--accent);background:color-mix(in srgb,var(--accent) 18%,transparent)"></div>
+          Current
+        </div>
+        <div class="leg-item">
+          <div class="leg-swatch" style="border-color:#a78bfa;background:color-mix(in srgb,#a78bfa 14%,transparent)"></div>
+          In stack
+        </div>
+        <div class="leg-item">
+          <div class="leg-swatch" style="border-color:var(--success);background:color-mix(in srgb,var(--success) 18%,transparent)"></div>
+          Answer found
+        </div>
+        <div class="leg-item">
+          <div class="leg-swatch" style="border-color:var(--text-dim);background:transparent;opacity:0.5"></div>
+          Done
+        </div>
+      </div>
+    </div>
+    <div class="right-col">
+      <div class="stack-label">Stack (top &uarr;)</div>
+      <div class="stack-col" id="stack-col">
+        <div class="stack-empty-hint">empty</div>
+      </div>
+    </div>
+  </div>
+
+  <div>
+    <span class="code-toggle" onclick="toggleCode()">&#9658; Show pseudocode</span>
+    <div id="code-panel" style="display:none">
+      <pre id="code-body"><span id="cl0" class="cl">def next_greater_element(nums):</span>
+<span id="cl1" class="cl">    n = len(nums)</span>
+<span id="cl2" class="cl">    result = [-1] * n</span>
+<span id="cl3" class="cl">    stack = []  # stores indices</span>
+<span id="cl4" class="cl"> </span>
+<span id="cl5" class="cl">    for i in range(n):</span>
+<span id="cl6" class="cl">        # pop while stack top &lt; current (NGE)</span>
+<span id="cl7" class="cl">        while stack and nums[stack[-1]] &lt; nums[i]:</span>
+<span id="cl8" class="cl">            idx = stack.pop()</span>
+<span id="cl9" class="cl">            result[idx] = nums[i]</span>
+<span id="cl10" class="cl">        stack.append(i)</span>
+<span id="cl11" class="cl"> </span>
+<span id="cl12" class="cl">    # remaining have no next greater element</span>
+<span id="cl13" class="cl">    # result[idx] stays -1</span>
+<span id="cl14" class="cl">    return result</span></pre>
+    </div>
+  </div>
+</div>
+
+<!-- hidden nav buttons required by VizNav bridge -->
+<div style="display:none">
+  <button id="prevBtn"></button>
+  <button id="stepBtn"></button>
+  <button id="playBtn"></button>
+  <button id="resetBtn"></button>
+  <select id="speedSel">
+    <option value="1200">0.5x</option>
+    <option value="700" selected>1x</option>
+    <option value="400">2x</option>
+    <option value="200">4x</option>
+  </select>
+</div>
+
+<script>
+// ─── State ────────────────────────────────────────────────────────────────────
+var steps = [];
+var currentStep = -1;
+var playTimer = null;
+var isPlaying = false;
+var speedMs = 700;
+var _nums = [];
+
+var PRESETS = {
+  mixed:      [2,1,2,4,3,1,5,3],
+  ascending:  [1,2,3,4,5,6],
+  descending: [6,5,4,3,2,1],
+  zigzag:     [3,1,4,1,5,9,2,6],
+  same:       [3,3,3,3,3],
+  valley:     [5,3,1,2,4,6],
+  peak:       [1,3,5,4,2],
+  single:     [7],
+};
+
+// ─── Input helpers ────────────────────────────────────────────────────────────
+function loadPreset() {
+  var key = document.getElementById('presetSel').value;
+  if (!key) return;
+  document.getElementById('arrInput').value = PRESETS[key].join(',');
+  buildAndRun();
+}
+
+function randomExample() {
+  var len = 6 + Math.floor(Math.random() * 5);
+  var arr = [];
+  for (var i = 0; i < len; i++) arr.push(1 + Math.floor(Math.random() * 9));
+  document.getElementById('arrInput').value = arr.join(',');
+  document.getElementById('presetSel').value = '';
+  buildAndRun();
+}
+
+function parseInput() {
+  var raw = document.getElementById('arrInput').value;
+  return raw.split(',').map(function(s){ return parseInt(s.trim(), 10); }).filter(function(n){ return !isNaN(n); });
+}
+
+// ─── Simulation builder ───────────────────────────────────────────────────────
+function buildSteps(nums, mode) {
+  var n = nums.length;
+  var result = [];
+  for (var k = 0; k < n; k++) result.push(null); // null = not yet known
+  var stack = []; // stores indices
+  var stepList = [];
+
+  stepList.push({
+    phase: 'init',
+    i: -1,
+    stackSnap: [],
+    resultSnap: result.slice(),
+    cellStates: makeStates(n, 'idle'),
+    poppingIdx: -1,
+    desc: 'Starting. Stack is empty. Iterating left to right.',
+    codeLines: [0,1,2,3],
+  });
+
+  for (var i = 0; i < n; i++) {
+    // visit step
+    stepList.push({
+      phase: 'visit',
+      i: i,
+      stackSnap: stack.slice(),
+      resultSnap: result.slice(),
+      cellStates: getCellStates(i, stack, result, n),
+      poppingIdx: -1,
+      desc: 'Visiting nums[' + i + '] = ' + nums[i] + '. Check stack top.',
+      codeLines: [5,7],
+    });
+
+    // pop loop
+    while (stack.length > 0) {
+      var top = stack[stack.length - 1];
+      var shouldPop = mode === 'nge' ? (nums[top] < nums[i]) : (nums[top] > nums[i]);
+      if (!shouldPop) break;
+
+      stack.pop();
+      result[top] = nums[i];
+
+      var cs = getCellStates(i, stack, result, n);
+      cs[top] = 'popped';
+
+      var dir = mode === 'nge' ? '<' : '>';
+      stepList.push({
+        phase: 'pop',
+        i: i,
+        stackSnap: stack.slice(),
+        resultSnap: result.slice(),
+        cellStates: cs,
+        poppingIdx: top,
+        desc: 'nums[' + top + ']=' + nums[top] + ' ' + dir + ' nums[' + i + ']=' + nums[i] + ' → result[' + top + '] = ' + nums[i],
+        codeLines: [7,8,9],
+      });
+    }
+
+    // push step
+    stack.push(i);
+    stepList.push({
+      phase: 'push',
+      i: i,
+      stackSnap: stack.slice(),
+      resultSnap: result.slice(),
+      cellStates: getCellStates(i, stack, result, n),
+      poppingIdx: -1,
+      desc: 'Push index ' + i + ' (value ' + nums[i] + ') onto stack.',
+      codeLines: [10],
+    });
+  }
+
+  // finalize: remaining items in stack get -1
+  while (stack.length > 0) {
+    var idx = stack.pop();
+    result[idx] = -1;
+  }
+  var csF = makeStates(n, 'done');
+  stepList.push({
+    phase: 'done',
+    i: -1,
+    stackSnap: [],
+    resultSnap: result.slice(),
+    cellStates: csF,
+    poppingIdx: -1,
+    desc: 'Done! Remaining stack items have no ' + (mode === 'nge' ? 'greater' : 'smaller') + ' element → -1.',
+    codeLines: [12,13,14],
+  });
+
+  return stepList;
+}
+
+function makeStates(n, val) {
+  var a = [];
+  for (var k = 0; k < n; k++) a.push(val);
+  return a;
+}
+
+function getCellStates(currentI, stack, result, n) {
+  var states = makeStates(n, 'idle');
+  for (var k = 0; k < n; k++) {
+    if (result[k] !== null) states[k] = 'done';
+  }
+  for (var j = 0; j < stack.length; j++) states[stack[j]] = 'stacked';
+  if (currentI >= 0) states[currentI] = 'current';
+  return states;
+}
+
+// ─── DOM build ────────────────────────────────────────────────────────────────
+function buildDOM(nums) {
+  var arrRow = document.getElementById('arr-row');
+  var resRow = document.getElementById('res-row');
+  arrRow.innerHTML = '';
+  resRow.innerHTML = '';
+  for (var i = 0; i < nums.length; i++) {
+    arrRow.innerHTML += '<div class="arr-cell"><div class="arr-box" id="ab' + i + '">' + nums[i] + '</div><div class="arr-idx">[' + i + ']</div></div>';
+    resRow.innerHTML += '<div class="arr-cell"><div class="res-box" id="rb' + i + '">&nbsp;</div><div class="arr-idx">[' + i + ']</div></div>';
+  }
+}
+
+// ─── Render ───────────────────────────────────────────────────────────────────
+function render(idx) {
+  if (!steps.length) return;
+  var s = steps[idx];
+  var nums = _nums;
+
+  // cell states
+  for (var i = 0; i < s.cellStates.length; i++) {
+    var box = document.getElementById('ab' + i);
+    if (!box) continue;
+    box.className = 'arr-box';
+    var state = s.cellStates[i];
+    if (state === 'current') box.classList.add('current');
+    else if (state === 'popped') box.classList.add('popped');
+    else if (state === 'done') box.classList.add('done');
+    else if (state === 'stacked') box.classList.add('stacked');
+  }
+
+  // result boxes
+  for (var i = 0; i < s.resultSnap.length; i++) {
+    var rb = document.getElementById('rb' + i);
+    if (!rb) continue;
+    rb.className = 'res-box';
+    var v = s.resultSnap[i];
+    if (v === null) { rb.innerHTML = '&nbsp;'; }
+    else if (v === -1) { rb.classList.add('minus'); rb.textContent = '-1'; }
+    else { rb.classList.add('filled'); rb.textContent = String(v); }
+  }
+
+  // stack column
+  var stackCol = document.getElementById('stack-col');
+  if (s.stackSnap.length === 0) {
+    stackCol.innerHTML = '<div class="stack-empty-hint">empty</div>';
+  } else {
+    stackCol.innerHTML = '';
+    for (var j = 0; j < s.stackSnap.length; j++) {
+      var sidx = s.stackSnap[j];
+      var isTop = (j === s.stackSnap.length - 1);
+      var isPopping = (sidx === s.poppingIdx);
+      var cls = 'stack-item';
+      if (isTop) cls += ' top';
+      if (isPopping) cls += ' popping';
+      stackCol.innerHTML += '<div class="' + cls + '"><span class="si-val">' + nums[sidx] + '</span><span class="si-idx">i=' + sidx + '</span></div>';
+    }
+  }
+
+  // status
+  document.getElementById('status-bar').innerHTML =
+    'Step ' + (idx + 1) + ' / ' + steps.length + ' &mdash; ' + s.desc;
+
+  // code highlight
+  for (var cl = 0; cl <= 14; cl++) {
+    var el = document.getElementById('cl' + cl);
+    if (el) el.classList.remove('hl');
+  }
+  var lines = s.codeLines || [];
+  for (var li = 0; li < lines.length; li++) {
+    var el = document.getElementById('cl' + lines[li]);
+    if (el) el.classList.add('hl');
+  }
+}
+
+// ─── Code panel update ────────────────────────────────────────────────────────
+function updateCodePseudo(mode) {
+  var fn  = mode === 'nge' ? 'next_greater_element' : 'next_smaller_element';
+  var cmt = mode === 'nge' ? '# pop while stack top < current (NGE)' : '# pop while stack top > current (NSE)';
+  var cnd = mode === 'nge'
+    ? '        while stack and nums[stack[-1]] &lt; nums[i]:'
+    : '        while stack and nums[stack[-1]] &gt; nums[i]:';
+  document.getElementById('cl0').textContent  = 'def ' + fn + '(nums):';
+  document.getElementById('cl6').textContent  = '        ' + cmt;
+  document.getElementById('cl7').innerHTML    = cnd;
+}
+
+// ─── Build & Run ──────────────────────────────────────────────────────────────
+function buildAndRun() {
+  clearPlay();
+  _nums = parseInput();
+  if (_nums.length === 0) return;
+  var mode = document.getElementById('modeSel').value;
+  steps = buildSteps(_nums, mode);
+  buildDOM(_nums);
+  updateCodePseudo(mode);
+  currentStep = 0;
+  render(0);
+}
+
+// ─── Playback ─────────────────────────────────────────────────────────────────
+function clearPlay() {
+  if (playTimer) { clearInterval(playTimer); playTimer = null; }
+  isPlaying = false;
+}
+
+function doPlay() {
+  if (isPlaying) { clearPlay(); return; }
+  if (currentStep >= steps.length - 1) currentStep = 0;
+  isPlaying = true;
+  playTimer = setInterval(function() {
+    if (currentStep < steps.length - 1) {
+      currentStep++;
+      render(currentStep);
+    } else {
+      clearPlay();
+    }
+  }, speedMs);
+}
+
+// ─── VizNav button wiring ─────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', function() {
+  var prev  = document.getElementById('prevBtn');
+  var step  = document.getElementById('stepBtn');
+  var play  = document.getElementById('playBtn');
+  var reset = document.getElementById('resetBtn');
+  var speed = document.getElementById('speedSel');
+  if (prev)  prev.onclick  = function(){ clearPlay(); if (currentStep > 0){ currentStep--; render(currentStep); } };
+  if (step)  step.onclick  = function(){ clearPlay(); if (currentStep < steps.length-1){ currentStep++; render(currentStep); } };
+  if (play)  play.onclick  = doPlay;
+  if (reset) reset.onclick = function(){ clearPlay(); currentStep = 0; render(0); };
+  if (speed) speed.onchange = function(e){ speedMs = parseInt(e.target.value,10) || 700; };
+});
+
+// ─── Code toggle ──────────────────────────────────────────────────────────────
+function toggleCode() {
+  var panel  = document.getElementById('code-panel');
+  var toggle = document.querySelector('.code-toggle');
+  var vis    = panel.style.display !== 'none';
+  panel.style.display = vis ? 'none' : 'block';
+  toggle.innerHTML = (vis ? '&#9658;' : '&#9660;') + ' ' + (vis ? 'Show' : 'Hide') + ' pseudocode';
+}
+
+// ─── Boot ─────────────────────────────────────────────────────────────────────
+buildAndRun();
+</script>
+</body>
+</html>

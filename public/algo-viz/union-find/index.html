@@ -1,0 +1,866 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Union-Find (DSU)</title>
+  <link rel="stylesheet" href="../shared/style.css" />
+  <script src="../shared/gsap.min.js"></script>
+  <script src="../shared/viz.js"></script>
+  <style>
+    .viz-inputs {
+      display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end;
+      padding: 10px 0 14px; width: 100%; max-width: 98%;
+    }
+    .viz-inputs .field { display: flex; flex-direction: column; gap: 4px; }
+    .viz-inputs label {
+      font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--text-dim);
+    }
+    .viz-inputs select, .viz-inputs input {
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--text); border-radius: var(--radius-sm);
+      padding: 6px 10px; font-size: 0.85rem;
+    }
+    .viz-inputs input.ops-input { width: 360px; }
+    .viz-inputs input.n-input { width: 60px; }
+
+    .viz-area {
+      width: 100%; max-width: 98%;
+      display: flex; flex-direction: column; gap: 12px;
+    }
+
+    .nav-row { display: flex; gap: 12px; align-items: stretch; }
+
+    .controls-panel {
+      flex: 0 0 auto; display: flex; gap: 8px; align-items: center;
+    }
+
+    .btn-step {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); color: var(--text);
+      cursor: pointer; font-size: 0.9rem; font-weight: 700;
+      padding: 7px 14px; transition: all 0.15s;
+    }
+    .btn-step:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+    .btn-step:disabled { opacity: 0.35; cursor: not-allowed; }
+
+    .btn-play {
+      background: var(--accent); border: none;
+      border-radius: var(--radius-sm); color: #1a1b26;
+      cursor: pointer; font-size: 0.85rem; font-weight: 700;
+      padding: 7px 16px; transition: background 0.15s;
+    }
+    .btn-play:hover:not(:disabled) { background: var(--accent-hover); }
+    .btn-play:disabled { opacity: 0.35; cursor: not-allowed; }
+
+    #speedSel {
+      background: var(--bg); border: 1px solid var(--border);
+      color: var(--text); border-radius: var(--radius-sm);
+      padding: 5px 8px; font-size: 0.8rem; cursor: pointer;
+    }
+
+    .status-panel {
+      flex: 1; min-width: 0; background: var(--surface);
+      border: 1px solid var(--border); border-radius: var(--radius-md);
+      padding: 8px 14px;
+    }
+    .phase-label {
+      font-size: 0.68rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.1em; color: var(--text-dim);
+    }
+    .step-desc {
+      font-size: 0.85rem; color: var(--text-muted); margin-top: 3px; min-height: 1.3em;
+    }
+
+    .main-row {
+      display: grid; grid-template-columns: 1fr 270px; gap: 12px; align-items: start;
+    }
+    @media (max-width: 820px) { .main-row { grid-template-columns: 1fr; } }
+
+    .left-col { display: flex; flex-direction: column; gap: 10px; }
+
+    #graph-container {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); overflow: hidden;
+      height: 310px; position: relative;
+    }
+    #graph-svg { width: 100%; height: 100%; }
+
+    #arrays-container {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-md); padding: 12px 16px;
+    }
+    .arr-section-title {
+      font-size: 0.68rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.1em; color: var(--text-dim); margin-bottom: 8px;
+    }
+    .arr-row { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
+    .arr-label {
+      font-size: 0.72rem; font-weight: 700; color: var(--text-dim);
+      width: 70px; font-family: monospace; flex: 0 0 auto;
+    }
+    .arr-cells { display: flex; gap: 4px; flex-wrap: nowrap; overflow-x: auto; }
+    .cell-block { display: flex; flex-direction: column; align-items: center; gap: 2px; flex: 0 0 auto; }
+    .cell-idx { font-size: 0.6rem; color: var(--text-dim); font-family: monospace; }
+    .arr-cell {
+      width: 36px; height: 32px; display: flex; align-items: center; justify-content: center;
+      border-radius: 5px; font-size: 0.82rem; font-weight: 700; font-family: monospace;
+      border: 2px solid var(--border); background: var(--bg); color: var(--text);
+      transition: background 0.22s, border-color 0.22s;
+    }
+    .arr-cell.is-root { border-color: var(--green) !important; background: var(--green-bg) !important; color: var(--green) !important; }
+    .arr-cell.is-active { border-color: var(--accent) !important; background: rgba(122,162,247,0.15) !important; }
+
+    #legend {
+      display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px;
+      padding-top: 6px; border-top: 1px solid var(--border-soft);
+    }
+    .legend-item { display: flex; align-items: center; gap: 5px; font-size: 0.72rem; color: var(--text-dim); }
+    .legend-dot { width: 10px; height: 10px; border-radius: 50%; flex: 0 0 auto; }
+
+    #code-panel {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-md); padding: 12px 14px;
+    }
+    .code-title {
+      font-size: 0.68rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.1em; color: var(--text-dim); margin-bottom: 10px;
+    }
+    #code-body {
+      font-family: 'JetBrains Mono', 'Fira Code', monospace;
+      font-size: 0.74rem; line-height: 1.85; overflow: auto;
+    }
+    .cl {
+      display: block; padding: 1px 6px;
+      white-space: pre; border-left: 2px solid transparent;
+      color: var(--text-muted); transition: all 0.2s;
+    }
+    .cl.hl {
+      background: rgba(122,162,247,0.12);
+      border-left-color: var(--accent);
+      color: var(--text);
+    }
+    .ln {
+      display: inline-block; width: 18px; text-align: right;
+      color: var(--text-dim); user-select: none; margin-right: 8px; font-size: 0.7rem;
+    }
+    .kw { color: var(--purple); }
+    .fn { color: var(--accent); }
+    .cm { color: var(--text-dim); font-style: italic; }
+  </style>
+</head>
+
+<body class="page">
+  <div class="page-header">
+    <a class="back-link" href="../index.html">&#8592; All Algorithms</a>
+    <div>
+      <div class="page-title">Union-Find (DSU)</div>
+      <div style="font-size:0.78rem;color:var(--text-dim);margin-top:4px;">
+        Disjoint Set Union &middot; Path Compression + Union by Rank &middot; O(&alpha;(n)) per op
+      </div>
+    </div>
+  </div>
+
+  <div class="viz-inputs">
+    <div class="field">
+      <label>Preset</label>
+      <select id="presetSel" onchange="loadPreset()">
+        <option value="">&#8212; custom &#8212;</option>
+        <option value="chain" selected>Chain (0&#8594;1&#8594;2&#8594;3&#8594;4&#8594;5)</option>
+        <option value="star">Star (all unite with 0)</option>
+        <option value="two-comps">Two components &#8594; merge</option>
+        <option value="grid">Grid connections</option>
+        <option value="already-conn">Already connected (no-ops)</option>
+        <option value="merge-all">Merge all step-by-step</option>
+        <option value="path-comp">Deep chain (path compression demo)</option>
+        <option value="rank-demo">Rank union demo</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Operations &nbsp;(union:x,y &nbsp;&middot;&nbsp; find:x)</label>
+      <input type="text" id="opsInput" class="ops-input"
+        value="union:0,1 union:1,2 union:2,3 union:3,4 union:4,5 find:0" />
+    </div>
+    <div class="field">
+      <label>Nodes (n)</label>
+      <input type="number" id="nInput" class="n-input" value="6" min="2" max="10" />
+    </div>
+    <button onclick="buildAndRun()"
+      style="background:var(--accent);border:none;color:#1a1b26;border-radius:var(--radius-sm);padding:8px 16px;cursor:pointer;font-size:0.85rem;font-weight:700;align-self:flex-end;">
+      Run
+    </button>
+    <button onclick="randomExample()"
+      style="background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:var(--radius-sm);padding:8px 14px;cursor:pointer;font-size:0.85rem;align-self:flex-end;">
+      &#127922; Random
+    </button>
+  </div>
+
+  <div class="controls"></div>
+
+  <div class="viz-area">
+    <div class="nav-row">
+      <div class="controls-panel">
+        <button class="btn-step" id="prevBtn" disabled>&#8592;</button>
+        <button class="btn-step" id="stepBtn" disabled>&#8594;</button>
+        <button class="btn-play" id="playBtn" disabled>&#9654; Play</button>
+        <button class="btn-step" id="resetBtn" title="Reset to start">&#8635;</button>
+        <select id="speedSel">
+          <option value="1000">Slow</option>
+          <option value="500" selected>Medium</option>
+          <option value="200">Fast</option>
+          <option value="80">Turbo</option>
+        </select>
+      </div>
+      <div class="status-panel">
+        <div class="phase-label" id="phase-label">&#8212;</div>
+        <div class="step-desc" id="step-desc">Select a preset or enter operations, then click Run.</div>
+      </div>
+    </div>
+
+    <div class="main-row">
+      <div class="left-col">
+        <div id="graph-container">
+          <svg id="graph-svg">
+            <defs>
+              <marker id="arr-default" markerWidth="7" markerHeight="7" refX="5.5" refY="3.5" orient="auto">
+                <path d="M0,0 L0,7 L7,3.5 z" fill="#414868" />
+              </marker>
+              <marker id="arr-hl" markerWidth="7" markerHeight="7" refX="5.5" refY="3.5" orient="auto">
+                <path d="M0,0 L0,7 L7,3.5 z" fill="#7aa2f7" />
+              </marker>
+              <marker id="arr-compress" markerWidth="7" markerHeight="7" refX="5.5" refY="3.5" orient="auto">
+                <path d="M0,0 L0,7 L7,3.5 z" fill="#9ece6a" />
+              </marker>
+            </defs>
+            <g id="edges-g"></g>
+            <g id="nodes-g"></g>
+          </svg>
+        </div>
+
+        <div id="arrays-container">
+          <div class="arr-section-title">Internal State</div>
+          <div class="arr-row">
+            <span class="arr-label">parent[]</span>
+            <div class="arr-cells" id="parent-cells"></div>
+          </div>
+          <div class="arr-row">
+            <span class="arr-label">rank[]</span>
+            <div class="arr-cells" id="rank-cells"></div>
+          </div>
+          <div id="legend"></div>
+        </div>
+      </div>
+
+      <div class="right-col">
+        <div id="code-panel">
+          <div class="code-title">Union-Find (DSU)</div>
+          <div id="code-body"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    var COMP_COLORS = [
+      '#7aa2f7','#9ece6a','#ff9e64','#f7768e',
+      '#bb9af7','#7dcfff','#e0af68','#2ac3de',
+      '#ff007c','#73daca'
+    ];
+    var NODE_R = 22;
+
+    var codeLines = [
+      '<span class="kw">def</span> <span class="fn">find</span>(x):',
+      '    <span class="kw">if</span> parent[x] != x:',
+      '        parent[x] = <span class="fn">find</span>(parent[x])  <span class="cm"># path compress</span>',
+      '    <span class="kw">return</span> parent[x]',
+      '',
+      '<span class="kw">def</span> <span class="fn">union</span>(x, y):',
+      '    rx = <span class="fn">find</span>(x)',
+      '    ry = <span class="fn">find</span>(y)',
+      '    <span class="kw">if</span> rx == ry: <span class="kw">return</span>  <span class="cm"># same component</span>',
+      '    <span class="kw">if</span> rank[rx] < rank[ry]:',
+      '        rx, ry = ry, rx  <span class="cm"># rx = higher-rank root</span>',
+      '    parent[ry] = rx',
+      '    <span class="kw">if</span> rank[rx] == rank[ry]:',
+      '        rank[rx] += 1',
+    ];
+
+    var codeBody = document.getElementById('code-body');
+    codeLines.forEach(function(line, i) {
+      var div = document.createElement('div');
+      div.className = 'cl';
+      div.id = 'cl' + i;
+      div.innerHTML = '<span class="ln">' + (i + 1) + '</span>' + (line || ' ');
+      codeBody.appendChild(div);
+    });
+
+    var N = 6;
+    var positions = [];
+    var lastSteps = [];
+    var nav;
+
+    var PRESETS = {
+      'chain':       { n: 6,  ops: 'union:0,1 union:1,2 union:2,3 union:3,4 union:4,5 find:0' },
+      'star':        { n: 6,  ops: 'union:0,1 union:0,2 union:0,3 union:0,4 union:0,5 find:3' },
+      'two-comps':   { n: 8,  ops: 'union:0,1 union:1,2 union:3,4 union:4,5 union:6,7 find:2 union:2,3 union:5,6' },
+      'grid':        { n: 9,  ops: 'union:0,1 union:1,2 union:3,4 union:4,5 union:6,7 union:7,8 union:0,3 union:3,6 union:1,4' },
+      'already-conn':{ n: 5,  ops: 'union:0,1 union:1,2 union:0,2 union:1,3 union:0,3 find:4' },
+      'merge-all':   { n: 7,  ops: 'union:0,1 union:2,3 union:4,5 union:0,2 union:4,6 union:0,4' },
+      'path-comp':   { n: 7,  ops: 'union:0,1 union:1,2 union:2,3 union:3,4 union:4,5 union:5,6 find:0 find:0' },
+      'rank-demo':   { n: 6,  ops: 'union:0,1 union:2,3 union:4,5 union:0,2 union:2,4' },
+    };
+
+    function loadPreset() {
+      var sel = document.getElementById('presetSel').value;
+      if (!sel || !PRESETS[sel]) return;
+      var p = PRESETS[sel];
+      document.getElementById('nInput').value = p.n;
+      document.getElementById('opsInput').value = p.ops;
+      buildAndRun();
+    }
+
+    function randomExample() {
+      var n = Math.floor(Math.random() * 5) + 4;
+      var ops = [];
+      var numOps = Math.floor(Math.random() * (n - 1)) + 3;
+      for (var i = 0; i < numOps; i++) {
+        var a = Math.floor(Math.random() * n);
+        var b = Math.floor(Math.random() * (n - 1));
+        if (b >= a) b++;
+        ops.push('union:' + a + ',' + b);
+      }
+      ops.push('find:' + Math.floor(Math.random() * n));
+      document.getElementById('nInput').value = n;
+      document.getElementById('opsInput').value = ops.join(' ');
+      document.getElementById('presetSel').value = '';
+      buildAndRun();
+    }
+
+    function parseOps(str) {
+      return str.trim().split(/\s+/).map(function(tok) {
+        if (!tok) return null;
+        var parts = tok.split(':');
+        if (parts.length < 2) return null;
+        var type = parts[0].toLowerCase();
+        if (type === 'union') {
+          var ab = parts[1].split(',').map(Number);
+          if (ab.length < 2 || isNaN(ab[0]) || isNaN(ab[1])) return null;
+          return { type: 'union', a: ab[0], b: ab[1] };
+        } else if (type === 'find') {
+          var x = Number(parts[1]);
+          if (isNaN(x)) return null;
+          return { type: 'find', x: x };
+        }
+        return null;
+      }).filter(Boolean);
+    }
+
+    function trueRoot(x, parent) {
+      while (parent[x] !== x) x = parent[x];
+      return x;
+    }
+
+    function pathToRoot(x, parent) {
+      var path = [];
+      var cur = x;
+      while (parent[cur] !== cur) { path.push(cur); cur = parent[cur]; }
+      path.push(cur);
+      return path;
+    }
+
+    function getCompColors(parent) {
+      var rootColor = {};
+      var ci = 0;
+      return parent.map(function(_, i) {
+        var r = trueRoot(i, parent);
+        if (!(r in rootColor)) rootColor[r] = ci++ % COMP_COLORS.length;
+        return COMP_COLORS[rootColor[r]];
+      });
+    }
+
+    function countComponents(parent) {
+      return parent.filter(function(p, i) { return p === i; }).length;
+    }
+
+    function buildSteps(n, ops) {
+      var parent = [];
+      var rank = [];
+      for (var i = 0; i < n; i++) { parent.push(i); rank.push(0); }
+      var out = [];
+
+      function snap(phase, desc, codeLine, opts) {
+        opts = opts || {};
+        out.push({
+          phase: phase,
+          desc: desc,
+          codeLine: (codeLine !== undefined) ? codeLine : -1,
+          parent: parent.slice(),
+          rank: rank.slice(),
+          activeNodes: opts.activeNodes || [],
+          pathNodes:   opts.pathNodes   || [],
+          hlEdges:     opts.hlEdges     || [],
+          compEdges:   opts.compEdges   || []
+        });
+      }
+
+      snap('Initial', 'Each node is its own root. parent[i] = i, rank[i] = 0.', -1);
+
+      function simFind(x) {
+        var path = pathToRoot(x, parent);
+        var root = path[path.length - 1];
+
+        if (path.length === 1) {
+          snap(
+            'find(' + x + ')',
+            'Node ' + x + ' is already a root (parent[' + x + '] = ' + x + ').',
+            1,
+            { activeNodes: [x] }
+          );
+          return root;
+        }
+
+        snap(
+          'find(' + x + ')',
+          'Traversing from node ' + x + ' up to root ' + root + ' via: ' + path.join(' -> ') + '.',
+          0,
+          {
+            activeNodes: [x],
+            pathNodes: path,
+            hlEdges: path.slice(0, -1).map(function(v, i) { return [v, path[i + 1]]; })
+          }
+        );
+
+        snap(
+          'find(' + x + ')',
+          'parent[' + x + '] = ' + parent[x] + ' (not a root). Recurse up the chain.',
+          1,
+          { activeNodes: [x], pathNodes: path, hlEdges: [[x, parent[x]]] }
+        );
+
+        if (path.length > 2) {
+          snap(
+            'find(' + x + ')',
+            'Path compression: redirect nodes ' + path.slice(0, -1).join(', ') + ' directly to root ' + root + '.',
+            2,
+            {
+              activeNodes: path.slice(0, -1),
+              pathNodes: path,
+              compEdges: path.slice(0, -1).map(function(v) { return [v, root]; })
+            }
+          );
+        }
+
+        for (var i = 0; i < path.length - 1; i++) parent[path[i]] = root;
+
+        snap(
+          'find(' + x + ')',
+          'find(' + x + ') = ' + root + '. Tree is now flatter after path compression.',
+          3,
+          {
+            activeNodes: [x, root],
+            pathNodes: (x !== root) ? [x, root] : [root],
+            hlEdges: (x !== root) ? [[x, root]] : []
+          }
+        );
+
+        return root;
+      }
+
+      for (var oi = 0; oi < ops.length; oi++) {
+        var op = ops[oi];
+
+        if (op.type === 'find') {
+          var fx = op.x;
+          if (fx < 0 || fx >= n) continue;
+          snap('find(' + fx + ')', 'Calling find(' + fx + '): locate the root of node ' + fx + '.', 0, { activeNodes: [fx] });
+          simFind(fx);
+
+        } else if (op.type === 'union') {
+          var ua = op.a, ub = op.b;
+          if (ua < 0 || ua >= n || ub < 0 || ub >= n) continue;
+
+          snap(
+            'union(' + ua + ',' + ub + ')',
+            'Calling union(' + ua + ', ' + ub + '): merge components of node ' + ua + ' and node ' + ub + '.',
+            5,
+            { activeNodes: [ua, ub] }
+          );
+
+          var pathA = pathToRoot(ua, parent);
+          var rx = pathA[pathA.length - 1];
+          snap(
+            'union(' + ua + ',' + ub + ')',
+            'rx = find(' + ua + '): root is ' + rx + '. Path: ' + pathA.join(' -> ') + '.',
+            6,
+            {
+              activeNodes: [ua],
+              pathNodes: pathA,
+              hlEdges: pathA.slice(0, -1).map(function(v, i) { return [v, pathA[i + 1]]; })
+            }
+          );
+          if (pathA.length > 2) {
+            snap(
+              'union(' + ua + ',' + ub + ')',
+              'Path compression for find(' + ua + '): nodes point to root ' + rx + '.',
+              2,
+              {
+                activeNodes: pathA.slice(0, -1),
+                compEdges: pathA.slice(0, -1).map(function(v) { return [v, rx]; })
+              }
+            );
+          }
+          for (var i = 0; i < pathA.length - 1; i++) parent[pathA[i]] = rx;
+
+          var pathB = pathToRoot(ub, parent);
+          var ry = pathB[pathB.length - 1];
+          snap(
+            'union(' + ua + ',' + ub + ')',
+            'ry = find(' + ub + '): root is ' + ry + '. Path: ' + pathB.join(' -> ') + '.',
+            7,
+            {
+              activeNodes: [ub],
+              pathNodes: pathB,
+              hlEdges: pathB.slice(0, -1).map(function(v, i) { return [v, pathB[i + 1]]; })
+            }
+          );
+          if (pathB.length > 2) {
+            snap(
+              'union(' + ua + ',' + ub + ')',
+              'Path compression for find(' + ub + '): nodes point to root ' + ry + '.',
+              2,
+              {
+                activeNodes: pathB.slice(0, -1),
+                compEdges: pathB.slice(0, -1).map(function(v) { return [v, ry]; })
+              }
+            );
+          }
+          for (var i = 0; i < pathB.length - 1; i++) parent[pathB[i]] = ry;
+
+          if (rx === ry) {
+            snap(
+              'union(' + ua + ',' + ub + ')',
+              'rx = ry = ' + rx + ': nodes ' + ua + ' and ' + ub + ' are already in the same component. Nothing to do.',
+              8,
+              { activeNodes: [rx, ua, ub] }
+            );
+            continue;
+          }
+
+          snap(
+            'union(' + ua + ',' + ub + ')',
+            'rx = ' + rx + ' (rank ' + rank[rx] + '), ry = ' + ry + ' (rank ' + rank[ry] + '). Link smaller-rank root under larger-rank root.',
+            9,
+            { activeNodes: [rx, ry] }
+          );
+
+          var fp = rx, fc = ry;
+          if (rank[rx] < rank[ry]) {
+            fp = ry; fc = rx;
+            snap(
+              'union(' + ua + ',' + ub + ')',
+              'rank[' + rx + '] < rank[' + ry + ']: swap so rx=' + ry + ' (higher rank) becomes the parent.',
+              10,
+              { activeNodes: [rx, ry] }
+            );
+          }
+
+          parent[fc] = fp;
+          var bumped = rank[fp] === rank[fc];
+          if (bumped) rank[fp]++;
+
+          snap(
+            'union(' + ua + ',' + ub + ')',
+            'parent[' + fc + '] = ' + fp + ': root ' + fc + ' is now a child of root ' + fp + '. Components merged!',
+            11,
+            { activeNodes: [fp, fc], hlEdges: [[fc, fp]] }
+          );
+
+          if (bumped) {
+            snap(
+              'union(' + ua + ',' + ub + ')',
+              'Both roots had equal rank. rank[' + fp + '] bumped to ' + rank[fp] + '.',
+              13,
+              { activeNodes: [fp] }
+            );
+          }
+        }
+      }
+
+      snap('Done', 'All operations complete. ' + countComponents(parent) + ' component(s) remain.', -1);
+      return out;
+    }
+
+    function computePositions(n) {
+      var svg = document.getElementById('graph-svg');
+      var W = svg.clientWidth  || 500;
+      var H = svg.clientHeight || 300;
+      var cx = W / 2, cy = H / 2;
+      var r = Math.min(W, H) * 0.36;
+      var pos = [];
+      for (var i = 0; i < n; i++) {
+        var angle = 2 * Math.PI * i / n - Math.PI / 2;
+        pos.push({ x: cx + r * Math.cos(angle), y: cy + r * Math.sin(angle) });
+      }
+      return pos;
+    }
+
+    function arcPath(x1, y1, x2, y2) {
+      var dx = x2 - x1, dy = y2 - y1;
+      var dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < 1) return null;
+      var nx = dx / dist, ny = dy / dist;
+      var sx = x1 + nx * (NODE_R + 2);
+      var sy = y1 + ny * (NODE_R + 2);
+      var ex = x2 - nx * (NODE_R + 9);
+      var ey = y2 - ny * (NODE_R + 9);
+      var mx = (sx + ex) / 2 - ny * 18;
+      var my = (sy + ey) / 2 + nx * 18;
+      return 'M' + sx.toFixed(1) + ',' + sy.toFixed(1) +
+             ' Q' + mx.toFixed(1) + ',' + my.toFixed(1) +
+             ' ' + ex.toFixed(1) + ',' + ey.toFixed(1);
+    }
+
+    function svgEl(tag) {
+      return document.createElementNS('http://www.w3.org/2000/svg', tag);
+    }
+
+    function drawEdge(edgesG, p1, p2, style) {
+      var d = arcPath(p1.x, p1.y, p2.x, p2.y);
+      if (!d) return;
+      var path = svgEl('path');
+      path.setAttribute('d', d);
+      path.setAttribute('fill', 'none');
+      if (style === 'hl') {
+        path.setAttribute('stroke', '#7aa2f7');
+        path.setAttribute('stroke-width', '2.5');
+        path.setAttribute('marker-end', 'url(#arr-hl)');
+      } else if (style === 'compress') {
+        path.setAttribute('stroke', '#9ece6a');
+        path.setAttribute('stroke-width', '2');
+        path.setAttribute('stroke-dasharray', '6,3');
+        path.setAttribute('marker-end', 'url(#arr-compress)');
+        path.setAttribute('opacity', '0.85');
+      } else {
+        path.setAttribute('stroke', '#414868');
+        path.setAttribute('stroke-width', '1.8');
+        path.setAttribute('marker-end', 'url(#arr-default)');
+        path.setAttribute('opacity', '0.55');
+      }
+      edgesG.appendChild(path);
+    }
+
+    function renderGraph(snap) {
+      var pos = positions;
+      var colors = getCompColors(snap.parent);
+
+      var activeSet = {};
+      snap.activeNodes.forEach(function(n) { activeSet[n] = true; });
+      var pathSet = {};
+      snap.pathNodes.forEach(function(n) { pathSet[n] = true; });
+
+      var hlSet = {};
+      snap.hlEdges.forEach(function(e) { hlSet[e[0] + '-' + e[1]] = true; });
+      var compSet = {};
+      snap.compEdges.forEach(function(e) { compSet[e[0] + '-' + e[1]] = true; });
+
+      var edgesG = document.getElementById('edges-g');
+      var nodesG = document.getElementById('nodes-g');
+      edgesG.innerHTML = '';
+      nodesG.innerHTML = '';
+
+      // Draw regular parent edges (skip those overridden by hlEdges or compEdges)
+      for (var i = 0; i < N; i++) {
+        var p = snap.parent[i];
+        if (p === i) continue;
+        var key = i + '-' + p;
+        if (hlSet[key] || compSet[key]) continue;
+        drawEdge(edgesG, pos[i], pos[p], 'default');
+      }
+
+      // Highlighted edges (blue)
+      snap.hlEdges.forEach(function(e) {
+        if (e[0] < N && e[1] < N) drawEdge(edgesG, pos[e[0]], pos[e[1]], 'hl');
+      });
+
+      // Compression edges (green dashed - may be future edges)
+      snap.compEdges.forEach(function(e) {
+        if (e[0] < N && e[1] < N) drawEdge(edgesG, pos[e[0]], pos[e[1]], 'compress');
+      });
+
+      // Draw nodes
+      for (var i = 0; i < N; i++) {
+        var pi = pos[i];
+        var isRoot   = snap.parent[i] === i;
+        var isActive = activeSet[i];
+        var isPath   = pathSet[i];
+        var color    = colors[i];
+        var g = svgEl('g');
+
+        if (isActive || isPath) {
+          var ring = svgEl('circle');
+          ring.setAttribute('cx', pi.x);
+          ring.setAttribute('cy', pi.y);
+          ring.setAttribute('r', NODE_R + 7);
+          ring.setAttribute('fill', 'none');
+          ring.setAttribute('stroke', isActive ? '#ff9e64' : color);
+          ring.setAttribute('stroke-width', '2');
+          ring.setAttribute('opacity', '0.5');
+          g.appendChild(ring);
+        }
+
+        var circle = svgEl('circle');
+        circle.setAttribute('cx', pi.x);
+        circle.setAttribute('cy', pi.y);
+        circle.setAttribute('r', NODE_R);
+        circle.setAttribute('fill', color);
+        circle.setAttribute('stroke', isRoot ? '#ffffff' : 'rgba(0,0,0,0.35)');
+        circle.setAttribute('stroke-width', isRoot ? '3' : '1.5');
+        circle.setAttribute('opacity', isActive ? '1' : isPath ? '0.9' : '0.72');
+        g.appendChild(circle);
+
+        var label = svgEl('text');
+        label.setAttribute('x', pi.x);
+        label.setAttribute('y', pi.y);
+        label.setAttribute('text-anchor', 'middle');
+        label.setAttribute('dominant-baseline', 'central');
+        label.setAttribute('fill', '#1a1b26');
+        label.setAttribute('font-size', '13');
+        label.setAttribute('font-weight', '800');
+        label.setAttribute('font-family', 'system-ui,sans-serif');
+        label.setAttribute('pointer-events', 'none');
+        label.textContent = String(i);
+        g.appendChild(label);
+
+        if (isRoot) {
+          var star = svgEl('text');
+          star.setAttribute('x', pi.x);
+          star.setAttribute('y', pi.y - NODE_R - 7);
+          star.setAttribute('text-anchor', 'middle');
+          star.setAttribute('fill', '#e0af68');
+          star.setAttribute('font-size', '11');
+          star.setAttribute('pointer-events', 'none');
+          star.textContent = '\u2605';
+          g.appendChild(star);
+        }
+
+        nodesG.appendChild(g);
+      }
+    }
+
+    function renderArrays(snap) {
+      var activeSet = {};
+      snap.activeNodes.forEach(function(n) { activeSet[n] = true; });
+
+      function buildRow(cellsId, values, isParent) {
+        var container = document.getElementById(cellsId);
+        container.innerHTML = '';
+        for (var i = 0; i < N; i++) {
+          var block = document.createElement('div');
+          block.className = 'cell-block';
+          var idx = document.createElement('div');
+          idx.className = 'cell-idx';
+          idx.textContent = i;
+          var cell = document.createElement('div');
+          var isRoot = isParent && snap.parent[i] === i;
+          var cls = 'arr-cell';
+          if (isRoot) cls += ' is-root';
+          else if (activeSet[i]) cls += ' is-active';
+          cell.className = cls;
+          cell.textContent = values[i];
+          block.appendChild(idx);
+          block.appendChild(cell);
+          container.appendChild(block);
+        }
+      }
+
+      buildRow('parent-cells', snap.parent, true);
+      buildRow('rank-cells', snap.rank, false);
+
+      var colors = getCompColors(snap.parent);
+      var seenRoots = {};
+      var legendEl = document.getElementById('legend');
+      legendEl.innerHTML = '';
+      for (var i = 0; i < N; i++) {
+        var root = trueRoot(i, snap.parent);
+        if (seenRoots[root]) { seenRoots[root].push(i); continue; }
+        seenRoots[root] = [i];
+      }
+      Object.keys(seenRoots).sort(function(a, b) { return Number(a) - Number(b); }).forEach(function(rootStr) {
+        var root = Number(rootStr);
+        var members = seenRoots[root];
+        var item = document.createElement('div');
+        item.className = 'legend-item';
+        var dot = document.createElement('div');
+        dot.className = 'legend-dot';
+        dot.style.background = colors[root];
+        var lbl = document.createElement('span');
+        lbl.textContent = '{' + members.join(',') + '}';
+        item.appendChild(dot);
+        item.appendChild(lbl);
+        legendEl.appendChild(item);
+      });
+    }
+
+    function highlightCode(lineIdx) {
+      for (var i = 0; i < codeLines.length; i++) {
+        var el = document.getElementById('cl' + i);
+        if (el) el.classList.toggle('hl', i === lineIdx);
+      }
+    }
+
+    function applyStep(snap, cur, total) {
+      renderGraph(snap);
+      renderArrays(snap);
+      highlightCode(snap.codeLine);
+      document.getElementById('phase-label').textContent =
+        '[' + (cur + 1) + ' / ' + total + ']  ' + snap.phase;
+      document.getElementById('step-desc').textContent = snap.desc;
+    }
+
+    function buildAndRun() {
+      N = Math.max(2, Math.min(10, parseInt(document.getElementById('nInput').value) || 6));
+      document.getElementById('nInput').value = N;
+      var opsStr = document.getElementById('opsInput').value;
+      try {
+        var ops = parseOps(opsStr);
+        positions = computePositions(N);
+        lastSteps = buildSteps(N, ops);
+        nav.load(lastSteps);
+      } catch(e) {
+        console.error('buildAndRun error:', e);
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', function() {
+      nav = VizNav({
+        btnPrev:  document.getElementById('prevBtn'),
+        btnNext:  document.getElementById('stepBtn'),
+        btnPlay:  document.getElementById('playBtn'),
+        speedSel: document.getElementById('speedSel'),
+        render:   applyStep
+      });
+
+      document.getElementById('resetBtn').addEventListener('click', function() {
+        nav.stopPlay();
+        nav.load(lastSteps);
+      });
+
+      if (window.self !== window.top) {
+        var bl = document.querySelector('.back-link');
+        if (bl) bl.style.display = 'none';
+      }
+
+      buildAndRun();
+    });
+
+    window.addEventListener('resize', function() {
+      positions = computePositions(N);
+      var cur = nav ? nav.cursor() : 0;
+      if (lastSteps.length > 0) {
+        applyStep(lastSteps[cur], cur, lastSteps.length);
+      }
+    });
+  </script>
+</body>
+</html>

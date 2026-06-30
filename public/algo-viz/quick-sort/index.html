@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quick Sort â Lomuto Partition</title>
+<link rel="stylesheet" href="../shared/style.css">
+<script src="../shared/gsap.min.js"></script>
+<script src="../shared/viz.js"></script>
+<style>
+  body { margin:0; display:flex; flex-direction:column; height:100vh; overflow:hidden; background:var(--bg-main); color:var(--text-main); font-family:var(--font); }
+
+  .viz-inputs { display:flex; flex-wrap:wrap; gap:10px; align-items:flex-end; padding:10px 14px 14px; border-bottom:1px solid var(--border); flex-shrink:0; }
+  .ig { display:flex; flex-direction:column; gap:4px; }
+  .il { font-size:0.7rem; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:var(--text-dim); }
+  .ig select, .ig input { background:var(--bg-card); color:var(--text-main); border:1px solid var(--border); border-radius:6px; padding:6px 10px; font-size:0.85rem; }
+  .btn-run  { padding:7px 18px; background:var(--accent); color:#fff; border:none; border-radius:6px; font-weight:600; cursor:pointer; }
+  .btn-rand { padding:7px 14px; background:var(--bg-card); color:var(--text-main); border:1px solid var(--border); border-radius:6px; cursor:pointer; }
+
+  #viz-root { display:flex; flex:1; overflow:hidden; }
+
+  /* left panel */
+  #array-panel { flex:1; display:flex; flex-direction:column; padding:16px; overflow:auto; }
+
+  /* bracket row */
+  #bracket-row { display:flex; gap:4px; min-height:18px; align-items:flex-end; margin-bottom:1px; }
+  .br-cell { width:48px; flex-shrink:0; text-align:center; font-size:0.8rem; font-weight:700; color:var(--accent); line-height:1; }
+
+  /* pointer label row */
+  #ptr-row { display:flex; gap:4px; min-height:16px; align-items:flex-end; margin-bottom:3px; }
+  .ptr-cell { width:48px; flex-shrink:0; text-align:center; font-size:0.65rem; font-weight:700; line-height:1; }
+
+  /* array row */
+  #array-row { display:flex; gap:4px; }
+  .arr-cell { display:flex; flex-direction:column; align-items:center; width:48px; flex-shrink:0; }
+  .arr-box {
+    width:44px; height:44px; display:flex; align-items:center; justify-content:center;
+    border:2px solid var(--border); border-radius:6px; font-size:1rem; font-weight:700;
+    background:var(--bg-card); transition:background 0.15s, border-color 0.15s, color 0.15s;
+  }
+  .arr-box.pivot    { background:#f59e0b22; border-color:#f59e0b; color:#f59e0b; }
+  .arr-box.i-ptr    { background:#3b82f622; border-color:#3b82f6; color:#3b82f6; }
+  .arr-box.j-ptr    { background:#ef444422; border-color:#ef4444; color:#ef4444; }
+  .arr-box.sorted   { background:#22c55e22; border-color:#22c55e; color:#22c55e; }
+  .arr-box.in-range { border-color:var(--accent); }
+  .arr-idx { font-size:0.65rem; color:var(--text-dim); margin-top:3px; }
+
+  #msg-box { margin-top:14px; padding:10px 14px; background:var(--bg-card); border:1px solid var(--border); border-radius:8px; font-size:0.85rem; min-height:36px; }
+  #step-counter { font-size:0.72rem; color:var(--text-dim); margin-top:5px; }
+
+  #legend { display:flex; gap:14px; flex-wrap:wrap; margin-top:10px; }
+  .li { display:flex; align-items:center; gap:6px; font-size:0.78rem; color:var(--text-dim); }
+  .ld { width:12px; height:12px; border-radius:3px; border:2px solid; }
+  .ld-p { border-color:#f59e0b; background:#f59e0b22; }
+  .ld-i { border-color:#3b82f6; background:#3b82f622; }
+  .ld-j { border-color:#ef4444; background:#ef444422; }
+  .ld-s { border-color:#22c55e; background:#22c55e22; }
+
+  /* right panel: code */
+  #code-panel { width:275px; flex-shrink:0; border-left:1px solid var(--border); display:flex; flex-direction:column; overflow:hidden; }
+  #code-header { padding:10px 14px; font-size:0.75rem; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:var(--text-dim); border-bottom:1px solid var(--border); }
+  #code-body { margin:0; padding:10px 8px; font-family:monospace; font-size:0.76rem; line-height:1.75; overflow:auto; flex:1; }
+  #code-body .cl { padding:1px 8px; border-radius:4px; white-space:pre; }
+  #code-body .cl.hl { background:var(--accent); color:#fff; }
+
+  .controls { display:none; }
+</style>
+</head>
+<body>
+
+<div class="viz-inputs">
+  <div class="ig">
+    <span class="il">Preset</span>
+    <select id="presetSel" onchange="loadPreset()">
+      <option value="">&#8212; pick a preset &#8212;</option>
+      <option value="3,6,8,10,1,2,1">Mixed [3,6,8,10,1,2,1]</option>
+      <option value="9,8,7,6,5,4,3,2,1">Reverse sorted ↓</option>
+      <option value="1,2,3,4,5,6,7,8,9">Already sorted ↑</option>
+      <option value="5,3,5,1,5,2,5">Many duplicates</option>
+      <option value="4,2,7,1,9,3">Small array</option>
+      <option value="2,2,2,2,2">All same</option>
+      <option value="5,1">Two elements</option>
+      <option value="42">Single element</option>
+    </select>
+  </div>
+  <div class="ig">
+    <span class="il">Array</span>
+    <input id="arrInput" type="text" value="3,6,8,10,1,2,1" style="width:180px;" placeholder="e.g. 3,6,8,10,1,2,1">
+  </div>
+  <button class="btn-run" onclick="buildAndRun()">Run</button>
+  <button class="btn-rand" onclick="randomExample()">🎲 Random</button>
+</div>
+
+<div id="viz-root">
+  <div id="array-panel">
+    <div id="bracket-row"></div>
+    <div id="ptr-row"></div>
+    <div id="array-row"></div>
+    <div id="msg-box">Press Run to start.</div>
+    <div id="step-counter"></div>
+    <div id="legend">
+      <div class="li"><div class="ld ld-p"></div>Pivot (P)</div>
+      <div class="li"><div class="ld ld-i"></div>i (boundary)</div>
+      <div class="li"><div class="ld ld-j"></div>j (scanner)</div>
+      <div class="li"><div class="ld ld-s"></div>Sorted</div>
+    </div>
+  </div>
+  <div id="code-panel">
+    <div id="code-header">Lomuto Partition</div>
+    <pre id="code-body"><div id="cl0"  class="cl">quicksort(A, lo, hi):</div>
+<div id="cl1"  class="cl">  if lo &lt; hi:</div>
+<div id="cl2"  class="cl">    p = partition(A, lo, hi)</div>
+<div id="cl3"  class="cl">    quicksort(A, lo, p-1)</div>
+<div id="cl4"  class="cl">    quicksort(A, p+1, hi)</div>
+<div id="cl5"  class="cl"> </div>
+<div id="cl6"  class="cl">partition(A, lo, hi):</div>
+<div id="cl7"  class="cl">  pivot = A[hi]</div>
+<div id="cl8"  class="cl">  i = lo - 1</div>
+<div id="cl9"  class="cl">  for j in [lo, hi):</div>
+<div id="cl10" class="cl">    if A[j] &lt;= pivot:</div>
+<div id="cl11" class="cl">      i++</div>
+<div id="cl12" class="cl">      swap(A[i], A[j])</div>
+<div id="cl13" class="cl">  swap(A[i+1], A[hi])</div>
+<div id="cl14" class="cl">  return i+1</pre>
+  </div>
+</div>
+
+<div class="controls">
+  <button id="prevBtn">Prev</button>
+  <button id="stepBtn">Step</button>
+  <button id="playBtn">Play</button>
+  <button id="resetBtn">Reset</button>
+  <select id="speedSel"><option value="1">1x</option><option value="2">2x</option><option value="0.5">0.5x</option></select>
+</div>
+
+<script>
+var steps = [];
+var curIdx = 0;
+window.steps = steps;
+window.curIdx = curIdx;
+
+function buildAndRun() {
+  var raw = document.getElementById("arrInput").value;
+  var arr = raw.split(",").map(function(s){ return parseInt(s.trim(), 10); }).filter(function(n){ return !isNaN(n); });
+  if (!arr.length) return;
+
+  steps = [];
+  var sortedSet = new Set();
+
+  function push(A, lo, hi, pivotIdx, iPtr, jPtr, codeLine, msg) {
+    steps.push({
+      arr: A.slice(),
+      lo: lo, hi: hi,
+      pivotIdx: pivotIdx,
+      iPtr: iPtr,
+      jPtr: jPtr,
+      sorted: new Set(sortedSet),
+      codeLine: codeLine,
+      msg: msg
+    });
+  }
+
+  function doPartition(A, lo, hi) {
+    var pivotVal = A[hi];
+    push(A, lo, hi, hi, -1, -1, 7, "pivot = A[" + hi + "] = " + pivotVal);
+
+    var i = lo - 1;
+    push(A, lo, hi, hi, i, -1, 8, "i = lo - 1 = " + i);
+
+    for (var j = lo; j < hi; j++) {
+      push(A, lo, hi, hi, i, j, 9, "j = " + j + " → A[" + j + "] = " + A[j]);
+      push(A, lo, hi, hi, i, j, 10, "A[" + j + "] = " + A[j] + " <= pivot " + pivotVal + "? " + (A[j] <= pivotVal ? "Yes" : "No"));
+
+      if (A[j] <= pivotVal) {
+        i++;
+        push(A, lo, hi, hi, i, j, 11, "Yes → i++ → i = " + i);
+
+        if (i !== j) {
+          var tmp = A[i]; A[i] = A[j]; A[j] = tmp;
+          push(A, lo, hi, hi, i, j, 12, "swap(A[" + i + "], A[" + j + "]) → [" + A.slice(lo, hi + 1).join(",") + "]");
+        } else {
+          push(A, lo, hi, hi, i, j, 12, "i === j, no swap needed");
+        }
+      }
+    }
+
+    var finalPos = i + 1;
+    var tmp2 = A[finalPos]; A[finalPos] = A[hi]; A[hi] = tmp2;
+    sortedSet.add(finalPos);
+    push(A, lo, hi, finalPos, finalPos, -1, 13, "Place pivot: swap(A[" + finalPos + "], A[" + hi + "]) → " + pivotVal + " now at index " + finalPos);
+    push(A, lo, hi, finalPos, -1, -1, 14, "return " + finalPos);
+
+    return finalPos;
+  }
+
+  function quicksort(A, lo, hi) {
+    push(A, lo, hi, -1, -1, -1, 0, "quicksort(A, " + lo + ", " + hi + ")");
+    push(A, lo, hi, -1, -1, -1, 1, lo < hi ? "lo(" + lo + ") < hi(" + hi + ") → continue" : "lo(" + lo + ") >= hi(" + hi + ") → base case");
+
+    if (lo >= hi) {
+      if (lo === hi) sortedSet.add(lo);
+      return;
+    }
+
+    push(A, lo, hi, -1, -1, -1, 2, "Calling partition(A, " + lo + ", " + hi + ")");
+    var p = doPartition(A, lo, hi);
+
+    push(A, 0, A.length - 1, p, -1, -1, 3, "Left subarray: quicksort(A, " + lo + ", " + (p - 1) + ")");
+    quicksort(A, lo, p - 1);
+
+    push(A, 0, A.length - 1, p, -1, -1, 4, "Right subarray: quicksort(A, " + (p + 1) + ", " + hi + ")");
+    quicksort(A, p + 1, hi);
+  }
+
+  quicksort(arr, 0, arr.length - 1);
+
+  for (var k = 0; k < arr.length; k++) sortedSet.add(k);
+  steps.push({
+    arr: arr.slice(),
+    lo: 0, hi: arr.length - 1,
+    pivotIdx: -1, iPtr: -1, jPtr: -1,
+    sorted: new Set(sortedSet),
+    codeLine: -1,
+    msg: "✓ Sorted: [" + arr.join(", ") + "]"
+  });
+
+  window.steps = steps;
+  window.curIdx = 0;
+  curIdx = 0;
+  render(0);
+}
+
+function render(idx) {
+  if (!steps.length) return;
+  idx = Math.max(0, Math.min(idx, steps.length - 1));
+  curIdx = idx;
+  window.curIdx = idx;
+
+  var s = steps[idx];
+  var n = s.arr.length;
+
+  // bracket row
+  var brRow = document.getElementById("bracket-row");
+  brRow.innerHTML = "";
+  for (var i = 0; i < n; i++) {
+    var bc = document.createElement("div");
+    bc.className = "br-cell";
+    if (s.lo >= 0 && s.hi >= 0 && s.lo <= s.hi) {
+      if (i === s.lo && i === s.hi)  bc.textContent = "[ ]";
+      else if (i === s.lo)           bc.textContent = "[";
+      else if (i === s.hi)           bc.textContent = "]";
+      else if (i > s.lo && i < s.hi) bc.textContent = "─";
+    }
+    brRow.appendChild(bc);
+  }
+
+  // pointer label row
+  var ptrRow = document.getElementById("ptr-row");
+  ptrRow.innerHTML = "";
+  for (var i = 0; i < n; i++) {
+    var pc = document.createElement("div");
+    pc.className = "ptr-cell";
+    var lbls = [];
+    var col = "";
+    if (i === s.pivotIdx) { lbls.push("P");  col = col || "#f59e0b"; }
+    if (i === s.iPtr)     { lbls.push("i");  col = col || "#3b82f6"; }
+    if (i === s.jPtr)     { lbls.push("j");  col = col || "#ef4444"; }
+    pc.textContent = lbls.join("/");
+    pc.style.color = col;
+    ptrRow.appendChild(pc);
+  }
+
+  // array row
+  var arrRow = document.getElementById("array-row");
+  arrRow.innerHTML = "";
+  s.arr.forEach(function(val, i) {
+    var cell = document.createElement("div");
+    cell.className = "arr-cell";
+
+    var box = document.createElement("div");
+    box.className = "arr-box";
+    box.textContent = val;
+
+    var inRange = (s.lo >= 0 && s.hi >= 0 && i >= s.lo && i <= s.hi);
+
+    if (s.sorted.has(i))        box.classList.add("sorted");
+    else if (i === s.pivotIdx)  box.classList.add("pivot");
+    else if (i === s.iPtr)      box.classList.add("i-ptr");
+    else if (i === s.jPtr)      box.classList.add("j-ptr");
+    else if (inRange)           box.classList.add("in-range");
+
+    var idxEl = document.createElement("div");
+    idxEl.className = "arr-idx";
+    idxEl.textContent = i;
+
+    cell.appendChild(box);
+    cell.appendChild(idxEl);
+    arrRow.appendChild(cell);
+  });
+
+  // message
+  document.getElementById("msg-box").textContent = s.msg;
+
+  // step counter
+  document.getElementById("step-counter").textContent = "Step " + (idx + 1) + " / " + steps.length;
+
+  // code highlight
+  for (var l = 0; l <= 14; l++) {
+    var el = document.getElementById("cl" + l);
+    if (el) el.classList.remove("hl");
+  }
+  if (s.codeLine >= 0 && s.codeLine <= 14) {
+    var el2 = document.getElementById("cl" + s.codeLine);
+    if (el2) el2.classList.add("hl");
+  }
+}
+
+function loadPreset() {
+  var sel = document.getElementById("presetSel");
+  if (!sel.value) return;
+  document.getElementById("arrInput").value = sel.value;
+  buildAndRun();
+}
+
+function randomExample() {
+  var n = 5 + Math.floor(Math.random() * 5);
+  var arr = [];
+  for (var i = 0; i < n; i++) arr.push(1 + Math.floor(Math.random() * 20));
+  document.getElementById("arrInput").value = arr.join(",");
+  document.getElementById("presetSel").value = "";
+  buildAndRun();
+}
+
+window.addEventListener("load", function() { buildAndRun(); });
+<\/script>
+</body>
+</html>

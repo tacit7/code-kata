@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Merge K Sorted Lists</title>
+<link rel="stylesheet" href="../shared/style.css">
+<style>
+  body { margin: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; background: var(--bg-main); color: var(--text-main); font-family: var(--font); }
+  .viz-inputs { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; padding: 10px 14px 0; flex-shrink: 0; }
+  .viz-inputs label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); display: block; margin-bottom: 4px; }
+  .viz-inputs select, .viz-inputs input { background: var(--bg-card); color: var(--text-main); border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px; font-size: 0.85rem; }
+  .viz-inputs input { width: 220px; }
+  .viz-inputs button { padding: 7px 18px; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 0.85rem; }
+  .btn-run { background: var(--accent); color: #fff; }
+  .btn-rand { background: var(--bg-card); color: var(--text-main); border: 1px solid var(--border); }
+  #viz-root { flex: 1; display: flex; gap: 0; overflow: hidden; min-height: 0; }
+  #viz-left { flex: 1; display: flex; flex-direction: column; gap: 10px; padding: 12px 14px; overflow-y: auto; min-width: 0; }
+  #code-panel { width: 260px; flex-shrink: 0; background: var(--bg-card); border-left: 1px solid var(--border); overflow-y: auto; padding: 12px; }
+  #code-panel h3 { margin: 0 0 8px; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); }
+  #code-body { margin: 0; font-size: 0.78rem; line-height: 1.7; font-family: monospace; }
+  .cl { padding: 0 6px; border-radius: 3px; white-space: pre; }
+  .cl.hl { background: var(--accent); color: #fff; }
+  .section-label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); margin-bottom: 6px; }
+  #lists-area { display: flex; flex-direction: column; gap: 8px; }
+  .list-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .list-label { font-size: 0.75rem; color: var(--text-dim); width: 36px; flex-shrink: 0; }
+  .node-box { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 6px; border: 2px solid var(--border); background: var(--bg-card); font-size: 0.9rem; font-weight: 700; transition: all 0.2s; }
+  .node-box.consumed { opacity: 0.2; border-style: dashed; }
+  .node-box.upcoming { opacity: 0.45; }
+  .node-box.in-heap { border-color: #f59e0b; background: rgba(245,158,11,0.18); }
+  .node-box.extracting { border-color: var(--accent); background: rgba(99,102,241,0.25); transform: scale(1.18); box-shadow: 0 0 0 3px rgba(99,102,241,0.3); }
+  .node-arrow { color: var(--text-dim); font-size: 0.8rem; }
+  #heap-area { background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; }
+  #heap-items { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; min-height: 44px; }
+  .heap-node { display: inline-flex; flex-direction: column; align-items: center; background: rgba(245,158,11,0.18); border: 2px solid #f59e0b; border-radius: 6px; padding: 4px 12px; font-size: 0.9rem; font-weight: 700; min-width: 36px; }
+  .heap-node.top { border-color: var(--accent); background: rgba(99,102,241,0.18); }
+  .heap-node .hn-sub { font-size: 0.6rem; color: var(--text-dim); font-weight: 400; }
+  #result-area { background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; }
+  #result-nodes { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; min-height: 44px; }
+  .result-node { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 6px; border: 2px solid var(--success); background: rgba(34,197,94,0.15); font-size: 0.9rem; font-weight: 700; color: var(--success); }
+  .result-arrow { color: var(--text-dim); font-size: 0.8rem; }
+  #step-msg { font-size: 0.85rem; color: var(--text-dim); min-height: 22px; padding: 2px 0; }
+  .empty-hint { color: var(--text-dim); font-size: 0.8rem; font-style: italic; }
+  .controls { display: none; }
+</style>
+</head>
+<body>
+
+<div class="viz-inputs">
+  <div>
+    <label>Preset</label>
+    <select id="presetSel" onchange="loadPreset()">
+      <option value="">— pick a preset —</option>
+      <option value="1,4,7|2,5,8|3,6,9">3 lists of 3 (interleaved)</option>
+      <option value="1,3,5,7,9|2,4,6,8,10">2 lists of 5</option>
+      <option value="1,2,3|2,3,4|3,4,5">Overlapping ranges</option>
+      <option value="1,2,3,4,5|10,20|30">One list dominates</option>
+      <option value="5,10,15,20,25">Single list</option>
+      <option value="1|2|3|4|5">5 single-element lists</option>
+      <option value="1,100|2,50|3,75|4,60">4 lists mixed</option>
+    </select>
+  </div>
+  <div>
+    <label>Lists (pipe-separated)</label>
+    <input id="listsInput" type="text" value="1,4,7|2,5,8|3,6,9" placeholder="1,4,7 | 2,5,8 | 3,6,9">
+  </div>
+  <button class="btn-run" onclick="buildAndRun()">Run</button>
+  <button class="btn-rand" onclick="randomExample()">&#x1F3B2; Random</button>
+</div>
+
+<div id="viz-root">
+  <div id="viz-left">
+    <div>
+      <div class="section-label">Input Lists</div>
+      <div id="lists-area"></div>
+    </div>
+    <div>
+      <div class="section-label">Min-Heap (priority queue &mdash; smallest at left)</div>
+      <div id="heap-area">
+        <div id="heap-items"><span class="empty-hint">heap is empty</span></div>
+      </div>
+    </div>
+    <div id="step-msg"></div>
+    <div>
+      <div class="section-label">Merged Result</div>
+      <div id="result-area">
+        <div id="result-nodes"><span class="empty-hint">result list is empty</span></div>
+      </div>
+    </div>
+  </div>
+  <div id="code-panel">
+    <h3>Pseudocode</h3>
+    <pre id="code-body"><div id="cl0" class="cl">def mergeKLists(lists):</div><div id="cl1" class="cl">  heap = MinHeap()</div><div id="cl2" class="cl">  for i, head in enumerate(lists):</div><div id="cl3" class="cl">    if head:</div><div id="cl4" class="cl">      heap.push((head.val,i,head))</div><div id="cl5" class="cl">  dummy = ListNode(0)</div><div id="cl6" class="cl">  cur = dummy</div><div id="cl7" class="cl">  while heap:</div><div id="cl8" class="cl">    val,i,node = heap.pop()</div><div id="cl9" class="cl">    cur.next = node</div><div id="cl10" class="cl">    cur = cur.next</div><div id="cl11" class="cl">    if node.next:</div><div id="cl12" class="cl">      heap.push((node.next.val,</div><div id="cl13" class="cl">                  i, node.next))</div><div id="cl14" class="cl">  return dummy.next</div></pre>
+  </div>
+</div>
+<div class="controls"></div>
+
+<script src="../shared/gsap.min.js"></script>
+<script src="../shared/viz.js"></script>
+<script>
+var steps = [];
+var currentStep = 0;
+var parsedLists = [];
+
+function parseLists(raw) {
+  return raw.split('|').map(function(s) {
+    return s.trim().split(',').map(function(x) { return parseInt(x.trim()); }).filter(function(n) { return !isNaN(n); });
+  }).filter(function(arr) { return arr.length > 0; });
+}
+
+// Simple min-heap
+function MinHeap() { this.data = []; }
+MinHeap.prototype.push = function(item) {
+  this.data.push(item);
+  this._up(this.data.length - 1);
+};
+MinHeap.prototype.pop = function() {
+  var top = this.data[0];
+  var last = this.data.pop();
+  if (this.data.length > 0) { this.data[0] = last; this._down(0); }
+  return top;
+};
+MinHeap.prototype._up = function(i) {
+  while (i > 0) {
+    var p = (i - 1) >> 1;
+    if (this.data[p][0] <= this.data[i][0]) break;
+    var tmp = this.data[p]; this.data[p] = this.data[i]; this.data[i] = tmp;
+    i = p;
+  }
+};
+MinHeap.prototype._down = function(i) {
+  var n = this.data.length;
+  while (true) {
+    var s = i, l = 2*i+1, r = 2*i+2;
+    if (l < n && this.data[l][0] < this.data[s][0]) s = l;
+    if (r < n && this.data[r][0] < this.data[s][0]) s = r;
+    if (s === i) break;
+    var tmp = this.data[s]; this.data[s] = this.data[i]; this.data[i] = tmp;
+    i = s;
+  }
+};
+MinHeap.prototype.size = function() { return this.data.length; };
+MinHeap.prototype.toArray = function() { return this.data.map(function(h) { return h.slice(); }); };
+
+function cloneHeap(h) { return h.map(function(x) { return x.slice(); }); }
+
+function buildAndRun() {
+  var raw = document.getElementById('listsInput').value;
+  parsedLists = parseLists(raw);
+  if (parsedLists.length === 0) return;
+
+  steps = [];
+  var heap = new MinHeap();
+  var result = [];
+
+  // Step: show initial state
+  steps.push({
+    phase: 'init',
+    heap: [],
+    result: [],
+    extracting: null,
+    msg: 'Starting: insert the head of each list into the min-heap.',
+    lines: [0, 1, 2]
+  });
+
+  // Insert heads
+  for (var i = 0; i < parsedLists.length; i++) {
+    if (parsedLists[i].length > 0) {
+      heap.push([parsedLists[i][0], i, 0]);
+      steps.push({
+        phase: 'insert-head',
+        heap: cloneHeap(heap.data),
+        result: result.slice(),
+        extracting: null,
+        msg: 'Inserted head of list ' + (i+1) + ' (val=' + parsedLists[i][0] + ') into heap.',
+        lines: [3, 4]
+      });
+    }
+  }
+
+  steps.push({
+    phase: 'loop-start',
+    heap: cloneHeap(heap.data),
+    result: result.slice(),
+    extracting: null,
+    msg: 'Heap initialized with ' + heap.size() + ' node(s). Begin extraction loop.',
+    lines: [5, 6, 7]
+  });
+
+  while (heap.size() > 0) {
+    var item = heap.pop();
+    var val = item[0], listIdx = item[1], nodeIdx = item[2];
+
+    steps.push({
+      phase: 'extract',
+      heap: cloneHeap(heap.data),
+      result: result.slice(),
+      extracting: { val: val, listIdx: listIdx, nodeIdx: nodeIdx },
+      msg: 'Extract min from heap: val=' + val + ' (from list ' + (listIdx+1) + '). Append to result.',
+      lines: [8, 9, 10]
+    });
+
+    result.push({ val: val, listIdx: listIdx, nodeIdx: nodeIdx });
+
+    var nextIdx = nodeIdx + 1;
+    if (nextIdx < parsedLists[listIdx].length) {
+      var nextVal = parsedLists[listIdx][nextIdx];
+      heap.push([nextVal, listIdx, nextIdx]);
+      steps.push({
+        phase: 'push-next',
+        heap: cloneHeap(heap.data),
+        result: result.slice(),
+        extracting: null,
+        msg: 'Next node in list ' + (listIdx+1) + ' (val=' + nextVal + ') pushed to heap.',
+        lines: [11, 12, 13]
+      });
+    } else {
+      steps.push({
+        phase: 'no-next',
+        heap: cloneHeap(heap.data),
+        result: result.slice(),
+        extracting: null,
+        msg: 'List ' + (listIdx+1) + ' is exhausted — no next node to push.',
+        lines: [11]
+      });
+    }
+  }
+
+  steps.push({
+    phase: 'done',
+    heap: [],
+    result: result.slice(),
+    extracting: null,
+    msg: 'Done! Merged ' + result.length + ' nodes in sorted order.',
+    lines: [14]
+  });
+
+  currentStep = 0;
+  render(0);
+}
+
+function render(idx) {
+  if (steps.length === 0) return;
+  idx = Math.max(0, Math.min(idx, steps.length - 1));
+  currentStep = idx;
+  var s = steps[idx];
+
+  // Code highlight
+  for (var i = 0; i <= 14; i++) {
+    var el = document.getElementById('cl' + i);
+    if (el) el.classList.toggle('hl', !!(s.lines && s.lines.indexOf(i) !== -1));
+  }
+
+  // Input lists
+  var listsArea = document.getElementById('lists-area');
+  listsArea.innerHTML = '';
+  parsedLists.forEach(function(list, li) {
+    var row = document.createElement('div');
+    row.className = 'list-row';
+    var lbl = document.createElement('span');
+    lbl.className = 'list-label';
+    lbl.textContent = 'L' + (li+1) + ':';
+    row.appendChild(lbl);
+
+    list.forEach(function(val, ni) {
+      var box = document.createElement('div');
+      box.className = 'node-box';
+      box.textContent = val;
+
+      var isExtracting = s.extracting && s.extracting.listIdx === li && s.extracting.nodeIdx === ni;
+      var inHeap = s.heap && s.heap.some(function(h) { return h[1] === li && h[2] === ni; });
+      var inResult = s.result && s.result.some(function(r) { return r.listIdx === li && r.nodeIdx === ni; });
+
+      if (isExtracting) {
+        box.classList.add('extracting');
+      } else if (inHeap) {
+        box.classList.add('in-heap');
+      } else if (inResult) {
+        box.classList.add('consumed');
+      } else {
+        box.classList.add('upcoming');
+      }
+
+      row.appendChild(box);
+      if (ni < list.length - 1) {
+        var arr = document.createElement('span');
+        arr.className = 'node-arrow';
+        arr.textContent = '→';
+        row.appendChild(arr);
+      }
+    });
+    listsArea.appendChild(row);
+  });
+
+  // Heap
+  var heapItems = document.getElementById('heap-items');
+  if (!s.heap || s.heap.length === 0) {
+    heapItems.innerHTML = '<span class="empty-hint">heap is empty</span>';
+  } else {
+    var sorted = s.heap.slice().sort(function(a, b) { return a[0] - b[0]; });
+    heapItems.innerHTML = '';
+    sorted.forEach(function(h, hi) {
+      var node = document.createElement('div');
+      node.className = 'heap-node' + (hi === 0 ? ' top' : '');
+      var valSpan = document.createElement('span');
+      valSpan.textContent = h[0];
+      var sub = document.createElement('span');
+      sub.className = 'hn-sub';
+      sub.textContent = 'L' + (h[1]+1);
+      node.appendChild(valSpan);
+      node.appendChild(sub);
+      heapItems.appendChild(node);
+    });
+  }
+
+  // Result
+  var resultNodes = document.getElementById('result-nodes');
+  if (!s.result || s.result.length === 0) {
+    resultNodes.innerHTML = '<span class="empty-hint">result list is empty</span>';
+  } else {
+    resultNodes.innerHTML = '';
+    s.result.forEach(function(r, ri) {
+      var node = document.createElement('div');
+      node.className = 'result-node';
+      node.textContent = r.val;
+      resultNodes.appendChild(node);
+      if (ri < s.result.length - 1) {
+        var arr = document.createElement('span');
+        arr.className = 'result-arrow';
+        arr.textContent = '→';
+        resultNodes.appendChild(arr);
+      }
+    });
+  }
+
+  document.getElementById('step-msg').textContent = s.msg || '';
+}
+
+// viz.js bridge
+window.__vizGetStepCount = function() { return steps.length; };
+window.__vizRender = function(idx) { render(idx); };
+window.__vizGetCurrentStep = function() { return currentStep; };
+
+function loadPreset() {
+  var val = document.getElementById('presetSel').value;
+  if (val) {
+    document.getElementById('listsInput').value = val;
+    buildAndRun();
+  }
+}
+
+function randomExample() {
+  var k = Math.floor(Math.random() * 4) + 2;
+  var len = Math.floor(Math.random() * 4) + 2;
+  var lists = [];
+  for (var i = 0; i < k; i++) {
+    var start = Math.floor(Math.random() * 10) + 1;
+    var arr = [];
+    for (var j = 0; j < len; j++) {
+      arr.push(start);
+      start += Math.floor(Math.random() * 5) + 1;
+    }
+    lists.push(arr.join(','));
+  }
+  document.getElementById('listsInput').value = lists.join(' | ');
+  document.getElementById('presetSel').value = '';
+  buildAndRun();
+}
+
+buildAndRun();
+</script>
+</body>
+</html>

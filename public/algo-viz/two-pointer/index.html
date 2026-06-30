@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Two Pointer — Remove Duplicates</title>
+<link rel="stylesheet" href="../shared/style.css">
+<style>
+  body { margin: 0; padding: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+  #main-layout { display: flex; flex: 1; min-height: 0; gap: 0; }
+  #left-panel { display: flex; flex-direction: column; flex: 1; min-width: 0; padding: 12px 16px; overflow: hidden; }
+  #code-panel { width: 280px; flex-shrink: 0; background: var(--bg-card); border-left: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
+  #code-header { padding: 10px 14px; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); border-bottom: 1px solid var(--border); }
+  #code-body { margin: 0; padding: 10px 0; font-size: 0.78rem; font-family: monospace; overflow-y: auto; flex: 1; }
+  #code-body .cl { padding: 2px 14px; line-height: 1.6; color: var(--text-dim); white-space: pre; transition: background 0.15s, color 0.15s; }
+  #code-body .cl.hl { background: rgba(99,102,241,0.18); color: var(--text-main); border-left: 3px solid var(--accent); padding-left: 11px; }
+  .viz-inputs { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; padding: 10px 0 14px; }
+  .viz-inputs label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); display: block; margin-bottom: 4px; }
+  .viz-inputs select, .viz-inputs input { background: var(--bg-card); color: var(--text-main); border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px; font-size: 0.85rem; }
+  .viz-inputs button { padding: 7px 18px; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 0.85rem; border: none; }
+  .btn-run { background: var(--accent); color: #fff; }
+  .btn-rand { background: var(--bg-card); color: var(--text-main); border: 1px solid var(--border) !important; }
+  #viz-root { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 24px; min-height: 0; }
+  #array-row { display: flex; gap: 6px; align-items: flex-end; flex-wrap: wrap; justify-content: center; }
+  .cell-wrap { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .cell { width: 46px; height: 46px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; font-weight: 700; border-radius: 8px; border: 2px solid var(--border); background: var(--bg-card); color: var(--text-main); transition: all 0.2s; }
+  .cell.left-ptr { border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,0.25); background: rgba(99,102,241,0.12); color: #818cf8; }
+  .cell.right-ptr { border-color: #f97316; box-shadow: 0 0 0 3px rgba(249,115,22,0.25); background: rgba(249,115,22,0.12); color: #fb923c; }
+  .cell.both-ptr { border-color: #a21caf; box-shadow: 0 0 0 3px rgba(162,28,175,0.25); background: rgba(162,28,175,0.12); color: #e879f9; }
+  .cell.written { border-color: var(--success); background: rgba(34,197,94,0.1); color: var(--success); }
+  .cell.dup { border-color: var(--border); background: rgba(128,128,128,0.12); color: var(--text-dim); }
+  .cell.done-k { border-color: var(--success); background: rgba(34,197,94,0.15); }
+  .cell.done-tail { border-color: var(--border); background: rgba(128,128,128,0.08); color: var(--text-dim); opacity: 0.45; }
+  .ptr-label { font-size: 0.62rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; height: 14px; }
+  .ptr-label.L { color: #6366f1; }
+  .ptr-label.R { color: #f97316; }
+  .ptr-label.LR { color: #a21caf; }
+  #status-msg { font-size: 0.88rem; color: var(--text-dim); text-align: center; min-height: 24px; padding: 0 16px; }
+  #step-counter { font-size: 0.72rem; color: var(--text-dim); font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; }
+  #result-badge { font-size: 1rem; font-weight: 700; color: var(--success); min-height: 24px; }
+  .legend { display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; font-size: 0.72rem; color: var(--text-dim); }
+  .legend-item { display: flex; align-items: center; gap: 5px; }
+  .legend-dot { width: 12px; height: 12px; border-radius: 3px; border: 2px solid; }
+</style>
+</head>
+<body>
+
+<div class="viz-inputs" style="padding: 10px 16px 0;">
+  <div>
+    <label>Preset</label>
+    <select id="presetSel" onchange="loadPreset()">
+      <option value="">— pick a preset —</option>
+      <option value="0,0,1,1,1,2,2,3,3,4">Many duplicates</option>
+      <option value="1,2,3,4,5,6">No duplicates</option>
+      <option value="7,7,7,7,7">All same</option>
+      <option value="1,1,2,2,3,3">3 distinct</option>
+      <option value="0,0,0,1,1,2,3,3,4,4,5,5,6">Long sorted array</option>
+      <option value="-3,-3,-1,0,0,2">Negative values</option>
+      <option value="1,1">Two same</option>
+    </select>
+  </div>
+  <div>
+    <label>Array (sorted, comma-separated)</label>
+    <input id="arrInput" type="text" value="0,0,1,1,1,2,2,3,3,4" style="width:220px;">
+  </div>
+  <button class="btn-run" onclick="buildAndRun()">Run</button>
+  <button class="btn-rand" onclick="randomExample()">🎲 Random</button>
+</div>
+<div class="controls"></div>
+
+<div id="main-layout">
+  <div id="left-panel">
+    <div id="viz-root">
+      <div id="step-counter">Step 0 / 0</div>
+      <div id="array-row"></div>
+      <div id="status-msg">Enter a sorted array and click Run.</div>
+      <div id="result-badge"></div>
+      <div class="legend">
+        <div class="legend-item"><div class="legend-dot" style="border-color:#6366f1;background:rgba(99,102,241,0.12)"></div> left (write)</div>
+        <div class="legend-item"><div class="legend-dot" style="border-color:#f97316;background:rgba(249,115,22,0.12)"></div> right (read)</div>
+        <div class="legend-item"><div class="legend-dot" style="border-color:#a21caf;background:rgba(162,28,175,0.12)"></div> both</div>
+        <div class="legend-item"><div class="legend-dot" style="border-color:var(--success);background:rgba(34,197,94,0.1)"></div> written</div>
+        <div class="legend-item"><div class="legend-dot" style="border-color:var(--border);background:rgba(128,128,128,0.12)"></div> duplicate</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="code-panel">
+    <div id="code-header">Pseudocode</div>
+    <pre id="code-body">
+<div id="cl1" class="cl">def removeDuplicates(nums):</div>
+<div id="cl2" class="cl">  if not nums: return 0</div>
+<div id="cl3" class="cl"> </div>
+<div id="cl4" class="cl">  left = 0</div>
+<div id="cl5" class="cl"> </div>
+<div id="cl6" class="cl">  for right in range(1, len(nums)):</div>
+<div id="cl7" class="cl">    if nums[right] != nums[left]:</div>
+<div id="cl8" class="cl">      left += 1</div>
+<div id="cl9" class="cl">      nums[left] = nums[right]</div>
+<div id="cl10" class="cl">    # else: skip duplicate</div>
+<div id="cl11" class="cl"> </div>
+<div id="cl12" class="cl">  return left + 1</div>
+</pre>
+  </div>
+</div>
+
+<script src="../shared/gsap.min.js"></script>
+<script src="../shared/viz.js"></script>
+<script>
+let steps = [];
+let currentStep = 0;
+let arr = [];
+
+function loadPreset() {
+  const sel = document.getElementById("presetSel");
+  if (sel.value) {
+    document.getElementById("arrInput").value = sel.value;
+    buildAndRun();
+  }
+}
+
+function randomExample() {
+  const distinctCount = Math.floor(Math.random() * 5) + 3;
+  const nums = [];
+  let val = Math.floor(Math.random() * 4) - 1;
+  for (let i = 0; i < distinctCount; i++) {
+    const reps = Math.floor(Math.random() * 3) + 1;
+    for (let j = 0; j < reps; j++) nums.push(val);
+    val += Math.floor(Math.random() * 3) + 1;
+  }
+  document.getElementById("arrInput").value = nums.join(",");
+  document.getElementById("presetSel").value = "";
+  buildAndRun();
+}
+
+function parseArr() {
+  const raw = document.getElementById("arrInput").value.trim();
+  return raw.split(",").map(s => parseInt(s.trim(), 10)).filter(n => !isNaN(n));
+}
+
+function buildAndRun() {
+  arr = parseArr();
+  if (arr.length === 0) {
+    document.getElementById("status-msg").textContent = "Enter a valid array.";
+    return;
+  }
+  steps = [];
+
+  // Step 1: initial state
+  steps.push({ arr: [...arr], left: 0, right: -1, phase: "init", msg: "Initialize left = 0. Right pointer will scan from index 1.", codeLines: [1, 4] });
+
+  if (arr.length === 1) {
+    steps.push({ arr: [...arr], left: 0, right: 0, phase: "done", msg: "Array has only one element. k = 1.", codeLines: [12] });
+    currentStep = 0;
+    render(0);
+    return;
+  }
+
+  const sim = [...arr];
+  let left = 0;
+
+  for (let right = 1; right < sim.length; right++) {
+    // Show right moving to this position, checking condition
+    steps.push({ arr: [...sim], left, right, phase: "check", msg: , codeLines: [6, 7] });
+
+    if (sim[right] !== sim[left]) {
+      left++;
+      sim[left] = sim[right];
+      steps.push({ arr: [...sim], left, right, phase: "write", msg: , codeLines: [8, 9] });
+    } else {
+      steps.push({ arr: [...sim], left, right, phase: "dup", msg: , codeLines: [10] });
+    }
+  }
+
+  steps.push({ arr: [...sim], left, right: sim.length - 1, phase: "done", msg: , codeLines: [12], k: left + 1 });
+
+  currentStep = 0;
+  render(0);
+}
+
+function getCodeLines(step) {
+  return step.codeLines || [];
+}
+
+function render(idx) {
+  if (!steps.length) return;
+  const step = steps[idx];
+  const total = steps.length;
+
+  document.getElementById("step-counter").textContent = ;
+  document.getElementById("status-msg").textContent = step.msg;
+  document.getElementById("result-badge").textContent = step.phase === "done" && step.k !== undefined ?  : "";
+
+  // Highlight code lines
+  for (let i = 1; i <= 12; i++) {
+    const el = document.getElementById("cl" + i);
+    if (el) el.classList.remove("hl");
+  }
+  getCodeLines(step).forEach(n => {
+    const el = document.getElementById("cl" + n);
+    if (el) el.classList.add("hl");
+  });
+
+  // Render array
+  const row = document.getElementById("array-row");
+  row.innerHTML = "";
+  const { arr: a, left, right, phase, k } = step;
+
+  a.forEach((val, i) => {
+    const wrap = document.createElement("div");
+    wrap.className = "cell-wrap";
+
+    const cell = document.createElement("div");
+    cell.className = "cell";
+    cell.textContent = val;
+
+    const lbl = document.createElement("div");
+    lbl.className = "ptr-label";
+
+    const isLeft = i === left;
+    const isRight = i === right;
+
+    if (phase === "done" && k !== undefined) {
+      if (i < k) cell.classList.add("done-k");
+      else cell.classList.add("done-tail");
+    } else if (isLeft && isRight) {
+      cell.classList.add("both-ptr");
+      lbl.textContent = "L+R";
+      lbl.classList.add("LR");
+    } else if (isLeft) {
+      cell.classList.add("left-ptr");
+      lbl.textContent = "L";
+      lbl.classList.add("L");
+    } else if (isRight) {
+      cell.classList.add("right-ptr");
+      lbl.textContent = "R";
+      lbl.classList.add("R");
+    } else if (phase === "write" && i === left && i <= right) {
+      cell.classList.add("written");
+    } else if (right >= 0 && i > left && i <= right && phase !== "init") {
+      cell.classList.add("dup");
+    }
+
+    wrap.appendChild(lbl);
+    wrap.appendChild(cell);
+
+    const idxLbl = document.createElement("div");
+    idxLbl.style.cssText = "font-size:0.6rem;color:var(--text-dim);font-family:monospace;";
+    idxLbl.textContent = i;
+    wrap.appendChild(idxLbl);
+
+    row.appendChild(wrap);
+  });
+}
+
+// VizNav integration
+window.__vizSteps = steps;
+window.__renderStep = render;
+window.__getCurrentStep = () => currentStep;
+window.__setCurrentStep = (i) => { currentStep = i; };
+window.__getTotalSteps = () => steps.length;
+
+// Override to keep steps in sync after build
+const _origBuild = buildAndRun;
+buildAndRun = function() {
+  _origBuild();
+  window.__vizSteps = steps;
+  window.__getTotalSteps = () => steps.length;
+};
+
+// Bootstrap
+buildAndRun();
+</script>
+</body>
+</html>

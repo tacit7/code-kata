@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Queue from Two Stacks</title>
+  <link rel="stylesheet" href="../shared/style.css" />
+  <script src="../shared/gsap.min.js"></script>
+  <script src="../shared/viz.js"></script>
+  <style>
+    .stacks-row {
+      display: flex;
+      gap: 24px;
+      align-items: flex-end;
+      justify-content: center;
+      min-height: 200px;
+    }
+    .stack-col {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      min-width: 110px;
+    }
+    .stack-title {
+      font-size: 0.68rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.1em;
+      color: var(--text-dim);
+    }
+    .stack-body {
+      display: flex;
+      flex-direction: column-reverse;
+      gap: 4px;
+      min-height: 180px;
+      width: 100px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px;
+      justify-content: flex-start;
+    }
+    .stack-item {
+      display: flex; align-items: center; justify-content: center;
+      height: 36px; border-radius: 6px;
+      font-weight: 700; font-size: 1rem;
+      border: 2px solid;
+      transition: all 0.2s ease;
+    }
+    .stack-item.s1 {
+      background: rgba(122, 162, 247, 0.15);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+    .stack-item.s2 {
+      background: rgba(115, 218, 149, 0.15);
+      border-color: var(--green);
+      color: var(--green);
+    }
+    .stack-item.hl {
+      background: rgba(224, 175, 104, 0.25);
+      border-color: var(--yellow);
+      color: var(--yellow);
+      transform: scale(1.1);
+    }
+    .stack-empty {
+      color: var(--text-dim); font-size: 0.75rem;
+      font-style: italic; text-align: center; padding: 8px;
+    }
+    .transfer-col {
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 4px; min-width: 64px;
+      color: var(--text-dim);
+      font-size: 0.75rem; font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      transition: color 0.2s;
+    }
+    .transfer-col.active { color: var(--yellow); }
+    .transfer-col .arrow { font-size: 1.6rem; line-height: 1; }
+
+    .queue-panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 16px;
+    }
+    .queue-label {
+      font-size: 0.68rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.1em;
+      color: var(--text-dim); margin-bottom: 10px;
+    }
+    .queue-row {
+      display: flex; gap: 6px; align-items: center;
+      flex-wrap: wrap; min-height: 36px;
+    }
+    .queue-item {
+      display: flex; align-items: center; justify-content: center;
+      width: 40px; height: 36px; border-radius: 6px;
+      font-weight: 700; font-size: 0.9rem;
+      border: 2px solid var(--border);
+      background: #0a0d14; color: var(--text);
+    }
+    .queue-item.front {
+      border-color: var(--green);
+      color: var(--green);
+      background: var(--green-bg);
+    }
+    .queue-arrow { color: var(--text-dim); font-size: 0.8rem; }
+    .queue-empty { color: var(--text-dim); font-size: 0.8rem; font-style: italic; }
+
+    .code-panel {
+      background: #0a0d14;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .code-header {
+      padding: 9px 14px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      font-size: 0.67rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.11em;
+      color: var(--text-dim);
+    }
+    .code-body {
+      padding: 12px 0;
+      font-family: 'JetBrains Mono', 'Fira Code', monospace;
+      font-size: 0.78rem; line-height: 1.75;
+      overflow-x: auto;
+    }
+    .cl {
+      display: flex; align-items: stretch;
+      border-left: 3px solid transparent;
+      padding: 0 14px 0 0;
+      transition: background-color 0.01s;
+      white-space: pre;
+    }
+    .cl .ln {
+      width: 28px; min-width: 28px;
+      text-align: right; color: #3d4468;
+      user-select: none; padding-right: 14px;
+      font-size: 0.72rem; line-height: 1.75;
+    }
+    .cl .code { color: var(--text-muted); }
+    .cl.hl {
+      background: rgba(122, 162, 247, 0.12);
+      border-left-color: var(--accent);
+    }
+    .kw  { color: var(--purple); }
+    .fn  { color: var(--blue); }
+    .bi  { color: var(--orange); }
+    .cm  { color: #3d4468; font-style: italic; }
+    .num { color: var(--yellow); }
+    .str { color: var(--green); }
+
+    .result-tag {
+      display: inline-block; margin-left: 8px;
+      padding: 2px 8px;
+      background: rgba(224, 175, 104, 0.15);
+      border: 1px solid var(--yellow);
+      border-radius: 4px;
+      color: var(--yellow);
+      font-weight: 700; font-size: 0.8rem;
+    }
+  </style>
+</head>
+<body class="page">
+
+<div class="page-header">
+  <a class="back-link" href="../index.html">&#8592; All Algorithms</a>
+  <div class="page-title">Queue from Two Stacks</div>
+  <div class="page-sub">LeetCode #232 &middot; stack / queue &middot; O(1) amortized push &amp; pop</div>
+</div>
+
+<div class="viz-inputs" style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;padding:10px 0 14px;">
+  <div style="display:flex;flex-direction:column;gap:4px;">
+    <label style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-dim);">Preset</label>
+    <select id="presetSel" onchange="loadPreset()" style="background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:var(--radius-sm);padding:6px 10px;font-size:0.85rem;cursor:pointer;">
+      <option value="">&#8212; custom &#8212;</option>
+      <option value="push3pop" selected>Push 3, pop all</option>
+      <option value="interleaved">Interleaved push/pop</option>
+      <option value="refill">Pop then refill</option>
+      <option value="peekFirst">Peek before pop</option>
+      <option value="pushMany">Push 5, mixed ops</option>
+    </select>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:4px;">
+    <label style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-dim);">Operations (push:N &nbsp;/&nbsp; pop &nbsp;/&nbsp; peek)</label>
+    <input type="text" id="opsInput" value="push:1 push:2 push:3 pop push:4 peek pop"
+      style="background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:var(--radius-sm);padding:6px 10px;font-size:0.85rem;width:320px;" />
+  </div>
+  <button id="buildBtn" style="background:var(--accent);border:none;color:#fff;border-radius:var(--radius-sm);padding:8px 16px;cursor:pointer;font-size:0.85rem;font-weight:700;">Run</button>
+  <button onclick="randomExample()" style="background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:var(--radius-sm);padding:8px 14px;cursor:pointer;font-size:0.85rem;">&#127922; Random</button>
+</div>
+
+<div class="controls"></div>
+
+<div class="viz-area">
+  <!-- nav row — hidden in iframe by .nav-row selector -->
+  <div class="nav-row" style="display:flex;gap:12px;margin-bottom:14px">
+    <div class="panel-box" style="flex:0 0 auto">
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="btn-step" id="prevBtn" disabled>&#8592;</button>
+        <button class="btn-step" id="stepBtn" disabled>&#8594;</button>
+        <button class="btn-play" id="playBtn" disabled>&#9654; Play</button>
+        <button class="btn-step" id="resetBtn">&#8635;</button>
+        <select id="speedSel" style="background:var(--bg);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:6px 10px;font-size:0.85rem">
+          <option value="700">Slow</option>
+          <option value="350" selected>Medium</option>
+          <option value="120">Fast</option>
+        </select>
+      </div>
+    </div>
+    <div class="panel-box" style="flex:1;min-width:0">
+      <div style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--text-dim)" id="phase-label">&#8212;</div>
+      <div style="font-size:0.88rem;color:var(--text-muted);margin-top:3px" id="step-desc">Click Run to start.</div>
+    </div>
+  </div>
+
+  <!-- Two stacks -->
+  <div class="stacks-row">
+    <div class="stack-col">
+      <div class="stack-title">Stack 1 &#8212; in</div>
+      <div class="stack-body" id="s1-body">
+        <div class="stack-empty">empty</div>
+      </div>
+      <div style="font-size:0.68rem;color:var(--text-dim);margin-top:4px;">&#8592; push(x) here</div>
+    </div>
+
+    <div class="transfer-col" id="transfer-col">
+      <span>transfer</span>
+      <span class="arrow">&#8594;</span>
+    </div>
+
+    <div class="stack-col">
+      <div class="stack-title">Stack 2 &#8212; out</div>
+      <div class="stack-body" id="s2-body">
+        <div class="stack-empty">empty</div>
+      </div>
+      <div style="font-size:0.68rem;color:var(--text-dim);margin-top:4px;">pop / peek here &#8592; top</div>
+    </div>
+  </div>
+
+  <!-- Logical queue -->
+  <div class="queue-panel" style="margin-top:14px">
+    <div class="queue-label">Logical Queue &#8212; front &#8594; back</div>
+    <div class="queue-row" id="queue-row">
+      <span class="queue-empty">empty</span>
+    </div>
+  </div>
+
+  <!-- Code panel -->
+  <div class="code-panel" style="margin-top:14px">
+    <div class="code-header">Python</div>
+    <div class="code-body" id="code-body"></div>
+  </div>
+</div>
+
+<script>
+var nav;
+
+var pythonCode = [
+  '<span class="kw">class</span> <span class="fn">MyQueue</span>:',
+  '    <span class="kw">def</span> <span class="fn">__init__</span>(<span class="bi">self</span>):',
+  '        <span class="bi">self</span>.s1 = []  <span class="cm"># in-stack (push here)</span>',
+  '        <span class="bi">self</span>.s2 = []  <span class="cm"># out-stack (pop/peek)</span>',
+  '',
+  '    <span class="kw">def</span> <span class="fn">push</span>(<span class="bi">self</span>, <span class="bi">x</span>):',
+  '        <span class="bi">self</span>.s1.append(<span class="bi">x</span>)',
+  '',
+  '    <span class="kw">def</span> <span class="fn">pop</span>(<span class="bi">self</span>):',
+  '        <span class="bi">self</span>._transfer()',
+  '        <span class="kw">return</span> <span class="bi">self</span>.s2.pop()',
+  '',
+  '    <span class="kw">def</span> <span class="fn">peek</span>(<span class="bi">self</span>):',
+  '        <span class="bi">self</span>._transfer()',
+  '        <span class="kw">return</span> <span class="bi">self</span>.s2[-<span class="num">1</span>]',
+  '',
+  '    <span class="kw">def</span> <span class="fn">_transfer</span>(<span class="bi">self</span>):',
+  '        <span class="kw">if not</span> <span class="bi">self</span>.s2:',
+  '            <span class="kw">while</span> <span class="bi">self</span>.s1:',
+  '                <span class="bi">self</span>.s2.append(',
+  '                    <span class="bi">self</span>.s1.pop())',
+];
+
+function renderCodePanel() {
+  var body = document.getElementById('code-body');
+  body.innerHTML = pythonCode.map(function(line, i) {
+    return '<div class="cl" id="cl-' + i + '"><div class="ln">' + (i + 1) + '</div><div class="code">' + line + '</div></div>';
+  }).join('');
+}
+
+function setCodeLines(activeLines) {
+  document.querySelectorAll('.cl').forEach(function(el, i) {
+    el.classList.toggle('hl', activeLines.indexOf(i) !== -1);
+  });
+}
+
+var PRESETS = {
+  push3pop:    'push:1 push:2 push:3 pop pop pop',
+  interleaved: 'push:1 push:2 pop push:3 push:4 pop peek pop',
+  refill:      'push:10 push:20 pop pop push:30 push:40 peek pop',
+  peekFirst:   'push:5 peek push:6 push:7 peek pop peek',
+  pushMany:    'push:1 push:2 push:3 push:4 push:5 pop pop push:6 peek pop pop'
+};
+
+function loadPreset() {
+  var sel = document.getElementById('presetSel');
+  if (!sel.value) return;
+  document.getElementById('opsInput').value = PRESETS[sel.value] || '';
+  buildAndRun();
+}
+
+function randomExample() {
+  var count = 3 + Math.floor(Math.random() * 4);
+  var ops = [];
+  for (var i = 0; i < count; i++) {
+    ops.push('push:' + (Math.floor(Math.random() * 20) + 1));
+    if (i >= 1 && Math.random() < 0.45) {
+      ops.push(Math.random() < 0.6 ? 'pop' : 'peek');
+    }
+  }
+  if (Math.random() < 0.5) ops.push('pop');
+  document.getElementById('opsInput').value = ops.join(' ');
+  document.getElementById('presetSel').value = '';
+  buildAndRun();
+}
+
+function parseOps(str) {
+  return str.trim().split(/\s+/).map(function(t) {
+    if (t.indexOf('push:') === 0) return { type: 'push', val: parseInt(t.slice(5), 10) };
+    if (t === 'pop')  return { type: 'pop' };
+    if (t === 'peek') return { type: 'peek' };
+    return null;
+  }).filter(Boolean);
+}
+
+function logicalQueue(s1, s2) {
+  // front = top of s2, back = top of s1
+  var out = s2.slice().reverse();
+  return out.concat(s1.slice());
+}
+
+function simulate(ops) {
+  var steps = [];
+  var s1 = [], s2 = [];
+
+  steps.push({
+    phase: 'Init',
+    desc: 'Both stacks empty. Ready to process operations.',
+    s1: [], s2: [],
+    activeLines: [1, 2, 3],
+    result: null, activeItem: null, transferring: false
+  });
+
+  for (var oi = 0; oi < ops.length; oi++) {
+    var op = ops[oi];
+
+    if (op.type === 'push') {
+      steps.push({
+        phase: 'push(' + op.val + ')',
+        desc: 'push(' + op.val + ') — append to Stack 1 (in-stack)',
+        s1: s1.slice(), s2: s2.slice(),
+        activeLines: [5, 6],
+        result: null, activeItem: op.val, transferring: false
+      });
+      s1.push(op.val);
+      steps.push({
+        phase: 'push(' + op.val + ')',
+        desc: op.val + ' pushed onto Stack 1.',
+        s1: s1.slice(), s2: s2.slice(),
+        activeLines: [6],
+        result: null, activeItem: op.val, transferring: false
+      });
+
+    } else if (op.type === 'pop' || op.type === 'peek') {
+      var opName = op.type;
+      var lineCall     = opName === 'pop' ? 8  : 12;
+      var lineTransfer = opName === 'pop' ? 9  : 13;
+      var lineReturn   = opName === 'pop' ? 10 : 14;
+
+      steps.push({
+        phase: opName + '()',
+        desc: opName + '() called',
+        s1: s1.slice(), s2: s2.slice(),
+        activeLines: [lineCall],
+        result: null, activeItem: null, transferring: false
+      });
+
+      if (s2.length === 0 && s1.length > 0) {
+        steps.push({
+          phase: opName + '() → _transfer()',
+          desc: 'Stack 2 is empty — transferring all items from Stack 1',
+          s1: s1.slice(), s2: s2.slice(),
+          activeLines: [lineTransfer, 16, 17],
+          result: null, activeItem: null, transferring: false
+        });
+        while (s1.length > 0) {
+          var item = s1[s1.length - 1];
+          steps.push({
+            phase: '_transfer()',
+            desc: 'Moving ' + item + ' from Stack 1 → Stack 2',
+            s1: s1.slice(), s2: s2.slice(),
+            activeLines: [17, 18, 19],
+            result: null, activeItem: item, transferring: true
+          });
+          s1.pop();
+          s2.push(item);
+          steps.push({
+            phase: '_transfer()',
+            desc: item + ' placed in Stack 2.',
+            s1: s1.slice(), s2: s2.slice(),
+            activeLines: [18, 19],
+            result: null, activeItem: item, transferring: false
+          });
+        }
+      } else if (s2.length > 0) {
+        steps.push({
+          phase: opName + '() → _transfer()',
+          desc: 'Stack 2 already has items — no transfer needed',
+          s1: s1.slice(), s2: s2.slice(),
+          activeLines: [lineTransfer, 16, 17],
+          result: null, activeItem: null, transferring: false
+        });
+      }
+
+      if (s2.length === 0) {
+        steps.push({
+          phase: opName + '() → EMPTY',
+          desc: opName + '() — queue is empty! Nothing to ' + opName + '.',
+          s1: s1.slice(), s2: s2.slice(),
+          activeLines: [lineReturn],
+          result: 'empty', activeItem: null, transferring: false
+        });
+      } else if (opName === 'pop') {
+        var val = s2[s2.length - 1];
+        steps.push({
+          phase: 'pop() → ' + val,
+          desc: 'Popping ' + val + ' from top of Stack 2 (front of queue)',
+          s1: s1.slice(), s2: s2.slice(),
+          activeLines: [lineReturn],
+          result: val, activeItem: val, transferring: false
+        });
+        s2.pop();
+        steps.push({
+          phase: 'pop() done',
+          desc: val + ' removed. Queue updated.',
+          s1: s1.slice(), s2: s2.slice(),
+          activeLines: [lineReturn],
+          result: val, activeItem: null, transferring: false
+        });
+      } else {
+        var peekVal = s2[s2.length - 1];
+        steps.push({
+          phase: 'peek() → ' + peekVal,
+          desc: 'Peeking top of Stack 2: ' + peekVal + ' (front of queue, not removed)',
+          s1: s1.slice(), s2: s2.slice(),
+          activeLines: [lineReturn],
+          result: peekVal, activeItem: peekVal, transferring: false
+        });
+      }
+    }
+  }
+
+  return steps;
+}
+
+function renderStack(bodyId, items, cls, activeItem) {
+  var el = document.getElementById(bodyId);
+  if (items.length === 0) {
+    el.innerHTML = '<div class="stack-empty">empty</div>';
+    return;
+  }
+  el.innerHTML = items.map(function(v, i) {
+    var isTop    = i === items.length - 1;
+    var isActive = isTop && v === activeItem;
+    return '<div class="stack-item ' + cls + (isActive ? ' hl' : '') + '">' + v + '</div>';
+  }).join('');
+}
+
+function applyStep(snap) {
+  renderStack('s1-body', snap.s1, 's1', snap.transferring ? null : snap.activeItem);
+  renderStack('s2-body', snap.s2, 's2', snap.transferring ? snap.activeItem : snap.activeItem);
+
+  // Transfer arrow
+  document.getElementById('transfer-col').classList.toggle('active', !!snap.transferring);
+
+  // Logical queue
+  var q = logicalQueue(snap.s1, snap.s2);
+  var qrow = document.getElementById('queue-row');
+  if (q.length === 0) {
+    qrow.innerHTML = '<span class="queue-empty">empty</span>';
+  } else {
+    qrow.innerHTML = q.map(function(v, i) {
+      return '<div class="queue-item' + (i === 0 ? ' front' : '') + '">' + v + '</div>' +
+             (i < q.length - 1 ? '<span class="queue-arrow">&#8250;</span>' : '');
+    }).join('');
+  }
+
+  setCodeLines(snap.activeLines || []);
+}
+
+function updateStatus(snap, cur, total) {
+  document.getElementById('phase-label').textContent =
+    (snap.phase || '—') + '  (' + (cur + 1) + ' / ' + total + ')';
+  var descHtml = snap.desc || '';
+  if (snap.result !== null && snap.result !== undefined) {
+    descHtml += ' <span class="result-tag">→ ' + snap.result + '</span>';
+  }
+  document.getElementById('step-desc').innerHTML = descHtml;
+}
+
+window.addEventListener('DOMContentLoaded', function() {
+  renderCodePanel();
+
+  nav = VizNav({
+    btnPrev:  document.getElementById('prevBtn'),
+    btnNext:  document.getElementById('stepBtn'),
+    btnPlay:  document.getElementById('playBtn'),
+    speedSel: document.getElementById('speedSel'),
+    render: function(snap, cur, total) {
+      applyStep(snap);
+      updateStatus(snap, cur, total);
+    }
+  });
+
+  document.getElementById('resetBtn').addEventListener('click', function() {
+    nav.stopPlay();
+    nav.goTo(0);
+  });
+
+  document.getElementById('buildBtn').addEventListener('click', buildAndRun);
+  buildAndRun();
+});
+
+function buildAndRun() {
+  var input = document.getElementById('opsInput').value;
+  var ops = parseOps(input);
+  if (ops.length === 0) { alert('Enter at least one operation (push:N, pop, or peek).'); return; }
+  var steps = simulate(ops);
+  nav.load(steps);
+}
+
+if (window.self !== window.top) {
+  var bl = document.querySelector('.back-link');
+  if (bl) bl.style.display = 'none';
+}
+</script>
+</body>
+</html>

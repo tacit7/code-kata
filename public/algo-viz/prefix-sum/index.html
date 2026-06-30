@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Prefix Sum / Range Sum Query</title>
+<link rel="stylesheet" href="../shared/style.css">
+<style>
+  body { margin: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+  #main-layout { display: flex; flex: 1; overflow: hidden; }
+  #left-panel { display: flex; flex-direction: column; flex: 1; padding: 16px; overflow-y: auto; gap: 14px; }
+  #code-panel { width: 280px; border-left: 1px solid var(--border); padding: 12px; overflow-y: auto; font-size: 0.78rem; flex-shrink: 0; }
+  #code-panel h4 { margin: 0 0 8px 0; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); }
+  #code-body { margin: 0; font-family: monospace; line-height: 1.7; }
+  .cl { padding: 1px 6px; border-radius: 3px; color: var(--text-dim); transition: background 0.2s, color 0.2s; white-space: pre; }
+  .cl.hl  { background: var(--accent); color: #fff; }
+  .cl.hl2 { background: #2a5c2a; color: #7eff7e; }
+  .section-label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); font-weight: 700; margin-bottom: 6px; }
+  .array-row { display: flex; align-items: flex-end; gap: 4px; flex-wrap: wrap; }
+  .cell { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+  .cell-idx { font-size: 0.65rem; color: var(--text-dim); }
+  .cell-box {
+    width: 46px; height: 46px;
+    border: 2px solid var(--border);
+    border-radius: 6px;
+    background: var(--bg-card);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1rem; font-weight: 700;
+    color: var(--text-main);
+    transition: background 0.25s, border-color 0.25s, color 0.25s, transform 0.2s;
+  }
+  .cell-box.building    { background: var(--accent); border-color: var(--accent); color: #fff; transform: scale(1.12); }
+  .cell-box.done-build  { background: #1a3a5c; border-color: var(--accent); color: var(--accent); }
+  .cell-box.query-range { background: #1a4d1a; border-color: #4caf50; color: #7eff7e; }
+  .cell-box.answer-cell { background: #3a3000; border-color: #f0c040; color: #f0c040; }
+  #status-box {
+    background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px;
+    padding: 10px 14px; font-size: 0.88rem; color: var(--text-main); min-height: 40px;
+    line-height: 1.6;
+  }
+  .phase   { font-weight: 700; color: var(--accent); margin-right: 4px; }
+  .formula { font-family: monospace; background: #1a1a2e; padding: 1px 6px; border-radius: 4px; color: #f0c040; }
+  #answer-box {
+    background: #3a3000; border: 2px solid #f0c040; border-radius: 8px;
+    padding: 10px 14px; font-size: 1rem; font-weight: 700; color: #f0c040;
+    display: none;
+  }
+  .viz-inputs label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); }
+  .viz-inputs input  { background: var(--bg-card); color: var(--text-main); border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px; font-size: 0.85rem; }
+  .viz-inputs input.wide  { width: 200px; }
+  .viz-inputs input.small { width: 60px; }
+</style>
+</head>
+<body>
+
+<!-- user controls MUST be in .viz-inputs — .controls is hidden by iframe bridge -->
+<div class="viz-inputs" style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;padding:10px 14px 10px;">
+  <div style="display:flex;flex-direction:column;gap:4px;">
+    <label>Preset</label>
+    <select id="presetSel" onchange="loadPreset()" style="background:var(--bg-card);color:var(--text-main);border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-size:0.85rem;">
+      <option value="">— pick a preset —</option>
+      <option value="1,3,5,7,9,11|0|5">Sequential odds [1..11], full range</option>
+      <option value="1,2,4,8,16,32|1|4">Powers of 2, mid query</option>
+      <option value="5,1,5,1,5,1,5|2|5">Alternating 5-1, mid range</option>
+      <option value="7,7,7,7,7,7,7|0|6">All same (7s), full range</option>
+      <option value="3,14,1,5,9,2,6,5|0|7">Pi digits, first-to-last</option>
+      <option value="10,20,30,40,50|2|4">Tens, last 3 [2,4]</option>
+      <option value="1,2,3,4,5,6,7,8|3|6">1..8, mid query [3,6]</option>
+    </select>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:4px;">
+    <label>Array (comma-separated)</label>
+    <input id="arrInput" type="text" class="wide" value="1,3,5,7,9,11" placeholder="e.g. 1,3,5,7,9">
+  </div>
+  <div style="display:flex;flex-direction:column;gap:4px;">
+    <label>Query L</label>
+    <input id="qL" type="number" class="small" value="1" min="0">
+  </div>
+  <div style="display:flex;flex-direction:column;gap:4px;">
+    <label>Query R</label>
+    <input id="qR" type="number" class="small" value="4" min="0">
+  </div>
+  <button onclick="buildAndRun()" style="padding:7px 18px;background:var(--accent);color:#fff;border:none;border-radius:6px;font-weight:600;cursor:pointer;">Run</button>
+  <button onclick="randomExample()" style="padding:7px 14px;background:var(--bg-card);color:var(--text-main);border:1px solid var(--border);border-radius:6px;cursor:pointer;">&#127922; Random</button>
+</div>
+
+<div id="main-layout">
+  <div id="left-panel">
+
+    <div>
+      <div class="section-label">Original Array</div>
+      <div class="array-row" id="orig-cells"></div>
+    </div>
+
+    <div>
+      <div class="section-label">
+        Prefix Sum Array
+        <span style="color:var(--text-dim);font-size:0.7rem;font-weight:400;text-transform:none;">
+          &nbsp;prefix[0]=0 &nbsp;|&nbsp; prefix[i] = prefix[i-1] + arr[i-1]
+        </span>
+      </div>
+      <div class="array-row" id="prefix-cells"></div>
+    </div>
+
+    <div id="status-box">Press Run to start.</div>
+    <div id="answer-box"></div>
+
+  </div>
+
+  <div id="code-panel">
+    <h4>Pseudocode</h4>
+    <pre id="code-body"><div id="cl1" class="cl">// Build prefix sum</div><div id="cl2" class="cl">prefix = [0] * (n+1)</div><div id="cl3" class="cl">for i in range(1, n+1):</div><div id="cl4" class="cl">  prefix[i] = prefix[i-1]</div><div id="cl5" class="cl">            + arr[i-1]</div><div id="cl6" class="cl"> </div><div id="cl7" class="cl">// Range Query  O(1)</div><div id="cl8" class="cl">def rangeSum(l, r):</div><div id="cl9" class="cl">  return prefix[r+1]</div><div id="cl10" class="cl">       - prefix[l]</div></pre>
+  </div>
+</div>
+
+<div class="controls"></div>
+
+<script src="../shared/gsap.min.js"></script>
+<script src="../shared/viz.js"></script>
+<script>
+var steps = [];
+var currentStep = 0;
+var arr = [];
+var prefix = [];
+var queryL = 0, queryR = 0;
+
+function loadPreset() {
+  var val = document.getElementById('presetSel').value;
+  if (!val) return;
+  var parts = val.split('|');
+  document.getElementById('arrInput').value = parts[0];
+  document.getElementById('qL').value = parts[1];
+  document.getElementById('qR').value = parts[2];
+  buildAndRun();
+}
+
+function randomExample() {
+  var n = 5 + Math.floor(Math.random() * 4);
+  var a = [];
+  for (var i = 0; i < n; i++) a.push(Math.floor(Math.random() * 20) + 1);
+  var l = Math.floor(Math.random() * n);
+  var r = l + Math.floor(Math.random() * (n - l));
+  document.getElementById('arrInput').value = a.join(',');
+  document.getElementById('qL').value = l;
+  document.getElementById('qR').value = r;
+  document.getElementById('presetSel').value = '';
+  buildAndRun();
+}
+
+function parseArr() {
+  return document.getElementById('arrInput').value
+    .split(',').map(function(s){ return parseInt(s.trim(), 10); }).filter(function(n){ return !isNaN(n); });
+}
+
+function buildAndRun() {
+  arr = parseArr();
+  if (arr.length === 0) return;
+  var n = arr.length;
+  queryL = Math.max(0, Math.min(parseInt(document.getElementById('qL').value, 10) || 0, n - 1));
+  queryR = Math.max(queryL, Math.min(parseInt(document.getElementById('qR').value, 10) || 0, n - 1));
+
+  prefix = new Array(n + 1).fill(0);
+  for (var i = 1; i <= n; i++) prefix[i] = prefix[i - 1] + arr[i - 1];
+
+  steps = [];
+
+  // Step 0: init
+  steps.push({ phase: 'build', builtUpTo: 0,
+    msg: '<span class="phase">Build</span> Initialize prefix[0] = 0',
+    lines: ['cl2'] });
+
+  // Build steps
+  for (var i = 1; i <= n; i++) {
+    steps.push({ phase: 'build', builtUpTo: i, currentI: i,
+      msg: '<span class="phase">Build</span> prefix[' + i + '] = prefix[' + (i-1) + '] + arr[' + (i-1) + '] = ' +
+           prefix[i-1] + ' + ' + arr[i-1] + ' = <span class="formula">' + prefix[i] + '</span>',
+      lines: ['cl3','cl4','cl5'] });
+  }
+
+  // Query announce
+  steps.push({ phase: 'query', builtUpTo: n, queryActive: false,
+    msg: '<span class="phase">Query</span> Computing rangeSum(' + queryL + ', ' + queryR + ')...',
+    lines: ['cl8'] });
+
+  // Query resolve
+  var answer = prefix[queryR + 1] - prefix[queryL];
+  steps.push({ phase: 'query', builtUpTo: n, queryActive: true,
+    msg: '<span class="phase">Query</span> rangeSum(' + queryL + ', ' + queryR + ') = ' +
+         'prefix[' + (queryR+1) + '] - prefix[' + queryL + '] = ' +
+         prefix[queryR+1] + ' - ' + prefix[queryL] + ' = <span class="formula">' + answer + '</span>',
+    lines: ['cl9','cl10'],
+    answer: answer });
+
+  renderCells();
+  document.getElementById('answer-box').style.display = 'none';
+  currentStep = 0;
+  render(0);
+  if (window.__vizSetSteps) window.__vizSetSteps(steps.length);
+}
+
+function makeCell(id, idx, val) {
+  var wrap = document.createElement('div');
+  wrap.className = 'cell';
+  var idxEl = document.createElement('div');
+  idxEl.className = 'cell-idx';
+  idxEl.textContent = idx;
+  var box = document.createElement('div');
+  box.className = 'cell-box';
+  box.id = id;
+  box.textContent = val;
+  wrap.appendChild(idxEl);
+  wrap.appendChild(box);
+  return wrap;
+}
+
+function renderCells() {
+  var n = arr.length;
+  var origC = document.getElementById('orig-cells');
+  var preC = document.getElementById('prefix-cells');
+  origC.innerHTML = '';
+  preC.innerHTML = '';
+  for (var i = 0; i < n; i++) origC.appendChild(makeCell('orig-' + i, i, arr[i]));
+  for (var i = 0; i <= n; i++) preC.appendChild(makeCell('pre-' + i, i, i === 0 ? 0 : '?'));
+}
+
+function clearHighlights() {
+  var boxes = document.querySelectorAll('.cell-box');
+  for (var i = 0; i < boxes.length; i++) boxes[i].className = 'cell-box';
+  var cls = document.querySelectorAll('.cl');
+  for (var i = 0; i < cls.length; i++) { cls[i].classList.remove('hl'); cls[i].classList.remove('hl2'); }
+}
+
+function render(idx) {
+  if (!steps.length) return;
+  idx = Math.max(0, Math.min(idx, steps.length - 1));
+  currentStep = idx;
+  var s = steps[idx];
+  var n = arr.length;
+  clearHighlights();
+
+  // Render prefix cells
+  for (var i = 0; i <= n; i++) {
+    var box = document.getElementById('pre-' + i);
+    if (!box) continue;
+    if (i < s.builtUpTo) {
+      box.textContent = prefix[i];
+      box.classList.add('done-build');
+    } else if (i === s.builtUpTo && s.phase === 'build' && s.currentI !== undefined) {
+      box.textContent = prefix[i];
+      box.classList.add('building');
+    } else if (i === 0) {
+      box.textContent = 0;
+      box.classList.add('done-build');
+    } else if (i === s.builtUpTo && s.phase === 'build' && s.currentI === undefined) {
+      // init step
+      box.textContent = '?';
+    } else {
+      box.textContent = '?';
+    }
+  }
+
+  // fix pre-0 always shown
+  var pre0 = document.getElementById('pre-0');
+  if (pre0) { pre0.textContent = 0; pre0.classList.add('done-build'); }
+
+  if (s.phase === 'query' && s.queryActive) {
+    // show query range on orig
+    for (var i = queryL; i <= queryR; i++) {
+      var ob = document.getElementById('orig-' + i);
+      if (ob) ob.classList.add('query-range');
+    }
+    // highlight lookup cells
+    var pL = document.getElementById('pre-' + queryL);
+    var pR = document.getElementById('pre-' + (queryR + 1));
+    if (pL) { pL.classList.remove('done-build'); pL.classList.add('answer-cell'); }
+    if (pR) { pR.classList.remove('done-build'); pR.classList.add('answer-cell'); }
+  }
+
+  // status
+  document.getElementById('status-box').innerHTML = s.msg;
+
+  // answer
+  if (s.answer !== undefined) {
+    var ab = document.getElementById('answer-box');
+    ab.style.display = 'block';
+    ab.textContent = 'Result: rangeSum(' + queryL + ', ' + queryR + ') = ' + s.answer;
+  } else {
+    document.getElementById('answer-box').style.display = 'none';
+  }
+
+  // code lines
+  var isQuery = s.phase === 'query';
+  if (s.lines) {
+    for (var i = 0; i < s.lines.length; i++) {
+      var el = document.getElementById(s.lines[i]);
+      if (el) el.classList.add(isQuery ? 'hl2' : 'hl');
+    }
+  }
+}
+
+// VizNav hooks
+window.__vizRender = render;
+window.__vizGetStep = function() { return currentStep; };
+window.__vizGetTotal = function() { return steps.length; };
+
+buildAndRun();
+</script>
+</body>
+</html>

@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Binary Tree DFS Traversal</title>
+  <link rel="stylesheet" href="../shared/style.css" />
+  <script src="../shared/gsap.min.js"></script>
+  <script src="../shared/viz.js"></script>
+  <style>
+    .viz-inputs {
+      display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end;
+      padding: 10px 0 14px; width: 100%; max-width: 90%;
+    }
+    .viz-inputs .field { display: flex; flex-direction: column; gap: 4px; }
+    .viz-inputs label {
+      font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--text-dim);
+    }
+    .viz-inputs select, .viz-inputs input[type="text"] {
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--text); border-radius: var(--radius-sm);
+      padding: 6px 10px; font-size: 0.85rem; cursor: pointer;
+    }
+    .viz-inputs input[type="text"] { width: 220px; cursor: text; }
+
+    .viz-area {
+      width: 100%; max-width: 90%;
+      display: flex; flex-direction: column; gap: 14px;
+    }
+
+    .nav-row {
+      display: flex; gap: 12px; margin-bottom: 4px;
+    }
+
+    .controls-panel {
+      flex: 0 0 auto; display: flex; gap: 8px; align-items: center;
+    }
+
+    .btn-step {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); color: var(--text);
+      cursor: pointer; font-size: 0.9rem; font-weight: 700;
+      padding: 8px 14px; transition: all 0.15s;
+    }
+    .btn-step:hover:not(:disabled) { background: var(--border); border-color: var(--accent); }
+    .btn-step:disabled { opacity: 0.35; cursor: not-allowed; }
+
+    .btn-play {
+      background: var(--accent); border: none;
+      border-radius: var(--radius-sm); color: #fff;
+      cursor: pointer; font-size: 0.9rem; font-weight: 700;
+      padding: 8px 18px; transition: background 0.15s;
+    }
+    .btn-play:hover:not(:disabled) { opacity: 0.85; }
+    .btn-play:disabled { opacity: 0.35; cursor: not-allowed; }
+
+    #speedSel {
+      background: var(--bg); border: 1px solid var(--border);
+      color: var(--text); border-radius: var(--radius-sm);
+      padding: 6px 10px; font-size: 0.85rem; cursor: pointer;
+    }
+
+    .status-panel {
+      flex: 1; min-width: 0; background: var(--surface);
+      border: 1px solid var(--border); border-radius: var(--radius-lg);
+      padding: 10px 14px;
+    }
+
+    .phase-label {
+      font-size: 0.68rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.1em; color: var(--text-dim);
+    }
+
+    .step-desc {
+      font-size: 0.88rem; color: var(--text-muted); margin-top: 4px; min-height: 1.4em;
+    }
+
+    .main-row {
+      display: grid; grid-template-columns: 3fr 2fr;
+      gap: 14px; align-items: start;
+    }
+
+    @media (max-width: 900px) { .main-row { grid-template-columns: 1fr; } }
+
+    .tree-panel {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 14px 16px;
+    }
+
+    .panel-title {
+      font-size: 0.68rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.1em; color: var(--text-dim); margin-bottom: 10px;
+    }
+
+    #tree-svg {
+      display: block; width: 100%; height: 260px;
+    }
+
+    .right-col { display: flex; flex-direction: column; gap: 14px; }
+
+    .code-panel {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 14px 16px; overflow-x: auto;
+    }
+
+    #code-body {
+      font-family: "JetBrains Mono", "Fira Code", "Cascadia Code", monospace;
+      font-size: 0.75rem; line-height: 1.8; margin: 0;
+    }
+
+    .cl {
+      display: flex; align-items: stretch; padding: 2px 0;
+      white-space: pre; border-left: 2px solid transparent;
+      padding-left: 6px; color: var(--text-muted); transition: all 0.2s;
+    }
+
+    .cl.hl {
+      background: rgba(122, 162, 247, 0.12);
+      border-left-color: var(--accent); color: var(--text);
+    }
+
+    .ln {
+      display: inline-block; width: 20px; text-align: right;
+      color: var(--text-dim); user-select: none; margin-right: 10px;
+      font-size: 0.7rem;
+    }
+
+    .kw { color: var(--purple); }
+    .nb { color: var(--green); }
+    .cm { color: var(--text-dim); font-style: italic; }
+
+    .result-panel {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 14px 16px;
+    }
+
+    #result-values {
+      display: flex; flex-wrap: wrap; gap: 6px; min-height: 32px; margin-top: 8px;
+    }
+
+    .result-chip {
+      background: var(--green); color: #fff; border-radius: 6px;
+      padding: 3px 10px; font-size: 0.85rem; font-weight: 700;
+      font-family: monospace;
+    }
+
+    /* SVG tree styles */
+    .tree-edge { stroke: var(--border); stroke-width: 2; fill: none; }
+    .tree-node-bg { fill: var(--bg); stroke: var(--border); stroke-width: 2; transition: fill 0.25s, stroke 0.25s; }
+    .tree-node-bg.visited { fill: var(--green); stroke: var(--green); }
+    .tree-node-bg.current { fill: var(--accent); stroke: var(--accent); }
+    .tree-node-label { fill: var(--text); font-size: 13px; font-weight: 700; text-anchor: middle; dominant-baseline: central; transition: fill 0.25s; }
+    .tree-node-label.visited, .tree-node-label.current { fill: #fff; }
+  </style>
+</head>
+
+<body class="page">
+  <div class="page-header">
+    <a class="back-link" href="../index.html">&larr; All Algorithms</a>
+    <div>
+      <div class="page-title">Binary Tree DFS Traversal</div>
+      <div style="font-size: 0.78rem; color: var(--text-dim); margin-top: 4px;">Inorder &middot; Preorder &middot; Postorder &middot; O(n) time &middot; O(h) space</div>
+    </div>
+  </div>
+
+  <div class="viz-inputs">
+    <div class="field">
+      <label>Preset</label>
+      <select id="presetSel" onchange="loadPreset()">
+        <option value="">&#8212; pick a preset &#8212;</option>
+        <option value="[1,2,3,4,5,null,6]">Balanced [1,2,3,4,5,null,6]</option>
+        <option value="[5,3,8,1,4,7,9]">Full BST [5,3,8,1,4,7,9]</option>
+        <option value="[4,2,6,1,3,5,7]">Perfect tree [4,2,6,1,3,5,7]</option>
+        <option value="[10,5,15,3,7,null,18]">BST with null [10,5,15,3,7,null,18]</option>
+        <option value="[1,2,3]">3-node [1,2,3]</option>
+        <option value="[1,2,null,4,5]">Left-heavy [1,2,null,4,5]</option>
+        <option value="[3,1,4,null,2,null,5]">Varied [3,1,4,null,2,null,5]</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Traversal</label>
+      <select id="traversalSel" onchange="buildAndRun()">
+        <option value="inorder">Inorder (L &rarr; Root &rarr; R)</option>
+        <option value="preorder">Preorder (Root &rarr; L &rarr; R)</option>
+        <option value="postorder">Postorder (L &rarr; R &rarr; Root)</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Tree (level-order array)</label>
+      <input type="text" id="treeInput" value="[1,2,3,4,5,null,6]" placeholder="[1,2,3,null,5]" />
+    </div>
+    <button onclick="buildAndRun()" style="background:var(--accent);border:none;color:#fff;border-radius:var(--radius-sm);padding:8px 16px;cursor:pointer;font-size:0.85rem;font-weight:700;">Run</button>
+    <button onclick="randomExample()" style="background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:var(--radius-sm);padding:8px 14px;cursor:pointer;font-size:0.85rem;">&#127922; Random</button>
+  </div>
+
+  <div class="controls"></div>
+
+  <div class="viz-area">
+    <div class="nav-row">
+      <div class="controls-panel">
+        <button class="btn-step" id="prevBtn" disabled>&#8592;</button>
+        <button class="btn-step" id="stepBtn" disabled>&#8594;</button>
+        <button class="btn-play" id="playBtn" disabled>&#9654; Play</button>
+        <select id="speedSel">
+          <option value="900">Slow</option>
+          <option value="350" selected>Medium</option>
+          <option value="100">Fast</option>
+        </select>
+      </div>
+      <div class="status-panel">
+        <div class="phase-label" id="phase-label">&#8212;</div>
+        <div class="step-desc" id="step-desc">Click Run to start.</div>
+      </div>
+    </div>
+
+    <div class="main-row">
+      <div class="tree-panel">
+        <div class="panel-title">Binary Tree</div>
+        <svg id="tree-svg" xmlns="http://www.w3.org/2000/svg"></svg>
+      </div>
+
+      <div class="right-col">
+        <div class="code-panel">
+          <div class="panel-title">Pseudocode</div>
+          <pre id="code-body"></pre>
+        </div>
+        <div class="result-panel">
+          <div class="panel-title">Result Array</div>
+          <div id="result-values"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ── Pseudocode definitions ───────────────────────────────────────────────
+    var CODE = {
+      inorder: [
+        '<span class=kw>def</span> <span class=nb>inorder</span>(node):',
+        '    <span class=kw>if not</span> node: <span class=kw>return</span>  <span class=cm># base case</span>',
+        '    inorder(node.left)         <span class=cm># recurse left</span>',
+        '    result.append(node.val)    <span class=cm># visit root</span>',
+        '    inorder(node.right)        <span class=cm># recurse right</span>',
+      ],
+      preorder: [
+        '<span class=kw>def</span> <span class=nb>preorder</span>(node):',
+        '    <span class=kw>if not</span> node: <span class=kw>return</span>  <span class=cm># base case</span>',
+        '    result.append(node.val)    <span class=cm># visit root first</span>',
+        '    preorder(node.left)        <span class=cm># recurse left</span>',
+        '    preorder(node.right)       <span class=cm># recurse right</span>',
+      ],
+      postorder: [
+        '<span class=kw>def</span> <span class=nb>postorder</span>(node):',
+        '    <span class=kw>if not</span> node: <span class=kw>return</span>  <span class=cm># base case</span>',
+        '    postorder(node.left)       <span class=cm># recurse left</span>',
+        '    postorder(node.right)      <span class=cm># recurse right</span>',
+        '    result.append(node.val)    <span class=cm># visit root last</span>',
+      ],
+    };
+
+    // codeLine index per action per traversal (1-based → maps to cl1..cl5)
+    var LINE_MAP = {
+      inorder:   { enter: 1, null_return: 2, go_left: 3, visit: 4, go_right: 5 },
+      preorder:  { enter: 1, null_return: 2, visit: 3, go_left: 4, go_right: 5 },
+      postorder: { enter: 1, null_return: 2, go_left: 3, go_right: 4, visit: 5 },
+    };
+
+    // ── State ────────────────────────────────────────────────────────────────
+    var nav;
+    var currentNodes = [];
+    var positions = {};
+    var SVG_W = 500, SVG_H = 240;
+
+    // ── Tree parsing ─────────────────────────────────────────────────────────
+    function parseTreeArray(str) {
+      str = str.trim();
+      try {
+        var arr = JSON.parse(str);
+        if (!Array.isArray(arr)) return null;
+        return arr.map(function(v) {
+          return (v === null || v === 'null') ? null : Number(v);
+        });
+      } catch(e) { return null; }
+    }
+
+    // ── Layout ───────────────────────────────────────────────────────────────
+    function computePositions(nodes) {
+      var pos = {};
+      var counter = 0;
+
+      function assignInorder(i) {
+        if (i >= nodes.length || nodes[i] === null || nodes[i] === undefined) return;
+        assignInorder(2 * i + 1);
+        pos[i] = { inorderRank: counter++ };
+        assignInorder(2 * i + 2);
+      }
+      assignInorder(0);
+
+      var total = Object.keys(pos).length;
+      if (total === 0) return pos;
+
+      function depth(i) {
+        var d = 0, idx = i;
+        while (idx > 0) { idx = Math.floor((idx - 1) / 2); d++; }
+        return d;
+      }
+
+      var maxDepth = 0;
+      Object.keys(pos).forEach(function(k) {
+        var d = depth(parseInt(k));
+        pos[k].depth = d;
+        if (d > maxDepth) maxDepth = d;
+      });
+
+      var padX = 30, padY = 36;
+      var usableW = SVG_W - 2 * padX;
+      var usableH = SVG_H - 2 * padY;
+
+      Object.keys(pos).forEach(function(k) {
+        var p = pos[k];
+        p.x = total > 1 ? padX + (p.inorderRank / (total - 1)) * usableW : SVG_W / 2;
+        p.y = padY + (maxDepth > 0 ? (p.depth / maxDepth) * usableH : 0);
+      });
+
+      return pos;
+    }
+
+    // ── Build Steps ──────────────────────────────────────────────────────────
+    function buildSteps(nodes, type) {
+      var steps = [];
+      var result = [];
+      var visited = [];
+      var lines = LINE_MAP[type];
+
+      function push(action, nodeIdx) {
+        steps.push({
+          action: action,
+          nodeIdx: nodeIdx,
+          result: result.slice(),
+          visited: visited.slice(),
+          codeLine: lines[action],
+        });
+      }
+
+      function dfs(i) {
+        if (i >= nodes.length || nodes[i] === null || nodes[i] === undefined) {
+          push('null_return', null);
+          return;
+        }
+        push('enter', i);
+
+        if (type === 'preorder') {
+          result.push(nodes[i]);
+          visited.push(i);
+          push('visit', i);
+          push('go_left', i);
+          dfs(2 * i + 1);
+          push('go_right', i);
+          dfs(2 * i + 2);
+        } else if (type === 'inorder') {
+          push('go_left', i);
+          dfs(2 * i + 1);
+          result.push(nodes[i]);
+          visited.push(i);
+          push('visit', i);
+          push('go_right', i);
+          dfs(2 * i + 2);
+        } else {
+          push('go_left', i);
+          dfs(2 * i + 1);
+          push('go_right', i);
+          dfs(2 * i + 2);
+          result.push(nodes[i]);
+          visited.push(i);
+          push('visit', i);
+        }
+      }
+
+      if (nodes.length > 0 && nodes[0] !== null && nodes[0] !== undefined) {
+        dfs(0);
+      }
+
+      return steps;
+    }
+
+    // ── SVG Rendering ────────────────────────────────────────────────────────
+    var SVG_NS = 'http://www.w3.org/2000/svg';
+
+    function renderTree(nodes) {
+      var svg = document.getElementById('tree-svg');
+      svg.innerHTML = '';
+      svg.setAttribute('viewBox', '0 0 ' + SVG_W + ' ' + SVG_H);
+
+      positions = computePositions(nodes);
+      var R = 18;
+
+      // Draw edges first (below nodes)
+      Object.keys(positions).forEach(function(k) {
+        var i = parseInt(k);
+        if (i === 0) return;
+        var pi = Math.floor((i - 1) / 2);
+        if (positions[pi] === undefined) return;
+        var line = document.createElementNS(SVG_NS, 'line');
+        line.setAttribute('x1', positions[pi].x);
+        line.setAttribute('y1', positions[pi].y);
+        line.setAttribute('x2', positions[i].x);
+        line.setAttribute('y2', positions[i].y);
+        line.setAttribute('class', 'tree-edge');
+        svg.appendChild(line);
+      });
+
+      // Draw nodes
+      Object.keys(positions).forEach(function(k) {
+        var i = parseInt(k);
+        var p = positions[i];
+
+        var g = document.createElementNS(SVG_NS, 'g');
+
+        var circle = document.createElementNS(SVG_NS, 'circle');
+        circle.setAttribute('cx', p.x);
+        circle.setAttribute('cy', p.y);
+        circle.setAttribute('r', R);
+        circle.setAttribute('class', 'tree-node-bg');
+        circle.setAttribute('id', 'nc-' + i);
+
+        var text = document.createElementNS(SVG_NS, 'text');
+        text.setAttribute('x', p.x);
+        text.setAttribute('y', p.y);
+        text.setAttribute('class', 'tree-node-label');
+        text.setAttribute('id', 'nt-' + i);
+        text.textContent = nodes[i];
+
+        g.appendChild(circle);
+        g.appendChild(text);
+        svg.appendChild(g);
+      });
+    }
+
+    // ── Code Panel ───────────────────────────────────────────────────────────
+    function renderCodePanel(type) {
+      var body = document.getElementById('code-body');
+      body.innerHTML = '';
+      CODE[type].forEach(function(line, idx) {
+        var div = document.createElement('div');
+        div.className = 'cl';
+        div.id = 'cl' + (idx + 1);
+        div.innerHTML = '<span class=ln>' + (idx + 1) + '</span>' + line;
+        body.appendChild(div);
+      });
+    }
+
+    // ── Apply Step ───────────────────────────────────────────────────────────
+    var ACTION_PHASE = {
+      enter:       'Enter Node',
+      null_return: 'Base Case',
+      visit:       'Visit Node',
+      go_left:     'Recurse Left',
+      go_right:    'Recurse Right',
+    };
+
+    function descForStep(snap, nodes) {
+      var val = snap.nodeIdx !== null ? nodes[snap.nodeIdx] : null;
+      if (snap.action === 'enter')       return 'Call dfs(node=' + val + ') — enter function.';
+      if (snap.action === 'null_return') return 'Node is null — base case, return.';
+      if (snap.action === 'visit')       return 'Append ' + val + ' to result array.';
+      if (snap.action === 'go_left')     return 'Recurse into left subtree of node ' + val + '.';
+      if (snap.action === 'go_right')    return 'Recurse into right subtree of node ' + val + '.';
+      return '';
+    }
+
+    function applyStep(snap, nodes) {
+      // Update node colors
+      Object.keys(positions).forEach(function(k) {
+        var i = parseInt(k);
+        var circle = document.getElementById('nc-' + i);
+        var label  = document.getElementById('nt-' + i);
+        if (!circle) return;
+        var isVisited = snap.visited.indexOf(i) !== -1;
+        var isCurrent = snap.nodeIdx === i && snap.action !== 'null_return';
+        var cls = 'tree-node-bg' + (isCurrent ? ' current' : isVisited ? ' visited' : '');
+        circle.setAttribute('class', cls);
+        label.setAttribute('class', 'tree-node-label' + (isCurrent || isVisited ? ' visited' : ''));
+      });
+
+      // Highlight code line
+      for (var ln = 1; ln <= 5; ln++) {
+        var el = document.getElementById('cl' + ln);
+        if (el) el.classList.toggle('hl', ln === snap.codeLine);
+      }
+
+      // Update result
+      var rv = document.getElementById('result-values');
+      rv.innerHTML = '';
+      snap.result.forEach(function(v) {
+        var chip = document.createElement('span');
+        chip.className = 'result-chip';
+        chip.textContent = v;
+        rv.appendChild(chip);
+      });
+    }
+
+    function updateStatus(snap, cursor, total, nodes) {
+      document.getElementById('phase-label').textContent = ACTION_PHASE[snap.action] + '  (' + (cursor + 1) + ' / ' + total + ')';
+      document.getElementById('step-desc').textContent = descForStep(snap, nodes);
+    }
+
+    // ── Build and Run ────────────────────────────────────────────────────────
+    function buildAndRun() {
+      var input = document.getElementById('treeInput').value.trim();
+      var type  = document.getElementById('traversalSel').value;
+
+      var parsed = parseTreeArray(input);
+      if (!parsed || parsed.length === 0) {
+        document.getElementById('step-desc').textContent = 'Invalid tree array. Use format: [1,2,3,null,5]';
+        return;
+      }
+
+      currentNodes = parsed;
+      renderCodePanel(type);
+      renderTree(currentNodes);
+
+      var steps = buildSteps(currentNodes, type);
+
+      nav.load(steps);
+    }
+
+    function loadPreset() {
+      var sel = document.getElementById('presetSel');
+      if (!sel.value) return;
+      document.getElementById('treeInput').value = sel.value;
+      sel.value = '';
+      buildAndRun();
+    }
+
+    function randomExample() {
+      var sizes = [5, 6, 7];
+      var size = sizes[Math.floor(Math.random() * sizes.length)];
+      var vals = [];
+      var pool = [];
+      for (var i = 1; i <= 15; i++) pool.push(i);
+      // shuffle
+      for (var i = pool.length - 1; i > 0; i--) {
+        var j = Math.floor(Math.random() * (i + 1));
+        var tmp = pool[i]; pool[i] = pool[j]; pool[j] = tmp;
+      }
+      for (var i = 0; i < size; i++) {
+        if (i > 0 && Math.random() < 0.15) {
+          vals.push(null);
+        } else {
+          vals.push(pool[i]);
+        }
+      }
+      document.getElementById('treeInput').value = JSON.stringify(vals);
+      buildAndRun();
+    }
+
+    // ── Init ─────────────────────────────────────────────────────────────────
+    window.addEventListener('DOMContentLoaded', function() {
+      // Hide back-link in iframe
+      if (window.self !== window.top) {
+        var bl = document.querySelector('.back-link');
+        if (bl) bl.style.display = 'none';
+      }
+
+      // Render code panel for default traversal
+      renderCodePanel('inorder');
+
+      // Init VizNav
+      nav = VizNav({
+        btnPrev:  document.getElementById('prevBtn'),
+        btnNext:  document.getElementById('stepBtn'),
+        btnPlay:  document.getElementById('playBtn'),
+        speedSel: document.getElementById('speedSel'),
+        render: function(snap, cursor, total) {
+          applyStep(snap, currentNodes);
+          updateStatus(snap, cursor, total, currentNodes);
+        },
+      });
+
+      buildAndRun();
+    });
+  </script>
+</body>
+</html>
