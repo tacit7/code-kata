@@ -261,6 +261,84 @@
 
     .btn-run:hover { background: var(--accent-hover); }
 
+    /* viz-inputs for user-facing controls */
+    .viz-inputs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: flex-end;
+      padding: 10px 0 14px;
+      width: 100%;
+      max-width: 90%;
+    }
+
+    .viz-inputs .field {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .viz-inputs label {
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-dim);
+    }
+
+    .viz-inputs input[type="text"] {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: var(--radius-sm);
+      padding: 6px 10px;
+      font-size: 0.85rem;
+      width: 280px;
+      font-family: monospace;
+    }
+
+    .viz-inputs input[type="text"]:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    .viz-inputs select {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: var(--radius-sm);
+      padding: 6px 10px;
+      font-size: 0.85rem;
+      cursor: pointer;
+    }
+
+    .viz-inputs select:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    .viz-inputs button {
+      padding: 7px 14px;
+      background: var(--surface);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .viz-inputs button:hover {
+      background: var(--bg);
+    }
+
+    .viz-inputs .btn-run {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      padding: 7px 18px;
+    }
+
     /* Code panel */
     .code-panel {
       font-family: monospace;
@@ -313,13 +391,26 @@
     <main class="viz-main">
       <div class="viz-area">
 
-        <!-- Input -->
-        <div class="panel">
-          <div class="input-row">
-            <label>Strings:</label>
-            <input id="strsInput" type="text" value="hello,world,foo,bar" />
-            <button class="btn-run" id="buildBtn">Run</button>
+        <!-- User inputs: presets and controls -->
+        <div class="viz-inputs">
+          <div class="field">
+            <label>Preset</label>
+            <select id="presetSel" onchange="loadPreset()">
+              <option value="">— pick a preset —</option>
+              <option value='{"strings":"hello,world,foo,bar"}'>Simple words</option>
+              <option value='{"strings":"a,bb,ccc"}'>Length variants</option>
+              <option value='{"strings":"test"}'>Single string</option>
+              <option value='{"strings":"x,y,z,w,v"}'>Short words</option>
+              <option value='{"strings":"algorithm,encoding,strings"}'>Longer words</option>
+              <option value='{"strings":"a,ab,abc,abcd"}'>Progressive length</option>
+            </select>
           </div>
+          <div class="field">
+            <label>Strings (comma-separated)</label>
+            <input id="strsInput" type="text" value="hello,world,foo,bar" />
+          </div>
+          <button class="btn-run" onclick="buildAndRun()">Run</button>
+          <button onclick="randomExample()">🎲 Random</button>
         </div>
 
         <!-- Status -->
@@ -357,7 +448,7 @@
         </div>
 
         <!-- Nav -->
-        <div class="nav-row">
+        <div class="controls">
           <button id="prevBtn" class="btn-step">← Prev</button>
           <button id="stepBtn" class="btn-step">Step →</button>
           <button id="playBtn" class="btn-play">Play</button>
@@ -404,7 +495,7 @@
         var el = document.createElement('span');
         el.className = 'code-line';
         el.id = 'cl-' + idx;
-        el.textContent = line || ' ';
+        el.textContent = line || ' ';
         panel.appendChild(el);
       });
     }
@@ -765,6 +856,26 @@
       nav.load(steps);
     }
 
+    function loadPreset() {
+      var sel = document.getElementById('presetSel');
+      if (!sel.value) return;
+      var d = JSON.parse(sel.value);
+      document.getElementById('strsInput').value = d.strings;
+      buildAndRun();
+    }
+
+    function randomExample() {
+      var words = ['apple', 'cat', 'dog', 'bird', 'tree', 'house', 'code', 'data', 'test', 'run', 'x', 'ab', 'abc'];
+      var count = Math.floor(Math.random() * 4) + 2;
+      var selected = [];
+      for (var i = 0; i < count; i++) {
+        selected.push(words[Math.floor(Math.random() * words.length)]);
+      }
+      document.getElementById('strsInput').value = selected.join(',');
+      document.getElementById('presetSel').value = '';
+      buildAndRun();
+    }
+
     window.addEventListener('DOMContentLoaded', function() {
       buildCodePanel();
 
@@ -779,7 +890,6 @@
         }
       });
 
-      document.getElementById('buildBtn').addEventListener('click', buildAndRun);
       document.getElementById('resetBtn').addEventListener('click', function() { nav.reset(); });
 
       buildAndRun();
