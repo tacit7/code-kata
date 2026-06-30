@@ -144,6 +144,28 @@
     .op  { color: var(--text); }
     .nb  { color: var(--green); }
     .st  { color: #f59e0b; }
+
+    .viz-inputs {
+      display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end;
+      padding: 10px 0 14px; width: 100%; max-width: 90%;
+    }
+    .viz-inputs .field {
+      display: flex; flex-direction: column; gap: 4px;
+    }
+    .viz-inputs label {
+      font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--text-dim);
+    }
+    .viz-inputs input[type="text"] {
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--text); border-radius: var(--radius-sm);
+      padding: 6px 10px; font-size: 0.85rem; width: 180px;
+    }
+    .viz-inputs select {
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--text); border-radius: var(--radius-sm);
+      padding: 6px 10px; font-size: 0.85rem; cursor: pointer;
+    }
   </style>
 </head>
 <body class="page">
@@ -154,20 +176,36 @@
   <div class="page-sub">LeetCode 17 &middot; Backtracking over phone key mappings &middot; O(4<sup>n</sup> &times; n) time &middot; O(n) stack space</div>
 </div>
 
-<div class="controls">
+<div class="viz-inputs">
   <div class="field">
     <label>Preset</label>
-    <select id="preset-sel" onchange="applyPreset()">
-      <option value="23" selected>"23"</option>
-      <option value="234">"234"</option>
-      <option value="9">"9"</option>
+    <select id="presetSel" onchange="loadPreset()">
+      <option value="">— pick a preset —</option>
+      <option value='{"digits":"2"}'>2 (abc)</option>
+      <option value='{"digits":"23"}'>23 (abc, def)</option>
+      <option value='{"digits":"234"}'>234 (abc, def, ghi)</option>
+      <option value='{"digits":"456"}'>456 (ghi, jkl, mno)</option>
+      <option value='{"digits":"789"}'>789 (pqrs, tuv, wxyz)</option>
+      <option value='{"digits":"9"}'>9 (wxyz)</option>
     </select>
   </div>
   <div class="field">
     <label>Digits (2–9, max 3)</label>
-    <input id="inp-digits" type="text" value="23" style="width:110px" />
+    <input id="inp-digits" type="text" value="23" />
   </div>
-  <button class="btn-primary" onclick="buildAndRun()">Build &amp; Run</button>
+  <button onclick="buildAndRun()" style="padding:7px 18px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);font-weight:600;cursor:pointer;">Run</button>
+  <button onclick="randomExample()" style="padding:7px 14px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;">🎲 Random</button>
+</div>
+
+<div class="controls">
+  <button class="stepBtn" id="prevBtn" disabled>&larr;</button>
+  <button class="stepBtn" id="stepBtn" disabled>&rarr;</button>
+  <button class="playBtn" id="playBtn" disabled>&#9654; Play</button>
+  <select class="speedSel" id="speedSel">
+    <option value="900">Slow</option>
+    <option value="420" selected>Medium</option>
+    <option value="120">Fast</option>
+  </select>
 </div>
 
 <div class="viz-area">
@@ -645,9 +683,24 @@ function buildAndRun() {
   nav.load(gSteps);
 }
 
-function applyPreset() {
-  var val = document.getElementById('preset-sel').value;
-  document.getElementById('inp-digits').value = val;
+function loadPreset() {
+  var sel = document.getElementById('presetSel');
+  if (!sel.value) return;
+  var d = JSON.parse(sel.value);
+  document.getElementById('inp-digits').value = d.digits;
+  buildAndRun();
+}
+
+function randomExample() {
+  var digits = ['2', '3', '4', '5', '6', '7', '8', '9'];
+  var numDigits = Math.floor(Math.random() * 3) + 1;
+  var chosen = [];
+  for (var i = 0; i < numDigits; i++) {
+    chosen.push(digits[Math.floor(Math.random() * digits.length)]);
+  }
+  document.getElementById('inp-digits').value = chosen.join('');
+  document.getElementById('presetSel').value = '';
+  buildAndRun();
 }
 
 // ── Init ──────────────────────────────────────────────────────────────────────
