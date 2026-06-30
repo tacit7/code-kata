@@ -125,6 +125,27 @@
     }
     .cs-frame.top { background: #4338ca; color: #fff; }
     .cs-empty { color: var(--text-faint); font-size: 0.82rem; font-style: italic; }
+    .viz-inputs {
+      display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end;
+      padding: 10px 0 14px; width: 100%; max-width: 90%;
+    }
+    .viz-inputs .field {
+      display: flex; flex-direction: column; gap: 4px;
+    }
+    .viz-inputs label {
+      font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--text-dim);
+    }
+    .viz-inputs input[type="text"] {
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--text); border-radius: var(--radius-sm);
+      padding: 6px 10px; font-size: 0.85rem; width: 300px;
+    }
+    .viz-inputs select {
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--text); border-radius: var(--radius-sm);
+      padding: 6px 10px; font-size: 0.85rem; cursor: pointer;
+    }
   </style>
 </head>
 <body class="page">
@@ -134,12 +155,28 @@
   <h1 class="page-title">Binary Tree Maximum Path Sum</h1>
 </div>
 
-<div class="controls">
+<div class="viz-inputs">
+  <div class="field">
+    <label>Preset</label>
+    <select id="presetSel" onchange="loadPreset()">
+      <option value="">— pick a preset —</option>
+      <option value='{"tree":"-10,9,20,null,null,15,7"}'>Example: Mixed tree</option>
+      <option value='{"tree":"1,2,3"}'>Example: All positive</option>
+      <option value='{"tree":"-3,-2,-1"}'>Example: All negative</option>
+      <option value='{"tree":"5"}'>Example: Single node</option>
+      <option value='{"tree":"1,null,2,null,null,3"}'>Example: Right-skewed</option>
+      <option value='{"tree":"100,-50,100,-75,-50,null,75"}'>Example: Large values</option>
+    </select>
+  </div>
   <div class="field">
     <label>Level-order (use null for empty)</label>
-    <input id="inp-tree" type="text" value="-10,9,20,null,null,15,7" style="width:300px" />
+    <input id="inp-tree" type="text" value="-10,9,20,null,null,15,7" />
   </div>
-  <button class="btn-primary" onclick="build()">Build</button>
+  <button onclick="buildAndRun()" style="padding:7px 18px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);font-weight:600;cursor:pointer;">Run</button>
+  <button onclick="randomExample()" style="padding:7px 14px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;">🎲 Random</button>
+</div>
+
+<div class="controls">
 </div>
 
 <div class="viz-area">
@@ -151,7 +188,7 @@
 
   <div class="status-bar" style="max-width:100%">
     <span class="phase-label" id="phase-label">&#8212;</span>
-    <span class="step-desc"   id="step-desc">Click Build to start.</span>
+    <span class="step-desc"   id="step-desc">Click Run to start.</span>
   </div>
 
   <div class="bottom-row">
@@ -227,7 +264,7 @@
 <script>
 var CODE_LINES = [
   [1,  '<span class="kw">def</span> <span class="fn">maxPathSum</span><span class="op">(</span>root<span class="op">):</span>'],
-  [2,  '    max_sum <span class="op">=</span> <span class="op">-</span><span class="bi">float</span><span class="op">(</span><span class="str">\'inf\'</span><span class="op">)</span>'],
+  [2,  '    max_sum <span class="op">=</span> <span class="op">-</span><span class="bi">float</span><span class="op">(</span><span class="str">'inf'</span><span class="op">)</span>'],
   [0,  ''],
   [4,  '    <span class="kw">def</span> <span class="fn">dfs</span><span class="op">(</span>node<span class="op">):</span>'],
   [5,  '        <span class="kw">if</span> node <span class="kw">is</span> <span class="bi">None</span><span class="op">:</span>'],
@@ -583,7 +620,7 @@ function renderCallStack(stack, animate) {
   });
 }
 
-function build() {
+function buildAndRun() {
   var txt = document.getElementById('inp-tree').value.trim();
   var vals = parseLevelOrder(txt);
   buildCodePanel();
@@ -602,6 +639,32 @@ function build() {
   nav.load(simulate(root));
 }
 
+function loadPreset() {
+  var sel = document.getElementById('presetSel');
+  if (!sel.value) return;
+  var d = JSON.parse(sel.value);
+  document.getElementById('inp-tree').value = d.tree;
+  buildAndRun();
+}
+
+function randomExample() {
+  var presets = [
+    "1,2,3",
+    "-1,-2,-3",
+    "5,-2,3",
+    "10",
+    "1,null,2,null,null,3",
+    "-10,9,20,null,null,15,7",
+    "0,1,-2",
+    "2,-1,-2",
+    "100,-50,100"
+  ];
+  var random = presets[Math.floor(Math.random() * presets.length)];
+  document.getElementById('inp-tree').value = random;
+  document.getElementById('presetSel').value = '';
+  buildAndRun();
+}
+
 var nav = VizNav({
   btnPrev:  document.getElementById('prevBtn'),
   btnNext:  document.getElementById('stepBtn'),
@@ -616,7 +679,7 @@ var nav = VizNav({
   }
 });
 
-build();
+buildAndRun();
 </script>
 <script>
   if (window.self !== window.top) {
