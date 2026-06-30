@@ -13,6 +13,28 @@
     .left-col, .right-col { display: flex; flex-direction: column; gap: 12px; }
     @media (max-width: 700px) { .main-row { grid-template-columns: 1fr; } }
 
+    /* viz-inputs */
+    .viz-inputs {
+      display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end;
+      padding: 10px 0 14px; width: 100%; max-width: 90%;
+    }
+    .viz-inputs .field {
+      display: flex; flex-direction: column; gap: 4px;
+    }
+    .viz-inputs label {
+      font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--text-dim);
+    }
+    .viz-inputs input[type="text"],
+    .viz-inputs input[type="number"],
+    .viz-inputs select {
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--text); border-radius: var(--radius-sm);
+      padding: 6px 10px; font-size: 0.85rem; cursor: pointer;
+    }
+    .viz-inputs input[type="text"] { width: 180px; }
+    .viz-inputs input[type="number"] { width: 80px; }
+
     /* dp array */
     .array-section {
       padding: 16px;
@@ -147,16 +169,42 @@
   <div class="page-sub">LeetCode 322 &middot; Bottom-up DP: dp[i] = min(dp[i-c]+1) &middot; O(amount &times; coins) time &middot; O(amount) space</div>
 </div>
 
-<div class="controls">
+<div class="viz-inputs">
+  <div class="field">
+    <label>Preset</label>
+    <select id="presetSel" onchange="loadPreset()">
+      <option value="">— pick a preset —</option>
+      <option value='{"coins":"1,5,11","amount":"15"}'>Classic (1,5,11 → 15)</option>
+      <option value='{"coins":"2,5","amount":"3"}'>No Solution (2,5 → 3)</option>
+      <option value='{"coins":"1","amount":"20"}'>All Ones (1 → 20)</option>
+      <option value='{"coins":"1,5,10,25","amount":"41"}'>Quarters (1,5,10,25 → 41)</option>
+      <option value='{"coins":"2,3","amount":"5"}'>Prime Coins (2,3 → 5)</option>
+      <option value='{"coins":"3,7","amount":"13"}'>Double Path (3,7 → 13)</option>
+    </select>
+  </div>
   <div class="field">
     <label>Coins (comma-separated)</label>
-    <input id="inp-coins" type="text" value="1,5,11" style="width:180px" />
+    <input id="inp-coins" type="text" value="1,5,11" />
   </div>
   <div class="field">
     <label>Amount</label>
-    <input id="inp-amount" type="number" value="15" min="0" max="50" style="width:80px" />
+    <input id="inp-amount" type="number" value="15" min="0" max="50" />
   </div>
-  <button class="btn-primary" onclick="buildAndRun()">Build &amp; Run</button>
+  <button class="btn-primary" onclick="buildAndRun()" style="padding:7px 18px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);font-weight:600;cursor:pointer;">Run</button>
+  <button onclick="randomExample()" style="padding:7px 14px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;">🎲 Random</button>
+</div>
+
+<div class="controls">
+  <div class="nav-row">
+    <button class="stepBtn" id="prevBtn" disabled>&larr;</button>
+    <button class="stepBtn" id="stepBtn" disabled>&rarr;</button>
+    <button class="playBtn" id="playBtn" disabled>&#9654; Play</button>
+    <select class="speedSel" id="speedSel">
+      <option value="700">Slow</option>
+      <option value="350" selected>Medium</option>
+      <option value="100">Fast</option>
+    </select>
+  </div>
 </div>
 
 <div class="viz-area">
@@ -179,10 +227,10 @@
       <div style="display:flex;gap:12px">
         <div class="panel-box" style="flex:0 0 auto">
           <div class="nav-row">
-            <button class="stepBtn" id="prevBtn" disabled>&larr;</button>
-            <button class="stepBtn" id="stepBtn" disabled>&rarr;</button>
-            <button class="playBtn" id="playBtn" disabled>&#9654; Play</button>
-            <select class="speedSel" id="speedSel">
+            <button class="stepBtn" id="prevBtn2" disabled>&larr;</button>
+            <button class="stepBtn" id="stepBtn2" disabled>&rarr;</button>
+            <button class="playBtn" id="playBtn2" disabled>&#9654; Play</button>
+            <select class="speedSel" id="speedSel2">
               <option value="700">Slow</option>
               <option value="350" selected>Medium</option>
               <option value="100">Fast</option>
@@ -317,6 +365,34 @@ function buildAndRun() {
   buildCoinsSection(coins);
   simSteps = simulate(coins, amount);
   nav.load(simSteps);
+}
+
+function loadPreset() {
+  var sel = document.getElementById('presetSel');
+  if (!sel.value) return;
+  var d = JSON.parse(sel.value);
+  document.getElementById('inp-coins').value = d.coins;
+  document.getElementById('inp-amount').value = d.amount;
+  buildAndRun();
+}
+
+function randomExample() {
+  var coinSets = [
+    '1,5,10',
+    '1,2,5',
+    '2,5,10',
+    '1,3,4',
+    '1,5,6',
+    '2,3,7',
+    '1,10,25',
+  ];
+  var amounts = [5, 10, 15, 20, 25, 30, 35, 40, 45];
+  var randomCoins = coinSets[Math.floor(Math.random() * coinSets.length)];
+  var randomAmount = amounts[Math.floor(Math.random() * amounts.length)];
+  document.getElementById('inp-coins').value = randomCoins;
+  document.getElementById('inp-amount').value = randomAmount;
+  document.getElementById('presetSel').value = '';
+  buildAndRun();
 }
 
 function buildArraySection(amount) {
