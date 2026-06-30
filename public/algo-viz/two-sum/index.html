@@ -153,20 +153,26 @@
     }
 
     #map-items {
-      display: flex; flex-direction: column; gap: 6px;
+      display: flex; gap: 8px; flex-wrap: wrap;
     }
 
     .map-item {
-      display: flex; align-items: center; justify-content: space-between;
-      background: var(--bg); border: 1px solid var(--border-soft);
-      border-radius: 6px; padding: 8px 10px; font-size: 0.85rem;
-      font-family: monospace; transition: all 0.2s;
+      min-width: 50px; height: 50px;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      background: var(--bg); border: 2px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-weight: 700; font-family: monospace; font-size: 1.1rem;
+      color: var(--text); transition: all 0.25s;
     }
 
     .map-item.highlight {
       background: rgba(158, 206, 106, 0.15);
       border-color: var(--green);
       color: var(--green);
+    }
+
+    .map-item-label {
+      font-size: 0.6rem; color: var(--text-dim); margin-top: 2px; font-weight: 400;
     }
 
     .vars-panel {
@@ -554,13 +560,13 @@
       // Update hash map display
       const mapDiv = document.getElementById('map-items');
       if (Object.keys(snap.seen).length === 0) {
-        mapDiv.innerHTML = '<div style="color: var(--text-dim);">{}  (empty)</div>';
+        mapDiv.innerHTML = '<div style="color: var(--text-dim); font-size: 0.85rem; font-family: monospace; padding: 4px;">empty</div>';
       } else {
         const items = [];
         for (const [key, val] of Object.entries(snap.seen)) {
           const isHighlight = snap.complement === parseInt(key);
           const className = isHighlight ? 'map-item highlight' : 'map-item';
-          items.push(`<div class="${className}">${key}: ${val}</div>`);
+          items.push(`<div class="${className}"><div>${key}</div><div class="map-item-label">→ ${val}</div></div>`);
         }
         mapDiv.innerHTML = items.join('');
       }
