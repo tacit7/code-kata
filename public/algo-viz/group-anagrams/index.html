@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Group Anagrams</title>
+  <link rel="stylesheet" href="../shared/style.css" />
+  <script src="../shared/gsap.min.js"></script>
+  <script src="../shared/viz.js"></script>
+  <style>
+    .viz-area {
+      width: 100%; max-width: 90%;
+      display: flex; flex-direction: column; gap: 14px;
+    }
+
+    .nav-row {
+      display: flex; gap: 12px; margin-bottom: 14px;
+    }
+
+    .controls-panel {
+      flex: 0 0 auto;
+      display: flex; gap: 8px; align-items: center;
+    }
+
+    .btn-step {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); color: var(--text);
+      cursor: pointer; font-size: 0.9rem; font-weight: 700;
+      padding: 8px 16px; transition: all 0.15s;
+    }
+    .btn-step:hover:not(:disabled) { background: var(--border); border-color: var(--accent); }
+    .btn-step:disabled { opacity: 0.35; cursor: not-allowed; }
+
+    .btn-play {
+      background: var(--accent); border: none;
+      border-radius: var(--radius-sm); color: #fff;
+      cursor: pointer; font-size: 0.9rem; font-weight: 700;
+      padding: 8px 18px; transition: background 0.15s;
+    }
+    .btn-play:hover:not(:disabled) { background: var(--accent-hover); }
+    .btn-play:disabled { opacity: 0.35; cursor: not-allowed; }
+
+    #speedSel {
+      background: var(--bg); border: 1px solid var(--border);
+      color: var(--text); border-radius: var(--radius-sm);
+      padding: 6px 10px; font-size: 0.85rem; cursor: pointer;
+    }
+
+    .status-panel {
+      flex: 1; min-width: 0;
+    }
+
+    .phase-label {
+      font-size: 0.68rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.1em;
+      color: var(--text-dim);
+    }
+
+    .step-desc {
+      font-size: 0.88rem; color: var(--text-muted); margin-top: 4px; min-height: 1.4em;
+    }
+
+    .main-row {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 14px;
+      align-items: start;
+    }
+
+    @media (max-width: 900px) { .main-row { grid-template-columns: 1fr; } }
+
+    .left-col {
+      display: flex; flex-direction: column; gap: 14px;
+    }
+
+    .words-panel {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 14px 16px;
+    }
+
+    .panel-title {
+      font-size: 0.68rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.1em;
+      color: var(--text-dim); margin-bottom: 10px;
+    }
+
+    #word-cells {
+      display: flex; gap: 8px; flex-wrap: wrap;
+    }
+
+    .word-cell {
+      min-width: 58px;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      background: var(--bg); border: 2px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-weight: 700; font-family: monospace; font-size: 0.95rem;
+      color: var(--text); transition: all 0.25s;
+      padding: 8px 10px;
+      gap: 4px;
+    }
+
+    .word-cell .word-val {
+      font-size: 1rem;
+    }
+
+    .word-cell .word-idx {
+      font-size: 0.6rem; color: var(--text-dim);
+    }
+
+    .word-cell.current {
+      background: rgba(255, 158, 100, 0.15);
+      border-color: var(--orange);
+      color: var(--orange);
+      transform: scale(1.1);
+    }
+
+    .word-cell.done {
+      background: rgba(158, 206, 106, 0.1);
+      border-color: var(--green);
+      color: var(--green);
+      opacity: 0.7;
+    }
+
+    .word-cell.final {
+      background: rgba(158, 206, 106, 0.2);
+      border-color: var(--green);
+      color: var(--green);
+    }
+
+    .key-panel {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 14px 16px;
+    }
+
+    .key-display {
+      display: flex; align-items: center; gap: 10px;
+      font-family: monospace; font-size: 0.9rem; margin-top: 6px;
+    }
+
+    .key-arrow {
+      color: var(--text-dim);
+    }
+
+    .key-word {
+      color: var(--orange); font-weight: 700; font-size: 1.1rem;
+    }
+
+    .key-sorted {
+      color: var(--accent); font-weight: 700; font-size: 1.1rem;
+    }
+
+    .key-dim {
+      color: var(--text-dim); font-size: 0.82rem;
+    }
+
+    .code-panel {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 14px 16px;
+      overflow-x: auto;
+    }
+
+    #code-body {
+      font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+      font-size: 0.75rem; line-height: 1.8;
+    }
+
+    .cl {
+      display: flex; align-items: stretch;
+      padding: 2px 0;
+      white-space: pre;
+      border-left: 2px solid transparent;
+      padding-left: 6px;
+      color: var(--text-muted);
+      transition: all 0.2s;
+    }
+
+    .cl.hl {
+      background: rgba(122, 162, 247, 0.12);
+      border-left-color: var(--accent);
+      color: var(--text);
+    }
+
+    .ln {
+      display: inline-block; width: 20px;
+      text-align: right; color: var(--text-dim);
+      user-select: none; margin-right: 10px;
+      font-size: 0.7rem;
+    }
+
+    .kw { color: var(--purple); }
+    .nb { color: var(--green); }
+    .cm { color: var(--text-dim); font-style: italic; }
+    .st { color: var(--yellow); }
+
+    .right-col {
+      display: flex; flex-direction: column; gap: 14px;
+    }
+
+    .groups-panel {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 14px 16px;
+    }
+
+    #groups-items {
+      display: flex; flex-direction: column; gap: 8px;
+    }
+
+    .group-entry {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: 6px; padding: 8px 10px;
+      font-size: 0.82rem; font-family: monospace;
+      transition: all 0.2s;
+    }
+
+    .group-entry.highlight {
+      border-color: var(--orange);
+      background: rgba(255, 158, 100, 0.08);
+    }
+
+    .group-entry.new-key {
+      border-color: var(--accent);
+      background: rgba(122, 162, 247, 0.1);
+      animation: pulse-in 0.35s ease;
+    }
+
+    @keyframes pulse-in {
+      0% { transform: scale(0.95); opacity: 0.5; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    .group-key {
+      color: var(--accent); font-weight: 700; margin-bottom: 4px;
+      font-size: 0.78rem;
+    }
+
+    .group-words {
+      color: var(--text-muted); display: flex; gap: 6px; flex-wrap: wrap;
+    }
+
+    .group-word {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 4px; padding: 2px 6px;
+      color: var(--text);
+      font-size: 0.8rem;
+    }
+
+    .group-word.just-added {
+      border-color: var(--orange);
+      color: var(--orange);
+      background: rgba(255, 158, 100, 0.1);
+    }
+
+    .result-panel {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 14px 16px;
+      display: none;
+    }
+
+    .result-panel.visible { display: block; }
+
+    .result-group {
+      display: flex; gap: 6px; flex-wrap: wrap;
+      margin-top: 6px; margin-bottom: 8px;
+    }
+
+    .result-word {
+      background: rgba(158, 206, 106, 0.15);
+      border: 1px solid var(--green);
+      border-radius: 4px; padding: 3px 8px;
+      color: var(--green); font-family: monospace; font-weight: 700;
+    }
+  </style>
+</head>
+
+<body class="page">
+  <div class="page-header">
+    <a class="back-link" href="../index.html">&#8592; All Algorithms</a>
+    <div>
+      <div class="page-title">Group Anagrams</div>
+      <div style="font-size: 0.78rem; color: var(--text-dim); margin-top: 4px;">LeetCode #49 &middot; Hash Map &middot; O(n &middot; k log k) time &middot; O(n) space</div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <div class="field">
+      <label>Words (comma-separated)</label>
+      <input type="text" id="wordsInput" value="eat,tea,tan,ate,nat,bat" />
+    </div>
+    <button class="btn-primary" onclick="buildAndRun()">Build &amp; Run</button>
+  </div>
+
+  <div class="viz-area">
+    <div class="nav-row">
+      <div class="panel-box controls-panel">
+        <button class="btn-step" id="prevBtn" disabled>&#8592; Prev</button>
+        <button class="btn-step" id="stepBtn" disabled>Step &#8594;</button>
+        <button class="btn-play" id="playBtn" disabled>Play</button>
+        <button class="btn-step" id="resetBtn">&#8635; Reset</button>
+        <select id="speedSel">
+          <option value="800">0.5&times;</option>
+          <option value="400" selected>1&times;</option>
+          <option value="200">2&times;</option>
+          <option value="100">4&times;</option>
+        </select>
+      </div>
+      <div class="panel-box status-panel">
+        <div class="phase-label" id="phase-label">&#8212;</div>
+        <div class="step-desc" id="step-desc">Click Build &amp; Run to start.</div>
+      </div>
+    </div>
+
+    <div class="main-row">
+      <div class="left-col">
+        <div class="words-panel">
+          <div class="panel-title">Input Words</div>
+          <div id="word-cells"></div>
+        </div>
+
+        <div class="key-panel">
+          <div class="panel-title">Current Word &rarr; Sorted Key</div>
+          <div class="key-display" id="key-display">
+            <span style="color: var(--text-dim); font-size: 0.85rem;">Waiting...</span>
+          </div>
+        </div>
+
+        <div class="code-panel">
+          <div class="panel-title">Solution</div>
+          <div id="code-body"></div>
+        </div>
+      </div>
+
+      <div class="right-col">
+        <div class="groups-panel">
+          <div class="panel-title">groups map (sorted_key &rarr; [words])</div>
+          <div id="groups-items">
+            <div style="color: var(--text-dim); font-size: 0.85rem; font-family: monospace;">{}  (empty)</div>
+          </div>
+        </div>
+
+        <div class="result-panel" id="result-panel">
+          <div class="panel-title">&#10003; Final Groups</div>
+          <div id="result-body"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const codeLines = [
+      '<span class="kw">def</span> <span class="nb">group_anagrams</span>(strs):',
+      '    groups = {}',
+      '    <span class="kw">for</span> s <span class="kw">in</span> strs:',
+      '        key = <span class="nb">tuple</span>(<span class="nb">sorted</span>(s))',
+      '        groups[key] = groups.<span class="nb">get</span>(key, []) + [s]',
+      '    <span class="kw">return</span> <span class="nb">list</span>(groups.<span class="nb">values</span>())',
+    ];
+
+    var nav;
+    var currentWords = [];
+
+    window.addEventListener('DOMContentLoaded', function() {
+      const codeBody = document.getElementById('code-body');
+      codeLines.forEach(function(line, idx) {
+        const cl = document.createElement('div');
+        cl.className = 'cl';
+        cl.id = 'cl-' + idx;
+        cl.innerHTML = '<span class="ln">' + (idx + 1) + '</span>' + line;
+        codeBody.appendChild(cl);
+      });
+
+      nav = VizNav({
+        btnPrev: document.getElementById('prevBtn'),
+        btnNext: document.getElementById('stepBtn'),
+        btnPlay: document.getElementById('playBtn'),
+        speedSel: document.getElementById('speedSel'),
+        render: function(snap, cur, total) {
+          applyStep(snap, cur > 0);
+          updateStatus(snap, cur, total);
+        }
+      });
+
+      document.getElementById('resetBtn').addEventListener('click', function() {
+        buildAndRun();
+      });
+
+      if (window.self !== window.top) {
+        const bl = document.querySelector('.back-link');
+        if (bl) bl.style.display = 'none';
+      }
+
+      buildAndRun();
+    });
+
+    function buildAndRun() {
+      const raw = document.getElementById('wordsInput').value;
+      const words = raw.split(',').map(function(w) { return w.trim(); }).filter(function(w) { return w.length > 0; });
+
+      if (words.length === 0) {
+        alert('Enter at least one word.');
+        return;
+      }
+
+      currentWords = words;
+      renderWordCells(words, null, [], false);
+
+      const steps = simulate(words);
+      nav.load(steps);
+    }
+
+    function renderWordCells(words, currentIdx, doneIdxs, allDone) {
+      const container = document.getElementById('word-cells');
+      container.innerHTML = '';
+      words.forEach(function(word, idx) {
+        const cell = document.createElement('div');
+        cell.className = 'word-cell';
+        cell.id = 'wc-' + idx;
+
+        if (allDone) {
+          cell.classList.add('final');
+        } else if (idx === currentIdx) {
+          cell.classList.add('current');
+        } else if (doneIdxs.indexOf(idx) !== -1) {
+          cell.classList.add('done');
+        }
+
+        cell.innerHTML = '<div class="word-val">' + escHtml(word) + '</div><div class="word-idx">i=' + idx + '</div>';
+        container.appendChild(cell);
+      });
+    }
+
+    function escHtml(s) {
+      return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    function sortedKey(s) {
+      return s.split('').sort().join('');
+    }
+
+    function simulate(words) {
+      const steps = [];
+      const groups = {};
+
+      // Step 0: init
+      steps.push({
+        phase: 'Setup',
+        desc: 'Initialize empty groups map.',
+        currentIdx: null,
+        doneIdxs: [],
+        currentWord: null,
+        currentKey: null,
+        groups: {},
+        justAddedKey: null,
+        justAddedWord: null,
+        isNewKey: false,
+        done: false,
+        lines: [0, 1],
+      });
+
+      for (let i = 0; i < words.length; i++) {
+        const s = words[i];
+        const key = sortedKey(s);
+
+        // Step: enter loop, pick word
+        steps.push({
+          phase: 'Iterate — word ' + (i + 1) + ' of ' + words.length,
+          desc: 'Processing "' + s + '" (index ' + i + ').',
+          currentIdx: i,
+          doneIdxs: Object.keys(groups).length > 0 ? range(i) : [],
+          currentWord: s,
+          currentKey: null,
+          groups: deepCopy(groups),
+          justAddedKey: null,
+          justAddedWord: null,
+          isNewKey: false,
+          done: false,
+          lines: [2],
+        });
+
+        // Step: compute sorted key
+        steps.push({
+          phase: 'Compute key for "' + s + '"',
+          desc: 'sorted("' + s + '") = "' + key + '" → key = "' + key + '"',
+          currentIdx: i,
+          doneIdxs: range(i),
+          currentWord: s,
+          currentKey: key,
+          groups: deepCopy(groups),
+          justAddedKey: null,
+          justAddedWord: null,
+          isNewKey: false,
+          done: false,
+          lines: [3],
+        });
+
+        const isNew = !(key in groups);
+        groups[key] = (groups[key] || []).concat([s]);
+
+        // Step: update groups
+        steps.push({
+          phase: isNew ? 'New group for key "' + key + '"' : 'Add to existing group "' + key + '"',
+          desc: isNew
+            ? '"' + key + '" not in groups — creating new entry with ["' + s + '"].'
+            : '"' + key + '" already in groups — appending "' + s + '".',
+          currentIdx: i,
+          doneIdxs: range(i + 1),
+          currentWord: s,
+          currentKey: key,
+          groups: deepCopy(groups),
+          justAddedKey: key,
+          justAddedWord: s,
+          isNewKey: isNew,
+          done: false,
+          lines: [4],
+        });
+      }
+
+      // Final step
+      steps.push({
+        phase: 'Complete',
+        desc: 'All words processed. Returning ' + Object.keys(groups).length + ' group(s).',
+        currentIdx: null,
+        doneIdxs: range(words.length),
+        currentWord: null,
+        currentKey: null,
+        groups: deepCopy(groups),
+        justAddedKey: null,
+        justAddedWord: null,
+        isNewKey: false,
+        done: true,
+        lines: [5],
+      });
+
+      return steps;
+    }
+
+    function range(n) {
+      const a = [];
+      for (let i = 0; i < n; i++) a.push(i);
+      return a;
+    }
+
+    function deepCopy(obj) {
+      const out = {};
+      for (const k in obj) {
+        out[k] = obj[k].slice();
+      }
+      return out;
+    }
+
+    function applyStep(snap, animate) {
+      // Update word cells
+      renderWordCells(currentWords, snap.currentIdx, snap.doneIdxs, snap.done);
+
+      // Update key display panel
+      const keyDiv = document.getElementById('key-display');
+      if (snap.currentWord && snap.currentKey) {
+        keyDiv.innerHTML =
+          '<span class="key-word">"' + escHtml(snap.currentWord) + '"</span>' +
+          '<span class="key-arrow">&#8594; sorted &#8594;</span>' +
+          '<span class="key-sorted">"' + escHtml(snap.currentKey) + '"</span>';
+      } else if (snap.currentWord) {
+        keyDiv.innerHTML =
+          '<span class="key-word">"' + escHtml(snap.currentWord) + '"</span>' +
+          '<span class="key-dim">&nbsp;&nbsp;(computing key...)</span>';
+      } else if (snap.done) {
+        keyDiv.innerHTML = '<span style="color: var(--green); font-weight: 700;">&#10003; Done</span>';
+      } else {
+        keyDiv.innerHTML = '<span style="color: var(--text-dim); font-size: 0.85rem;">Waiting...</span>';
+      }
+
+      // Update code highlighting
+      document.querySelectorAll('.cl').forEach(function(cl) { cl.classList.remove('hl'); });
+      snap.lines.forEach(function(lineIdx) {
+        const cl = document.getElementById('cl-' + lineIdx);
+        if (cl) cl.classList.add('hl');
+      });
+
+      // Update groups map
+      const groupsDiv = document.getElementById('groups-items');
+      const keys = Object.keys(snap.groups);
+      if (keys.length === 0) {
+        groupsDiv.innerHTML = '<div style="color: var(--text-dim); font-size: 0.85rem; font-family: monospace;">{}  (empty)</div>';
+      } else {
+        groupsDiv.innerHTML = '';
+        keys.forEach(function(k) {
+          const entry = document.createElement('div');
+          entry.className = 'group-entry';
+          if (k === snap.justAddedKey && snap.isNewKey) {
+            entry.classList.add('new-key');
+          } else if (k === snap.justAddedKey) {
+            entry.classList.add('highlight');
+          }
+
+          const keyRow = document.createElement('div');
+          keyRow.className = 'group-key';
+          keyRow.textContent = '"' + k + '"';
+
+          const wordsRow = document.createElement('div');
+          wordsRow.className = 'group-words';
+          snap.groups[k].forEach(function(w) {
+            const span = document.createElement('span');
+            span.className = 'group-word';
+            if (w === snap.justAddedWord && k === snap.justAddedKey) {
+              span.classList.add('just-added');
+            }
+            span.textContent = '"' + w + '"';
+            wordsRow.appendChild(span);
+          });
+
+          entry.appendChild(keyRow);
+          entry.appendChild(wordsRow);
+          groupsDiv.appendChild(entry);
+        });
+      }
+
+      // Final result panel
+      const resultPanel = document.getElementById('result-panel');
+      const resultBody = document.getElementById('result-body');
+      if (snap.done) {
+        resultPanel.classList.add('visible');
+        resultBody.innerHTML = '';
+        Object.values(snap.groups).forEach(function(wordList) {
+          const row = document.createElement('div');
+          row.className = 'result-group';
+          wordList.forEach(function(w) {
+            const span = document.createElement('span');
+            span.className = 'result-word';
+            span.textContent = w;
+            row.appendChild(span);
+          });
+          resultBody.appendChild(row);
+        });
+      } else {
+        resultPanel.classList.remove('visible');
+      }
+    }
+
+    function updateStatus(snap, cur, total) {
+      document.getElementById('phase-label').textContent = snap.phase + '  (' + cur + ' / ' + (total - 1) + ')';
+      document.getElementById('step-desc').textContent = snap.desc;
+    }
+  </script>
+</body>
+</html>

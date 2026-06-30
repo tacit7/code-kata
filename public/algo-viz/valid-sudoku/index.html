@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Valid Sudoku — Step-Through Viz</title>
+  <link rel="stylesheet" href="../shared/style.css" />
+  <style>
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d27;
+      --border: #2d3148;
+      --text: #e2e8f0;
+      --text-muted: #94a3b8;
+      --text-dim: #4a5568;
+      --accent: #6366f1;
+      --accent-hover: #818cf8;
+      --green: #22c55e;
+      --red: #ef4444;
+      --orange: #f59e0b;
+      --purple: #a855f7;
+      --blue: #3b82f6;
+      --yellow: #eab308;
+      --radius-sm: 4px;
+      --radius-lg: 10px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Fira Mono', 'Cascadia Code', monospace;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+      padding: 16px;
+      gap: 12px;
+    }
+
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    h1 {
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: var(--text);
+      flex: 1;
+    }
+
+    .board-toggle {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      padding: 6px 14px;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      font-size: 0.8rem;
+      transition: all 0.15s;
+    }
+    .board-toggle:hover { border-color: var(--accent); color: var(--text); }
+    .board-toggle.invalid-active { border-color: var(--red); color: var(--red); }
+
+    .main-layout {
+      display: flex;
+      gap: 16px;
+      flex: 1;
+      align-items: flex-start;
+    }
+
+    /* ── Grid ── */
+    .grid-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .sudoku-grid {
+      display: grid;
+      grid-template-columns: repeat(9, 42px);
+      grid-template-rows: repeat(9, 42px);
+      border: 2px solid var(--text-muted);
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+    }
+
+    .cell {
+      width: 42px;
+      height: 42px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text);
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      transition: background 0.15s, color 0.15s;
+      cursor: default;
+      user-select: none;
+    }
+
+    /* thick borders every 3 cells */
+    .cell.col-2, .cell.col-5 { border-right: 2px solid var(--text-muted); }
+    .cell.row-2, .cell.row-5 { border-bottom: 2px solid var(--text-muted); }
+    .cell.col-8 { border-right: none; }
+    .cell.row-8 { border-bottom: none; }
+
+    .cell.empty { color: var(--text-dim); }
+    .cell.visited { background: #22304a; color: var(--text-muted); }
+    .cell.current { background: var(--orange); color: #000; }
+    .cell.conflict { background: var(--red); color: #fff; }
+    .cell.skipped { background: #1e293b; color: var(--text-dim); }
+
+    /* ── Right Panel ── */
+    .right-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      min-width: 200px;
+      max-width: 320px;
+    }
+
+    .set-group {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 8px 10px;
+    }
+
+    .set-group.highlighted { border-color: var(--orange); }
+
+    .set-label {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .set-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      min-height: 22px;
+    }
+
+    .chip {
+      background: var(--accent);
+      color: #fff;
+      border-radius: var(--radius-sm);
+      padding: 2px 7px;
+      font-size: 0.75rem;
+      font-weight: 700;
+    }
+
+    .chip.new { background: var(--orange); color: #000; }
+
+    /* ── Status ── */
+    .status-bar {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 8px 12px;
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      min-height: 36px;
+      display: flex;
+      align-items: center;
+    }
+
+    .status-bar .ok { color: var(--green); }
+    .status-bar .err { color: var(--red); }
+    .status-bar .hi { color: var(--orange); }
+
+    /* ── Code Panel ── */
+    .code-section { display: flex; flex-direction: column; gap: 6px; }
+
+    .code-toggle {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      font-size: 0.78rem;
+      cursor: pointer;
+      text-align: left;
+      padding: 0;
+    }
+    .code-toggle:hover { color: var(--text); }
+
+    .code-panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+    }
+
+    .code-panel pre {
+      margin: 0;
+      padding: 10px 14px;
+      font-size: 0.76rem;
+      line-height: 1.65;
+      overflow-x: auto;
+      color: var(--text-muted);
+    }
+
+    .code-panel .code-line { display: block; padding: 0 2px; border-radius: 2px; }
+    .code-panel .code-line.active { background: rgba(245,158,11,0.2); color: var(--orange); }
+
+    /* ── Nav ── */
+    .nav-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .btn-step, .btn-play {
+      padding: 7px 14px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text);
+      cursor: pointer;
+      font-size: 0.82rem;
+      font-family: inherit;
+      transition: all 0.15s;
+    }
+    .btn-step:hover { border-color: var(--accent); color: var(--accent-hover); }
+    .btn-play { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .btn-play:hover { background: var(--accent-hover); }
+
+    select#speedSel {
+      padding: 6px 8px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: var(--radius-sm);
+      font-family: inherit;
+      font-size: 0.8rem;
+    }
+
+    .step-counter {
+      margin-left: auto;
+      font-size: 0.75rem;
+      color: var(--text-dim);
+    }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Valid Sudoku — Step-Through</h1>
+  <button class="board-toggle" id="boardToggle">Switch to Invalid Board</button>
+</div>
+
+<div class="main-layout">
+  <div class="grid-wrap">
+    <div class="sudoku-grid" id="grid"></div>
+  </div>
+
+  <div class="right-panel">
+    <div class="set-group" id="rowSetDisplay">
+      <div class="set-label" id="rowSetLabel">Row — set</div>
+      <div class="set-chips" id="rowSetChips"></div>
+    </div>
+    <div class="set-group" id="colSetDisplay">
+      <div class="set-label" id="colSetLabel">Col — set</div>
+      <div class="set-chips" id="colSetChips"></div>
+    </div>
+    <div class="set-group" id="boxSetDisplay">
+      <div class="set-label" id="boxSetLabel">Box — set</div>
+      <div class="set-chips" id="boxSetChips"></div>
+    </div>
+  </div>
+</div>
+
+<div class="status-bar" id="statusBar">Ready. Press Step or Play to begin.</div>
+
+<div class="code-section">
+  <button class="code-toggle" id="codeToggle">▶ Show Code</button>
+  <div class="code-panel" id="codePanel" style="display:none">
+    <pre id="codePre"></pre>
+  </div>
+</div>
+
+<div class="nav-row">
+  <button id="prevBtn" class="btn-step">← Prev</button>
+  <button id="stepBtn" class="btn-step">Step →</button>
+  <button id="playBtn" class="btn-play">Play</button>
+  <button id="resetBtn" class="btn-step">↺ Reset</button>
+  <select id="speedSel">
+    <option value="800">0.5×</option>
+    <option value="400" selected>1×</option>
+    <option value="200">2×</option>
+    <option value="100">4×</option>
+  </select>
+  <span class="step-counter" id="stepCounter">0 / 0</span>
+</div>
+
+<script src="../shared/gsap.min.js"></script>
+<script src="../shared/viz.js"></script>
+<script>
+  // ── Boards ──
+  const VALID_BOARD = [
+    ["5","3",".",".","7",".",".",".","."],
+    ["6",".",".","1","9","5",".",".","."],
+    [".","9","8",".",".",".",".","6","."],
+    ["8",".",".",".","6",".",".",".","3"],
+    ["4",".",".","8",".","3",".",".","1"],
+    ["7",".",".",".","2",".",".",".","6"],
+    [".","6",".",".",".",".","2","8","."],
+    [".",".",".","4","1","9",".",".","5"],
+    [".",".",".",".","8",".",".","7","9"]
+  ];
+
+  // Invalid: row 0 has two 5s (add "5" at [0][1])
+  const INVALID_BOARD = VALID_BOARD.map(r => [...r]);
+  INVALID_BOARD[0] = ["5","5",".",".","7",".",".",".","."];
+
+  let currentBoard = VALID_BOARD;
+  let useInvalid = false;
+
+  // ── Steps ──
+  let steps = [];
+
+  function cloneSets(arr) {
+    return arr.map(s => [...s]);
+  }
+
+  function buildSteps() {
+    steps = [];
+    const board = currentBoard;
+    const rows  = Array.from({length:9}, () => []);
+    const cols  = Array.from({length:9}, () => []);
+    const boxes = Array.from({length:9}, () => []);
+
+    // initial snapshot
+    steps.push({
+      r: -1, c: -1, val: null, phase: 'init',
+      rowSets: cloneSets(rows), colSets: cloneSets(cols), boxSets: cloneSets(boxes),
+      conflictType: null, result: null, checkedCells: [],
+      highlightRow: -1, highlightCol: -1, highlightBox: -1
+    });
+
+    const checked = [];
+
+    outer:
+    for (let r = 0; r < 9; r++) {
+      for (let c = 0; c < 9; c++) {
+        const val = board[r][c];
+        const boxIdx = Math.floor(r/3)*3 + Math.floor(c/3);
+
+        if (val === '.') {
+          steps.push({
+            r, c, val, phase: 'skip',
+            rowSets: cloneSets(rows), colSets: cloneSets(cols), boxSets: cloneSets(boxes),
+            conflictType: null, result: null, checkedCells: [...checked],
+            highlightRow: r, highlightCol: c, highlightBox: boxIdx
+          });
+          checked.push([r, c]);
+          continue;
+        }
+
+        // check phase
+        let conflictType = null;
+        if (rows[r].includes(val)) conflictType = 'row';
+        else if (cols[c].includes(val)) conflictType = 'col';
+        else if (boxes[boxIdx].includes(val)) conflictType = 'box';
+
+        if (conflictType) {
+          steps.push({
+            r, c, val, phase: 'conflict',
+            rowSets: cloneSets(rows), colSets: cloneSets(cols), boxSets: cloneSets(boxes),
+            conflictType, result: false, checkedCells: [...checked],
+            highlightRow: r, highlightCol: c, highlightBox: boxIdx
+          });
+          steps.push({
+            r: -1, c: -1, val: null, phase: 'done',
+            rowSets: cloneSets(rows), colSets: cloneSets(cols), boxSets: cloneSets(boxes),
+            conflictType: null, result: false, checkedCells: [...checked],
+            highlightRow: -1, highlightCol: -1, highlightBox: -1
+          });
+          break outer;
+        }
+
+        // check step (valid so far)
+        steps.push({
+          r, c, val, phase: 'check',
+          rowSets: cloneSets(rows), colSets: cloneSets(cols), boxSets: cloneSets(boxes),
+          conflictType: null, result: null, checkedCells: [...checked],
+          highlightRow: r, highlightCol: c, highlightBox: boxIdx
+        });
+
+        // add
+        rows[r].push(val);
+        cols[c].push(val);
+        boxes[boxIdx].push(val);
+
+        steps.push({
+          r, c, val, phase: 'add',
+          rowSets: cloneSets(rows), colSets: cloneSets(cols), boxSets: cloneSets(boxes),
+          conflictType: null, result: null, checkedCells: [...checked],
+          highlightRow: r, highlightCol: c, highlightBox: boxIdx
+        });
+
+        checked.push([r, c]);
+      }
+    }
+
+    // done (valid)
+    if (steps[steps.length-1].phase !== 'done') {
+      steps.push({
+        r: -1, c: -1, val: null, phase: 'done',
+        rowSets: cloneSets(rows), colSets: cloneSets(cols), boxSets: cloneSets(boxes),
+        conflictType: null, result: true, checkedCells: [...checked],
+        highlightRow: -1, highlightCol: -1, highlightBox: -1
+      });
+    }
+  }
+
+  // ── Grid DOM ──
+  const gridEl = document.getElementById('grid');
+  const cells = [];
+
+  function buildGrid() {
+    gridEl.innerHTML = '';
+    cells.length = 0;
+    for (let r = 0; r < 9; r++) {
+      for (let c = 0; c < 9; c++) {
+        const el = document.createElement('div');
+        el.className = `cell row-${r} col-${c}`;
+        const val = currentBoard[r][c];
+        el.textContent = val === '.' ? '' : val;
+        gridEl.appendChild(el);
+        cells.push(el);
+      }
+    }
+  }
+
+  function cellEl(r, c) { return cells[r*9+c]; }
+
+  function applyStep(snap, _forward) {
+    // reset all cells
+    for (let r = 0; r < 9; r++) {
+      for (let c = 0; c < 9; c++) {
+        const el = cellEl(r, c);
+        el.className = `cell row-${r} col-${c}`;
+        const val = currentBoard[r][c];
+        el.textContent = val === '.' ? '' : val;
+        if (val === '.') el.classList.add('empty');
+      }
+    }
+
+    // mark visited
+    for (const [vr, vc] of snap.checkedCells) {
+      const el = cellEl(vr, vc);
+      const val = currentBoard[vr][vc];
+      el.classList.add(val === '.' ? 'skipped' : 'visited');
+    }
+
+    // mark current
+    if (snap.r >= 0 && snap.c >= 0) {
+      const el = cellEl(snap.r, snap.c);
+      if (snap.phase === 'conflict') {
+        el.classList.add('conflict');
+      } else {
+        el.classList.add('current');
+      }
+    }
+
+    // right panel sets
+    renderSets(snap);
+
+    // code highlight
+    renderCode(snap);
+  }
+
+  // ── Right Panel ──
+  const CODE_LINES = [
+    'def is_valid_sudoku(board):',
+    '    rows = [set() for _ in range(9)]',
+    '    cols = [set() for _ in range(9)]',
+    '    boxes = [set() for _ in range(9)]',
+    '',
+    '    for r in range(9):',
+    '        for c in range(9):',
+    '            val = board[r][c]',
+    '            if val == ".":',
+    '                continue',
+    '            box_idx = (r // 3) * 3 + (c // 3)',
+    '            if (val in rows[r] or val in cols[c]',
+    '                    or val in boxes[box_idx]):',
+    '                return False',
+    '            rows[r].add(val)',
+    '            cols[c].add(val)',
+    '            boxes[box_idx].add(val)',
+    '    return True'
+  ];
+
+  function phaseToLine(phase) {
+    switch(phase) {
+      case 'init':     return [1,2,3];
+      case 'skip':     return [8,9];
+      case 'check':    return [11,12];
+      case 'conflict': return [13];
+      case 'add':      return [14,15,16];
+      case 'done':     return [17];
+      default:         return [];
+    }
+  }
+
+  function renderCode(snap) {
+    const active = new Set(phaseToLine(snap.phase));
+    const codePre = document.getElementById('codePre');
+    codePre.innerHTML = CODE_LINES.map((line, i) => {
+      const cls = active.has(i) ? 'code-line active' : 'code-line';
+      const escaped = line.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      return `<span class="${cls}">${escaped || ' '}</span>`;
+    }).join('\n');
+  }
+
+  function renderSets(snap) {
+    const hr = snap.highlightRow;
+    const hc = snap.highlightCol;
+    const hb = snap.highlightBox;
+
+    const rowDisplay = document.getElementById('rowSetDisplay');
+    const colDisplay = document.getElementById('colSetDisplay');
+    const boxDisplay = document.getElementById('boxSetDisplay');
+
+    rowDisplay.classList.toggle('highlighted', hr >= 0);
+    colDisplay.classList.toggle('highlighted', hc >= 0);
+    boxDisplay.classList.toggle('highlighted', hb >= 0);
+
+    document.getElementById('rowSetLabel').textContent =
+      hr >= 0 ? `Row ${hr} set` : 'Row sets';
+    document.getElementById('colSetLabel').textContent =
+      hc >= 0 ? `Col ${hc} set` : 'Col sets';
+    document.getElementById('boxSetLabel').textContent =
+      hb >= 0 ? `Box ${hb} set` : 'Box sets';
+
+    renderChips('rowSetChips', hr >= 0 ? snap.rowSets[hr] : [], snap.val, snap.phase);
+    renderChips('colSetChips', hc >= 0 ? snap.colSets[hc] : [], snap.val, snap.phase);
+    renderChips('boxSetChips', hb >= 0 ? snap.boxSets[hb] : [], snap.val, snap.phase);
+  }
+
+  function renderChips(id, arr, newVal, phase) {
+    const el = document.getElementById(id);
+    el.innerHTML = arr.map(v => {
+      const isNew = v === newVal && phase === 'add';
+      return `<span class="chip${isNew ? ' new' : ''}">${v}</span>`;
+    }).join('');
+  }
+
+  // ── Status ──
+  function updateStatus(snap, cur, total) {
+    const bar = document.getElementById('statusBar');
+    document.getElementById('stepCounter').textContent = `${cur} / ${total - 1}`;
+
+    if (snap.phase === 'init') {
+      bar.innerHTML = 'Ready — scanning board cell by cell.';
+      return;
+    }
+    if (snap.phase === 'done') {
+      if (snap.result === true) {
+        bar.innerHTML = '<span class="ok">Result: VALID ✓ — no duplicates found in any row, column, or box.</span>';
+      } else {
+        bar.innerHTML = '<span class="err">Result: INVALID ✗ — duplicate digit detected.</span>';
+      }
+      return;
+    }
+    if (snap.phase === 'skip') {
+      bar.innerHTML = `Cell (r=${snap.r}, c=${snap.c}) → <span class="hi">"."</span> — skipping empty cell.`;
+      return;
+    }
+    if (snap.phase === 'conflict') {
+      bar.innerHTML = `<span class="err">Conflict at (r=${snap.r}, c=${snap.c}) → "${snap.val}" already in ${snap.conflictType === 'row' ? 'Row ' + snap.r : snap.conflictType === 'col' ? 'Col ' + snap.c : 'Box ' + snap.highlightBox}!</span>`;
+      return;
+    }
+    if (snap.phase === 'check') {
+      bar.innerHTML = `Checking (r=${snap.r}, c=${snap.c}) → digit <span class="hi">"${snap.val}"</span> | checking row ${snap.r}, col ${snap.c}, box ${snap.highlightBox}…`;
+      return;
+    }
+    if (snap.phase === 'add') {
+      bar.innerHTML = `Added <span class="hi">"${snap.val}"</span> to row ${snap.highlightRow}, col ${snap.highlightCol}, box ${snap.highlightBox} sets. <span class="ok">✓</span>`;
+    }
+  }
+
+  // ── VizNav ──
+  let nav;
+
+  function initNav() {
+    nav = VizNav({
+      btnPrev:  document.getElementById('prevBtn'),
+      btnNext:  document.getElementById('stepBtn'),
+      btnPlay:  document.getElementById('playBtn'),
+      speedSel: document.getElementById('speedSel'),
+      render: function(snap, cur, total) {
+        applyStep(snap, cur > 0);
+        updateStatus(snap, cur, total);
+      }
+    });
+  }
+
+  // ── Reset ──
+  document.getElementById('resetBtn').addEventListener('click', () => {
+    buildSteps();
+    nav.reset(steps);
+  });
+
+  // ── Board Toggle ──
+  document.getElementById('boardToggle').addEventListener('click', () => {
+    useInvalid = !useInvalid;
+    currentBoard = useInvalid ? INVALID_BOARD : VALID_BOARD;
+    const btn = document.getElementById('boardToggle');
+    btn.textContent = useInvalid ? 'Switch to Valid Board' : 'Switch to Invalid Board';
+    btn.classList.toggle('invalid-active', useInvalid);
+    buildGrid();
+    buildSteps();
+    nav.reset(steps);
+  });
+
+  // ── Code Toggle ──
+  document.getElementById('codeToggle').addEventListener('click', () => {
+    const panel = document.getElementById('codePanel');
+    const btn = document.getElementById('codeToggle');
+    const visible = panel.style.display !== 'none';
+    panel.style.display = visible ? 'none' : 'block';
+    btn.textContent = visible ? '▶ Show Code' : '▼ Hide Code';
+  });
+
+  // ── Init ──
+  document.addEventListener('DOMContentLoaded', () => {
+    buildGrid();
+    buildSteps();
+    initNav();
+    nav.reset(steps);
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Reverse Linked List</title>
+  <link rel="stylesheet" href="../shared/style.css" />
+  <script src="../shared/gsap.min.js"></script>
+  <script src="../shared/viz.js"></script>
+  <style>
+    .viz-area {
+      width: 100%;
+      max-width: 90%;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .main-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      align-items: start;
+    }
+
+    @media (max-width: 800px) {
+      .main-row { grid-template-columns: 1fr; }
+    }
+
+    /* Linked list canvas */
+    #list-container {
+      padding: 24px 16px 16px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      min-height: 160px;
+      display: flex;
+      flex-direction: column;
+      gap: 28px;
+      overflow-x: auto;
+    }
+
+    .list-row {
+      display: flex;
+      align-items: center;
+      flex-wrap: nowrap;
+      gap: 0;
+    }
+
+    .list-row-label {
+      font-size: 0.62rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.09em;
+      color: var(--text-dim);
+      margin-bottom: 6px;
+    }
+
+    .node-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .node-box {
+      width: 44px;
+      height: 44px;
+      border-radius: var(--radius-sm);
+      border: 2px solid var(--border);
+      background: var(--bg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: monospace;
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text);
+      transition: border-color 0.25s, background 0.25s, box-shadow 0.25s;
+    }
+
+    .node-box.ptr-curr {
+      border-color: var(--orange);
+      background: rgba(255, 158, 100, 0.12);
+      box-shadow: 0 0 10px rgba(255, 158, 100, 0.3);
+      color: var(--orange);
+    }
+
+    .node-box.ptr-prev {
+      border-color: var(--purple);
+      background: rgba(187, 154, 247, 0.12);
+      box-shadow: 0 0 10px rgba(187, 154, 247, 0.3);
+      color: var(--purple);
+    }
+
+    .node-box.ptr-next {
+      border-color: var(--blue);
+      background: rgba(122, 162, 247, 0.12);
+      box-shadow: 0 0 10px rgba(122, 162, 247, 0.3);
+      color: var(--blue);
+    }
+
+    .node-box.ptr-curr.ptr-prev {
+      border-color: var(--orange);
+      background: rgba(255, 158, 100, 0.12);
+    }
+
+    .node-box.done {
+      border-color: var(--green);
+      background: rgba(158, 206, 106, 0.1);
+      color: var(--green);
+    }
+
+    .ptr-labels {
+      display: flex;
+      gap: 3px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .ptr-badge {
+      font-size: 0.6rem;
+      font-weight: 700;
+      padding: 1px 5px;
+      border-radius: 3px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .ptr-badge.prev { background: rgba(187,154,247,0.25); color: var(--purple); }
+    .ptr-badge.curr { background: rgba(255,158,100,0.25); color: var(--orange); }
+    .ptr-badge.next { background: rgba(122,162,247,0.25); color: var(--blue); }
+
+    /* Arrow between nodes */
+    .arrow-wrap {
+      display: flex;
+      align-items: center;
+      padding: 0 2px;
+      padding-bottom: 28px; /* align with node center, offset for badge area */
+    }
+
+    .arrow {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      font-size: 0.75rem;
+    }
+
+    .arrow-line {
+      width: 22px;
+      height: 2px;
+      background: var(--border);
+    }
+
+    .arrow-line.fwd { background: var(--text-dim); }
+    .arrow-line.rev { background: var(--green); }
+    .arrow-line.none { background: #333; opacity: 0.3; }
+
+    .arrow-head {
+      width: 0;
+      height: 0;
+      border-top: 5px solid transparent;
+      border-bottom: 5px solid transparent;
+    }
+
+    .arrow-head.fwd {
+      border-left: 8px solid var(--text-dim);
+    }
+
+    .arrow-head.rev {
+      border-left: 8px solid var(--green);
+    }
+
+    /* null terminal */
+    .null-node {
+      font-family: monospace;
+      font-size: 0.78rem;
+      color: var(--text-dim);
+      font-weight: 600;
+      padding-bottom: 28px;
+      display: flex;
+      align-items: center;
+    }
+
+    /* Variables panel */
+    .var-panel {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 10px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 14px 16px;
+    }
+
+    .var-item {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .var-label {
+      font-size: 0.65rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-dim);
+    }
+
+    .var-value {
+      font-size: 1rem;
+      font-weight: 700;
+      font-family: monospace;
+      color: var(--text-bright, var(--text));
+    }
+
+    .var-value.clr-prev { color: var(--purple); }
+    .var-value.clr-curr { color: var(--orange); }
+    .var-value.clr-next { color: var(--blue); }
+
+    /* Code panel */
+    .code-panel {
+      background: #0a0d14;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .code-header {
+      padding: 9px 14px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      font-size: 0.67rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.11em;
+      color: var(--text-dim);
+    }
+
+    .code-body {
+      padding: 10px 0;
+      font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+      font-size: 0.75rem;
+      line-height: 1.7;
+      overflow-x: auto;
+      flex: 1;
+    }
+
+    .code-line {
+      display: flex;
+      align-items: stretch;
+      border-left: 3px solid transparent;
+      padding: 0 14px 0 0;
+      white-space: pre;
+      transition: background 0.2s, border-color 0.2s;
+    }
+
+    .code-line.hl {
+      background: rgba(122, 162, 247, 0.12);
+      border-left-color: var(--accent);
+      padding-left: 6px;
+    }
+
+    .code-line .ln {
+      width: 28px;
+      min-width: 28px;
+      text-align: right;
+      color: #3d4468;
+      user-select: none;
+      padding-right: 14px;
+      font-size: 0.7rem;
+    }
+
+    .code-line .code { color: var(--text-muted); }
+    .kw { color: var(--purple); }
+    .fn { color: var(--blue); }
+    .nb { color: var(--green); }
+
+    /* Status panel */
+    .status-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 12px 16px;
+    }
+
+    .status-phase {
+      font-size: 0.65rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-dim);
+    }
+
+    .status-desc {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    .status-result {
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: var(--green);
+      margin-top: 4px;
+    }
+
+    /* Nav row */
+    .nav-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .btn-step {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      cursor: pointer;
+      font-size: 0.9rem;
+      font-weight: 600;
+      padding: 7px 12px;
+      transition: background 0.2s, border-color 0.2s;
+    }
+
+    .btn-step:hover:not(:disabled) {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+    }
+
+    .btn-step:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .btn-play {
+      background: #15803d;
+      border: none;
+      border-radius: var(--radius-sm);
+      color: #fff;
+      cursor: pointer;
+      font-size: 0.88rem;
+      font-weight: 600;
+      padding: 7px 16px;
+      transition: background 0.2s;
+    }
+
+    .btn-play:hover:not(:disabled) { background: #16a34a; }
+    .btn-play:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    #speedSel {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: var(--radius-sm);
+      padding: 6px 10px;
+      font-size: 0.85rem;
+      cursor: pointer;
+    }
+
+    .page-sub {
+      color: var(--text-dim);
+      font-size: 0.85rem;
+    }
+  </style>
+</head>
+<body class="page">
+  <div class="page-header">
+    <a class="back-link" href="../index.html">← All Algorithms</a>
+    <div>
+      <div class="page-title">Reverse Linked List</div>
+      <div class="page-sub">LeetCode #206 · iterative · O(n) time · O(1) space</div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <div class="field">
+      <label for="numsInput">Node values (comma-separated):</label>
+      <input type="text" id="numsInput" value="1,2,3,4,5" />
+    </div>
+    <button class="btn-primary" id="buildBtn">Build &amp; Run</button>
+  </div>
+
+  <div class="viz-area">
+    <div class="panel-box" style="display:inline-flex;align-self:flex-start">
+      <div class="nav-row">
+        <button id="prevBtn" class="btn-step" disabled>← Prev</button>
+        <button id="stepBtn" class="btn-step" disabled>Step →</button>
+        <button id="playBtn" class="btn-play" disabled>Play</button>
+        <button id="resetBtn" class="btn-step" disabled>↺ Reset</button>
+        <select id="speedSel">
+          <option value="800">0.5×</option>
+          <option value="400" selected>1×</option>
+          <option value="200">2×</option>
+          <option value="100">4×</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="main-row">
+      <!-- Left: list + vars + status -->
+      <div style="display:flex;flex-direction:column;gap:14px">
+
+        <div class="panel-box">
+          <div class="list-row-label">Linked List</div>
+          <div id="list-container"></div>
+        </div>
+
+        <div class="var-panel">
+          <div class="var-item">
+            <div class="var-label" style="color:var(--purple)">prev</div>
+            <div class="var-value clr-prev" id="varPrev">—</div>
+          </div>
+          <div class="var-item">
+            <div class="var-label" style="color:var(--orange)">curr</div>
+            <div class="var-value clr-curr" id="varCurr">—</div>
+          </div>
+          <div class="var-item">
+            <div class="var-label" style="color:var(--blue)">next</div>
+            <div class="var-value clr-next" id="varNext">—</div>
+          </div>
+        </div>
+
+        <div class="status-panel">
+          <div class="status-phase" id="phase-label">—</div>
+          <div class="status-desc" id="step-desc">Click Build &amp; Run to start.</div>
+          <div class="status-result" id="result-msg" style="display:none"></div>
+        </div>
+      </div>
+
+      <!-- Right: code -->
+      <div class="code-panel">
+        <div class="code-header">Python Solution</div>
+        <div class="code-body" id="code-body"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    var nav;
+
+    const pythonCode = [
+      'def reverse_list(head):',
+      '    prev = None',
+      '    curr = head',
+      '    ',
+      '    while curr:',
+      '        next_node = curr.next',
+      '        curr.next = prev',
+      '        prev = curr',
+      '        curr = next_node',
+      '    ',
+      '    return prev'
+    ];
+
+    function buildCodePanel() {
+      const cb = document.getElementById('code-body');
+      cb.innerHTML = pythonCode.map((line, i) =>
+        `<div class="code-line" id="cl-${i}"><span class="ln">${i + 1}</span><span class="code">${escHtml(line)}</span></div>`
+      ).join('');
+    }
+
+    function escHtml(t) {
+      const d = document.createElement('div');
+      d.textContent = t;
+      return d.innerHTML;
+    }
+
+    function setCodeLines(active) {
+      pythonCode.forEach((_, i) => {
+        document.getElementById('cl-' + i).classList.toggle('hl', active.includes(i));
+      });
+    }
+
+    // Build simulation snapshots
+    // Each node is represented by its index into the values array.
+    // We track: next[] — who each node points to (-1 = null, -2 = reversed)
+    // prev/curr/next_node are indices (-1 = null, -99 = not yet set)
+    function simulate(vals) {
+      const n = vals.length;
+      const steps = [];
+
+      // next[i] = index of node i's .next pointer (-1 means null)
+      function makeNext(arr) { return arr.slice(); }
+
+      // Initial: 0->1->2->...->n-1->null
+      const initNext = vals.map((_, i) => i < n - 1 ? i + 1 : -1);
+
+      function pushStep(phase, desc, lines, nextArr, prev, curr, nextNode, done) {
+        steps.push({
+          phase, desc, lines,
+          next: makeNext(nextArr),
+          prev,        // index or -1 (null)
+          curr,        // index or -1 (null)
+          nextNode,    // index or -1 (null) or -99 (not set)
+          done: !!done
+        });
+      }
+
+      // Step 0: initial state — show list, set prev=null, curr=head
+      pushStep(
+        'Initialize',
+        'Set prev = None, curr = head (node ' + vals[0] + ')',
+        [0, 1, 2],
+        initNext, -1, 0, -99, false
+      );
+
+      const nextArr = makeNext(initNext);
+      let prev = -1;
+      let curr = 0;
+
+      while (curr !== -1) {
+        const nextNode = nextArr[curr];
+
+        // Step: save next_node
+        pushStep(
+          'Save next_node',
+          'next_node = curr.next  →  next_node = ' + (nextNode === -1 ? 'None' : 'node ' + vals[nextNode]),
+          [4, 5],
+          nextArr, prev, curr, nextNode, false
+        );
+
+        // Step: reverse pointer
+        nextArr[curr] = prev;
+        pushStep(
+          'Reverse pointer',
+          'curr.next = prev  →  node ' + vals[curr] + '.next = ' + (prev === -1 ? 'None' : 'node ' + vals[prev]),
+          [6],
+          nextArr, prev, curr, nextNode, false
+        );
+
+        // Step: advance prev
+        prev = curr;
+        pushStep(
+          'Advance prev',
+          'prev = curr  →  prev = node ' + vals[prev],
+          [7],
+          nextArr, prev, curr, nextNode, false
+        );
+
+        // Step: advance curr
+        curr = nextNode;
+        pushStep(
+          'Advance curr',
+          'curr = next_node  →  curr = ' + (curr === -1 ? 'None' : 'node ' + vals[curr]),
+          [8],
+          nextArr, prev, curr, nextNode, false
+        );
+      }
+
+      // Final: return prev
+      pushStep(
+        'Done — return prev',
+        'curr is None. Return prev (new head = node ' + vals[prev] + '). List reversed: ' + vals.slice().reverse().join(' → ') + ' → null',
+        [10],
+        nextArr, prev, -1, -99, true
+      );
+
+      return steps;
+    }
+
+    // Draw the linked list given snap
+    function drawList(snap, vals) {
+      const container = document.getElementById('list-container');
+      container.innerHTML = '';
+
+      // Build ordered chain from snap.next, starting from the head
+      // The "head" in each snap is tricky: once reversal starts the original
+      // chain breaks, so we show ALL nodes in their original order (index 0..n-1)
+      // with arrows reflecting snap.next[].
+      const n = vals.length;
+
+      const row = document.createElement('div');
+      row.className = 'list-row';
+
+      for (let i = 0; i < n; i++) {
+        const wrap = document.createElement('div');
+        wrap.className = 'node-wrap';
+
+        // Node box
+        const box = document.createElement('div');
+        box.className = 'node-box';
+
+        const isPrev = snap.prev === i;
+        const isCurr = snap.curr === i;
+        const isNext = snap.nextNode === i;
+
+        if (snap.done) {
+          box.classList.add('done');
+        } else {
+          if (isPrev) box.classList.add('ptr-prev');
+          if (isCurr) box.classList.add('ptr-curr');
+          if (isNext) box.classList.add('ptr-next');
+        }
+
+        box.textContent = vals[i];
+        wrap.appendChild(box);
+
+        // Pointer badges
+        const badges = document.createElement('div');
+        badges.className = 'ptr-labels';
+        if (!snap.done) {
+          if (isPrev) { const b = document.createElement('span'); b.className='ptr-badge prev'; b.textContent='prev'; badges.appendChild(b); }
+          if (isCurr) { const b = document.createElement('span'); b.className='ptr-badge curr'; b.textContent='curr'; badges.appendChild(b); }
+          if (isNext) { const b = document.createElement('span'); b.className='ptr-badge next'; b.textContent='next'; badges.appendChild(b); }
+        }
+        wrap.appendChild(badges);
+
+        row.appendChild(wrap);
+
+        // Arrow after this node (not after last)
+        if (i < n - 1) {
+          const arrowWrap = document.createElement('div');
+          arrowWrap.className = 'arrow-wrap';
+
+          const nxt = snap.next[i];
+          // nxt === i+1  → forward arrow (original)
+          // nxt === i-1  → reversed (goes back, show rev color)
+          // nxt === -1   → null (no arrow / severed)
+
+          const line = document.createElement('div');
+          const head = document.createElement('div');
+
+          if (nxt === i + 1) {
+            // forward
+            line.className = 'arrow-line fwd';
+            head.className = 'arrow-head fwd';
+          } else if (nxt !== -1) {
+            // points somewhere else (reversed leftward from this index)
+            line.className = 'arrow-line rev';
+            head.className = 'arrow-head rev';
+          } else {
+            // severed — show dim line with no head
+            line.className = 'arrow-line none';
+          }
+
+          arrowWrap.appendChild(line);
+          if (nxt !== -1) arrowWrap.appendChild(head);
+          row.appendChild(arrowWrap);
+        }
+      }
+
+      // null terminal
+      const last = n - 1;
+      const lastNext = snap.next[last];
+
+      // Show null at the end if last node points to null (or we're done)
+      const nullEl = document.createElement('div');
+      nullEl.className = 'null-node';
+
+      // Arrow before null
+      const nullArrow = document.createElement('div');
+      nullArrow.className = 'arrow-wrap';
+      const nullLine = document.createElement('div');
+      const nullHead = document.createElement('div');
+
+      if (snap.done || lastNext === -1) {
+        // In done state last node of reversed list is vals[0], shown at index 0.
+        // We'll just append null after the first node which is now tail.
+        // Actually just show null after the full row with an arrow.
+        nullLine.className = 'arrow-line none';
+        nullArrow.appendChild(nullLine);
+        nullEl.textContent = 'null';
+      } else {
+        nullLine.className = 'arrow-line fwd';
+        nullHead.className = 'arrow-head fwd';
+        nullArrow.appendChild(nullLine);
+        nullArrow.appendChild(nullHead);
+        nullEl.textContent = 'null';
+      }
+
+      row.appendChild(nullArrow);
+      row.appendChild(nullEl);
+
+      container.appendChild(row);
+    }
+
+    function applyStep(snap, animate) {
+      const vals = snap.vals;
+
+      drawList(snap, vals);
+      setCodeLines(snap.lines);
+
+      // Variables
+      document.getElementById('varPrev').textContent = snap.prev === -1 ? 'None' : 'node ' + vals[snap.prev];
+      document.getElementById('varCurr').textContent = snap.curr === -1 ? 'None' : 'node ' + vals[snap.curr];
+      document.getElementById('varNext').textContent = snap.nextNode === -99 ? '—' : (snap.nextNode === -1 ? 'None' : 'node ' + vals[snap.nextNode]);
+
+      document.getElementById('phase-label').textContent = snap.phase;
+      document.getElementById('step-desc').textContent = snap.desc;
+
+      const res = document.getElementById('result-msg');
+      if (snap.done) {
+        res.style.display = '';
+        res.textContent = '✓ Reversed: ' + vals.slice().reverse().join(' → ') + ' → null';
+      } else {
+        res.style.display = 'none';
+      }
+    }
+
+    function updateStatus(snap, cur, total) {
+      // VizNav calls render(snap, cur, total) — applyStep handles display
+    }
+
+    function buildAndRun() {
+      const raw = document.getElementById('numsInput').value;
+      const vals = raw.split(',').map(x => {
+        const n = parseInt(x.trim());
+        return isNaN(n) ? 0 : n;
+      }).filter((_, i, a) => a.length > 0);
+
+      if (vals.length === 0) {
+        alert('Enter at least one node value.');
+        return;
+      }
+
+      const steps = simulate(vals);
+      // Attach vals to each step
+      steps.forEach(s => { s.vals = vals; });
+
+      nav.load(steps);
+    }
+
+    window.addEventListener('DOMContentLoaded', function () {
+      buildCodePanel();
+
+      nav = VizNav({
+        btnPrev: document.getElementById('prevBtn'),
+        btnNext: document.getElementById('stepBtn'),
+        btnPlay: document.getElementById('playBtn'),
+        speedSel: document.getElementById('speedSel'),
+        render: function(snap, cur, total) {
+          applyStep(snap, cur > 0);
+          updateStatus(snap, cur, total);
+        }
+      });
+
+      document.getElementById('resetBtn').addEventListener('click', buildAndRun);
+      document.getElementById('buildBtn').addEventListener('click', buildAndRun);
+
+      buildAndRun();
+
+      if (window.self !== window.top) {
+        const bl = document.querySelector('.back-link');
+        if (bl) bl.style.display = 'none';
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,798 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Encode and Decode Strings</title>
+  <link rel="stylesheet" href="../shared/style.css" />
+  <script src="../shared/gsap.min.js"></script>
+  <script src="../shared/viz.js"></script>
+  <style>
+    .viz-area {
+      width: 100%;
+      max-width: 92%;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .top-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+
+    .bottom-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+
+    @media (max-width: 800px) {
+      .top-row, .bottom-row { grid-template-columns: 1fr; }
+    }
+
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 16px;
+    }
+
+    .panel-title {
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      margin-bottom: 10px;
+    }
+
+    /* String lists */
+    .str-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .str-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 6px 10px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      font-family: monospace;
+      font-size: 0.88rem;
+      transition: background 0.2s, border-color 0.2s;
+    }
+
+    .str-item .str-idx {
+      font-size: 0.68rem;
+      color: var(--text-dim);
+      min-width: 20px;
+    }
+
+    .str-item .str-val {
+      color: var(--text);
+    }
+
+    .str-item.active {
+      background: rgba(122, 162, 247, 0.12);
+      border-color: var(--blue);
+    }
+
+    .str-item.done {
+      border-color: var(--green);
+      background: rgba(158, 206, 106, 0.08);
+    }
+
+    .str-item .badge {
+      margin-left: auto;
+      font-size: 0.65rem;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 99px;
+      background: var(--green);
+      color: #000;
+    }
+
+    /* Encoded string display */
+    #encoded-display {
+      font-family: monospace;
+      font-size: 0.92rem;
+      line-height: 1.8;
+      word-break: break-all;
+      min-height: 60px;
+      color: var(--text);
+      letter-spacing: 0.02em;
+    }
+
+    .enc-segment {
+      display: inline;
+    }
+
+    .enc-prefix {
+      color: var(--orange);
+      font-weight: 700;
+    }
+
+    .enc-word {
+      color: var(--blue);
+    }
+
+    .enc-active-prefix {
+      background: rgba(255, 158, 100, 0.25);
+      border-radius: 2px;
+      outline: 2px solid var(--orange);
+    }
+
+    .enc-active-word {
+      background: rgba(122, 162, 247, 0.25);
+      border-radius: 2px;
+      outline: 2px solid var(--blue);
+    }
+
+    /* Pointer line */
+    #pointer-row {
+      font-family: monospace;
+      font-size: 0.88rem;
+      color: var(--text-muted);
+      margin-top: 6px;
+      min-height: 22px;
+    }
+
+    .ptr-char {
+      display: inline-block;
+      width: 0.62em;
+      text-align: center;
+    }
+
+    .ptr-i {
+      color: var(--accent);
+      font-weight: 700;
+    }
+
+    .ptr-j {
+      color: var(--yellow);
+      font-weight: 700;
+    }
+
+    .ptr-window {
+      background: rgba(187, 154, 247, 0.2);
+      border-radius: 2px;
+      outline: 2px solid var(--purple);
+    }
+
+    /* Phase badge */
+    #phase-label {
+      display: inline-block;
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      padding: 2px 10px;
+      border-radius: 99px;
+      margin-bottom: 6px;
+    }
+
+    .phase-encode { background: rgba(255, 158, 100, 0.2); color: var(--orange); border: 1px solid var(--orange); }
+    .phase-decode { background: rgba(122, 162, 247, 0.2); color: var(--blue); border: 1px solid var(--blue); }
+    .phase-done   { background: rgba(158, 206, 106, 0.2); color: var(--green); border: 1px solid var(--green); }
+
+    #step-desc {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      min-height: 36px;
+      margin-top: 4px;
+    }
+
+    /* Var row */
+    .var-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+      gap: 8px;
+    }
+
+    .var-box {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 6px 10px;
+      text-align: center;
+    }
+
+    .var-label {
+      font-size: 0.62rem;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .var-value {
+      font-family: monospace;
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: var(--accent);
+      word-break: break-all;
+      margin-top: 2px;
+    }
+
+    /* Input row */
+    .input-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .input-row label {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+    }
+
+    .input-row input {
+      flex: 1;
+      min-width: 180px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      padding: 5px 10px;
+      font-size: 0.82rem;
+      font-family: monospace;
+    }
+
+    .input-row input:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    .btn-run {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius-sm);
+      padding: 5px 14px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .btn-run:hover { background: var(--accent-hover); }
+
+    /* Code panel */
+    .code-panel {
+      font-family: monospace;
+      font-size: 0.78rem;
+      line-height: 1.75;
+      white-space: pre;
+      overflow-x: auto;
+    }
+
+    .code-line {
+      display: block;
+      padding: 0 8px;
+      border-radius: 2px;
+      color: var(--text-dim);
+      transition: background 0.15s;
+    }
+
+    .code-line.hl {
+      background: rgba(122, 162, 247, 0.18);
+      color: var(--text);
+    }
+
+    .summary-row {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .summary-item {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+    }
+
+    .summary-item span {
+      font-family: monospace;
+      color: var(--text);
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+  <div class="page-shell">
+    <header class="top-bar">
+      <a href="../../" class="back-link">← Katas</a>
+      <span class="prob-title">Encode &amp; Decode Strings</span>
+      <span class="prob-tag">String · Medium</span>
+    </header>
+
+    <main class="viz-main">
+      <div class="viz-area">
+
+        <!-- Input -->
+        <div class="panel">
+          <div class="input-row">
+            <label>Strings:</label>
+            <input id="strsInput" type="text" value="hello,world,foo,bar" />
+            <button class="btn-run" id="buildBtn">Run</button>
+          </div>
+        </div>
+
+        <!-- Status -->
+        <div class="panel">
+          <div id="phase-label" class="phase-encode">Encode</div>
+          <div id="step-desc">Ready</div>
+          <div class="summary-row" style="margin-top:10px;">
+            <div class="var-grid" id="var-row" style="flex:1;"></div>
+          </div>
+        </div>
+
+        <!-- Top row: original list + encoded string -->
+        <div class="top-row">
+          <div class="panel">
+            <div class="panel-title">Original Strings</div>
+            <div class="str-list" id="original-list"></div>
+          </div>
+          <div class="panel">
+            <div class="panel-title">Encoded String</div>
+            <div id="encoded-display"></div>
+            <div id="pointer-row"></div>
+          </div>
+        </div>
+
+        <!-- Bottom row: decoded list + code -->
+        <div class="bottom-row">
+          <div class="panel">
+            <div class="panel-title">Decoded Strings</div>
+            <div class="str-list" id="decoded-list"></div>
+          </div>
+          <div class="panel">
+            <div class="panel-title">Code</div>
+            <div class="code-panel" id="code-panel"></div>
+          </div>
+        </div>
+
+        <!-- Nav -->
+        <div class="nav-row">
+          <button id="prevBtn" class="btn-step">← Prev</button>
+          <button id="stepBtn" class="btn-step">Step →</button>
+          <button id="playBtn" class="btn-play">Play</button>
+          <button id="resetBtn" class="btn-step">↺ Reset</button>
+          <select id="speedSel">
+            <option value="800">0.5×</option>
+            <option value="400" selected>1×</option>
+            <option value="200">2×</option>
+            <option value="100">4×</option>
+          </select>
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+  <script>
+    var nav;
+
+    // ─── Code source ────────────────────────────────────────────────────────
+    var CODE_LINES = [
+      'def encode(strs):',
+      '    res = ""',
+      '    for s in strs:',
+      '        res += str(len(s)) + "#" + s',
+      '    return res',
+      '',
+      'def decode(s):',
+      '    res, i = [], 0',
+      '    while i < len(s):',
+      '        j = i',
+      '        while s[j] != "#":',
+      '            j += 1',
+      '        length = int(s[i:j])',
+      '        res.append(s[j+1:j+1+length])',
+      '        i = j + 1 + length',
+      '    return res',
+    ];
+
+    function buildCodePanel() {
+      var panel = document.getElementById('code-panel');
+      panel.innerHTML = '';
+      CODE_LINES.forEach(function(line, idx) {
+        var el = document.createElement('span');
+        el.className = 'code-line';
+        el.id = 'cl-' + idx;
+        el.textContent = line || ' ';
+        panel.appendChild(el);
+      });
+    }
+
+    function setCodeLines(lines) {
+      CODE_LINES.forEach(function(_, idx) {
+        var el = document.getElementById('cl-' + idx);
+        if (el) el.classList.toggle('hl', lines.indexOf(idx) !== -1);
+      });
+    }
+
+    // ─── Simulation ──────────────────────────────────────────────────────────
+    function simulate(strs) {
+      var steps = [];
+
+      // ── Encode phase ────────────────────────────────
+      steps.push({
+        phase: 'encode',
+        desc: 'Start encoding. res = ""',
+        encBuilt: [],      // array of {prefix, word} segments completed
+        activeWordIdx: -1,
+        encodedFull: '',
+        decodedBuilt: [],
+        pointerI: null,
+        pointerJ: null,
+        vars: { res: '""' },
+        lines: [0, 1],
+      });
+
+      var encSegments = [];
+      strs.forEach(function(s, wi) {
+        var prefix = s.length + '#';
+
+        // Step: starting to encode this word
+        steps.push({
+          phase: 'encode',
+          desc: 'Encoding word [' + wi + '] "' + s + '" → append "' + prefix + s + '"',
+          encBuilt: encSegments.slice(),
+          activeWordIdx: wi,
+          activeIsPrefix: true,
+          encodedFull: encSegments.map(function(seg){ return seg.prefix + seg.word; }).join(''),
+          decodedBuilt: [],
+          pointerI: null,
+          pointerJ: null,
+          vars: { s: '"' + s + '"', res: '"' + encSegments.map(function(seg){ return seg.prefix + seg.word; }).join('') + '"' },
+          lines: [2, 3],
+        });
+
+        encSegments.push({ prefix: prefix, word: s });
+        var encoded = encSegments.map(function(seg){ return seg.prefix + seg.word; }).join('');
+
+        steps.push({
+          phase: 'encode',
+          desc: 'Appended "' + prefix + s + '". res now has ' + encoded.length + ' chars.',
+          encBuilt: encSegments.slice(),
+          activeWordIdx: wi,
+          activeIsPrefix: false,
+          encodedFull: encoded,
+          decodedBuilt: [],
+          pointerI: null,
+          pointerJ: null,
+          vars: { s: '"' + s + '"', res: '"' + encoded + '"' },
+          lines: [3],
+        });
+      });
+
+      var finalEncoded = encSegments.map(function(seg){ return seg.prefix + seg.word; }).join('');
+
+      steps.push({
+        phase: 'encode',
+        desc: 'Encode complete. Returning encoded string (' + finalEncoded.length + ' chars).',
+        encBuilt: encSegments.slice(),
+        activeWordIdx: -1,
+        encodedFull: finalEncoded,
+        decodedBuilt: [],
+        pointerI: null,
+        pointerJ: null,
+        vars: { res: '"' + finalEncoded + '"' },
+        lines: [4],
+      });
+
+      // ── Decode phase ────────────────────────────────
+      var s = finalEncoded;
+
+      steps.push({
+        phase: 'decode',
+        desc: 'Start decoding. res=[], i=0',
+        encBuilt: encSegments.slice(),
+        activeWordIdx: -1,
+        encodedFull: s,
+        decodedBuilt: [],
+        pointerI: 0,
+        pointerJ: null,
+        vars: { i: 0, res: '[]' },
+        lines: [6, 7],
+      });
+
+      var i = 0;
+      var decoded = [];
+
+      while (i < s.length) {
+        var j = i;
+
+        // scan j to find '#'
+        steps.push({
+          phase: 'decode',
+          desc: 'i=' + i + '. Set j=i, scan forward to find "#".',
+          encBuilt: encSegments.slice(),
+          activeWordIdx: -1,
+          encodedFull: s,
+          decodedBuilt: decoded.slice(),
+          pointerI: i,
+          pointerJ: j,
+          vars: { i: i, j: j },
+          lines: [8, 9, 10],
+        });
+
+        while (s[j] !== '#') {
+          j++;
+          steps.push({
+            phase: 'decode',
+            desc: 's[' + j + ']="' + s[j] + '". ' + (s[j] === '#' ? 'Found "#" at j=' + j : 'Not "#", advance j.'),
+            encBuilt: encSegments.slice(),
+            activeWordIdx: -1,
+            encodedFull: s,
+            decodedBuilt: decoded.slice(),
+            pointerI: i,
+            pointerJ: j,
+            vars: { i: i, j: j },
+            lines: s[j] === '#' ? [11] : [10, 11],
+          });
+        }
+
+        var length = parseInt(s.slice(i, j));
+        var word = s.slice(j + 1, j + 1 + length);
+
+        steps.push({
+          phase: 'decode',
+          desc: 'length = int(s[' + i + ':' + j + ']) = ' + length + '. Extract s[' + (j+1) + ':' + (j+1+length) + '] = "' + word + '"',
+          encBuilt: encSegments.slice(),
+          activeWordIdx: decoded.length,
+          encodedFull: s,
+          decodedBuilt: decoded.slice(),
+          pointerI: i,
+          pointerJ: j,
+          extractStart: j + 1,
+          extractEnd: j + 1 + length,
+          vars: { i: i, j: j, length: length },
+          lines: [12, 13],
+        });
+
+        decoded.push(word);
+        i = j + 1 + length;
+
+        steps.push({
+          phase: 'decode',
+          desc: 'Appended "' + word + '" to res. Advance i = j+1+length = ' + i,
+          encBuilt: encSegments.slice(),
+          activeWordIdx: decoded.length - 1,
+          encodedFull: s,
+          decodedBuilt: decoded.slice(),
+          pointerI: i,
+          pointerJ: null,
+          vars: { i: i, res: JSON.stringify(decoded) },
+          lines: [14],
+        });
+      }
+
+      steps.push({
+        phase: 'done',
+        desc: 'Decode complete. Recovered ' + decoded.length + ' strings. ✓',
+        encBuilt: encSegments.slice(),
+        activeWordIdx: -1,
+        encodedFull: s,
+        decodedBuilt: decoded.slice(),
+        pointerI: null,
+        pointerJ: null,
+        vars: { res: JSON.stringify(decoded) },
+        lines: [15],
+      });
+
+      return steps;
+    }
+
+    // ─── Render ──────────────────────────────────────────────────────────────
+    var _strs = [];
+
+    function renderOriginal(snap) {
+      var el = document.getElementById('original-list');
+      el.innerHTML = '';
+      _strs.forEach(function(s, i) {
+        var item = document.createElement('div');
+        item.className = 'str-item';
+        if (i === snap.activeWordIdx && snap.phase === 'encode') item.classList.add('active');
+        if (snap.phase === 'encode' && i < snap.encBuilt.length) item.classList.add('done');
+
+        var idxEl = document.createElement('span');
+        idxEl.className = 'str-idx';
+        idxEl.textContent = '[' + i + ']';
+
+        var valEl = document.createElement('span');
+        valEl.className = 'str-val';
+        valEl.textContent = '"' + s + '"';
+
+        item.appendChild(idxEl);
+        item.appendChild(valEl);
+
+        if (snap.phase !== 'encode' || i < snap.encBuilt.length) {
+          var badge = document.createElement('span');
+          badge.className = 'badge';
+          badge.textContent = snap.phase === 'encode'
+            ? (snap.encBuilt[i] ? snap.encBuilt[i].prefix + snap.encBuilt[i].word : '')
+            : '✓';
+          if (badge.textContent) item.appendChild(badge);
+        }
+
+        el.appendChild(item);
+      });
+    }
+
+    function renderEncoded(snap) {
+      var display = document.getElementById('encoded-display');
+      var ptrRow = document.getElementById('pointer-row');
+
+      if (!snap.encodedFull) {
+        display.innerHTML = '<span style="color:var(--text-dim)">—</span>';
+        ptrRow.innerHTML = '';
+        return;
+      }
+
+      // Build colored encoded string
+      var html = '';
+      if (snap.phase === 'encode') {
+        // Show completed segments + active segment
+        snap.encBuilt.forEach(function(seg, si) {
+          var isActive = si === snap.activeWordIdx;
+          html += '<span class="enc-prefix' + (isActive && snap.activeIsPrefix === false ? ' enc-active-prefix' : '') + '">' + esc(seg.prefix) + '</span>';
+          html += '<span class="enc-word' + (isActive ? ' enc-active-word' : '') + '">' + esc(seg.word) + '</span>';
+        });
+      } else {
+        // Decode phase: show full string with pointer highlights
+        var s = snap.encodedFull;
+        var i = snap.pointerI;
+        var j = snap.pointerJ;
+        var exS = snap.extractStart;
+        var exE = snap.extractEnd;
+
+        for (var ci = 0; ci < s.length; ci++) {
+          var cls = '';
+          if (exS !== undefined && ci >= exS && ci < exE) cls = 'ptr-window';
+          var ch = esc(s[ci]);
+          html += '<span class="ptr-char ' + cls + '">' + ch + '</span>';
+        }
+      }
+
+      display.innerHTML = html || '<span style="color:var(--text-dim)">—</span>';
+
+      // Pointer row (decode only)
+      if (snap.phase !== 'encode' && snap.encodedFull) {
+        var s2 = snap.encodedFull;
+        var phtml = '';
+        for (var ci2 = 0; ci2 < s2.length; ci2++) {
+          var marker = '&nbsp;';
+          if (snap.pointerI === ci2 && snap.pointerJ === ci2) marker = '<span style="color:var(--purple);font-weight:700">^</span>';
+          else if (ci2 === snap.pointerI) marker = '<span class="ptr-i">i</span>';
+          else if (ci2 === snap.pointerJ) marker = '<span class="ptr-j">j</span>';
+          phtml += '<span class="ptr-char">' + marker + '</span>';
+        }
+        ptrRow.innerHTML = phtml;
+      } else {
+        ptrRow.innerHTML = '';
+      }
+    }
+
+    function renderDecoded(snap) {
+      var el = document.getElementById('decoded-list');
+      el.innerHTML = '';
+      if (!snap.decodedBuilt || snap.decodedBuilt.length === 0) {
+        var empty = document.createElement('div');
+        empty.style.color = 'var(--text-dim)';
+        empty.style.fontSize = '0.8rem';
+        empty.textContent = 'Building…';
+        el.appendChild(empty);
+        return;
+      }
+      snap.decodedBuilt.forEach(function(s, i) {
+        var item = document.createElement('div');
+        item.className = 'str-item done';
+        if (i === snap.activeWordIdx && snap.phase === 'decode') item.classList.add('active');
+
+        var idxEl = document.createElement('span');
+        idxEl.className = 'str-idx';
+        idxEl.textContent = '[' + i + ']';
+
+        var valEl = document.createElement('span');
+        valEl.className = 'str-val';
+        valEl.textContent = '"' + s + '"';
+
+        var match = _strs[i] === s;
+        var badge = document.createElement('span');
+        badge.className = 'badge';
+        badge.style.background = match ? 'var(--green)' : 'var(--red)';
+        badge.textContent = match ? '✓' : '✗';
+        item.appendChild(idxEl);
+        item.appendChild(valEl);
+        item.appendChild(badge);
+        el.appendChild(item);
+      });
+    }
+
+    function renderVars(snap) {
+      var grid = document.getElementById('var-row');
+      grid.innerHTML = '';
+      Object.keys(snap.vars).forEach(function(k) {
+        var box = document.createElement('div');
+        box.className = 'var-box';
+        var lbl = document.createElement('div');
+        lbl.className = 'var-label';
+        lbl.textContent = k;
+        var val = document.createElement('div');
+        val.className = 'var-value';
+        val.textContent = String(snap.vars[k]);
+        box.appendChild(lbl);
+        box.appendChild(val);
+        grid.appendChild(box);
+      });
+    }
+
+    function applyStep(snap, animate) {
+      // Phase badge
+      var phaseEl = document.getElementById('phase-label');
+      phaseEl.textContent = snap.phase === 'encode' ? 'Encode' : snap.phase === 'decode' ? 'Decode' : 'Done';
+      phaseEl.className = snap.phase === 'encode' ? 'phase-encode' : snap.phase === 'decode' ? 'phase-decode' : 'phase-done';
+
+      document.getElementById('step-desc').textContent = snap.desc;
+
+      setCodeLines(snap.lines || []);
+      renderOriginal(snap);
+      renderEncoded(snap);
+      renderDecoded(snap);
+      renderVars(snap);
+    }
+
+    function esc(str) {
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+    }
+
+    // ─── Build & wire ─────────────────────────────────────────────────────────
+    function buildAndRun() {
+      var raw = document.getElementById('strsInput').value;
+      _strs = raw.split(',').map(function(x){ return x.trim(); }).filter(function(x){ return x.length > 0; });
+      if (_strs.length === 0) { alert('Enter at least one string.'); return; }
+
+      var steps = simulate(_strs);
+      nav.load(steps);
+    }
+
+    window.addEventListener('DOMContentLoaded', function() {
+      buildCodePanel();
+
+      nav = VizNav({
+        btnPrev: document.getElementById('prevBtn'),
+        btnNext: document.getElementById('stepBtn'),
+        btnPlay: document.getElementById('playBtn'),
+        speedSel: document.getElementById('speedSel'),
+        render: function(snap, cur, total) {
+          applyStep(snap, cur > 0);
+          updateStatus(snap, cur, total);
+        }
+      });
+
+      document.getElementById('buildBtn').addEventListener('click', buildAndRun);
+      document.getElementById('resetBtn').addEventListener('click', function() { nav.reset(); });
+
+      buildAndRun();
+
+      if (window.self !== window.top) {
+        var bl = document.querySelector('.back-link');
+        if (bl) bl.style.display = 'none';
+      }
+    });
+
+    function updateStatus(snap, cur, total) {
+      // step counter is shown by nav, nothing extra needed
+    }
+  </script>
+</body>
+</html>

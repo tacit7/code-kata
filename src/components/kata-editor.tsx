@@ -140,7 +140,17 @@ type VizKataName =
   | "Product of Array Except Self"
   | "Longest Consecutive Sequence"
   | "Valid Parentheses"
-  | "Binary Search";
+  | "Binary Search"
+  | "Group Anagrams"
+  | "Top K Frequent Elements"
+  | "Encode and Decode Strings"
+  | "Valid Sudoku"
+  | "Trapping Rain Water"
+  | "Largest Rectangle In Histogram"
+  | "Min Stack"
+  | "Evaluate Reverse Polish Notation"
+  | "Daily Temperatures"
+  | "Reverse Linked List";
 
 // Kata name → algo-viz subfolder served from /algo-viz/<folder>/index.html
 const VIZ_MAP: Partial<Record<VizKataName, string>> = {
@@ -268,6 +278,16 @@ const VIZ_MAP: Partial<Record<VizKataName, string>> = {
   "Longest Consecutive Sequence": "longest-consecutive",
   "Valid Parentheses":            "valid-parentheses",
   "Binary Search":                "binary-search",
+  "Group Anagrams":               "group-anagrams",
+  "Top K Frequent Elements":      "top-k-frequent",
+  "Encode and Decode Strings":    "encode-decode-strings",
+  "Valid Sudoku":                 "valid-sudoku",
+  "Trapping Rain Water":          "trapping-rain-water",
+  "Largest Rectangle In Histogram": "largest-rectangle-histogram",
+  "Min Stack":                    "min-stack",
+  "Evaluate Reverse Polish Notation": "evaluate-rpn",
+  "Daily Temperatures":           "daily-temperatures",
+  "Reverse Linked List":          "reverse-linked-list",
 };
 
 // Overrides for slugs that can't be reliably derived from the display name
