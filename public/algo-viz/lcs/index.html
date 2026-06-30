@@ -153,6 +153,38 @@
     .nb { color: var(--green); }
     .cm { color: var(--text-ghost); }
     .str { color: var(--yellow); }
+
+    /* Viz inputs */
+    .viz-inputs {
+      display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end;
+      padding: 10px 0 14px; width: 100%; max-width: 90%;
+    }
+    .viz-inputs .field {
+      display: flex; flex-direction: column; gap: 4px;
+    }
+    .viz-inputs label {
+      font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--text-dim);
+    }
+    .viz-inputs input[type="text"] {
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--text); border-radius: var(--radius-sm);
+      padding: 6px 10px; font-size: 0.85rem; width: 100px; font-family: monospace; text-transform: uppercase;
+    }
+    .viz-inputs select {
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--text); border-radius: var(--radius-sm);
+      padding: 6px 10px; font-size: 0.85rem; cursor: pointer;
+    }
+    .viz-inputs button {
+      padding: 7px 18px; background: var(--accent); color: #fff; border: none;
+      border-radius: var(--radius-sm); font-weight: 600; cursor: pointer; font-size: 0.85rem;
+    }
+    .viz-inputs button:hover { opacity: 0.9; }
+    .viz-inputs .random-btn {
+      padding: 7px 14px; background: var(--surface); color: var(--text);
+      border: 1px solid var(--border);
+    }
   </style>
 </head>
 <body class="page">
@@ -163,17 +195,32 @@
   <div class="page-sub">LeetCode 1143 &middot; 2-D DP: dp[i][j] = dp[i-1][j-1]+1 on match, else max(↑,←) &middot; O(m&times;n) time &middot; O(m&times;n) space</div>
 </div>
 
-<div class="controls">
+<div class="viz-inputs">
+  <div class="field">
+    <label>Preset</label>
+    <select id="presetSel" onchange="loadPreset()">
+      <option value="">— pick a preset —</option>
+      <option value='{"t1":"ABCBDAB","t2":"BDCAB"}'>Classic: ABCBDAB / BDCAB</option>
+      <option value='{"t1":"AGGTAB","t2":"GXTXAYB"}'>Gaps: AGGTAB / GXTXAYB</option>
+      <option value='{"t1":"SUNDAY","t2":"SATURDAY"}'>Days: SUNDAY / SATURDAY</option>
+      <option value='{"t1":"OXCPQRSVWF","t2":"SHMTULQRPY"}'>Random 1: OXCPQRSVWF / SHMTULQRPY</option>
+      <option value='{"t1":"ALGORITHM","t2":"ALTRUISTIC"}'>Random 2: ALGORITHM / ALTRUISTIC</option>
+      <option value='{"t1":"ABC","t2":"XYZ"}'>No match: ABC / XYZ</option>
+    </select>
+  </div>
   <div class="field">
     <label>Text 1</label>
-    <input id="inp-t1" type="text" value="ABCBDAB" maxlength="8" style="width:110px;font-family:monospace;text-transform:uppercase" />
+    <input id="inp-t1" type="text" value="ABCBDAB" maxlength="8" />
   </div>
   <div class="field">
     <label>Text 2</label>
-    <input id="inp-t2" type="text" value="BDCAB" maxlength="8" style="width:110px;font-family:monospace;text-transform:uppercase" />
+    <input id="inp-t2" type="text" value="BDCAB" maxlength="8" />
   </div>
-  <button class="btn-primary" onclick="buildAndRun()">Build &amp; Run</button>
+  <button onclick="buildAndRun()">Run</button>
+  <button class="random-btn" onclick="randomExample()">🎲 Random</button>
 </div>
+
+<div class="controls"></div>
 
 <div class="viz-area">
   <div class="main-row">
@@ -184,7 +231,7 @@
         <div class="preset-row" id="preset-row"></div>
       </div>
       <div class="table-section" id="table-section">
-        <span style="color:var(--text-dim);font-size:0.82rem">Set strings and click Build &amp; Run.</span>
+        <span style="color:var(--text-dim);font-size:0.82rem">Set strings and click Run.</span>
       </div>
       <div class="code-panel">
         <div class="code-header">Python</div>
@@ -208,7 +255,7 @@
         </div>
         <div class="panel-box" style="flex:1;min-width:0">
           <div class="panel-title" id="phase-label">&mdash;</div>
-          <div style="font-size:0.8rem;color:var(--text-muted);margin-top:2px;line-height:1.45" id="step-desc">Set strings and click Build &amp; Run.</div>
+          <div style="font-size:0.8rem;color:var(--text-muted);margin-top:2px;line-height:1.45" id="step-desc">Set strings and click Run.</div>
         </div>
       </div>
 
@@ -294,7 +341,7 @@ var CODE = [
   [12, '    <span class="kw">while</span> i <span class="op">></span> <span class="nb">0</span> <span class="kw">and</span> j <span class="op">></span> <span class="nb">0</span><span class="op">:</span>'],
   [13, '        <span class="kw">if</span> text1<span class="op">[</span>i<span class="op">-</span><span class="nb">1</span><span class="op">]</span> <span class="op">==</span> text2<span class="op">[</span>j<span class="op">-</span><span class="nb">1</span><span class="op">]:</span>'],
   [14, '            lcs <span class="op">=</span> text1<span class="op">[</span>i<span class="op">-</span><span class="nb">1</span><span class="op">]</span> <span class="op">+</span> lcs<span class="op">;</span> i<span class="op">-=</span><span class="nb">1</span><span class="op">;</span> j<span class="op">-=</span><span class="nb">1</span>'],
-  [15, '        <span class="kw">elif</span> dp<span class="op">[</span>i<span class="op">-</span><span class="nb">1</span><span class="op">][</span>j<span class="op">]</span> <span class="op">>=</span> dp<span class="op">[</span>i<span class="op">][</span>j<span class="op">-</span><span class="nb">1</span><span class="op">]:</span>  i<span class="op">-=</span><span class="nb">1</span>'],
+  [15, '        <span class="kw">elif</span> dp<span class="op">[</span>i<span class="op">-</span><span class="nb">1</span><span class="op">][</span>j<span class="op">]</span> <span class="op">=</span> dp<span class="op">[</span>i<span class="op">][</span>j<span class="op">-</span><span class="nb">1</span><span class="op">]:</span>  i<span class="op">-=</span><span class="nb">1</span>'],
   [16, '        <span class="kw">else</span><span class="op">:</span>  j<span class="op">-=</span><span class="nb">1</span>'],
   [17, '    <span class="kw">return</span> lcs'],
 ];
@@ -336,6 +383,42 @@ function setPreset(idx) {
   });
   document.getElementById('inp-t1').value = PRESETS[idx].t1;
   document.getElementById('inp-t2').value = PRESETS[idx].t2;
+  document.getElementById('presetSel').value = '';
+  buildAndRun();
+}
+
+function loadPreset() {
+  var sel = document.getElementById('presetSel');
+  if (!sel.value) return;
+  var d = JSON.parse(sel.value);
+  document.getElementById('inp-t1').value = d.t1;
+  document.getElementById('inp-t2').value = d.t2;
+  PRESETS.forEach(function(_, i) {
+    var el = document.getElementById('preset-' + i);
+    if (el) el.classList.remove('active');
+  });
+  buildAndRun();
+}
+
+function randomExample() {
+  var chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  var t1 = '';
+  var t2 = '';
+  var len1 = Math.floor(Math.random() * 5) + 4;
+  var len2 = Math.floor(Math.random() * 5) + 4;
+  for (var i = 0; i < len1; i++) {
+    t1 += chars[Math.floor(Math.random() * chars.length)];
+  }
+  for (var i = 0; i < len2; i++) {
+    t2 += chars[Math.floor(Math.random() * chars.length)];
+  }
+  document.getElementById('inp-t1').value = t1.slice(0, 8);
+  document.getElementById('inp-t2').value = t2.slice(0, 8);
+  document.getElementById('presetSel').value = '';
+  PRESETS.forEach(function(_, i) {
+    var el = document.getElementById('preset-' + i);
+    if (el) el.classList.remove('active');
+  });
   buildAndRun();
 }
 
@@ -427,7 +510,7 @@ function simulate(text1, text2) {
       if (c1 === c2) {
         dp[i][j] = dp[i-1][j-1] + 1;
         snap('Fill',
-          'text1[' + (i-1) + ']=’' + c1 + '’ == text2[' + (j-1) + ']=’' + c2 + '’ ✓ Match! dp[' + i + '][' + j + '] = dp[' + (i-1) + '][' + (j-1) + '] + 1 = ' + dp[i][j],
+          'text1[' + (i-1) + ']='' + c1 + '' == text2[' + (j-1) + ']='' + c2 + '' ✓ Match! dp[' + i + '][' + j + '] = dp[' + (i-1) + '][' + (j-1) + '] + 1 = ' + dp[i][j],
           [4,5,6,7], [i,j], true, [[i-1,j-1]], [], '');
       } else {
         var up   = dp[i-1][j];
@@ -437,7 +520,7 @@ function simulate(text1, text2) {
         if (up >= left) srcs.push([i-1, j]);
         if (left >= up)  srcs.push([i, j-1]);
         snap('Fill',
-          'text1[' + (i-1) + ']=’' + c1 + '’ ≠ text2[' + (j-1) + ']=’' + c2 + '’. dp[' + i + '][' + j + '] = max(↑' + up + ', ←' + left + ') = ' + dp[i][j],
+          'text1[' + (i-1) + ']='' + c1 + '' ≠ text2[' + (j-1) + ']='' + c2 + ''. dp[' + i + '][' + j + '] = max(↑' + up + ', ←' + left + ') = ' + dp[i][j],
           [4,5,8,9], [i,j], false, srcs, [], '');
       }
     }
@@ -458,7 +541,7 @@ function simulate(text1, text2) {
       path = [[ii,jj]].concat(path);
       lcsStr = c1 + lcsStr;
       snap('Backtrace',
-        '’' + c1 + '’ == ’' + c2 + '’ ✓ Match — prepend ’' + c1 + '’. LCS so far: "' + lcsStr + '". Move ↖ to (' + (ii-1) + ',' + (jj-1) + ').',
+        ''' + c1 + '' == '' + c2 + '' ✓ Match — prepend '' + c1 + ''. LCS so far: "' + lcsStr + '". Move ↖ to (' + (ii-1) + ',' + (jj-1) + ').',
         [12,13,14], [ii,jj], true, [[ii-1,jj-1]], path, lcsStr);
       ii--; jj--;
     } else if (dp[ii-1][jj] >= dp[ii][jj-1]) {
