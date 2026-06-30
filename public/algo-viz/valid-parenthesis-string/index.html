@@ -13,6 +13,28 @@
     .left-col, .right-col { display: flex; flex-direction: column; gap: 12px; }
     @media (max-width: 700px) { .main-row { grid-template-columns: 1fr; } }
 
+    .viz-inputs {
+      display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end;
+      padding: 10px 0 14px; width: 100%; max-width: 90%;
+    }
+    .viz-inputs .field {
+      display: flex; flex-direction: column; gap: 4px;
+    }
+    .viz-inputs label {
+      font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--text-dim);
+    }
+    .viz-inputs input[type="text"] {
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--text); border-radius: var(--radius-sm);
+      padding: 6px 10px; font-size: 0.85rem; width: 180px;
+    }
+    .viz-inputs select {
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--text); border-radius: var(--radius-sm);
+      padding: 6px 10px; font-size: 0.85rem; cursor: pointer;
+    }
+
     .string-section {
       padding: 16px;
       background: var(--surface); border: 1px solid var(--border);
@@ -170,14 +192,23 @@
 
 <div class="viz-inputs">
   <div class="field">
-    <label>string</label>
-    <input id="inp-str" type="text" value="(*))"/>
+    <label>Preset</label>
+    <select id="presetSel" onchange="loadPreset()">
+      <option value="">— pick a preset —</option>
+      <option value='{"string":"()"}'>() - valid</option>
+      <option value='{"string":"(*)"}'>(*) - valid</option>
+      <option value='{"string":"(*))"}'>(*)) - valid</option>
+      <option value='{"string":"(**"}'>(**) - valid</option>
+      <option value='{"string":"(*)(()"}'>(*)(( - invalid</option>
+      <option value='{"string":"()))"}'>()) - invalid</option>
+    </select>
   </div>
-  <button class="btn-primary" onclick="buildAndRun()">Build</button>
-  <button class="btn-primary" onclick="loadEx('(*))' )" style="background:var(--surface)">(*)) &rarr; T</button>
-  <button class="btn-primary" onclick="loadEx('(*)'  )" style="background:var(--surface)">(*)  &rarr; T</button>
-  <button class="btn-primary" onclick="loadEx('(**'  )" style="background:var(--surface)">(** &rarr; T</button>
-  <button class="btn-primary" onclick="loadEx('(*)((')" style="background:var(--surface)">(*)(( &rarr; F</button>
+  <div class="field">
+    <label>String</label>
+    <input id="inp-str" type="text" value="(*)"/>
+  </div>
+  <button onclick="buildAndRun()" style="padding:7px 18px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);font-weight:600;cursor:pointer;">Run</button>
+  <button onclick="randomExample()" style="padding:7px 14px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;">🎲 Random</button>
 </div>
 
 <div class="viz-area">
@@ -185,7 +216,7 @@
     <div class="left-col">
 
       <div class="string-section" id="string-section">
-        <span style="color:var(--text-dim);font-size:0.82rem">Enter a string and click Build.</span>
+        <span style="color:var(--text-dim);font-size:0.82rem">Enter a string and click Run.</span>
       </div>
 
       <div class="range-section" id="range-section" style="display:none">
@@ -210,7 +241,7 @@
           </div>
           <div class="legend-item">
             <div class="legend-char" style="background:rgba(124,58,237,0.15);border-color:#7c3aed;color:#c4b5fd">*</div>
-            min--, max++ (clamp min&ge;0)
+            min--, max++ (clamp min≥0)
           </div>
         </div>
       </div>
@@ -239,7 +270,7 @@
         </div>
         <div class="panel-box" style="flex:1;min-width:0">
           <div class="panel-title" id="phase-label">&mdash;</div>
-          <div style="font-size:0.82rem;color:var(--text-muted);margin-top:2px" id="step-desc">Enter a string and click Build.</div>
+          <div style="font-size:0.82rem;color:var(--text-muted);margin-top:2px" id="step-desc">Enter a string and click Run.</div>
         </div>
       </div>
 
@@ -326,8 +357,31 @@ function buildCodePanel() {
   }).join('');
 }
 
-function loadEx(s) {
-  document.getElementById('inp-str').value = s;
+function loadPreset() {
+  var sel = document.getElementById('presetSel');
+  if (!sel.value) return;
+  var d = JSON.parse(sel.value);
+  document.getElementById('inp-str').value = d.string;
+  buildAndRun();
+}
+
+function randomExample() {
+  var patterns = [
+    '()',
+    '(())',
+    '()()',
+    '(*)',
+    '((*)',
+    '(*)',
+    '(**',
+    '(*)',
+    '()',
+    '()*',
+    '*(*)',
+  ];
+  var baseStr = patterns[Math.floor(Math.random() * patterns.length)];
+  document.getElementById('presetSel').value = '';
+  document.getElementById('inp-str').value = baseStr;
   buildAndRun();
 }
 

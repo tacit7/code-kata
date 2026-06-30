@@ -235,13 +235,24 @@
 </div>
 
 <div class="viz-inputs">
-  <div class="input-row">
-    <div class="input-field">
-      <label>Grid rows (semicolon-separated, e.g. XXXX;XOOX;XXOX;XOXX)</label>
-      <input type="text" id="inp-grid" value="XXXX;XOOX;XXOX;XOXX" />
-    </div>
-    <button class="btn-primary" onclick="buildViz()">Build</button>
+  <div class="input-field">
+    <label>Preset</label>
+    <select id="presetSel" onchange="loadPreset()" style="width: auto; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text); font-size: 0.85rem; padding: 8px 10px;">
+      <option value="">— pick a preset —</option>
+      <option value='{"grid":"XXXX;XOOX;XXOX;XOXX"}'>Basic Example (surrounded O in middle)</option>
+      <option value='{"grid":"XXX;XOX;XXX"}'>Minimal 3×3 (1 surrounded)</option>
+      <option value='{"grid":"XOOOX;XOXOX;XOOOX"}'>Larger grid (1 surrounded)</option>
+      <option value='{"grid":"OOOOO;OXOXO;OOOOO"}'>Mostly O (2 surrounded)</option>
+      <option value='{"grid":"XXXXX;XOOOX;XOXOX;XOOOX;XXXXX"}'>5×5 (2 surrounded)</option>
+      <option value='{"grid":"OOOO"}'>All border (no capture)</option>
+    </select>
   </div>
+  <div class="input-field">
+    <label>Grid rows (semicolon-separated, e.g. XXXX;XOOX;XXOX;XOXX)</label>
+    <input type="text" id="inp-grid" value="XXXX;XOOX;XXOX;XOXX" />
+  </div>
+  <button class="btn-primary" onclick="buildAndRun()" style="padding: 8px 18px; background: var(--accent); color: #fff; border: none; border-radius: var(--radius-sm); font-weight: 600; cursor: pointer;">Run</button>
+  <button class="btn-secondary" onclick="randomExample()" style="padding: 8px 14px; background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: var(--radius-sm); cursor: pointer;">🎲 Random</button>
 </div>
 
 <div class="viz-area">
@@ -710,6 +721,41 @@ window.addEventListener('resize', function() { if (ROWS > 0) renderGridShell(); 
 
 buildCodePanel();
 buildViz();
+function buildAndRun() {
+  buildViz();
+}
+
+function loadPreset() {
+  var sel = document.getElementById('presetSel');
+  if (!sel.value) return;
+  var d = JSON.parse(sel.value);
+  document.getElementById('inp-grid').value = d.grid;
+  buildViz();
+}
+
+function randomExample() {
+  // Generate random grid for Surrounded Regions
+  // Random dimensions 3-7
+  var rows = Math.floor(Math.random() * 5) + 3;
+  var cols = Math.floor(Math.random() * 5) + 3;
+  
+  var grid = [];
+  for (var r = 0; r < rows; r++) {
+    var row = '';
+    for (var c = 0; c < cols; c++) {
+      // Bias toward X on borders, random mix in interior
+      var isBorder = (r === 0 || r === rows - 1 || c === 0 || c === cols - 1);
+      var isX = isBorder ? (Math.random() < 0.7) : (Math.random() < 0.5);
+      row += isX ? 'X' : 'O';
+    }
+    grid.push(row);
+  }
+  
+  document.getElementById('presetSel').value = '';
+  document.getElementById('inp-grid').value = grid.join(';');
+  buildViz();
+}
+
 </script>
 
 <script>
