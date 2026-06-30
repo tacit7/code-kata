@@ -704,16 +704,6 @@ function buildAndRun() {
   nav.load(steps);
 }
 
-// postMessage bridge for parent app control
-window.addEventListener('message', function(e) {
-  var msg = e.data;
-  if (msg === 'prev')  btnPrev.click();
-  else if (msg === 'step')  btnNext.click();
-  else if (msg === 'play')  btnPlay.click();
-  else if (msg === 'reset') buildAndRun();
-  else if (msg && msg.type === 'speed') speedSel.value = msg.value;
-});
-
 window.addEventListener('DOMContentLoaded', function() {
   document.getElementById('presetSel').value = '0';
   loadPreset();
