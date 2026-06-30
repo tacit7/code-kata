@@ -76,6 +76,9 @@
 
   #code-panel {
     width: 220px;
+    min-width: 120px;
+    max-width: 560px;
+    overflow-x: auto;
     flex-shrink: 0;
     background: #0d1117;
     border-right: 1px solid var(--border);
@@ -113,6 +116,8 @@
   .viz-inputs input { width: 320px; }
   .btn-run { padding: 7px 18px; background: var(--accent); color: #fff; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; font-family: inherit; }
   .btn-rand { padding: 7px 14px; background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: 6px; cursor: pointer; font-family: inherit; }
+  #resize-handle { width:5px; flex-shrink:0; cursor:col-resize; background:transparent; border-right:1px solid var(--border); transition:background .15s; z-index:10; }
+  #resize-handle:hover, #resize-handle.dragging { background: var(--accent); }
 </style>
 </head>
 <body>
@@ -148,6 +153,7 @@
     <div class="code-panel-title">Code</div>
     <pre id="code-pre"></pre>
   </div>
+  <div id="resize-handle"></div>
   <div id="viz-area">
     <div id="desc">Initializing...</div>
     <div id="lists-container" style="width:100%;max-width:720px;display:flex;flex-direction:column;gap:20px;position:relative;">
@@ -587,6 +593,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
   window.nav.load(snaps);
 });
+
+(function() {
+  var handle = document.getElementById('resize-handle');
+  var panel  = document.getElementById('code-panel');
+  var dragging = false, startX = 0, startW = 0;
+  handle.addEventListener('mousedown', function(e) {
+    dragging = true; startX = e.clientX; startW = panel.offsetWidth;
+    handle.classList.add('dragging'); e.preventDefault();
+  });
+  document.addEventListener('mousemove', function(e) {
+    if (!dragging) return;
+    var delta = e.clientX - startX;
+    panel.style.width = Math.min(560, Math.max(120, startW + delta)) + 'px';
+  });
+  document.addEventListener('mouseup', function() {
+    if (!dragging) return;
+    dragging = false; handle.classList.remove('dragging');
+  });
+})();
 </script>
 </body>
 </html>

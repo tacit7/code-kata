@@ -88,7 +88,7 @@
   .list-text { font-size: 11px; color: var(--text-muted); line-height: 1.6; }
 
   /* Code panel */
-  #code-panel { width: 220px; flex-shrink: 0; background: #0d1117; border-right: 1px solid var(--border); overflow-y: auto; padding: 10px 12px; display: flex; flex-direction: column; }
+  #code-panel { width: 220px; min-width: 120px; max-width: 560px; overflow-x: auto; flex-shrink: 0; background: #0d1117; border-right: 1px solid var(--border); overflow-y: auto; padding: 10px 12px; display: flex; flex-direction: column; }
   .code-panel-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--text-dim); margin-bottom: 8px; flex-shrink: 0; }
   #code-pre { font-size: 11px; line-height: 1.7; font-family: inherit; overflow-x: auto; }
   .code-line { padding: 0 4px; border-radius: 3px; display: block; transition: background .2s; white-space: pre; }
@@ -103,6 +103,8 @@
   .btn-play { background: var(--accent); border-color: var(--accent); color: #fff; }
   .btn-play:hover { background: var(--accent-hover); }
   select { padding: 5px 8px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: #1e293b; color: var(--text); font-size: 12px; font-family: inherit; cursor: pointer; }
+  #resize-handle { width:5px; flex-shrink:0; cursor:col-resize; background:transparent; border-right:1px solid var(--border); transition:background .15s; z-index:10; }
+  #resize-handle:hover, #resize-handle.dragging { background: var(--accent); }
 </style>
 </head>
 <body>
@@ -142,6 +144,7 @@
     <div class="code-panel-title">Code</div>
     <pre id="code-pre"></pre>
   </div>
+  <div id="resize-handle"></div>
   <div id="viz-area">
     <div id="desc">Initializing...</div>
     <div id="array-canvas"></div>
@@ -440,6 +443,25 @@ document.addEventListener('DOMContentLoaded', function() {
 
   window.nav.load(snaps);
 });
+
+(function() {
+  var handle = document.getElementById('resize-handle');
+  var panel  = document.getElementById('code-panel');
+  var dragging = false, startX = 0, startW = 0;
+  handle.addEventListener('mousedown', function(e) {
+    dragging = true; startX = e.clientX; startW = panel.offsetWidth;
+    handle.classList.add('dragging'); e.preventDefault();
+  });
+  document.addEventListener('mousemove', function(e) {
+    if (!dragging) return;
+    var delta = e.clientX - startX;
+    panel.style.width = Math.min(560, Math.max(120, startW + delta)) + 'px';
+  });
+  document.addEventListener('mouseup', function() {
+    if (!dragging) return;
+    dragging = false; handle.classList.remove('dragging');
+  });
+})();
 </script>
 </body>
 </html>
