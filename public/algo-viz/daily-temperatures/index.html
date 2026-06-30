@@ -27,6 +27,72 @@
       .main-row { grid-template-columns: 1fr; }
     }
 
+    /* ── User inputs (visible) ── */
+    .viz-inputs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: flex-end;
+      padding: 10px 0 14px;
+      width: 100%;
+      max-width: 90%;
+    }
+
+    .viz-inputs .field {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .viz-inputs label {
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-dim);
+    }
+
+    .viz-inputs input[type="text"] {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: var(--radius-sm);
+      padding: 6px 10px;
+      font-size: 0.85rem;
+      width: 200px;
+      font-family: monospace;
+    }
+
+    .viz-inputs select {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: var(--radius-sm);
+      padding: 6px 10px;
+      font-size: 0.85rem;
+      cursor: pointer;
+    }
+
+    .viz-inputs button {
+      padding: 7px 18px;
+      border: none;
+      border-radius: var(--radius-sm);
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 0.85rem;
+    }
+
+    .viz-inputs #run-btn {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .viz-inputs #random-btn {
+      background: var(--surface);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+
     /* ── Left: bar chart panel ── */
     .panel {
       background: var(--surface);
@@ -286,58 +352,13 @@
       white-space: nowrap;
     }
 
-    /* Nav row */
-    .nav-row {
+    /* Nav controls (hidden by parent) */
+    .controls {
       display: flex;
       gap: 8px;
       align-items: center;
       flex-wrap: wrap;
     }
-
-    /* Custom input */
-    .input-row {
-      display: flex;
-      gap: 8px;
-      align-items: center;
-      flex-wrap: wrap;
-    }
-
-    .input-row label {
-      font-size: 0.78rem;
-      color: var(--text-dim);
-      white-space: nowrap;
-    }
-
-    #custom-input {
-      flex: 1;
-      min-width: 200px;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-sm);
-      color: var(--text);
-      padding: 6px 10px;
-      font-size: 0.82rem;
-      font-family: monospace;
-      outline: none;
-    }
-
-    #custom-input:focus {
-      border-color: var(--accent);
-    }
-
-    #load-btn {
-      background: var(--accent);
-      color: #1a1b26;
-      border: none;
-      border-radius: var(--radius-sm);
-      padding: 6px 14px;
-      font-size: 0.8rem;
-      font-weight: 700;
-      cursor: pointer;
-      transition: background 0.2s;
-    }
-
-    #load-btn:hover { background: var(--accent-hover); }
   </style>
 </head>
 <body>
@@ -352,15 +373,30 @@
 
   <div class="viz-area">
 
-    <!-- Custom input -->
-    <div class="input-row">
-      <label>Temperatures:</label>
-      <input id="custom-input" type="text" value="73,74,75,71,69,72,76,73" />
-      <button id="load-btn">Load</button>
+    <!-- User inputs (visible) -->
+    <div class="viz-inputs">
+      <div class="field">
+        <label>Preset</label>
+        <select id="presetSel" onchange="loadPreset()">
+          <option value="">— pick a preset —</option>
+          <option value='{"temps":"73,74,75,71,69,72,76,73"}'>Example: Mixed</option>
+          <option value='{"temps":"30,40,50,60,70,80,90"}'>Ascending</option>
+          <option value='{"temps":"90,80,70,60,50,40,30"}'>Descending</option>
+          <option value='{"temps":"72,72,72,72,72"}'>All Same</option>
+          <option value='{"temps":"50,80,60,70,75,65,55"}'>Warm Weekend</option>
+          <option value='{"temps":"80,60,40,45,50,55,70,85"}'>Cold Snap</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Temperatures</label>
+        <input id="temps-input" type="text" value="73,74,75,71,69,72,76,73" />
+      </div>
+      <button id="run-btn" onclick="buildAndRun()">Run</button>
+      <button id="random-btn" onclick="randomExample()">🎲 Random</button>
     </div>
 
-    <!-- Nav controls -->
-    <div class="nav-row">
+    <!-- Nav controls (hidden by parent CSS) -->
+    <div class="controls">
       <button id="prevBtn" class="btn-step">← Prev</button>
       <button id="stepBtn" class="btn-step">Step →</button>
       <button id="playBtn" class="btn-play">Play</button>
@@ -733,13 +769,35 @@
     nav.load(steps);
   }
 
-  // Custom input load
-  document.getElementById('load-btn').addEventListener('click', function() {
-    var raw = document.getElementById('custom-input').value;
+  // Preset loader
+  function loadPreset() {
+    var sel = document.getElementById('presetSel');
+    if (!sel.value) return;
+    var d = JSON.parse(sel.value);
+    document.getElementById('temps-input').value = d.temps;
+    buildAndRun();
+  }
+
+  // Build and run
+  function buildAndRun() {
+    var raw = document.getElementById('temps-input').value;
     var parsed = raw.split(',').map(function(s){ return parseInt(s.trim(), 10); }).filter(function(n){ return !isNaN(n); });
     if (parsed.length < 2) { alert('Enter at least 2 temperatures.'); return; }
+    document.getElementById('presetSel').value = '';
     loadTemps(parsed);
-  });
+  }
+
+  // Random example
+  function randomExample() {
+    var len = Math.floor(Math.random() * 8) + 3; // 3–10 temperatures
+    var temps = [];
+    for (var i = 0; i < len; i++) {
+      temps.push(Math.floor(Math.random() * 90) + 10); // 10–99°F
+    }
+    document.getElementById('temps-input').value = temps.join(',');
+    document.getElementById('presetSel').value = '';
+    loadTemps(temps);
+  }
 
   // ── Auto-run ─────────────────────────────────────────────────────────────
   document.addEventListener('DOMContentLoaded', function() {
