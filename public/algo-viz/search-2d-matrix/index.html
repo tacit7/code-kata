@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Search a 2D Matrix</title>
+  <link rel="stylesheet" href="../shared/style.css" />
+  <style>
+    .viz-inputs {
+      display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end;
+      padding: 10px 0 14px; width: 100%; max-width: 96%;
+    }
+    .viz-inputs .field {
+      display: flex; flex-direction: column; gap: 4px;
+    }
+    .viz-inputs label {
+      font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--text-dim);
+    }
+    .viz-inputs select, .viz-inputs textarea, .viz-inputs input[type="number"] {
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--text); border-radius: var(--radius-sm);
+      padding: 6px 10px; font-size: 0.85rem;
+    }
+    .viz-inputs textarea {
+      font-family: monospace; resize: vertical; min-height: 58px; width: 200px;
+    }
+    .viz-inputs input[type="number"] { width: 80px; }
+    .error-msg {
+      color: #f7768e; font-size: 0.78rem; margin-top: 4px;
+      display: none; align-self: flex-end;
+    }
+    .error-msg.visible { display: block; }
+
+    .viz-area {
+      width: 100%; max-width: 96%;
+      display: flex; flex-direction: column; gap: 14px;
+    }
+    .nav-row {
+      display: flex; gap: 12px; align-items: stretch;
+    }
+    .controls-panel {
+      flex: 0 0 auto; display: flex; gap: 8px; align-items: center;
+    }
+    .btn-step {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); color: var(--text);
+      cursor: pointer; font-size: 0.9rem; font-weight: 700;
+      padding: 8px 16px; transition: all 0.15s;
+    }
+    .btn-step:hover:not(:disabled) { background: var(--border); border-color: var(--accent); }
+    .btn-step:disabled { opacity: 0.35; cursor: not-allowed; }
+    .btn-play {
+      background: var(--accent); border: none;
+      border-radius: var(--radius-sm); color: #fff;
+      cursor: pointer; font-size: 0.9rem; font-weight: 700;
+      padding: 8px 18px; transition: background 0.15s;
+    }
+    .btn-play:hover:not(:disabled) { opacity: 0.85; }
+    .btn-play:disabled { opacity: 0.35; cursor: not-allowed; }
+    #speedSel {
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--text); border-radius: var(--radius-sm);
+      padding: 6px 10px; font-size: 0.85rem; cursor: pointer;
+    }
+    .status-panel {
+      flex: 1; min-width: 0; background: var(--surface);
+      border: 1px solid var(--border); border-radius: var(--radius-sm);
+      padding: 10px 14px; display: flex; flex-direction: column; justify-content: center;
+    }
+    .phase-label {
+      font-size: 0.68rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-dim);
+    }
+    .step-desc {
+      font-size: 0.88rem; color: var(--text); margin-top: 4px; min-height: 1.4em;
+    }
+
+    .main-row {
+      display: grid;
+      grid-template-columns: 1fr 300px;
+      gap: 14px;
+      align-items: start;
+    }
+    @media (max-width: 860px) { .main-row { grid-template-columns: 1fr; } }
+
+    .panel-box {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 14px 16px;
+    }
+    .panel-title {
+      font-size: 0.68rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.1em; color: var(--text-dim); margin-bottom: 12px;
+    }
+
+    /* Matrix grid */
+    #matrixGrid {
+      display: grid;
+      gap: 6px;
+      margin-bottom: 16px;
+    }
+    .m-cell {
+      width: 56px; height: 56px;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      background: var(--bg-card); border: 2px solid var(--border);
+      border-radius: 6px;
+      font-family: monospace; font-size: 1rem; font-weight: 700;
+      color: var(--text-main);
+      position: relative;
+      transition: background 0.15s, border-color 0.15s, opacity 0.15s, color 0.15s;
+    }
+    .m-cell.small { width: 44px; height: 44px; font-size: 0.82rem; }
+    .m-cell.eliminated { opacity: 0.28; text-decoration: line-through; }
+    .m-cell.active {
+      background: rgba(122, 162, 247, 0.18);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+    .m-cell.found {
+      background: rgba(158, 206, 106, 0.2);
+      border-color: #9ece6a;
+      color: #9ece6a;
+    }
+    .m-cell.not-found {
+      background: rgba(247, 118, 142, 0.12);
+      border-color: #f7768e;
+      color: #f7768e;
+    }
+    .m-cell-rc {
+      font-size: 0.52rem; color: var(--text-dim); margin-top: 2px; font-weight: 400;
+    }
+
+    /* Flat index bar */
+    .flat-bar-wrap {
+      position: relative; margin-top: 8px;
+    }
+    .flat-bar-label {
+      font-size: 0.62rem; color: var(--text-dim); text-transform: uppercase;
+      letter-spacing: 0.08em; margin-bottom: 6px;
+    }
+    #flatBar {
+      display: flex; gap: 4px; flex-wrap: wrap;
+    }
+    .f-cell {
+      width: 32px; height: 32px;
+      display: flex; align-items: center; justify-content: center;
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: 4px;
+      font-family: monospace; font-size: 0.7rem; font-weight: 600;
+      color: var(--text-dim);
+      transition: background 0.15s, border-color 0.15s, opacity 0.15s, color 0.15s;
+    }
+    .f-cell.eliminated { opacity: 0.25; }
+    .f-cell.in-range {
+      background: rgba(122, 162, 247, 0.08);
+      border-color: var(--border);
+      color: var(--text-main);
+    }
+    .f-cell.active {
+      background: rgba(122, 162, 247, 0.22);
+      border-color: var(--accent);
+      color: var(--accent);
+      font-weight: 800;
+    }
+    .f-cell.found {
+      background: rgba(158, 206, 106, 0.2);
+      border-color: #9ece6a;
+      color: #9ece6a;
+    }
+    .f-cell.not-found { opacity: 0.2; }
+
+    /* Bracket below flat bar */
+    .bracket-wrap {
+      position: relative; height: 14px; margin-top: 4px;
+    }
+    #loBracket, #hiBracket {
+      position: absolute; top: 0;
+      font-size: 0.62rem; font-weight: 700; color: var(--accent);
+      transition: left 0.2s;
+    }
+    #midBracket {
+      position: absolute; top: 0;
+      font-size: 0.62rem; font-weight: 700; color: #ff9e64;
+      transition: left 0.2s;
+    }
+
+    /* Right panel */
+    .right-col {
+      display: flex; flex-direction: column; gap: 12px;
+    }
+    .info-row {
+      display: flex; gap: 8px; align-items: center;
+      font-family: monospace; font-size: 0.85rem;
+    }
+    .badge {
+      padding: 4px 10px; border-radius: 4px;
+      font-size: 0.78rem; font-weight: 700;
+      background: var(--bg-card); border: 1px solid var(--border);
+      color: var(--text-main);
+    }
+    .badge.accent { background: rgba(122,162,247,0.15); border-color: var(--accent); color: var(--accent); }
+    .badge.orange { background: rgba(255,158,100,0.15); border-color: #ff9e64; color: #ff9e64; }
+    .badge.green { background: rgba(158,206,106,0.15); border-color: #9ece6a; color: #9ece6a; }
+    .badge.red { background: rgba(247,118,142,0.15); border-color: #f7768e; color: #f7768e; }
+
+    .ptr-row {
+      display: flex; flex-direction: column; gap: 6px;
+    }
+    .ptr-item {
+      display: flex; align-items: center; gap: 8px;
+      font-family: monospace; font-size: 0.85rem;
+    }
+    .ptr-key {
+      color: var(--text-dim); font-size: 0.78rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.05em;
+      min-width: 36px;
+    }
+    .ptr-val {
+      font-weight: 700; color: var(--text-main);
+    }
+    .ptr-val.accent { color: var(--accent); }
+    .ptr-val.orange { color: #ff9e64; }
+
+    .decomp-box {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: 6px; padding: 10px 12px;
+      font-family: monospace; font-size: 0.8rem; line-height: 1.8;
+      color: var(--text-dim);
+    }
+    .decomp-box .hl { color: var(--accent); font-weight: 700; }
+    .decomp-box .hl-orange { color: #ff9e64; font-weight: 700; }
+
+    .cmp-box {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: 6px; padding: 10px 12px;
+      font-family: monospace; font-size: 0.8rem; line-height: 1.8;
+      color: var(--text-dim);
+    }
+    .cmp-box .hl { color: var(--accent); font-weight: 700; }
+
+    .result-banner {
+      padding: 12px 14px; border-radius: 8px;
+      font-size: 0.9rem; font-weight: 700; text-align: center;
+      display: none;
+    }
+    .result-banner.found {
+      display: block;
+      background: rgba(158,206,106,0.15);
+      border: 1px solid #9ece6a;
+      color: #9ece6a;
+    }
+    .result-banner.not-found {
+      display: block;
+      background: rgba(247,118,142,0.12);
+      border: 1px solid #f7768e;
+      color: #f7768e;
+    }
+  </style>
+</head>
+
+<body class="page">
+  <div class="page-header">
+    <a class="back-link" href="../index.html">← All Algorithms</a>
+    <div>
+      <div class="page-title">Search a 2D Matrix</div>
+      <div style="font-size:0.78rem;color:var(--text-dim);margin-top:4px;">LeetCode #74 · Binary Search · O(log m·n) time · O(1) space</div>
+    </div>
+  </div>
+
+  <div class="viz-inputs">
+    <div class="field">
+      <label>Preset</label>
+      <select id="presetSel" onchange="loadPreset()">
+        <option value="">— custom —</option>
+        <option value="1,3,5,7|10,11,16,20|23,30,34,60|3" selected>3×4 matrix → target 3 (found 0,1)</option>
+        <option value="1,3,5,7|10,11,16,20|23,30,34,60|13">3×4 matrix → target 13 (not found)</option>
+        <option value="1,3,5,7|10,11,16,20|23,30,34,60|60">3×4 matrix → target 60 (last cell)</option>
+        <option value="1,3,5,7|10,11,16,20|23,30,34,60|1">3×4 matrix → target 1 (first cell)</option>
+        <option value="1,4|6,8|6">2×2 matrix → target 6 (found 1,0)</option>
+        <option value="1|1">1×1 matrix → target 1 (edge case)</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Matrix (one row per line, comma-separated)</label>
+      <textarea id="matrixInput" rows="3">1,3,5,7
+10,11,16,20
+23,30,34,60</textarea>
+    </div>
+    <div class="field">
+      <label>Target</label>
+      <input type="number" id="targetInput" value="3" />
+    </div>
+    <button onclick="buildAndRun()" style="background:var(--accent);border:none;color:#fff;border-radius:var(--radius-sm);padding:8px 16px;cursor:pointer;font-size:0.85rem;font-weight:700;">Run</button>
+    <button onclick="randomExample()" style="background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:var(--radius-sm);padding:8px 14px;cursor:pointer;font-size:0.85rem;">🎲 Random</button>
+    <span class="error-msg" id="errorMsg"></span>
+  </div>
+
+  <div class="controls"></div>
+
+  <div class="viz-area">
+    <div class="nav-row">
+      <div class="panel-box controls-panel">
+        <button class="btn-step" id="prevBtn" disabled>&#8592;</button>
+        <button class="btn-step" id="stepBtn" disabled>&#8594;</button>
+        <button class="btn-play" id="playBtn" disabled>&#9654; Play</button>
+        <select id="speedSel">
+          <option value="900">Slow</option>
+          <option value="350" selected>Medium</option>
+          <option value="100">Fast</option>
+        </select>
+      </div>
+      <div class="status-panel">
+        <div class="phase-label" id="phase-label">—</div>
+        <div class="step-desc" id="step-desc">Set up inputs and click Run to start.</div>
+      </div>
+    </div>
+
+    <div class="main-row">
+      <!-- Left: matrix + flat bar -->
+      <div style="display:flex;flex-direction:column;gap:14px;">
+        <div class="panel-box">
+          <div class="panel-title" id="matrixPanelTitle">Matrix</div>
+          <div id="matrixGrid"></div>
+          <div class="flat-bar-label">Flat Index (treat as 1D array)</div>
+          <div id="flatBar"></div>
+          <div class="bracket-wrap" id="bracketWrap">
+            <span id="loBracket" style="display:none"></span>
+            <span id="midBracket" style="display:none"></span>
+            <span id="hiBracket" style="display:none"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right: info panel -->
+      <div class="right-col">
+        <div class="panel-box">
+          <div class="panel-title">Search State</div>
+          <div style="margin-bottom:12px;">
+            <div style="font-size:0.7rem;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px;">Target</div>
+            <span class="badge accent" id="targetBadge">—</span>
+          </div>
+          <div class="ptr-row" style="margin-bottom:12px;">
+            <div class="ptr-item">
+              <span class="ptr-key">lo</span>
+              <span class="ptr-val" id="loVal">—</span>
+            </div>
+            <div class="ptr-item">
+              <span class="ptr-key">hi</span>
+              <span class="ptr-val" id="hiVal">—</span>
+            </div>
+            <div class="ptr-item">
+              <span class="ptr-key">mid</span>
+              <span class="ptr-val orange" id="midVal">—</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel-box" id="decompPanel">
+          <div class="panel-title">mid → (row, col)</div>
+          <div class="decomp-box" id="decompBox">
+            <div>mid = ?</div>
+            <div>row = mid ÷ cols = ?</div>
+            <div>col = mid mod cols = ?</div>
+          </div>
+        </div>
+
+        <div class="panel-box" id="cmpPanel">
+          <div class="panel-title">Comparison</div>
+          <div class="cmp-box" id="cmpBox">
+            <div>matrix[?][?] = ?</div>
+            <div>target = ?</div>
+            <div id="cmpResult" style="margin-top:6px;font-weight:700;">—</div>
+          </div>
+        </div>
+
+        <div class="result-banner" id="resultBanner"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="../shared/viz.js"></script>
+  <script>
+    var nav;
+    var currentMatrix = [];
+    var currentTarget = 0;
+
+    // ── Preset loader ──────────────────────────────────────────────
+    function loadPreset() {
+      var sel = document.getElementById('presetSel');
+      if (!sel.value) return;
+      // Format: "r0c0,r0c1,...|r1c0,...|target"
+      var parts = sel.value.split('|');
+      var target = parts[parts.length - 1];
+      var rows = parts.slice(0, parts.length - 1);
+      document.getElementById('matrixInput').value = rows.join('\n');
+      document.getElementById('targetInput').value = target;
+      buildAndRun();
+    }
+
+    // ── Random example ─────────────────────────────────────────────
+    function randInt(a, b) { return a + Math.floor(Math.random() * (b - a + 1)); }
+
+    function randomExample() {
+      var rows = randInt(2, 4);
+      var cols = randInt(2, 5);
+      var total = rows * cols;
+      var vals = [];
+      var cur = randInt(1, 5);
+      for (var i = 0; i < total; i++) {
+        vals.push(cur);
+        cur += randInt(1, 8);
+      }
+      var matrix = [];
+      for (var r = 0; r < rows; r++) {
+        matrix.push(vals.slice(r * cols, (r + 1) * cols));
+      }
+      var target;
+      if (Math.random() < 0.6) {
+        target = vals[randInt(0, total - 1)];
+      } else {
+        // Pick a value NOT in the matrix
+        var idx = randInt(0, total - 2);
+        if (vals[idx + 1] - vals[idx] <= 1) {
+          target = vals[total - 1] + randInt(1, 10);
+        } else {
+          target = randInt(vals[idx] + 1, vals[idx + 1] - 1);
+        }
+      }
+      document.getElementById('matrixInput').value = matrix.map(function(r) { return r.join(','); }).join('\n');
+      document.getElementById('targetInput').value = target;
+      document.getElementById('presetSel').value = '';
+      buildAndRun();
+    }
+
+    // ── Input parsing ──────────────────────────────────────────────
+    function showError(msg) {
+      var el = document.getElementById('errorMsg');
+      el.textContent = msg;
+      el.classList.add('visible');
+    }
+    function clearError() {
+      var el = document.getElementById('errorMsg');
+      el.textContent = '';
+      el.classList.remove('visible');
+    }
+
+    function parseMatrix(raw) {
+      var lines = raw.trim().split('\n').map(function(l) { return l.trim(); }).filter(Boolean);
+      if (!lines.length) throw new Error('Matrix is empty');
+      var matrix = lines.map(function(line) {
+        return line.split(',').map(function(x) {
+          var v = parseInt(x.trim(), 10);
+          if (isNaN(v)) throw new Error('Non-integer value: ' + x.trim());
+          return v;
+        });
+      });
+      var cols = matrix[0].length;
+      for (var r = 1; r < matrix.length; r++) {
+        if (matrix[r].length !== cols) throw new Error('Row ' + r + ' has wrong length (expected ' + cols + ')');
+      }
+      // Validate strictly increasing across flattened array
+      var flat = [].concat.apply([], matrix);
+      for (var i = 1; i < flat.length; i++) {
+        if (flat[i] <= flat[i - 1]) throw new Error('Matrix must be strictly increasing (flat[' + (i-1) + ']=' + flat[i-1] + ' >= flat[' + i + ']=' + flat[i] + ')');
+      }
+      return matrix;
+    }
+
+    // ── Step builder ───────────────────────────────────────────────
+    function buildSteps(matrix, target) {
+      var rows = matrix.length;
+      var cols = matrix[0].length;
+      var total = rows * cols;
+      var steps = [];
+
+      var lo = 0, hi = total - 1;
+
+      // INIT step
+      steps.push({
+        lo: lo, hi: hi, mid: null, midRow: null, midCol: null, midVal: null,
+        phase: 'init', found: null,
+        matrix: matrix, target: target, rows: rows, cols: cols,
+        label: 'Start: lo=0, hi=' + hi + ', searching for target=' + target
+      });
+
+      while (lo <= hi) {
+        var mid = Math.floor((lo + hi) / 2);
+        var midRow = Math.floor(mid / cols);
+        var midCol = mid % cols;
+        var midVal = matrix[midRow][midCol];
+
+        // CHECK step
+        steps.push({
+          lo: lo, hi: hi, mid: mid, midRow: midRow, midCol: midCol, midVal: midVal,
+          phase: 'check', found: null,
+          matrix: matrix, target: target, rows: rows, cols: cols,
+          label: 'mid = (' + lo + '+' + hi + ')÷2 = ' + mid + ' → (row=' + midRow + ', col=' + midCol + '), matrix[' + midRow + '][' + midCol + '] = ' + midVal
+        });
+
+        if (midVal === target) {
+          steps.push({
+            lo: lo, hi: hi, mid: mid, midRow: midRow, midCol: midCol, midVal: midVal,
+            phase: 'found', found: true,
+            matrix: matrix, target: target, rows: rows, cols: cols,
+            label: midVal + ' == ' + target + ' → FOUND at (' + midRow + ', ' + midCol + ')!'
+          });
+          return steps;
+        } else if (midVal < target) {
+          lo = mid + 1;
+          steps.push({
+            lo: lo, hi: hi, mid: null, midRow: null, midCol: null, midVal: null,
+            phase: 'adjust-lo', found: null,
+            matrix: matrix, target: target, rows: rows, cols: cols,
+            label: midVal + ' < ' + target + ' → search right half, lo = ' + lo
+          });
+        } else {
+          hi = mid - 1;
+          steps.push({
+            lo: lo, hi: hi, mid: null, midRow: null, midCol: null, midVal: null,
+            phase: 'adjust-hi', found: null,
+            matrix: matrix, target: target, rows: rows, cols: cols,
+            label: midVal + ' > ' + target + ' → search left half, hi = ' + hi
+          });
+        }
+      }
+
+      // NOT-FOUND
+      steps.push({
+        lo: lo, hi: hi, mid: null, midRow: null, midCol: null, midVal: null,
+        phase: 'not-found', found: false,
+        matrix: matrix, target: target, rows: rows, cols: cols,
+        label: 'lo (' + lo + ') > hi (' + hi + ') — target ' + target + ' not in matrix'
+      });
+
+      return steps;
+    }
+
+    // ── Build & Run ────────────────────────────────────────────────
+    function buildAndRun() {
+      clearError();
+      var rawMatrix = document.getElementById('matrixInput').value;
+      var rawTarget = document.getElementById('targetInput').value;
+      try {
+        var matrix = parseMatrix(rawMatrix);
+        var target = parseInt(rawTarget, 10);
+        if (isNaN(target)) throw new Error('Target must be an integer');
+        currentMatrix = matrix;
+        currentTarget = target;
+        buildGrid(matrix);
+        var steps = buildSteps(matrix, target);
+        nav.load(steps);
+      } catch (e) {
+        showError(e.message);
+      }
+    }
+
+    // ── Grid renderer ──────────────────────────────────────────────
+    function buildGrid(matrix) {
+      var rows = matrix.length;
+      var cols = matrix[0].length;
+      var total = rows * cols;
+      var small = total > 12;
+
+      // Matrix grid
+      var grid = document.getElementById('matrixGrid');
+      grid.innerHTML = '';
+      grid.style.gridTemplateColumns = 'repeat(' + cols + ', auto)';
+      for (var r = 0; r < rows; r++) {
+        for (var c = 0; c < cols; c++) {
+          var cell = document.createElement('div');
+          cell.className = 'm-cell' + (small ? ' small' : '');
+          cell.id = 'mc-' + r + '-' + c;
+          cell.innerHTML = '<div>' + matrix[r][c] + '</div><div class="m-cell-rc">(' + r + ',' + c + ')</div>';
+          grid.appendChild(cell);
+        }
+      }
+
+      // Title
+      document.getElementById('matrixPanelTitle').textContent = 'Matrix (' + rows + '×' + cols + ')';
+
+      // Flat bar
+      var bar = document.getElementById('flatBar');
+      bar.innerHTML = '';
+      for (var i = 0; i < total; i++) {
+        var fc = document.createElement('div');
+        fc.className = 'f-cell';
+        fc.id = 'fc-' + i;
+        var flatRow = Math.floor(i / cols);
+        var flatVal = matrix[flatRow][i % cols];
+        fc.textContent = flatVal;
+        bar.appendChild(fc);
+      }
+    }
+
+    // ── Render step ────────────────────────────────────────────────
+    function applyStep(snap, cur, total) {
+      var rows = snap.rows, cols = snap.cols;
+      var flatTotal = rows * cols;
+
+      // Matrix cells
+      for (var r = 0; r < rows; r++) {
+        for (var c = 0; c < cols; c++) {
+          var flatIdx = r * cols + c;
+          var cell = document.getElementById('mc-' + r + '-' + c);
+          if (!cell) continue;
+          cell.className = cell.className.replace(/\s*(eliminated|active|found|not-found)/g, '');
+          if (snap.phase === 'found') {
+            if (r === snap.midRow && c === snap.midCol) {
+              cell.classList.add('found');
+            } else {
+              cell.classList.add('eliminated');
+            }
+          } else if (snap.phase === 'not-found') {
+            cell.classList.add('not-found');
+          } else if (snap.mid !== null && r === snap.midRow && c === snap.midCol) {
+            cell.classList.add('active');
+          } else if (flatIdx < snap.lo || flatIdx > snap.hi) {
+            cell.classList.add('eliminated');
+          }
+        }
+      }
+
+      // Flat bar
+      for (var i = 0; i < flatTotal; i++) {
+        var fc = document.getElementById('fc-' + i);
+        if (!fc) continue;
+        fc.className = 'f-cell';
+        if (snap.phase === 'found') {
+          var midFlat = snap.midRow * cols + snap.midCol;
+          if (i === midFlat) fc.classList.add('found');
+          else fc.classList.add('eliminated');
+        } else if (snap.phase === 'not-found') {
+          fc.classList.add('not-found');
+        } else if (snap.mid !== null && i === snap.mid) {
+          fc.classList.add('active');
+        } else if (i < snap.lo || i > snap.hi) {
+          fc.classList.add('eliminated');
+        } else {
+          fc.classList.add('in-range');
+        }
+      }
+
+      // Pointer labels
+      document.getElementById('targetBadge').textContent = snap.target;
+      document.getElementById('loVal').textContent = snap.lo;
+      document.getElementById('hiVal').textContent = snap.hi;
+      document.getElementById('midVal').textContent = snap.mid !== null ? snap.mid : '—';
+
+      // Decomp box
+      var decompBox = document.getElementById('decompBox');
+      if (snap.mid !== null) {
+        decompBox.innerHTML =
+          '<div>mid = <span class="hl-orange">' + snap.mid + '</span></div>' +
+          '<div>row = ' + snap.mid + ' ÷ ' + cols + ' = <span class="hl">' + snap.midRow + '</span></div>' +
+          '<div>col = ' + snap.mid + ' mod ' + cols + ' = <span class="hl">' + snap.midCol + '</span></div>';
+      } else {
+        decompBox.innerHTML = '<div style="color:var(--text-dim)">—</div>';
+      }
+
+      // Comparison box
+      var cmpBox = document.getElementById('cmpBox');
+      if (snap.mid !== null && snap.midVal !== null) {
+        var cmpTxt = '';
+        if (snap.midVal < snap.target) cmpTxt = '<span style="color:#ff9e64;font-weight:700">' + snap.midVal + ' &lt; ' + snap.target + ' → lo = mid + 1</span>';
+        else if (snap.midVal > snap.target) cmpTxt = '<span style="color:#bb9af7;font-weight:700">' + snap.midVal + ' &gt; ' + snap.target + ' → hi = mid − 1</span>';
+        else cmpTxt = '<span style="color:#9ece6a;font-weight:700">' + snap.midVal + ' == ' + snap.target + ' → FOUND!</span>';
+        cmpBox.innerHTML =
+          '<div>matrix[<span class="hl">' + snap.midRow + '</span>][<span class="hl">' + snap.midCol + '</span>] = <span class="hl">' + snap.midVal + '</span></div>' +
+          '<div>target = <span class="hl">' + snap.target + '</span></div>' +
+          '<div style="margin-top:6px;">' + cmpTxt + '</div>';
+      } else {
+        cmpBox.innerHTML = '<div style="color:var(--text-dim)">—</div>';
+      }
+
+      // Result banner
+      var banner = document.getElementById('resultBanner');
+      banner.className = 'result-banner';
+      if (snap.phase === 'found') {
+        banner.classList.add('found');
+        banner.textContent = '✓ FOUND at (' + snap.midRow + ', ' + snap.midCol + ')';
+      } else if (snap.phase === 'not-found') {
+        banner.classList.add('not-found');
+        banner.textContent = '✗ NOT FOUND — target ' + snap.target + ' is not in the matrix';
+      }
+
+      // Status bar
+      var phaseNames = {
+        'init': 'Initialize', 'check': 'Check mid',
+        'adjust-lo': 'Adjust lo', 'adjust-hi': 'Adjust hi',
+        'found': 'Found!', 'not-found': 'Not Found'
+      };
+      document.getElementById('phase-label').textContent =
+        (phaseNames[snap.phase] || snap.phase) + ' — Step ' + (cur + 1) + ' / ' + total;
+      document.getElementById('step-desc').textContent = snap.label;
+    }
+
+    // ── Init ───────────────────────────────────────────────────────
+    window.addEventListener('DOMContentLoaded', function() {
+      nav = VizNav({
+        btnPrev: document.getElementById('prevBtn'),
+        btnNext: document.getElementById('stepBtn'),
+        btnPlay: document.getElementById('playBtn'),
+        speedSel: document.getElementById('speedSel'),
+        render: function(snap, cur, total) {
+          applyStep(snap, cur, total);
+        }
+      });
+
+      if (window.self !== window.top) {
+        var bl = document.querySelector('.back-link');
+        if (bl) bl.style.display = 'none';
+      }
+
+      buildAndRun();
+    });
+  </script>
+</body>
+</html>
