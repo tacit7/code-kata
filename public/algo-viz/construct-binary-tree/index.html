@@ -199,6 +199,67 @@
       flex-shrink: 0;
     }
 
+    .viz-inputs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: flex-end;
+      padding: 10px 0 14px;
+      width: 100%;
+      max-width: 90%;
+    }
+
+    .viz-inputs .field {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .viz-inputs label {
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-dim);
+    }
+
+    .viz-inputs input[type="text"] {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: var(--radius-sm);
+      padding: 6px 10px;
+      font-size: 0.85rem;
+      width: 180px;
+    }
+
+    .viz-inputs select {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: var(--radius-sm);
+      padding: 6px 10px;
+      font-size: 0.85rem;
+      cursor: pointer;
+    }
+
+    .viz-inputs button {
+      padding: 7px 18px;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius-sm);
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 0.85rem;
+    }
+
+    .viz-inputs button.secondary {
+      background: var(--surface);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+
     @media (max-width: 720px) {
       .main-area { flex-direction: column; }
       .left-panel { width: 100%; min-width: unset; }
@@ -213,17 +274,33 @@
   <h1 class="page-title">Construct Binary Tree from Preorder &amp; Inorder</h1>
 </div>
 
-<div class="controls">
+<div class="viz-inputs">
+  <div class="field">
+    <label>Preset</label>
+    <select id="presetSel" onchange="loadPreset()">
+      <option value="">— pick a preset —</option>
+      <option value='{"pre":"3,9,20,15,7","in":"9,3,15,20,7"}'>Basic example</option>
+      <option value='{"pre":"1","in":"1"}'>Single node</option>
+      <option value='{"pre":"1,2,3,4,5","in":"5,4,3,2,1"}'>Left-skewed tree</option>
+      <option value='{"pre":"1,2,3,4,5","in":"1,2,3,4,5"}'>Right-skewed tree</option>
+      <option value='{"pre":"1,2,4,5,3,6,7","in":"4,2,5,1,6,3,7"}'>Balanced tree</option>
+      <option value='{"pre":"1,2,3","in":"2,1,3"}'>Small zig-zag</option>
+      <option value='{"pre":"1,2,3,4,5,6,7,8,9,10","in":"5,3,7,2,8,4,9,1,6,10"}'>Larger tree</option>
+    </select>
+  </div>
   <div class="field">
     <label>Preorder</label>
-    <input id="inp-pre" type="text" value="3,9,20,15,7" style="width:185px" />
+    <input id="inp-pre" type="text" value="3,9,20,15,7" />
   </div>
   <div class="field">
     <label>Inorder</label>
-    <input id="inp-in" type="text" value="9,3,15,20,7" style="width:185px" />
+    <input id="inp-in" type="text" value="9,3,15,20,7" />
   </div>
-  <button class="btn-primary" onclick="build()">Build</button>
+  <button onclick="buildAndRun()">Run</button>
+  <button class="secondary" onclick="randomExample()">🎲 Random</button>
 </div>
+
+<div class="controls"></div>
 
 <div class="main-area">
 
@@ -300,7 +377,7 @@
 
 <div class="status-bar" style="margin: 0 16px 4px">
   <span class="phase-label" id="phase-label">—</span>
-  <span class="step-desc" id="step-desc">Enter arrays and click Build.</span>
+  <span class="step-desc" id="step-desc">Enter arrays and click Run.</span>
 </div>
 
 <div class="step-nav">
@@ -683,7 +760,7 @@ function applyInfo(s) {
 }
 
 // ─── Build ────────────────────────────────────────────────────────────────────
-function build() {
+function buildAndRun() {
   const pre    = parseArr(document.getElementById('inp-pre').value);
   const inArr  = parseArr(document.getElementById('inp-in').value);
 
@@ -704,6 +781,28 @@ function build() {
   nav.load(steps);
 }
 
+// ─── Presets and random ────────────────────────────────────────────────────────
+function loadPreset() {
+  var sel = document.getElementById('presetSel');
+  if (!sel.value) return;
+  var d = JSON.parse(sel.value);
+  document.getElementById('inp-pre').value = d.pre;
+  document.getElementById('inp-in').value = d.in;
+  buildAndRun();
+}
+
+function randomExample() {
+  document.getElementById('presetSel').value = '';
+  const sizes = [2, 3, 4, 5, 6];
+  const n = sizes[Math.floor(Math.random() * sizes.length)];
+  const values = Array.from({length: n}, (_, i) => i + 1);
+  const pre = values.slice();
+  const inArr = values.slice().sort(() => Math.random() - 0.5);
+  document.getElementById('inp-pre').value = pre.join(',');
+  document.getElementById('inp-in').value = inArr.join(',');
+  buildAndRun();
+}
+
 // ─── Nav ──────────────────────────────────────────────────────────────────────
 var nav = VizNav({
   btnPrev:  document.getElementById('prevBtn'),
@@ -719,7 +818,7 @@ var nav = VizNav({
   },
 });
 
-build();
+buildAndRun();
 </script>
 
 <script>
