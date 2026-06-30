@@ -531,8 +531,18 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
         if (!window.__vizBridge) {
           window.__vizBridge = true;
           var style = document.createElement('style');
-          style.textContent = '.controls, .input-row, .step-nav, .nav-bar, .nav-row, .nav-strip, .nav-box, .nav-panel, .bottom-bar, .ctrl-row, .controls-row, #nav-bar { display: none !important; }';
+          style.textContent = '.controls, .input-row, .step-nav, .nav-bar, .nav-row, .nav-strip, .nav-box, .nav-panel, .bottom-bar, .ctrl-row, .controls-row, #nav-bar, #nav-controls, .control-group { display: none !important; }';
           document.head.appendChild(style);
+          // Also hide whatever element directly wraps prevBtn+playBtn (catches inline-style containers)
+          var prevBtn = document.getElementById('prevBtn');
+          var playBtn = document.getElementById('playBtn');
+          if (prevBtn && playBtn) {
+            var el = prevBtn.parentElement;
+            while (el && el !== document.body) {
+              if (el.contains(playBtn)) { el.style.setProperty('display', 'none', 'important'); break; }
+              el = el.parentElement;
+            }
+          }
           window.addEventListener('message', function(e) {
             var d = e.data;
             if (d === 'prev') document.getElementById('prevBtn')?.click();
