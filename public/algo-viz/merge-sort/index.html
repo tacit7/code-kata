@@ -43,9 +43,15 @@
   .legend-item { display: flex; align-items: center; gap: 5px; font-size: 0.68rem; color: var(--text-dim); }
   .legend-dot { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
 
-  /* Depth pips */
-  #depth-row { display: flex; align-items: center; gap: 6px; font-size: 0.72rem; color: var(--text-dim); }
-  .depth-pip { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); margin-right: 1px; }
+  /* Recursion brackets */
+  #brackets-area { width: 100%; max-width: 640px; padding: 0 2px; display: flex; flex-direction: column; gap: 2px; min-height: 14px; }
+  .bracket-row { position: relative; height: 14px; }
+  .bracket { position: absolute; top: 2px; height: 10px; border-left: 1px solid; border-bottom: 1px solid; border-right: 1px solid; box-sizing: border-box; }
+  .bracket.ancestor { border-color: var(--border); }
+  .bracket.current  { border-color: var(--accent); }
+  .bracket.single   { border: none; border-left: 1px solid; height: 10px; }
+  .bracket.single.ancestor { border-color: var(--border); }
+  .bracket.single.current  { border-color: var(--accent); }
 
   #resize-handle { width: 5px; flex-shrink: 0; cursor: col-resize; background: transparent; border-left: 1px solid var(--border); transition: background .15s; z-index: 10; }
   #resize-handle:hover, #resize-handle.dragging { background: var(--accent); }
@@ -110,7 +116,7 @@
   <div id="viz-area">
     <div id="desc">Click Run to start.</div>
     <div id="bar-chart"></div>
-    <div id="depth-row">Recursion depth: <span id="depth-pips"></span></div>
+    <div id="brackets-area"></div>
     <div id="legend-row">
       <div class="legend-item"><div class="legend-dot" style="background:var(--text-dim);opacity:0.6"></div>Unsorted</div>
       <div class="legend-item"><div class="legend-dot" style="background:var(--accent)"></div>Active range</div>
@@ -209,6 +215,8 @@
     var colors = new Array(n).fill('default');
     var cmpCount = 0;
 
+    var rangeStack = [];
+
     function snap(msg, codeLine, depth, phase) {
       steps.push({
         arr: work.slice(),
@@ -218,6 +226,7 @@
         depth: depth,
         phase: phase || 'divide',
         cmp: cmpCount,
+        ranges: rangeStack.slice(),
       });
     }
 
@@ -226,9 +235,11 @@
     }
 
     function mergeSort(lo, hi, depth) {
+      rangeStack.push({lo: lo, hi: hi});
       if (lo >= hi) {
         colors[lo] = 'sorted';
         snap('Base case: [' + lo + '] = ' + work[lo] + ', already sorted', 1, depth, 'base');
+        rangeStack.pop();
         return;
       }
       var mid = Math.floor((lo + hi) / 2);
@@ -241,6 +252,7 @@
       mergeSort(mid + 1, hi, depth + 1);
       snap('_merge(left, right)', 5, depth, 'merge');
       merge(lo, mid, hi, depth);
+      rangeStack.pop();
     }
 
     function merge(lo, mid, hi, depth) {
@@ -328,15 +340,29 @@
     document.getElementById('sb-cmp').textContent = snap.cmp;
     document.getElementById('sb-step').textContent = (cur + 1) + ' / ' + total;
 
-    // Depth pips
-    var pipsContainer = document.getElementById('depth-pips');
-    pipsContainer.innerHTML = '';
-    for (var d = 0; d <= Math.min(snap.depth, 9); d++) {
-      var pip = document.createElement('span');
-      pip.className = 'depth-pip';
-      pip.style.opacity = d === snap.depth ? '1' : '0.3';
-      pipsContainer.appendChild(pip);
-    }
+    // Recursion brackets
+    var bracketsArea = document.getElementById('brackets-area');
+    bracketsArea.innerHTML = '';
+    var n = snap.arr.length;
+    (snap.ranges || []).forEach(function(range, level) {
+      var isCurrent = level === snap.ranges.length - 1;
+      var row = document.createElement('div');
+      row.className = 'bracket-row';
+      var b = document.createElement('div');
+      var leftPct  = (range.lo / n) * 100;
+      var widthPct = ((range.hi - range.lo + 1) / n) * 100;
+      if (range.lo === range.hi) {
+        b.className = 'bracket single ' + (isCurrent ? 'current' : 'ancestor');
+        b.style.left  = leftPct + '%';
+        b.style.width = widthPct + '%';
+      } else {
+        b.className = 'bracket ' + (isCurrent ? 'current' : 'ancestor');
+        b.style.left  = leftPct + '%';
+        b.style.width = widthPct + '%';
+      }
+      row.appendChild(b);
+      bracketsArea.appendChild(row);
+    });
 
     // Code highlight
     codeLines.forEach(function(_, i) {
