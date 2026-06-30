@@ -166,15 +166,15 @@ var codeLines = [
   { id: 'cl3',  n: 4,  t: '    <span class="kw">quicksort</span>(A, lo, p-1)' },
   { id: 'cl4',  n: 5,  t: '    <span class="kw">quicksort</span>(A, p+1, hi)' },
   { id: 'cl5',  n: 6,  t: '' },
-  { id: 'cl6',  n: 7,  t: '<span class="kw">partition</span>(A, lo, hi):' },
-  { id: 'cl7',  n: 8,  t: '  pivot = A[hi]' },
-  { id: 'cl8',  n: 9,  t: '  i = lo - 1' },
-  { id: 'cl9',  n: 10, t: '  <span class="kw">for</span> j <span class="kw">in</span> [lo, hi):' },
-  { id: 'cl10', n: 11, t: '    <span class="kw">if</span> A[j] &lt;= pivot:' },
-  { id: 'cl11', n: 12, t: '      i++' },
-  { id: 'cl12', n: 13, t: '      swap(A[i], A[j])' },
-  { id: 'cl13', n: 14, t: '  swap(A[i+1], A[hi])' },
-  { id: 'cl14', n: 15, t: '  <span class="kw">return</span> i+1' },
+  { id: 'cl6',  n: 7,  t: '<span class="kw">def</span> <span class="nb">partition</span>(arr, lo, hi):' },
+  { id: 'cl7',  n: 8,  t: '  pivot = arr[hi]' },
+  { id: 'cl8',  n: 9,  t: '  i = lo' },
+  { id: 'cl9',  n: 10, t: '  <span class="kw">for</span> j <span class="kw">in</span> range(lo, hi):' },
+  { id: 'cl10', n: 11, t: '    <span class="kw">if</span> arr[j] &lt;= pivot:' },
+  { id: 'cl11', n: 12, t: '      arr[i], arr[j] = arr[j], arr[i]' },
+  { id: 'cl12', n: 13, t: '      i += 1' },
+  { id: 'cl13', n: 14, t: '  arr[i], arr[hi] = arr[hi], arr[i]' },
+  { id: 'cl14', n: 15, t: '  <span class="kw">return</span> i' },
 ];
 
 window.addEventListener('DOMContentLoaded', function() {
@@ -264,35 +264,35 @@ function buildAndRun() {
 
   function doPartition(A, lo, hi) {
     var pivotVal = A[hi];
-    push(A, lo, hi, hi, -1, -1, 7, 'pivot = A[' + hi + '] = ' + pivotVal);
+    push(A, lo, hi, hi, -1, -1, 7, 'pivot = arr[' + hi + '] = ' + pivotVal);
 
-    var i = lo - 1;
-    push(A, lo, hi, hi, i, -1, 8, 'i = lo - 1 = ' + i);
+    var i = lo;
+    push(A, lo, hi, hi, i, -1, 8, 'i = lo = ' + i);
 
     for (var j = lo; j < hi; j++) {
-      push(A, lo, hi, hi, i, j, 9, 'j = ' + j + ' → A[' + j + '] = ' + A[j]);
-      push(A, lo, hi, hi, i, j, 10, 'A[' + j + '] = ' + A[j] + ' <= pivot ' + pivotVal + '? ' + (A[j] <= pivotVal ? 'Yes' : 'No'));
+      push(A, lo, hi, hi, i, j, 9, 'j = ' + j + ' → arr[' + j + '] = ' + A[j]);
+      push(A, lo, hi, hi, i, j, 10, 'arr[' + j + '] = ' + A[j] + ' <= pivot ' + pivotVal + '? ' + (A[j] <= pivotVal ? 'Yes' : 'No'));
 
       if (A[j] <= pivotVal) {
-        i++;
-        push(A, lo, hi, hi, i, j, 11, 'Yes → i++ → i = ' + i);
-
         if (i !== j) {
           var tmp = A[i]; A[i] = A[j]; A[j] = tmp;
-          push(A, lo, hi, hi, i, j, 12, 'swap(A[' + i + '], A[' + j + ']) → [' + A.slice(lo, hi + 1).join(',') + ']');
+          push(A, lo, hi, hi, i, j, 11, 'arr[i], arr[j] = arr[j], arr[i]  → [' + A.slice(lo, hi + 1).join(',') + ']');
         } else {
-          push(A, lo, hi, hi, i, j, 12, 'i === j, no swap needed');
+          push(A, lo, hi, hi, i, j, 11, 'i === j, no swap needed');
         }
+        i++;
+        push(A, lo, hi, hi, i, j, 12, 'i += 1  → i = ' + i);
       }
     }
 
-    var finalPos = i + 1;
-    var tmp2 = A[finalPos]; A[finalPos] = A[hi]; A[hi] = tmp2;
-    sortedSet.add(finalPos);
-    push(A, lo, hi, finalPos, finalPos, -1, 13, 'Place pivot: swap(A[' + finalPos + '], A[' + hi + ']) → ' + pivotVal + ' now at index ' + finalPos);
-    push(A, lo, hi, finalPos, -1, -1, 14, 'return ' + finalPos);
+    if (i !== hi) {
+      var tmp2 = A[i]; A[i] = A[hi]; A[hi] = tmp2;
+    }
+    sortedSet.add(i);
+    push(A, lo, hi, i, i, -1, 13, 'arr[i], arr[hi] = arr[hi], arr[i]  → pivot ' + pivotVal + ' at index ' + i);
+    push(A, lo, hi, i, -1, -1, 14, 'return ' + i);
 
-    return finalPos;
+    return i;
   }
 
   function quicksort(A, lo, hi) {
