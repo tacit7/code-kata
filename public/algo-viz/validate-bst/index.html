@@ -166,6 +166,7 @@
     <input id="inp-tree" type="text" value="5,3,7,2,4,6,8" style="width:260px" />
   </div>
   <button class="btn-primary" onclick="build()">Build &amp; Run</button>
+  <button onclick="randomExample()" style="padding:7px 14px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;font-size:0.85rem">🎲 Random</button>
 </div>
 
 <div class="viz-area">
@@ -663,6 +664,26 @@ function applyPreset() {
 }
 
 // ─── Build & Run ──────────────────────────────────────────────────────────────
+// ─── Random Example ───────────────────────────────────────────────────────
+function randomExample() {
+  const examples = [
+    '5,3,7,2,4,6,8',           // Valid balanced BST
+    '5,3,7,2,6',               // Invalid (6 violates right subtree constraint)
+    '10,5,15,2,7,12,20',       // Valid larger BST
+    '1,null,2',                // Valid right-only
+    '2,1,3',                   // Valid simple
+    '5,5,5',                   // Invalid (duplicate violates strict inequality)
+    '3,1,5,null,null,4,6',     // Valid
+    '1,2,3',                   // Invalid (left is greater than parent)
+    '10,5,15,null,null,6',     // Invalid (6 in right subtree less than parent 10)
+  ];
+  const randomIdx = Math.floor(Math.random() * examples.length);
+  document.getElementById('inp-tree').value = examples[randomIdx];
+  document.getElementById('preset-sel').value = '';
+  build();
+}
+
+
 function build() {
   const txt = document.getElementById('inp-tree').value.trim();
   const vals = parseLevelOrder(txt);
