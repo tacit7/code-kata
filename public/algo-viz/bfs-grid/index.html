@@ -185,6 +185,42 @@
       width: 100%;
       max-width: 90%;
     }
+
+    .viz-inputs {
+      display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end;
+      padding: 10px 0 14px; width: 100%; max-width: 90%;
+    }
+    .viz-inputs .field {
+      display: flex; flex-direction: column; gap: 4px;
+    }
+    .viz-inputs label {
+      font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--text-dim);
+    }
+    .viz-inputs input[type="text"],
+    .viz-inputs input[type="number"] {
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--text); border-radius: var(--radius-sm);
+      padding: 6px 10px; font-size: 0.85rem;
+    }
+    .viz-inputs input[type="number"] {
+      width: 80px;
+    }
+    .viz-inputs select {
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--text); border-radius: var(--radius-sm);
+      padding: 6px 10px; font-size: 0.85rem; cursor: pointer;
+    }
+    .viz-inputs button {
+      padding: 7px 18px; background: var(--accent); color: #fff;
+      border: none; border-radius: var(--radius-sm); font-weight: 600;
+      cursor: pointer; font-size: 0.85rem;
+    }
+    .viz-inputs button:hover { opacity: 0.9; }
+    .viz-inputs .btn-secondary {
+      background: var(--surface); color: var(--text);
+      border: 1px solid var(--border);
+    }
   </style>
 </head>
 <body class="page">
@@ -194,7 +230,19 @@
   <h1 class="page-title">BFS &mdash; Grid / Matrix</h1>
 </div>
 
-<div class="controls">
+<div class="viz-inputs">
+  <div class="field">
+    <label>Preset</label>
+    <select id="presetSel" onchange="loadPreset()">
+      <option value="">— pick a preset —</option>
+      <option value='{"rows":"4","cols":"4","walls":"0"}'>Small Open (4×4)</option>
+      <option value='{"rows":"8","cols":"8","walls":"20"}'>Medium Grid (8×8)</option>
+      <option value='{"rows":"10","cols":"10","walls":"25"}'>Default (10×10)</option>
+      <option value='{"rows":"12","cols":"12","walls":"40"}'>Maze-like (12×12)</option>
+      <option value='{"rows":"15","cols":"15","walls":"10"}'>Large Sparse (15×15)</option>
+      <option value='{"rows":"20","cols":"20","walls":"45"}'>Tight Maze (20×20)</option>
+    </select>
+  </div>
   <div class="field">
     <label>Rows</label>
     <input id="inp-rows" type="number" min="4" max="20" value="10" />
@@ -207,10 +255,13 @@
     <label>Wall %</label>
     <input id="inp-walls" type="number" min="0" max="50" value="25" />
   </div>
-  <button class="btn-primary" onclick="buildGrid()">Randomize</button>
-  <button class="btn-primary" style="background:var(--surface);border:1px solid var(--border);color:var(--text)" onclick="clearWalls()">Clear Walls</button>
-  <button class="btn-primary" onclick="runBFS()">Run BFS</button>
+  <button onclick="buildGrid()">Randomize</button>
+  <button class="btn-secondary" onclick="clearWalls()">Clear Walls</button>
+  <button onclick="runBFS()">Run BFS</button>
+  <button class="btn-secondary" onclick="randomExample()">🎲 Random</button>
 </div>
+
+<div class="controls"></div>
 
 <div class="viz-area">
   <div class="grid-wrap">
@@ -343,6 +394,27 @@ function clearWalls() {
   simReady = false;
   wallGrid = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
   renderGrid(); resetStatus();
+}
+
+function loadPreset() {
+  var sel = document.getElementById('presetSel');
+  if (!sel.value) return;
+  var d = JSON.parse(sel.value);
+  document.getElementById('inp-rows').value = d.rows;
+  document.getElementById('inp-cols').value = d.cols;
+  document.getElementById('inp-walls').value = d.walls;
+  buildGrid();
+}
+
+function randomExample() {
+  document.getElementById('presetSel').value = '';
+  var rows = Math.floor(Math.random() * 11) + 6;
+  var cols = Math.floor(Math.random() * 11) + 6;
+  var walls = Math.floor(Math.random() * 41) + 10;
+  document.getElementById('inp-rows').value = rows;
+  document.getElementById('inp-cols').value = cols;
+  document.getElementById('inp-walls').value = walls;
+  buildGrid();
 }
 
 function renderGrid() {
