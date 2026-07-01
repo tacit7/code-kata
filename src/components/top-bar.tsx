@@ -40,6 +40,7 @@ export function TopBar() {
     setLaunching(true);
     const kataMap = new Map(katas.map((k) => [k.id, k]));
     const resolved = dailyKataIds.map((id) => kataMap.get(id)).filter(Boolean) as typeof katas;
+    resolved.sort(() => Math.random() - 0.5);
     if (resolved.length === 0) {
       setLaunching(false);
       navigate("/problems");
