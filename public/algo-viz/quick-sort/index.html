@@ -120,8 +120,8 @@
     <div id="msg-box">Press Run to start.</div>
     <div id="legend">
       <div class="li"><div class="ld ld-p"></div>Pivot (P)</div>
-      <div class="li"><div class="ld ld-i"></div>i (boundary)</div>
-      <div class="li"><div class="ld ld-j"></div>j (scanner)</div>
+      <div class="li"><div class="ld ld-i"></div>boundary</div>
+      <div class="li"><div class="ld ld-j"></div>scan</div>
       <div class="li"><div class="ld ld-s"></div>Sorted</div>
     </div>
   </div>
@@ -169,13 +169,13 @@ var codeLines = [
   { id: 'cl5',  n: 6,  t: '' },
   { id: 'cl6',  n: 7,  t: '<span class="kw">def</span> <span class="nb">partition</span>(arr, lo, hi):' },
   { id: 'cl7',  n: 8,  t: '  pivot = arr[hi]' },
-  { id: 'cl8',  n: 9,  t: '  i = lo' },
-  { id: 'cl9',  n: 10, t: '  <span class="kw">for</span> j <span class="kw">in</span> range(lo, hi):' },
-  { id: 'cl10', n: 11, t: '    <span class="kw">if</span> arr[j] &lt;= pivot:' },
-  { id: 'cl11', n: 12, t: '      arr[i], arr[j] = arr[j], arr[i]' },
-  { id: 'cl12', n: 13, t: '      i += 1' },
-  { id: 'cl13', n: 14, t: '  arr[i], arr[hi] = arr[hi], arr[i]' },
-  { id: 'cl14', n: 15, t: '  <span class="kw">return</span> i' },
+  { id: 'cl8',  n: 9,  t: '  boundary = lo' },
+  { id: 'cl9',  n: 10, t: '  <span class="kw">for</span> scan <span class="kw">in</span> range(lo, hi):' },
+  { id: 'cl10', n: 11, t: '    <span class="kw">if</span> arr[scan] &lt;= pivot:' },
+  { id: 'cl11', n: 12, t: '      arr[boundary], arr[scan] = arr[scan], arr[boundary]' },
+  { id: 'cl12', n: 13, t: '      boundary += 1' },
+  { id: 'cl13', n: 14, t: '  arr[boundary], arr[hi] = arr[hi], arr[boundary]' },
+  { id: 'cl14', n: 15, t: '  <span class="kw">return</span> boundary' },
 ];
 
 window.addEventListener('DOMContentLoaded', function() {
@@ -268,33 +268,33 @@ function buildAndRun() {
     var pivotVal = A[hi];
     push(A, lo, hi, hi, -1, -1, 7, 'pivot = arr[' + hi + '] = ' + pivotVal);
 
-    var i = lo;
-    push(A, lo, hi, hi, i, -1, 8, 'i = lo = ' + i);
+    var boundary = lo;
+    push(A, lo, hi, hi, boundary, -1, 8, 'boundary = lo = ' + boundary);
 
-    for (var j = lo; j < hi; j++) {
-      push(A, lo, hi, hi, i, j, 9, 'j = ' + j + ' → arr[' + j + '] = ' + A[j]);
-      push(A, lo, hi, hi, i, j, 10, 'arr[' + j + '] = ' + A[j] + ' <= pivot ' + pivotVal + '? ' + (A[j] <= pivotVal ? 'Yes' : 'No'));
+    for (var scan = lo; scan < hi; scan++) {
+      push(A, lo, hi, hi, boundary, scan, 9, 'scan = ' + scan + ' → arr[' + scan + '] = ' + A[scan]);
+      push(A, lo, hi, hi, boundary, scan, 10, 'arr[' + scan + '] = ' + A[scan] + ' <= pivot ' + pivotVal + '? ' + (A[scan] <= pivotVal ? 'Yes' : 'No'));
 
-      if (A[j] <= pivotVal) {
-        if (i !== j) {
-          var tmp = A[i]; A[i] = A[j]; A[j] = tmp;
-          push(A, lo, hi, hi, i, j, 11, 'arr[i], arr[j] = arr[j], arr[i]  → [' + A.slice(lo, hi + 1).join(',') + ']');
+      if (A[scan] <= pivotVal) {
+        if (boundary !== scan) {
+          var tmp = A[boundary]; A[boundary] = A[scan]; A[scan] = tmp;
+          push(A, lo, hi, hi, boundary, scan, 11, 'arr[boundary], arr[scan] = arr[scan], arr[boundary]  → [' + A.slice(lo, hi + 1).join(',') + ']');
         } else {
-          push(A, lo, hi, hi, i, j, 11, 'i === j, no swap needed');
+          push(A, lo, hi, hi, boundary, scan, 11, 'boundary === scan, no swap needed');
         }
-        i++;
-        push(A, lo, hi, hi, i, j, 12, 'i += 1  → i = ' + i);
+        boundary++;
+        push(A, lo, hi, hi, boundary, scan, 12, 'boundary += 1  → boundary = ' + boundary);
       }
     }
 
-    if (i !== hi) {
-      var tmp2 = A[i]; A[i] = A[hi]; A[hi] = tmp2;
+    if (boundary !== hi) {
+      var tmp2 = A[boundary]; A[boundary] = A[hi]; A[hi] = tmp2;
     }
-    sortedSet.add(i);
-    push(A, lo, hi, i, i, -1, 13, 'arr[i], arr[hi] = arr[hi], arr[i]  → pivot ' + pivotVal + ' at index ' + i);
-    push(A, lo, hi, i, -1, -1, 14, 'return ' + i);
+    sortedSet.add(boundary);
+    push(A, lo, hi, boundary, boundary, -1, 13, 'arr[boundary], arr[hi] = arr[hi], arr[boundary]  → pivot ' + pivotVal + ' at index ' + boundary);
+    push(A, lo, hi, boundary, -1, -1, 14, 'return boundary = ' + boundary);
 
-    return i;
+    return boundary;
   }
 
   function quicksort(A, lo, hi) {
@@ -396,9 +396,9 @@ function render(idx) {
     pc.className = 'ptr-cell';
     var lbls = [];
     var col = '';
-    if (i === s.pivotIdx) { lbls.push('P');  col = col || '#f59e0b'; }
-    if (i === s.iPtr)     { lbls.push('i');  col = col || '#3b82f6'; }
-    if (i === s.jPtr)     { lbls.push('j');  col = col || '#ef4444'; }
+    if (i === s.pivotIdx) { lbls.push('P');   col = col || '#f59e0b'; }
+    if (i === s.iPtr)     { lbls.push('bnd'); col = col || '#3b82f6'; }
+    if (i === s.jPtr)     { lbls.push('scn'); col = col || '#ef4444'; }
     pc.textContent = lbls.join('/');
     pc.style.color = col;
     ptrRow.appendChild(pc);
@@ -472,10 +472,10 @@ function render(idx) {
     html += '<div class="var-item"><span class="var-key">pivot</span> = <span class="var-val">' + s.arr[s.pivotIdx] + '</span></div>';
   }
   if (s.iPtr >= 0) {
-    html += '<div class="var-item"><span class="var-key">i</span> = <span class="var-val">' + s.iPtr + '</span></div>';
+    html += '<div class="var-item"><span class="var-key">boundary</span> = <span class="var-val">' + s.iPtr + '</span></div>';
   }
   if (s.jPtr >= 0) {
-    html += '<div class="var-item"><span class="var-key">j</span> = <span class="var-val">' + s.jPtr + '</span></div>';
+    html += '<div class="var-item"><span class="var-key">scan</span> = <span class="var-val">' + s.jPtr + '</span></div>';
   }
   html += '<div class="var-item"><span class="var-key">sorted</span> = <span class="var-val">' + s.sorted.size + '</span></div>';
   document.getElementById('vars-items').innerHTML = html || '<span style="color:var(--text-dim);">—</span>';
