@@ -22,60 +22,80 @@
   .vi-btn-rand { padding: 6px 14px; border-radius: 6px; font-size: 0.82rem; cursor: pointer; font-family: inherit; background: var(--bg); color: var(--text); border: 1px solid var(--border); }
 
   #main { display: flex; flex: 1; overflow: hidden; }
+  #viz-area { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding: 16px 20px; gap: 4px; overflow-y: auto; }
 
-  #viz-area { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; gap: 20px; overflow-y: auto; }
-
-  #bracket-row { display: flex; gap: 4px; min-height: 18px; align-items: flex-end; margin-bottom: 1px; }
+  /* Array chrome */
+  #bracket-row { display: flex; gap: 4px; min-height: 18px; align-items: flex-end; }
   .br-cell { width: 48px; flex-shrink: 0; text-align: center; font-size: 0.8rem; font-weight: 700; color: var(--accent); line-height: 1; }
 
-  #ptr-row { display: flex; gap: 4px; min-height: 16px; align-items: flex-end; margin-bottom: 3px; }
-  .ptr-cell { width: 48px; flex-shrink: 0; text-align: center; font-size: 0.65rem; font-weight: 700; line-height: 1; }
+  #ptr-row { display: flex; gap: 4px; min-height: 18px; align-items: flex-end; margin-top: 2px; }
+  .ptr-cell { width: 48px; flex-shrink: 0; text-align: center; font-size: 0.6rem; font-weight: 700; line-height: 1; }
 
-  #array-row { display: flex; gap: 4px; }
+  #array-row { display: flex; gap: 4px; margin-top: 2px; }
   .arr-cell { display: flex; flex-direction: column; align-items: center; width: 48px; flex-shrink: 0; }
-  .arr-box { width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; border: 2px solid var(--border); border-radius: 6px; font-size: 1rem; font-weight: 700; background: var(--bg); transition: background 0.15s, border-color 0.15s, color 0.15s; }
-  .arr-box.pivot    { background: #f59e0b22; border-color: #f59e0b; color: #f59e0b; }
-  .arr-box.i-ptr    { background: #3b82f622; border-color: #3b82f6; color: #3b82f6; }
-  .arr-box.j-ptr    { background: #ef444422; border-color: #ef4444; color: #ef4444; }
-  .arr-box.sorted   { background: #22c55e22; border-color: #22c55e; color: #22c55e; }
-  .arr-box.in-range { border-color: var(--accent); }
-  .arr-idx { font-size: 0.65rem; color: var(--text-dim); margin-top: 3px; }
+  .arr-box { width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; border: 2px solid var(--border); border-radius: 6px; font-size: 1rem; font-weight: 700; background: var(--bg); transition: background 0.15s, border-color 0.15s, color 0.15s, opacity 0.15s; }
+  .arr-idx { font-size: 0.6rem; color: var(--text-dim); margin-top: 3px; }
 
-  #msg-box { padding: 10px 14px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; font-size: 0.85rem; min-height: 36px; width: 100%; max-width: 560px; text-align: center; }
+  /* Zone colors — distinct from "sorted" green */
+  .arr-box.le-zone    { background: rgba(22,163,74,0.12); border-color: #16a34a; color: #86efac; }
+  .arr-box.gt-zone    { background: rgba(249,115,22,0.12); border-color: #f97316; color: #fdba74; }
+  .arr-box.unk-zone   { background: var(--bg); border-color: #334155; color: var(--text-muted); }
+  .arr-box.pivot-held { background: rgba(245,158,11,0.14); border-color: #f59e0b; color: #f59e0b; }
+  .arr-box.sorted     { background: rgba(34,197,94,0.18); border-color: #22c55e; color: #22c55e; }
+  .arr-box.in-range   { border-color: var(--accent); color: var(--text); }
+  .arr-box.outside    { background: var(--bg); border-color: #1e293b; color: #334155; opacity: 0.4; }
 
-  #legend { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; }
-  .li { display: flex; align-items: center; gap: 6px; font-size: 0.78rem; color: var(--text-dim); }
-  .ld { width: 12px; height: 12px; border-radius: 3px; border: 2px solid; }
-  .ld-p { border-color: #f59e0b; background: #f59e0b22; }
-  .ld-i { border-color: #3b82f6; background: #3b82f622; }
-  .ld-j { border-color: #ef4444; background: #ef444422; }
-  .ld-s { border-color: #22c55e; background: #22c55e22; }
+  /* Zones label row */
+  #zones-row { display: flex; gap: 4px; min-height: 14px; margin-top: 2px; margin-bottom: 8px; }
+  .zone-lbl { width: 48px; flex-shrink: 0; text-align: center; font-size: 0.58rem; font-weight: 700; letter-spacing: .02em; line-height: 1; }
+
+  /* Decision panel */
+  #decision-panel { width: 100%; max-width: 520px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; display: none; flex-direction: column; gap: 3px; margin-top: 4px; }
+  .dp-title { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--text-dim); margin-bottom: 2px; }
+  .dp-expr  { font-family: monospace; color: var(--text-muted); font-size: 0.78rem; }
+  .dp-vals  { font-family: monospace; font-size: 1.05rem; font-weight: 700; color: var(--text); }
+  .dp-result { font-weight: 700; font-size: 0.9rem; }
+  .dp-action { font-size: 0.75rem; color: var(--text-muted); margin-top: 4px; padding-top: 5px; border-top: 1px solid var(--border-soft); line-height: 1.4; }
+
+  #msg-box { width: 100%; max-width: 520px; padding: 8px 14px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; font-size: 0.82rem; min-height: 34px; text-align: center; color: var(--text-muted); line-height: 1.4; margin-top: 4px; }
+
+  #legend { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; margin-top: 8px; }
+  .li { display: flex; align-items: center; gap: 5px; font-size: 0.72rem; color: var(--text-dim); }
+  .ld { width: 11px; height: 11px; border-radius: 3px; border: 2px solid; flex-shrink: 0; }
 
   #resize-handle { width: 5px; flex-shrink: 0; cursor: col-resize; background: transparent; border-left: 1px solid var(--border); transition: background .15s; z-index: 10; }
   #resize-handle:hover, #resize-handle.dragging { background: var(--accent); }
 
-  #code-panel { width: 350px; min-width: 120px; max-width: 560px; flex-shrink: 0; background: #0d1117; border-right: 1px solid var(--border); overflow-y: auto; overflow-x: auto; padding: 10px 12px; display: flex; flex-direction: column; }
+  #code-panel { width: 310px; min-width: 120px; max-width: 500px; flex-shrink: 0; background: #0d1117; border-right: 1px solid var(--border); overflow-y: auto; overflow-x: auto; padding: 10px 12px; }
   .code-panel-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--text-dim); margin-bottom: 8px; }
-
-  .cl { display: flex; align-items: stretch; padding: 2px 0; white-space: pre; border-left: 2px solid transparent; padding-left: 6px; color: var(--text-muted); transition: all 0.2s; font-family: 'Fira Code', 'Cascadia Code', monospace; font-size: 0.75rem; line-height: 1.8; }
+  .cl { display: flex; align-items: stretch; padding: 2px 0; white-space: pre; border-left: 2px solid transparent; padding-left: 6px; color: var(--text-muted); font-family: 'Fira Code','Cascadia Code',monospace; font-size: 0.73rem; line-height: 1.8; transition: all 0.15s; }
   .cl.hl { background: rgba(122,162,247,0.12); border-left-color: var(--accent); color: var(--text); }
-  .ln { display: inline-block; width: 20px; text-align: right; color: var(--text-dim); user-select: none; margin-right: 10px; font-size: 0.7rem; }
+  .cl-hint { font-size: 8.5px; color: #3b4261; margin-left: 6px; align-self: center; }
+  .ln { display: inline-block; width: 20px; text-align: right; color: var(--text-dim); user-select: none; margin-right: 10px; font-size: 0.68rem; }
   .kw { color: var(--purple); }
   .nb { color: var(--green); }
 
-  #sidebar { width: 220px; flex-shrink: 0; background: var(--surface); border-left: 1px solid var(--border); overflow-y: auto; padding: 14px 12px; display: flex; flex-direction: column; gap: 12px; }
-  .sidebar-section { font-size: 11px; }
-  .sidebar-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--text-dim); margin-bottom: 6px; }
-  .var-item { font-size: 11px; font-family: monospace; color: var(--text-muted); padding: 4px 0; border-bottom: 1px solid var(--border-soft); }
+  #sidebar { width: 220px; flex-shrink: 0; background: var(--surface); border-left: 1px solid var(--border); overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 14px; }
+  .sidebar-section { }
+  .sidebar-title { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--text-dim); margin-bottom: 6px; }
+  .var-item { font-size: 11px; font-family: monospace; color: var(--text-muted); padding: 3px 0; border-bottom: 1px solid var(--border-soft); }
   .var-item:last-child { border-bottom: none; }
   .var-key { color: var(--text-dim); }
   .var-val { color: var(--accent); font-weight: 700; }
+  .var-hint { display: block; font-size: 9px; color: #3b4261; line-height: 1.2; margin-top: 1px; }
+
+  .stack-frame { font-size: 10px; font-family: monospace; padding: 2px 0; border-bottom: 1px solid var(--border-soft); }
+  .stack-frame:last-child { border-bottom: none; }
+  .stack-fn { color: var(--blue); }
+  .stack-args { color: var(--text-dim); }
+  .stack-frame.active { color: var(--text); }
+  .stack-frame.active .stack-fn { color: var(--accent); }
 
   #nav-row { flex-shrink: 0; display: flex; align-items: center; gap: 8px; padding: 10px 16px; background: var(--surface); border-top: 1px solid var(--border); }
   .btn-step, .btn-play { padding: 6px 14px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--surface); color: var(--text); font-family: inherit; font-size: 12px; cursor: pointer; transition: background .15s; }
   .btn-step:hover { background: #334155; }
   .btn-play { background: var(--accent); border-color: var(--accent); color: #fff; }
-  .btn-play:hover { background: var(--accent-hover); }
+  .btn-play:hover { opacity: 0.85; }
   #nav-row select { padding: 5px 8px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: #1e293b; color: var(--text); font-size: 12px; font-family: inherit; cursor: pointer; }
 </style>
 </head>
@@ -117,12 +137,21 @@
     <div id="bracket-row"></div>
     <div id="ptr-row"></div>
     <div id="array-row"></div>
+    <div id="zones-row"></div>
+    <div id="decision-panel">
+      <div class="dp-title">Comparing</div>
+      <div class="dp-expr" id="dp-expr"></div>
+      <div class="dp-vals" id="dp-vals"></div>
+      <div class="dp-result" id="dp-result"></div>
+      <div class="dp-action" id="dp-action"></div>
+    </div>
     <div id="msg-box">Press Run to start.</div>
     <div id="legend">
-      <div class="li"><div class="ld ld-p"></div>Pivot (P)</div>
-      <div class="li"><div class="ld ld-i"></div>boundary</div>
-      <div class="li"><div class="ld ld-j"></div>scan</div>
-      <div class="li"><div class="ld ld-s"></div>Sorted</div>
+      <div class="li"><div class="ld" style="border-color:#f59e0b;background:rgba(245,158,11,0.14)"></div>pivot</div>
+      <div class="li"><div class="ld" style="border-color:#16a34a;background:rgba(22,163,74,0.12)"></div>≤ pivot zone</div>
+      <div class="li"><div class="ld" style="border-color:#f97316;background:rgba(249,115,22,0.12)"></div>&gt; pivot zone</div>
+      <div class="li"><div class="ld" style="border-color:#334155;background:var(--bg)"></div>unknown</div>
+      <div class="li"><div class="ld" style="border-color:#22c55e;background:rgba(34,197,94,0.18)"></div>sorted</div>
     </div>
   </div>
 
@@ -136,7 +165,15 @@
   <div id="sidebar">
     <div class="sidebar-section">
       <div class="sidebar-title">Variables</div>
-      <div id="vars-items"><span style="color:var(--text-dim);">—</span></div>
+      <div id="vars-items"><span style="color:var(--text-dim)">—</span></div>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-title">Counters</div>
+      <div id="counters-items"><span style="color:var(--text-dim)">—</span></div>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-title">Call Stack</div>
+      <div id="stack-items"><span style="color:var(--text-dim)">—</span></div>
     </div>
   </div>
 </div>
@@ -160,49 +197,49 @@ var curIdx = 0;
 var playInterval = null;
 var lastRenderedIdx = -1;
 
-var codeLines = [
-  { id: 'cl0',  n: 1,  t: '<span class="kw">quicksort</span>(A, lo, hi):' },
-  { id: 'cl1',  n: 2,  t: '  <span class="kw">if</span> lo &lt; hi:' },
-  { id: 'cl2',  n: 3,  t: '    p = partition(A, lo, hi)' },
-  { id: 'cl3',  n: 4,  t: '    <span class="kw">quicksort</span>(A, lo, p-1)' },
-  { id: 'cl4',  n: 5,  t: '    <span class="kw">quicksort</span>(A, p+1, hi)' },
-  { id: 'cl5',  n: 6,  t: '' },
-  { id: 'cl6',  n: 7,  t: '<span class="kw">def</span> <span class="nb">partition</span>(arr, lo, hi):' },
-  { id: 'cl7',  n: 8,  t: '  pivot = arr[hi]' },
-  { id: 'cl8',  n: 9,  t: '  boundary = lo' },
-  { id: 'cl9',  n: 10, t: '  <span class="kw">for</span> scan <span class="kw">in</span> range(lo, hi):' },
-  { id: 'cl10', n: 11, t: '    <span class="kw">if</span> arr[scan] &lt;= pivot:' },
-  { id: 'cl11', n: 12, t: '      arr[boundary], arr[scan] = arr[scan], arr[boundary]' },
-  { id: 'cl12', n: 13, t: '      boundary += 1' },
-  { id: 'cl13', n: 14, t: '  arr[boundary], arr[hi] = arr[hi], arr[boundary]' },
-  { id: 'cl14', n: 15, t: '  <span class="kw">return</span> boundary' },
+var CODE_LINES = [
+  { id:'cl0',  n:1,  t:'<span class="kw">def</span> <span class="nb">quicksort</span>(arr, lo, hi):', hint:'' },
+  { id:'cl1',  n:2,  t:'  <span class="kw">if</span> lo &lt; hi:', hint:'' },
+  { id:'cl2',  n:3,  t:'    p = partition(arr, lo, hi)', hint:'' },
+  { id:'cl3',  n:4,  t:'    <span class="kw">quicksort</span>(arr, lo, p-1)', hint:'' },
+  { id:'cl4',  n:5,  t:'    <span class="kw">quicksort</span>(arr, p+1, hi)', hint:'' },
+  { id:'cl5',  n:6,  t:'', hint:'' },
+  { id:'cl6',  n:7,  t:'<span class="kw">def</span> <span class="nb">partition</span>(arr, lo, hi):', hint:'' },
+  { id:'cl7',  n:8,  t:'  pivot = arr[hi]', hint:'choose last element' },
+  { id:'cl8',  n:9,  t:'  boundary = lo', hint:'next ≤ pivot slot' },
+  { id:'cl9',  n:10, t:'  <span class="kw">for</span> scan <span class="kw">in</span> range(lo, hi):', hint:'' },
+  { id:'cl10', n:11, t:'    <span class="kw">if</span> arr[scan] &lt;= pivot:', hint:'classify' },
+  { id:'cl11', n:12, t:'      arr[boundary], arr[scan] =', hint:'' },
+  { id:'cl11b',n:'',  t:'        arr[scan], arr[boundary]', hint:'swap into ≤ zone' },
+  { id:'cl12', n:13, t:'      boundary += 1', hint:'≤ zone grows' },
+  { id:'cl13', n:14, t:'  arr[boundary], arr[hi] =', hint:'' },
+  { id:'cl13b',n:'',  t:'    arr[hi], arr[boundary]', hint:'pivot to final pos' },
+  { id:'cl14', n:15, t:'  <span class="kw">return</span> boundary', hint:'' },
 ];
 
 window.addEventListener('DOMContentLoaded', function() {
   var codeBody = document.getElementById('code-body');
-  codeLines.forEach(function(line) {
+  CODE_LINES.forEach(function(line) {
     var el = document.createElement('div');
     el.className = 'cl';
     el.id = line.id;
-    el.innerHTML = '<span class="ln">' + line.n + '</span>' + line.t;
+    var lnTxt = line.n !== '' ? String(line.n) : '';
+    el.innerHTML = '<span class="ln">' + lnTxt + '</span>' + line.t +
+      (line.hint ? '<span class="cl-hint">← ' + line.hint + '</span>' : '');
     codeBody.appendChild(el);
   });
 
   document.getElementById('prevBtn').addEventListener('click', function() {
-    stopPlay();
-    if (curIdx > 0) { curIdx--; render(curIdx); }
+    stopPlay(); if (curIdx > 0) { curIdx--; render(curIdx); }
   });
   document.getElementById('stepBtn').addEventListener('click', function() {
-    stopPlay();
-    if (curIdx < steps.length - 1) { curIdx++; render(curIdx); }
+    stopPlay(); if (curIdx < steps.length - 1) { curIdx++; render(curIdx); }
   });
   document.getElementById('resetBtn').addEventListener('click', function() {
-    stopPlay();
-    curIdx = 0;
-    render(0);
+    stopPlay(); curIdx = 0; render(0);
   });
   document.getElementById('playBtn').addEventListener('click', function() {
-    if (playInterval) { stopPlay(); } else { startPlay(); }
+    if (playInterval) stopPlay(); else startPlay();
   });
 
   var handle = document.getElementById('resize-handle');
@@ -210,17 +247,14 @@ window.addEventListener('DOMContentLoaded', function() {
   var dragging = false, startX = 0, startW = 0;
   handle.addEventListener('mousedown', function(e) {
     dragging = true; startX = e.clientX; startW = panel.offsetWidth;
-    handle.classList.add('dragging');
-    e.preventDefault();
+    handle.classList.add('dragging'); e.preventDefault();
   });
   document.addEventListener('mousemove', function(e) {
     if (!dragging) return;
-    var delta = startX - e.clientX;
-    panel.style.width = Math.min(560, Math.max(120, startW + delta)) + 'px';
+    panel.style.width = Math.min(500, Math.max(120, startW + (startX - e.clientX))) + 'px';
   });
   document.addEventListener('mouseup', function() {
-    if (!dragging) return;
-    dragging = false; handle.classList.remove('dragging');
+    if (!dragging) return; dragging = false; handle.classList.remove('dragging');
   });
 
   buildAndRun();
@@ -231,8 +265,7 @@ function startPlay() {
   document.getElementById('playBtn').textContent = 'Pause';
   playInterval = setInterval(function() {
     if (curIdx >= steps.length - 1) { stopPlay(); return; }
-    curIdx++;
-    render(curIdx);
+    curIdx++; render(curIdx);
   }, speed);
 }
 
@@ -241,6 +274,7 @@ function stopPlay() {
   document.getElementById('playBtn').textContent = 'Play';
 }
 
+// ── Simulation ─────────────────────────────────────────────────────────────
 function buildAndRun() {
   stopPlay();
   var raw = document.getElementById('arrInput').value;
@@ -250,70 +284,101 @@ function buildAndRun() {
   steps = [];
   lastRenderedIdx = -1;
   var sortedSet = new Set();
+  var comparisons = 0, swaps = 0;
+  var callStack = [];
 
-  function push(A, lo, hi, pivotIdx, iPtr, jPtr, codeLine, msg) {
+  function push(A, lo, hi, pivotIdx, iPtr, jPtr, codeLine, msg, decision) {
     steps.push({
-      arr: A.slice(),
-      lo: lo, hi: hi,
-      pivotIdx: pivotIdx,
-      iPtr: iPtr,
-      jPtr: jPtr,
+      arr: A.slice(), lo: lo, hi: hi,
+      pivotIdx: pivotIdx, iPtr: iPtr, jPtr: jPtr,
       sorted: new Set(sortedSet),
-      codeLine: codeLine,
-      msg: msg
+      codeLine: codeLine, msg: msg,
+      comparisons: comparisons, swaps: swaps,
+      callStack: callStack.map(function(f) { return { fn: f.fn, lo: f.lo, hi: f.hi }; }),
+      decision: decision || null
     });
   }
 
   function doPartition(A, lo, hi) {
+    callStack.push({ fn: 'partition', lo: lo, hi: hi });
+
     var pivotVal = A[hi];
     push(A, lo, hi, hi, -1, -1, 7, 'pivot = arr[' + hi + '] = ' + pivotVal);
 
     var boundary = lo;
-    push(A, lo, hi, hi, boundary, -1, 8, 'boundary = lo = ' + boundary);
+    push(A, lo, hi, hi, boundary, -1, 8, 'boundary = lo = ' + boundary + '  (next slot for a value ≤ pivot)');
 
     for (var scan = lo; scan < hi; scan++) {
-      push(A, lo, hi, hi, boundary, scan, 9, 'scan = ' + scan + ' → arr[' + scan + '] = ' + A[scan]);
-      push(A, lo, hi, hi, boundary, scan, 10, 'arr[' + scan + '] = ' + A[scan] + ' <= pivot ' + pivotVal + '? ' + (A[scan] <= pivotVal ? 'Yes' : 'No'));
+      push(A, lo, hi, hi, boundary, scan, 9, 'scan = ' + scan + '  →  arr[' + scan + '] = ' + A[scan]);
 
-      if (A[scan] <= pivotVal) {
+      comparisons++;
+      var result = A[scan] <= pivotVal;
+      push(A, lo, hi, hi, boundary, scan, 10,
+        'arr[' + scan + '] (' + A[scan] + ') ≤ pivot (' + pivotVal + ')? ' + (result ? 'YES' : 'NO'),
+        { scanIdx: scan, scanVal: A[scan], pivotVal: pivotVal, result: result, boundary: boundary }
+      );
+
+      if (result) {
         if (boundary !== scan) {
           var tmp = A[boundary]; A[boundary] = A[scan]; A[scan] = tmp;
-          push(A, lo, hi, hi, boundary, scan, 11, 'arr[boundary], arr[scan] = arr[scan], arr[boundary]  → [' + A.slice(lo, hi + 1).join(',') + ']');
+          swaps++;
+          push(A, lo, hi, hi, boundary, scan, 11,
+            'Swap arr[' + boundary + '] ↔ arr[' + scan + ']  →  [' + A.slice(lo, hi + 1).join(', ') + ']');
         } else {
-          push(A, lo, hi, hi, boundary, scan, 11, 'boundary === scan, no swap needed');
+          push(A, lo, hi, hi, boundary, scan, 11, 'boundary === scan, already in the right place');
         }
         boundary++;
-        push(A, lo, hi, hi, boundary, scan, 12, 'boundary += 1  → boundary = ' + boundary);
+        push(A, lo, hi, hi, boundary, scan, 12, 'boundary += 1  →  boundary = ' + boundary + '  (≤ pivot zone grew by one)');
+      } else {
+        // "No swap" moment — value classified into > zone
+        // no extra snap; the color change in the next scan step makes it visible
       }
     }
 
+    // Dedicated "why the final swap works" step
+    push(A, lo, hi, hi, boundary, -1, 13,
+      'Loop done. Indices [' + lo + '..' + (boundary - 1) + '] are ≤ pivot. ' +
+      'Indices [' + boundary + '..' + (hi - 1) + '] are > pivot. ' +
+      'Pivot belongs exactly at boundary (' + boundary + ').');
+
     if (boundary !== hi) {
       var tmp2 = A[boundary]; A[boundary] = A[hi]; A[hi] = tmp2;
+      swaps++;
     }
     sortedSet.add(boundary);
-    push(A, lo, hi, boundary, boundary, -1, 13, 'arr[boundary], arr[hi] = arr[hi], arr[boundary]  → pivot ' + pivotVal + ' at index ' + boundary);
+    push(A, lo, hi, boundary, boundary, -1, 13,
+      'Pivot ' + pivotVal + ' placed at index ' + boundary + ' — its final sorted position.');
     push(A, lo, hi, boundary, -1, -1, 14, 'return boundary = ' + boundary);
 
+    callStack.pop();
     return boundary;
   }
 
   function quicksort(A, lo, hi) {
-    push(A, lo, hi, -1, -1, -1, 0, 'quicksort(A, ' + lo + ', ' + hi + ')');
-    push(A, lo, hi, -1, -1, -1, 1, lo < hi ? 'lo(' + lo + ') < hi(' + hi + ') → continue' : 'lo(' + lo + ') >= hi(' + hi + ') → base case');
+    callStack.push({ fn: 'quicksort', lo: lo, hi: hi });
+
+    push(A, lo, hi, -1, -1, -1, 0, 'quicksort(arr, ' + lo + ', ' + hi + ')');
+    push(A, lo, hi, -1, -1, -1, 1,
+      lo < hi
+        ? 'lo(' + lo + ') < hi(' + hi + ')  →  continue'
+        : 'lo(' + lo + ') ≥ hi(' + hi + ')  →  base case, one element is always sorted');
 
     if (lo >= hi) {
       if (lo === hi) sortedSet.add(lo);
+      callStack.pop();
       return;
     }
 
-    push(A, lo, hi, -1, -1, -1, 2, 'Calling partition(A, ' + lo + ', ' + hi + ')');
+    push(A, lo, hi, -1, -1, -1, 2, 'Calling partition(arr, ' + lo + ', ' + hi + ')');
     var p = doPartition(A, lo, hi);
 
-    push(A, 0, A.length - 1, p, -1, -1, 3, 'Left subarray: quicksort(A, ' + lo + ', ' + (p - 1) + ')');
+    push(A, 0, A.length - 1, p, -1, -1, 3, 'Pivot at ' + p + '. Sort left side: quicksort(arr, ' + lo + ', ' + (p - 1) + ')');
     quicksort(A, lo, p - 1);
 
-    push(A, 0, A.length - 1, p, -1, -1, 4, 'Right subarray: quicksort(A, ' + (p + 1) + ', ' + hi + ')');
+    push(A, 0, A.length - 1, p, -1, -1, 4, 'Sort right side: quicksort(arr, ' + (p + 1) + ', ' + hi + ')');
     quicksort(A, p + 1, hi);
+
+    callStack.pop();
   }
 
   quicksort(arr, 0, arr.length - 1);
@@ -325,16 +390,53 @@ function buildAndRun() {
     pivotIdx: -1, iPtr: -1, jPtr: -1,
     sorted: new Set(sortedSet),
     codeLine: -1,
-    msg: '✓ Sorted: [' + arr.join(', ') + ']'
+    msg: '✓ Sorted: [' + arr.join(', ') + ']',
+    comparisons: comparisons, swaps: swaps,
+    callStack: [],
+    decision: null
   });
 
   curIdx = 0;
   render(0);
 }
 
+// ── Zone helper ─────────────────────────────────────────────────────────────
+function getZone(i, s) {
+  if (s.sorted.has(i)) return 'sorted';
+  var lo = s.lo, hi = s.hi;
+  if (lo < 0 || hi < 0 || i < lo || i > hi) return 'outside';
+
+  var b  = s.iPtr;  // boundary (-1 when not in partition)
+  var sc = s.jPtr;  // scan (-1 when not scanning)
+
+  // Pivot held at hi during partition
+  if (s.pivotIdx === hi && hi >= 0 && i === hi && !s.sorted.has(hi)) return 'pivot-held';
+
+  // Not in a partition frame
+  if (b < 0) return 'in-range';
+
+  // In partition frame
+  if (i < b) return 'le-zone';
+  if (sc >= 0 && i >= b && i < sc) return 'gt-zone';
+  if (i < hi) return 'unk-zone';
+
+  return 'in-range';
+}
+
+var ZONE_INFO = {
+  'le-zone':    { lbl: '≤ P', color: '#16a34a' },
+  'gt-zone':    { lbl: '> P',     color: '#f97316' },
+  'unk-zone':   { lbl: '?',       color: '#64748b' },
+  'pivot-held': { lbl: 'P',       color: '#f59e0b' },
+  'sorted':     { lbl: '✓',  color: '#22c55e' },
+  'outside':    { lbl: '',        color: '' },
+  'in-range':   { lbl: '',        color: '' }
+};
+
+// ── Render ───────────────────────────────────────────────────────────────────
 function getPhase(s) {
   if (s.codeLine < 0) return 'Done';
-  if (s.codeLine <= 4) return 'Quicksort';
+  if (s.codeLine <= 5) return 'Quicksort';
   return 'Partition';
 }
 
@@ -342,24 +444,17 @@ function render(idx) {
   if (!steps.length) return;
   idx = Math.max(0, Math.min(idx, steps.length - 1));
 
-  // Detect swap between prev and current step (forward only)
+  // Detect swap for FLIP animation
   var swapI = -1, swapJ = -1;
   if (idx > lastRenderedIdx && idx > 0) {
-    var prev = steps[idx - 1].arr;
-    var curr = steps[idx].arr;
+    var prev = steps[idx - 1].arr, curr = steps[idx].arr;
     var diffs = [];
-    for (var d = 0; d < curr.length; d++) {
-      if (prev[d] !== curr[d]) diffs.push(d);
-    }
-    if (diffs.length === 2 &&
-        prev[diffs[0]] === curr[diffs[1]] &&
-        prev[diffs[1]] === curr[diffs[0]]) {
-      swapI = diffs[0];
-      swapJ = diffs[1];
+    for (var d = 0; d < curr.length; d++) { if (prev[d] !== curr[d]) diffs.push(d); }
+    if (diffs.length === 2 && prev[diffs[0]] === curr[diffs[1]] && prev[diffs[1]] === curr[diffs[0]]) {
+      swapI = diffs[0]; swapJ = diffs[1];
     }
   }
 
-  // Capture old screen rects before DOM update
   var oldRects = {};
   if (swapI !== -1) {
     var oldBoxes = document.querySelectorAll('#array-row .arr-box');
@@ -369,116 +464,147 @@ function render(idx) {
 
   lastRenderedIdx = idx;
   curIdx = idx;
-
   var s = steps[idx];
   var n = s.arr.length;
 
-  // bracket row
+  // Bracket row
   var brRow = document.getElementById('bracket-row');
   brRow.innerHTML = '';
   for (var i = 0; i < n; i++) {
-    var bc = document.createElement('div');
-    bc.className = 'br-cell';
+    var bc = document.createElement('div'); bc.className = 'br-cell';
     if (s.lo >= 0 && s.hi >= 0 && s.lo <= s.hi) {
-      if (i === s.lo && i === s.hi)  bc.textContent = '[ ]';
-      else if (i === s.lo)           bc.textContent = '[';
-      else if (i === s.hi)           bc.textContent = ']';
-      else if (i > s.lo && i < s.hi) bc.textContent = '─';
+      if      (i === s.lo && i === s.hi)  bc.textContent = '[ ]';
+      else if (i === s.lo)                bc.textContent = '[';
+      else if (i === s.hi)                bc.textContent = ']';
+      else if (i > s.lo && i < s.hi)     bc.textContent = '─';
     }
     brRow.appendChild(bc);
   }
 
-  // pointer label row
+  // Pointer row — teaching labels
   var ptrRow = document.getElementById('ptr-row');
   ptrRow.innerHTML = '';
   for (var i = 0; i < n; i++) {
-    var pc = document.createElement('div');
-    pc.className = 'ptr-cell';
-    var lbls = [];
-    var col = '';
-    if (i === s.pivotIdx) { lbls.push('P');   col = col || '#f59e0b'; }
-    if (i === s.iPtr)     { lbls.push('bnd'); col = col || '#3b82f6'; }
-    if (i === s.jPtr)     { lbls.push('scn'); col = col || '#ef4444'; }
+    var pc = document.createElement('div'); pc.className = 'ptr-cell';
+    var lbls = [], col = '';
+    if (i === s.pivotIdx && s.pivotIdx === s.hi && !s.sorted.has(i)) { lbls.push('pivot'); col = '#f59e0b'; }
+    if (i === s.iPtr) { lbls.push('next≤'); col = col || '#3b82f6'; }
+    if (i === s.jPtr) { lbls.push('check'); col = col || '#ef4444'; }
+    if (s.sorted.has(i) && i === s.pivotIdx && s.pivotIdx !== s.hi) { lbls.push('pivot'); col = '#22c55e'; }
     pc.textContent = lbls.join('/');
     pc.style.color = col;
     ptrRow.appendChild(pc);
   }
 
-  // array row
+  // Array row
   var arrRow = document.getElementById('array-row');
   arrRow.innerHTML = '';
   s.arr.forEach(function(val, i) {
-    var cell = document.createElement('div');
-    cell.className = 'arr-cell';
-
-    var box = document.createElement('div');
-    box.className = 'arr-box';
+    var cell = document.createElement('div'); cell.className = 'arr-cell';
+    var box  = document.createElement('div'); box.className = 'arr-box ' + getZone(i, s);
     box.textContent = val;
-
-    var inRange = (s.lo >= 0 && s.hi >= 0 && i >= s.lo && i <= s.hi);
-
-    if (s.sorted.has(i))        box.classList.add('sorted');
-    else if (i === s.pivotIdx)  box.classList.add('pivot');
-    else if (i === s.iPtr)      box.classList.add('i-ptr');
-    else if (i === s.jPtr)      box.classList.add('j-ptr');
-    else if (inRange)           box.classList.add('in-range');
-
-    var idxEl = document.createElement('div');
-    idxEl.className = 'arr-idx';
-    idxEl.textContent = i;
-
-    cell.appendChild(box);
-    cell.appendChild(idxEl);
+    var idxEl = document.createElement('div'); idxEl.className = 'arr-idx'; idxEl.textContent = i;
+    cell.appendChild(box); cell.appendChild(idxEl);
     arrRow.appendChild(cell);
   });
 
-  // Swap animation (FLIP)
+  // Zones label row
+  var zonesRow = document.getElementById('zones-row');
+  zonesRow.innerHTML = '';
+  s.arr.forEach(function(_, i) {
+    var zl = document.createElement('div'); zl.className = 'zone-lbl';
+    var info = ZONE_INFO[getZone(i, s)] || { lbl: '', color: '' };
+    zl.textContent = info.lbl;
+    zl.style.color = info.color;
+    zonesRow.appendChild(zl);
+  });
+
+  // FLIP swap animation
   if (swapI !== -1 && oldRects[swapI] && oldRects[swapJ]) {
     requestAnimationFrame(function() {
       var newBoxes = document.querySelectorAll('#array-row .arr-box');
-      var boxI = newBoxes[swapI];
-      var boxJ = newBoxes[swapJ];
-      if (!boxI || !boxJ) return;
-      gsap.killTweensOf([boxI, boxJ]);
-      var dI = oldRects[swapJ].left - oldRects[swapI].left;
-      var dJ = oldRects[swapI].left - oldRects[swapJ].left;
-      gsap.fromTo(boxI, { x: dI }, { x: 0, duration: 0.35, ease: 'power2.out' });
-      gsap.fromTo(boxJ, { x: dJ }, { x: 0, duration: 0.35, ease: 'power2.out' });
+      var bI = newBoxes[swapI], bJ = newBoxes[swapJ];
+      if (!bI || !bJ) return;
+      gsap.killTweensOf([bI, bJ]);
+      gsap.fromTo(bI, { x: oldRects[swapJ].left - oldRects[swapI].left }, { x: 0, duration: 0.35, ease: 'power2.out' });
+      gsap.fromTo(bJ, { x: oldRects[swapI].left - oldRects[swapJ].left }, { x: 0, duration: 0.35, ease: 'power2.out' });
     });
   }
 
-  // message
+  // Decision panel
+  var dp = document.getElementById('decision-panel');
+  if (s.decision) {
+    dp.style.display = 'flex';
+    var d = s.decision;
+    document.getElementById('dp-expr').textContent = 'arr[scan=' + d.scanIdx + '] ≤ pivot';
+    document.getElementById('dp-vals').textContent = d.scanVal + ' ≤ ' + d.pivotVal;
+    var resEl = document.getElementById('dp-result');
+    resEl.textContent = d.result ? '✔ True' : '✘ False';
+    resEl.style.color = d.result ? '#22c55e' : '#ef4444';
+    document.getElementById('dp-action').textContent = d.result
+      ? 'Action: swap arr[boundary=' + d.boundary + '] ↔ arr[scan=' + d.scanIdx + '], then boundary += 1\n        Value moves into the ≤ pivot zone.'
+      : 'Action: do nothing. scan moves right.\n        Value stays — classified as > pivot zone.';
+  } else {
+    dp.style.display = 'none';
+  }
+
+  // Message
   document.getElementById('msg-box').textContent = s.msg;
 
-  // step counter + phase badge
+  // Header
   document.getElementById('step-counter').textContent = 'Step ' + (idx + 1) + ' / ' + steps.length;
   document.getElementById('phase-badge').textContent = getPhase(s);
 
-  // code highlight
-  for (var l = 0; l <= 14; l++) {
-    var el = document.getElementById('cl' + l);
+  // Code highlight — clear all, set active
+  CODE_LINES.forEach(function(cl) {
+    var el = document.getElementById(cl.id);
     if (el) el.classList.remove('hl');
-  }
-  if (s.codeLine >= 0 && s.codeLine <= 14) {
-    var el2 = document.getElementById('cl' + s.codeLine);
-    if (el2) el2.classList.add('hl');
+  });
+  var activeIds = { 11: ['cl11', 'cl11b'], 13: ['cl13', 'cl13b'] };
+  if (activeIds[s.codeLine]) {
+    activeIds[s.codeLine].forEach(function(id) {
+      var el = document.getElementById(id); if (el) el.classList.add('hl');
+    });
+  } else if (s.codeLine >= 0) {
+    var el = document.getElementById('cl' + s.codeLine);
+    if (el) el.classList.add('hl');
   }
 
-  // sidebar variables
-  var html = '';
-  html += '<div class="var-item"><span class="var-key">lo</span> = <span class="var-val">' + s.lo + '</span></div>';
-  html += '<div class="var-item"><span class="var-key">hi</span> = <span class="var-val">' + s.hi + '</span></div>';
-  if (s.pivotIdx >= 0) {
-    html += '<div class="var-item"><span class="var-key">pivot</span> = <span class="var-val">' + s.arr[s.pivotIdx] + '</span></div>';
+  // Sidebar: Variables
+  var vHtml = '';
+  vHtml += '<div class="var-item"><span class="var-key">lo</span> = <span class="var-val">' + s.lo + '</span></div>';
+  vHtml += '<div class="var-item"><span class="var-key">hi</span> = <span class="var-val">' + s.hi + '</span></div>';
+  if (s.pivotIdx >= 0 && s.pivotIdx < s.arr.length) {
+    vHtml += '<div class="var-item"><span class="var-key">pivot</span> = <span class="var-val">' + s.arr[s.pivotIdx] + '</span></div>';
   }
   if (s.iPtr >= 0) {
-    html += '<div class="var-item"><span class="var-key">boundary</span> = <span class="var-val">' + s.iPtr + '</span></div>';
+    vHtml += '<div class="var-item"><span class="var-key">boundary</span> = <span class="var-val">' + s.iPtr + '</span><span class="var-hint">next slot for ≤ pivot</span></div>';
   }
   if (s.jPtr >= 0) {
-    html += '<div class="var-item"><span class="var-key">scan</span> = <span class="var-val">' + s.jPtr + '</span></div>';
+    vHtml += '<div class="var-item"><span class="var-key">scan</span> = <span class="var-val">' + s.jPtr + '</span><span class="var-hint">currently checking</span></div>';
   }
-  html += '<div class="var-item"><span class="var-key">sorted</span> = <span class="var-val">' + s.sorted.size + '</span></div>';
-  document.getElementById('vars-items').innerHTML = html || '<span style="color:var(--text-dim);">—</span>';
+  document.getElementById('vars-items').innerHTML = vHtml || '<span style="color:var(--text-dim)">—</span>';
+
+  // Sidebar: Counters
+  var cHtml = '';
+  cHtml += '<div class="var-item"><span class="var-key">comparisons</span> = <span class="var-val">' + s.comparisons + '</span></div>';
+  cHtml += '<div class="var-item"><span class="var-key">swaps</span> = <span class="var-val">' + s.swaps + '</span></div>';
+  document.getElementById('counters-items').innerHTML = cHtml;
+
+  // Sidebar: Call stack (most recent on top)
+  var stHtml = '';
+  if (s.callStack && s.callStack.length) {
+    var stack = s.callStack.slice().reverse();
+    stack.forEach(function(frame, fi) {
+      stHtml += '<div class="stack-frame' + (fi === 0 ? ' active' : '') + '">'
+        + '<span class="stack-fn">' + frame.fn + '</span>'
+        + '<span class="stack-args">(' + frame.lo + ', ' + frame.hi + ')</span>'
+        + '</div>';
+    });
+  } else {
+    stHtml = '<span style="color:var(--text-dim)">empty</span>';
+  }
+  document.getElementById('stack-items').innerHTML = stHtml;
 }
 
 function loadPreset() {
