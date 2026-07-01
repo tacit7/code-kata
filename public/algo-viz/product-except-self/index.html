@@ -266,6 +266,7 @@ var CODE = [
   [2,  '    n      <span class="op">=</span> <span class="bi">len</span><span class="op">(</span>nums<span class="op">)</span>'],
   [3,  '    result <span class="op">=</span> <span class="op">[</span><span class="nb">1</span><span class="op">]</span> <span class="op">*</span> n'],
   [0,  ''],
+  [4,  '    prefix <span class="op">=</span> <span class="nb">1</span>'],
   [5,  '    <span class="kw">for</span> i <span class="op">in</span> <span class="bi">range</span><span class="op">(</span>n<span class="op">):</span>'],
   [6,  '        result<span class="op">[</span>i<span class="op">]</span> <span class="op">=</span> prefix'],
   [7,  '        prefix <span class="op">*=</span> nums<span class="op">[</span>i<span class="op">]</span>'],
@@ -419,7 +420,7 @@ function simulate(nums) {
   }
 
   // Init
-  snap('Init', 'Initialize: n = ' + n + ', result = [1, 1, ..., 1], prefix = 1. Now scan left-to-right.', [1, 2, 3], -1, 1, 0);
+  snap('Init', 'Initialize: n = ' + n + ', result = [1, 1, ..., 1], prefix = 1. Now scan left-to-right.', [1, 2, 3, 4], -1, 1, 0);
 
   // Prefix pass
   for (var i = 0; i < n; i++) {
@@ -434,7 +435,7 @@ function simulate(nums) {
   snap('Suffix Pass Init', 'Prefix pass done. Now scan right-to-left. suffix = 1.', [9], -1, prefix, 1);
 
   for (var i = n - 1; i >= 0; i--) {
-    snap('Suffix Pass', 'i = ' + i + ': Multiply result[' + i + '] by current suffix ' + suffix + '. result[' + i + '] = ' + result[i] + ' * ' + suffix + ' = ' + (result[i] * suffix) + '.', [10], i, prefix, suffix);
+    snap('Suffix Pass', 'i = ' + i + ': Multiply result[' + i + '] by current suffix ' + suffix + '. result[' + i + '] = ' + result[i] + ' * ' + suffix + ' = ' + (result[i] * suffix) + '.', [10, 11], i, prefix, suffix);
     result[i] *= suffix;
     suffix *= nums[i];
     snap('Suffix Pass', 'i = ' + i + ': Multiply suffix by nums[' + i + '] = ' + nums[i] + '. suffix = ' + suffix + '.', [12], i, prefix, suffix);
