@@ -1,4 +1,5 @@
 import { useRef, useEffect, useState, useCallback } from "react";
+import { useNavigate } from "react-router";
 import Editor, { type OnMount } from "@monaco-editor/react";
 import type { editor } from "monaco-editor";
 import { initVimMode, type VimAdapterInstance } from "monaco-vim";
@@ -487,6 +488,7 @@ interface KataEditorProps {
 }
 
 export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataEditorProps) {
+  const navigate = useNavigate();
   const { theme, vimMode, toggleVimMode, toggleTheme, fontSize, fontFamily, tabSize, hideDescriptionInSession, setSetting } = useSettingsStore();
   const maxTestRuns = useSessionStore((s) => s.activeSession?.maxTestRuns ?? null);
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
@@ -827,6 +829,12 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
           className={`btn btn-xs ${vimMode ? "btn-success" : "btn-ghost text-base-content/40"}`}
         >
           VIM
+        </button>
+        <button
+          onClick={() => navigate("/settings")}
+          className="btn btn-ghost btn-xs text-base-content/35 hover:text-base-content/70"
+        >
+          settings
         </button>
         <button
           onClick={handleRun}
