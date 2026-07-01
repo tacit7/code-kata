@@ -570,20 +570,16 @@ function render(idx) {
     if (el) el.classList.add('hl');
   }
 
-  // Sidebar: Variables
+  // Sidebar: Variables — always show all vars, dash when not active
+  function varVal(v) { return v >= 0 ? '<span class="var-val">' + v + '</span>' : '<span style="color:var(--text-dim)">—</span>'; }
+  var pivotVal2 = (s.pivotIdx >= 0 && s.pivotIdx < s.arr.length) ? s.arr[s.pivotIdx] : -1;
   var vHtml = '';
-  vHtml += '<div class="var-item"><span class="var-key">lo</span> = <span class="var-val">' + s.lo + '</span></div>';
-  vHtml += '<div class="var-item"><span class="var-key">hi</span> = <span class="var-val">' + s.hi + '</span></div>';
-  if (s.pivotIdx >= 0 && s.pivotIdx < s.arr.length) {
-    vHtml += '<div class="var-item"><span class="var-key">pivot</span> = <span class="var-val">' + s.arr[s.pivotIdx] + '</span></div>';
-  }
-  if (s.iPtr >= 0) {
-    vHtml += '<div class="var-item"><span class="var-key">boundary</span> = <span class="var-val">' + s.iPtr + '</span><span class="var-hint">next slot for ≤ pivot</span></div>';
-  }
-  if (s.jPtr >= 0) {
-    vHtml += '<div class="var-item"><span class="var-key">scan</span> = <span class="var-val">' + s.jPtr + '</span><span class="var-hint">currently checking</span></div>';
-  }
-  document.getElementById('vars-items').innerHTML = vHtml || '<span style="color:var(--text-dim)">—</span>';
+  vHtml += '<div class="var-item"><span class="var-key">lo</span> = ' + varVal(s.lo) + '</div>';
+  vHtml += '<div class="var-item"><span class="var-key">hi</span> = ' + varVal(s.hi) + '</div>';
+  vHtml += '<div class="var-item"><span class="var-key">pivot</span> = ' + varVal(pivotVal2) + '</div>';
+  vHtml += '<div class="var-item"><span class="var-key">boundary</span> = ' + varVal(s.iPtr) + (s.iPtr >= 0 ? '<span class="var-hint">next slot for ≤ pivot</span>' : '') + '</div>';
+  vHtml += '<div class="var-item"><span class="var-key">scan</span> = ' + varVal(s.jPtr) + (s.jPtr >= 0 ? '<span class="var-hint">currently checking</span>' : '') + '</div>';
+  document.getElementById('vars-items').innerHTML = vHtml;
 
   // Sidebar: Counters
   var cHtml = '';
