@@ -13,6 +13,7 @@ import { SessionResultsPage } from "./routes/session-results";
 import { DashboardPage } from "./routes/dashboard";
 import { SettingsPage } from "./routes/settings";
 import { KataFormPage } from "./routes/kata-form";
+import { ResultsPage } from "./routes/results";
 
 function App() {
   const theme = useSettingsStore((s) => s.theme);
@@ -82,6 +83,7 @@ function App() {
             <Route path="/editor/:kataId" element={<EditorPage />} />
             <Route path="/session/:sessionId" element={<SessionPage />} />
             <Route path="/session/:sessionId/results" element={<SessionResultsPage />} />
+            <Route path="/results" element={<ResultsPage />} />
             <Route path="/settings" element={<SettingsPage />} />
           </Routes>
         </main>

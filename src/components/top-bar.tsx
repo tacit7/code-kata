@@ -9,6 +9,7 @@ const NAV_ITEMS = [
   { path: "/dashboard", label: "Dashboard" },
   { path: "/practice", label: "Practice" },
   { path: "/problems", label: "Problems", matchPrefix: "/session" },
+  { path: "/results", label: "Results" },
   { path: "/settings", label: "Settings" },
 ];
 
