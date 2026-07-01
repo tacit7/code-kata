@@ -138,6 +138,7 @@ export function PracticeQueuePage() {
   const navigate = useNavigate();
 
   const [mode, setMode] = useState<Mode>("sr");
+  const [dailyRandomize, setDailyRandomize] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState("");
   const [selectedLevels, setSelectedLevels] = useState<Set<number>>(new Set());
   const [sessionSize, setSessionSize] = useState<SizeOpt>(10);
@@ -211,8 +212,12 @@ export function PracticeQueuePage() {
       items.sort((a, b) => b.score - a.score);
     }
 
+    if (mode === "daily" && dailyRandomize) {
+      items.sort(() => Math.random() - 0.5);
+    }
+
     return items;
-  }, [katas, statsMap, medianMs, mode, categoryFilter, selectedLevels, dailyKataIds, streaks, bestTimes]);
+  }, [katas, statsMap, medianMs, mode, categoryFilter, selectedLevels, dailyKataIds, streaks, bestTimes, dailyRandomize]);
 
   const modeCounts = useMemo(() => {
     const dailySet = new Set(dailyKataIds);
@@ -367,6 +372,30 @@ export function PracticeQueuePage() {
                   }`}
                 >
                   {cat}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Daily order toggle */}
+        {mode === "daily" && (
+          <div>
+            <p className="text-[11px] font-bold uppercase tracking-widest text-base-content/35 mb-2">
+              Order
+            </p>
+            <div className="flex gap-1.5">
+              {([false, true] as const).map((rand) => (
+                <button
+                  key={String(rand)}
+                  onClick={() => setDailyRandomize(rand)}
+                  className={`flex-1 py-1.5 rounded-md border text-[12px] font-semibold transition-all ${
+                    dailyRandomize === rand
+                      ? "border-primary/50 bg-primary/10 text-primary"
+                      : "border-base-300/60 text-base-content/40 hover:border-base-300 hover:text-base-content/60 bg-transparent"
+                  }`}
+                >
+                  {rand ? "Random" : "SR Queue"}
                 </button>
               ))}
             </div>
