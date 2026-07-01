@@ -607,6 +607,16 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
     toggleSolution: handleToggleSolution,
   });
 
+  // When viz panel opens the Monaco editor unmounts. Reset editorReady so the
+  // transition back triggers the vim mode effect with a real state change.
+  useEffect(() => {
+    if (showPanel === "viz") {
+      setEditorReady(false);
+      vimModeRef.current?.dispose();
+      vimModeRef.current = null;
+    }
+  }, [showPanel]);
+
   // Vim mode lifecycle
   useEffect(() => {
     if (!editorReady || !editorRef.current || !statusBarRef.current) return;
