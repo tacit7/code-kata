@@ -394,11 +394,11 @@ function render(snap, cursor, total) {
   // Window info
   var winInfo = document.getElementById("window-info");
   if (snap.foundAt >= 0) {
-    winInfo.innerHTML = "<span style="color:var(--green);font-weight:700;">&#10003; FOUND at index " + snap.foundAt + "!</span>";
+    winInfo.innerHTML = "<span style='color:var(--green);font-weight:700;'>&#10003; FOUND at index " + snap.foundAt + "!</span>";
   } else if (left >= 0) {
     winInfo.textContent = "Window [" + left + ", " + right + "]: “" + s2.slice(left, right + 1) + "”";
   } else if (snap.result === false) {
-    winInfo.innerHTML = "<span style="color:var(--bad);">&#10007; No permutation found</span>";
+    winInfo.innerHTML = "<span style='color:var(--bad);'>&#10007; No permutation found</span>";
   } else {
     winInfo.textContent = "Window: —";
   }
@@ -414,8 +414,8 @@ function render(snap, cursor, total) {
     if (snap.s1Freq[i] > 0 || snap.winFreq[i] > 0) activeCols.push(i);
   }
   if (activeCols.length === 0) {
-    freqS1El.innerHTML = "<div style="color:var(--text-ghost);font-size:0.72rem;">—</div>";
-    freqWinEl.innerHTML = "<div style="color:var(--text-ghost);font-size:0.72rem;">—</div>";
+    freqS1El.innerHTML = "<div style='color:var(--text-ghost);font-size:0.72rem;'>—</div>";
+    freqWinEl.innerHTML = "<div style='color:var(--text-ghost);font-size:0.72rem;'>—</div>";
   } else {
     var hdr1a = document.createElement("div"); hdr1a.className="freq-header"; hdr1a.textContent="char"; freqS1El.appendChild(hdr1a);
     var hdr1b = document.createElement("div"); hdr1b.className="freq-header"; hdr1b.textContent="s1"; freqS1El.appendChild(hdr1b);
