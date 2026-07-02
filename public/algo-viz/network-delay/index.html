@@ -1,159 +1,92 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Network Delay Time</title>
-  <link rel="stylesheet" href="../shared/style.css" />
-  <script src="../shared/viz.js"></script>
-  <style>
-    .viz-area { width: 100%; max-width: 95%; }
-    .main-row { display: grid; grid-template-columns: 1fr 380px; gap: 20px; align-items: start; }
-    @media (max-width: 800px) { .main-row { grid-template-columns: 1fr; } }
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Network Delay Time</title>
+<link rel="stylesheet" href="../shared/style.css" />
+<script src="../shared/viz.js"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font-family: "Fira Code", monospace; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
 
-    .graph-panel {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--radius-lg); padding: 16px;
-      display: flex; flex-direction: column; gap: 10px;
-    }
-    .graph-svg-wrap {
-      width: 100%; aspect-ratio: 1.4;
-      background: var(--bg); border-radius: var(--radius-sm);
-      overflow: hidden;
-    }
-    #graph-svg { width: 100%; height: 100%; }
+.viz-inputs { width: 100%; padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; flex-wrap: wrap; gap: 12px; align-items: center; flex-shrink: 0; }
+.viz-inputs label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); display: block; margin-bottom: 3px; }
+.viz-inputs button { padding: 6px 14px; border-radius: var(--radius-sm); font-size: 0.82rem; cursor: pointer; font-family: inherit; background: var(--bg); color: var(--text); border: 1px solid var(--border); }
+.vi-btn-run { background: var(--accent) !important; color: #fff !important; border: none !important; font-weight: 600; }
+.preset-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.btn-preset { padding: 6px 12px; border-radius: var(--radius-sm); background: var(--bg); border: 1px solid var(--border); color: var(--text-dim); font-size: 0.8rem; cursor: pointer; font-family: inherit; transition: border-color 0.15s, color 0.15s; }
+.btn-preset:hover, .btn-preset.active { border-color: var(--accent); color: var(--accent-pale); }
 
-    .node-circle { stroke-width: 2.5; transition: fill 0.3s, stroke 0.3s; }
-    .node-circle.state-unvisited { fill: #1a1b2e; stroke: #414868; }
-    .node-circle.state-queued    { fill: #3d3524; stroke: #e0af68; }
-    .node-circle.state-popped    { fill: #1a1f3a; stroke: #7dcfff; }
-    .node-circle.state-settled   { fill: #1a2a1a; stroke: #9ece6a; }
+#header { padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+#phase-label { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; padding: 3px 10px; border-radius: var(--radius-sm); background: #1e3a5f; color: var(--blue); border: 1px solid var(--blue); }
 
-    .node-label {
-      fill: var(--text-bright); font-size: 13px; font-weight: 700;
-      font-family: monospace; text-anchor: middle; dominant-baseline: central;
-      pointer-events: none;
-    }
+#main { display: flex; flex: 1; overflow: hidden; }
+#viz-area { flex: 1; display: flex; flex-direction: column; align-items: stretch; padding: 16px; gap: 12px; overflow-y: auto; }
+#resize-handle { width: 5px; flex-shrink: 0; cursor: col-resize; background: transparent; border-left: 1px solid var(--border); transition: background .15s; z-index: 10; }
+#resize-handle:hover, #resize-handle.dragging { background: var(--accent); }
+#code-panel { width: 340px; min-width: 120px; max-width: 560px; flex-shrink: 0; background: #0d1117; border-right: 1px solid var(--border); overflow-y: auto; overflow-x: auto; padding: 10px 12px; display: flex; flex-direction: column; }
+#sidebar { width: 260px; flex-shrink: 0; background: var(--surface); border-left: 1px solid var(--border); overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+#nav-row { flex-shrink: 0; display: flex; align-items: center; gap: 8px; padding: 10px 16px; background: var(--surface); border-top: 1px solid var(--border); }
+.btn-step { padding: 6px 14px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--surface); color: var(--text); font-family: inherit; font-size: 12px; cursor: pointer; }
+.btn-play { padding: 6px 14px; border-radius: var(--radius-sm); background: #15803d; border: none; color: #fff; font-family: inherit; font-size: 12px; font-weight: 600; cursor: pointer; }
+.btn-play.playing { background: #c2410c; }
+#nav-row select { padding: 5px 8px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--bg); color: var(--text); font-size: 12px; font-family: inherit; cursor: pointer; }
+.code-panel-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--text-dim); margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
 
-    .source-ring {
-      fill: none; stroke: #bb9af7; stroke-width: 2; stroke-dasharray: 4 3; opacity: 0.7;
-    }
+.graph-panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 16px; display: flex; flex-direction: column; gap: 10px; flex: 1; }
+.graph-svg-wrap { width: 100%; aspect-ratio: 1.6; background: var(--bg); border-radius: var(--radius-sm); overflow: hidden; }
+#graph-svg { width: 100%; height: 100%; }
 
-    .edge-line {
-      stroke-width: 2; fill: none; stroke: #3b4261; transition: stroke 0.3s;
-    }
-    .edge-line.active   { stroke: #7dcfff; stroke-width: 2.5; }
-    .edge-line.relaxed  { stroke: #e0af68; stroke-width: 2.5; }
-    .edge-line.settled  { stroke: #9ece6a; }
+.node-circle { stroke-width: 2.5; transition: fill 0.3s, stroke 0.3s; }
+.node-circle.state-unvisited { fill: #1a1b2e; stroke: #414868; }
+.node-circle.state-queued    { fill: #3d3524; stroke: #e0af68; }
+.node-circle.state-popped    { fill: #1a1f3a; stroke: #7dcfff; }
+.node-circle.state-settled   { fill: #1a2a1a; stroke: #9ece6a; }
+.node-label { fill: var(--text-bright); font-size: 13px; font-weight: 700; font-family: monospace; text-anchor: middle; dominant-baseline: central; pointer-events: none; }
+.source-ring { fill: none; stroke: #bb9af7; stroke-width: 2; stroke-dasharray: 4 3; opacity: 0.7; }
+.edge-line { stroke-width: 2; fill: none; stroke: #3b4261; transition: stroke 0.3s; }
+.edge-line.active   { stroke: #7dcfff; stroke-width: 2.5; }
+.edge-line.relaxed  { stroke: #e0af68; stroke-width: 2.5; }
+.edge-line.settled  { stroke: #9ece6a; }
+.edge-weight-bg { fill: var(--bg); }
+.edge-weight { fill: var(--text-dim); font-size: 11px; font-weight: 700; font-family: monospace; text-anchor: middle; dominant-baseline: central; }
+.edge-weight.active  { fill: #7dcfff; }
+.edge-weight.relaxed { fill: #e0af68; }
+.edge-weight.settled { fill: #9ece6a; }
 
-    .edge-weight-bg { fill: var(--bg); }
-    .edge-weight {
-      fill: var(--text-dim); font-size: 11px; font-weight: 700;
-      font-family: monospace; text-anchor: middle; dominant-baseline: central;
-    }
-    .edge-weight.active  { fill: #7dcfff; }
-    .edge-weight.relaxed { fill: #e0af68; }
-    .edge-weight.settled { fill: #9ece6a; }
+.panel-box { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; }
+.panel-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--text-dim); }
+#step-desc { font-size: 0.78rem; color: var(--text-muted); line-height: 1.5; min-height: 36px; }
+.result-badge { font-size: 0.82rem; font-weight: 700; padding: 4px 10px; border-radius: 6px; display: none; }
+.result-badge.success { background: #1a2a1a; color: #9ece6a; border: 1px solid #9ece6a; display: block; }
+.result-badge.failure { background: #3d1515; color: #f7768e; border: 1px solid #f7768e; display: block; }
 
-    .right-col { display: flex; flex-direction: column; gap: 12px; }
+.dist-cells { display: flex; gap: 6px; flex-wrap: wrap; }
+.dist-cell { display: flex; flex-direction: column; align-items: center; gap: 2px; border: 1px solid var(--border); border-radius: 6px; padding: 4px 8px; min-width: 40px; transition: border-color 0.2s, background 0.2s; }
+.dist-cell.queued  { border-color: #e0af68; background: #3d3524; }
+.dist-cell.popped  { border-color: #7dcfff; background: #1a1f3a; }
+.dist-cell.settled { border-color: #9ece6a; background: #1a2a1a; }
+.dc-node { font-size: 0.65rem; color: var(--text-dim); font-weight: 600; }
+.dc-val  { font-size: 0.88rem; font-weight: 700; font-family: monospace; color: var(--text-bright); }
 
-    .panel-box {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--radius-lg); padding: 14px 16px;
-      display: flex; flex-direction: column; gap: 8px;
-    }
-    .panel-title {
-      font-size: 0.72rem; font-weight: 700;
-      text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim);
-    }
+.heap-list { display: flex; gap: 5px; flex-wrap: wrap; min-height: 24px; align-items: center; }
+.heap-chip { padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; font-family: monospace; font-weight: 700; background: #3d3524; border: 1px solid #e0af68; color: #e0af68; }
+.heap-chip.top { background: #1a1f3a; border-color: #7dcfff; color: #7dcfff; }
+.legend-row { display: flex; align-items: center; gap: 8px; font-size: 0.75rem; color: var(--text-muted); }
+.legend-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; border: 2px solid; }
 
-    .nav-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-    .playBtn {
-      background: #15803d; border: none; border-radius: var(--radius-sm);
-      color: #fff; cursor: pointer; font-size: 0.88rem; font-weight: 600;
-      padding: 9px 16px; transition: background 0.2s;
-    }
-    .playBtn:hover { background: #166534; }
-    .playBtn.playing { background: #c2410c; }
-    .playBtn.playing:hover { background: #9a3412; }
-    .playBtn:disabled { opacity: 0.4; cursor: not-allowed; }
-    .speedSel {
-      background: var(--bg); border: 1px solid var(--border);
-      border-radius: var(--radius-sm); color: var(--text);
-      font-size: 0.85rem; padding: 8px 10px; outline: none; width: 80px;
-    }
-
-    .result-badge {
-      font-size: 0.88rem; font-weight: 700;
-      padding: 5px 14px; border-radius: 6px;
-      display: none; width: fit-content;
-    }
-    .result-badge.success { background: #1a2a1a; color: #9ece6a; border: 1px solid #9ece6a; display: block; }
-    .result-badge.failure { background: #3d1515; color: #f7768e; border: 1px solid #f7768e; display: block; }
-
-    .dist-cells { display: flex; gap: 8px; flex-wrap: wrap; }
-    .dist-cell {
-      display: flex; flex-direction: column; align-items: center; gap: 2px;
-      border: 1px solid var(--border); border-radius: 6px;
-      padding: 5px 10px; min-width: 44px;
-      transition: border-color 0.2s, background 0.2s;
-    }
-    .dist-cell.queued  { border-color: #e0af68; background: #3d3524; }
-    .dist-cell.popped  { border-color: #7dcfff; background: #1a1f3a; }
-    .dist-cell.settled { border-color: #9ece6a; background: #1a2a1a; }
-    .dc-node { font-size: 0.68rem; color: var(--text-dim); font-weight: 600; }
-    .dc-val  { font-size: 0.9rem; font-weight: 700; font-family: monospace; color: var(--text-bright); }
-
-    .heap-list { display: flex; gap: 6px; flex-wrap: wrap; min-height: 28px; align-items: center; }
-    .heap-chip {
-      padding: 3px 10px; border-radius: 4px;
-      font-size: 0.8rem; font-family: monospace; font-weight: 700;
-      background: #3d3524; border: 1px solid #e0af68; color: #e0af68;
-    }
-    .heap-chip.top { background: #1a1f3a; border-color: #7dcfff; color: #7dcfff; }
-
-    .legend-row { display: flex; align-items: center; gap: 8px; font-size: 0.78rem; color: var(--text-muted); }
-    .legend-dot { width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; border: 2px solid; }
-
-    .code-panel {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--radius-lg); overflow: hidden;
-    }
-    .code-header {
-      padding: 8px 14px; font-size: 0.72rem; font-weight: 600;
-      color: var(--text-dim); border-bottom: 1px solid var(--border); background: var(--bg);
-    }
-    .code-body { padding: 10px 0; font-size: 0.78rem; line-height: 1.75; white-space: pre; }
-    .code-line { display: flex; align-items: center; padding: 0 14px; }
-    .code-line.hl { background: var(--border-soft); border-left: 2px solid var(--accent); }
-    .ln { min-width: 24px; color: var(--text-ghost); user-select: none; font-size: 0.7rem; }
-    .kw { color: var(--purple); }
-    .fn { color: var(--blue); }
-    .bi { color: var(--orange); }
-    .cm { color: var(--text-ghost); }
-    .nb { color: var(--green); }
-    .st { color: #9ece6a; }
-
-    .preset-row { display: flex; gap: 8px; flex-wrap: wrap; }
-    .btn-preset {
-      padding: 6px 12px; border-radius: var(--radius-sm);
-      background: var(--bg); border: 1px solid var(--border);
-      color: var(--text-dim); font-size: 0.8rem; cursor: pointer;
-      transition: border-color 0.15s, color 0.15s;
-    }
-    .btn-preset:hover, .btn-preset.active { border-color: var(--accent); color: var(--accent-pale); }
-  </style>
+.code-body { padding: 8px 0; font-size: 0.78rem; line-height: 1.75; white-space: pre; }
+.code-line { display: flex; align-items: center; padding: 0 14px; }
+.code-line.hl { background: var(--border-soft); border-left: 2px solid var(--accent); }
+.ln { min-width: 24px; color: var(--text-dim); user-select: none; font-size: 0.7rem; }
+.kw { color: var(--purple); } .fn { color: var(--blue); } .bi { color: var(--orange); } .cm { color: var(--text-dim); } .nb { color: var(--green); } .st { color: #9ece6a; }
+</style>
 </head>
-<body class="page">
+<body>
 
-<div class="page-header">
-  <a class="back-link" href="../index.html">&larr; All Algorithms</a>
-  <div class="page-title">Network Delay Time</div>
-  <div class="page-sub">LeetCode 743 &middot; Dijkstra&apos;s algorithm &middot; Min-heap priority queue &middot; O((V+E) log V)</div>
-</div>
-
-<div class="controls">
-  <div class="field">
+<div class="viz-inputs">
+  <div>
     <label>Preset</label>
     <div class="preset-row">
       <button class="btn-preset active" id="preset-classic"    onclick="loadPreset('classic')">Classic (k=1)</button>
@@ -161,12 +94,20 @@
       <button class="btn-preset"        id="preset-disconnect" onclick="loadPreset('disconnect')">Disconnected (k=1)</button>
     </div>
   </div>
-  <button class="btn-primary" onclick="buildAndRun()">Build &amp; Run</button>
+  <button class="vi-btn-run" onclick="buildAndRun()">Build &amp; Run</button>
+  <button onclick="randomExample()">&#x1F3B2; Random</button>
 </div>
 
-<div class="viz-area">
-  <div class="main-row">
+<div class="controls"></div>
 
+<div id="header">
+  <span id="phase-label">—</span>
+  <span style="font-size:13px;font-weight:700;">Network Delay Time</span>
+  <a href="../index.html" style="margin-left:auto;font-size:12px;color:var(--text-dim)">&#x2190; All Algorithms</a>
+</div>
+
+<div id="main">
+  <div id="viz-area">
     <div class="graph-panel">
       <div class="panel-title" id="graph-title">Weighted Directed Graph</div>
       <div class="graph-svg-wrap">
@@ -190,71 +131,44 @@
         </svg>
       </div>
     </div>
-
-    <div class="right-col">
-
-      <div class="panel-box">
-        <div class="nav-row">
-          <button class="stepBtn" id="prevBtn" disabled>&larr;</button>
-          <button class="stepBtn" id="stepBtn" disabled>&rarr;</button>
-          <button class="playBtn" id="playBtn" disabled>&#9654; Play</button>
-          <select class="speedSel" id="speedSel">
-            <option value="800">Slow</option>
-            <option value="400" selected>Medium</option>
-            <option value="120">Fast</option>
-          </select>
-        </div>
+  </div>
+  <div id="resize-handle"></div>
+  <div id="code-panel">
+    <div class="code-panel-title">Python</div>
+    <div class="code-body" id="code-body"></div>
+  </div>
+  <div id="sidebar">
+    <div id="result-badge"></div>
+    <div id="step-desc">Select a preset and click Build &amp; Run.</div>
+    <div class="panel-box">
+      <div class="panel-title">dist[] Array</div>
+      <div class="dist-cells" id="dist-cells"><span style="color:var(--text-dim);font-size:0.78rem">—</span></div>
+    </div>
+    <div class="panel-box">
+      <div class="panel-title">Min-Heap (priority queue)</div>
+      <div class="heap-list" id="heap-list"><span style="color:var(--text-dim);font-size:0.78rem">empty</span></div>
+    </div>
+    <div class="panel-box">
+      <div class="panel-title">Legend</div>
+      <div style="display:flex;flex-direction:column;gap:5px">
+        <div class="legend-row"><div class="legend-dot" style="background:#1a1b2e;border-color:#414868"></div><span>Unvisited</span></div>
+        <div class="legend-row"><div class="legend-dot" style="background:#3d3524;border-color:#e0af68"></div><span>In heap</span></div>
+        <div class="legend-row"><div class="legend-dot" style="background:#1a1f3a;border-color:#7dcfff"></div><span>Popped</span></div>
+        <div class="legend-row"><div class="legend-dot" style="background:#1a2a1a;border-color:#9ece6a"></div><span>Settled</span></div>
       </div>
-
-      <div class="panel-box">
-        <div class="panel-title" id="phase-label">&mdash;</div>
-        <div style="font-size:0.82rem;color:var(--text-muted);margin-top:2px;min-height:36px" id="step-desc">Select a preset and click Build &amp; Run.</div>
-        <div class="result-badge" id="result-badge"></div>
-      </div>
-
-      <div class="panel-box">
-        <div class="panel-title">dist[] Array</div>
-        <div class="dist-cells" id="dist-cells">
-          <span style="color:var(--text-ghost);font-size:0.78rem">—</span>
-        </div>
-      </div>
-
-      <div class="panel-box">
-        <div class="panel-title">Min-Heap (priority queue)</div>
-        <div class="heap-list" id="heap-list">
-          <span style="color:var(--text-ghost);font-size:0.78rem">empty</span>
-        </div>
-      </div>
-
-      <div class="panel-box">
-        <div class="panel-title">Legend</div>
-        <div style="display:flex;flex-direction:column;gap:6px">
-          <div class="legend-row">
-            <div class="legend-dot" style="background:#1a1b2e;border-color:#414868"></div>
-            <span>Unvisited</span>
-          </div>
-          <div class="legend-row">
-            <div class="legend-dot" style="background:#3d3524;border-color:#e0af68"></div>
-            <span>In heap (queued)</span>
-          </div>
-          <div class="legend-row">
-            <div class="legend-dot" style="background:#1a1f3a;border-color:#7dcfff"></div>
-            <span>Popped — processing now</span>
-          </div>
-          <div class="legend-row">
-            <div class="legend-dot" style="background:#1a2a1a;border-color:#9ece6a"></div>
-            <span>Settled — shortest path confirmed</span>
-          </div>
-        </div>
-      </div>
-
-      <div class="code-panel">
-        <div class="code-header">Python</div>
-        <div class="code-body" id="code-body"></div>
-      </div>
-
     </div>
   </div>
+</div>
+
+<div id="nav-row">
+  <button class="btn-step" id="prevBtn" disabled>&#8592; Prev</button>
+  <button class="btn-step" id="stepBtn" disabled>Step &#8594;</button>
+  <button class="btn-play" id="playBtn" disabled>&#9654; Play</button>
+  <select id="speedSel">
+    <option value="800">Slow</option>
+    <option value="400" selected>Medium</option>
+    <option value="120">Fast</option>
+  </select>
 </div>
 
 <script>
@@ -280,7 +194,7 @@ var CODE = [
 
 var PRESETS = {
   classic: {
-    label: 'Classic — 4 nodes, source k=1',
+    label: 'Classic \u2014 4 nodes, source k=1',
     k: 1,
     nodes: [
       {id:1, x:80,  y:200, label:'1'},
@@ -296,7 +210,7 @@ var PRESETS = {
     ]
   },
   leetcode: {
-    label: 'LeetCode Example — 4 nodes, source k=2, answer=2',
+    label: 'LeetCode Example \u2014 4 nodes, source k=2, answer=2',
     k: 2,
     nodes: [
       {id:1, x:130, y:200, label:'1'},
@@ -311,7 +225,7 @@ var PRESETS = {
     ]
   },
   disconnect: {
-    label: 'Disconnected — 5 nodes, node 5 unreachable, returns -1',
+    label: 'Disconnected \u2014 5 nodes, node 5 unreachable, returns -1',
     k: 1,
     nodes: [
       {id:1, x:80,  y:200, label:'1'},
@@ -338,6 +252,13 @@ function loadPreset(name) {
   ['classic','leetcode','disconnect'].forEach(function(p) {
     document.getElementById('preset-' + p).classList.toggle('active', p === name);
   });
+}
+
+function randomExample() {
+  var keys = Object.keys(PRESETS);
+  var key = keys[Math.floor(Math.random() * keys.length)];
+  loadPreset(key);
+  buildAndRun();
 }
 
 function buildAndRun() {
@@ -375,7 +296,6 @@ function getEdgePts(from, to) {
   var y2 = nv.y - uy * (NODE_R + 6);
   var mx = (x1 + x2) / 2;
   var my = (y1 + y2) / 2;
-  // weight label: perpendicular offset (left of travel direction)
   var wx = mx + uy * 14;
   var wy = my - ux * 14;
   return {x1:x1, y1:y1, x2:x2, y2:y2, wx:wx, wy:wy};
@@ -395,7 +315,6 @@ function renderGraph(snap) {
     gNodes.forEach(function(n) { nodeStates[n.id] = n.id === gK ? 'queued' : 'unvisited'; });
   }
 
-  // Edges
   gEdges.forEach(function(e) {
     var pts = getEdgePts(e.from, e.to);
     if (!pts) return;
@@ -410,7 +329,6 @@ function renderGraph(snap) {
     line.setAttribute('marker-end', 'url(#arrow-' + markerName + ')');
     edgesG.appendChild(line);
 
-    // Weight label
     var rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
     rect.setAttribute('x', pts.wx - 9); rect.setAttribute('y', pts.wy - 8);
     rect.setAttribute('width', 18); rect.setAttribute('height', 16);
@@ -425,7 +343,6 @@ function renderGraph(snap) {
     edgesG.appendChild(wt);
   });
 
-  // Source ring
   var srcNode = nodeById(gK);
   if (srcNode) {
     var ring = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
@@ -435,7 +352,6 @@ function renderGraph(snap) {
     nodesG.appendChild(ring);
   }
 
-  // Nodes
   gNodes.forEach(function(n) {
     var g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
     var circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
@@ -472,7 +388,7 @@ function simulate(nodes, edges, k) {
   var heap = [{d: 0, u: k}];
   var edgeStates = {};
 
-  function ds(d) { return d === INF ? '∞' : d; }
+  function ds(d) { return d === INF ? '\u221e' : d; }
 
   function snap(phase, desc, lines) {
     var sortedHeap = heap.slice().sort(function(a, b) { return a.d - b.d || a.u - b.u; });
@@ -486,7 +402,7 @@ function simulate(nodes, edges, k) {
   }
 
   snap('Init',
-    'dist[' + k + '] = 0, all others = ∞. Push (0, ' + k + ') to the min-heap. Source node marked queued.',
+    'dist[' + k + '] = 0, all others = \u221e. Push (0, ' + k + ') to the min-heap. Source node marked queued.',
     [5, 6, 7]);
 
   while (heap.length > 0) {
@@ -497,14 +413,14 @@ function simulate(nodes, edges, k) {
 
     if (d > dist[u]) {
       snap('Stale',
-        'Pop (' + d + ', ' + u + '). Stale entry — dist[' + u + '] was already improved to ' + dist[u] + '. Skip.',
+        'Pop (' + d + ', ' + u + '). Stale entry \u2014 dist[' + u + '] was already improved to ' + dist[u] + '. Skip.',
         [9, 10]);
       continue;
     }
 
     states[u] = 'popped';
     snap('Pop',
-      'Pop (' + d + ', ' + u + ') — minimum in heap. Examine outgoing edges from node ' + u + '.',
+      'Pop (' + d + ', ' + u + ') \u2014 minimum in heap. Examine outgoing edges from node ' + u + '.',
       [9]);
 
     var neighbors = adj[u];
@@ -516,7 +432,7 @@ function simulate(nodes, edges, k) {
       edgeStates = {};
       edgeStates[edgeKey(u, v)] = 'active';
       snap('Examine',
-        'Edge ' + u + '→' + v + ' (w=' + w + '). dist[' + u + '] + ' + w + ' = ' + nd + ' vs dist[' + v + '] = ' + ds(dist[v]) + '.',
+        'Edge ' + u + '\u2192' + v + ' (w=' + w + '). dist[' + u + '] + ' + w + ' = ' + nd + ' vs dist[' + v + '] = ' + ds(dist[v]) + '.',
         [11, 12, 13]);
 
       if (nd < dist[v]) {
@@ -525,12 +441,12 @@ function simulate(nodes, edges, k) {
         if (states[v] !== 'settled') states[v] = 'queued';
         edgeStates[edgeKey(u, v)] = 'relaxed';
         snap('Relax',
-          'Relaxed! dist[' + v + '] ← ' + nd + '. Push (' + nd + ', ' + v + ') onto heap.',
+          'Relaxed! dist[' + v + '] \u2190 ' + nd + '. Push (' + nd + ', ' + v + ') onto heap.',
           [13, 14, 15]);
       } else {
         edgeStates[edgeKey(u, v)] = 'skipped';
         snap('NoRelax',
-          'No improvement — dist[' + v + '] = ' + ds(dist[v]) + ' ≤ ' + nd + '. Skip.',
+          'No improvement \u2014 dist[' + v + '] = ' + ds(dist[v]) + ' \u2264 ' + nd + '. Skip.',
           [12, 13]);
       }
     }
@@ -539,7 +455,7 @@ function simulate(nodes, edges, k) {
     edgeStates = {};
     var edgeDesc = neighbors.length === 0
       ? 'No outgoing edges from ' + u + '. Node ' + u + ' settled at dist=' + d + '.'
-      : 'All edges from ' + u + ' processed. Node ' + u + ' settled — shortest path confirmed: ' + d + '.';
+      : 'All edges from ' + u + ' processed. Node ' + u + ' settled \u2014 shortest path confirmed: ' + d + '.';
     snap('Settle', edgeDesc, [8, 9]);
   }
 
@@ -584,11 +500,11 @@ function applyStep(snap) {
 
 function updateDist(dist, states) {
   var el = document.getElementById('dist-cells');
-  if (!dist) { el.innerHTML = '<span style="color:var(--text-ghost);font-size:0.78rem">—</span>'; return; }
+  if (!dist) { el.innerHTML = '<span style="color:var(--text-dim);font-size:0.78rem">\u2014</span>'; return; }
   var ids = Object.keys(dist).map(Number).sort(function(a, b) { return a - b; });
   el.innerHTML = ids.map(function(id) {
     var val = dist[id];
-    var display = val === Infinity ? '∞' : val;
+    var display = val === Infinity ? '\u221e' : val;
     var st = states ? (states[id] || 'unvisited') : 'unvisited';
     var cls = 'dist-cell';
     if (st === 'popped')  cls += ' popped';
@@ -604,13 +520,13 @@ function updateDist(dist, states) {
 function updateHeap(heap) {
   var el = document.getElementById('heap-list');
   if (!heap || heap.length === 0) {
-    el.innerHTML = '<span style="color:var(--text-ghost);font-size:0.78rem">empty</span>';
+    el.innerHTML = '<span style="color:var(--text-dim);font-size:0.78rem">empty</span>';
     return;
   }
   var sorted = heap.slice().sort(function(a, b) { return a.d - b.d || a.u - b.u; });
   el.innerHTML = sorted.map(function(item, i) {
     var cls = i === 0 ? 'heap-chip top' : 'heap-chip';
-    return '<div class="' + cls + '">(' + item.d + ', ' + item.u + ')</div>';
+    return '<div class="' + cls + '">(' + item.d + ', ' + item.u + ')</div>';
   }).join('');
 }
 
@@ -641,13 +557,32 @@ window.addEventListener('DOMContentLoaded', function() {
       applyStep(snap);
       var phaseEl = document.getElementById('phase-label');
       var descEl  = document.getElementById('step-desc');
-      if (phaseEl) phaseEl.textContent = 'Step ' + (cur + 1) + ' / ' + total + '  ·  ' + snap.phase;
+      if (phaseEl) phaseEl.textContent = 'Step ' + (cur + 1) + ' / ' + total + '  \u00b7  ' + snap.phase;
       if (descEl)  descEl.textContent = snap.desc;
     }
   });
 });
 </script>
-
+<script>
+(function() {
+  var handle = document.getElementById('resize-handle');
+  var panel  = document.getElementById('code-panel');
+  var dragging = false, startX = 0, startW = 0;
+  handle.addEventListener('mousedown', function(e) {
+    dragging = true; startX = e.clientX; startW = panel.offsetWidth;
+    handle.classList.add('dragging'); e.preventDefault();
+  });
+  document.addEventListener('mousemove', function(e) {
+    if (!dragging) return;
+    var delta = startX - e.clientX;
+    panel.style.width = Math.min(560, Math.max(120, startW + delta)) + 'px';
+  });
+  document.addEventListener('mouseup', function() {
+    if (!dragging) return;
+    dragging = false; handle.classList.remove('dragging');
+  });
+})();
+</script>
 <script>
   if (window.self !== window.top) {
     var bl = document.querySelector('.back-link');

@@ -1,596 +1,283 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Longest Consecutive Sequence</title>
-  <link rel="stylesheet" href="../shared/style.css" />
-  <script src="../shared/viz.js"></script>
-  <script src="../shared/gsap.min.js"></script>
-  <style>
-    .number-line {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      margin-bottom: 16px;
-    }
-    .number-chip {
-      min-width: 40px;
-      height: 40px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      font-weight: 600;
-      color: var(--text);
-      transition: all 0.3s ease;
-      font-size: 0.9rem;
-    }
-    .number-chip.in-set {
-      background: var(--surface);
-      border: 1px solid var(--accent);
-    }
-    .number-chip.current {
-      background: var(--accent);
-      color: #fff;
-      box-shadow: 0 0 12px rgba(122, 162, 247, 0.4);
-    }
-    .number-chip.in-sequence {
-      background: var(--green);
-      color: #fff;
-      border: 1px solid var(--green);
-    }
-    .number-chip.winner {
-      background: var(--orange);
-      color: #fff;
-      border: 1px solid var(--orange);
-      box-shadow: 0 0 12px rgba(255, 157, 77, 0.4);
-    }
-
-    .hash-set-panel {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-      padding: 12px;
-      background: var(--surface);
-      border-radius: 8px;
-      border: 1px solid var(--border);
-    }
-    .badge {
-      padding: 4px 8px;
-      background: var(--bg);
-      border: 1px solid var(--border);
-      border-radius: 4px;
-      font-size: 0.75rem;
-      font-weight: 600;
-      color: var(--text);
-      transition: all 0.3s ease;
-    }
-    .badge.current {
-      background: var(--accent);
-      border: 1px solid var(--accent);
-      color: #fff;
-    }
-    .badge.checked {
-      opacity: 0.5;
-    }
-
-    .variables-panel {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-      gap: 8px;
-    }
-    .var-box {
-      padding: 10px;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 6px;
-    }
-    .var-label {
-      font-size: 0.65rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-      color: var(--text-dim);
-      margin-bottom: 4px;
-    }
-    .var-value {
-      font-size: 1.1rem;
-      font-weight: 700;
-      color: var(--text);
-      font-family: monospace;
-    }
-    .var-value.accent {
-      color: var(--accent);
-    }
-
-    .viz-inputs {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      align-items: flex-end;
-      padding: 10px 0 14px;
-      width: 100%;
-      max-width: 90%;
-      margin-bottom: 16px;
-    }
-    .viz-inputs .field {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }
-    .viz-inputs label {
-      font-size: 0.7rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      color: var(--text-dim);
-    }
-    .viz-inputs input[type="text"] {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      color: var(--text);
-      border-radius: 6px;
-      padding: 6px 10px;
-      font-size: 0.85rem;
-      width: 220px;
-      font-family: monospace;
-    }
-    .viz-inputs select {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      color: var(--text);
-      border-radius: 6px;
-      padding: 6px 10px;
-      font-size: 0.85rem;
-      cursor: pointer;
-    }
-
-    .controls {
-      margin-bottom: 20px;
-      padding: 12px;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-    }
-    .controls-row {
-      display: flex;
-      gap: 8px;
-      align-items: center;
-      flex-wrap: wrap;
-    }
-    .controls input {
-      flex: 1;
-      min-width: 200px;
-      padding: 8px 10px;
-      background: var(--bg);
-      border: 1px solid var(--border);
-      color: var(--text);
-      border-radius: 6px;
-      font-family: monospace;
-      font-size: 0.85rem;
-    }
-    .controls button {
-      padding: 8px 16px;
-      background: var(--accent);
-      color: #fff;
-      border: none;
-      border-radius: 6px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: background 0.2s;
-    }
-    .controls button:hover {
-      background: var(--blue);
-    }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Longest Consecutive Sequence</title>
+<link rel="stylesheet" href="../shared/style.css" />
+<script src="../shared/gsap.min.js"></script>
+<script src="../shared/viz.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: "Fira Code", "Cascadia Code", monospace; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+  #header { padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+  #phase-badge { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; padding: 3px 10px; border-radius: var(--radius-sm); background: #1e3a5f; color: var(--blue); border: 1px solid var(--blue); }
+  #step-counter { font-size: 12px; color: var(--text-muted); margin-left: auto; }
+  .viz-inputs { width: 100%; max-width: 100%; padding: 10px 16px; background: var(--surface); border: none; border-bottom: 1px solid var(--border); border-radius: 0; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; flex-shrink: 0; }
+  .viz-inputs label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); display: block; margin-bottom: 3px; }
+  .viz-inputs select, .viz-inputs input { background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 0 8px; height: 30px; font-size: 0.82rem; font-family: inherit; }
+  .vi-btn-run { padding: 6px 14px; border-radius: 6px; font-size: 0.82rem; font-weight: 600; cursor: pointer; font-family: inherit; background: var(--accent); color: #fff; border: none; }
+  .vi-btn-rand { padding: 6px 14px; border-radius: 6px; font-size: 0.82rem; cursor: pointer; font-family: inherit; background: var(--bg); color: var(--text); border: 1px solid var(--border); }
+  #main { display: flex; flex: 1; overflow: hidden; }
+  #viz-area { flex: 1; display: flex; flex-direction: column; align-items: flex-start; padding: 20px; gap: 14px; overflow-y: auto; }
+  #desc { font-size: 13px; color: var(--text-muted); max-width: 560px; min-height: 36px; line-height: 1.5; }
+  #resize-handle { width: 5px; flex-shrink: 0; cursor: col-resize; background: transparent; border-left: 1px solid var(--border); transition: background .15s; z-index: 10; }
+  #resize-handle:hover, #resize-handle.dragging { background: var(--accent); }
+  #code-panel { width: 350px; min-width: 120px; max-width: 560px; flex-shrink: 0; background: #0d1117; border-right: 1px solid var(--border); overflow-y: auto; overflow-x: auto; padding: 10px 12px; display: flex; flex-direction: column; }
+  .cl { display: flex; align-items: stretch; padding: 2px 0; white-space: pre; border-left: 2px solid transparent; padding-left: 6px; color: var(--text-muted); font-family: 'Fira Code', 'Cascadia Code', monospace; font-size: 0.75rem; line-height: 1.8; }
+  .cl.hl { background: rgba(122,162,247,0.12); border-left-color: var(--accent); color: var(--text); }
+  .ln { display: inline-block; width: 20px; text-align: right; color: var(--text-dim); user-select: none; margin-right: 10px; font-size: 0.7rem; }
+  #sidebar { width: 220px; flex-shrink: 0; background: var(--surface); border-left: 1px solid var(--border); overflow-y: auto; padding: 14px 12px; display: flex; flex-direction: column; gap: 12px; }
+  .sidebar-section { font-size: 11px; }
+  .sidebar-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--text-dim); margin-bottom: 6px; }
+  .var-item { font-size: 12px; font-family: monospace; color: var(--text-muted); padding: 5px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
+  .var-item:last-child { border-bottom: none; }
+  .var-key { color: var(--text-dim); } .var-val { color: var(--accent); font-weight: 700; }
+  #nav-row { flex-shrink: 0; display: flex; align-items: center; gap: 8px; padding: 10px 16px; background: var(--surface); border-top: 1px solid var(--border); }
+  .btn-step, .btn-play { padding: 6px 14px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--surface); color: var(--text); font-family: inherit; font-size: 12px; cursor: pointer; transition: background .15s; }
+  .btn-step:hover { background: #334155; }
+  .btn-play { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn-play:hover { background: var(--accent-hover); }
+  #nav-row select { padding: 5px 8px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: #1e293b; color: var(--text); font-size: 12px; font-family: inherit; cursor: pointer; }
+  /* UNIQUE VIZ CSS */
+  .number-line { display: flex; flex-wrap: wrap; gap: 8px; }
+  .number-chip { min-width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; font-weight: 600; color: var(--text); transition: all 0.3s ease; font-size: 0.9rem; }
+  .number-chip.in-set { border: 1px solid var(--accent); }
+  .number-chip.current { background: var(--accent); color: #fff; box-shadow: 0 0 12px rgba(122,162,247,0.4); }
+  .number-chip.in-sequence { background: var(--green); color: #fff; border: 1px solid var(--green); }
+  .number-chip.winner { background: var(--orange); color: #fff; border: 1px solid var(--orange); box-shadow: 0 0 12px rgba(255,157,77,0.4); }
+  .hash-set-panel { display: flex; flex-wrap: wrap; gap: 6px; padding: 12px; background: var(--surface); border-radius: 8px; border: 1px solid var(--border); }
+  .badge { padding: 4px 8px; background: var(--bg); border: 1px solid var(--border); border-radius: 4px; font-size: 0.75rem; font-weight: 600; color: var(--text); transition: all 0.3s ease; }
+  .badge.current { background: var(--accent); border: 1px solid var(--accent); color: #fff; }
+  .badge.checked { opacity: 0.5; }
+  .panel-label { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--text-dim); margin-bottom: 8px; }
+</style>
 </head>
-<body class="page">
-  <div class="page-header">
-    <a class="back-link" href="../index.html">← All Algorithms</a>
-    <div class="page-title">Longest Consecutive Sequence</div>
-    <div class="page-sub">LeetCode #128 · Hash Set · O(n) time · O(n) space</div>
+<body>
+
+<div class="viz-inputs">
+  <div>
+    <label>Preset</label>
+    <select id="presetSel" onchange="loadPreset()">
+      <option value="">— pick a preset —</option>
+      <option value='{"nums":"100, 4, 200, 1, 3, 2"}'>Simple sequence [1-4]</option>
+      <option value='{"nums":"1, 2, 3, 4, 5"}'>All consecutive</option>
+      <option value='{"nums":"9, 1, 4, 7, 3, 2, 8, 5, 6"}'>Full range [1-9]</option>
+      <option value='{"nums":"42"}'>Single element</option>
+      <option value='{"nums":"0, 3, 7, 2, 5, 8, 4, 6, 1"}'>Disjoint sequences</option>
+      <option value='{"nums":"-5, -4, -3, -2, -1, 0, 1"}'>Negative numbers</option>
+    </select>
   </div>
-
-  <div class="viz-inputs">
-    <div class="field">
-      <label>Preset</label>
-      <select id="presetSel" onchange="loadPreset()">
-        <option value="">— pick a preset —</option>
-        <option value='{"nums":"100, 4, 200, 1, 3, 2"}'>Simple sequence [1-4]</option>
-        <option value='{"nums":"1, 2, 3, 4, 5"}'>All consecutive</option>
-        <option value='{"nums":"9, 1, 4, 7, 3, 2, 8, 5, 6"}'>Full range [1-9]</option>
-        <option value='{"nums":"42"}'>Single element</option>
-        <option value='{"nums":"0, 3, 7, 2, 5, 8, 4, 6, 1"}'>Disjoint sequences</option>
-        <option value='{"nums":"-5, -4, -3, -2, -1, 0, 1"}'>Negative numbers</option>
-      </select>
-    </div>
-    <div class="field">
-      <label>Numbers</label>
-      <input type="text" id="nums-input" placeholder="Enter numbers separated by commas (e.g., 100, 4, 200, 1, 3, 2)" value="100, 4, 200, 1, 3, 2">
-    </div>
-    <button onclick="buildAndRun()" style="padding:7px 18px;background:var(--accent);color:#fff;border:none;border-radius:6px;font-weight:600;cursor:pointer;">Run</button>
-    <button onclick="randomExample()" style="padding:7px 14px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:6px;cursor:pointer;">🎲 Random</button>
+  <div>
+    <label>Numbers</label>
+    <input type="text" id="nums-input" value="100, 4, 200, 1, 3, 2" style="width:240px;" />
   </div>
+  <button class="vi-btn-run" onclick="buildAndRun()">Run</button>
+  <button class="vi-btn-rand" onclick="randomExample()">&#127922; Random</button>
+</div>
+<div class="controls"></div>
 
-  <div class="controls">
-    <div class="controls-row">
-      <div style="display:flex;gap:8px;align-items:center">
-        <button class="btn-step" id="prevBtn" disabled>&#8592;</button>
-        <button class="btn-step" id="stepBtn" disabled>&#8594;</button>
-        <button class="btn-play" id="playBtn" disabled>&#9654; Play</button>
-        <select id="speedSel" style="background:var(--bg);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:6px 10px;font-size:0.85rem">
-          <option value="700">Slow</option>
-          <option value="250" selected>Medium</option>
-          <option value="80">Fast</option>
-        </select>
-      </div>
-    </div>
-  </div>
+<div id="header">
+  <span id="phase-badge">Setup</span>
+  <span style="font-size:13px;font-weight:700;">Longest Consecutive Sequence</span>
+  <span id="step-counter">Step 0 / 0</span>
+</div>
 
-  <div class="viz-area" style="width:100%;max-width:90%">
-    <div style="display:flex;gap:12px;margin-bottom:14px">
-      <div class="panel-box" style="flex:0 0 auto">
-        <div style="display:flex;gap:8px;align-items:center">
-          <button class="btn-step" id="prevBtn2" disabled>&#8592;</button>
-          <button class="btn-step" id="stepBtn2" disabled>&#8594;</button>
-          <button class="btn-play" id="playBtn2" disabled>&#9654; Play</button>
-          <select id="speedSel2" style="background:var(--bg);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:6px 10px;font-size:0.85rem">
-            <option value="700">Slow</option>
-            <option value="250" selected>Medium</option>
-            <option value="80">Fast</option>
-          </select>
-        </div>
-      </div>
-      <div class="panel-box" style="flex:1;min-width:0">
-        <div style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--text-dim)" id="phase-label">—</div>
-        <div style="font-size:0.88rem;color:var(--text-muted);margin-top:3px" id="step-desc">Click Run to start.</div>
-      </div>
-    </div>
-
-    <div class="panel-box" style="margin-bottom:16px">
-      <div style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--text-dim);margin-bottom:8px">Number Line</div>
+<div id="main">
+  <div id="viz-area">
+    <div id="desc">Click Run to start.</div>
+    <div style="width:100%;max-width:700px;">
+      <div class="panel-label">Number Line</div>
       <div class="number-line" id="number-line"></div>
     </div>
-
-    <div class="panel-box" style="margin-bottom:16px">
-      <div style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--text-dim);margin-bottom:8px">Hash Set</div>
+    <div style="width:100%;max-width:700px;">
+      <div class="panel-label">Hash Set</div>
       <div class="hash-set-panel" id="hash-set-panel"></div>
     </div>
-
-    <div class="panel-box" style="margin-bottom:16px">
-      <div style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--text-dim);margin-bottom:8px">Variables</div>
-      <div class="variables-panel" id="variables-panel">
-        <div class="var-box">
-          <div class="var-label">Current</div>
-          <div class="var-value" id="var-current">—</div>
-        </div>
-        <div class="var-box">
-          <div class="var-label">Length</div>
-          <div class="var-value" id="var-length">—</div>
-        </div>
-        <div class="var-box">
-          <div class="var-label">Longest</div>
-          <div class="var-value accent" id="var-longest">0</div>
-        </div>
-      </div>
-    </div>
-
-    <div class="panel-box" style="font-family:monospace;font-size:0.78rem;line-height:1.75;margin-bottom:16px">
-      <div style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--text-dim);margin-bottom:8px">Python</div>
-      <div id="code-body"></div>
+  </div>
+  <div id="resize-handle"></div>
+  <div id="code-panel">
+    <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--text-dim);margin-bottom:8px;">Python</div>
+    <div id="code-body"></div>
+  </div>
+  <div id="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-title">Variables</div>
+      <div class="var-item"><span class="var-key">current: </span><span class="var-val" id="var-current">&#8212;</span></div>
+      <div class="var-item"><span class="var-key">length: </span><span class="var-val" id="var-length">&#8212;</span></div>
+      <div class="var-item"><span class="var-key">longest: </span><span class="var-val" id="var-longest">0</span></div>
     </div>
   </div>
+</div>
 
-  <script>
-    var nav;
-    var currentSteps = [];
-    var sortedNums = [];
-    var numSet = new Set();
+<div id="nav-row">
+  <button id="prevBtn" class="btn-step">&#8592; Prev</button>
+  <button id="stepBtn" class="btn-step">Step &#8594;</button>
+  <button id="playBtn" class="btn-play">Play</button>
+  <button id="resetBtn" class="btn-step">&#8635; Reset</button>
+  <select id="speedSel">
+    <option value="800">0.5&#215;</option>
+    <option value="400" selected>1&#215;</option>
+    <option value="200">2&#215;</option>
+    <option value="100">4&#215;</option>
+  </select>
+</div>
 
-    const pythonCode = `def longest_consecutive(nums):
-    num_set = set(nums)
-    longest = 0
-    for num in num_set:
-        if num - 1 not in num_set:  # start of sequence
-            length = 1
-            while num + length in num_set:
-                length += 1
-            longest = max(longest, length)
-    return longest`;
+<script>
+var nav;
+var sortedNums = [];
+var numSet = new Set();
 
-    function setCodeLines(activeLines) {
-      const codeBody = document.getElementById('code-body');
-      const lines = pythonCode.split('\n');
-      codeBody.innerHTML = lines.map((line, i) => {
-        const lineNum = i;
-        const isActive = activeLines.includes(lineNum);
-        const hlClass = isActive ? ' hl' : '';
-        return `<div id="cl-${lineNum}" class="code-line${hlClass}">${escapeHtml(line)}</div>`;
-      }).join('');
+var pythonCode = "def longest_consecutive(nums):\n" +
+    "    num_set = set(nums)\n" +
+    "    longest = 0\n" +
+    "    for num in num_set:\n" +
+    "        if num - 1 not in num_set:  # start of sequence\n" +
+    "            length = 1\n" +
+    "            while num + length in num_set:\n" +
+    "                length += 1\n" +
+    "            longest = max(longest, length)\n" +
+    "    return longest";
 
-      // Apply highlighting to active lines
-      activeLines.forEach(lineNum => {
-        const el = document.getElementById(`cl-${lineNum}`);
-        if (el) {
-          el.classList.add('hl');
-          el.style.background = 'rgba(122, 162, 247, 0.12)';
-          el.style.borderLeft = '2px solid var(--accent)';
-          el.style.paddingLeft = '6px';
-        }
-      });
-    }
+function setCodeLines(activeLines) {
+  var codeBody = document.getElementById('code-body');
+  var lines = pythonCode.split('\n');
+  codeBody.innerHTML = lines.map(function(line, i) {
+    var isActive = activeLines.indexOf(i) !== -1;
+    var div = document.createElement('div');
+    div.className = 'cl' + (isActive ? ' hl' : '');
+    div.id = 'cl-' + i;
+    div.innerHTML = '<span class="ln">' + (i + 1) + '</span>' + escapeHtml(line);
+    return div.outerHTML;
+  }).join('');
+}
 
-    function escapeHtml(text) {
-      const div = document.createElement('div');
-      div.textContent = text;
-      return div.innerHTML;
-    }
+function escapeHtml(text) {
+  var div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
 
-    function simulate(nums) {
-      if (!nums || nums.length === 0) {
-        return [{
-          phase: 'empty',
-          desc: 'Input is empty',
-          lines: [0],
-          current: null,
-          length: null,
-          longest: 0,
-          inSequence: [],
-          winner: []
-        }];
+function simulate(nums) {
+  if (!nums || nums.length === 0) {
+    return [{ phase: 'empty', desc: 'Input is empty', lines: [0], current: null, length: null, longest: 0, inSequence: [], winner: [] }];
+  }
+
+  var steps = [];
+  var num_set = new Set(nums);
+  var longest = 0;
+  var sorted = Array.from(num_set).sort(function(a, b) { return a - b; });
+
+  steps.push({ phase: 'init', desc: 'Create hash set and initialize longest', lines: [0, 1, 2], current: null, length: null, longest: 0, inSequence: [], winner: [], nums: nums, sorted: sorted });
+
+  var checked = new Set();
+  for (var num of num_set) {
+    steps.push({ phase: 'check-start', desc: 'Check if ' + num + ' is a sequence start (' + num + ' - 1 = ' + (num - 1) + ' not in set?)', lines: [3, 4], current: num, length: null, longest: longest, inSequence: [], winner: [], nums: nums, sorted: sorted, checked: Array.from(checked) });
+    checked.add(num);
+
+    if (!num_set.has(num - 1)) {
+      var length = 1;
+      steps.push({ phase: 'sequence-start', desc: 'Found sequence start at ' + num + '! Initialize length = 1', lines: [4, 5], current: num, length: 1, longest: longest, inSequence: [num], winner: [], nums: nums, sorted: sorted, checked: Array.from(checked) });
+
+      while (num_set.has(num + length)) {
+        steps.push({ phase: 'extend', desc: num + ' + ' + length + ' = ' + (num + length) + ' is in set, extend length to ' + (length + 1), lines: [6, 7], current: num, length: length + 1, longest: longest, inSequence: Array.from({ length: length + 1 }, function(_, i) { return num + i; }), winner: [], nums: nums, sorted: sorted, checked: Array.from(checked) });
+        length++;
       }
 
-      const steps = [];
-      const num_set = new Set(nums);
-      let longest = 0;
-      let sorted = Array.from(num_set).sort((a, b) => a - b);
-
-      // Initial state
-      steps.push({
-        phase: 'init',
-        desc: 'Create hash set and initialize longest',
-        lines: [0, 1, 2],
-        current: null,
-        length: null,
-        longest: 0,
-        inSequence: [],
-        winner: [],
-        nums: nums,
-        sorted: sorted
-      });
-
-      // Iterate through each number
-      const checked = new Set();
-      for (let num of num_set) {
-        // Check if this is a sequence start
-        steps.push({
-          phase: 'check-start',
-          desc: `Check if ${num} is a sequence start (${num} - 1 = ${num - 1} not in set?)`,
-          lines: [3, 4],
-          current: num,
-          length: null,
-          longest: longest,
-          inSequence: [],
-          winner: [],
-          nums: nums,
-          sorted: sorted,
-          checked: Array.from(checked)
-        });
-        checked.add(num);
-
-        if (num - 1 not in num_set) {
-          // This is a sequence start
-          let length = 1;
-          steps.push({
-            phase: 'sequence-start',
-            desc: `Found sequence start at ${num}! Initialize length = 1`,
-            lines: [4, 5],
-            current: num,
-            length: 1,
-            longest: longest,
-            inSequence: [num],
-            winner: [],
-            nums: nums,
-            sorted: sorted,
-            checked: Array.from(checked)
-          });
-
-          // Count how long the sequence extends
-          while (num + length in num_set) {
-            steps.push({
-              phase: 'extend',
-              desc: `${num} + ${length} = ${num + length} is in set, extend length to ${length + 1}`,
-              lines: [6, 7],
-              current: num,
-              length: length + 1,
-              longest: longest,
-              inSequence: Array.from({ length: length + 1 }, (_, i) => num + i),
-              winner: [],
-              nums: nums,
-              sorted: sorted,
-              checked: Array.from(checked)
-            });
-            length++;
-          }
-
-          // Update longest
-          if (length > longest) {
-            steps.push({
-              phase: 'update-longest',
-              desc: `Sequence length ${length} > longest ${longest}, update longest to ${length}`,
-              lines: [8],
-              current: num,
-              length: length,
-              longest: length,
-              inSequence: Array.from({ length: length }, (_, i) => num + i),
-              winner: Array.from({ length: length }, (_, i) => num + i),
-              nums: nums,
-              sorted: sorted,
-              checked: Array.from(checked)
-            });
-            longest = length;
-          } else {
-            steps.push({
-              phase: 'sequence-done',
-              desc: `Sequence length ${length} <= longest ${longest}, continue`,
-              lines: [3],
-              current: num,
-              length: length,
-              longest: longest,
-              inSequence: Array.from({ length: length }, (_, i) => num + i),
-              winner: [],
-              nums: nums,
-              sorted: sorted,
-              checked: Array.from(checked)
-            });
-          }
-        } else {
-          steps.push({
-            phase: 'skip',
-            desc: `${num} - 1 = ${num - 1} is in set, skip (not a start)`,
-            lines: [3],
-            current: num,
-            length: null,
-            longest: longest,
-            inSequence: [],
-            winner: [],
-            nums: nums,
-            sorted: sorted,
-            checked: Array.from(checked)
-          });
-        }
+      if (length > longest) {
+        steps.push({ phase: 'update-longest', desc: 'Sequence length ' + length + ' > longest ' + longest + ', update longest to ' + length, lines: [8], current: num, length: length, longest: length, inSequence: Array.from({ length: length }, function(_, i) { return num + i; }), winner: Array.from({ length: length }, function(_, i) { return num + i; }), nums: nums, sorted: sorted, checked: Array.from(checked) });
+        longest = length;
+      } else {
+        steps.push({ phase: 'sequence-done', desc: 'Sequence length ' + length + ' <= longest ' + longest + ', continue', lines: [3], current: num, length: length, longest: longest, inSequence: Array.from({ length: length }, function(_, i) { return num + i; }), winner: [], nums: nums, sorted: sorted, checked: Array.from(checked) });
       }
-
-      // Final result
-      steps.push({
-        phase: 'done',
-        desc: `Algorithm complete. Longest consecutive sequence length: ${longest}`,
-        lines: [9],
-        current: null,
-        length: null,
-        longest: longest,
-        inSequence: [],
-        winner: [],
-        nums: nums,
-        sorted: sorted,
-        checked: Array.from(checked)
-      });
-
-      return steps;
+    } else {
+      steps.push({ phase: 'skip', desc: num + ' - 1 = ' + (num - 1) + ' is in set, skip (not a start)', lines: [3], current: num, length: null, longest: longest, inSequence: [], winner: [], nums: nums, sorted: sorted, checked: Array.from(checked) });
     }
+  }
 
-    function applyStep(snap, animate) {
-      sortedNums = snap.sorted || [];
-      numSet = new Set(snap.nums || []);
+  steps.push({ phase: 'done', desc: 'Algorithm complete. Longest consecutive sequence length: ' + longest, lines: [9], current: null, length: null, longest: longest, inSequence: [], winner: [], nums: nums, sorted: sorted, checked: Array.from(checked) });
+  return steps;
+}
 
-      // Update number line
-      const numberLine = document.getElementById('number-line');
-      numberLine.innerHTML = sortedNums.map(num => {
-        let classes = 'number-chip';
-        if (snap.winner && snap.winner.includes(num)) {
-          classes += ' winner';
-        } else if (snap.inSequence && snap.inSequence.includes(num)) {
-          classes += ' in-sequence';
-        } else if (snap.current !== null && snap.current === num) {
-          classes += ' current';
-        } else if (snap.checked && snap.checked.includes(num)) {
-          classes += ' in-set';
-        } else {
-          classes += ' in-set';
-        }
-        return `<div class="${classes}">${num}</div>`;
-      }).join('');
+function applyStep(snap) {
+  sortedNums = snap.sorted || [];
+  numSet = new Set(snap.nums || []);
 
-      // Update hash set
-      const hashSetPanel = document.getElementById('hash-set-panel');
-      hashSetPanel.innerHTML = Array.from(numSet).sort((a, b) => a - b).map(num => {
-        let classes = 'badge';
-        if (snap.current !== null && snap.current === num) {
-          classes += ' current';
-        } else if (snap.checked && snap.checked.includes(num)) {
-          classes += ' checked';
-        }
-        return `<div class="${classes}">${num}</div>`;
-      }).join('');
+  var numberLine = document.getElementById('number-line');
+  numberLine.innerHTML = sortedNums.map(function(num) {
+    var classes = 'number-chip';
+    if (snap.winner && snap.winner.indexOf(num) !== -1) { classes += ' winner'; }
+    else if (snap.inSequence && snap.inSequence.indexOf(num) !== -1) { classes += ' in-sequence'; }
+    else if (snap.current !== null && snap.current === num) { classes += ' current'; }
+    else { classes += ' in-set'; }
+    return '<div class="' + classes + '">' + num + '</div>';
+  }).join('');
 
-      // Update variables
-      document.getElementById('var-current').textContent = snap.current !== null ? snap.current : '—';
-      document.getElementById('var-length').textContent = snap.length !== null ? snap.length : '—';
-      document.getElementById('var-longest').textContent = snap.longest;
-    }
+  var hashSetPanel = document.getElementById('hash-set-panel');
+  hashSetPanel.innerHTML = Array.from(numSet).sort(function(a, b) { return a - b; }).map(function(num) {
+    var classes = 'badge';
+    if (snap.current !== null && snap.current === num) { classes += ' current'; }
+    else if (snap.checked && snap.checked.indexOf(num) !== -1) { classes += ' checked'; }
+    return '<div class="' + classes + '">' + num + '</div>';
+  }).join('');
 
-    function updateStatus(snap, cur, total) {
-      document.getElementById('phase-label').textContent = snap.phase.toUpperCase();
-      document.getElementById('step-desc').textContent = snap.desc;
+  document.getElementById('var-current').textContent = snap.current !== null ? snap.current : '\u2014';
+  document.getElementById('var-length').textContent = snap.length !== null ? snap.length : '\u2014';
+  document.getElementById('var-longest').textContent = snap.longest;
+}
 
-      // Code highlighting
-      setCodeLines(snap.lines || []);
-    }
+function updateStatus(snap, cur, total) {
+  document.getElementById('phase-badge').textContent = snap.phase || '';
+  document.getElementById('step-counter').textContent = 'Step ' + (cur + 1) + ' / ' + total;
+  var desc = document.getElementById('desc');
+  if (desc) desc.textContent = snap.desc || '';
+  setCodeLines(snap.lines || []);
+}
 
-    function buildAndRun() {
-      const input = document.getElementById('nums-input').value;
-      const nums = input.split(',').map(s => {
-        const n = parseInt(s.trim());
-        return isNaN(n) ? 0 : n;
-      }).filter(n => isFinite(n));
+function buildAndRun() {
+  var input = document.getElementById('nums-input').value;
+  var nums = input.split(',').map(function(s) { var n = parseInt(s.trim()); return isNaN(n) ? null : n; }).filter(function(n) { return n !== null && isFinite(n); });
+  var steps = simulate(nums);
+  nav.load(steps);
+}
 
-      currentSteps = simulate(nums);
-      nav.load(currentSteps);
-    }
+function loadPreset() {
+  var sel = document.getElementById('presetSel');
+  if (!sel.value) return;
+  var d = JSON.parse(sel.value);
+  document.getElementById('nums-input').value = d.nums;
+  buildAndRun();
+}
 
-    function loadPreset() {
-      var sel = document.getElementById('presetSel');
-      if (!sel.value) return;
-      var d = JSON.parse(sel.value);
-      document.getElementById('nums-input').value = d.nums;
-      buildAndRun();
-    }
+function randomExample() {
+  var examples = [[100,4,200,1,3,2],[1,2,3,4,5],[9,1,4,7,3,2,8,5,6],[42],[0,3,7,2,5,8,4,6,1],[-5,-4,-3,-2,-1,0,1],[5,15,10,20,25],[10,8,9,11,12],[99,1,50,2,49,3,48]];
+  var idx = Math.floor(Math.random() * examples.length);
+  document.getElementById('nums-input').value = examples[idx].join(', ');
+  document.getElementById('presetSel').value = '';
+  buildAndRun();
+}
 
-    function randomExample() {
-      var presetExamples = [
-        [100, 4, 200, 1, 3, 2],
-        [1, 2, 3, 4, 5],
-        [9, 1, 4, 7, 3, 2, 8, 5, 6],
-        [42],
-        [0, 3, 7, 2, 5, 8, 4, 6, 1],
-        [-5, -4, -3, -2, -1, 0, 1],
-        [5, 15, 10, 20, 25],
-        [1],
-        [10, 8, 9, 11, 12],
-        [99, 1, 50, 2, 49, 3, 48]
-      ];
-      var randomIdx = Math.floor(Math.random() * presetExamples.length);
-      var randomNums = presetExamples[randomIdx].join(', ');
-      document.getElementById('nums-input').value = randomNums;
-      document.getElementById('presetSel').value = '';
-      buildAndRun();
-    }
+window.addEventListener('DOMContentLoaded', function() {
+  nav = VizNav({
+    btnPrev:  document.getElementById('prevBtn'),
+    btnNext:  document.getElementById('stepBtn'),
+    btnPlay:  document.getElementById('playBtn'),
+    speedSel: document.getElementById('speedSel'),
+    render: function(snap, cur, total) { applyStep(snap); updateStatus(snap, cur, total); }
+  });
+  document.getElementById('resetBtn').addEventListener('click', function() { buildAndRun(); });
+  setCodeLines([0]);
+  buildAndRun();
+});
 
-    window.addEventListener('DOMContentLoaded', function() {
-      setCodeLines([0]);
-
-      nav = VizNav({
-        btnPrev: document.getElementById('prevBtn'),
-        btnNext: document.getElementById('stepBtn'),
-        btnPlay: document.getElementById('playBtn'),
-        speedSel: document.getElementById('speedSel'),
-        render: function(snap, cur, total) {
-          applyStep(snap, cur > 0);
-          updateStatus(snap, cur, total);
-        }
-      });
-
-      buildAndRun();
-    });
-
-    // Hide back-link when in iframe
-    if (window.self !== window.top) {
-      var bl = document.querySelector('.back-link');
-      if (bl) bl.style.display = 'none';
-    }
-  </script>
+(function() {
+  var handle = document.getElementById('resize-handle');
+  var panel  = document.getElementById('code-panel');
+  var dragging = false, startX = 0, startW = 0;
+  handle.addEventListener('mousedown', function(e) { dragging = true; startX = e.clientX; startW = panel.offsetWidth; handle.classList.add('dragging'); e.preventDefault(); });
+  document.addEventListener('mousemove', function(e) { if (!dragging) return; var delta = startX - e.clientX; panel.style.width = Math.min(560, Math.max(120, startW + delta)) + 'px'; });
+  document.addEventListener('mouseup', function() { if (!dragging) return; dragging = false; handle.classList.remove('dragging'); });
+})();
+</script>
 </body>
 </html>
