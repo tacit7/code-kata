@@ -1,10 +1,10 @@
 import { useRef, useEffect, useState, useCallback } from "react";
-import Editor, { type OnMount } from "@monaco-editor/react";
+import Editor, { DiffEditor, type OnMount } from "@monaco-editor/react";
 import type { editor } from "monaco-editor";
 import { initVimMode, type VimAdapterInstance } from "monaco-vim";
 import { open } from "@tauri-apps/plugin-shell";
 import { useSettingsStore } from "../stores/settings-store";
-import { resolveMonacoTheme } from "../lib/editor-themes";
+import { resolveMonacoTheme, APP_THEMES } from "../lib/editor-themes";
 import { useTimerStore } from "../stores/timer-store";
 import { useSessionStore } from "../stores/session-store";
 import { useKeyboardShortcuts } from "../hooks/use-keyboard-shortcuts";
@@ -490,7 +490,7 @@ interface KataEditorProps {
 }
 
 export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataEditorProps) {
-  const { theme, vimMode, toggleVimMode, toggleTheme, fontSize, fontFamily, tabSize, hideDescriptionInSession, setSetting, editorAutocomplete, lineNumbersMode, wordWrap, autoClosingBrackets, fontLigatures } = useSettingsStore();
+  const { theme, vimMode, toggleVimMode, fontSize, fontFamily, tabSize, hideDescriptionInSession, setSetting, editorAutocomplete, lineNumbersMode, wordWrap, autoClosingBrackets, fontLigatures } = useSettingsStore();
   const sessionMaxTestRuns = useSessionStore((s) => s.activeSession?.maxTestRuns ?? null);
   // Attempt limits only apply inside a practice session, never in the standalone editor
   const maxTestRuns = isSession ? sessionMaxTestRuns : null;
@@ -504,7 +504,7 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
   const [running, setRunning] = useState(false);
   const [runCount, setRunCount] = useState(0);
   const [kataPassed, setKataPassed] = useState(false);
-  const [showPanel, setShowPanel] = useState<"description" | "solution" | "notes" | "viz" | null>(
+  const [showPanel, setShowPanel] = useState<"description" | "solution" | "notes" | "viz" | "diff" | null>(
     isSession && hideDescriptionInSession ? null : kata.description ? "description" : null
   );
   const [editorReady, setEditorReady] = useState(false);
@@ -833,9 +833,17 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
               <span className="text-xs text-base-content/45">vim mode</span>
               <input type="checkbox" className="toggle toggle-sm toggle-success" checked={vimMode} onChange={toggleVimMode} />
             </div>
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-base-content/45">dark mode</span>
-              <input type="checkbox" className="toggle toggle-sm toggle-success" checked={theme === "dark"} onChange={toggleTheme} />
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-xs text-base-content/45">theme</span>
+              <select
+                value={theme}
+                onChange={(e) => setSetting("theme", e.target.value)}
+                className="select select-bordered select-xs bg-base-100 text-xs"
+              >
+                {APP_THEMES.map((t) => (
+                  <option key={t.id} value={t.id}>{t.label}</option>
+                ))}
+              </select>
             </div>
           </div>
         )}
@@ -922,6 +930,31 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
                     lineNumbers: "off",
                   }}
                 />
+              </div>
+            )}
+            {showPanel === "diff" && kata.solution && (
+              <div className="flex-1 min-h-0 flex flex-col">
+                <div className="px-4 pt-2 pb-1 text-[11px] text-base-content/40 shrink-0">
+                  reference solution (left) vs your code (right)
+                </div>
+                <div className="flex-1 min-h-0">
+                  <DiffEditor
+                    original={kata.solution}
+                    modified={editorRef.current?.getValue() ?? ""}
+                    language={kata.language}
+                    theme={monacoTheme}
+                    options={{
+                      readOnly: true,
+                      renderSideBySide: true,
+                      minimap: { enabled: false },
+                      fontSize,
+                      fontFamily,
+                      automaticLayout: true,
+                      scrollBeyondLastLine: false,
+                      lineNumbers: "off",
+                    }}
+                  />
+                </div>
               </div>
             )}
             {showPanel === "notes" && (
@@ -1014,6 +1047,15 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
                 <span className="text-xs text-base-content/45">
                   {running ? "running..." : "results"}
                 </span>
+                {!running && results && results.length > 0 && results.every((r) => r.passed) && kata.solution && (
+                  <button
+                    onClick={() => setShowPanel((v) => (v === "diff" ? null : "diff"))}
+                    className="ml-auto btn btn-ghost btn-xs h-5 min-h-0 px-1.5 text-[10px] text-success/70 hover:text-success"
+                    title="Compare your code with the reference solution"
+                  >
+                    ⇄ compare solution
+                  </button>
+                )}
               </div>
               <div className="flex-1 min-h-0 overflow-y-auto">
                 {running ? (
