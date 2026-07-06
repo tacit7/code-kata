@@ -23,6 +23,50 @@ cd src-tauri && cargo check       # Type check Rust without building
 cd src-tauri && cargo clippy      # Lint Rust code
 ```
 
+## Branch Model (read before changing anything)
+
+This repo ships **per-language app variants as long-lived branches**. There is
+no single releasable trunk; each variant branch is its own app.
+
+| Branch | What it is | Dev port |
+|--------|-----------|----------|
+| `app-core` | Shared base: styling, chrome, editor, REPL panel, generic features. Not a runnable product on its own terms — it exists to be merged outward. | 1420 |
+| `main` | **JS + Python** variant. Python runs via Pyodide in a Web Worker (`public/pyodide/`). | 1420 |
+| `js-ruby-version` | **JS + Ruby** variant. Ruby runs via bundled ruby.wasm (`@ruby/wasm-wasi`) in a Web Worker; Python is fully removed. | 1440 |
+
+### Flow rules
+
+- **Shared work** (UI, styling, settings, editor behavior, REPL panel, viz
+  pages, anything language-agnostic): commit on `app-core`, then merge it into
+  EVERY variant: `git merge app-core` on `main` and on `js-ruby-version`.
+- **Language work** (runners, workers, kata content, seed data, language
+  settings): commit directly on the variant that owns it.
+- Flow is strictly one-way: `app-core` → variants. **Never** merge a variant
+  into `app-core` or into another variant.
+- After merging core into a variant, build and test THAT variant before
+  moving on; on `js-ruby-version` also run `pnpm verify-katas` for changes
+  touching the Ruby runner or kata content.
+
+### Variant-owned files (expect merge conflicts here, resolve per variant)
+
+- `src/stores/settings-store.ts` — `KataLanguage` union and persisted-language
+  validation differ per variant.
+- `src/routes/settings.tsx` / `src/routes/kata-form.tsx` — language options.
+- `src/lib/repl-backends.ts` — each variant registers its own REPL backend
+  (python on `main`, ruby on `js-ruby-version`); `app-core` ships a stub and
+  must never change it again.
+- `src/lib/database.ts` seed imports and the `src/lib/*kata*.ts` content files.
+- `vite.config.ts` / `src-tauri/tauri.conf.json` — dev port per variant.
+
+### Gotchas
+
+- All variants share one app identifier, so they share
+  `~/Library/Application Support/com.code-kata.app/kata.db`. Switching which
+  variant you run requires Settings → Practice → "Reload Problem Statements"
+  (reseed) and re-selecting the language.
+- Worktrees for cross-branch work live in `.claude/worktrees/` (`app-core`,
+  `main-variant`).
+
 ## Architecture
 
 ### Two-Layer Structure
