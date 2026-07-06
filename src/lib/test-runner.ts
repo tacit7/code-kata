@@ -53,3 +53,10 @@ export async function runTests(
   }
   return runJsTests(userCode, testCode);
 }
+
+// No-op on app-core — language runners don't expose a warm-up entry point
+// that is reachable without touching their files. Variant branches override
+// this to eagerly spin up their language worker (e.g. Pyodide on main).
+export function prewarmRunner(_language: string): void {
+  // intentional no-op
+}

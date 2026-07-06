@@ -8,7 +8,7 @@ import { resolveMonacoTheme, APP_THEMES } from "../lib/editor-themes";
 import { useTimerStore } from "../stores/timer-store";
 import { useSessionStore } from "../stores/session-store";
 import { useKeyboardShortcuts } from "../hooks/use-keyboard-shortcuts";
-import { runTests } from "../lib/test-runner";
+import { runTests, prewarmRunner } from "../lib/test-runner";
 import { saveUserCode, loadUserCode, deleteUserCode, saveKataNotes, loadKataNotes } from "../lib/database";
 import { TestOutput } from "./test-output";
 import { ReplPanel, type ReplSeed } from "./repl-panel";
@@ -539,6 +539,10 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
     suggestOnTriggerCharacters: editorAutocomplete,
     wordBasedSuggestions: editorAutocomplete ? ("currentDocument" as const) : ("off" as const),
   };
+
+  useEffect(() => {
+    prewarmRunner(kata.language);
+  }, [kata.id, kata.language]);
 
   // Load saved user code and notes on mount; clean up autosave timers on unmount
   useEffect(() => {
