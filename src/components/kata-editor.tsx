@@ -10,6 +10,7 @@ import { useKeyboardShortcuts } from "../hooks/use-keyboard-shortcuts";
 import { runTests } from "../lib/test-runner";
 import { saveUserCode, loadUserCode, deleteUserCode, saveKataNotes, loadKataNotes } from "../lib/database";
 import { TestOutput } from "./test-output";
+import { ReplPanel } from "./repl-panel";
 import { toast } from "../stores/toast-store";
 import type { Kata, TestResult } from "../types/editor";
 
@@ -509,6 +510,7 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
   const dragging = useRef(false);
   const [saved, setSaved] = useState(true);
   const [showConfig, setShowConfig] = useState(false);
+  const [showRepl, setShowRepl] = useState(false);
   const [savedCode, setSavedCode] = useState<string | null>(null);
   const [codeLoaded, setCodeLoaded] = useState(false);
   const autosaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -825,6 +827,13 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
           </span>
         )}
         <button
+          onClick={() => setShowRepl((v) => !v)}
+          title="Toggle REPL"
+          className={`btn btn-xs ${showRepl ? "btn-info" : "btn-ghost text-base-content/40"}`}
+        >
+          &gt;_
+        </button>
+        <button
           onClick={toggleVimMode}
           className={`btn btn-xs ${vimMode ? "btn-success" : "btn-ghost text-base-content/40"}`}
         >
@@ -935,7 +944,7 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
         {/* Editor + results column */}
         <div className="flex flex-col flex-1 min-w-0">
           {/* Monaco editor */}
-          <div className={`${results ? "flex-[2]" : "flex-1"} min-h-0`}>
+          <div className={`${results || showRepl ? "flex-[2]" : "flex-1"} min-h-0`}>
             <Editor
               key={kata.id}
               defaultValue={initialCode}
@@ -962,6 +971,26 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
               }}
             />
           </div>
+
+          {/* REPL pane — keyed by kata so switching katas drops the session */}
+          {showRepl && (
+            <div className="flex-1 min-h-0 flex flex-col border-t border-base-300/60">
+              <div className="flex items-center px-3 py-1 border-b border-base-300/60 bg-base-200 shrink-0">
+                <button
+                  onClick={() => setShowRepl(false)}
+                  className="text-xs text-base-content/30 hover:text-base-content/60 transition-colors mr-2"
+                >
+                  ✕
+                </button>
+                <span className="text-xs text-base-content/45">repl · {kata.language}</span>
+              </div>
+              <ReplPanel
+                key={kata.id}
+                language={kata.language}
+                getEditorCode={() => editorRef.current?.getValue() ?? null}
+              />
+            </div>
+          )}
 
           {/* Closable results pane */}
           {(results || running) && (
