@@ -289,3 +289,53 @@ html, body, #root {
   --color-error: #bf616a;
   --color-error-content: #eceff4;
 }
+
+@plugin "daisyui/theme" {
+  name: "github-light";
+  color-scheme: light;
+  --color-base-100: #ffffff;
+  --color-base-200: #f6f8fa;
+  --color-base-300: #eaeef2;
+  --color-base-content: #1f2328;
+  --color-primary: #0969da;
+  --color-primary-content: #ffffff;
+  --color-secondary: #57606a;
+  --color-secondary-content: #ffffff;
+  --color-accent: #8250df;
+  --color-accent-content: #ffffff;
+  --color-neutral: #d0d7de;
+  --color-neutral-content: #1f2328;
+  --color-info: #0969da;
+  --color-info-content: #ffffff;
+  --color-success: #1a7f37;
+  --color-success-content: #ffffff;
+  --color-warning: #9a6700;
+  --color-warning-content: #ffffff;
+  --color-error: #cf222e;
+  --color-error-content: #ffffff;
+}
+
+@plugin "daisyui/theme" {
+  name: "solarized-light";
+  color-scheme: light;
+  --color-base-100: #fdf6e3;
+  --color-base-200: #eee8d5;
+  --color-base-300: #e0dac7;
+  --color-base-content: #586e75;
+  --color-primary: #268bd2;
+  --color-primary-content: #fdf6e3;
+  --color-secondary: #93a1a1;
+  --color-secondary-content: #002b36;
+  --color-accent: #d33682;
+  --color-accent-content: #fdf6e3;
+  --color-neutral: #eee8d5;
+  --color-neutral-content: #586e75;
+  --color-info: #2aa198;
+  --color-info-content: #fdf6e3;
+  --color-success: #859900;
+  --color-success-content: #fdf6e3;
+  --color-warning: #b58900;
+  --color-warning-content: #fdf6e3;
+  --color-error: #dc322f;
+  --color-error-content: #fdf6e3;
+}
