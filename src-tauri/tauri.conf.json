@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "Code Kata",
+        "title": "Code Kata Ruby",
         "width": 1280,
         "height": 800,
         "resizable": true,
