@@ -7,14 +7,22 @@ interface Entry {
   info?: string;
 }
 
+export interface ReplSeed {
+  /** Expression to pre-fill (not auto-run) after loading the editor code. */
+  expression: string;
+  /** Changes on every send so repeated clicks re-trigger the effect. */
+  nonce: number;
+}
+
 interface ReplPanelProps {
   language: string;
   getEditorCode: () => string | null;
+  seed?: ReplSeed | null;
 }
 
 // Per-kata REPL: the parent keys this component by kata id, so switching
 // katas unmounts it — the unmount effect tears the session down.
-export function ReplPanel({ language, getEditorCode }: ReplPanelProps) {
+export function ReplPanel({ language, getEditorCode, seed }: ReplPanelProps) {
   const [entries, setEntries] = useState<Entry[]>([]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
@@ -24,6 +32,19 @@ export function ReplPanel({ language, getEditorCode }: ReplPanelProps) {
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => resetRepl, []);
+
+  // Seeded from a failing test: load the editor code into the session, then
+  // pre-fill (don't run) the extracted call so the user can tweak args.
+  useEffect(() => {
+    if (!seed) return;
+    void (async () => {
+      const code = getEditorCode();
+      if (code) await submit(code, "(editor code loaded)");
+      setInput(seed.expression);
+      inputRef.current?.focus();
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [seed?.nonce]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
