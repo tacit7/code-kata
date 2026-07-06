@@ -7,19 +7,22 @@ import githubDark from "./themes/github-dark.json";
 import nightOwl from "./themes/night-owl.json";
 import nord from "./themes/nord.json";
 
-// "auto" follows the app theme (vs-dark / vs); the rest are fixed looks.
-export const EDITOR_THEMES = [
-  { id: "auto", label: "Auto (match app)" },
-  { id: "dracula", label: "Dracula" },
-  { id: "monokai", label: "Monokai" },
-  { id: "github-dark", label: "GitHub Dark" },
-  { id: "night-owl", label: "Night Owl" },
-  { id: "nord", label: "Nord" },
+// One theme drives BOTH the app chrome (daisyUI data-theme, defined in
+// index.css with base-100 matching each Monaco editor.background) and the
+// Monaco editor. "dark"/"light" are the built-in app themes.
+export const APP_THEMES = [
+  { id: "dark", label: "Dark", monaco: "vs-dark" },
+  { id: "light", label: "Light", monaco: "vs" },
+  { id: "dracula", label: "Dracula", monaco: "dracula" },
+  { id: "monokai", label: "Monokai", monaco: "monokai" },
+  { id: "github-dark", label: "GitHub Dark", monaco: "github-dark" },
+  { id: "night-owl", label: "Night Owl", monaco: "night-owl" },
+  { id: "nord", label: "Nord", monaco: "nord" },
 ] as const;
 
-export type EditorThemeId = (typeof EDITOR_THEMES)[number]["id"];
+export type AppThemeId = (typeof APP_THEMES)[number]["id"];
 
-const THEME_DATA: Record<Exclude<EditorThemeId, "auto">, unknown> = {
+const THEME_DATA: Record<string, unknown> = {
   dracula,
   monokai,
   "github-dark": githubDark,
@@ -27,8 +30,8 @@ const THEME_DATA: Record<Exclude<EditorThemeId, "auto">, unknown> = {
   nord,
 };
 
-export function isEditorThemeId(v: unknown): v is EditorThemeId {
-  return typeof v === "string" && EDITOR_THEMES.some((t) => t.id === v);
+export function isAppThemeId(v: unknown): v is AppThemeId {
+  return typeof v === "string" && APP_THEMES.some((t) => t.id === v);
 }
 
 export function registerEditorThemes(monaco: typeof monacoNs): void {
@@ -37,7 +40,6 @@ export function registerEditorThemes(monaco: typeof monacoNs): void {
   }
 }
 
-export function resolveMonacoTheme(editorTheme: EditorThemeId, appTheme: "dark" | "light"): string {
-  if (editorTheme === "auto") return appTheme === "dark" ? "vs-dark" : "vs";
-  return editorTheme;
+export function resolveMonacoTheme(theme: AppThemeId): string {
+  return APP_THEMES.find((t) => t.id === theme)?.monaco ?? "vs-dark";
 }

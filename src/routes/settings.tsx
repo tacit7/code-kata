@@ -3,7 +3,7 @@ import { useNavigate } from "react-router";
 import { useSettingsStore, DEFAULT_SHORTCUTS } from "../stores/settings-store";
 import type { ShortcutAction } from "../stores/settings-store";
 import { reseedKatas } from "../lib/database";
-import { EDITOR_THEMES } from "../lib/editor-themes";
+import { APP_THEMES } from "../lib/editor-themes";
 import { useKataStore } from "../stores/kata-store";
 
 type Tab = "editor" | "practice" | "shortcuts";
@@ -67,7 +67,6 @@ function EditorTab() {
   const tabSize = useSettingsStore((s) => s.tabSize);
   const language = useSettingsStore((s) => s.language);
   const setSetting = useSettingsStore((s) => s.setSetting);
-  const editorTheme = useSettingsStore((s) => s.editorTheme);
   const editorAutocomplete = useSettingsStore((s) => s.editorAutocomplete);
   const lineNumbersMode = useSettingsStore((s) => s.lineNumbersMode);
   const wordWrap = useSettingsStore((s) => s.wordWrap);
@@ -96,30 +95,12 @@ function EditorTab() {
 
       <div>
         <SectionLabel>Theme</SectionLabel>
-        <div className="join">
-          <button
-            onClick={() => setSetting("theme", "dark")}
-            className={`btn btn-sm join-item ${theme === "dark" ? "btn-primary" : "btn-ghost"}`}
-          >
-            Dark
-          </button>
-          <button
-            onClick={() => setSetting("theme", "light")}
-            className={`btn btn-sm join-item ${theme === "light" ? "btn-primary" : "btn-ghost"}`}
-          >
-            Light
-          </button>
-        </div>
-      </div>
-
-      <div>
-        <SectionLabel>Editor Theme</SectionLabel>
         <select
-          value={editorTheme}
-          onChange={(e) => setSetting("editorTheme", e.target.value)}
+          value={theme}
+          onChange={(e) => setSetting("theme", e.target.value)}
           className="select select-bordered select-sm bg-base-100"
         >
-          {EDITOR_THEMES.map((t) => (
+          {APP_THEMES.map((t) => (
             <option key={t.id} value={t.id}>{t.label}</option>
           ))}
         </select>

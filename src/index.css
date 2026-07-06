@@ -162,3 +162,130 @@ html, body, #root {
 .hm-2 { background-color: oklch(46% 0.08 165); }
 .hm-3 { background-color: oklch(62% 0.11 165); }
 .hm-4 { background-color: oklch(78% 0.14 165); }
+
+/* ── Unified app+editor themes: base-100 matches each Monaco theme's
+     editor.background exactly so chrome and editor blend seamlessly ── */
+@plugin "daisyui/theme" {
+  name: "dracula";
+  color-scheme: dark;
+  --color-base-100: #282a36;
+  --color-base-200: #21222c;
+  --color-base-300: #191a21;
+  --color-base-content: #f8f8f2;
+  --color-primary: #bd93f9;
+  --color-primary-content: #1e1f29;
+  --color-secondary: #6272a4;
+  --color-secondary-content: #f8f8f2;
+  --color-accent: #ff79c6;
+  --color-accent-content: #1e1f29;
+  --color-neutral: #44475a;
+  --color-neutral-content: #f8f8f2;
+  --color-info: #8be9fd;
+  --color-info-content: #1e1f29;
+  --color-success: #50fa7b;
+  --color-success-content: #1e1f29;
+  --color-warning: #f1fa8c;
+  --color-warning-content: #1e1f29;
+  --color-error: #ff5555;
+  --color-error-content: #f8f8f2;
+}
+
+@plugin "daisyui/theme" {
+  name: "monokai";
+  color-scheme: dark;
+  --color-base-100: #272822;
+  --color-base-200: #1e1f1a;
+  --color-base-300: #171812;
+  --color-base-content: #f8f8f2;
+  --color-primary: #66d9ef;
+  --color-primary-content: #1b1c17;
+  --color-secondary: #75715e;
+  --color-secondary-content: #f8f8f2;
+  --color-accent: #f92672;
+  --color-accent-content: #f8f8f2;
+  --color-neutral: #3e3d32;
+  --color-neutral-content: #f8f8f2;
+  --color-info: #66d9ef;
+  --color-info-content: #1b1c17;
+  --color-success: #a6e22e;
+  --color-success-content: #1b1c17;
+  --color-warning: #fd971f;
+  --color-warning-content: #1b1c17;
+  --color-error: #f92672;
+  --color-error-content: #f8f8f2;
+}
+
+@plugin "daisyui/theme" {
+  name: "github-dark";
+  color-scheme: dark;
+  --color-base-100: #24292e;
+  --color-base-200: #1d2126;
+  --color-base-300: #16191d;
+  --color-base-content: #e6edf3;
+  --color-primary: #58a6ff;
+  --color-primary-content: #0d1117;
+  --color-secondary: #8b949e;
+  --color-secondary-content: #0d1117;
+  --color-accent: #d2a8ff;
+  --color-accent-content: #0d1117;
+  --color-neutral: #30363d;
+  --color-neutral-content: #e6edf3;
+  --color-info: #58a6ff;
+  --color-info-content: #0d1117;
+  --color-success: #3fb950;
+  --color-success-content: #0d1117;
+  --color-warning: #d29922;
+  --color-warning-content: #0d1117;
+  --color-error: #f85149;
+  --color-error-content: #ffffff;
+}
+
+@plugin "daisyui/theme" {
+  name: "night-owl";
+  color-scheme: dark;
+  --color-base-100: #011627;
+  --color-base-200: #01111d;
+  --color-base-300: #000c14;
+  --color-base-content: #d6deeb;
+  --color-primary: #82aaff;
+  --color-primary-content: #011627;
+  --color-secondary: #5f7e97;
+  --color-secondary-content: #011627;
+  --color-accent: #c792ea;
+  --color-accent-content: #011627;
+  --color-neutral: #0b2942;
+  --color-neutral-content: #d6deeb;
+  --color-info: #7fdbca;
+  --color-info-content: #011627;
+  --color-success: #addb67;
+  --color-success-content: #011627;
+  --color-warning: #ecc48d;
+  --color-warning-content: #011627;
+  --color-error: #ef5350;
+  --color-error-content: #ffffff;
+}
+
+@plugin "daisyui/theme" {
+  name: "nord";
+  color-scheme: dark;
+  --color-base-100: #2e3440;
+  --color-base-200: #272c36;
+  --color-base-300: #21252e;
+  --color-base-content: #d8dee9;
+  --color-primary: #88c0d0;
+  --color-primary-content: #2e3440;
+  --color-secondary: #81a1c1;
+  --color-secondary-content: #2e3440;
+  --color-accent: #b48ead;
+  --color-accent-content: #2e3440;
+  --color-neutral: #3b4252;
+  --color-neutral-content: #d8dee9;
+  --color-info: #5e81ac;
+  --color-info-content: #eceff4;
+  --color-success: #a3be8c;
+  --color-success-content: #2e3440;
+  --color-warning: #ebcb8b;
+  --color-warning-content: #2e3440;
+  --color-error: #bf616a;
+  --color-error-content: #eceff4;
+}

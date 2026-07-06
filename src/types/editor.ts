@@ -1,4 +1,6 @@
-export type AppTheme = "dark" | "light";
+import type { AppThemeId } from "../lib/editor-themes";
+
+export type AppTheme = AppThemeId;
 
 export interface Kata {
   id: number;

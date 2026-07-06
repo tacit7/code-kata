@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { isEditorThemeId, type EditorThemeId } from "../lib/editor-themes";
+import { isAppThemeId } from "../lib/editor-themes";
 import type { AppTheme } from "../types/editor";
 import { getDb } from "../lib/database";
 
@@ -52,7 +52,6 @@ const DEFAULTS = {
   fontSize: 14,
   fontFamily: "JetBrains Mono, monospace",
   tabSize: 2,
-  editorTheme: "auto" as EditorThemeId,
   editorAutocomplete: true,
   lineNumbersMode: "on" as LineNumbersMode,
   wordWrap: false,
@@ -77,7 +76,6 @@ interface SettingsState {
   fontSize: number;
   fontFamily: string;
   tabSize: number;
-  editorTheme: EditorThemeId;
   editorAutocomplete: boolean;
   lineNumbersMode: LineNumbersMode;
   wordWrap: boolean;
@@ -155,12 +153,11 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
 
     // Merge with defaults: DB values override defaults
     set({
-      theme: (patch.theme as AppTheme) ?? DEFAULTS.theme,
+      theme: isAppThemeId(patch.theme) ? patch.theme : DEFAULTS.theme,
       vimMode: (patch.vimMode as boolean) ?? DEFAULTS.vimMode,
       fontSize: (patch.fontSize as number) ?? DEFAULTS.fontSize,
       fontFamily: (patch.fontFamily as string) ?? DEFAULTS.fontFamily,
       tabSize: (patch.tabSize as number) ?? DEFAULTS.tabSize,
-      editorTheme: isEditorThemeId(patch.editorTheme) ? patch.editorTheme : DEFAULTS.editorTheme,
       editorAutocomplete: (patch.editorAutocomplete as boolean) ?? DEFAULTS.editorAutocomplete,
       lineNumbersMode:
         patch.lineNumbersMode === "off" || patch.lineNumbersMode === "relative" || patch.lineNumbersMode === "on"
