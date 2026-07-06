@@ -2,7 +2,8 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router";
 import { useKataStore } from "../stores/kata-store";
 import { useSettingsStore, type PracticeConfig } from "../stores/settings-store";
-import { useSessionStore, fetchKataStats, medianTime, srWeight } from "../stores/session-store";
+import { useSessionStore, fetchKataStats, fetchAttemptHistory } from "../stores/session-store";
+import { computeSrState, formatDue, type SrState } from "../lib/sr";
 import { useTimerStore } from "../stores/timer-store";
 import type { KataStats } from "../stores/session-store";
 import type { Kata } from "../types/editor";
@@ -20,6 +21,7 @@ interface QueueItem {
   status: KataStatus;
   meta: string;
   streak: number;
+  dueAt: number | null;
 }
 
 const MODES: { id: Mode; title: string; desc: string }[] = [
@@ -59,13 +61,13 @@ const DIFFICULTY_OPTIONS: { id: DifficultyFilter; label: string }[] = [
   { id: "hard", label: "Hard" },
 ];
 
-function computeStatus(score: number): KataStatus {
-  if (score >= 10) return "new";
-  if (score >= 6) return "failed";
-  if (score >= 2) return "slow";
-  if (score > 0.5) return "due";
+function srStatusToKataStatus(sr: SrState): KataStatus {
+  if (sr.status === "new") return "new";
+  if (sr.status === "failed") return "failed";
+  if (sr.status === "due") return "due";
   return "ok";
 }
+
 
 function buildMeta(kata: Kata, stats: KataStats | undefined, status: KataStatus): string {
   if (!stats || stats.attempt_count === 0) return `${kata.category} · never attempted`;
@@ -175,15 +177,14 @@ export function PracticeQueuePage() {
   const setMaxTestRuns = (n: number | null) => updateConfig({ maxTestRuns: n });
 
   const [statsMap, setStatsMap] = useState<Map<number, KataStats>>(new Map());
-  const [medianMs, setMedianMs] = useState(Infinity);
+  const [historyMap, setHistoryMap] = useState<Map<number, { passed: number; started_at: string }[]>>(new Map());
+
   const [launching, setLaunching] = useState(false);
 
   useEffect(() => {
     if (katas.length === 0) return;
-    fetchKataStats(katas.map((k) => k.id)).then((map) => {
-      setStatsMap(map);
-      setMedianMs(medianTime(map));
-    });
+    fetchKataStats(katas.map((k) => k.id)).then(setStatsMap);
+    fetchAttemptHistory(katas.map((k) => k.id)).then(setHistoryMap);
   }, [katas]);
 
   const categories = useMemo(
@@ -227,15 +228,17 @@ export function PracticeQueuePage() {
 
     const items: QueueItem[] = pool.map((kata) => {
       const stats = statsMap.get(kata.id);
-      const score = srWeight(stats, medianMs);
-      const status = computeStatus(score);
+      const sr = computeSrState(historyMap.get(kata.id));
+      const status = srStatusToKataStatus(sr);
+      const dueLabel = sr.status === "new" || sr.status === "failed" ? "" : ` · ${formatDue(sr)}`;
       return {
         kata,
         stats,
-        score,
+        score: sr.score,
         status,
-        meta: buildMeta(kata, stats, status),
+        meta: buildMeta(kata, stats, status) + dueLabel,
         streak: streaks[kata.id] ?? 0,
+        dueAt: sr.dueAt,
       };
     });
 
@@ -252,14 +255,13 @@ export function PracticeQueuePage() {
     }
 
     return items;
-  }, [katas, statsMap, medianMs, mode, categoryFilter, difficultyFilter, selectedLevels, dailyKataIds, streaks, bestTimes, dailyRandomize]);
+  }, [katas, statsMap, historyMap, mode, categoryFilter, difficultyFilter, selectedLevels, dailyKataIds, streaks, bestTimes, dailyRandomize]);
 
   const modeCounts = useMemo(() => {
     const dailySet = new Set(dailyKataIds);
     const allItems = katas.map((k) => {
       const stats = statsMap.get(k.id);
-      const score = srWeight(stats, medianMs);
-      return { id: k.id, status: computeStatus(score), stats, inDaily: dailySet.has(k.id), category: k.category };
+      return { id: k.id, status: srStatusToKataStatus(computeSrState(historyMap.get(k.id))), stats, inDaily: dailySet.has(k.id), category: k.category };
     });
     const levelPool = selectedLevels.size > 0
       ? allItems.filter((i) => selectedLevels.has(CATEGORY_LEVEL[i.category] ?? -1))
@@ -271,7 +273,7 @@ export function PracticeQueuePage() {
       speed: allItems.filter((i) => (i.stats?.pass_count ?? 0) > 0).length,
       level: levelPool.length,
     };
-  }, [katas, statsMap, medianMs, dailyKataIds, selectedLevels]);
+  }, [katas, statsMap, historyMap, dailyKataIds, selectedLevels]);
 
   const dueNow = queueItems.filter((i) => i.status !== "ok");
   const doingWell = queueItems.filter((i) => i.status === "ok");
@@ -534,7 +536,11 @@ export function PracticeQueuePage() {
             {mode === "level" && selectedLevels.size > 0
               ? `Lv.${[...selectedLevels].sort((a, b) => a - b).join(", ")} · `
               : `${MODE_SUBTITLE[mode]} · `}
-            {queueItems.length} katas
+            {mode === "sr"
+              ? `${queueItems.filter((i) => i.status !== "ok").length} due now · ${
+                  queueItems.filter((i) => i.status === "ok" && i.dueAt !== null && i.dueAt <= Date.now() + 7 * 86_400_000).length
+                } due this week · ${queueItems.length} katas`
+              : `${queueItems.length} katas`}
           </span>
         </div>
 
