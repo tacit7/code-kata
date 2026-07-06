@@ -14,10 +14,24 @@ import {
 import type { SeedKata } from "../src/types/editor";
 import { sampleKatas } from "../src/lib/sample-katas";
 import { sampleKatasRuby } from "../src/lib/sample-katas-ruby";
-// Task 8 adds: the blind75/neetcode imports — copy the
-// exact import block from src/lib/database.ts lines 4-27 as those files are
-// ported (paths become ../src/lib/...). At Task 6 time only sampleKatas
-// exists, so total will be 0 until the temporary kata in Step 3.
+import { blind75Part1 } from "../src/lib/blind75-additions-part1";
+import { blind75Part2 } from "../src/lib/blind75-additions-part2";
+import { blind75Part3 } from "../src/lib/blind75-additions-part3";
+import { blind75Part4 } from "../src/lib/blind75-additions-part4";
+import { blind75Part5 } from "../src/lib/blind75-additions-part5";
+import { blind75Part6 } from "../src/lib/blind75-additions-part6";
+import { blind75Part7 } from "../src/lib/blind75-additions-part7";
+import { blind75Part8 } from "../src/lib/blind75-additions-part8";
+import { neetcodeStack } from "../src/lib/neetcode-stack";
+import { neetcodeBinarySearch } from "../src/lib/neetcode-binary-search";
+import { neetcodeTrees } from "../src/lib/neetcode-trees";
+import { neetcodeBacktracking } from "../src/lib/neetcode-backtracking";
+import { neetcodeHeap } from "../src/lib/neetcode-heap";
+import { neetcodeGraphs } from "../src/lib/neetcode-graphs";
+import { neetcodeGreedy } from "../src/lib/neetcode-greedy";
+import { neetcodeAdvancedGraphs } from "../src/lib/neetcode-advanced-graphs";
+import { neetcode2dDp } from "../src/lib/neetcode-2d-dp";
+import { neetcodeMathBit } from "../src/lib/neetcode-math-bit";
 
 const require = createRequire(import.meta.url);
 const wasmPath = require.resolve("@ruby/3.3-wasm-wasi/dist/ruby+stdlib.wasm");
@@ -33,8 +47,12 @@ async function main() {
   const allKatas: SeedKata[] = [
     ...sampleKatas,
     ...sampleKatasRuby,
-    // Task 8 appends: the blind75/neetcode spreads,
-    // same order as database.ts seedKatas().
+    ...blind75Part1, ...blind75Part2, ...blind75Part3, ...blind75Part4,
+    ...blind75Part5, ...blind75Part6, ...blind75Part7, ...blind75Part8,
+    ...neetcodeStack, ...neetcodeBinarySearch, ...neetcodeTrees,
+    ...neetcodeBacktracking, ...neetcodeHeap, ...neetcodeGraphs,
+    ...neetcodeGreedy, ...neetcodeAdvancedGraphs, ...neetcode2dDp,
+    ...neetcodeMathBit,
   ];
   const rubyKatas = allKatas.filter((k) => k.language === "ruby");
 
