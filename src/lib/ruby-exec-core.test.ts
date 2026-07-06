@@ -67,3 +67,22 @@ describe("synthetic results", () => {
     expect(runnerErrorResult()[0]).toMatchObject({ name: "runner_error", passed: false });
   });
 });
+
+describe("REPL script builders", () => {
+  it("rubyStringLiteral escapes interpolation and quotes", async () => {
+    const { rubyStringLiteral } = await import("./ruby-exec-core");
+    expect(rubyStringLiteral('x = "#{5}"')).toBe('"x = \\"\\#{5}\\""');
+  });
+  it("buildReplEvalScript embeds the code and caps", async () => {
+    const { buildReplEvalScript } = await import("./ruby-exec-core");
+    const script = buildReplEvalScript("x = 5");
+    expect(script).toContain('$__kata_repl_binding.eval("x = 5")');
+    expect(script).toContain("__repl_val.inspect[0, 8192]");
+  });
+  it("parseReplResult maps ok, error, and garbage", async () => {
+    const { parseReplResult } = await import("./ruby-exec-core");
+    expect(parseReplResult('{"ok":true,"value":"10","output":""}')).toEqual({ ok: true, value: "10", error: undefined, output: undefined });
+    expect(parseReplResult('{"ok":false,"error":"NameError: x","output":"hi\\n"}')).toMatchObject({ ok: false, error: "NameError: x", output: "hi" });
+    expect(parseReplResult("garbage").ok).toBe(false);
+  });
+});

@@ -141,3 +141,61 @@ export function loadErrorResult(message: string): TestResult[] {
 export function runnerErrorResult(): TestResult[] {
   return [{ name: "runner_error", passed: false, error: "No test_* methods in test code" }];
 }
+
+// ── REPL support ──────────────────────────────────────────────────────────
+// A REPL session is one persistent VM holding a single Binding, so local
+// variables survive across inputs (separate top-level evals would not share
+// locals). Inputs are embedded as Ruby string literals and evaluated inside
+// that binding.
+
+export interface ReplResult {
+  ok: boolean;
+  value?: string;
+  error?: string;
+  output?: string;
+}
+
+// Escapes arbitrary code as a Ruby double-quoted string literal. JSON string
+// escaping is valid in Ruby double-quotes except `#{` interpolation, so `#`
+// is additionally escaped.
+export function rubyStringLiteral(code: string): string {
+  return JSON.stringify(code).replace(/#/g, "\\#");
+}
+
+export function buildReplSetupScript(): string {
+  return `${buildPrelude()}\n$__kata_repl_binding = binding\nnil`;
+}
+
+export function buildReplEvalScript(code: string): string {
+  return `
+__repl_buf = StringIO.new
+__repl_orig = $stdout
+$stdout = __repl_buf
+begin
+  __repl_val = $__kata_repl_binding.eval(${rubyStringLiteral(code)})
+  JSON.generate({ "ok" => true, "value" => __repl_val.inspect[0, ${UI_TRUNCATE_BYTES}], "output" => __repl_buf.string[0, ${OUTPUT_CAP_BYTES}] })
+rescue Exception => __repl_e
+  JSON.generate({ "ok" => false, "error" => "#{__repl_e.class}: #{__repl_e.message}"[0, ${UI_TRUNCATE_BYTES}], "output" => __repl_buf.string[0, ${OUTPUT_CAP_BYTES}] })
+ensure
+  $stdout = __repl_orig
+end
+`;
+}
+
+export function parseReplResult(json: string): ReplResult {
+  try {
+    const raw = JSON.parse(json) as ReplResult;
+    return {
+      ok: !!raw.ok,
+      value: raw.value,
+      error: raw.error,
+      output: raw.output && raw.output.trim()
+        ? (raw.output.trim().length > UI_TRUNCATE_BYTES
+            ? raw.output.trim().slice(0, UI_TRUNCATE_BYTES) + "…[truncated]"
+            : raw.output.trim())
+        : undefined,
+    };
+  } catch {
+    return { ok: false, error: `REPL returned unparseable output: ${json.slice(0, 200)}` };
+  }
+}

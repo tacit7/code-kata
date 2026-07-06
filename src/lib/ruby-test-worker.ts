@@ -4,8 +4,11 @@ import wasmUrl from "@ruby/3.3-wasm-wasi/dist/ruby+stdlib.wasm?url";
 import {
   buildPrelude,
   buildRunnerScript,
+  buildReplSetupScript,
+  buildReplEvalScript,
   extractTestNames,
   parseRunResults,
+  parseReplResult,
   loadErrorResult,
   runnerErrorResult,
 } from "./ruby-exec-core";
@@ -20,7 +23,44 @@ modulePromise.then(
   (err) => self.postMessage({ type: "init_error", error: `ruby.wasm compile failed: ${String(err)} (url: ${wasmUrl})` }),
 );
 
-self.onmessage = async (e: MessageEvent<{ userCode: string; testCode: string }>) => {
+// REPL: one persistent VM per session so locals/methods survive across
+// inputs (test runs keep their fresh-VM isolation — separate code path).
+type ReplVm = { eval: (code: string) => { toString(): string } };
+let replVm: ReplVm | null = null;
+
+async function handleReplMessage(msg: { type: string; code?: string }) {
+  if (msg.type === "repl_reset") {
+    replVm = null;
+    return;
+  }
+  try {
+    if (!replVm) {
+      const module = await modulePromise;
+      const { vm } = await DefaultRubyVM(module);
+      vm.eval(buildReplSetupScript());
+      replVm = vm;
+    }
+    const json = replVm.eval(buildReplEvalScript(msg.code ?? "")).toString();
+    self.postMessage({ type: "repl_result", ...parseReplResult(json) });
+  } catch (err) {
+    // VM-level crash (uncontained exit, boot failure): drop the session so
+    // the next input starts fresh.
+    replVm = null;
+    const message = err instanceof Error ? err.message : String(err);
+    self.postMessage({ type: "repl_result", ok: false, error: `REPL session crashed: ${message}` });
+  }
+}
+
+type WorkerMessage =
+  | { userCode: string; testCode: string; type?: undefined }
+  | { type: "repl_eval"; code: string }
+  | { type: "repl_reset" };
+
+self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
+  if (e.data.type === "repl_eval" || e.data.type === "repl_reset") {
+    await handleReplMessage(e.data);
+    return;
+  }
   const { userCode, testCode } = e.data;
 
   const testNames = extractTestNames(testCode);
