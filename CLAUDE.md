@@ -86,7 +86,7 @@ no single releasable trunk; each variant branch is its own app.
 
 ### Backend (Tauri v2) Plugins
 Registered in `src-tauri/src/lib.rs`:
-- `tauri-plugin-shell` — spawns child processes for test runners (pytest, vitest)
+- `tauri-plugin-shell` — opens external links (test runners no longer spawn processes; see Test Execution Model)
 - `tauri-plugin-sql` — SQLite database access (kata metadata, sessions, attempts, settings)
 - `tauri-plugin-fs` — read/write kata files from the local filesystem
 - `tauri-plugin-log` — logging (debug builds only)
@@ -102,9 +102,15 @@ When adding new Tauri plugin features, you may need to add permissions here.
 SQLite via `@tauri-apps/plugin-sql` on the frontend side. Schema defined in `PRD_kata_desktop.md` — tables: `katas`, `sessions`, `attempts`, `settings`, `presets`.
 
 ### Test Execution Model
-The app spawns child processes via Tauri's shell plugin:
-- Python katas: `uv run python -m pytest <test_file> -q --tb=short`
-- React katas: `pnpm vitest run <test_file>`
+All kata tests run **in-app in Web Workers** — no child processes, no system
+runtimes, works offline:
+- JavaScript katas: evaluated in a plain worker (`src/lib/js-test-worker.ts`)
+  with `test_*` functions and `assertEqual(actual, expected)` helpers.
+- The variant's second language runs on a bundled WASM runtime in its own
+  worker: Pyodide on `main` (`python-test-worker.ts`), ruby.wasm on
+  `js-ruby-version` (`ruby-test-worker.ts`, fresh VM per run).
+- The REPL panel uses separate workers with persistent sessions
+  (`repl-runner.ts` + per-variant `repl-backends.ts`).
 
 ## Key Conventions
 
