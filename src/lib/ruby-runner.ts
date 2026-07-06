@@ -1,91 +1,96 @@
-import { Command } from "@tauri-apps/plugin-shell";
 import type { TestResult } from "../types/editor";
+import { INIT_TIMEOUT_MS, EXEC_TIMEOUT_MS } from "./ruby-exec-core";
 
-const RUBY_HELPERS = `
-def assert_equal(expected, actual, msg = nil)
-  raise (msg || "Expected #{expected.inspect}, got #{actual.inspect}") unless expected == actual
-end
+// Warm worker: reused across runs so the compiled wasm module is cached.
+// Discarded (null) after any timeout or fatal error; the next run pays the
+// cold init cost again. Fresh Ruby VM per run happens INSIDE the worker.
+let workerInstance: Worker | null = null;
+let readyPromise: Promise<void> | null = null;
 
-def assert_true(condition, msg = nil)
-  raise (msg || "Expected truthy, got #{condition.inspect}") unless condition
-end
+function timeoutResult(seconds: number): TestResult[] {
+  return [
+    {
+      name: "Timeout",
+      passed: false,
+      error: `Execution exceeded ${seconds}s — possible infinite loop`,
+    },
+  ];
+}
 
-def assert_false(condition, msg = nil)
-  raise (msg || "Expected falsy, got #{condition.inspect}") if condition
-end
-`;
+function discardWorker() {
+  workerInstance?.terminate();
+  workerInstance = null;
+  readyPromise = null;
+}
+
+function getWorker(): { worker: Worker; ready: Promise<void> } {
+  if (workerInstance && readyPromise) {
+    return { worker: workerInstance, ready: readyPromise };
+  }
+  const worker = new Worker(new URL("./ruby-test-worker.ts", import.meta.url), {
+    type: "module",
+  });
+  const ready = new Promise<void>((resolve, reject) => {
+    const initTimer = setTimeout(() => {
+      reject(new Error(`ruby.wasm init exceeded ${INIT_TIMEOUT_MS / 1000}s`));
+    }, INIT_TIMEOUT_MS);
+    const onMessage = (e: MessageEvent<{ type: string; error?: string }>) => {
+      if (e.data.type === "ready") {
+        clearTimeout(initTimer);
+        worker.removeEventListener("message", onMessage);
+        resolve();
+      } else if (e.data.type === "init_error") {
+        clearTimeout(initTimer);
+        worker.removeEventListener("message", onMessage);
+        reject(new Error(e.data.error));
+      }
+    };
+    worker.addEventListener("message", onMessage);
+  });
+  workerInstance = worker;
+  readyPromise = ready;
+  return { worker, ready };
+}
 
 export async function runRubyTests(
   userCode: string,
   testCode: string,
 ): Promise<TestResult[]> {
-  const testNames = [...testCode.matchAll(/def\s+(test_\w+)/g)].map(
-    (m) => m[1],
-  );
+  const { worker, ready } = getWorker();
 
-  if (testNames.length === 0) {
-    return [
-      {
-        name: "No tests found",
-        passed: false,
-        error: "No test_* methods in test code",
-      },
-    ];
-  }
-
-  const testList = testNames.map((n) => `:${n}`).join(", ");
-  // Note: #{m} here is Ruby interpolation, not TypeScript — TS only interpolates ${}
-  const runner = `
-[${testList}].each do |m|
-  begin
-    send(m)
-    $stdout.puts "PASS: \#{m}"
-  rescue => e
-    $stdout.puts "FAIL: \#{m}: \#{e.message.lines.first&.strip}"
-  end
-end
-`;
-
-  const script = [RUBY_HELPERS, userCode, testCode, runner].join("\n");
-
-  let output: { stdout: string; stderr: string; code: number | null };
   try {
-    output = await Command.create("ruby", ["-e", script]).execute();
-  } catch {
+    await ready;
+  } catch (err) {
+    discardWorker();
     return [
       {
-        name: "Ruby not found",
+        name: "Ruby runtime error",
         passed: false,
-        error: "Ruby is not installed or not in PATH",
+        error: err instanceof Error ? err.message : String(err),
       },
     ];
   }
 
-  const stdout = output.stdout ?? "";
-  const stderr = output.stderr ?? "";
+  return new Promise((resolve) => {
+    const timer = setTimeout(() => {
+      discardWorker();
+      resolve(timeoutResult(EXEC_TIMEOUT_MS / 1000));
+    }, EXEC_TIMEOUT_MS);
 
-  // Fatal error (syntax error, etc.) before any tests ran
-  if (!stdout.trim() && output.code !== 0) {
-    const errMsg = stderr.split("\n").slice(0, 3).join("\n");
-    return testNames.map((name) => ({ name, passed: false, error: errMsg }));
-  }
+    const onMessage = (e: MessageEvent<{ type: string; results?: TestResult[] }>) => {
+      if (e.data.type !== "results") return;
+      clearTimeout(timer);
+      worker.removeEventListener("message", onMessage);
+      resolve(e.data.results ?? []);
+    };
+    worker.addEventListener("message", onMessage);
 
-  const resultMap = new Map<string, TestResult>();
-  for (const line of stdout.split("\n")) {
-    if (line.startsWith("PASS: ")) {
-      const name = line.slice(6).trim();
-      resultMap.set(name, { name, passed: true });
-    } else if (line.startsWith("FAIL: ")) {
-      const rest = line.slice(6);
-      const sep = rest.indexOf(": ");
-      const name = sep >= 0 ? rest.slice(0, sep) : rest;
-      const error = sep >= 0 ? rest.slice(sep + 2) : "Test failed";
-      resultMap.set(name, { name, passed: false, error });
-    }
-  }
+    worker.onerror = (e) => {
+      clearTimeout(timer);
+      discardWorker();
+      resolve([{ name: "Worker error", passed: false, error: e.message }]);
+    };
 
-  return testNames.map(
-    (name) =>
-      resultMap.get(name) ?? { name, passed: false, error: "Test did not run" },
-  );
+    worker.postMessage({ userCode, testCode });
+  });
 }
