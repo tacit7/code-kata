@@ -11,7 +11,8 @@ import { useKeyboardShortcuts } from "../hooks/use-keyboard-shortcuts";
 import { runTests } from "../lib/test-runner";
 import { saveUserCode, loadUserCode, deleteUserCode, saveKataNotes, loadKataNotes } from "../lib/database";
 import { TestOutput } from "./test-output";
-import { ReplPanel } from "./repl-panel";
+import { ReplPanel, type ReplSeed } from "./repl-panel";
+import { extractTestCall } from "../lib/repl-seed";
 import { toast } from "../stores/toast-store";
 import type { Kata, TestResult } from "../types/editor";
 
@@ -512,6 +513,7 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
   const [saved, setSaved] = useState(true);
   const [showConfig, setShowConfig] = useState(false);
   const [showRepl, setShowRepl] = useState(false);
+  const [replSeed, setReplSeed] = useState<ReplSeed | null>(null);
   const [savedCode, setSavedCode] = useState<string | null>(null);
   const [codeLoaded, setCodeLoaded] = useState(false);
   const autosaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -994,6 +996,7 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
                 key={kata.id}
                 language={kata.language}
                 getEditorCode={() => editorRef.current?.getValue() ?? null}
+                seed={replSeed}
               />
             </div>
           )}
@@ -1019,7 +1022,15 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
                     Running tests...
                   </div>
                 ) : results ? (
-                  <TestOutput results={results} ranAt={ranAt} />
+                  <TestOutput
+                    results={results}
+                    ranAt={ranAt}
+                    onSendToRepl={(testName) => {
+                      const expression = extractTestCall(kata.testCode, testName, kata.language) ?? "";
+                      setShowRepl(true);
+                      setReplSeed({ expression, nonce: Date.now() });
+                    }}
+                  />
                 ) : null}
               </div>
             </div>
