@@ -15,6 +15,12 @@ import { SettingsPage } from "./routes/settings";
 import { KataFormPage } from "./routes/kata-form";
 import { ResultsPage } from "./routes/results";
 
+if (import.meta.env.DEV) {
+  import("./lib/ruby-stress").then((m) => {
+    (window as unknown as { __rubyStress: typeof m.rubyStress }).__rubyStress = m.rubyStress;
+  });
+}
+
 function App() {
   const theme = useSettingsStore((s) => s.theme);
   const language = useSettingsStore((s) => s.language);
