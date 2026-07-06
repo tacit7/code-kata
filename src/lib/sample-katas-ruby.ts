@@ -1,0 +1,4229 @@
+import type { SeedKata } from "../types/editor";
+
+export const sampleKatasRuby: SeedKata[] = [
+  {
+    name: "Kadane's Algorithm",
+    category: "1-d-dp",
+    language: "ruby",
+    difficulty: "medium",
+    description: `Kadane's Algorithm
+
+Given an integer array nums, find the subarray with the largest sum, and return its sum.
+
+A subarray is a contiguous non-empty sequence of elements within an array.
+
+Example 1:
+Input: nums = [-2,1,-3,4,-1,2,1,-5,4]
+Output: 6
+Explanation: The subarray [4,-1,2,1] has the largest sum 6.
+
+Example 2:
+Input: nums = [1,2,3]
+Output: 6
+Explanation: The subarray [1,2,3] has the largest sum 6.
+
+Example 3:
+Input: nums = [-5]
+Output: -5
+Explanation: The single element is the only subarray, so the answer is -5.
+
+Constraints:
+- 1 <= nums.length <= 10^5
+- -10^4 <= nums[i] <= 10^4
+
+Ref: LeetCode #53 Maximum Subarray`,
+    code: `def max_subarray_sum(nums)
+  raise NotImplementedError
+end`,
+    testCode: `def test_mixed
+  assert_equal(6, max_subarray_sum([-2, 1, -3, 4, -1, 2, 1, -5, 4]))
+end
+
+def test_all_negative
+  assert_equal(-1, max_subarray_sum([-3, -1, -2]))
+end
+
+def test_all_positive
+  assert_equal(6, max_subarray_sum([1, 2, 3]))
+end
+
+def test_single
+  assert_equal(5, max_subarray_sum([5]))
+end
+
+def test_single_negative
+  assert_equal(-5, max_subarray_sum([-5]))
+end
+
+def test_zero_crossing
+  assert_equal(6, max_subarray_sum([-1, 2, 3, -4, 5]))
+end`,
+    solution: `def max_subarray_sum(nums)
+  max_sum = nums[0]
+  current = nums[0]
+  nums[1..].each do |num|
+    current = [num, current + num].max
+    max_sum = [max_sum, current].max
+  end
+  max_sum
+end`,
+    usage: null,
+    tags: ["dynamic-programming", "greedy", "blind75"],
+  },
+  {
+    name: "Climbing Stairs (Iterative)",
+    category: "1-d-dp",
+    language: "ruby",
+    difficulty: "easy",
+    description: `Climbing Stairs (Iterative)
+
+You are climbing a staircase. It takes n steps to reach the top. Each time you can either climb 1 or 2 steps. Return the number of distinct ways you can climb to the top.
+
+Use an iterative (bottom-up) approach.
+
+Example 1:
+Input: n = 2
+Output: 2
+Explanation: There are two ways: 1+1 and 2.
+
+Example 2:
+Input: n = 3
+Output: 3
+Explanation: There are three ways: 1+1+1, 1+2, and 2+1.
+
+Example 3:
+Input: n = 5
+Output: 8
+
+Constraints:
+- 1 <= n <= 45
+
+Ref: LeetCode #70 Climbing Stairs`,
+    code: `def climb_stairs(n)
+  raise NotImplementedError
+end`,
+    testCode: `def test_one
+  assert_equal(1, climb_stairs(1))
+end
+
+def test_two
+  assert_equal(2, climb_stairs(2))
+end
+
+def test_three
+  assert_equal(3, climb_stairs(3))
+end
+
+def test_four
+  assert_equal(5, climb_stairs(4))
+end
+
+def test_five
+  assert_equal(8, climb_stairs(5))
+end
+
+def test_ten
+  assert_equal(89, climb_stairs(10))
+end`,
+    solution: `def climb_stairs(n)
+  return n if n <= 2
+  a, b = 1, 2
+  (3..n).each do
+    a, b = b, a + b
+  end
+  b
+end`,
+    usage: null,
+    tags: ["dynamic-programming", "memoization", "blind75", "neetcode", "1d-dp"],
+  },
+  {
+    name: "Climbing Stairs (Recursive)",
+    category: "1-d-dp",
+    language: "ruby",
+    difficulty: "easy",
+    description: `Climbing Stairs (Recursive)
+
+You are climbing a staircase. It takes n steps to reach the top. Each time you can either climb 1 or 2 steps. Return the number of distinct ways you can climb to the top.
+
+Use a recursive approach with memoization.
+
+Example 1:
+Input: n = 2
+Output: 2
+Explanation: There are two ways: 1+1 and 2.
+
+Example 2:
+Input: n = 3
+Output: 3
+Explanation: There are three ways: 1+1+1, 1+2, and 2+1.
+
+Example 3:
+Input: n = 10
+Output: 89
+
+Constraints:
+- 1 <= n <= 45
+
+Ref: LeetCode #70 Climbing Stairs`,
+    code: `def climb_stairs(n)
+  raise NotImplementedError
+end`,
+    testCode: `def test_one
+  assert_equal(1, climb_stairs(1))
+end
+
+def test_two
+  assert_equal(2, climb_stairs(2))
+end
+
+def test_three
+  assert_equal(3, climb_stairs(3))
+end
+
+def test_four
+  assert_equal(5, climb_stairs(4))
+end
+
+def test_five
+  assert_equal(8, climb_stairs(5))
+end
+
+def test_ten
+  assert_equal(89, climb_stairs(10))
+end`,
+    solution: `def climb_stairs(n)
+  memo = {}
+
+  helper = lambda do |k|
+    return k if k <= 2
+    return memo[k] if memo.key?(k)
+
+    memo[k] = helper.call(k - 1) + helper.call(k - 2)
+    memo[k]
+  end
+
+  helper.call(n)
+end`,
+    usage: null,
+    tags: ["dynamic-programming", "memoization", "recursion", "blind75", "neetcode", "1d-dp"],
+  },
+  {
+    name: "Longest Common Subsequence",
+    category: "2-d-dp",
+    language: "ruby",
+    difficulty: "medium",
+    description: `Longest Common Subsequence
+
+Given two strings text1 and text2, return the length of their longest common subsequence. If there is no common subsequence, return 0.
+
+A subsequence of a string is a new string generated from the original string with some characters (can be none) deleted without changing the relative order of the remaining characters.
+
+Example 1:
+Input: text1 = "abcde", text2 = "ace"
+Output: 3
+Explanation: The longest common subsequence is "ace" and its length is 3.
+
+Example 2:
+Input: text1 = "abc", text2 = "abc"
+Output: 3
+Explanation: The longest common subsequence is "abc" and its length is 3.
+
+Example 3:
+Input: text1 = "abc", text2 = "def"
+Output: 0
+Explanation: There is no common subsequence, so the result is 0.
+
+Constraints:
+- 1 <= text1.length, text2.length <= 1000
+- text1 and text2 consist of only lowercase English characters.
+
+Ref: LeetCode #1143 Longest Common Subsequence`,
+    code: `def lcs(text1, text2)
+  raise NotImplementedError
+end`,
+    testCode: `def test_basic
+  assert_equal(3, lcs("abcde", "ace"))
+end
+
+def test_identical
+  assert_equal(3, lcs("abc", "abc"))
+end
+
+def test_no_common
+  assert_equal(0, lcs("abc", "def"))
+end
+
+def test_one_empty
+  assert_equal(0, lcs("", "abc"))
+end
+
+def test_both_empty
+  assert_equal(0, lcs("", ""))
+end
+
+def test_longer
+  assert_equal(5, lcs("abcba", "abcbcba"))
+end`,
+    solution: `def lcs(text1, text2)
+  m, n = text1.length, text2.length
+  dp = Array.new(m + 1) { Array.new(n + 1, 0) }
+  (1..m).each do |i|
+    (1..n).each do |j|
+      if text1[i - 1] == text2[j - 1]
+        dp[i][j] = dp[i - 1][j - 1] + 1
+      else
+        dp[i][j] = [dp[i - 1][j], dp[i][j - 1]].max
+      end
+    end
+  end
+  dp[m][n]
+end`,
+    usage: null,
+    tags: ["dynamic-programming", "string", "blind75"],
+  },
+  {
+    name: "Topological Sort",
+    category: "advanced-graphs",
+    language: "ruby",
+    difficulty: "hard",
+    description: `Topological Sort
+
+Given a directed acyclic graph (DAG) represented as an adjacency list (a dictionary mapping each node to a list of nodes it has edges to), return a valid topological ordering as a list.
+
+A topological ordering is a linear ordering of vertices such that for every directed edge (u, v), vertex u comes before v in the ordering.
+
+Example 1:
+Input: graph = {"a": ["b", "c"], "b": ["d"], "c": ["d"], "d": []}
+Output: ["a", "b", "c", "d"] (or any valid topological order)
+Explanation: "a" must come before "b" and "c"; both "b" and "c" must come before "d".
+
+Example 2:
+Input: graph = {"a": ["b"], "b": ["c"], "c": []}
+Output: ["a", "b", "c"]
+Explanation: A simple linear chain has only one valid ordering.
+
+Example 3:
+Input: graph = {"a": [], "b": [], "c": []}
+Output: ["a", "b", "c"] (any permutation is valid)
+Explanation: With no edges, any ordering is a valid topological sort.
+
+Constraints:
+- The graph is a valid DAG (no cycles).
+- All nodes appear as keys in the adjacency list.
+- 1 <= number of nodes <= 10^4
+
+Ref: LeetCode #210 Course Schedule II`,
+    code: `def topological_sort(graph)
+  raise NotImplementedError
+end`,
+    testCode: `def test_simple_dag
+  graph = {
+    "a" => ["b", "c"],
+    "b" => ["d"],
+    "c" => ["d"],
+    "d" => [],
+  }
+  result = topological_sort(graph)
+  assert_equal(4, result.length)
+  assert_true(result.index("a") < result.index("b"))
+  assert_true(result.index("a") < result.index("c"))
+  assert_true(result.index("b") < result.index("d"))
+  assert_true(result.index("c") < result.index("d"))
+end
+
+def test_linear
+  graph = { "a" => ["b"], "b" => ["c"], "c" => [] }
+  result = topological_sort(graph)
+  assert_equal(["a", "b", "c"], result)
+end
+
+def test_no_edges
+  graph = { "a" => [], "b" => [], "c" => [] }
+  result = topological_sort(graph)
+  assert_equal(["a", "b", "c"], result.sort)
+end`,
+    solution: `def topological_sort(graph)
+  visited = {}
+  order = []
+
+  dfs = lambda do |node|
+    return if visited[node]
+
+    visited[node] = true
+    (graph[node] || []).each { |neighbor| dfs.call(neighbor) }
+    order << node
+  end
+
+  graph.each_key { |node| dfs.call(node) }
+
+  order.reverse
+end`,
+    usage: null,
+    tags: ["graph", "topological-sort"],
+  },
+  {
+    name: "Union Find",
+    category: "advanced-graphs",
+    language: "ruby",
+    difficulty: "hard",
+    description: `Union Find
+
+Implement a Union-Find (Disjoint Set Union) data structure that supports the following operations efficiently using path compression and union by rank:
+
+- UnionFind(n): Initialize with n elements labeled 0 to n-1, each in its own set.
+- find(x): Return the representative (root) of the set containing x.
+- union(x, y): Merge the sets containing x and y.
+- connected(x, y): Return True if x and y belong to the same set, False otherwise.
+
+Example 1:
+Input: n = 5, union(0, 1), union(1, 2), connected(0, 2)
+Output: True
+Explanation: After merging {0,1} and then {1,2}, elements 0 and 2 are in the same set.
+
+Example 2:
+Input: n = 5, union(0, 1), union(3, 4), connected(0, 4)
+Output: False
+Explanation: Sets {0,1} and {3,4} are separate components.
+
+Example 3:
+Input: n = 3, connected(0, 0)
+Output: True
+Explanation: Every element is always connected to itself.
+
+Constraints:
+- 0 <= x, y < n
+- 1 <= n <= 10^5
+
+Ref: LeetCode #684 Redundant Connection (closest match)`,
+    code: `class UnionFind
+  def initialize(n)
+    raise NotImplementedError
+  end
+
+  def find(x)
+    raise NotImplementedError
+  end
+
+  def union(x, y)
+    raise NotImplementedError
+  end
+
+  def connected(x, y)
+    raise NotImplementedError
+  end
+end`,
+    testCode: `def test_initially_disconnected
+  uf = UnionFind.new(5)
+  assert_equal(false, uf.connected(0, 1))
+end
+
+def test_union_connects
+  uf = UnionFind.new(5)
+  uf.union(0, 1)
+  assert_equal(true, uf.connected(0, 1))
+end
+
+def test_transitive
+  uf = UnionFind.new(5)
+  uf.union(0, 1)
+  uf.union(1, 2)
+  assert_equal(true, uf.connected(0, 2))
+end
+
+def test_separate_components
+  uf = UnionFind.new(5)
+  uf.union(0, 1)
+  uf.union(3, 4)
+  assert_equal(false, uf.connected(0, 4))
+end
+
+def test_merge_components
+  uf = UnionFind.new(5)
+  uf.union(0, 1)
+  uf.union(3, 4)
+  uf.union(1, 3)
+  assert_equal(true, uf.connected(0, 4))
+end
+
+def test_self_connected
+  uf = UnionFind.new(3)
+  assert_equal(true, uf.connected(0, 0))
+end`,
+    solution: `class UnionFind
+  def initialize(n)
+    @parent = (0...n).to_a
+    @rank = Array.new(n, 0)
+  end
+
+  def find(x)
+    if @parent[x] != x
+      @parent[x] = find(@parent[x])
+    end
+    @parent[x]
+  end
+
+  def union(x, y)
+    rx, ry = find(x), find(y)
+    return if rx == ry
+
+    rx, ry = ry, rx if @rank[rx] < @rank[ry]
+    @parent[ry] = rx
+    @rank[rx] += 1 if @rank[rx] == @rank[ry]
+  end
+
+  def connected(x, y)
+    find(x) == find(y)
+  end
+end`,
+    usage: null,
+    tags: ["graph", "disjoint-set"],
+  },
+  {
+    name: "Frequency Count",
+    category: "arrays",
+    language: "ruby",
+    difficulty: "easy",
+    description: `Frequency Count
+
+Given a list of items, return a dictionary mapping each unique item to the number of times it appears in the list.
+
+Example 1:
+Input: items = ["a", "b", "a", "c", "a", "b"]
+Output: {"a": 3, "b": 2, "c": 1}
+
+Example 2:
+Input: items = [1, 2, 2, 3, 3, 3]
+Output: {1: 1, 2: 2, 3: 3}
+
+Example 3:
+Input: items = []
+Output: {}
+
+Constraints:
+- 0 <= len(items) <= 10^5
+- Items can be any hashable type.
+
+Ref: LeetCode #1207 Unique Number of Occurrences (closest match)`,
+    code: `def frequency_count(items)
+  raise NotImplementedError
+end`,
+    testCode: `def test_frequency_count
+  assert_equal({ "a" => 3, "b" => 2, "c" => 1 }, frequency_count(["a", "b", "a", "c", "a", "b"]))
+end
+
+def test_frequency_count_single
+  assert_equal({ "x" => 1 }, frequency_count(["x"]))
+end
+
+def test_frequency_count_numbers
+  assert_equal({ 1 => 1, 2 => 2, 3 => 3 }, frequency_count([1, 2, 2, 3, 3, 3]))
+end
+
+def test_frequency_count_empty
+  assert_equal({}, frequency_count([]))
+end`,
+    solution: `def frequency_count(items)
+  counts = {}
+  items.each do |item|
+    counts[item] = (counts[item] || 0) + 1
+  end
+  counts
+end`,
+    usage: null,
+    tags: ["hash-map", "counting"],
+  },
+  {
+    name: "Most Frequent Element",
+    category: "arrays",
+    language: "ruby",
+    difficulty: "easy",
+    description: `Most Frequent Element
+
+Given a non-empty list of items, return the item that appears most frequently. If there are ties, return any one of the most frequent items.
+
+Example 1:
+Input: items = ["a", "b", "a", "c", "a", "b"]
+Output: "a"
+Explanation: "a" appears 3 times, more than any other element.
+
+Example 2:
+Input: items = [1, 2, 2, 3, 3, 3]
+Output: 3
+Explanation: 3 appears 3 times, which is the most frequent.
+
+Example 3:
+Input: items = [42]
+Output: 42
+
+Constraints:
+- 1 <= len(items) <= 10^5
+- Items can be any hashable type.
+
+Ref: LeetCode #169 Majority Element (closest match)`,
+    code: `def most_frequent(items)
+  raise NotImplementedError
+end`,
+    testCode: `def test_most_frequent_strings
+  assert_equal("a", most_frequent(["a", "b", "a", "c", "a", "b"]))
+end
+
+def test_most_frequent_numbers
+  assert_equal(3, most_frequent([1, 2, 2, 3, 3, 3]))
+end
+
+def test_most_frequent_single
+  assert_equal(42, most_frequent([42]))
+end`,
+    solution: `def most_frequent(items)
+  counts = {}
+  items.each do |item|
+    counts[item] = (counts[item] || 0) + 1
+  end
+  counts.max_by { |_, v| v }[0]
+end`,
+    usage: null,
+    tags: ["hash-map", "counting"],
+  },
+  {
+    name: "Merge Sort",
+    category: "arrays",
+    language: "ruby",
+    difficulty: "medium",
+    description: `Merge Sort
+
+Given an array of integers arr, sort the array in ascending order using the merge sort algorithm and return the sorted array as a new list.
+
+Merge sort is a divide-and-conquer algorithm that splits the array in half, recursively sorts each half, and then merges the two sorted halves.
+
+Example 1:
+Input: arr = [3, 1, 2]
+Output: [1, 2, 3]
+
+Example 2:
+Input: arr = [5, 4, 3, 2, 1]
+Output: [1, 2, 3, 4, 5]
+
+Example 3:
+Input: arr = [-3, 0, 2, -1]
+Output: [-3, -1, 0, 2]
+
+Constraints:
+- 0 <= arr.length <= 5 * 10^4
+- -5 * 10^4 <= arr[i] <= 5 * 10^4
+
+Ref: LeetCode #912 Sort an Array`,
+    code: `def merge_sort(arr)
+  raise NotImplementedError
+end`,
+    testCode: `def test_basic
+  assert_equal([1, 2, 3], merge_sort([3, 1, 2]))
+end
+
+def test_already_sorted
+  assert_equal([1, 2, 3, 4], merge_sort([1, 2, 3, 4]))
+end
+
+def test_reversed
+  assert_equal([1, 2, 3, 4, 5], merge_sort([5, 4, 3, 2, 1]))
+end
+
+def test_duplicates
+  assert_equal([1, 1, 2, 3, 3], merge_sort([3, 1, 3, 1, 2]))
+end
+
+def test_single
+  assert_equal([1], merge_sort([1]))
+end
+
+def test_empty
+  assert_equal([], merge_sort([]))
+end
+
+def test_negatives
+  assert_equal([-3, -1, 0, 2], merge_sort([-3, 0, 2, -1]))
+end`,
+    solution: `def merge_sort(arr)
+  return arr if arr.length <= 1
+
+  mid = arr.length / 2
+  left = merge_sort(arr[0...mid])
+  right = merge_sort(arr[mid..])
+  merge_halves(left, right)
+end
+
+def merge_halves(left, right)
+  result = []
+  i = j = 0
+  while i < left.length && j < right.length
+    if left[i] <= right[j]
+      result << left[i]
+      i += 1
+    else
+      result << right[j]
+      j += 1
+    end
+  end
+  result.concat(left[i..])
+  result.concat(right[j..])
+  result
+end`,
+    usage: null,
+    tags: ["divide-and-conquer", "sorting", "recursion"],
+  },
+  {
+    name: "Lomuto Partition",
+    category: "arrays",
+    language: "ruby",
+    difficulty: "medium",
+    description: `Lomuto Partition
+
+Implement the Lomuto partition scheme. Given an array arr and indices lo and hi, use arr[hi] as the pivot. Rearrange elements in arr[lo..hi] in-place so that all elements less than or equal to the pivot come before it, and all elements greater than the pivot come after it. Return the final index of the pivot.
+
+This is a fundamental building block of quicksort.
+
+Example 1:
+Input: arr = [3, 6, 8, 10, 1, 2, 1], lo = 0, hi = 6
+Output: 1 (pivot value is 1; after partitioning, pivot is at index 1)
+Explanation: Elements <= 1 are moved to the left of index 1, elements > 1 to the right.
+
+Example 2:
+Input: arr = [1, 2, 3, 4, 5], lo = 0, hi = 4
+Output: 4
+Explanation: Pivot is 5, which is already the largest element, so it stays at index 4.
+
+Example 3:
+Input: arr = [2, 1], lo = 0, hi = 1
+Output: 0
+Explanation: Pivot is 1; after partitioning, arr becomes [1, 2] and pivot is at index 0.
+
+Constraints:
+- 0 <= lo <= hi < len(arr)
+- 1 <= len(arr) <= 10^5
+- The function modifies arr in-place and returns the pivot index.
+
+Ref: LeetCode #912 Sort an Array`,
+    code: `def partition(arr, lo, hi)
+  raise NotImplementedError
+end`,
+    testCode: `def test_partition_basic
+  arr = [3, 6, 8, 10, 1, 2, 1]
+  p = partition(arr, 0, arr.length - 1)
+  pivot_val = arr[p]
+  assert_true((0...p).all? { |i| arr[i] <= pivot_val })
+  assert_true((p...arr.length).all? { |i| arr[i] >= pivot_val })
+end
+
+def test_partition_sorted
+  arr = [1, 2, 3, 4, 5]
+  p = partition(arr, 0, 4)
+  assert_equal(5, arr[p])
+  assert_equal(4, p)
+end
+
+def test_partition_two
+  arr = [2, 1]
+  p = partition(arr, 0, 1)
+  assert_equal([1, 2], arr)
+  assert_equal(0, p)
+end`,
+    solution: `def partition(arr, lo, hi)
+  pivot = arr[hi]
+  i = lo
+  (lo...hi).each do |j|
+    if arr[j] <= pivot
+      arr[i], arr[j] = arr[j], arr[i]
+      i += 1
+    end
+  end
+  arr[i], arr[hi] = arr[hi], arr[i]
+  i
+end`,
+    usage: null,
+    tags: ["sorting", "partitioning"],
+  },
+  {
+    name: "Quick Sort",
+    category: "arrays",
+    language: "ruby",
+    difficulty: "medium",
+    description: `Quick Sort
+
+Given an array of integers, sort the array in ascending order using the Quick Sort algorithm with Lomuto partition scheme and return the sorted array.
+
+The Lomuto partition scheme picks the last element as the pivot, then partitions the array such that all elements less than or equal to the pivot come before it, and all elements greater come after it. Recursively apply this to the sub-arrays.
+
+Example 1:
+Input: arr = [3, 1, 2]
+Output: [1, 2, 3]
+
+Example 2:
+Input: arr = [5, 4, 3, 2, 1]
+Output: [1, 2, 3, 4, 5]
+
+Example 3:
+Input: arr = [3, 1, 3, 1, 2]
+Output: [1, 1, 2, 3, 3]
+Explanation: Duplicate elements are preserved and sorted correctly.
+
+Constraints:
+- 0 <= arr.length <= 10^4
+- -10^4 <= arr[i] <= 10^4
+- The array may contain duplicate values.
+
+Ref: LeetCode #912 Sort an Array`,
+    code: `def quick_sort(arr)
+  raise NotImplementedError
+end`,
+    testCode: `def test_quick_sort_basic
+  assert_equal([1, 2, 3], quick_sort([3, 1, 2]))
+end
+
+def test_quick_sort_reversed
+  assert_equal([1, 2, 3, 4, 5], quick_sort([5, 4, 3, 2, 1]))
+end
+
+def test_quick_sort_duplicates
+  assert_equal([1, 1, 2, 3, 3], quick_sort([3, 1, 3, 1, 2]))
+end
+
+def test_quick_sort_single
+  assert_equal([1], quick_sort([1]))
+end
+
+def test_quick_sort_empty
+  assert_equal([], quick_sort([]))
+end`,
+    solution: `def quick_sort(arr)
+  qs(arr, 0, arr.length - 1)
+  arr
+end
+
+def qs_partition(arr, lo, hi)
+  pivot = arr[hi]
+  i = lo
+  (lo...hi).each do |j|
+    if arr[j] <= pivot
+      arr[i], arr[j] = arr[j], arr[i]
+      i += 1
+    end
+  end
+  arr[i], arr[hi] = arr[hi], arr[i]
+  i
+end
+
+def qs(arr, lo, hi)
+  if lo < hi
+    p = qs_partition(arr, lo, hi)
+    qs(arr, lo, p - 1)
+    qs(arr, p + 1, hi)
+  end
+end`,
+    usage: null,
+    tags: ["divide-and-conquer", "sorting", "recursion"],
+  },
+  {
+    name: "Two Sum",
+    category: "arrays",
+    language: "ruby",
+    difficulty: "easy",
+    description: `Two Sum
+
+Given an array of integers nums and an integer target, return indices of the two numbers such that they add up to target.
+
+You may assume that each input would have exactly one solution, and you may not use the same element twice. You can return the answer in any order.
+
+Example 1:
+Input: nums = [2, 7, 11, 15], target = 9
+Output: [0, 1]
+Explanation: Because nums[0] + nums[1] == 9, we return [0, 1].
+
+Example 2:
+Input: nums = [3, 2, 4], target = 6
+Output: [1, 2]
+
+Example 3:
+Input: nums = [3, 3], target = 6
+Output: [0, 1]
+
+Constraints:
+- 2 <= nums.length <= 10^4
+- -10^9 <= nums[i] <= 10^9
+- -10^9 <= target <= 10^9
+- Only one valid answer exists.
+
+Ref: LeetCode #1 Two Sum`,
+    code: `def two_sum(nums, target)
+  raise NotImplementedError
+end`,
+    testCode: `def test_basic
+  assert_equal([0, 1], two_sum([2, 7, 11, 15], 9))
+end
+
+def test_middle
+  result = two_sum([3, 2, 4], 6)
+  assert_equal([1, 2], result.sort)
+end
+
+def test_duplicates
+  assert_equal([0, 1], two_sum([3, 3], 6))
+end
+
+def test_negative
+  result = two_sum([-1, -2, -3, -4, -5], -8)
+  assert_equal([2, 4], result.sort)
+end`,
+    solution: `def two_sum(nums, target)
+  seen = {}
+  nums.each_with_index do |num, i|
+    complement = target - num
+    return [seen[complement], i] if seen.key?(complement)
+
+    seen[num] = i
+  end
+end`,
+    usage: null,
+    tags: ["hash-map", "blind75", "neetcode", "arrays-hashing"],
+  },
+  {
+    name: "Build Prefix Sum",
+    category: "arrays",
+    language: "ruby",
+    difficulty: "easy",
+    description: `Build Prefix Sum
+
+Given an array of integers nums, build a prefix sum array where prefix[i] equals the sum of nums[0] through nums[i-1]. The prefix array starts with 0, so its length is len(nums) + 1.
+
+This is a fundamental building block for range sum queries and many array problems.
+
+Example 1:
+Input: nums = [1, 2, 3, 4]
+Output: [0, 1, 3, 6, 10]
+Explanation: prefix[0]=0, prefix[1]=1, prefix[2]=1+2=3, prefix[3]=1+2+3=6, prefix[4]=1+2+3+4=10.
+
+Example 2:
+Input: nums = []
+Output: [0]
+
+Example 3:
+Input: nums = [1, -1, 2]
+Output: [0, 1, 0, 2]
+Explanation: prefix[2]=1+(-1)=0, prefix[3]=1+(-1)+2=2.
+
+Constraints:
+- 0 <= nums.length <= 10^4
+- -10^4 <= nums[i] <= 10^4
+
+Ref: LeetCode #1480 Running Sum of 1d Array`,
+    code: `def build_prefix(nums)
+  raise NotImplementedError
+end`,
+    testCode: `def test_build_prefix
+  assert_equal([0, 1, 3, 6, 10], build_prefix([1, 2, 3, 4]))
+end
+
+def test_build_prefix_empty
+  assert_equal([0], build_prefix([]))
+end
+
+def test_build_prefix_single
+  assert_equal([0, 5], build_prefix([5]))
+end
+
+def test_build_prefix_negatives
+  assert_equal([0, 1, 0, 2], build_prefix([1, -1, 2]))
+end`,
+    solution: `def build_prefix(nums)
+  prefix = Array.new(nums.length + 1, 0)
+  (0...nums.length).each do |i|
+    prefix[i + 1] = prefix[i] + nums[i]
+  end
+  prefix
+end`,
+    usage: null,
+    tags: ["prefix-sum"],
+  },
+  {
+    name: "Range Sum Query",
+    category: "arrays",
+    language: "ruby",
+    difficulty: "easy",
+    description: `Range Sum Query
+
+Given a prefix sum array and two indices left and right, return the sum of the original array from index left to right (inclusive).
+
+The prefix array satisfies prefix[i] = sum of original[0..i-1], with prefix[0] = 0. Use the identity: sum(left, right) = prefix[right + 1] - prefix[left].
+
+Example 1:
+Input: prefix = [0, 1, 3, 6, 10], left = 0, right = 3
+Output: 10
+Explanation: Sum of original array [1, 2, 3, 4] from index 0 to 3 is 10.
+
+Example 2:
+Input: prefix = [0, 1, 3, 6, 10], left = 1, right = 2
+Output: 5
+Explanation: Sum of elements at indices 1 and 2 (2 + 3) is 5.
+
+Example 3:
+Input: prefix = [0, 1, 3, 6, 10], left = 2, right = 2
+Output: 3
+Explanation: Single element at index 2 is 3.
+
+Constraints:
+- 1 <= prefix.length <= 10^4 + 1
+- 0 <= left <= right < prefix.length - 1
+
+Ref: LeetCode #303 Range Sum Query - Immutable`,
+    code: `def range_sum(prefix, left, right)
+  raise NotImplementedError
+end`,
+    testCode: `def test_range_sum_full
+  prefix = [0, 1, 3, 6, 10]
+  assert_equal(10, range_sum(prefix, 0, 3))
+end
+
+def test_range_sum_middle
+  prefix = [0, 1, 3, 6, 10]
+  assert_equal(5, range_sum(prefix, 1, 2))
+end
+
+def test_range_sum_single
+  prefix = [0, 1, 3, 6, 10]
+  assert_equal(3, range_sum(prefix, 2, 2))
+end
+
+def test_range_sum_first
+  prefix = [0, 5, 8, 15]
+  assert_equal(5, range_sum(prefix, 0, 0))
+end`,
+    solution: `def range_sum(prefix, left, right)
+  prefix[right + 1] - prefix[left]
+end`,
+    usage: null,
+    tags: ["prefix-sum"],
+  },
+  {
+    name: "Permutations",
+    category: "backtracking",
+    language: "ruby",
+    difficulty: "medium",
+    description: `Permutations
+
+Given an array nums of distinct integers, return all the possible permutations. You can return the answer in any order.
+
+A permutation is a rearrangement of all the elements of the array. For n distinct elements, there are n! total permutations.
+
+Example 1:
+Input: nums = [1, 2, 3]
+Output: [[1,2,3],[1,3,2],[2,1,3],[2,3,1],[3,1,2],[3,2,1]]
+
+Example 2:
+Input: nums = [0, 1]
+Output: [[0,1],[1,0]]
+
+Example 3:
+Input: nums = [1]
+Output: [[1]]
+
+Constraints:
+- 0 <= nums.length <= 6
+- -10 <= nums[i] <= 10
+- All the integers of nums are unique.
+
+Ref: LeetCode #46 Permutations`,
+    code: `def permutations(nums)
+  raise NotImplementedError
+end`,
+    testCode: `def test_three_elements
+  result = permutations([1, 2, 3])
+  expected = [
+    [1, 2, 3], [1, 3, 2], [2, 1, 3],
+    [2, 3, 1], [3, 1, 2], [3, 2, 1],
+  ]
+  assert_equal(expected.sort, result.sort)
+end
+
+def test_two_elements
+  result = permutations([1, 2])
+  assert_equal([[1, 2], [2, 1]].sort, result.sort)
+end
+
+def test_single
+  assert_equal([[1]], permutations([1]))
+end
+
+def test_empty
+  assert_equal([[]], permutations([]))
+end
+
+def test_count
+  result = permutations([1, 2, 3, 4])
+  assert_equal(24, result.length)
+end`,
+    solution: `def permutations(nums)
+  result = []
+
+  backtrack = lambda do |path, remaining|
+    if remaining.empty?
+      result << path.dup
+      return
+    end
+    remaining.each_index do |i|
+      path.push(remaining[i])
+      backtrack.call(path, remaining[0...i] + remaining[(i + 1)..])
+      path.pop
+    end
+  end
+
+  backtrack.call([], nums)
+  result
+end`,
+    usage: null,
+    tags: ["backtracking", "recursion"],
+  },
+  {
+    name: "Subsets",
+    category: "backtracking",
+    language: "ruby",
+    difficulty: "medium",
+    description: `Subsets
+
+Given an integer array nums of unique elements, return all possible subsets (the power set). The solution set must not contain duplicate subsets. Return the subsets in any order.
+
+The power set of a set with n elements contains 2^n subsets, including the empty set and the set itself.
+
+Example 1:
+Input: nums = [1, 2, 3]
+Output: [[], [1], [2], [3], [1,2], [1,3], [2,3], [1,2,3]]
+
+Example 2:
+Input: nums = [0]
+Output: [[], [0]]
+
+Example 3:
+Input: nums = [1, 2]
+Output: [[], [1], [2], [1,2]]
+
+Constraints:
+- 0 <= nums.length <= 10
+- -10 <= nums[i] <= 10
+- All the numbers of nums are unique.
+
+Ref: LeetCode #78 Subsets`,
+    code: `def subsets(nums)
+  raise NotImplementedError
+end`,
+    testCode: `def test_three_elements
+  result = subsets([1, 2, 3])
+  expected = [[], [1], [2], [3], [1, 2], [1, 3], [2, 3], [1, 2, 3]]
+  assert_equal(expected.sort, result.sort)
+end
+
+def test_two_elements
+  result = subsets([1, 2])
+  assert_equal([[], [1], [2], [1, 2]].sort, result.sort)
+end
+
+def test_single
+  result = subsets([1])
+  assert_equal([[], [1]].sort, result.sort)
+end
+
+def test_empty
+  assert_equal([[]], subsets([]))
+end
+
+def test_count
+  result = subsets([1, 2, 3, 4])
+  assert_equal(16, result.length)
+end`,
+    solution: `def subsets(nums)
+  result = []
+
+  backtrack = lambda do |start, path|
+    result << path.dup
+    (start...nums.length).each do |i|
+      path.push(nums[i])
+      backtrack.call(i + 1, path)
+      path.pop
+    end
+  end
+
+  backtrack.call(0, [])
+  result
+end`,
+    usage: null,
+    tags: ["backtracking", "recursion"],
+  },
+  {
+    name: "Binary Search (Iterative)",
+    category: "binary-search",
+    language: "ruby",
+    difficulty: "easy",
+    description: `Binary Search (Iterative)
+
+Given a sorted array of integers nums in ascending order and an integer target, write a function to search target in nums. If target exists, return its index. Otherwise, return -1.
+
+You must write an algorithm with O(log n) runtime complexity using an iterative approach.
+
+Example 1:
+Input: nums = [1, 3, 5, 7, 9], target = 5
+Output: 2
+Explanation: 5 exists in nums and its index is 2.
+
+Example 2:
+Input: nums = [1, 3, 5, 7, 9], target = 4
+Output: -1
+Explanation: 4 does not exist in nums, so we return -1.
+
+Example 3:
+Input: nums = [], target = 1
+Output: -1
+
+Constraints:
+- 0 <= nums.length <= 10^4
+- -10^4 < nums[i], target < 10^4
+- All the integers in nums are unique.
+- nums is sorted in ascending order.
+
+Ref: LeetCode #704 Binary Search`,
+    code: `def binary_search(nums, target)
+  raise NotImplementedError
+end`,
+    testCode: `def test_found_middle
+  assert_equal(2, binary_search([1, 3, 5, 7, 9], 5))
+end
+
+def test_found_first
+  assert_equal(0, binary_search([1, 3, 5, 7, 9], 1))
+end
+
+def test_found_last
+  assert_equal(4, binary_search([1, 3, 5, 7, 9], 9))
+end
+
+def test_not_found
+  assert_equal(-1, binary_search([1, 3, 5, 7, 9], 4))
+end
+
+def test_empty_list
+  assert_equal(-1, binary_search([], 1))
+end
+
+def test_single_element_found
+  assert_equal(0, binary_search([5], 5))
+end
+
+def test_single_element_not_found
+  assert_equal(-1, binary_search([5], 3))
+end`,
+    solution: `def binary_search(nums, target)
+  lo, hi = 0, nums.length - 1
+
+  while lo <= hi
+    mid = (lo + hi) / 2
+
+    if nums[mid] == target
+      return mid
+    elsif nums[mid] < target
+      lo = mid + 1
+    else
+      hi = mid - 1
+    end
+  end
+
+  -1
+end`,
+    usage: null,
+    tags: ["binary-search", "divide-and-conquer", "neetcode"],
+  },
+  {
+    name: "Binary Search Find First",
+    category: "binary-search",
+    language: "ruby",
+    difficulty: "medium",
+    description: `Binary Search Find First
+
+Given a sorted array of integers nums and a target value, find the first (leftmost) index where target appears. Return -1 if target is not found.
+
+The array may contain duplicates. Your solution should run in O(log n) time by using a modified binary search that continues searching left after finding a match.
+
+Example 1:
+Input: nums = [1, 2, 2, 2, 3], target = 2
+Output: 1
+Explanation: The first occurrence of 2 is at index 1.
+
+Example 2:
+Input: nums = [2, 2, 2], target = 2
+Output: 0
+Explanation: All elements are 2; the first occurrence is at index 0.
+
+Example 3:
+Input: nums = [1, 3, 5], target = 2
+Output: -1
+Explanation: 2 is not in the array.
+
+Constraints:
+- 0 <= nums.length <= 10^5
+- -10^9 <= nums[i] <= 10^9
+- nums is sorted in non-decreasing order.
+
+Ref: LeetCode #34 Find First and Last Position of Element in Sorted Array`,
+    code: `def find_first(nums, target)
+  raise NotImplementedError
+end`,
+    testCode: `def test_find_first_dupes
+  assert_equal(1, find_first([1, 2, 2, 2, 3], 2))
+end
+
+def test_find_first_not_found
+  assert_equal(-1, find_first([1, 3, 5], 2))
+end
+
+def test_find_first_single_match
+  assert_equal(1, find_first([1, 2, 3], 2))
+end
+
+def test_find_first_all_same
+  assert_equal(0, find_first([2, 2, 2], 2))
+end
+
+def test_find_first_empty
+  assert_equal(-1, find_first([], 1))
+end
+
+def test_find_first_at_start
+  assert_equal(0, find_first([1, 2, 3], 1))
+end`,
+    solution: `def find_first(nums, target)
+  lo, hi = 0, nums.length - 1
+  result = -1
+  while lo <= hi
+    mid = (lo + hi) / 2
+    if nums[mid] == target
+      result = mid
+      hi = mid - 1
+    elsif nums[mid] < target
+      lo = mid + 1
+    else
+      hi = mid - 1
+    end
+  end
+  result
+end`,
+    usage: null,
+    tags: ["binary-search"],
+  },
+  {
+    name: "Binary Search Find Last",
+    category: "binary-search",
+    language: "ruby",
+    difficulty: "medium",
+    description: `Binary Search Find Last
+
+Given a sorted array of integers nums and a target value, find the last (rightmost) index where target appears. Return -1 if target is not found.
+
+The array may contain duplicates. Your solution should run in O(log n) time by using a modified binary search that continues searching right after finding a match.
+
+Example 1:
+Input: nums = [1, 2, 2, 2, 3], target = 2
+Output: 3
+Explanation: The last occurrence of 2 is at index 3.
+
+Example 2:
+Input: nums = [2, 2, 2], target = 2
+Output: 2
+Explanation: All elements are 2; the last occurrence is at index 2.
+
+Example 3:
+Input: nums = [1, 3, 5], target = 2
+Output: -1
+Explanation: 2 is not in the array.
+
+Constraints:
+- 0 <= nums.length <= 10^5
+- -10^9 <= nums[i] <= 10^9
+- nums is sorted in non-decreasing order.
+
+Ref: LeetCode #34 Find First and Last Position of Element in Sorted Array`,
+    code: `def find_last(nums, target)
+  raise NotImplementedError
+end`,
+    testCode: `def test_find_last_dupes
+  assert_equal(3, find_last([1, 2, 2, 2, 3], 2))
+end
+
+def test_find_last_not_found
+  assert_equal(-1, find_last([1, 3, 5], 2))
+end
+
+def test_find_last_single_match
+  assert_equal(1, find_last([1, 2, 3], 2))
+end
+
+def test_find_last_all_same
+  assert_equal(2, find_last([2, 2, 2], 2))
+end
+
+def test_find_last_empty
+  assert_equal(-1, find_last([], 1))
+end
+
+def test_find_last_at_end
+  assert_equal(2, find_last([1, 2, 3], 3))
+end`,
+    solution: `def find_last(nums, target)
+  lo, hi = 0, nums.length - 1
+  result = -1
+  while lo <= hi
+    mid = (lo + hi) / 2
+    if nums[mid] == target
+      result = mid
+      lo = mid + 1
+    elsif nums[mid] < target
+      lo = mid + 1
+    else
+      hi = mid - 1
+    end
+  end
+  result
+end`,
+    usage: null,
+    tags: ["binary-search"],
+  },
+  {
+    name: "Binary Search (Recursive)",
+    category: "binary-search",
+    language: "ruby",
+    difficulty: "easy",
+    description: `Binary Search (Recursive)
+
+Given a sorted array of integers nums in ascending order and an integer target, write a function to search target in nums. If target exists, return its index. Otherwise, return -1.
+
+You must write an algorithm with O(log n) runtime complexity using a recursive approach with a helper function.
+
+Example 1:
+Input: nums = [1, 3, 5, 7, 9], target = 5
+Output: 2
+Explanation: 5 exists in nums and its index is 2.
+
+Example 2:
+Input: nums = [1, 3, 5, 7, 9], target = 4
+Output: -1
+Explanation: 4 does not exist in nums, so we return -1.
+
+Example 3:
+Input: nums = [5], target = 5
+Output: 0
+
+Constraints:
+- 0 <= nums.length <= 10^4
+- -10^4 < nums[i], target < 10^4
+- All the integers in nums are unique.
+- nums is sorted in ascending order.
+
+Ref: LeetCode #704 Binary Search`,
+    code: `def binary_search(nums, target)
+  raise NotImplementedError
+end`,
+    testCode: `def test_found_middle
+  assert_equal(2, binary_search([1, 3, 5, 7, 9], 5))
+end
+
+def test_found_first
+  assert_equal(0, binary_search([1, 3, 5, 7, 9], 1))
+end
+
+def test_found_last
+  assert_equal(4, binary_search([1, 3, 5, 7, 9], 9))
+end
+
+def test_not_found
+  assert_equal(-1, binary_search([1, 3, 5, 7, 9], 4))
+end
+
+def test_empty_list
+  assert_equal(-1, binary_search([], 1))
+end
+
+def test_single_element_found
+  assert_equal(0, binary_search([5], 5))
+end
+
+def test_single_element_not_found
+  assert_equal(-1, binary_search([5], 3))
+end`,
+    solution: `def binary_search(nums, target)
+  helper = lambda do |lo, hi|
+    return -1 if lo > hi
+
+    mid = (lo + hi) / 2
+    if nums[mid] == target
+      mid
+    elsif nums[mid] < target
+      helper.call(mid + 1, hi)
+    else
+      helper.call(lo, mid - 1)
+    end
+  end
+  helper.call(0, nums.length - 1)
+end`,
+    usage: null,
+    tags: ["binary-search", "divide-and-conquer", "recursion", "neetcode"],
+  },
+  {
+    name: "Single Number XOR",
+    category: "bit-manipulation",
+    language: "ruby",
+    difficulty: "easy",
+    description: `Single Number
+
+Given a non-empty array of integers nums, every element appears exactly twice except for one. Find that single one.
+
+You must implement a solution with O(n) time complexity and O(1) space complexity.
+
+Example 1:
+Input: nums = [2, 2, 1]
+Output: 1
+
+Example 2:
+Input: nums = [4, 1, 2, 1, 2]
+Output: 4
+Explanation: 1 and 2 each appear twice, so 4 is the single number.
+
+Example 3:
+Input: nums = [1]
+Output: 1
+
+Constraints:
+- 1 <= nums.length <= 3 * 10^4
+- -3 * 10^4 <= nums[i] <= 3 * 10^4
+- Each element appears exactly twice except for one element which appears only once.
+
+Ref: LeetCode #136 Single Number`,
+    code: `def single_number(nums)
+  raise NotImplementedError
+end`,
+    testCode: `def test_basic
+  assert_equal(1, single_number([2, 2, 1]))
+end
+
+def test_middle
+  assert_equal(4, single_number([4, 1, 2, 1, 2]))
+end
+
+def test_single
+  assert_equal(1, single_number([1]))
+end
+
+def test_larger
+  assert_equal(30, single_number([10, 20, 10, 30, 20]))
+end`,
+    solution: `def single_number(nums)
+  result = 0
+  nums.each { |num| result ^= num }
+  result
+end`,
+    usage: null,
+    tags: ["bit-manipulation", "xor"],
+  },
+  {
+    name: "Count Set Bits",
+    category: "bit-manipulation",
+    language: "ruby",
+    difficulty: "easy",
+    description: `Number of 1 Bits
+
+Given a non-negative integer n, return the number of 1 bits in its binary representation (also known as the Hamming weight).
+
+Example 1:
+Input: n = 11 (binary: 1011)
+Output: 3
+Explanation: The binary representation of 11 is 1011, which has three 1 bits.
+
+Example 2:
+Input: n = 128 (binary: 10000000)
+Output: 1
+
+Example 3:
+Input: n = 255 (binary: 11111111)
+Output: 8
+
+Constraints:
+- 0 <= n <= 2^31 - 1
+
+Ref: LeetCode #191 Number of 1 Bits`,
+    code: `def count_bits(n)
+  raise NotImplementedError
+end`,
+    testCode: `def test_zero
+  assert_equal(0, count_bits(0))
+end
+
+def test_one
+  assert_equal(1, count_bits(1))
+end
+
+def test_three
+  assert_equal(2, count_bits(3)) # 11
+end
+
+def test_seven
+  assert_equal(3, count_bits(7)) # 111
+end
+
+def test_eight
+  assert_equal(1, count_bits(8)) # 1000
+end
+
+def test_255
+  assert_equal(8, count_bits(255)) # 11111111
+end
+
+def test_large
+  assert_equal(10, count_bits(1023)) # 1111111111
+end`,
+    solution: `def count_bits(n)
+  count = 0
+  while n > 0
+    count += n & 1
+    n >>= 1
+  end
+  count
+end`,
+    usage: null,
+    tags: ["bit-manipulation", "blind75"],
+  },
+  {
+    name: "Matrix BFS",
+    category: "graphs",
+    language: "ruby",
+    difficulty: "medium",
+    description: `Matrix BFS
+
+Given a 2D grid of integers and a starting position (row, col), perform a breadth-first search and return the list of all positions visited in BFS order. Only traverse cells with value 0 (passable). Cells with value 1 are walls. Move in 4 directions: up, down, left, right.
+
+Example 1:
+Input: grid = [[0,0,0],[0,1,0],[0,0,0]], start = (0, 0)
+Output: [(0,0), (0,1), (1,0), (0,2), (2,0), (1,2), (2,1), (2,2)]
+Explanation: BFS explores all passable cells level by level. The center cell (1,1) is a wall and is skipped.
+
+Example 2:
+Input: grid = [[0,1],[1,0]], start = (0, 0)
+Output: [(0, 0)]
+Explanation: Start is surrounded by walls, so only the start cell is visited.
+
+Example 3:
+Input: grid = [[0]], start = (0, 0)
+Output: [(0, 0)]
+
+Constraints:
+- 1 <= grid.length, grid[0].length <= 100
+- grid[i][j] is 0 or 1
+- start is always a passable cell (value 0)
+
+Ref: LeetCode #1091 Shortest Path in Binary Matrix`,
+    code: `def matrix_bfs(grid, start)
+  raise NotImplementedError
+end`,
+    testCode: `def test_matrix_bfs_simple
+  grid = [
+    [0, 0, 0],
+    [0, 1, 0],
+    [0, 0, 0],
+  ]
+  result = matrix_bfs(grid, [0, 0])
+  assert_equal([0, 0], result[0])
+  assert_equal(8, result.length) # all passable cells
+end
+
+def test_matrix_bfs_blocked
+  grid = [
+    [0, 1],
+    [1, 0],
+  ]
+  result = matrix_bfs(grid, [0, 0])
+  assert_equal([[0, 0]], result)
+end
+
+def test_matrix_bfs_single_cell
+  grid = [[0]]
+  result = matrix_bfs(grid, [0, 0])
+  assert_equal([[0, 0]], result)
+end`,
+    solution: `def matrix_bfs(grid, start)
+  rows, cols = grid.length, grid[0].length
+  queue = [start]
+  visited = { start => true }
+  result = []
+
+  until queue.empty?
+    r, c = queue.shift
+    result << [r, c]
+
+    [[0, 1], [0, -1], [1, 0], [-1, 0]].each do |dr, dc|
+      nr, nc = r + dr, c + dc
+      next unless nr >= 0 && nr < rows && nc >= 0 && nc < cols
+      next if visited[[nr, nc]] || grid[nr][nc] != 0
+
+      visited[[nr, nc]] = true
+      queue << [nr, nc]
+    end
+  end
+
+  result
+end`,
+    usage: null,
+    tags: ["bfs", "matrix"],
+  },
+  {
+    name: "Graph DFS (Iterative)",
+    category: "graphs",
+    language: "ruby",
+    difficulty: "medium",
+    description: `Graph DFS (Iterative)
+
+Given a graph represented as an adjacency list (dictionary mapping each node to a list of its neighbors) and a start node, return a list of all reachable nodes visited in depth-first order. Use an iterative approach with an explicit stack.
+
+Example 1:
+Input: graph = {"a": ["b", "c"], "b": ["d"], "c": [], "d": []}, start = "a"
+Output: ["a", "c", "b", "d"]
+Explanation: DFS visits "a", then pushes "b" and "c" onto the stack. Popping "c" first (stack is LIFO), then "b", then "d".
+
+Example 2:
+Input: graph = {"a": []}, start = "a"
+Output: ["a"]
+
+Example 3:
+Input: graph = {"a": ["b"], "b": [], "c": ["d"], "d": []}, start = "a"
+Output: ["a", "b"]
+Explanation: Nodes "c" and "d" are not reachable from "a".
+
+Constraints:
+- The graph is represented as a dict of node -> list of neighbors.
+- All neighbor nodes referenced in adjacency lists exist as keys in the graph.
+- The start node exists in the graph.
+
+Ref: LeetCode #323 Number of Connected Components (closest match)`,
+    code: `def graph_dfs(graph, start)
+  raise NotImplementedError
+end`,
+    testCode: `def test_simple_graph
+  graph = {
+    "a" => ["b", "c"],
+    "b" => ["d"],
+    "c" => [],
+    "d" => [],
+  }
+  result = graph_dfs(graph, "a")
+  assert_equal("a", result[0])
+  assert_equal(["a", "b", "c", "d"], result.sort)
+end
+
+def test_single_node
+  graph = { "a" => [] }
+  assert_equal(["a"], graph_dfs(graph, "a"))
+end
+
+def test_disconnected
+  graph = {
+    "a" => ["b"],
+    "b" => [],
+    "c" => ["d"],
+    "d" => [],
+  }
+  result = graph_dfs(graph, "a")
+  assert_equal(["a", "b"], result.sort)
+end`,
+    solution: `def graph_dfs(graph, start)
+  visited = {}
+  result = []
+  stack = [start]
+
+  until stack.empty?
+    node = stack.pop
+    next if visited[node]
+
+    visited[node] = true
+    result << node
+
+    graph[node].each do |neighbor|
+      stack << neighbor unless visited[neighbor]
+    end
+  end
+
+  result
+end`,
+    usage: null,
+    tags: ["dfs", "graph"],
+  },
+  {
+    name: "Build Adjacency List",
+    category: "graphs",
+    language: "ruby",
+    difficulty: "easy",
+    description: `Build Adjacency List
+
+Given a list of edges where each edge is a tuple of two nodes, build and return an adjacency list represented as a dictionary. If directed is False (the default), add edges in both directions. If directed is True, only add edges in the given direction.
+
+Example 1:
+Input: edges = [("a", "b"), ("b", "c")], directed = False
+Output: {"a": ["b"], "b": ["a", "c"], "c": ["b"]}
+Explanation: Undirected graph, so each edge creates connections in both directions.
+
+Example 2:
+Input: edges = [("a", "b"), ("b", "c")], directed = True
+Output: {"a": ["b"], "b": ["c"]}
+Explanation: Directed graph, so edges only go one way. Node "c" has no outgoing edges and does not appear as a key.
+
+Example 3:
+Input: edges = []
+Output: {}
+
+Constraints:
+- Each edge is a tuple of exactly two nodes.
+- Nodes can be any hashable type (typically strings or integers).
+- The returned dict maps each node to a list of its neighbors.
+
+Ref: LeetCode #133 Clone Graph (closest match)`,
+    code: `def build_adjacency_list(edges, directed: false)
+  raise NotImplementedError
+end`,
+    testCode: `def test_undirected
+  edges = [["a", "b"], ["b", "c"]]
+  result = build_adjacency_list(edges)
+  assert_true(result["a"].include?("b"))
+  assert_true(result["b"].include?("a"))
+  assert_true(result["b"].include?("c"))
+  assert_true(result["c"].include?("b"))
+end
+
+def test_directed
+  edges = [["a", "b"], ["b", "c"]]
+  result = build_adjacency_list(edges, directed: true)
+  assert_equal(["b"], result["a"])
+  assert_equal(["c"], result["b"])
+  assert_true(!(result.fetch("b", [])).include?("a") || result["b"] == ["c"])
+  assert_true(!result.key?("c"))
+end
+
+def test_empty
+  result = build_adjacency_list([])
+  assert_equal({}, result)
+end`,
+    solution: `def build_adjacency_list(edges, directed: false)
+  graph = {}
+
+  edges.each do |a, b|
+    (graph[a] ||= []) << b
+    (graph[b] ||= []) << a unless directed
+  end
+
+  graph
+end`,
+    usage: null,
+    tags: ["graph"],
+  },
+  {
+    name: "Matrix DFS (Recursive)",
+    category: "graphs",
+    language: "ruby",
+    difficulty: "medium",
+    description: `Matrix DFS (Recursive)
+
+Given a 2D grid of integers and a starting position (row, col), perform a depth-first search using recursion and return the list of all positions visited in DFS order. Only traverse cells with value 0 (passable). Cells with value 1 are walls. Move in 4 directions: up, down, left, right.
+
+Example 1:
+Input: grid = [[0,0,0],[0,1,0],[0,0,0]], start = (0, 0)
+Output: [(0,0), (0,1), (0,2), (1,2), (2,2), (2,1), (2,0), (1,0)]
+Explanation: DFS explores as deep as possible along each branch before backtracking. The center cell (1,1) is a wall.
+
+Example 2:
+Input: grid = [[0,1],[1,0]], start = (0, 0)
+Output: [(0, 0)]
+Explanation: The start cell is surrounded by walls, so only it is visited.
+
+Example 3:
+Input: grid = [[0,0],[0,0]], start = (0, 0)
+Output: [(0,0), (0,1), (1,1), (1,0)]
+Explanation: All cells are passable. DFS visits all 4 cells.
+
+Constraints:
+- 1 <= grid.length, grid[0].length <= 100
+- grid[i][j] is 0 or 1
+- start is always a passable cell (value 0)
+
+Ref: LeetCode #200 Number of Islands`,
+    code: `def matrix_dfs(grid, start)
+  raise NotImplementedError
+end`,
+    testCode: `def test_simple
+  grid = [
+    [0, 0, 0],
+    [0, 1, 0],
+    [0, 0, 0],
+  ]
+  result = matrix_dfs(grid, [0, 0])
+  assert_equal([0, 0], result[0])
+  assert_equal(8, result.length)
+end
+
+def test_blocked
+  grid = [
+    [0, 1],
+    [1, 0],
+  ]
+  result = matrix_dfs(grid, [0, 0])
+  assert_equal([[0, 0]], result)
+end
+
+def test_single_cell
+  grid = [[0]]
+  result = matrix_dfs(grid, [0, 0])
+  assert_equal([[0, 0]], result)
+end
+
+def test_all_open
+  grid = [
+    [0, 0],
+    [0, 0],
+  ]
+  result = matrix_dfs(grid, [0, 0])
+  assert_equal(4, result.length)
+  assert_equal([0, 0], result[0])
+end`,
+    solution: `def matrix_dfs(grid, start)
+  rows, cols = grid.length, grid[0].length
+  visited = {}
+  result = []
+
+  dfs = lambda do |r, c|
+    next if r < 0 || r >= rows || c < 0 || c >= cols
+    next if visited[[r, c]] || grid[r][c] == 1
+
+    visited[[r, c]] = true
+    result << [r, c]
+
+    [[0, 1], [0, -1], [1, 0], [-1, 0]].each do |dr, dc|
+      dfs.call(r + dr, c + dc)
+    end
+  end
+
+  dfs.call(start[0], start[1])
+  result
+end`,
+    usage: null,
+    tags: ["dfs", "matrix", "recursion"],
+  },
+  {
+    name: "Graph DFS (Recursive)",
+    category: "graphs",
+    language: "ruby",
+    difficulty: "medium",
+    description: `Graph DFS (Recursive)
+
+Given a graph represented as an adjacency list (dictionary mapping each node to a list of its neighbors) and a start node, return a list of all reachable nodes visited in depth-first order. Use a recursive approach.
+
+Example 1:
+Input: graph = {"a": ["b", "c"], "b": ["d"], "c": [], "d": []}, start = "a"
+Output: ["a", "b", "d", "c"]
+Explanation: Recursive DFS visits "a", then recurses into "b", then "d" (depth-first), backtracks, then visits "c".
+
+Example 2:
+Input: graph = {"a": []}, start = "a"
+Output: ["a"]
+
+Example 3:
+Input: graph = {"a": ["b"], "b": [], "c": ["d"], "d": []}, start = "a"
+Output: ["a", "b"]
+Explanation: Nodes "c" and "d" are not reachable from "a".
+
+Constraints:
+- The graph is represented as a dict of node -> list of neighbors.
+- All neighbor nodes referenced in adjacency lists exist as keys in the graph.
+- The start node exists in the graph.
+
+Ref: LeetCode #323 Number of Connected Components (closest match)`,
+    code: `def graph_dfs(graph, start)
+  raise NotImplementedError
+end`,
+    testCode: `def test_simple_graph
+  graph = {
+    "a" => ["b", "c"],
+    "b" => ["d"],
+    "c" => [],
+    "d" => [],
+  }
+  result = graph_dfs(graph, "a")
+  assert_equal("a", result[0])
+  assert_equal(["a", "b", "c", "d"], result.sort)
+end
+
+def test_single_node
+  graph = { "a" => [] }
+  assert_equal(["a"], graph_dfs(graph, "a"))
+end
+
+def test_disconnected
+  graph = {
+    "a" => ["b"],
+    "b" => [],
+    "c" => ["d"],
+    "d" => [],
+  }
+  result = graph_dfs(graph, "a")
+  assert_equal(["a", "b"], result.sort)
+end`,
+    solution: `def graph_dfs(graph, start)
+  visited = {}
+  result = []
+
+  dfs = lambda do |node|
+    next if visited[node]
+
+    visited[node] = true
+    result << node
+    graph[node].each { |neighbor| dfs.call(neighbor) }
+  end
+
+  dfs.call(start)
+  result
+end`,
+    usage: null,
+    tags: ["dfs", "graph", "recursion"],
+  },
+  {
+    name: "Matrix DFS (Iterative)",
+    category: "graphs",
+    language: "ruby",
+    difficulty: "medium",
+    description: `Matrix DFS (Iterative)
+
+Given a 2D grid of integers and a starting position (row, col), perform a depth-first search using an explicit stack (iterative approach) and return the list of all positions visited in DFS order. Only traverse cells with value 0 (passable). Cells with value 1 are walls. Move in 4 directions: up, down, left, right.
+
+Example 1:
+Input: grid = [[0,0,0],[0,1,0],[0,0,0]], start = (0, 0)
+Output: [(0,0), (1,0), (2,0), (2,1), (2,2), (1,2), (0,2), (0,1)]
+Explanation: Iterative DFS uses a stack, so traversal order may differ from recursive DFS. The center cell (1,1) is a wall and is skipped.
+
+Example 2:
+Input: grid = [[0,1],[1,0]], start = (0, 0)
+Output: [(0, 0)]
+Explanation: Start is surrounded by walls, so only the start cell is visited.
+
+Example 3:
+Input: grid = [[0,0],[0,0]], start = (0, 0)
+Output: [(0,0), (1,0), (1,1), (0,1)]
+Explanation: All cells are passable. Stack-based DFS visits all 4 cells.
+
+Constraints:
+- 1 <= grid.length, grid[0].length <= 100
+- grid[i][j] is 0 or 1
+- start is always a passable cell (value 0)
+
+Ref: LeetCode #200 Number of Islands`,
+    code: `def matrix_dfs(grid, start)
+  raise NotImplementedError
+end`,
+    testCode: `def test_simple
+  grid = [
+    [0, 0, 0],
+    [0, 1, 0],
+    [0, 0, 0],
+  ]
+  result = matrix_dfs(grid, [0, 0])
+  assert_equal([0, 0], result[0])
+  assert_equal(8, result.length)
+end
+
+def test_blocked
+  grid = [
+    [0, 1],
+    [1, 0],
+  ]
+  result = matrix_dfs(grid, [0, 0])
+  assert_equal([[0, 0]], result)
+end
+
+def test_single_cell
+  grid = [[0]]
+  result = matrix_dfs(grid, [0, 0])
+  assert_equal([[0, 0]], result)
+end
+
+def test_all_open
+  grid = [
+    [0, 0],
+    [0, 0],
+  ]
+  result = matrix_dfs(grid, [0, 0])
+  assert_equal(4, result.length)
+  assert_equal([0, 0], result[0])
+end`,
+    solution: `def matrix_dfs(grid, start)
+  rows, cols = grid.length, grid[0].length
+  visited = {}
+  result = []
+  stack = [start]
+
+  until stack.empty?
+    r, c = stack.pop
+    next if visited[[r, c]] || grid[r][c] == 1
+
+    visited[[r, c]] = true
+    result << [r, c]
+
+    [[0, 1], [0, -1], [1, 0], [-1, 0]].each do |dr, dc|
+      nr, nc = r + dr, c + dc
+      if nr >= 0 && nr < rows && nc >= 0 && nc < cols && !visited[[nr, nc]]
+        stack << [nr, nc]
+      end
+    end
+  end
+
+  result
+end`,
+    usage: null,
+    tags: ["dfs", "matrix"],
+  },
+  {
+    name: "Matrix Grid BFS",
+    category: "graphs",
+    language: "ruby",
+    difficulty: "easy",
+    description: `Grid BFS
+
+Given an integer n, perform a breadth-first search starting from cell (0, 0) on an n x n grid. Return the list of all visited cells as (row, col) tuples in the order they were visited. All cells are passable. Move in 4 directions: up, down, left, right.
+
+Example 1:
+Input: n = 1
+Output: [(0, 0)]
+
+Example 2:
+Input: n = 2
+Output: [(0,0), (0,1), (1,0), (1,1)]
+Explanation: BFS from (0,0) visits adjacent cells level by level.
+
+Example 3:
+Input: n = 3
+Output: [(0,0), (0,1), (1,0), (0,2), (1,1), (2,0), (1,2), (2,1), (2,2)]
+Explanation: All 9 cells are visited in BFS order from the top-left corner.
+
+Constraints:
+- 1 <= n <= 100
+- The grid has no walls; all n * n cells are visited.
+- Output length is always n * n.`,
+    code: `def grid_bfs(n)
+  raise NotImplementedError
+end`,
+    testCode: `def test_1x1
+  assert_equal([[0, 0]], grid_bfs(1))
+end
+
+def test_2x2
+  result = grid_bfs(2)
+  assert_equal([0, 0], result[0])
+  assert_equal([[0, 0], [0, 1], [1, 0], [1, 1]], result.sort)
+  assert_equal(4, result.length)
+end
+
+def test_3x3
+  result = grid_bfs(3)
+  assert_equal([0, 0], result[0])
+  assert_equal(9, result.length)
+  expected = (0...3).flat_map { |r| (0...3).map { |c| [r, c] } }
+  assert_equal(expected.sort, result.sort)
+end
+
+def test_all_cells_visited
+  n = 4
+  result = grid_bfs(n)
+  assert_equal(n * n, result.length)
+  assert_equal(n * n, result.uniq.length)
+end`,
+    solution: `def grid_bfs(n)
+  visited = { [0, 0] => true }
+  order = []
+  queue = [[0, 0]]
+  until queue.empty?
+    r, c = queue.shift
+    order << [r, c]
+    [[-1, 0], [1, 0], [0, -1], [0, 1]].each do |dr, dc|
+      nr, nc = r + dr, c + dc
+      if nr >= 0 && nr < n && nc >= 0 && nc < n && !visited[[nr, nc]]
+        visited[[nr, nc]] = true
+        queue << [nr, nc]
+      end
+    end
+  end
+  order
+end`,
+    usage: null,
+    tags: ["bfs", "matrix"],
+  },
+  {
+    name: "Min Heap",
+    category: "heap",
+    language: "ruby",
+    difficulty: "hard",
+    description: `Min Heap
+
+Implement a min heap data structure from scratch. Do not use Python's heapq module.
+
+Your MinHeap class should support the following operations:
+- insert(val): Add a value to the heap and maintain the heap property by bubbling up.
+- extract_min(): Remove and return the smallest value from the heap, then restore the heap property by bubbling down. Raise IndexError if the heap is empty.
+- peek(): Return the smallest value without removing it. Raise IndexError if the heap is empty.
+- __len__(): Return the number of elements in the heap.
+
+Example 1:
+h = MinHeap()
+h.insert(5)
+h.insert(3)
+h.insert(7)
+h.peek()        # returns 3
+h.extract_min()  # returns 3
+h.extract_min()  # returns 5
+
+Example 2:
+h = MinHeap()
+h.insert(1)
+len(h)           # returns 1
+h.extract_min()  # returns 1
+len(h)           # returns 0
+
+Example 3:
+h = MinHeap()
+h.insert(3)
+h.insert(3)
+h.insert(3)
+h.extract_min()  # returns 3 (duplicates are allowed)
+
+Constraints:
+- Values are comparable integers.
+- extract_min() and peek() on an empty heap must raise IndexError.
+- All operations should maintain the min-heap invariant: parent <= children.
+
+Ref: LeetCode #703 Kth Largest Element in a Stream (closest match)`,
+    code: `class MinHeap
+  def initialize
+    @data = []
+  end
+
+  def insert(val)
+    raise NotImplementedError
+  end
+
+  def extract_min
+    raise NotImplementedError
+  end
+
+  def peek
+    raise NotImplementedError
+  end
+
+  def length
+    @data.length
+  end
+end`,
+    testCode: `def test_insert_and_peek
+  h = MinHeap.new
+  h.insert(5)
+  h.insert(3)
+  h.insert(7)
+  assert_equal(3, h.peek)
+end
+
+def test_extract_min
+  h = MinHeap.new
+  [5, 3, 7, 1, 4].each { |val| h.insert(val) }
+
+  assert_equal(1, h.extract_min)
+  assert_equal(3, h.extract_min)
+  assert_equal(4, h.extract_min)
+  assert_equal(5, h.extract_min)
+  assert_equal(7, h.extract_min)
+end
+
+def test_extract_from_empty
+  h = MinHeap.new
+  begin
+    h.extract_min
+    assert_true(false, "Expected IndexError")
+  rescue IndexError
+    assert_true(true)
+  end
+end
+
+def test_peek_empty
+  h = MinHeap.new
+  begin
+    h.peek
+    assert_true(false, "Expected IndexError")
+  rescue IndexError
+    assert_true(true)
+  end
+end
+
+def test_len
+  h = MinHeap.new
+  assert_equal(0, h.length)
+  h.insert(1)
+  h.insert(2)
+  assert_equal(2, h.length)
+  h.extract_min
+  assert_equal(1, h.length)
+end
+
+def test_insert_duplicates
+  h = MinHeap.new
+  h.insert(3)
+  h.insert(3)
+  h.insert(3)
+  assert_equal(3, h.extract_min)
+  assert_equal(3, h.extract_min)
+  assert_equal(3, h.extract_min)
+end`,
+    solution: `class MinHeap
+  def initialize
+    @data = []
+  end
+
+  def insert(val)
+    @data << val
+    bubble_up(@data.length - 1)
+  end
+
+  def extract_min
+    raise IndexError, "extract from empty heap" if @data.empty?
+
+    swap(0, @data.length - 1)
+    val = @data.pop
+    bubble_down(0) unless @data.empty?
+    val
+  end
+
+  def peek
+    raise IndexError, "peek at empty heap" if @data.empty?
+
+    @data[0]
+  end
+
+  def length
+    @data.length
+  end
+
+  private
+
+  def bubble_up(i)
+    while i > 0
+      parent = (i - 1) / 2
+      if @data[i] < @data[parent]
+        swap(i, parent)
+        i = parent
+      else
+        break
+      end
+    end
+  end
+
+  def bubble_down(i)
+    size = @data.length
+    loop do
+      smallest = i
+      left = (2 * i) + 1
+      right = (2 * i) + 2
+
+      smallest = left if left < size && @data[left] < @data[smallest]
+      smallest = right if right < size && @data[right] < @data[smallest]
+
+      break if smallest == i
+
+      swap(i, smallest)
+      i = smallest
+    end
+  end
+
+  def swap(i, j)
+    @data[i], @data[j] = @data[j], @data[i]
+  end
+end`,
+    usage: null,
+    tags: ["heap"],
+  },
+  {
+    name: "Merge Intervals",
+    category: "intervals",
+    language: "ruby",
+    difficulty: "medium",
+    description: `Merge Intervals
+
+Given an array of intervals where intervals[i] = [start_i, end_i], merge all overlapping intervals, and return an array of the non-overlapping intervals that cover all the intervals in the input.
+
+Example 1:
+Input: intervals = [[1,3],[2,6],[8,10],[15,18]]
+Output: [[1,6],[8,10],[15,18]]
+Explanation: Since intervals [1,3] and [2,6] overlap, merge them into [1,6].
+
+Example 2:
+Input: intervals = [[1,4],[4,5]]
+Output: [[1,5]]
+Explanation: Intervals [1,4] and [4,5] are considered overlapping.
+
+Example 3:
+Input: intervals = [[1,4],[2,3],[3,6]]
+Output: [[1,6]]
+Explanation: All three intervals overlap and merge into a single interval.
+
+Constraints:
+- 1 <= intervals.length <= 10^4
+- intervals[i].length == 2
+- 0 <= start_i <= end_i <= 10^4
+
+Ref: LeetCode #56 Merge Intervals`,
+    code: `def merge(intervals)
+  raise NotImplementedError
+end`,
+    testCode: `def test_overlapping
+  assert_equal([[1, 6], [8, 10], [15, 18]], merge([[1, 3], [2, 6], [8, 10], [15, 18]]))
+end
+
+def test_adjacent
+  assert_equal([[1, 5]], merge([[1, 4], [4, 5]]))
+end
+
+def test_no_overlap
+  assert_equal([[1, 2], [4, 5]], merge([[1, 2], [4, 5]]))
+end
+
+def test_single
+  assert_equal([[1, 5]], merge([[1, 5]]))
+end
+
+def test_empty
+  assert_equal([], merge([]))
+end
+
+def test_all_overlapping
+  assert_equal([[1, 6]], merge([[1, 4], [2, 3], [3, 6]]))
+end
+
+def test_unsorted
+  assert_equal([[1, 4]], merge([[3, 4], [1, 2], [2, 3]]))
+end`,
+    solution: `def merge(intervals)
+  return [] if intervals.empty?
+
+  intervals = intervals.sort_by { |x| x[0] }
+  merged = [intervals[0]]
+  intervals[1..].each do |start, end_|
+    if start <= merged[-1][1]
+      merged[-1][1] = [merged[-1][1], end_].max
+    else
+      merged << [start, end_]
+    end
+  end
+  merged
+end`,
+    usage: null,
+    tags: ["sorting", "intervals", "blind75"],
+  },
+  {
+    name: "Linked List Traversal (Iterative)",
+    category: "linked-list",
+    language: "ruby",
+    difficulty: "easy",
+    description: `Linked List Traversal (Iterative)
+
+Given the head of a singly linked list, return a list of all node values in order using an iterative approach.
+
+Each node has a val attribute and a next pointer. Traverse from head to the end of the list, collecting each node's value.
+
+Example 1:
+Input: head = [1,2,3]
+Output: [1,2,3]
+Explanation: Traverse 1 -> 2 -> 3, collecting values into a list.
+
+Example 2:
+Input: head = [42]
+Output: [42]
+Explanation: Single node, return its value in a list.
+
+Example 3:
+Input: head = []
+Output: []
+Explanation: Empty list, return an empty list.
+
+Constraints:
+- 0 <= number of nodes <= 5000
+- -10^4 <= Node.val <= 10^4
+
+Ref: LeetCode #234 Palindrome Linked List (closest match)`,
+    code: `class Node
+  attr_accessor :val, :next
+
+  def initialize(val)
+    @val = val
+    @next = nil
+  end
+end
+
+def traverse(head)
+  raise NotImplementedError
+end`,
+    testCode: `def test_traverse_multiple
+  a = Node.new(1)
+  b = Node.new(2)
+  c = Node.new(3)
+  a.next = b
+  b.next = c
+  assert_equal([1, 2, 3], traverse(a))
+end
+
+def test_traverse_single
+  a = Node.new(42)
+  assert_equal([42], traverse(a))
+end
+
+def test_traverse_empty
+  assert_equal([], traverse(nil))
+end`,
+    solution: `class Node
+  attr_accessor :val, :next
+
+  def initialize(val)
+    @val = val
+    @next = nil
+  end
+end
+
+def traverse(head)
+  result = []
+  current = head
+
+  while !current.nil?
+    result << current.val
+    current = current.next
+  end
+
+  result
+end`,
+    usage: null,
+    tags: ["linked-list", "iteration", "blind75"],
+  },
+  {
+    name: "Reverse Linked List (Iterative)",
+    category: "linked-list",
+    language: "ruby",
+    difficulty: "easy",
+    description: `Reverse Linked List (Iterative)
+
+Given the head of a singly linked list, reverse the list using an iterative approach, and return the reversed list.
+
+Example 1:
+Input: head = [1,2,3,4]
+Output: [4,3,2,1]
+Explanation: Reverse all pointers so the list runs backwards.
+
+Example 2:
+Input: head = [1]
+Output: [1]
+Explanation: A single-node list is already reversed.
+
+Example 3:
+Input: head = []
+Output: []
+Explanation: An empty list remains empty when reversed.
+
+Constraints:
+- 0 <= number of nodes <= 5000
+- -5000 <= Node.val <= 5000
+
+Ref: LeetCode #206 Reverse Linked List`,
+    code: `class Node
+  attr_accessor :val, :next
+
+  def initialize(val)
+    @val = val
+    @next = nil
+  end
+end
+
+def reverse_iterative(head)
+  raise NotImplementedError
+end`,
+    testCode: `def build_list(values)
+  head = nil
+  values.reverse_each do |v|
+    n = Node.new(v)
+    n.next = head
+    head = n
+  end
+  head
+end
+
+def to_list(head)
+  result = []
+  while head
+    result << head.val
+    head = head.next
+  end
+  result
+end
+
+def test_reverse_iterative
+  head = build_list([1, 2, 3, 4])
+  result = reverse_iterative(head)
+  assert_equal([4, 3, 2, 1], to_list(result))
+end
+
+def test_reverse_iterative_single
+  head = build_list([1])
+  result = reverse_iterative(head)
+  assert_equal([1], to_list(result))
+end
+
+def test_reverse_iterative_empty
+  assert_equal(nil, reverse_iterative(nil))
+end`,
+    solution: `class Node
+  attr_accessor :val, :next
+
+  def initialize(val)
+    @val = val
+    @next = nil
+  end
+end
+
+def reverse_iterative(head)
+  prev = nil
+  current = head
+  while !current.nil?
+    nxt = current.next
+    current.next = prev
+    prev = current
+    current = nxt
+  end
+  prev
+end`,
+    usage: null,
+    tags: ["linked-list", "iteration"],
+  },
+  {
+    name: "Reverse Linked List (Recursive)",
+    category: "linked-list",
+    language: "ruby",
+    difficulty: "medium",
+    description: `Reverse Linked List (Recursive)
+
+Given the head of a singly linked list, reverse the list using a recursive approach, and return the reversed list.
+
+Example 1:
+Input: head = [1,2,3,4]
+Output: [4,3,2,1]
+Explanation: Recursively reverse the rest of the list, then fix the pointers.
+
+Example 2:
+Input: head = [1]
+Output: [1]
+Explanation: Base case; a single-node list is already reversed.
+
+Example 3:
+Input: head = []
+Output: []
+Explanation: An empty list remains empty when reversed.
+
+Constraints:
+- 0 <= number of nodes <= 5000
+- -5000 <= Node.val <= 5000
+
+Ref: LeetCode #206 Reverse Linked List`,
+    code: `class Node
+  attr_accessor :val, :next
+
+  def initialize(val)
+    @val = val
+    @next = nil
+  end
+end
+
+def reverse_recursive(head)
+  raise NotImplementedError
+end`,
+    testCode: `def build_list(values)
+  head = nil
+  values.reverse_each do |v|
+    n = Node.new(v)
+    n.next = head
+    head = n
+  end
+  head
+end
+
+def to_list(head)
+  result = []
+  while head
+    result << head.val
+    head = head.next
+  end
+  result
+end
+
+def test_reverse_recursive
+  head = build_list([1, 2, 3, 4])
+  result = reverse_recursive(head)
+  assert_equal([4, 3, 2, 1], to_list(result))
+end
+
+def test_reverse_recursive_single
+  head = build_list([1])
+  result = reverse_recursive(head)
+  assert_equal([1], to_list(result))
+end
+
+def test_reverse_recursive_empty
+  assert_equal(nil, reverse_recursive(nil))
+end`,
+    solution: `class Node
+  attr_accessor :val, :next
+
+  def initialize(val)
+    @val = val
+    @next = nil
+  end
+end
+
+def reverse_recursive(head)
+  return head if head.nil? || head.next.nil?
+
+  new_head = reverse_recursive(head.next)
+  head.next.next = head
+  head.next = nil
+  new_head
+end`,
+    usage: null,
+    tags: ["linked-list", "recursion", "blind75"],
+  },
+  {
+    name: "Linked List Cycle Detection",
+    category: "linked-list",
+    language: "ruby",
+    difficulty: "easy",
+    description: `Linked List Cycle Detection
+
+Given head, the head of a linked list, determine if the linked list has a cycle in it.
+
+There is a cycle in a linked list if there is some node in the list that can be reached again by continuously following the next pointer. Return True if there is a cycle, False otherwise.
+
+Use Floyd's cycle detection algorithm (tortoise and hare) with O(1) space.
+
+Example 1:
+Input: head = [3,2,0,-4], pos = 1
+Output: True
+Explanation: There is a cycle where the tail connects to the 1st node (0-indexed).
+
+Example 2:
+Input: head = [1], pos = -1
+Output: False
+Explanation: There is no cycle in the list.
+
+Example 3:
+Input: head = [1,2], pos = 0
+Output: True
+Explanation: The tail connects back to the 0th node.
+
+Constraints:
+- 0 <= number of nodes <= 10^4
+- -10^5 <= Node.val <= 10^5
+
+Ref: LeetCode #141 Linked List Cycle`,
+    code: `class Node
+  attr_accessor :val, :next
+
+  def initialize(val)
+    @val = val
+    @next = nil
+  end
+end
+
+def has_cycle(head)
+  raise NotImplementedError
+end`,
+    testCode: `def test_no_cycle
+  a = Node.new(1)
+  b = Node.new(2)
+  c = Node.new(3)
+  a.next = b
+  b.next = c
+  assert_equal(false, has_cycle(a))
+end
+
+def test_has_cycle
+  a = Node.new(1)
+  b = Node.new(2)
+  c = Node.new(3)
+  a.next = b
+  b.next = c
+  c.next = a
+  assert_equal(true, has_cycle(a))
+end
+
+def test_self_cycle
+  a = Node.new(1)
+  a.next = a
+  assert_equal(true, has_cycle(a))
+end
+
+def test_empty
+  assert_equal(false, has_cycle(nil))
+end
+
+def test_single_no_cycle
+  a = Node.new(1)
+  assert_equal(false, has_cycle(a))
+end`,
+    solution: `class Node
+  attr_accessor :val, :next
+
+  def initialize(val)
+    @val = val
+    @next = nil
+  end
+end
+
+def has_cycle(head)
+  slow = head
+  fast = head
+
+  while !fast.nil? && !fast.next.nil?
+    slow = slow.next
+    fast = fast.next.next
+    return true if slow.equal?(fast)
+  end
+
+  false
+end`,
+    usage: null,
+    tags: ["linked-list", "fast-slow-pointer", "blind75"],
+  },
+  {
+    name: "Linked List Traversal (Recursive)",
+    category: "linked-list",
+    language: "ruby",
+    difficulty: "easy",
+    description: `Linked List Traversal (Recursive)
+
+Given the head of a singly linked list, return a list of all node values in order using a recursive approach.
+
+At each recursive call, add the current node's value and recurse on the next node. Base case: return an empty list when head is None.
+
+Example 1:
+Input: head = [1,2,3]
+Output: [1,2,3]
+Explanation: Recursively visit 1, then 2, then 3, building up the result list.
+
+Example 2:
+Input: head = [42]
+Output: [42]
+Explanation: Single node; return [42].
+
+Example 3:
+Input: head = []
+Output: []
+Explanation: Empty list; base case returns [].
+
+Constraints:
+- 0 <= number of nodes <= 5000
+- -10^4 <= Node.val <= 10^4
+
+Ref: LeetCode #234 Palindrome Linked List (closest match)`,
+    code: `class Node
+  attr_accessor :val, :next
+
+  def initialize(val)
+    @val = val
+    @next = nil
+  end
+end
+
+def traverse(head)
+  raise NotImplementedError
+end`,
+    testCode: `def test_traverse_multiple
+  a = Node.new(1)
+  b = Node.new(2)
+  c = Node.new(3)
+  a.next = b
+  b.next = c
+  assert_equal([1, 2, 3], traverse(a))
+end
+
+def test_traverse_single
+  a = Node.new(42)
+  assert_equal([42], traverse(a))
+end
+
+def test_traverse_empty
+  assert_equal([], traverse(nil))
+end`,
+    solution: `class Node
+  attr_accessor :val, :next
+
+  def initialize(val)
+    @val = val
+    @next = nil
+  end
+end
+
+def traverse(head)
+  return [] if head.nil?
+
+  [head.val] + traverse(head.next)
+end`,
+    usage: null,
+    tags: ["linked-list", "recursion"],
+  },
+  {
+    name: "Sliding Window Max Sum",
+    category: "sliding-window",
+    language: "ruby",
+    difficulty: "medium",
+    description: `Sliding Window Max Sum
+
+Given an integer array nums and an integer k, find the maximum sum of any contiguous subarray of size k.
+
+Use the sliding window technique: compute the sum of the first window, then slide by adding the next element and removing the leftmost element.
+
+Example 1:
+Input: nums = [1,4,2,10,2,3,1,0,20], k = 4
+Output: 24
+Explanation: The subarray [3,1,0,20] has the maximum sum of 24.
+
+Example 2:
+Input: nums = [1,2,3], k = 3
+Output: 6
+Explanation: Only one window exists, which is the entire array summing to 6.
+
+Example 3:
+Input: nums = [5,1,8,3], k = 1
+Output: 8
+Explanation: With window size 1, return the maximum element.
+
+Constraints:
+- 1 <= k <= nums.length <= 10^5
+- -10^4 <= nums[i] <= 10^4
+
+Ref: LeetCode #2461 Maximum Sum of Distinct Subarrays With Length K`,
+    code: `def max_subarray_sum(nums, k)
+  raise NotImplementedError
+end`,
+    testCode: `def test_basic
+  assert_equal(24, max_subarray_sum([1, 4, 2, 10, 2, 3, 1, 0, 20], 4))
+end
+
+def test_window_is_full_array
+  assert_equal(6, max_subarray_sum([1, 2, 3], 3))
+end
+
+def test_window_of_one
+  assert_equal(8, max_subarray_sum([5, 1, 8, 3], 1))
+end
+
+def test_negative_values
+  assert_equal(-3, max_subarray_sum([-1, -2, -3, -4], 2))
+end
+
+def test_mixed
+  assert_equal(6, max_subarray_sum([2, -1, 5, -3, 4], 3))
+end`,
+    solution: `def max_subarray_sum(nums, k)
+  window_sum = nums[0...k].sum
+  max_sum = window_sum
+
+  (k...nums.length).each do |i|
+    window_sum += nums[i] - nums[i - k]
+    max_sum = [max_sum, window_sum].max
+  end
+
+  max_sum
+end`,
+    usage: null,
+    tags: ["sliding-window"],
+  },
+  {
+    name: "Balanced Parentheses",
+    category: "stack",
+    language: "ruby",
+    difficulty: "easy",
+    description: `Valid Parentheses
+
+Given a string s containing just the characters '(', ')', '{', '}', '[' and ']', determine if the input string is valid.
+
+An input string is valid if:
+1. Open brackets must be closed by the same type of brackets.
+2. Open brackets must be closed in the correct order.
+3. Every close bracket has a corresponding open bracket of the same type.
+
+Example 1:
+Input: s = "()"
+Output: True
+
+Example 2:
+Input: s = "({[]})"
+Output: True
+Explanation: Each bracket is closed in the correct nesting order.
+
+Example 3:
+Input: s = "(]"
+Output: False
+Explanation: The open parenthesis is closed by a square bracket, which is invalid.
+
+Constraints:
+- 0 <= s.length <= 10^4
+- s consists of parentheses only: '(){}[]'
+
+Ref: LeetCode #20 Valid Parentheses`,
+    code: `def is_balanced(s)
+  raise NotImplementedError
+end`,
+    testCode: `def test_balanced_simple
+  assert_equal(true, is_balanced("()"))
+end
+
+def test_balanced_nested
+  assert_equal(true, is_balanced("({[]})"))
+end
+
+def test_balanced_multiple
+  assert_equal(true, is_balanced("()[]{}"))
+end
+
+def test_unbalanced_close
+  assert_equal(false, is_balanced("(]"))
+end
+
+def test_unbalanced_open
+  assert_equal(false, is_balanced("("))
+end
+
+def test_unbalanced_extra_close
+  assert_equal(false, is_balanced("())"))
+end
+
+def test_empty
+  assert_equal(true, is_balanced(""))
+end
+
+def test_complex
+  assert_equal(true, is_balanced("{[()]}[{}]"))
+end`,
+    solution: `def is_balanced(s)
+  stack = []
+  pairs = { ")" => "(", "}" => "{", "]" => "[" }
+  s.each_char do |ch|
+    if "({[".include?(ch)
+      stack.push(ch)
+    elsif pairs.key?(ch)
+      return false if stack.empty? || stack[-1] != pairs[ch]
+
+      stack.pop
+    end
+  end
+  stack.empty?
+end`,
+    usage: null,
+    tags: ["stack", "string", "blind75"],
+  },
+  {
+    name: "Queue from Two Stacks",
+    category: "stack",
+    language: "ruby",
+    difficulty: "medium",
+    description: `Queue from Two Stacks
+
+Implement a first-in-first-out (FIFO) queue using only two stacks (Python lists). The implemented queue should support the following operations: enqueue, dequeue, peek, and is_empty.
+
+Implement the Queue class:
+- Queue() initializes the queue object.
+- enqueue(val) pushes element val to the back of the queue.
+- dequeue() removes the element from the front of the queue and returns it.
+- peek() returns the element at the front of the queue without removing it.
+- is_empty() returns True if the queue is empty, False otherwise.
+
+Example 1:
+Input: enqueue(1), enqueue(2), dequeue(), dequeue()
+Output: 1, 2
+Explanation: Elements are dequeued in FIFO order.
+
+Example 2:
+Input: enqueue(5), enqueue(10), peek(), dequeue(), peek()
+Output: 5, 5, 10
+Explanation: peek() returns front without removing; after dequeue(), front becomes 10.
+
+Example 3:
+Input: is_empty(), enqueue(1), is_empty(), dequeue(), is_empty()
+Output: True, False, True
+Explanation: Queue starts empty, becomes non-empty after enqueue, empty again after dequeue.
+
+Constraints:
+- 1 <= val <= 9
+- At most 100 calls to enqueue, dequeue, peek, and is_empty
+- All calls to dequeue and peek are valid (queue is non-empty)
+
+Ref: LeetCode #232 Implement Queue using Stacks`,
+    code: `class Queue
+  def initialize
+    raise NotImplementedError
+  end
+
+  def enqueue(val)
+    raise NotImplementedError
+  end
+
+  def dequeue
+    raise NotImplementedError
+  end
+
+  def peek
+    raise NotImplementedError
+  end
+
+  def is_empty
+    raise NotImplementedError
+  end
+end`,
+    testCode: `def test_enqueue_dequeue
+  q = Queue.new
+  q.enqueue(1)
+  q.enqueue(2)
+  assert_equal(1, q.dequeue)
+  assert_equal(2, q.dequeue)
+end
+
+def test_fifo_order
+  q = Queue.new
+  q.enqueue(10)
+  q.enqueue(20)
+  q.enqueue(30)
+  assert_equal(10, q.dequeue)
+  assert_equal(20, q.dequeue)
+  assert_equal(30, q.dequeue)
+end
+
+def test_peek
+  q = Queue.new
+  q.enqueue(5)
+  q.enqueue(10)
+  assert_equal(5, q.peek)
+  q.dequeue
+  assert_equal(10, q.peek)
+end
+
+def test_is_empty
+  q = Queue.new
+  assert_equal(true, q.is_empty)
+  q.enqueue(1)
+  assert_equal(false, q.is_empty)
+  q.dequeue
+  assert_equal(true, q.is_empty)
+end
+
+def test_interleaved
+  q = Queue.new
+  q.enqueue(1)
+  q.enqueue(2)
+  assert_equal(1, q.dequeue)
+  q.enqueue(3)
+  assert_equal(2, q.dequeue)
+  assert_equal(3, q.dequeue)
+end`,
+    solution: `class Queue
+  def initialize
+    @in_stack = []
+    @out_stack = []
+  end
+
+  def enqueue(val)
+    @in_stack.push(val)
+  end
+
+  def transfer
+    if @out_stack.empty?
+      @out_stack.push(@in_stack.pop) until @in_stack.empty?
+    end
+  end
+  private :transfer
+
+  def dequeue
+    transfer
+    @out_stack.pop
+  end
+
+  def peek
+    transfer
+    @out_stack[-1]
+  end
+
+  def is_empty
+    @in_stack.empty? && @out_stack.empty?
+  end
+end`,
+    usage: null,
+    tags: ["stack", "queue"],
+  },
+  {
+    name: "Monotonic Stack",
+    category: "stack",
+    language: "ruby",
+    difficulty: "medium",
+    description: `Next Greater Element
+
+Given an array of integers nums, for each element find the next greater element to its right. The next greater element of a number x is the first number to the right that is greater than x. If no such element exists, use -1.
+
+Return an array answer where answer[i] is the next greater element for nums[i].
+
+Example 1:
+Input: nums = [2,1,2,4,3]
+Output: [4,2,4,-1,-1]
+Explanation: For 2, next greater is 4. For 1, next greater is 2. For the second 2, next greater is 4. For 4 and 3, no greater element exists to the right.
+
+Example 2:
+Input: nums = [5,4,3,2,1]
+Output: [-1,-1,-1,-1,-1]
+Explanation: Array is strictly decreasing, so no element has a next greater element.
+
+Example 3:
+Input: nums = [1,2,3,4,5]
+Output: [2,3,4,5,-1]
+Explanation: Each element's next greater is the element immediately to its right, except for 5.
+
+Constraints:
+- 1 <= nums.length <= 10^4
+- -10^9 <= nums[i] <= 10^9
+
+Ref: LeetCode #496 Next Greater Element I`,
+    code: `def next_greater_element(nums)
+  raise NotImplementedError
+end`,
+    testCode: `def test_basic
+  assert_equal([4, 2, 4, -1, -1], next_greater_element([2, 1, 2, 4, 3]))
+end
+
+def test_descending
+  assert_equal([-1, -1, -1, -1, -1], next_greater_element([5, 4, 3, 2, 1]))
+end
+
+def test_ascending
+  assert_equal([2, 3, 4, 5, -1], next_greater_element([1, 2, 3, 4, 5]))
+end
+
+def test_single
+  assert_equal([-1], next_greater_element([1]))
+end
+
+def test_duplicates
+  assert_equal([2, 2, 2, -1], next_greater_element([1, 1, 1, 2]))
+end`,
+    solution: `def next_greater_element(nums)
+  result = Array.new(nums.length, -1)
+  stack = []
+  (0...nums.length).each do |i|
+    while !stack.empty? && nums[i] > nums[stack[-1]]
+      result[stack.pop] = nums[i]
+    end
+    stack.push(i)
+  end
+  result
+end`,
+    usage: null,
+    tags: ["stack", "monotonic"],
+  },
+  {
+    name: "Binary Tree BFS",
+    category: "trees",
+    language: "ruby",
+    difficulty: "medium",
+    description: `Binary Tree BFS
+
+Given the root of a binary tree, return its node values in breadth-first (level-order) traversal order. Visit nodes level by level, from left to right.
+
+If the tree is empty (root is None), return an empty list.
+
+Example 1:
+Input: root = [1, 2, 3, 4, 5]
+        1
+       / \\
+      2   3
+     / \\
+    4   5
+Output: [1, 2, 3, 4, 5]
+
+Example 2:
+Input: root = [1]
+Output: [1]
+
+Example 3:
+Input: root = []
+Output: []
+
+Constraints:
+- The number of nodes in the tree is in the range [0, 1000].
+- -1000 <= Node.val <= 1000
+
+Ref: LeetCode #102 Binary Tree Level Order Traversal`,
+    code: `class Node
+  attr_accessor :val, :left, :right
+
+  def initialize(val)
+    @val = val
+    @left = nil
+    @right = nil
+  end
+end
+
+def bfs(root)
+  raise NotImplementedError
+end`,
+    testCode: `def test_bfs_single_node
+  a = Node.new(1)
+  assert_equal([1], bfs(a))
+end
+
+def test_bfs_complete_tree
+  a = Node.new(1)
+  b = Node.new(2)
+  c = Node.new(3)
+  d = Node.new(4)
+  e = Node.new(5)
+  a.left = b
+  a.right = c
+  b.left = d
+  b.right = e
+  assert_equal([1, 2, 3, 4, 5], bfs(a))
+end
+
+def test_bfs_left_skewed
+  a = Node.new(1)
+  b = Node.new(2)
+  c = Node.new(3)
+  a.left = b
+  b.left = c
+  assert_equal([1, 2, 3], bfs(a))
+end
+
+def test_bfs_empty
+  assert_equal([], bfs(nil))
+end`,
+    solution: `class Node
+  attr_accessor :val, :left, :right
+
+  def initialize(val)
+    @val = val
+    @left = nil
+    @right = nil
+  end
+end
+
+def bfs(root)
+  return [] if root.nil?
+
+  queue = [root]
+  result = []
+
+  until queue.empty?
+    node = queue.shift
+    result << node.val
+
+    queue << node.left if node.left
+    queue << node.right if node.right
+  end
+
+  result
+end`,
+    usage: null,
+    tags: ["bfs", "tree", "blind75"],
+  },
+  {
+    name: "Binary Tree Preorder (Recursive)",
+    category: "trees",
+    language: "ruby",
+    difficulty: "easy",
+    description: `Binary Tree Preorder Traversal (Recursive)
+
+Given the root of a binary tree, return a list of its node values in preorder traversal order: visit the root first, then recursively traverse the left subtree, then the right subtree.
+
+If the tree is empty (root is None), return an empty list.
+
+Example 1:
+Input: root = [1, 2, 3, 4, 5]
+        1
+       / \\
+      2   3
+     / \\
+    4   5
+Output: [1, 2, 4, 5, 3]
+Explanation: Root(1) -> Left(2) -> Left(4) -> Right(5) -> Right(3)
+
+Example 2:
+Input: root = [42]
+Output: [42]
+
+Example 3:
+Input: root = []
+Output: []
+
+Constraints:
+- The number of nodes in the tree is in the range [0, 100].
+- -100 <= Node.val <= 100
+
+Ref: LeetCode #144 Binary Tree Preorder Traversal`,
+    code: `class Node
+  attr_accessor :val, :left, :right
+
+  def initialize(val)
+    @val = val
+    @left = nil
+    @right = nil
+  end
+end
+
+def preorder(root)
+  raise NotImplementedError
+end`,
+    testCode: `def build_tree
+  #       1
+  #      / \\
+  #     2   3
+  #    / \\
+  #   4   5
+  a = Node.new(1)
+  b = Node.new(2)
+  c = Node.new(3)
+  d = Node.new(4)
+  e = Node.new(5)
+  a.left = b
+  a.right = c
+  b.left = d
+  b.right = e
+  a
+end
+
+def test_preorder
+  assert_equal([1, 2, 4, 5, 3], preorder(build_tree))
+end
+
+def test_preorder_empty
+  assert_equal([], preorder(nil))
+end
+
+def test_preorder_single
+  n = Node.new(42)
+  assert_equal([42], preorder(n))
+end`,
+    solution: `class Node
+  attr_accessor :val, :left, :right
+
+  def initialize(val)
+    @val = val
+    @left = nil
+    @right = nil
+  end
+end
+
+def preorder(root)
+  return [] if root.nil?
+
+  [root.val] + preorder(root.left) + preorder(root.right)
+end`,
+    usage: null,
+    tags: ["dfs", "tree", "recursion"],
+  },
+  {
+    name: "Binary Tree Inorder (Recursive)",
+    category: "trees",
+    language: "ruby",
+    difficulty: "easy",
+    description: `Binary Tree Inorder Traversal (Recursive)
+
+Given the root of a binary tree, return a list of its node values in inorder traversal order: recursively traverse the left subtree, visit the root, then recursively traverse the right subtree.
+
+If the tree is empty (root is None), return an empty list.
+
+Example 1:
+Input: root = [1, 2, 3, 4, 5]
+        1
+       / \\
+      2   3
+     / \\
+    4   5
+Output: [4, 2, 5, 1, 3]
+Explanation: Left(4) -> Root(2) -> Right(5) -> Root(1) -> Right(3)
+
+Example 2:
+Input: root = [42]
+Output: [42]
+
+Example 3:
+Input: root = []
+Output: []
+
+Constraints:
+- The number of nodes in the tree is in the range [0, 100].
+- -100 <= Node.val <= 100
+
+Ref: LeetCode #94 Binary Tree Inorder Traversal`,
+    code: `class Node
+  attr_accessor :val, :left, :right
+
+  def initialize(val)
+    @val = val
+    @left = nil
+    @right = nil
+  end
+end
+
+def inorder(root)
+  raise NotImplementedError
+end`,
+    testCode: `def build_tree
+  #       1
+  #      / \\
+  #     2   3
+  #    / \\
+  #   4   5
+  a = Node.new(1)
+  b = Node.new(2)
+  c = Node.new(3)
+  d = Node.new(4)
+  e = Node.new(5)
+  a.left = b
+  a.right = c
+  b.left = d
+  b.right = e
+  a
+end
+
+def test_inorder
+  assert_equal([4, 2, 5, 1, 3], inorder(build_tree))
+end
+
+def test_inorder_empty
+  assert_equal([], inorder(nil))
+end
+
+def test_inorder_single
+  n = Node.new(42)
+  assert_equal([42], inorder(n))
+end`,
+    solution: `class Node
+  attr_accessor :val, :left, :right
+
+  def initialize(val)
+    @val = val
+    @left = nil
+    @right = nil
+  end
+end
+
+def inorder(root)
+  return [] if root.nil?
+
+  inorder(root.left) + [root.val] + inorder(root.right)
+end`,
+    usage: null,
+    tags: ["dfs", "tree", "recursion"],
+  },
+  {
+    name: "Binary Tree Postorder (Recursive)",
+    category: "trees",
+    language: "ruby",
+    difficulty: "medium",
+    description: `Binary Tree Postorder Traversal (Recursive)
+
+Given the root of a binary tree, return a list of its node values in postorder traversal order: recursively traverse the left subtree, then the right subtree, then visit the root.
+
+If the tree is empty (root is None), return an empty list.
+
+Example 1:
+Input: root = [1, 2, 3, 4, 5]
+        1
+       / \\
+      2   3
+     / \\
+    4   5
+Output: [4, 5, 2, 3, 1]
+Explanation: Left(4) -> Right(5) -> Root(2) -> Right(3) -> Root(1)
+
+Example 2:
+Input: root = [42]
+Output: [42]
+
+Example 3:
+Input: root = []
+Output: []
+
+Constraints:
+- The number of nodes in the tree is in the range [0, 100].
+- -100 <= Node.val <= 100
+
+Ref: LeetCode #145 Binary Tree Postorder Traversal`,
+    code: `class Node
+  attr_accessor :val, :left, :right
+
+  def initialize(val)
+    @val = val
+    @left = nil
+    @right = nil
+  end
+end
+
+def postorder(root)
+  raise NotImplementedError
+end`,
+    testCode: `def build_tree
+  #       1
+  #      / \\
+  #     2   3
+  #    / \\
+  #   4   5
+  a = Node.new(1)
+  b = Node.new(2)
+  c = Node.new(3)
+  d = Node.new(4)
+  e = Node.new(5)
+  a.left = b
+  a.right = c
+  b.left = d
+  b.right = e
+  a
+end
+
+def test_postorder
+  assert_equal([4, 5, 2, 3, 1], postorder(build_tree))
+end
+
+def test_postorder_empty
+  assert_equal([], postorder(nil))
+end
+
+def test_postorder_single
+  n = Node.new(42)
+  assert_equal([42], postorder(n))
+end`,
+    solution: `class Node
+  attr_accessor :val, :left, :right
+
+  def initialize(val)
+    @val = val
+    @left = nil
+    @right = nil
+  end
+end
+
+def postorder(root)
+  return [] if root.nil?
+
+  postorder(root.left) + postorder(root.right) + [root.val]
+end`,
+    usage: null,
+    tags: ["dfs", "tree", "recursion"],
+  },
+  {
+    name: "Binary Tree Preorder (Iterative)",
+    category: "trees",
+    language: "ruby",
+    difficulty: "medium",
+    description: `Binary Tree Preorder Traversal (Iterative)
+
+Given the root of a binary tree, return a list of its node values in preorder traversal order (root, left, right). You must use an iterative approach with an explicit stack instead of recursion.
+
+If the tree is empty (root is None), return an empty list.
+
+Example 1:
+Input: root = [1, 2, 3, 4, 5]
+        1
+       / \\
+      2   3
+     / \\
+    4   5
+Output: [1, 2, 4, 5, 3]
+
+Example 2:
+Input: root = [42]
+Output: [42]
+
+Example 3:
+Input: root = []
+Output: []
+
+Constraints:
+- The number of nodes in the tree is in the range [0, 100].
+- -100 <= Node.val <= 100
+- Must use iterative approach (no recursion).
+
+Ref: LeetCode #144 Binary Tree Preorder Traversal`,
+    code: `class Node
+  attr_accessor :val, :left, :right
+
+  def initialize(val)
+    @val = val
+    @left = nil
+    @right = nil
+  end
+end
+
+def preorder(root)
+  raise NotImplementedError
+end`,
+    testCode: `def build_tree
+  #       1
+  #      / \\
+  #     2   3
+  #    / \\
+  #   4   5
+  a = Node.new(1)
+  b = Node.new(2)
+  c = Node.new(3)
+  d = Node.new(4)
+  e = Node.new(5)
+  a.left = b
+  a.right = c
+  b.left = d
+  b.right = e
+  a
+end
+
+def test_preorder
+  assert_equal([1, 2, 4, 5, 3], preorder(build_tree))
+end
+
+def test_preorder_empty
+  assert_equal([], preorder(nil))
+end
+
+def test_preorder_single
+  n = Node.new(42)
+  assert_equal([42], preorder(n))
+end`,
+    solution: `class Node
+  attr_accessor :val, :left, :right
+
+  def initialize(val)
+    @val = val
+    @left = nil
+    @right = nil
+  end
+end
+
+def preorder(root)
+  return [] if root.nil?
+
+  stack = [root]
+  result = []
+  until stack.empty?
+    node = stack.pop
+    result << node.val
+    stack << node.right if node.right
+    stack << node.left if node.left
+  end
+  result
+end`,
+    usage: null,
+    tags: ["dfs", "tree"],
+  },
+  {
+    name: "Binary Tree Inorder (Iterative)",
+    category: "trees",
+    language: "ruby",
+    difficulty: "medium",
+    description: `Binary Tree Inorder Traversal (Iterative)
+
+Given the root of a binary tree, return a list of its node values in inorder traversal order (left, root, right). You must use an iterative approach with an explicit stack instead of recursion.
+
+If the tree is empty (root is None), return an empty list.
+
+Example 1:
+Input: root = [1, 2, 3, 4, 5]
+        1
+       / \\
+      2   3
+     / \\
+    4   5
+Output: [4, 2, 5, 1, 3]
+
+Example 2:
+Input: root = [42]
+Output: [42]
+
+Example 3:
+Input: root = []
+Output: []
+
+Constraints:
+- The number of nodes in the tree is in the range [0, 100].
+- -100 <= Node.val <= 100
+- Must use iterative approach (no recursion).
+
+Ref: LeetCode #94 Binary Tree Inorder Traversal`,
+    code: `class Node
+  attr_accessor :val, :left, :right
+
+  def initialize(val)
+    @val = val
+    @left = nil
+    @right = nil
+  end
+end
+
+def inorder(root)
+  raise NotImplementedError
+end`,
+    testCode: `def build_tree
+  #       1
+  #      / \\
+  #     2   3
+  #    / \\
+  #   4   5
+  a = Node.new(1)
+  b = Node.new(2)
+  c = Node.new(3)
+  d = Node.new(4)
+  e = Node.new(5)
+  a.left = b
+  a.right = c
+  b.left = d
+  b.right = e
+  a
+end
+
+def test_inorder
+  assert_equal([4, 2, 5, 1, 3], inorder(build_tree))
+end
+
+def test_inorder_empty
+  assert_equal([], inorder(nil))
+end
+
+def test_inorder_single
+  n = Node.new(42)
+  assert_equal([42], inorder(n))
+end`,
+    solution: `class Node
+  attr_accessor :val, :left, :right
+
+  def initialize(val)
+    @val = val
+    @left = nil
+    @right = nil
+  end
+end
+
+def inorder(root)
+  result = []
+  stack = []
+  current = root
+  while current || !stack.empty?
+    while current
+      stack.push(current)
+      current = current.left
+    end
+    current = stack.pop
+    result << current.val
+    current = current.right
+  end
+  result
+end`,
+    usage: null,
+    tags: ["dfs", "tree"],
+  },
+  {
+    name: "Binary Tree Postorder (Iterative)",
+    category: "trees",
+    language: "ruby",
+    difficulty: "hard",
+    description: `Binary Tree Postorder Traversal (Iterative)
+
+Given the root of a binary tree, return a list of its node values in postorder traversal order (left, right, root). You must use an iterative approach with an explicit stack instead of recursion.
+
+If the tree is empty (root is None), return an empty list.
+
+Example 1:
+Input: root = [1, 2, 3, 4, 5]
+        1
+       / \\
+      2   3
+     / \\
+    4   5
+Output: [4, 5, 2, 3, 1]
+
+Example 2:
+Input: root = [42]
+Output: [42]
+
+Example 3:
+Input: root = []
+Output: []
+
+Constraints:
+- The number of nodes in the tree is in the range [0, 100].
+- -100 <= Node.val <= 100
+- Must use iterative approach (no recursion).
+
+Ref: LeetCode #145 Binary Tree Postorder Traversal`,
+    code: `class Node
+  attr_accessor :val, :left, :right
+
+  def initialize(val)
+    @val = val
+    @left = nil
+    @right = nil
+  end
+end
+
+def postorder(root)
+  raise NotImplementedError
+end`,
+    testCode: `def build_tree
+  #       1
+  #      / \\
+  #     2   3
+  #    / \\
+  #   4   5
+  a = Node.new(1)
+  b = Node.new(2)
+  c = Node.new(3)
+  d = Node.new(4)
+  e = Node.new(5)
+  a.left = b
+  a.right = c
+  b.left = d
+  b.right = e
+  a
+end
+
+def test_postorder
+  assert_equal([4, 5, 2, 3, 1], postorder(build_tree))
+end
+
+def test_postorder_empty
+  assert_equal([], postorder(nil))
+end
+
+def test_postorder_single
+  n = Node.new(42)
+  assert_equal([42], postorder(n))
+end`,
+    solution: `class Node
+  attr_accessor :val, :left, :right
+
+  def initialize(val)
+    @val = val
+    @left = nil
+    @right = nil
+  end
+end
+
+def postorder(root)
+  return [] if root.nil?
+
+  stack = [root]
+  result = []
+  until stack.empty?
+    node = stack.pop
+    result << node.val
+    stack << node.left if node.left
+    stack << node.right if node.right
+  end
+  result.reverse
+end`,
+    usage: null,
+    tags: ["dfs", "tree"],
+  },
+  {
+    name: "Trie",
+    category: "tries",
+    language: "ruby",
+    difficulty: "hard",
+    description: `Implement Trie (Prefix Tree)
+
+A trie (pronounced "try") or prefix tree is a tree data structure used to efficiently store and retrieve keys in a dataset of strings. Implement the Trie class with the following methods:
+
+- Trie() initializes the trie object.
+- insert(word) inserts the string word into the trie.
+- search(word) returns True if the string word is in the trie (i.e., was inserted before), and False otherwise.
+- starts_with(prefix) returns True if there is a previously inserted string word that has the prefix prefix, and False otherwise.
+
+Example 1:
+Input:
+  t = Trie()
+  t.insert("apple")
+  t.search("apple")   -> True
+  t.search("app")     -> False
+  t.starts_with("app") -> True
+  t.insert("app")
+  t.search("app")     -> True
+
+Example 2:
+Input:
+  t = Trie()
+  t.search("anything") -> False
+  t.starts_with("any") -> False
+
+Constraints:
+- 1 <= len(word), len(prefix) <= 2000
+- word and prefix consist only of lowercase English letters.
+- At most 3 * 10^4 calls in total will be made to insert, search, and starts_with.
+
+Ref: LeetCode #208 Implement Trie (Prefix Tree)`,
+    code: `class Trie
+  def initialize
+    raise NotImplementedError
+  end
+
+  def insert(word)
+    raise NotImplementedError
+  end
+
+  def search(word)
+    raise NotImplementedError
+  end
+
+  def starts_with(prefix)
+    raise NotImplementedError
+  end
+end`,
+    testCode: `def test_insert_search
+  t = Trie.new
+  t.insert("apple")
+  assert_equal(true, t.search("apple"))
+end
+
+def test_search_missing
+  t = Trie.new
+  t.insert("apple")
+  assert_equal(false, t.search("app"))
+end
+
+def test_starts_with
+  t = Trie.new
+  t.insert("apple")
+  assert_equal(true, t.starts_with("app"))
+end
+
+def test_starts_with_missing
+  t = Trie.new
+  t.insert("apple")
+  assert_equal(false, t.starts_with("ban"))
+end
+
+def test_multiple_words
+  t = Trie.new
+  t.insert("apple")
+  t.insert("app")
+  assert_equal(true, t.search("app"))
+  assert_equal(true, t.search("apple"))
+end
+
+def test_empty_search
+  t = Trie.new
+  assert_equal(false, t.search("anything"))
+end`,
+    solution: `class Trie
+  attr_accessor :children, :is_end
+
+  def initialize
+    @children = {}
+    @is_end = false
+  end
+
+  def insert(word)
+    node = self
+    word.each_char do |ch|
+      node.children[ch] = Trie.new unless node.children.key?(ch)
+      node = node.children[ch]
+    end
+    node.is_end = true
+  end
+
+  def search(word)
+    node = find(word)
+    !node.nil? && node.is_end
+  end
+
+  def starts_with(prefix)
+    !find(prefix).nil?
+  end
+
+  def find(prefix)
+    node = self
+    prefix.each_char do |ch|
+      return nil unless node.children.key?(ch)
+
+      node = node.children[ch]
+    end
+    node
+  end
+  private :find
+end`,
+    usage: null,
+    tags: ["trie", "blind75"],
+  },
+  {
+    name: "Two Pointer Remove Duplicates",
+    category: "two-pointers",
+    language: "ruby",
+    difficulty: "easy",
+    description: `Remove Duplicates from Sorted Array
+
+Given an integer array nums sorted in non-decreasing order, remove the duplicates in-place such that each unique element appears only once. The relative order of the elements should be kept the same. Return k, the number of unique elements.
+
+After calling your function, the first k elements of nums should hold the unique values in their original order. It does not matter what you leave beyond position k.
+
+Example 1:
+Input: nums = [1, 1, 2, 3, 3]
+Output: 3, nums = [1, 2, 3, ...]
+Explanation: Your function should return k = 3, with the first three elements being 1, 2, and 3.
+
+Example 2:
+Input: nums = [5, 5, 5, 5]
+Output: 1, nums = [5, ...]
+
+Example 3:
+Input: nums = [1, 2, 3]
+Output: 3, nums = [1, 2, 3]
+
+Constraints:
+- 0 <= nums.length <= 3 * 10^4
+- -100 <= nums[i] <= 100
+- nums is sorted in non-decreasing order.
+
+Ref: LeetCode #26 Remove Duplicates from Sorted Array`,
+    code: `def remove_duplicates(nums)
+  raise NotImplementedError
+end`,
+    testCode: `def test_basic
+  nums = [1, 1, 2, 3, 3]
+  k = remove_duplicates(nums)
+  assert_equal(3, k)
+  assert_equal([1, 2, 3], nums[0...k])
+end
+
+def test_no_dupes
+  nums = [1, 2, 3]
+  k = remove_duplicates(nums)
+  assert_equal(3, k)
+  assert_equal([1, 2, 3], nums[0...k])
+end
+
+def test_all_same
+  nums = [5, 5, 5, 5]
+  k = remove_duplicates(nums)
+  assert_equal(1, k)
+  assert_equal([5], nums[0...k])
+end
+
+def test_empty
+  nums = []
+  k = remove_duplicates(nums)
+  assert_equal(0, k)
+end
+
+def test_single
+  nums = [7]
+  k = remove_duplicates(nums)
+  assert_equal(1, k)
+  assert_equal([7], nums[0...k])
+end`,
+    solution: `def remove_duplicates(nums)
+  return 0 if nums.empty?
+
+  write = 0
+
+  (1...nums.length).each do |read|
+    if nums[read] != nums[write]
+      write += 1
+      nums[write] = nums[read]
+    end
+  end
+
+  write + 1
+end`,
+    usage: null,
+    tags: ["two-pointers", "in-place"],
+  },
+  {
+    name: "Merge Two Sorted Arrays",
+    category: "two-pointers",
+    language: "ruby",
+    difficulty: "easy",
+    description: `Merge Two Sorted Arrays
+
+You are given two integer arrays a and b, both sorted in non-decreasing order. Merge them into a single sorted array and return it. You may not use any built-in sort function.
+
+Example 1:
+Input: a = [1, 3, 5], b = [2, 4, 6]
+Output: [1, 2, 3, 4, 5, 6]
+
+Example 2:
+Input: a = [1, 2], b = [3, 4, 5, 6]
+Output: [1, 2, 3, 4, 5, 6]
+
+Example 3:
+Input: a = [], b = [1, 2, 3]
+Output: [1, 2, 3]
+
+Constraints:
+- 0 <= a.length, b.length <= 1000
+- -10^6 <= a[i], b[j] <= 10^6
+- Both a and b are sorted in non-decreasing order.
+- Do not use built-in sort.
+
+Ref: LeetCode #88 Merge Sorted Array`,
+    code: `def merge_sorted(a, b)
+  raise NotImplementedError
+end`,
+    testCode: `def test_basic
+  assert_equal([1, 2, 3, 4, 5, 6], merge_sorted([1, 3, 5], [2, 4, 6]))
+end
+
+def test_different_lengths
+  assert_equal([1, 2, 3, 4, 5, 6], merge_sorted([1, 2], [3, 4, 5, 6]))
+end
+
+def test_one_empty
+  assert_equal([1, 2, 3], merge_sorted([], [1, 2, 3]))
+  assert_equal([1, 2, 3], merge_sorted([1, 2, 3], []))
+end
+
+def test_both_empty
+  assert_equal([], merge_sorted([], []))
+end
+
+def test_duplicates
+  assert_equal([1, 2, 3, 3, 3, 4], merge_sorted([1, 3, 3], [2, 3, 4]))
+end
+
+def test_negatives
+  assert_equal([-5, -3, -1, 0, 2, 3], merge_sorted([-5, -1, 3], [-3, 0, 2]))
+end`,
+    solution: `def merge_sorted(a, b)
+  result = []
+  i, j = 0, 0
+
+  while i < a.length && j < b.length
+    if a[i] <= b[j]
+      result << a[i]
+      i += 1
+    else
+      result << b[j]
+      j += 1
+    end
+  end
+
+  result.concat(a[i..])
+  result.concat(b[j..])
+  result
+end`,
+    usage: null,
+    tags: ["two-pointers", "sorting"],
+  },
+];

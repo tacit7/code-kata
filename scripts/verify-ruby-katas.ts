@@ -13,7 +13,8 @@ import {
 } from "../src/lib/ruby-exec-core";
 import type { SeedKata } from "../src/types/editor";
 import { sampleKatas } from "../src/lib/sample-katas";
-// Task 8 adds: sampleKatasRuby plus the blind75/neetcode imports — copy the
+import { sampleKatasRuby } from "../src/lib/sample-katas-ruby";
+// Task 8 adds: the blind75/neetcode imports — copy the
 // exact import block from src/lib/database.ts lines 4-27 as those files are
 // ported (paths become ../src/lib/...). At Task 6 time only sampleKatas
 // exists, so total will be 0 until the temporary kata in Step 3.
@@ -31,7 +32,8 @@ interface Failure {
 async function main() {
   const allKatas: SeedKata[] = [
     ...sampleKatas,
-    // Task 8 appends: ...sampleKatasRuby and the blind75/neetcode spreads,
+    ...sampleKatasRuby,
+    // Task 8 appends: the blind75/neetcode spreads,
     // same order as database.ts seedKatas().
   ];
   const rubyKatas = allKatas.filter((k) => k.language === "ruby");

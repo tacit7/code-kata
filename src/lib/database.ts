@@ -1,7 +1,7 @@
 import Database from "@tauri-apps/plugin-sql";
 import type { SeedKata } from "../types/editor";
 import { sampleKatas } from "./sample-katas";
-import { sampleKatasPython } from "./sample-katas-python";
+import { sampleKatasRuby } from "./sample-katas-ruby";
 import { blind75Part1 } from "./blind75-additions-part1";
 import { blind75Part2 } from "./blind75-additions-part2";
 import { blind75Part3 } from "./blind75-additions-part3";
@@ -186,7 +186,7 @@ async function seedKatas(db: Database) {
   const countRows = await db.select<{ count: number }[]>("SELECT COUNT(*) as count FROM katas");
   if (countRows[0].count > 0) return;
 
-  for (const kata of [...sampleKatas, ...sampleKatasPython, ...blind75Katas]) {
+  for (const kata of [...sampleKatas, ...sampleKatasRuby, ...blind75Katas]) {
     await db.execute(
       `INSERT INTO katas (name, category, language, difficulty, description, code, test_code, solution, usage, tags)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
@@ -232,7 +232,7 @@ export async function reseedKatas(): Promise<string> {
 }
 
 async function seedKatasForce(db: Database) {
-  for (const kata of [...sampleKatas, ...sampleKatasPython, ...blind75Katas]) {
+  for (const kata of [...sampleKatas, ...sampleKatasRuby, ...blind75Katas]) {
     await db.execute(
       `INSERT INTO katas (name, category, language, difficulty, description, code, test_code, solution, usage, tags)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
