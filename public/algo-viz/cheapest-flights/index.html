@@ -1,188 +1,138 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Cheapest Flights Within K Stops</title>
-  <link rel="stylesheet" href="../shared/style.css" />
-  <script src="../shared/viz.js"></script>
-  <style>
-    .viz-area { width: 100%; max-width: 95%; }
-    .main-row { display: grid; grid-template-columns: 1fr 380px; gap: 20px; align-items: start; }
-    @media (max-width: 800px) { .main-row { grid-template-columns: 1fr; } }
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Cheapest Flights Within K Stops</title>
+<link rel="stylesheet" href="../shared/style.css" />
+<script src="../shared/gsap.min.js"></script>
+<script src="../shared/viz.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: "Fira Code", "Cascadia Code", monospace; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
 
-    .graph-panel {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--radius-lg); padding: 16px;
-      display: flex; flex-direction: column; gap: 10px;
-    }
-    .graph-svg-wrap {
-      width: 100%; aspect-ratio: 1.4;
-      background: var(--bg); border-radius: var(--radius-sm);
-      overflow: hidden;
-    }
-    #graph-svg { width: 100%; height: 100%; }
+  #header { padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+  #phase-badge { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; padding: 3px 10px; border-radius: var(--radius-sm); background: #1e3a5f; color: var(--blue); border: 1px solid var(--blue); }
+  #step-counter { font-size: 12px; color: var(--text-muted); margin-left: auto; }
 
-    .node-circle { stroke-width: 2.5; transition: fill 0.3s, stroke 0.3s; }
-    .node-circle.state-unvisited { fill: #1a1b2e; stroke: #414868; }
-    .node-circle.state-relaxed   { fill: #3d3524; stroke: #e0af68; }
-    .node-circle.state-active    { fill: #1a1f3a; stroke: #7dcfff; }
-    .node-circle.state-reached   { fill: #1a2a1a; stroke: #9ece6a; }
-    .node-circle.state-src       { fill: #2a1a2e; stroke: #bb9af7; }
-    .node-circle.state-dst       { fill: #2e1a1a; stroke: #f7768e; }
+  .viz-inputs { width: 100%; max-width: 100%; padding: 10px 16px; background: var(--surface); border: none; border-bottom: 1px solid var(--border); border-radius: 0; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; flex-shrink: 0; }
+  .viz-inputs label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); display: block; margin-bottom: 3px; }
+  .viz-inputs select, .viz-inputs input { background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 0 8px; height: 30px; font-size: 0.82rem; font-family: inherit; appearance: none; -webkit-appearance: none; }
+  .vi-btn-run { padding: 6px 14px; border-radius: 6px; font-size: 0.82rem; font-weight: 600; cursor: pointer; font-family: inherit; background: var(--accent); color: #fff; border: none; }
+  .vi-btn-rand { padding: 6px 14px; border-radius: 6px; font-size: 0.82rem; cursor: pointer; font-family: inherit; background: var(--bg); color: var(--text); border: 1px solid var(--border); }
 
-    .node-label {
-      fill: var(--text-bright); font-size: 13px; font-weight: 700;
-      font-family: monospace; text-anchor: middle; dominant-baseline: central;
-      pointer-events: none;
-    }
+  #main { display: flex; flex: 1; overflow: hidden; }
 
-    .src-ring {
-      fill: none; stroke: #bb9af7; stroke-width: 2; stroke-dasharray: 4 3; opacity: 0.7;
-    }
-    .dst-ring {
-      fill: none; stroke: #f7768e; stroke-width: 2; stroke-dasharray: 4 3; opacity: 0.7;
-    }
+  #viz-area { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding: 20px; gap: 16px; overflow-y: auto; }
 
-    .edge-line {
-      stroke-width: 2; fill: none; stroke: #3b4261; transition: stroke 0.3s;
-    }
-    .edge-line.active   { stroke: #7dcfff; stroke-width: 2.5; }
-    .edge-line.relaxed  { stroke: #e0af68; stroke-width: 2.5; }
-    .edge-line.improved { stroke: #9ece6a; stroke-width: 2.5; }
-    .edge-line.skipped  { stroke: #3b4261; }
+  #resize-handle { width: 5px; flex-shrink: 0; cursor: col-resize; background: transparent; border-left: 1px solid var(--border); transition: background .15s; z-index: 10; }
+  #resize-handle:hover, #resize-handle.dragging { background: var(--accent); }
 
-    .edge-weight-bg { fill: var(--bg); }
-    .edge-weight {
-      fill: var(--text-dim); font-size: 11px; font-weight: 700;
-      font-family: monospace; text-anchor: middle; dominant-baseline: central;
-    }
-    .edge-weight.active  { fill: #7dcfff; }
-    .edge-weight.relaxed { fill: #e0af68; }
-    .edge-weight.improved { fill: #9ece6a; }
+  #code-panel { width: 350px; min-width: 120px; max-width: 560px; flex-shrink: 0; background: #0d1117; border-right: 1px solid var(--border); overflow-y: auto; overflow-x: auto; padding: 10px 12px; display: flex; flex-direction: column; }
+  .code-panel-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--text-dim); margin-bottom: 8px; }
 
-    .right-col { display: flex; flex-direction: column; gap: 12px; }
+  .cl { display: flex; align-items: stretch; padding: 2px 0; white-space: pre; border-left: 2px solid transparent; padding-left: 6px; color: var(--text-muted); transition: all 0.2s; font-family: 'Fira Code', 'Cascadia Code', monospace; font-size: 0.75rem; line-height: 1.8; }
+  .cl.hl { background: rgba(122,162,247,0.12); border-left-color: var(--accent); color: var(--text); }
+  .ln { display: inline-block; width: 20px; text-align: right; color: var(--text-dim); user-select: none; margin-right: 10px; font-size: 0.7rem; }
 
-    .panel-box {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--radius-lg); padding: 14px 16px;
-      display: flex; flex-direction: column; gap: 8px;
-    }
-    .panel-title {
-      font-size: 0.72rem; font-weight: 700;
-      text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim);
-    }
+  #sidebar { width: 240px; flex-shrink: 0; background: var(--surface); border-left: 1px solid var(--border); overflow-y: auto; padding: 14px 12px; display: flex; flex-direction: column; gap: 12px; }
+  .sidebar-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--text-dim); margin-bottom: 6px; }
 
-    .nav-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-    .btn-play {
-      background: #15803d; border: none; border-radius: var(--radius-sm);
-      color: #fff; cursor: pointer; font-size: 0.88rem; font-weight: 600;
-      padding: 9px 16px; transition: background 0.2s;
-    }
-    .btn-play:hover { background: #166534; }
-    .btn-play.playing { background: #c2410c; }
-    .btn-play.playing:hover { background: #9a3412; }
-    .btn-play:disabled { opacity: 0.4; cursor: not-allowed; }
-    .speed-select {
-      background: var(--bg); border: 1px solid var(--border);
-      border-radius: var(--radius-sm); color: var(--text);
-      font-size: 0.85rem; padding: 8px 10px; outline: none; width: 80px;
-    }
+  #nav-row { flex-shrink: 0; display: flex; align-items: center; gap: 8px; padding: 10px 16px; background: var(--surface); border-top: 1px solid var(--border); }
+  .btn-step { padding: 6px 14px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--surface); color: var(--text); font-family: inherit; font-size: 12px; cursor: pointer; transition: background .15s; }
+  .btn-step:hover { background: #334155; }
+  .btn-play { padding: 6px 14px; border-radius: var(--radius-sm); background: var(--accent); border: 1px solid var(--accent); color: #fff; font-family: inherit; font-size: 12px; cursor: pointer; }
+  .btn-play:hover { background: var(--accent-hover); }
+  #nav-row select { padding: 5px 8px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: #1e293b; color: var(--text); font-size: 12px; font-family: inherit; cursor: pointer; }
 
-    .result-badge {
-      font-size: 0.88rem; font-weight: 700;
-      padding: 5px 14px; border-radius: 6px;
-      display: none; width: fit-content;
-    }
-    .result-badge.success { background: #1a2a1a; color: #9ece6a; border: 1px solid #9ece6a; display: block; }
-    .result-badge.failure { background: #3d1515; color: #f7768e; border: 1px solid #f7768e; display: block; }
+  /* PAGE-SPECIFIC */
+  .graph-panel {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius-lg); padding: 14px;
+    display: flex; flex-direction: column; gap: 10px;
+    width: 100%;
+  }
+  .graph-svg-wrap { width: 100%; aspect-ratio: 1.4; background: var(--bg); border-radius: var(--radius-sm); overflow: hidden; }
+  #graph-svg { width: 100%; height: 100%; }
 
-    .dp-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: flex-start; }
-    .dp-col { display: flex; flex-direction: column; gap: 4px; align-items: center; }
-    .dp-node-label {
-      font-size: 0.68rem; color: var(--text-dim); font-weight: 600;
-      font-family: monospace;
-    }
-    .dp-cell {
-      border: 1px solid var(--border); border-radius: 6px;
-      padding: 5px 10px; min-width: 48px; text-align: center;
-      font-size: 0.88rem; font-weight: 700; font-family: monospace;
-      color: var(--text-bright);
-      transition: border-color 0.2s, background 0.2s;
-    }
-    .dp-cell.prev { background: #1a1b2e; color: var(--text-dim); border-color: #414868; }
-    .dp-cell.curr { background: #1a1b2e; color: var(--text-bright); border-color: #414868; }
-    .dp-cell.relaxed { border-color: #e0af68; background: #3d3524; color: #e0af68; }
-    .dp-cell.improved { border-color: #9ece6a; background: #1a2a1a; color: #9ece6a; }
-    .dp-cell.active { border-color: #7dcfff; background: #1a1f3a; color: #7dcfff; }
+  .node-circle { stroke-width: 2.5; transition: fill 0.3s, stroke 0.3s; }
+  .node-circle.state-unvisited { fill: #1a1b2e; stroke: #414868; }
+  .node-circle.state-relaxed   { fill: #3d3524; stroke: #e0af68; }
+  .node-circle.state-active    { fill: #1a1f3a; stroke: #7dcfff; }
+  .node-circle.state-reached   { fill: #1a2a1a; stroke: #9ece6a; }
+  .node-circle.state-src       { fill: #2a1a2e; stroke: #bb9af7; }
+  .node-circle.state-dst       { fill: #2e1a1a; stroke: #f7768e; }
 
-    .dp-header {
-      font-size: 0.68rem; color: var(--text-muted); font-weight: 600; margin-bottom: 2px;
-    }
+  .node-label { fill: var(--text-bright); font-size: 13px; font-weight: 700; font-family: monospace; text-anchor: middle; dominant-baseline: central; pointer-events: none; }
+  .src-ring { fill: none; stroke: #bb9af7; stroke-width: 2; stroke-dasharray: 4 3; opacity: 0.7; }
+  .dst-ring { fill: none; stroke: #f7768e; stroke-width: 2; stroke-dasharray: 4 3; opacity: 0.7; }
+  .edge-line { stroke-width: 2; fill: none; stroke: #3b4261; transition: stroke 0.3s; }
+  .edge-line.active   { stroke: #7dcfff; stroke-width: 2.5; }
+  .edge-line.relaxed  { stroke: #e0af68; stroke-width: 2.5; }
+  .edge-line.improved { stroke: #9ece6a; stroke-width: 2.5; }
+  .edge-weight-bg { fill: var(--bg); }
+  .edge-weight { fill: var(--text-dim); font-size: 11px; font-weight: 700; font-family: monospace; text-anchor: middle; dominant-baseline: central; }
+  .edge-weight.active  { fill: #7dcfff; }
+  .edge-weight.relaxed { fill: #e0af68; }
+  .edge-weight.improved { fill: #9ece6a; }
 
-    .round-badge {
-      display: inline-block; padding: 3px 10px; border-radius: 4px;
-      font-size: 0.82rem; font-weight: 700; font-family: monospace;
-      background: #1a1f3a; border: 1px solid #7dcfff; color: #7dcfff;
-    }
+  .result-badge { font-size: 0.82rem; font-weight: 700; padding: 5px 12px; border-radius: 6px; display: none; width: fit-content; margin-top: 4px; }
+  .result-badge.success { background: #1a2a1a; color: #9ece6a; border: 1px solid #9ece6a; display: block; }
+  .result-badge.failure { background: #3d1515; color: #f7768e; border: 1px solid #f7768e; display: block; }
 
-    .legend-row { display: flex; align-items: center; gap: 8px; font-size: 0.78rem; color: var(--text-muted); }
-    .legend-dot { width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; border: 2px solid; }
+  .dp-row { display: flex; gap: 6px; flex-wrap: wrap; align-items: flex-start; }
+  .dp-col { display: flex; flex-direction: column; gap: 3px; align-items: center; }
+  .dp-node-label { font-size: 0.62rem; color: var(--text-dim); font-weight: 600; font-family: monospace; }
+  .dp-cell { border: 1px solid var(--border); border-radius: 5px; padding: 4px 8px; min-width: 40px; text-align: center; font-size: 0.82rem; font-weight: 700; font-family: monospace; color: var(--text-bright); transition: border-color 0.2s, background 0.2s; }
+  .dp-cell.prev { background: #1a1b2e; color: var(--text-dim); border-color: #414868; }
+  .dp-cell.curr { background: #1a1b2e; color: var(--text-bright); border-color: #414868; }
+  .dp-cell.relaxed { border-color: #e0af68; background: #3d3524; color: #e0af68; }
+  .dp-cell.improved { border-color: #9ece6a; background: #1a2a1a; color: #9ece6a; }
+  .dp-cell.active { border-color: #7dcfff; background: #1a1f3a; color: #7dcfff; }
 
-    .code-panel {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--radius-lg); overflow: hidden;
-    }
-    .code-header {
-      padding: 8px 14px; font-size: 0.72rem; font-weight: 600;
-      color: var(--text-dim); border-bottom: 1px solid var(--border); background: var(--bg);
-    }
-    .code-body { padding: 10px 0; font-size: 0.78rem; line-height: 1.75; white-space: pre; }
-    .code-line { display: flex; align-items: center; padding: 0 14px; }
-    .code-line.hl { background: var(--border-soft); border-left: 2px solid var(--accent); }
-    .ln { min-width: 24px; color: var(--text-ghost); user-select: none; font-size: 0.7rem; }
-    .kw { color: var(--purple); }
-    .fn { color: var(--blue); }
-    .bi { color: var(--orange); }
-    .cm { color: var(--text-ghost); }
-    .nb { color: var(--green); }
-    .st { color: #9ece6a; }
+  .round-badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.78rem; font-weight: 700; font-family: monospace; background: #1a1f3a; border: 1px solid #7dcfff; color: #7dcfff; }
 
-    .preset-row { display: flex; gap: 8px; flex-wrap: wrap; }
-    .btn-preset {
-      padding: 6px 12px; border-radius: var(--radius-sm);
-      background: var(--bg); border: 1px solid var(--border);
-      color: var(--text-dim); font-size: 0.8rem; cursor: pointer;
-      transition: border-color 0.15s, color 0.15s;
-    }
-    .btn-preset:hover, .btn-preset.active { border-color: var(--accent); color: var(--accent-pale); }
-  </style>
+  .legend-row { display: flex; align-items: center; gap: 8px; font-size: 0.75rem; color: var(--text-muted); margin-bottom: 5px; }
+  .legend-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; border: 2px solid; }
+
+  .kw { color: var(--purple); }
+  .fn { color: var(--blue); }
+  .bi { color: var(--orange); }
+  .cm { color: var(--text-ghost); }
+  .nb { color: var(--green); }
+  .st { color: #9ece6a; }
+
+  .preset-row { display: flex; gap: 8px; flex-wrap: wrap; }
+  .btn-preset { padding: 5px 10px; border-radius: var(--radius-sm); background: var(--bg); border: 1px solid var(--border); color: var(--text-dim); font-size: 0.8rem; cursor: pointer; transition: border-color 0.15s, color 0.15s; }
+  .btn-preset:hover, .btn-preset.active { border-color: var(--accent); color: var(--accent-pale); }
+</style>
 </head>
-<body class="page">
+<body>
 
-<div class="page-header">
-  <a class="back-link" href="../index.html">&larr; All Algorithms</a>
-  <div class="page-title">Cheapest Flights Within K Stops</div>
-  <div class="page-sub">LeetCode 787 &middot; Bellman-Ford (k+1 rounds) &middot; dp[node] = min cost within i stops &middot; O(k &times; E)</div>
-</div>
-
-<div class="controls">
-  <div class="field">
+<div class="viz-inputs">
+  <div>
     <label>Preset</label>
     <div class="preset-row">
-      <button class="btn-preset active" id="preset-default"   onclick="loadPreset('default')">Default (k=1, ans=700)</button>
-      <button class="btn-preset"        id="preset-k2"        onclick="loadPreset('k2')">More Stops (k=2, ans=200)</button>
+      <button class="btn-preset active" id="preset-default"     onclick="loadPreset('default')">Default (k=1, ans=700)</button>
+      <button class="btn-preset"        id="preset-k2"          onclick="loadPreset('k2')">More Stops (k=2, ans=200)</button>
       <button class="btn-preset"        id="preset-unreachable" onclick="loadPreset('unreachable')">Unreachable (ans=-1)</button>
     </div>
   </div>
-  <button class="btn-primary" onclick="buildAndRun()">Build &amp; Run</button>
+  <button class="vi-btn-run" onclick="buildAndRun()">Build &amp; Run</button>
+  <button class="vi-btn-rand" onclick="randomExample()">&#127922; Random</button>
+</div>
+<div class="controls"></div>
+
+<div id="header">
+  <span id="phase-badge">Setup</span>
+  <span style="font-size:13px;font-weight:700;">Cheapest Flights Within K Stops</span>
+  <span id="step-counter">Step 0 / 0</span>
 </div>
 
-<div class="viz-area">
-  <div class="main-row">
-
+<div id="main">
+  <div id="viz-area">
     <div class="graph-panel">
-      <div class="panel-title" id="graph-title">Weighted Directed Graph</div>
+      <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-dim)" id="graph-title">Weighted Directed Graph</div>
       <div class="graph-svg-wrap">
         <svg id="graph-svg" viewBox="0 0 560 400" preserveAspectRatio="xMidYMid meet">
           <defs>
@@ -204,68 +154,52 @@
         </svg>
       </div>
     </div>
+    <div id="desc" style="font-size:13px;color:var(--text-muted);text-align:center;max-width:560px;min-height:36px;line-height:1.5;">Select a preset and click Build &amp; Run.</div>
+  </div>
 
-    <div class="right-col">
+  <div id="resize-handle"></div>
 
-      <div class="panel-box">
-        <div class="nav-row">
-          <button class="stepBtn" id="prevBtn" disabled>&larr;</button>
-          <button class="stepBtn" id="stepBtn" disabled>&rarr;</button>
-          <button class="playBtn" id="playBtn" disabled>&#9654; Play</button>
-          <select class="speedSel" id="speedSel">
-            <option value="800">Slow</option>
-            <option value="400" selected>Medium</option>
-            <option value="120">Fast</option>
-          </select>
-        </div>
+  <div id="code-panel">
+    <div class="code-panel-title">Code</div>
+    <div id="code-body"></div>
+  </div>
+
+  <div id="sidebar">
+    <div>
+      <div class="sidebar-title">Result</div>
+      <div class="result-badge" id="result-badge"></div>
+    </div>
+    <div>
+      <div class="sidebar-title" style="display:flex;align-items:center;justify-content:space-between;">
+        dp[] Cost to Node
+        <span id="round-info"></span>
       </div>
-
-      <div class="panel-box">
-        <div class="panel-title" id="phase-label">&mdash;</div>
-        <div style="font-size:0.82rem;color:var(--text-muted);margin-top:2px;min-height:36px" id="step-desc">Select a preset and click Build &amp; Run.</div>
-        <div class="result-badge" id="result-badge"></div>
+      <div style="font-size:0.65rem;color:var(--text-ghost);margin-bottom:4px">prev &rarr; curr</div>
+      <div class="dp-row" id="dp-cells">
+        <span style="color:var(--text-ghost);font-size:0.75rem">—</span>
       </div>
-
-      <div class="panel-box">
-        <div style="display:flex;justify-content:space-between;align-items:center">
-          <div class="panel-title">dp[] — Cost to Reach Node</div>
-          <div id="round-info" style="font-size:0.78rem;color:var(--text-muted)"></div>
-        </div>
-        <div style="font-size:0.72rem;color:var(--text-ghost);margin-bottom:4px">prev (last round) → curr (being built)</div>
-        <div class="dp-row" id="dp-cells">
-          <span style="color:var(--text-ghost);font-size:0.78rem">—</span>
-        </div>
-      </div>
-
-      <div class="panel-box">
-        <div class="panel-title">Legend</div>
-        <div style="display:flex;flex-direction:column;gap:6px">
-          <div class="legend-row">
-            <div class="legend-dot" style="background:#2a1a2e;border-color:#bb9af7"></div>
-            <span>Source node (src)</span>
-          </div>
-          <div class="legend-row">
-            <div class="legend-dot" style="background:#2e1a1a;border-color:#f7768e"></div>
-            <span>Destination node (dst)</span>
-          </div>
-          <div class="legend-row">
-            <div class="legend-dot" style="background:#3d3524;border-color:#e0af68"></div>
-            <span>Edge being examined</span>
-          </div>
-          <div class="legend-row">
-            <div class="legend-dot" style="background:#1a2a1a;border-color:#9ece6a"></div>
-            <span>Cost improved</span>
-          </div>
-        </div>
-      </div>
-
-      <div class="code-panel">
-        <div class="code-header">Python</div>
-        <div class="code-body" id="code-body"></div>
-      </div>
-
+    </div>
+    <div>
+      <div class="sidebar-title">Legend</div>
+      <div class="legend-row"><div class="legend-dot" style="background:#2a1a2e;border-color:#bb9af7"></div><span>Source</span></div>
+      <div class="legend-row"><div class="legend-dot" style="background:#2e1a1a;border-color:#f7768e"></div><span>Destination</span></div>
+      <div class="legend-row"><div class="legend-dot" style="background:#3d3524;border-color:#e0af68"></div><span>Examining</span></div>
+      <div class="legend-row"><div class="legend-dot" style="background:#1a2a1a;border-color:#9ece6a"></div><span>Improved</span></div>
     </div>
   </div>
+</div>
+
+<div id="nav-row">
+  <button id="prevBtn" class="btn-step">&larr; Prev</button>
+  <button id="stepBtn" class="btn-step">Step &rarr;</button>
+  <button id="playBtn" class="btn-play">Play</button>
+  <button id="resetBtn" class="btn-step">&#8635; Reset</button>
+  <select id="speedSel">
+    <option value="800">0.5&times;</option>
+    <option value="400" selected>1&times;</option>
+    <option value="200">2&times;</option>
+    <option value="100">4&times;</option>
+  </select>
 </div>
 
 <script>
@@ -347,6 +281,13 @@ function loadPreset(name) {
   });
 }
 
+function randomExample() {
+  var keys = Object.keys(PRESETS);
+  var k = keys[Math.floor(Math.random() * keys.length)];
+  loadPreset(k);
+  buildAndRun();
+}
+
 function buildAndRun() {
   var preset = PRESETS[currentPreset];
   gNodes = preset.nodes;
@@ -399,7 +340,6 @@ function renderGraph(edgeStates, activeNode, nodeStates) {
   var eSt = edgeStates || {};
   var nSt = nodeStates || {};
 
-  // Src ring
   var srcNode = nodeById(gSrc);
   if (srcNode) {
     var srcRing = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
@@ -409,7 +349,6 @@ function renderGraph(edgeStates, activeNode, nodeStates) {
     nodesG.appendChild(srcRing);
   }
 
-  // Dst ring
   var dstNode = nodeById(gDst);
   if (dstNode) {
     var dstRing = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
@@ -419,7 +358,6 @@ function renderGraph(edgeStates, activeNode, nodeStates) {
     nodesG.appendChild(dstRing);
   }
 
-  // Edges
   gFlights.forEach(function(f) {
     var pts = getEdgePts(f.s, f.d);
     if (!pts) return;
@@ -452,7 +390,6 @@ function renderGraph(edgeStates, activeNode, nodeStates) {
     edgesG.appendChild(wt);
   });
 
-  // Nodes
   gNodes.forEach(function(n) {
     var g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
     var circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
@@ -474,7 +411,7 @@ function renderGraph(edgeStates, activeNode, nodeStates) {
   });
 }
 
-// ---- Simulation (Bellman-Ford with k+1 rounds) ----
+// ---- Simulation ----
 function simulate(n, flights, src, dst, k) {
   var steps = [];
   var INF = Infinity;
@@ -501,7 +438,7 @@ function simulate(n, flights, src, dst, k) {
   nSt[src] = 'src';
 
   snap('Init',
-    'prices[' + src + '] = 0, all others = ∞. We will run k+1=' + (k+1) + ' relaxation rounds. Each round = one more allowed stop.',
+    'prices[' + src + '] = 0, all others = ∞. Will run k+1=' + (k+1) + ' relaxation rounds.',
     [2, 3], {}, Object.assign({}, nSt), prices, prices, -1);
 
   for (var round = 0; round < k + 1; round++) {
@@ -509,7 +446,7 @@ function simulate(n, flights, src, dst, k) {
     var roundNSt = Object.assign({}, nSt);
 
     snap('Round',
-      'Round ' + round + '/' + k + ' — snapshot prices[] as prev. Will relax all flights using prev costs to avoid using edges added this round.',
+      'Round ' + round + '/' + k + ' — snapshot prices[] as prev. Relax all flights using prev costs.',
       [4, 5], {}, roundNSt, prices, tmp, round);
 
     for (var fi = 0; fi < flights.length; fi++) {
@@ -554,14 +491,14 @@ function simulate(n, flights, src, dst, k) {
     nSt = Object.assign({}, roundNSt);
 
     snap('EndRound',
-      'Round ' + round + ' complete. prices = [' + prices.map(ds).join(', ') + ']. These are min costs using at most ' + (round + 1) + ' edge' + (round + 1 === 1 ? '' : 's') + '.',
+      'Round ' + round + ' complete. prices = [' + prices.map(ds).join(', ') + '].',
       [10], {}, nSt, prices, prices, round);
   }
 
   var answer = prices[dst] === INF ? -1 : prices[dst];
   var doneDesc = answer === -1
-    ? 'Done. prices[' + dst + '] = ∞ — destination not reachable within ' + k + ' stop' + (k===1?'':'s') + '. Return -1.'
-    : 'Done. prices[' + dst + '] = ' + answer + '. Cheapest flight from ' + src + ' to ' + dst + ' with at most ' + k + ' stop' + (k===1?'':'s') + '. Return ' + answer + '.';
+    ? 'Done. prices[' + dst + '] = ∞ — not reachable within ' + k + ' stop' + (k===1?'':'s') + '. Return -1.'
+    : 'Done. prices[' + dst + '] = ' + answer + '. Return ' + answer + '.';
 
   snap('Done', doneDesc, [11], {}, nSt, prices, prices, k);
 
@@ -582,25 +519,23 @@ function applyStep(step) {
     var cost = step.curr[gDst];
     if (cost === Infinity) {
       badge.className = 'result-badge failure';
-      badge.textContent = 'Return -1 (unreachable within ' + gK + ' stops)';
+      badge.textContent = 'Return -1 (unreachable)';
     } else {
       badge.className = 'result-badge success';
-      badge.textContent = 'Return ' + cost + ' (cheapest in ≤' + gK + ' stops)';
+      badge.textContent = 'Return ' + cost;
     }
   }
 }
 
 function updateDP(prev, curr, edgeStates, nodeStates) {
   var el = document.getElementById('dp-cells');
-  if (!prev) { el.innerHTML = '<span style="color:var(--text-ghost);font-size:0.78rem">—</span>'; return; }
+  if (!prev) { el.innerHTML = '<span style="color:var(--text-ghost);font-size:0.75rem">—</span>'; return; }
 
-  // Find which nodes were improved this step (curr[i] < prev[i])
   var improved = {};
   for (var i = 0; i < curr.length; i++) {
     if (curr[i] < prev[i]) improved[i] = true;
   }
 
-  // Find active destination from edgeStates
   var activeDst = -1;
   if (edgeStates) {
     Object.keys(edgeStates).forEach(function(key) {
@@ -618,7 +553,7 @@ function updateDP(prev, curr, edgeStates, nodeStates) {
 
     var lbl = document.createElement('div');
     lbl.className = 'dp-node-label';
-    lbl.textContent = 'node ' + i;
+    lbl.textContent = 'n' + i;
     col.appendChild(lbl);
 
     var prevCell = document.createElement('div');
@@ -643,7 +578,7 @@ function updateDP(prev, curr, edgeStates, nodeStates) {
 function updateRound(round) {
   var el = document.getElementById('round-info');
   if (round < 0) { el.textContent = ''; return; }
-  el.innerHTML = '<span class="round-badge">Round ' + round + '/' + gK + '</span>';
+  el.innerHTML = '<span class="round-badge">R' + round + '/' + gK + '</span>';
 }
 
 function setCodeLines(lines) {
@@ -657,7 +592,7 @@ function setCodeLines(lines) {
 function buildCodePanel() {
   var body = document.getElementById('code-body');
   body.innerHTML = CODE.map(function(e) {
-    return '<div class="code-line" id="cl-' + e[0] + '"><span class="ln">' + e[0] + '</span><span>' + e[1] + '</span></div>';
+    return '<div class="cl" id="cl-' + e[0] + '"><span class="ln">' + e[0] + '</span><span>' + e[1] + '</span></div>';
   }).join('');
 }
 
@@ -671,20 +606,35 @@ window.addEventListener('DOMContentLoaded', function() {
     speedSel: document.getElementById('speedSel'),
     render: function(step, cur, total) {
       applyStep(step);
-      var phaseEl = document.getElementById('phase-label');
-      var descEl  = document.getElementById('step-desc');
-      if (phaseEl) phaseEl.textContent = 'Step ' + (cur + 1) + ' / ' + total + '  ·  ' + step.phase;
-      if (descEl)  descEl.textContent = step.desc;
+      document.getElementById('phase-badge').textContent = step.phase;
+      document.getElementById('step-counter').textContent = 'Step ' + (cur + 1) + ' / ' + total;
+      document.getElementById('desc').textContent = step.desc;
     }
   });
+  document.getElementById('resetBtn').addEventListener('click', function() { buildAndRun(); });
 });
 </script>
 
 <script>
-  if (window.self !== window.top) {
-    var bl = document.querySelector('.back-link');
-    if (bl) bl.style.display = 'none';
-  }
+(function() {
+  var handle = document.getElementById('resize-handle');
+  var panel  = document.getElementById('code-panel');
+  var dragging = false, startX = 0, startW = 0;
+  handle.addEventListener('mousedown', function(e) {
+    dragging = true; startX = e.clientX; startW = panel.offsetWidth;
+    handle.classList.add('dragging');
+    e.preventDefault();
+  });
+  document.addEventListener('mousemove', function(e) {
+    if (!dragging) return;
+    var delta = startX - e.clientX;
+    panel.style.width = Math.min(560, Math.max(120, startW + delta)) + 'px';
+  });
+  document.addEventListener('mouseup', function() {
+    if (!dragging) return;
+    dragging = false; handle.classList.remove('dragging');
+  });
+})();
 </script>
 </body>
 </html>

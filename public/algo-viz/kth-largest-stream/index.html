@@ -5,19 +5,45 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Kth Largest Element in a Stream</title>
   <link rel="stylesheet" href="../shared/style.css" />
+  <script src="../shared/gsap.min.js"></script>
   <script src="../shared/viz.js"></script>
   <style>
-    body { display:flex; flex-direction:column; height:100vh; overflow:hidden; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: "Fira Code", "Cascadia Code", monospace; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+    #header { padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+    #phase-badge { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; padding: 3px 10px; border-radius: var(--radius-sm); background: #1e3a5f; color: var(--blue); border: 1px solid var(--blue); }
+    #step-counter { font-size: 12px; color: var(--text-muted); margin-left: auto; }
+    .viz-inputs { width: 100%; max-width: 100%; padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; flex-wrap: wrap; gap: 12px; align-items: center; flex-shrink: 0; }
+    .viz-inputs label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); display: block; margin-bottom: 3px; }
+    .viz-inputs select, .viz-inputs input { background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 0 8px; height: 30px; font-size: 0.82rem; font-family: inherit; }
+    .vi-btn-run { padding: 6px 14px; border-radius: 6px; font-size: 0.82rem; font-weight: 600; cursor: pointer; font-family: inherit; background: var(--accent); color: #fff; border: none; }
+    .vi-btn-rand { padding: 6px 14px; border-radius: 6px; font-size: 0.82rem; cursor: pointer; font-family: inherit; background: var(--bg); color: var(--text); border: 1px solid var(--border); }
+    #main { display: flex; flex: 1; overflow: hidden; }
+    #viz-area { flex: 1; display: flex; flex-direction: column; align-items: stretch; justify-content: flex-start; padding: 16px; gap: 14px; overflow-y: auto; }
+    #resize-handle { width: 5px; flex-shrink: 0; cursor: col-resize; background: transparent; border-left: 1px solid var(--border); transition: background .15s; }
+    #resize-handle:hover, #resize-handle.dragging { background: var(--accent); }
+    #code-panel { width: 350px; min-width: 120px; max-width: 560px; flex-shrink: 0; background: #0d1117; border-right: 1px solid var(--border); overflow-y: auto; overflow-x: auto; padding: 10px 12px; display: flex; flex-direction: column; }
+    .code-panel-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--text-dim); margin-bottom: 8px; }
+    .cl { display: flex; align-items: stretch; padding: 2px 0; white-space: pre; border-left: 2px solid transparent; padding-left: 6px; color: var(--text-muted); font-size: 0.75rem; line-height: 1.8; }
+    .cl.hl { background: rgba(122,162,247,0.12); border-left-color: var(--accent); color: var(--text); }
+    .ln { display: inline-block; width: 20px; text-align: right; color: var(--text-dim); user-select: none; margin-right: 10px; font-size: 0.7rem; }
+    .kw { color: var(--purple); }
+    .nb { color: var(--green); }
+    .fn { color: var(--blue); }
+    .cm { color: var(--text-dim); font-style: italic; }
+    #sidebar { width: 220px; flex-shrink: 0; background: var(--surface); border-left: 1px solid var(--border); overflow-y: auto; padding: 14px 12px; display: flex; flex-direction: column; gap: 12px; }
+    .sidebar-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--text-dim); margin-bottom: 6px; }
+    #nav-row { flex-shrink: 0; display: flex; align-items: center; gap: 8px; padding: 10px 16px; background: var(--surface); border-top: 1px solid var(--border); }
+    .btn-step { padding: 6px 14px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--surface); color: var(--text); font-family: inherit; font-size: 12px; cursor: pointer; }
+    .btn-play { padding: 6px 14px; border-radius: var(--radius-sm); background: var(--accent); border-color: var(--accent); color: #fff; font-family: inherit; font-size: 12px; cursor: pointer; }
 
-    .top-area { flex:0 0 auto; }
-    .mid-area  { flex:1; display:grid; grid-template-columns:1fr 1fr; gap:14px; padding:0 16px 8px; overflow:hidden; min-height:0; }
-    .bot-area  { flex:0 0 auto; padding:0 16px 10px; }
-
+    /* page-specific */
+    .panels-row { display: flex; gap: 14px; flex: 1; min-height: 0; overflow: hidden; }
     .panel {
       background:var(--surface); border:1px solid var(--border);
       border-radius:var(--radius-lg); padding:14px 16px;
       display:flex; flex-direction:column; gap:10px;
-      overflow:hidden; min-height:0;
+      overflow:hidden; min-height:0; flex: 1;
     }
     .panel-title {
       font-size:0.72rem; font-weight:700;
@@ -33,8 +59,6 @@
       background:var(--bg); border:1px solid var(--border);
       color:var(--text-dim);
     }
-
-    /* ── heap list ── */
     .heap-rows { display:flex; flex-direction:column; gap:4px; overflow-y:auto; flex:1; }
     .heap-row {
       display:flex; align-items:center; gap:10px;
@@ -49,8 +73,6 @@
     .heap-rank { width:18px; color:var(--text-ghost); font-size:0.7rem; text-align:right; }
     .heap-val  { color:var(--text-bright); flex:1; font-size:0.9rem; font-weight:600; }
     .heap-note { color:var(--text-dim); font-size:0.73rem; }
-
-    /* ── stream log ── */
     .stream-log { display:flex; flex-direction:column; gap:5px; overflow-y:auto; flex:1; }
     .log-row {
       display:flex; align-items:center; gap:10px;
@@ -64,37 +86,7 @@
     .log-num   { color:var(--text-bright); font-weight:600; min-width:28px; }
     .log-arrow { color:var(--text-ghost); }
     .log-ans   { color:#4ade80; font-weight:700; }
-    .log-phase { color:var(--text-dim); font-size:0.75rem; margin-left:auto; }
     .log-pending { color:var(--text-ghost); font-style:italic; }
-
-    /* init log */
-    .init-row {
-      display:flex; align-items:center; gap:8px;
-      padding:6px 12px; border-radius:6px;
-      background:var(--bg); border:1px solid var(--border-soft);
-      font-family:monospace; font-size:0.78rem;
-      color:var(--text-muted);
-      transition:border-color 0.15s;
-    }
-    .init-row.current { border-color:#7c3aed; }
-    .init-sep {
-      font-size:0.7rem; font-weight:700; text-transform:uppercase;
-      letter-spacing:0.08em; color:var(--text-ghost); padding:2px 0;
-    }
-
-    /* ── bottom nav ── */
-    .nav-strip { display:flex; gap:10px; align-items:center; }
-    .step-info { flex:1; min-width:0; display:flex; flex-direction:column; gap:2px; }
-    #phase-label { font-size:0.72rem; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:var(--text-dim); }
-    #step-desc   { font-size:0.82rem; color:var(--text-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-
-    .speed-select {
-      background:var(--bg); border:1px solid var(--border);
-      border-radius:var(--radius-sm); color:var(--text);
-      font-size:0.85rem; padding:8px 10px; outline:none; width:80px;
-    }
-
-    /* answer badge */
     .kth-badge {
       display:inline-flex; align-items:center; gap:6px;
       font-size:0.78rem; font-family:monospace;
@@ -103,76 +95,134 @@
       color:#a78bfa;
     }
     .kth-badge .kth-val { font-weight:700; font-size:0.9rem; color:#c4b5fd; }
+    #step-desc-box { font-size: 0.75rem; color: var(--text-muted); line-height: 1.4; }
   </style>
 </head>
-<body class="page">
+<body>
 
-<div class="page-header top-area">
-  <a class="back-link" href="../index.html">&larr; All Algorithms</a>
-  <div class="page-title">Kth Largest Element in a Stream</div>
-  <div class="page-sub">LeetCode 703 &middot; Min-heap of size k &middot; O(n log k) time &middot; O(k) space</div>
-</div>
-
-<div class="viz-inputs top-area">
-  <div class="field">
+<div class="viz-inputs">
+  <div>
+    <label>Preset</label>
+    <select id="presetSel" onchange="loadPreset()">
+      <option value="">— pick a preset —</option>
+      <option value='{"k":3,"nums":"4,5,8,2","stream":"3,5,10,9,4"}'>k=3, nums=[4,5,8,2], stream=[3,5,10,9,4]</option>
+      <option value='{"k":1,"nums":"","stream":"1,2,3,4,5"}'>k=1 (always max)</option>
+      <option value='{"k":2,"nums":"1","stream":"7,2,9,3"}'>k=2 small init</option>
+      <option value='{"k":4,"nums":"10,20,30,40,50","stream":"5,15,25"}'>k=4 large init</option>
+      <option value='{"k":3,"nums":"","stream":"5,3,1,9,7,2"}'>k=3 no init</option>
+    </select>
+  </div>
+  <div>
     <label>k</label>
     <input id="inp-k" type="number" value="3" min="1" max="20" style="width:60px" />
   </div>
-  <div class="field">
-    <label>Initial nums (comma-separated)</label>
-    <input id="inp-nums" type="text" value="4,5,8,2" style="width:180px;font-family:monospace" />
+  <div>
+    <label>Initial nums</label>
+    <input id="inp-nums" type="text" value="4,5,8,2" style="width:150px;font-family:monospace" />
   </div>
-  <div class="field">
-    <label>Stream values (comma-separated)</label>
-    <input id="inp-stream" type="text" value="3,5,10,9,4" style="width:180px;font-family:monospace" />
+  <div>
+    <label>Stream values</label>
+    <input id="inp-stream" type="text" value="3,5,10,9,4" style="width:150px;font-family:monospace" />
   </div>
-  <button class="btn-primary" onclick="buildAndRun()">Build &amp; Run</button>
+  <button class="vi-btn-run" onclick="buildAndRun()">Build &amp; Run</button>
+  <button class="vi-btn-rand" onclick="randomExample()">&#127922; Random</button>
+</div>
+<div class="controls"></div>
+
+<div id="header">
+  <span id="phase-badge">Kth Largest in Stream</span>
+  <span style="font-size:12px;color:var(--text-muted)">LeetCode 703 &middot; Min-heap of size k &middot; O(n log k) time &middot; O(k) space</span>
+  <span id="step-counter"></span>
 </div>
 
-<div class="mid-area">
-
-  <div class="panel">
-    <div class="panel-meta">
-      <div class="panel-title">Min-Heap (size k)</div>
-      <span id="heap-badge">size: 0 / k: —</span>
-    </div>
-    <div style="flex-shrink:0" id="kth-answer-wrap"></div>
-    <div class="heap-rows" id="heap-rows">
-      <div style="color:var(--text-ghost);font-size:0.82rem;text-align:center;padding:24px 0">Heap is empty</div>
+<div id="main">
+  <div id="viz-area">
+    <div class="panels-row">
+      <div class="panel">
+        <div class="panel-meta">
+          <div class="panel-title">Min-Heap (size k)</div>
+          <span id="heap-badge">size: 0 / k: —</span>
+        </div>
+        <div style="flex-shrink:0" id="kth-answer-wrap"></div>
+        <div class="heap-rows" id="heap-rows">
+          <div style="color:var(--text-ghost);font-size:0.82rem;text-align:center;padding:24px 0">Heap is empty</div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-title">Stream Log</div>
+        <div class="stream-log" id="stream-log">
+          <div style="color:var(--text-ghost);font-size:0.82rem;text-align:center;padding:24px 0">No stream values yet</div>
+        </div>
+      </div>
     </div>
   </div>
 
-  <div class="panel">
-    <div class="panel-title">Stream Log</div>
-    <div class="stream-log" id="stream-log">
-      <div style="color:var(--text-ghost);font-size:0.82rem;text-align:center;padding:24px 0">No stream values yet</div>
-    </div>
+  <div id="resize-handle"></div>
+
+  <div id="code-panel">
+    <div class="code-panel-title">Python</div>
+    <div id="code-body"></div>
   </div>
 
+  <div id="sidebar">
+    <div>
+      <div class="sidebar-title">Step</div>
+      <div id="step-desc-box">Enter values and click Build &amp; Run.</div>
+    </div>
+    <div>
+      <div class="sidebar-title">State</div>
+      <div style="font-size:11px;font-family:monospace;color:var(--text-muted)">
+        <div style="padding:4px 0;border-bottom:1px solid var(--border-soft)"><span style="color:var(--text-dim)">k:</span> <span id="sb-k" style="color:var(--accent);font-weight:700">—</span></div>
+        <div style="padding:4px 0;border-bottom:1px solid var(--border-soft)"><span style="color:var(--text-dim)">heap size:</span> <span id="sb-size" style="color:var(--accent);font-weight:700">—</span></div>
+        <div style="padding:4px 0"><span style="color:var(--text-dim)">kth largest:</span> <span id="sb-kth" style="color:#c4b5fd;font-weight:700">—</span></div>
+      </div>
+    </div>
+  </div>
 </div>
 
-<div class="bot-area">
-  <div class="nav-strip">
-    <button class="stepBtn" id="prevBtn" disabled>&larr;</button>
-    <button class="stepBtn" id="stepBtn" disabled>&rarr;</button>
-    <button class="playBtn" id="playBtn" disabled>&#9654; Play</button>
-    <select class="speedSel" id="speedSel">
-      <option value="900">Slow</option>
-      <option value="450" selected>Medium</option>
-      <option value="140">Fast</option>
-    </select>
-    <div class="step-info">
-      <div id="phase-label">&mdash;</div>
-      <div id="step-desc">Enter k, initial nums, and stream values, then click Build &amp; Run.</div>
-    </div>
-  </div>
+<div id="nav-row">
+  <button class="btn-step" id="prevBtn" disabled>&larr;</button>
+  <button class="btn-step" id="stepBtn" disabled>&rarr;</button>
+  <button class="btn-play" id="playBtn" disabled>&#9654; Play</button>
+  <button class="btn-step" id="resetBtn">&#8635; Reset</button>
+  <select id="speedSel">
+    <option value="900">Slow</option>
+    <option value="450" selected>Medium</option>
+    <option value="140">Fast</option>
+  </select>
 </div>
 
 <script>
 var simSteps = [], nav;
 var currentK = 0, currentNums = [], currentStream = [];
 
-// ── min-heap ─────────────────────────────────────────────────────────────────
+var CODE_LINES = [
+  [1,  '<span class="kw">import</span> heapq'],
+  [2,  '<span class="kw">class</span> <span class="fn">KthLargest</span>:'],
+  [3,  '  <span class="kw">def</span> <span class="fn">__init__</span>(self, k, nums):'],
+  [4,  '    self.k = k'],
+  [5,  '    self.heap = []'],
+  [6,  '    <span class="kw">for</span> n <span class="kw">in</span> nums:'],
+  [7,  '      heapq.heappush(self.heap, n)'],
+  [8,  '      <span class="kw">if</span> len(self.heap) > k:'],
+  [9,  '        heapq.heappop(self.heap)'],
+  [0,  ''],
+  [11, '  <span class="kw">def</span> <span class="fn">add</span>(self, val):'],
+  [12, '    heapq.heappush(self.heap, val)'],
+  [13, '    <span class="kw">if</span> len(self.heap) > self.k:'],
+  [14, '      heapq.heappop(self.heap)'],
+  [15, '    <span class="kw">return</span> self.heap[<span class="nb">0</span>]'],
+];
+
+function buildCodePanel() {
+  var body = document.getElementById('code-body');
+  body.innerHTML = CODE_LINES.map(function(e) {
+    var ln = e[0], html = e[1];
+    var id = ln > 0 ? ' id="cl-' + ln + '"' : '';
+    return '<div class="cl"' + id + '><span class="ln">' + (ln || '') + '</span><span>' + html + '</span></div>';
+  }).join('');
+}
+
 function minHeapPush(heap, val) {
   heap.push(val);
   var i = heap.length - 1;
@@ -199,7 +249,6 @@ function minHeapPop(heap) {
   return top;
 }
 
-// ── simulation ────────────────────────────────────────────────────────────────
 function simulate(k, nums, stream) {
   var steps = [];
   var heap = [];
@@ -223,7 +272,6 @@ function simulate(k, nums, stream) {
 
   snap('Start', 'Initialize: push each num into the min-heap, evict the minimum whenever size exceeds k=' + k + '.', { isInit:true, initIdx:-1 });
 
-  // Build from nums
   for (var i = 0; i < nums.length; i++) {
     var v = nums[i];
     minHeapPush(heap, v);
@@ -237,7 +285,6 @@ function simulate(k, nums, stream) {
   var initAns = heap.length >= k ? heap[0] : null;
   snap('Init:done', 'Init complete. Heap: [' + heap.slice().sort(function(a,b){return a-b;}).join(', ') + ']. ' + (initAns !== null ? 'Kth largest = ' + initAns + '.' : 'Heap has fewer than k elements — need more values.'), { isInit:true, initIdx:-1 });
 
-  // Stream
   for (var si = 0; si < stream.length; si++) {
     var sv = stream[si];
     snap('Stream:consider', 'add(' + sv + '): push ' + sv + ' into the heap.', { streamIdx:si, streamAnswers:streamAnswers, newVal:sv });
@@ -259,15 +306,16 @@ function simulate(k, nums, stream) {
   return steps;
 }
 
-// ── render ────────────────────────────────────────────────────────────────────
 function applyStep(s, animate) {
   renderHeap(s);
   renderStreamLog(s);
-
-  var phaseEl = document.getElementById('phase-label');
-  var descEl  = document.getElementById('step-desc');
-  if (phaseEl) phaseEl.textContent = s.phase;
-  if (descEl) descEl.textContent = s.desc;
+  var sbK   = document.getElementById('sb-k');
+  var sbSz  = document.getElementById('sb-size');
+  var sbKth = document.getElementById('sb-kth');
+  if (sbK)   sbK.textContent   = currentK;
+  if (sbSz)  sbSz.textContent  = s.heap.length;
+  var kthVal = s.heap.length >= currentK ? s.heap[0] : null;
+  if (sbKth) sbKth.textContent = kthVal !== null ? kthVal : '—';
 }
 
 function renderHeap(s) {
@@ -277,7 +325,6 @@ function renderHeap(s) {
 
   badge.textContent = 'size: ' + s.heap.length + ' / k: ' + currentK;
 
-  // answer badge
   var heapMin = s.heap.length >= currentK ? s.heap[0] : null;
   if (heapMin !== null) {
     ansWrap.innerHTML = '<span class="kth-badge">kth largest = <span class="kth-val">' + heapMin + '</span></span>';
@@ -290,7 +337,6 @@ function renderHeap(s) {
     return;
   }
 
-  // Display sorted ascending so min (index 0) is at top — shows structure clearly
   var sorted = s.heap.slice().sort(function(a,b){return a-b;});
   rows.innerHTML = sorted.map(function(val, rank) {
     var isMin    = (rank === 0);
@@ -332,29 +378,38 @@ function renderStreamLog(s) {
 
   log.innerHTML = html;
 
-  // Scroll current into view
   var currentEl = log.querySelector('.log-row.current');
   if (currentEl) currentEl.scrollIntoView({block:'nearest'});
 }
 
-// ── wire-up ───────────────────────────────────────────────────────────────────
-window.addEventListener('DOMContentLoaded', function() {
-  nav = VizNav({
-    btnPrev:  document.getElementById('prevBtn'),
-    btnNext:  document.getElementById('stepBtn'),
-    btnPlay:  document.getElementById('playBtn'),
-    speedSel: document.getElementById('speedSel'),
-    render: function(snap, cur, total) {
-      applyStep(snap, cur > 0);
-      var phaseEl = document.getElementById('phase-label');
-      if (phaseEl) phaseEl.textContent = 'Step ' + (cur+1) + ' / ' + total + '  ·  ' + snap.phase;
-    }
-  });
-  buildAndRun();
-});
-
 function parseCSV(raw) {
   return raw.split(',').map(function(s){return parseInt(s.trim(),10);}).filter(function(n){return !isNaN(n);});
+}
+
+function loadPreset() {
+  var sel = document.getElementById('presetSel');
+  if (!sel.value) return;
+  var d = JSON.parse(sel.value);
+  document.getElementById('inp-k').value      = d.k;
+  document.getElementById('inp-nums').value   = d.nums;
+  document.getElementById('inp-stream').value = d.stream;
+  buildAndRun();
+}
+
+function randomExample() {
+  var examples = [
+    {k:2, nums:'1,5', stream:'3,7,2,8'},
+    {k:3, nums:'2,4,6', stream:'1,3,5,7,9'},
+    {k:1, nums:'', stream:'4,2,8,1,6'},
+    {k:4, nums:'10,20,30,40', stream:'5,25,15,35'},
+    {k:2, nums:'1,2,3,4,5', stream:'6,0,4'},
+  ];
+  var pick = examples[Math.floor(Math.random() * examples.length)];
+  document.getElementById('inp-k').value      = pick.k;
+  document.getElementById('inp-nums').value   = pick.nums;
+  document.getElementById('inp-stream').value = pick.stream;
+  document.getElementById('presetSel').value  = '';
+  buildAndRun();
 }
 
 function buildAndRun() {
@@ -371,12 +426,46 @@ function buildAndRun() {
   simSteps = simulate(k, nums, stream);
   nav.load(simSteps);
 }
+
+window.addEventListener('DOMContentLoaded', function() {
+  buildCodePanel();
+  nav = VizNav({
+    btnPrev:  document.getElementById('prevBtn'),
+    btnNext:  document.getElementById('stepBtn'),
+    btnPlay:  document.getElementById('playBtn'),
+    speedSel: document.getElementById('speedSel'),
+    render: function(snap, cur, total) {
+      applyStep(snap, cur > 0);
+      var badge   = document.getElementById('phase-badge');
+      var counter = document.getElementById('step-counter');
+      var descEl  = document.getElementById('step-desc-box');
+      if (badge)   badge.textContent   = snap.phase;
+      if (counter) counter.textContent = 'Step ' + (cur+1) + ' / ' + total;
+      if (descEl)  descEl.textContent  = snap.desc;
+    }
+  });
+  document.getElementById('resetBtn').addEventListener('click', function() { buildAndRun(); });
+  buildAndRun();
+});
 </script>
 <script>
-  if (window.self !== window.top) {
-    var bl = document.querySelector('.back-link');
-    if (bl) bl.style.display = 'none';
-  }
+(function() {
+  var handle = document.getElementById('resize-handle');
+  var panel  = document.getElementById('code-panel');
+  var dragging = false, startX = 0, startW = 0;
+  handle.addEventListener('mousedown', function(e) {
+    dragging = true; startX = e.clientX; startW = panel.offsetWidth;
+    handle.classList.add('dragging'); e.preventDefault();
+  });
+  document.addEventListener('mousemove', function(e) {
+    if (!dragging) return;
+    var delta = startX - e.clientX;
+    panel.style.width = Math.min(560, Math.max(120, startW + delta)) + 'px';
+  });
+  document.addEventListener('mouseup', function() {
+    if (!dragging) return; dragging = false; handle.classList.remove('dragging');
+  });
+})();
 </script>
 </body>
 </html>

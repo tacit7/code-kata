@@ -8,144 +8,67 @@
   <script src="../shared/gsap.min.js"></script>
   <script src="../shared/viz.js"></script>
   <style>
-    .viz-area { width: 100%; max-width: 90%; }
-    .main-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
-    .left-col, .right-col { display: flex; flex-direction: column; gap: 12px; }
-    @media (max-width: 700px) { .main-row { grid-template-columns: 1fr; } }
-
+    /* === Canonical layout === */
+    body { background: var(--bg); color: var(--text); font-family: "Fira Code", monospace; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+    .viz-inputs { width: 100%; padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; flex-wrap: wrap; gap: 12px; align-items: center; flex-shrink: 0; }
+    #header { padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+    #phase-label { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; padding: 3px 10px; border-radius: var(--radius-sm); background: #1e3a5f; color: var(--blue); border: 1px solid var(--blue); }
+    #main { display: flex; flex: 1; overflow: hidden; }
+    #viz-area { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding: 20px; gap: 20px; overflow-y: auto; }
+    #resize-handle { width: 5px; flex-shrink: 0; cursor: col-resize; background: transparent; border-left: 1px solid var(--border); transition: background .15s; z-index: 10; }
+    #resize-handle:hover, #resize-handle.dragging { background: var(--accent); }
+    #code-panel { width: 350px; min-width: 120px; max-width: 560px; flex-shrink: 0; background: #0d1117; border-right: 1px solid var(--border); overflow-y: auto; overflow-x: auto; padding: 10px 12px; display: flex; flex-direction: column; }
+    #sidebar { width: 220px; flex-shrink: 0; background: var(--surface); border-left: 1px solid var(--border); overflow-y: auto; padding: 14px 12px; display: flex; flex-direction: column; gap: 12px; }
+    #nav-row { flex-shrink: 0; display: flex; align-items: center; gap: 8px; padding: 10px 16px; background: var(--surface); border-top: 1px solid var(--border); }
+    .btn-step { background: var(--surface); border: 1px solid var(--border); color: var(--text); border-radius: var(--radius-sm); padding: 6px 14px; cursor: pointer; font-size: 0.82rem; }
+    .btn-play { background: #15803d; border: none; color: #fff; border-radius: var(--radius-sm); padding: 6px 14px; cursor: pointer; font-size: 0.82rem; font-weight: 600; }
+    .code-panel-title { font-size: 0.67rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-dim); margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+    /* === Viz-specific === */
     .array-section {
-      padding: 20px 16px;
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--radius-lg);
-      display: flex; flex-direction: column; gap: 10px;
-      min-height: 160px;
-      align-items: center; justify-content: center;
+      padding: 20px 16px; background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); display: flex; flex-direction: column; gap: 10px;
+      min-height: 160px; width: 100%; max-width: 600px; align-items: center; justify-content: center;
     }
     .arr-row { display: flex; gap: 8px; flex-wrap: nowrap; }
     .arr-cell {
       width: 56px; height: 64px; flex-shrink: 0;
       display: flex; align-items: center; justify-content: center;
       border: 2px solid var(--border-soft); border-radius: 6px;
-      background: #0f0f0f;
-      font-size: 1.6rem; font-weight: 700; font-family: monospace;
-      color: var(--text-ghost);
-      position: relative;
+      background: #0f0f0f; font-size: 1.6rem; font-weight: 700; font-family: monospace;
+      color: var(--text-ghost); position: relative;
     }
-    .arr-cell[data-state="done"]    { color: var(--text-bright); border-color: #2d3148; }
-    .arr-cell[data-state="current"] { color: var(--accent-pale); border-color: var(--accent); background: var(--surface-dark); box-shadow: 0 0 0 3px rgba(var(--accent-ch), 0.12); }
-    .arr-cell[data-state="written"] { color: #86efac; border-color: #15803d; background: #052e16; }
+    .arr-cell[data-state="done"]      { color: var(--text-bright); border-color: #2d3148; }
+    .arr-cell[data-state="current"]   { color: var(--accent-pale); border-color: var(--accent); background: var(--surface-dark); box-shadow: 0 0 0 3px rgba(var(--accent-ch), 0.12); }
+    .arr-cell[data-state="written"]   { color: #86efac; border-color: #15803d; background: #052e16; }
     .arr-cell[data-state="prepended"] { color: #fde68a; border-color: #b45309; background: #1c1207; }
-
     .carry-tag {
       position: absolute; top: -18px; right: -10px;
       font-size: 0.72rem; font-family: monospace; font-weight: 700;
-      padding: 2px 6px; border-radius: 4px;
-      background: #b45309; color: #fff;
+      padding: 2px 6px; border-radius: 4px; background: #b45309; color: #fff;
     }
-
     .arr-indices { display: flex; gap: 8px; }
-    .arr-idx {
-      width: 56px; flex-shrink: 0;
-      text-align: center; font-size: 0.65rem;
-      color: var(--text-ghost); font-family: monospace;
-    }
-
-    .panel-box {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--radius-lg); padding: 14px 16px;
-      display: flex; flex-direction: column; gap: 8px;
-    }
-    .panel-title {
-      font-size: 0.72rem; font-weight: 700;
-      text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim);
-    }
-
-    .var-main { display: flex; gap: 10px; }
-    .var-box {
-      flex: 1; padding: 10px 8px;
-      background: var(--bg); border: 1px solid var(--border);
-      border-radius: var(--radius-sm);
-      display: flex; flex-direction: column; align-items: center; gap: 3px;
-    }
+    .arr-idx { width: 56px; flex-shrink: 0; text-align: center; font-size: 0.65rem; color: var(--text-ghost); font-family: monospace; }
+    .panel-box { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; }
+    .panel-title { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); }
+    .var-box { padding: 8px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: space-between; gap: 6px; }
     .var-box.carry-accent { border-color: #b45309; }
-    .var-label  { font-size: 0.65rem; font-family: monospace; color: var(--text-faint); }
-    .var-val    { font-size: 1.4rem; font-weight: 700; color: var(--text-bright); }
-
-    .code-panel {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--radius-lg); overflow: hidden;
-    }
-    .code-header {
-      padding: 8px 14px; font-size: 0.72rem; font-weight: 600;
-      color: var(--text-dim); border-bottom: 1px solid var(--border); background: var(--bg);
-    }
-    .code-body { padding: 10px 0; font-size: 0.78rem; line-height: 1.75; flex: 1; white-space: pre; }
-    .code-line { display: flex; align-items: center; padding: 0 14px; }
-    .code-line.hl { background: var(--border-soft); border-left: 2px solid var(--accent); }
+    .var-label { font-size: 0.65rem; font-family: monospace; color: var(--text-faint); }
+    .var-val   { font-size: 1.1rem; font-weight: 700; color: var(--text-bright); }
+    .code-body { padding: 0; font-size: 0.78rem; line-height: 1.75; flex: 1; white-space: pre; }
+    .code-line { display: flex; align-items: center; padding: 0 4px; }
+    .code-line.hl { background: rgba(122,162,247,0.1); border-left: 2px solid var(--accent); }
     .ln { min-width: 24px; color: var(--text-ghost); user-select: none; font-size: 0.7rem; }
-
-    .playBtn {
-      background: #15803d; border: none; border-radius: var(--radius-sm);
-      color: #fff; cursor: pointer; font-size: 0.88rem; font-weight: 600;
-      padding: 9px 16px; transition: background 0.2s;
-    }
-    .playBtn:hover { background: #166534; }
-    .playBtn.playing { background: #c2410c; }
-    .playBtn.playing:hover { background: #9a3412; }
-    .playBtn:disabled { opacity: 0.4; cursor: not-allowed; }
-    .speedSel {
-      background: var(--bg); border: 1px solid var(--border);
-      border-radius: var(--radius-sm); color: var(--text);
-      font-size: 0.85rem; padding: 8px 10px; outline: none; width: 80px;
-    }
-    .nav-row { display: flex; gap: 8px; align-items: center; }
-
-    .viz-inputs {
-      display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end;
-      padding: 10px 0 14px; width: 100%; max-width: 90%;
-    }
-    .viz-inputs .field {
-      display: flex; flex-direction: column; gap: 4px;
-    }
-    .viz-inputs label {
-      font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
-      letter-spacing: 0.08em; color: var(--text-dim);
-    }
-    .viz-inputs input[type="text"] {
-      background: var(--surface); border: 1px solid var(--border);
-      color: var(--text); border-radius: var(--radius-sm);
-      padding: 6px 10px; font-size: 0.85rem; width: 180px;
-    }
-    .viz-inputs select {
-      background: var(--surface); border: 1px solid var(--border);
-      color: var(--text); border-radius: var(--radius-sm);
-      padding: 6px 10px; font-size: 0.85rem; cursor: pointer;
-    }
-    .viz-inputs button {
-      padding: 7px 18px; background: var(--accent); color: #fff;
-      border: none; border-radius: var(--radius-sm); font-weight: 600;
-      cursor: pointer; font-size: 0.85rem;
-    }
+    .kw { color: var(--purple); } .fn { color: var(--blue); } .bi { color: var(--orange); } .op { color: var(--text); } .nb { color: var(--green); }
+    .viz-inputs label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); }
+    .viz-inputs .field { display: flex; flex-direction: column; gap: 4px; }
+    .viz-inputs input[type="text"] { background: var(--surface); border: 1px solid var(--border); color: var(--text); border-radius: var(--radius-sm); padding: 6px 10px; font-size: 0.85rem; width: 180px; }
+    .viz-inputs select { background: var(--surface); border: 1px solid var(--border); color: var(--text); border-radius: var(--radius-sm); padding: 6px 10px; font-size: 0.85rem; cursor: pointer; }
+    .viz-inputs button { padding: 7px 18px; background: var(--accent); color: #fff; border: none; border-radius: var(--radius-sm); font-weight: 600; cursor: pointer; font-size: 0.85rem; }
     .viz-inputs button:hover { opacity: 0.9; }
-    .viz-inputs .random-btn {
-      background: var(--surface); color: var(--text);
-      border: 1px solid var(--border);
-    }
-
-    .kw { color: var(--purple); }
-    .fn { color: var(--blue); }
-    .bi { color: var(--orange); }
-    .op { color: var(--text); }
-    .nb { color: var(--green); }
+    .viz-inputs .random-btn { background: var(--surface); color: var(--text); border: 1px solid var(--border); }
   </style>
 </head>
-<body class="page">
-
-<div class="page-header">
-  <a class="back-link" href="../index.html">&larr; All Algorithms</a>
-  <div class="page-title">Plus One</div>
-  <div class="page-sub">LeetCode 66 &middot; Add one to a digit array &middot; O(n) time &middot; O(1) extra space</div>
-</div>
+<body>
 
 <div class="viz-inputs">
   <div class="field">
@@ -168,70 +91,63 @@
   <button class="random-btn" onclick="randomExample()">🎲 Random</button>
 </div>
 
-<div class="controls">
-</div>
+<div class="controls"></div>
 
-<div class="viz-area">
-  <div class="main-row">
-    <div class="left-col">
-      <div class="array-section" id="array-section">
-        <span style="color:var(--text-dim);font-size:0.82rem">Enter digits and click Build &amp; Run.</span>
+<div id="header">
+  <span id="phase-label">&mdash;</span>
+  <span style="font-size:13px;font-weight:700;">Plus One</span>
+</div>
+<div id="main">
+  <div id="viz-area">
+    <div class="array-section" id="array-section">
+      <span style="color:var(--text-dim);font-size:0.82rem">Enter digits and click Run.</span>
+    </div>
+  </div>
+  <div id="resize-handle"></div>
+  <div id="code-panel">
+    <div class="code-panel-title">Python</div>
+    <div class="code-body" id="code-body"></div>
+  </div>
+  <div id="sidebar">
+    <div class="panel-box">
+      <div class="panel-title">Status</div>
+      <div style="font-size:0.82rem;color:var(--text-muted);line-height:1.45" id="step-desc">Enter digits and click Run.</div>
+    </div>
+    <div class="panel-box">
+      <div class="panel-title">Variables</div>
+      <div class="var-box">
+        <div class="var-label">i</div>
+        <div class="var-val" id="vv-i">&mdash;</div>
       </div>
-      <div class="code-panel">
-        <div class="code-header">Python</div>
-        <div class="code-body" id="code-body"></div>
+      <div class="var-box carry-accent">
+        <div class="var-label">carry</div>
+        <div class="var-val" id="vv-carry">&mdash;</div>
+      </div>
+      <div class="var-box">
+        <div class="var-label">sum</div>
+        <div class="var-val" id="vv-sum">&mdash;</div>
       </div>
     </div>
-
-    <div class="right-col">
-      <div style="display:flex;gap:12px">
-        <div class="panel-box" style="flex:0 0 auto">
-          <div class="nav-row">
-            <button class="stepBtn" id="prevBtn" disabled>&larr;</button>
-            <button class="stepBtn" id="stepBtn" disabled>&rarr;</button>
-            <button class="playBtn" id="playBtn" disabled>&#9654; Play</button>
-            <select class="speedSel" id="speedSel">
-              <option value="700">Slow</option>
-              <option value="350" selected>Medium</option>
-              <option value="120">Fast</option>
-            </select>
-          </div>
-        </div>
-        <div class="panel-box" style="flex:1;min-width:0">
-          <div class="panel-title" id="phase-label">&mdash;</div>
-          <div style="font-size:0.82rem;color:var(--text-muted);margin-top:2px" id="step-desc">Enter digits and click Build &amp; Run.</div>
-        </div>
-      </div>
-
-      <div class="panel-box">
-        <div class="panel-title">Variables</div>
-        <div class="var-main">
-          <div class="var-box">
-            <div class="var-label">i</div>
-            <div class="var-val" id="vv-i">&mdash;</div>
-          </div>
-          <div class="var-box carry-accent">
-            <div class="var-label">carry</div>
-            <div class="var-val" id="vv-carry">&mdash;</div>
-          </div>
-          <div class="var-box">
-            <div class="var-label">sum</div>
-            <div class="var-val" id="vv-sum">&mdash;</div>
-          </div>
-        </div>
-      </div>
-
-      <div class="panel-box">
-        <div class="panel-title">Why a carry?</div>
-        <div style="font-size:0.82rem;color:var(--text-muted);line-height:1.55">
-          Adding 1 to a digit can overflow past 9. We replace the digit with <code>sum % 10</code> and push the overflow
-          (<code>sum / 10</code>) to the next position on the left. If the leftmost digit also overflows, we prepend a new <strong>1</strong>.
-        </div>
+    <div class="panel-box">
+      <div class="panel-title">Why a carry?</div>
+      <div style="font-size:0.78rem;color:var(--text-muted);line-height:1.55">
+        Adding 1 to a digit can overflow past 9. Replace with <code>sum % 10</code>, push overflow (<code>sum / 10</code>) left. If leftmost overflows, prepend <strong>1</strong>.
       </div>
     </div>
   </div>
 </div>
-
+<div id="nav-row">
+  <button id="prevBtn" class="btn-step">&#8592; Prev</button>
+  <button id="stepBtn" class="btn-step">Step &#8594;</button>
+  <button id="playBtn" class="btn-play">Play</button>
+  <button id="resetBtn" class="btn-step">&#8635; Reset</button>
+  <select id="speedSel">
+    <option value="800">0.5&#215;</option>
+    <option value="400" selected>1&#215;</option>
+    <option value="200">2&#215;</option>
+    <option value="100">4&#215;</option>
+  </select>
+</div>
 <script>
 var simSteps = [], nav;
 
@@ -472,12 +388,25 @@ function setCodeLines(lines) {
   });
 }
 </script>
-  <script>
-    // Hide back-link when embedded in an iframe
-    if (window.self !== window.top) {
-      var bl = document.querySelector('.back-link');
-      if (bl) bl.style.display = 'none';
-    }
-  </script>
+<script>
+(function() {
+  var handle = document.getElementById('resize-handle');
+  var panel  = document.getElementById('code-panel');
+  var dragging = false, startX = 0, startW = 0;
+  handle.addEventListener('mousedown', function(e) {
+    dragging = true; startX = e.clientX; startW = panel.offsetWidth;
+    handle.classList.add('dragging'); e.preventDefault();
+  });
+  document.addEventListener('mousemove', function(e) {
+    if (!dragging) return;
+    var delta = startX - e.clientX;
+    panel.style.width = Math.min(560, Math.max(120, startW + delta)) + 'px';
+  });
+  document.addEventListener('mouseup', function() {
+    if (!dragging) return;
+    dragging = false; handle.classList.remove('dragging');
+  });
+})();
+</script>
 </body>
 </html>

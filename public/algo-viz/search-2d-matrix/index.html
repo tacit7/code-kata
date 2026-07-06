@@ -229,8 +229,7 @@ function loadPreset() {
   var sel = document.getElementById('presetSel');
   if (sel.value === '') return;
   var p = PRESETS[parseInt(sel.value)];
-  document.getElementById('matrixInput').value = p.matrix.map(function(r){ return r.join(','); }).join('
-');
+  document.getElementById('matrixInput').value = p.matrix.map(function(r){ return r.join(','); }).join('\n');
   document.getElementById('targetInput').value = p.target;
   buildAndRun();
 }
@@ -266,8 +265,7 @@ function randomExample() {
       target = vals[total - 1] + randInt(1, 10);
     }
   }
-  document.getElementById('matrixInput').value = matrix.map(function(r){ return r.join(','); }).join('
-');
+  document.getElementById('matrixInput').value = matrix.map(function(r){ return r.join(','); }).join('\n');
   document.getElementById('targetInput').value = target;
   buildAndRun();
 }
@@ -287,8 +285,7 @@ function parseInputs() {
   var target = parseInt(rawTarget);
   if (isNaN(target)) return err('Target must be an integer.');
 
-  var rawRows = document.getElementById('matrixInput').value.trim().split('
-');
+  var rawRows = document.getElementById('matrixInput').value.trim().split('\n');
   if (!rawRows.length || (rawRows.length === 1 && rawRows[0] === ''))
     return err('Matrix cannot be empty.');
 

@@ -8,94 +8,46 @@
   <script src="../shared/gsap.min.js"></script>
   <script src="../shared/viz.js"></script>
   <style>
-    .viz-area { width: 100%; max-width: 96%; display: flex; flex-direction: column; gap: 12px; }
+    body { background: var(--bg); color: var(--text); font-family: "Fira Code", monospace; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+    .viz-inputs { width: 100%; padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; flex-wrap: wrap; gap: 12px; align-items: center; flex-shrink: 0; }
+    #header { padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+    #phase-badge { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; padding: 3px 10px; border-radius: var(--radius-sm); background: #1e3a5f; color: var(--blue); border: 1px solid var(--blue); }
+    #step-counter { font-size: 12px; color: var(--text-muted); margin-left: auto; }
+    #main { display: flex; flex: 1; overflow: hidden; }
+    #viz-area { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding: 20px; gap: 20px; overflow-y: auto; }
+    #resize-handle { width: 5px; flex-shrink: 0; cursor: col-resize; background: transparent; border-left: 1px solid var(--border); transition: background .15s; z-index: 10; }
+    #resize-handle:hover, #resize-handle.dragging { background: var(--accent); }
+    #code-panel { width: 350px; min-width: 120px; max-width: 560px; flex-shrink: 0; background: #0d1117; border-right: 1px solid var(--border); overflow-y: auto; overflow-x: auto; padding: 10px 12px; display: flex; flex-direction: column; }
+    #sidebar { width: 240px; flex-shrink: 0; background: var(--surface); border-left: 1px solid var(--border); overflow-y: auto; padding: 14px 12px; display: flex; flex-direction: column; gap: 12px; }
+    #nav-row { flex-shrink: 0; display: flex; align-items: center; gap: 8px; padding: 10px 16px; background: var(--surface); border-top: 1px solid var(--border); }
+    .btn-step { background: var(--surface); border: 1px solid var(--border); color: var(--text); border-radius: var(--radius-sm); padding: 6px 14px; cursor: pointer; font-size: 0.82rem; }
+    .btn-play { background: #15803d; border: none; color: #fff; border-radius: var(--radius-sm); padding: 6px 14px; cursor: pointer; font-size: 0.82rem; font-weight: 600; }
+    .code-panel-title { font-size: 0.67rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-dim); margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
 
-    .main-layout { display: grid; grid-template-columns: 1fr 320px; gap: 12px; align-items: start; }
-    @media (max-width: 860px) { .main-layout { grid-template-columns: 1fr; } }
+    .viz-inputs .field { display: flex; flex-direction: column; gap: 4px; }
+    .viz-inputs label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); }
+    .viz-inputs input[type="text"] { background: var(--surface); border: 1px solid var(--border); color: var(--text); border-radius: var(--radius-sm); padding: 6px 10px; font-size: 0.85rem; }
+    .viz-inputs select { background: var(--surface); border: 1px solid var(--border); color: var(--text); border-radius: var(--radius-sm); padding: 6px 10px; font-size: 0.85rem; cursor: pointer; }
 
-    /* tree SVG */
-    .tree-wrap {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--radius-lg); overflow: hidden;
-    }
+    .tree-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; width: 100%; }
     #tree-svg { display: block; width: 100%; }
 
-    /* right panel */
-    .right-col { display: flex; flex-direction: column; gap: 10px; }
+    .panel-box { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 13px 16px; display: flex; flex-direction: column; gap: 8px; }
+    .panel-title { font-size: 0.67rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-dim); }
 
-    .panel-box {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--radius-lg); padding: 13px 16px;
-      display: flex; flex-direction: column; gap: 8px;
-    }
-    .panel-title {
-      font-size: 0.67rem; font-weight: 700;
-      text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-dim);
-    }
+    #subsets-list { display: flex; flex-wrap: wrap; gap: 6px; max-height: 180px; overflow-y: auto; }
+    .subset-chip { background: var(--surface); border: 1px solid var(--border); border-radius: 5px; padding: 3px 9px; font-family: monospace; font-size: 0.82rem; color: var(--text-dim); }
+    .subset-chip.new { border-color: var(--green); color: var(--green); background: rgba(22,163,74,0.08); }
 
-    /* subsets list */
-    #subsets-list {
-      display: flex; flex-wrap: wrap; gap: 6px;
-      max-height: 220px; overflow-y: auto;
-    }
-    .subset-chip {
-      background: var(--bg); border: 1px solid var(--border);
-      border-radius: 5px; padding: 3px 9px;
-      font-family: monospace; font-size: 0.82rem; color: var(--text-dim);
-    }
-    .subset-chip.new {
-      border-color: var(--green); color: var(--green); background: rgba(22,163,74,0.08);
-    }
+    #active-path { font-family: monospace; font-size: 1.1rem; font-weight: 700; color: var(--accent); min-height: 1.5em; letter-spacing: 0.04em; }
+    #step-desc { font-size: 0.8rem; color: var(--text-muted); line-height: 1.5; }
 
-    /* active path display */
-    #active-path {
-      font-family: monospace; font-size: 1.1rem; font-weight: 700;
-      color: var(--accent); min-height: 1.5em;
-      letter-spacing: 0.04em;
-    }
-
-    /* code */
-    .code-panel {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--radius-lg); overflow: hidden;
-    }
-    .code-header {
-      padding: 8px 14px; font-size: 0.67rem; font-weight: 700;
-      text-transform: uppercase; letter-spacing: 0.1em;
-      color: var(--text-dim); border-bottom: 1px solid var(--border);
-      background: var(--bg);
-    }
-    .code-body {
-      padding: 8px 0; font-size: 0.76rem; line-height: 1.72;
-      font-family: 'JetBrains Mono', 'Fira Code', monospace; overflow-x: auto;
-    }
-    .cl {
-      display: flex; align-items: stretch;
-      border-left: 3px solid transparent; padding: 0 14px 0 0;
-      white-space: pre;
-    }
+    .code-body { padding: 8px 0; font-size: 0.76rem; line-height: 1.72; font-family: 'JetBrains Mono', 'Fira Code', monospace; overflow-x: auto; }
+    .cl { display: flex; align-items: stretch; border-left: 3px solid transparent; padding: 0 14px 0 0; white-space: pre; }
     .cl .ln { width: 26px; min-width: 26px; text-align: right; color: #3d4468; user-select: none; padding-right: 12px; font-size: 0.7rem; line-height: 1.72; }
     .cl .code { color: var(--text-muted); }
 
-    /* nav */
-    .btn-play {
-      background: #15803d; border: none; border-radius: var(--radius-sm);
-      color: #fff; cursor: pointer; font-size: 0.88rem; font-weight: 600;
-      padding: 8px 14px; transition: background 0.2s;
-    }
-    .btn-play:hover { background: #166534; }
-    .btn-play.playing { background: #c2410c; }
-    .btn-play.playing:hover { background: #9a3412; }
-    .btn-play:disabled { opacity: 0.4; cursor: not-allowed; }
-    .speed-select {
-      background: var(--bg); border: 1px solid var(--border);
-      border-radius: var(--radius-sm); color: var(--text);
-      font-size: 0.84rem; padding: 7px 9px; outline: none;
-    }
-    .nav-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-
-    /* legend */
-    .leg-row { display: flex; gap: 14px; flex-wrap: wrap; font-size: 0.76rem; color: var(--text-muted); }
+    .leg-row { display: flex; flex-direction: column; gap: 6px; font-size: 0.76rem; color: var(--text-muted); }
     .leg-item { display: flex; align-items: center; gap: 6px; }
 
     .kw  { color: var(--purple); }
@@ -106,18 +58,12 @@
     .nb  { color: var(--green); }
   </style>
 </head>
-<body class="page">
-
-<div class="page-header">
-  <a class="back-link" href="../index.html">&larr; All Algorithms</a>
-  <div class="page-title">Subsets</div>
-  <div class="page-sub">LeetCode 78 &middot; Backtracking: include or exclude each element &middot; O(n &times; 2<sup>n</sup>) time &middot; O(n) stack space</div>
-</div>
+<body>
 
 <div class="viz-inputs">
   <div class="field">
     <label>Preset</label>
-    <select id="preset-sel" onchange="applyPreset()">
+    <select id="preset-sel" onchange="loadPreset()">
       <option value="1,2,3" selected>[1,2,3]</option>
       <option value="1,2,3,4">[1,2,3,4]</option>
       <option value="0,1,2">[0,1,2]</option>
@@ -128,70 +74,60 @@
     <input id="inp-nums" type="text" value="1,2,3" style="width:160px" />
   </div>
   <button class="btn-primary" onclick="buildAndRun()">Build &amp; Run</button>
+  <button onclick="randomExample()" style="padding:7px 14px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;font-size:0.85rem">&#127922; Random</button>
+</div>
+<div class="controls"></div>
+
+<div id="header">
+  <span id="phase-badge">&#8212;</span>
+  <span style="font-size:13px;font-weight:700;">Subsets</span>
+  <span id="step-counter">Step 0 / 0</span>
 </div>
 
-<div class="viz-area">
-
-  <div class="main-layout">
-
-    <div style="display:flex;flex-direction:column;gap:10px">
-      <div class="tree-wrap">
-        <svg id="tree-svg" viewBox="0 0 800 400" preserveAspectRatio="xMidYMid meet"></svg>
-      </div>
-      <div class="code-panel">
-        <div class="code-header">Python</div>
-        <div class="code-body" id="code-body"></div>
-      </div>
-    </div>
-
-    <div class="right-col">
-
-      <div class="panel-box">
-        <div class="nav-row">
-          <button class="stepBtn" id="prevBtn" disabled>&larr;</button>
-          <button class="stepBtn" id="stepBtn" disabled>&rarr;</button>
-          <button class="playBtn" id="playBtn" disabled>&#9654; Play</button>
-          <select class="speedSel" id="speedSel">
-            <option value="900">Slow</option>
-            <option value="420" selected>Medium</option>
-            <option value="120">Fast</option>
-          </select>
-        </div>
-        <div class="panel-title" id="phase-label">&mdash;</div>
-        <div style="font-size:0.82rem;color:var(--text-muted)" id="step-desc">Choose a preset or enter numbers, then click Build &amp; Run.</div>
-      </div>
-
-      <div class="panel-box">
-        <div class="panel-title">Current path</div>
-        <div id="active-path">[ ]</div>
-        <div style="font-size:0.74rem;color:var(--text-muted)" id="path-hint"></div>
-      </div>
-
-      <div class="panel-box">
-        <div class="panel-title">Collected subsets <span id="subset-count" style="font-weight:400;color:var(--text-faint)"></span></div>
-        <div id="subsets-list"><span style="color:var(--text-faint);font-size:0.8rem;font-style:italic">none yet</span></div>
-      </div>
-
-      <div class="panel-box">
-        <div class="panel-title">Legend</div>
-        <div class="leg-row">
-          <div class="leg-item">
-            <svg width="14" height="14"><circle cx="7" cy="7" r="6" fill="#1e2130" stroke="#2d3148" stroke-width="2"/></svg>
-            Unvisited
-          </div>
-          <div class="leg-item">
-            <svg width="14" height="14"><circle cx="7" cy="7" r="6" fill="#4338ca" stroke="var(--accent)" stroke-width="2"/></svg>
-            Active
-          </div>
-          <div class="leg-item">
-            <svg width="14" height="14"><circle cx="7" cy="7" r="6" fill="#052e16" stroke="#16a34a" stroke-width="2"/></svg>
-            Leaf / done
-          </div>
-        </div>
-      </div>
-
+<div id="main">
+  <div id="viz-area">
+    <div class="tree-wrap">
+      <svg id="tree-svg" viewBox="0 0 800 400" preserveAspectRatio="xMidYMid meet"></svg>
     </div>
   </div>
+  <div id="resize-handle"></div>
+  <div id="code-panel">
+    <div class="code-panel-title">Python</div>
+    <div class="code-body" id="code-body"></div>
+  </div>
+  <div id="sidebar">
+    <div id="step-desc">Choose a preset or enter numbers, then click Build &amp; Run.</div>
+    <div class="panel-box">
+      <div class="panel-title">Current path</div>
+      <div id="active-path">[ ]</div>
+      <div style="font-size:0.74rem;color:var(--text-muted)" id="path-hint"></div>
+    </div>
+    <div class="panel-box">
+      <div class="panel-title">Collected subsets <span id="subset-count" style="font-weight:400;color:var(--text-faint)"></span></div>
+      <div id="subsets-list"><span style="color:var(--text-faint);font-size:0.8rem;font-style:italic">none yet</span></div>
+    </div>
+    <div class="panel-box">
+      <div class="panel-title">Legend</div>
+      <div class="leg-row">
+        <div class="leg-item"><svg width="14" height="14"><circle cx="7" cy="7" r="6" fill="#1e2130" stroke="#2d3148" stroke-width="2"/></svg>Unvisited</div>
+        <div class="leg-item"><svg width="14" height="14"><circle cx="7" cy="7" r="6" fill="#4338ca" stroke="var(--accent)" stroke-width="2"/></svg>Active</div>
+        <div class="leg-item"><svg width="14" height="14"><circle cx="7" cy="7" r="6" fill="#052e16" stroke="#16a34a" stroke-width="2"/></svg>Leaf / done</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="nav-row">
+  <button id="prevBtn" class="btn-step">&#8592; Prev</button>
+  <button id="stepBtn" class="btn-step">Step &#8594;</button>
+  <button id="playBtn" class="btn-play">Play</button>
+  <button id="resetBtn" class="btn-step">&#8635; Reset</button>
+  <select id="speedSel">
+    <option value="800">0.5&#215;</option>
+    <option value="400" selected>1&#215;</option>
+    <option value="200">2&#215;</option>
+    <option value="100">4&#215;</option>
+  </select>
 </div>
 
 <script>
@@ -236,15 +172,12 @@ var C = {
 
 // ── Global ──────────────────────────────────────────────────────────────────
 var gNums = [];
-var gNodes = [];   // { id, x, y, label, parentId, edgeLabel }
+var gNodes = [];
 var gSteps = [];
 var prevLines = [];
 var nav;
 
 // ── Tree layout ─────────────────────────────────────────────────────────────
-// Build the decision tree structure, then lay it out with Reingold-Tilford-ish
-// simple approach: assign positions level by level, left to right.
-
 function buildDecisionTree(nums) {
   var nodes = [];
   var id = 0;
@@ -253,8 +186,6 @@ function buildDecisionTree(nums) {
     var nid = id++;
     nodes.push({ id: nid, idx: idx, path: path.slice(), parentId: parentId, edgeLabel: edgeLabel, children: [] });
     if (parentId >= 0) nodes[parentId].children.push(nid);
-    // At each index, we include nums[idx], nums[idx+1], ..., nums[n-1]
-    // This mirrors the iterative for-loop backtracking
     for (var j = idx; j < nums.length; j++) {
       path.push(nums[j]);
       rec(j + 1, path, nid, (idx === j ? 'include ' : 'skip→') + nums[j]);
@@ -266,11 +197,8 @@ function buildDecisionTree(nums) {
   return nodes;
 }
 
-// Simple Reingold-Tilford clone: assign x via in-order traversal leaf counting
 function layoutTree(nodes) {
-  // Build children lookup
   var n = nodes.length;
-  // Count leaf-positions per node using post-order
   var leafCount = new Array(n).fill(0);
   var leafStart = new Array(n).fill(0);
   var totalLeaves = 0;
@@ -287,7 +215,6 @@ function layoutTree(nodes) {
   countLeaves(0);
   totalLeaves = nodes[0]._leafSpan;
 
-  // Assign x positions
   var leafIdx = 0;
   function assignX(nid) {
     var node = nodes[nid];
@@ -297,14 +224,12 @@ function layoutTree(nodes) {
       return;
     }
     node.children.forEach(function(cid) { assignX(cid); });
-    // center over children
     var first = nodes[node.children[0]].x;
     var last  = nodes[node.children[node.children.length - 1]].x;
     node.x = (first + last) / 2;
   }
   assignX(0);
 
-  // Assign y by depth
   function depth(nid) {
     var node = nodes[nid];
     node.depth = node.parentId < 0 ? 0 : nodes[node.parentId].depth + 1;
@@ -312,7 +237,6 @@ function layoutTree(nodes) {
   }
   depth(0);
 
-  // Compute bounding box
   var maxDepth = 0;
   nodes.forEach(function(nd) { if (nd.depth > maxDepth) maxDepth = nd.depth; });
 
@@ -345,7 +269,6 @@ function renderTree(nodes, totalLeaves, maxDepth) {
   svg.appendChild(edgeG);
   svg.appendChild(nodeG);
 
-  // Edges
   nodes.forEach(function(nd) {
     if (nd.parentId < 0) return;
     var par = nodes[nd.parentId];
@@ -356,7 +279,6 @@ function renderTree(nodes, totalLeaves, maxDepth) {
     });
     edgeG.appendChild(line);
 
-    // Edge label (midpoint)
     var mx = (par.px + nd.px) / 2;
     var my = (par.py + nd.py) / 2;
     var lbl = svgEl('text', {
@@ -370,7 +292,6 @@ function renderTree(nodes, totalLeaves, maxDepth) {
     edgeG.appendChild(lbl);
   });
 
-  // Nodes
   nodes.forEach(function(nd) {
     var g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
     g.id = 'node-g-' + nd.id;
@@ -381,7 +302,6 @@ function renderTree(nodes, totalLeaves, maxDepth) {
     });
     g.appendChild(circle);
 
-    // Label: show path as short set notation
     var label = nd.path.length === 0 ? '∅' : '[' + nd.path.join(',') + ']';
     var fontSize = nd.path.length <= 2 ? 11 : nd.path.length <= 3 ? 9 : 8;
     var txt = svgEl('text', {
@@ -426,7 +346,6 @@ function simulate(nums, nodes) {
     collected.push(subset);
 
     if (nd.children.length === 0) {
-      // leaf
       snap('Leaf', 'Leaf reached. Record subset ' + pathStr + '.', [4], nodeId, nd.path, subset);
       stateMap[nodeId] = 'leaf';
     } else {
@@ -453,7 +372,6 @@ function simulate(nums, nodes) {
 
 // ── Apply step ──────────────────────────────────────────────────────────────
 function applyStep(s, animate) {
-  // Node colors
   Object.keys(s.stateMap).forEach(function(idStr) {
     var id = +idStr;
     var st = s.stateMap[id];
@@ -470,13 +388,11 @@ function applyStep(s, animate) {
     }
   });
 
-  // Highlight active node with pulse
   if (animate && s.activeId >= 0) {
     var nc = document.getElementById('nc-' + s.activeId);
     if (nc) gsap.fromTo(nc, { attr: { r: 20 } }, { attr: { r: 24 }, duration: 0.15, yoyo: true, repeat: 1 });
   }
 
-  // Edge highlighting: color edges on active path
   gNodes.forEach(function(nd) {
     if (nd.parentId < 0) return;
     var edge = document.getElementById('edge-' + nd.parentId + '-' + nd.id);
@@ -493,7 +409,6 @@ function applyStep(s, animate) {
     if (lbl) lbl.setAttribute('fill', lblCol);
   });
 
-  // Active path display
   var ap = document.getElementById('active-path');
   var pathStr = s.path.length === 0 ? '[ ]' : '[ ' + s.path.join(', ') + ' ]';
   if (ap) {
@@ -501,7 +416,6 @@ function applyStep(s, animate) {
     ap.textContent = pathStr;
   }
 
-  // Subsets list
   var listEl = document.getElementById('subsets-list');
   var countEl = document.getElementById('subset-count');
   if (listEl) {
@@ -521,7 +435,6 @@ function applyStep(s, animate) {
     if (countEl) countEl.textContent = s.collected.length ? '(' + s.collected.length + ')' : '';
   }
 
-  // Code highlighting
   setCodeLines(prevLines, s.lines, animate);
   prevLines = s.lines || [];
 }
@@ -572,6 +485,18 @@ function applyPreset() {
   document.getElementById('inp-nums').value = val;
 }
 
+function loadPreset() {
+  applyPreset();
+}
+
+function randomExample() {
+  var examples = ['1,2,3', '1,2,3,4', '0,1,2', '1,2', '1,2,3,4,5'];
+  var idx = Math.floor(Math.random() * examples.length);
+  document.getElementById('inp-nums').value = examples[idx];
+  document.getElementById('preset-sel').value = '';
+  buildAndRun();
+}
+
 // ── Init ────────────────────────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', function() {
   buildCodePanel();
@@ -583,8 +508,10 @@ window.addEventListener('DOMContentLoaded', function() {
     speedSel: document.getElementById('speedSel'),
     render: function(snap, cur, total) {
       applyStep(snap, cur > 0);
-      var pl = document.getElementById('phase-label');
-      if (pl) pl.textContent = 'Step ' + (cur + 1) + ' / ' + total + '  ·  ' + snap.phase;
+      var pb = document.getElementById('phase-badge');
+      if (pb) pb.textContent = snap.phase;
+      var sc = document.getElementById('step-counter');
+      if (sc) sc.textContent = 'Step ' + (cur + 1) + ' / ' + total;
       var sd = document.getElementById('step-desc');
       if (sd) { gsap.fromTo(sd, { opacity: 0.3 }, { opacity: 1, duration: 0.15 }); sd.textContent = snap.desc; }
     }
@@ -592,6 +519,26 @@ window.addEventListener('DOMContentLoaded', function() {
 
   buildAndRun();
 });
+</script>
+<script>
+(function() {
+  var handle = document.getElementById('resize-handle');
+  var panel  = document.getElementById('code-panel');
+  var dragging = false, startX = 0, startW = 0;
+  handle.addEventListener('mousedown', function(e) {
+    dragging = true; startX = e.clientX; startW = panel.offsetWidth;
+    handle.classList.add('dragging'); e.preventDefault();
+  });
+  document.addEventListener('mousemove', function(e) {
+    if (!dragging) return;
+    var delta = startX - e.clientX;
+    panel.style.width = Math.min(560, Math.max(120, startW + delta)) + 'px';
+  });
+  document.addEventListener('mouseup', function() {
+    if (!dragging) return;
+    dragging = false; handle.classList.remove('dragging');
+  });
+})();
 </script>
 <script>
 if (window.self !== window.top) { var bl = document.querySelector('.back-link'); if (bl) bl.style.display = 'none'; }

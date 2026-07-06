@@ -7,19 +7,35 @@
 <link rel="stylesheet" href="../shared/style.css" />
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
-body { background: var(--bg); color: var(--text); font-family: 'JetBrains Mono', monospace; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
 
-/* ── NAV ROW ── */
-.nav-row { display: flex; align-items: center; gap: 8px; padding: 6px 12px; background: var(--surface); border-bottom: 1px solid var(--border); flex: 0 0 auto; }
-.nav-row .title { font-size: 13px; font-weight: 700; color: var(--accent); margin-right: auto; }
+/* ── CANONICAL LAYOUT ── */
+body { background: var(--bg); color: var(--text); font-family: "Fira Code", monospace; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+.viz-inputs { width: 100%; padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; flex-wrap: wrap; gap: 12px; align-items: center; flex-shrink: 0; }
+#header { padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+#phase-badge { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; padding: 3px 10px; border-radius: var(--radius-sm); background: #1e3a5f; color: var(--blue); border: 1px solid var(--blue); }
+#step-counter { font-size: 12px; color: var(--text-muted); margin-left: auto; }
+#main { display: flex; flex: 1; overflow: hidden; }
+#viz-area { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+#resize-handle { width: 5px; flex-shrink: 0; cursor: col-resize; background: transparent; border-left: 1px solid var(--border); transition: background .15s; z-index: 10; }
+#resize-handle:hover, #resize-handle.dragging { background: var(--accent); }
+#code-panel { width: 300px; min-width: 120px; max-width: 480px; flex-shrink: 0; background: #0d1117; border-right: 1px solid var(--border); overflow-y: auto; padding: 10px 12px; display: flex; flex-direction: column; }
+#sidebar { width: 200px; flex-shrink: 0; background: var(--surface); border-left: 1px solid var(--border); overflow-y: auto; padding: 14px 12px; display: flex; flex-direction: column; gap: 8px; }
+#nav-row { flex-shrink: 0; display: flex; align-items: center; gap: 8px; padding: 10px 16px; background: var(--surface); border-top: 1px solid var(--border); }
+.code-panel-title { font-size: 0.67rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-dim); margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+
+/* ── VIZ-SPECIFIC STYLES ── */
+.viz-inputs .field { display: flex; flex-direction: column; gap: 4px; }
+.viz-inputs label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); }
+.viz-inputs input[type="text"], .viz-inputs input[type="number"] { background: var(--surface); border: 1px solid var(--border); color: var(--text); border-radius: var(--radius-sm); padding: 6px 10px; font-size: 0.85rem; }
+.viz-inputs select { background: var(--surface); border: 1px solid var(--border); color: var(--text); border-radius: var(--radius-sm); padding: 6px 10px; font-size: 0.85rem; cursor: pointer; }
+
 .btn-step { background: var(--surface); border: 1px solid var(--border); color: var(--text); padding: 4px 12px; border-radius: var(--radius-sm); cursor: pointer; font-size: 12px; }
 .btn-step:hover { background: var(--border); }
-.btn-play { background: var(--accent); border: none; color: #000; padding: 4px 14px; border-radius: var(--radius-sm); cursor: pointer; font-size: 12px; font-weight: 700; }
-.btn-play:hover { background: var(--accent-hover); }
+.btn-play { background: #15803d; border: none; color: #fff; padding: 4px 14px; border-radius: var(--radius-sm); cursor: pointer; font-size: 12px; font-weight: 700; }
 #speedSel { background: var(--surface); border: 1px solid var(--border); color: var(--text); padding: 4px 6px; border-radius: var(--radius-sm); font-size: 12px; }
 
 /* ── ROAD PANEL ── */
-.road-panel { flex: 0 0 28%; position: relative; background: #111827; border-bottom: 1px solid var(--border); overflow: hidden; }
+.road-panel { flex: 0 0 32%; position: relative; background: #111827; border-bottom: 1px solid var(--border); overflow: hidden; }
 .road-surface { position: absolute; bottom: 30%; left: 5%; right: 5%; height: 54px; background: #1f2937; border-radius: 4px; }
 .road-tick { position: absolute; bottom: calc(30% + 54px); font-size: 10px; color: var(--text-dim); transform: translateX(-50%); }
 .road-tick-line { position: absolute; bottom: calc(30%); width: 1px; background: #374151; transform: translateX(-50%); top: auto; }
@@ -38,7 +54,7 @@ body { background: var(--bg); color: var(--text); font-family: 'JetBrains Mono',
 .bottom-row { flex: 1; display: flex; gap: 10px; padding: 8px; overflow: hidden; }
 
 /* ── STACK PANEL ── */
-.stack-panel { flex: 0 0 38%; display: flex; flex-direction: column; background: #0f172a; border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 10px; overflow: hidden; }
+.stack-panel { flex: 0 0 42%; display: flex; flex-direction: column; background: #0f172a; border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 10px; overflow: hidden; }
 .stack-header { font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; flex: 0 0 auto; }
 .stack-body { flex: 1; display: flex; flex-direction: column-reverse; gap: 5px; overflow: hidden; justify-content: flex-start; }
 .stack-empty { flex: 1; display: flex; align-items: center; justify-content: center; border: 2px dashed var(--border); border-radius: var(--radius-sm); color: var(--text-dim); font-size: 12px; }
@@ -65,12 +81,8 @@ body { background: var(--bg); color: var(--text); font-family: 'JetBrains Mono',
 .badge-merge { background: #92400e; color: #fcd34d; border: 1px solid #f59e0b; }
 .badge-neutral { background: #1e293b; color: var(--text-dim); border: 1px solid var(--border); }
 
-/* ── CODE PANEL ── */
-.code-panel { flex: 0 0 0; overflow: hidden; background: #0d1117; border: 1px solid var(--border); border-radius: var(--radius-lg); transition: flex-basis 0.3s ease; display: flex; flex-direction: column; }
-.code-panel.open { flex: 0 0 32%; }
-.code-toggle { font-size: 10px; color: var(--accent); cursor: pointer; padding: 0; background: none; border: none; flex: 0 0 auto; }
-.code-toggle:hover { text-decoration: underline; }
-.code-inner { flex: 1; overflow-y: auto; padding: 10px; font-size: 11.5px; font-family: 'JetBrains Mono', monospace; line-height: 1.6; }
+/* ── CODE INNER ── */
+.code-inner { flex: 1; overflow-y: auto; padding: 4px; font-size: 11.5px; font-family: 'JetBrains Mono', monospace; line-height: 1.6; }
 .code-line { padding: 1px 6px; border-radius: 3px; white-space: pre; }
 .code-line.hl { background: rgba(250,240,100,0.08); border-left: 3px solid #facc15; padding-left: 4px; color: #facc15; }
 .kw { color: #ff79c6; }
@@ -85,61 +97,138 @@ body { background: var(--bg); color: var(--text); font-family: 'JetBrains Mono',
 </head>
 <body>
 
-<div class="nav-row">
-  <span class="title">Car Fleet</span>
-  <button id="prevBtn" class="btn-step">← Prev</button>
-  <button id="stepBtn" class="btn-step">Step →</button>
-  <button id="playBtn" class="btn-play">Play</button>
-  <button id="resetBtn" class="btn-step">↺ Reset</button>
-  <select id="speedSel">
-    <option value="800">0.5×</option>
-    <option value="400" selected>1×</option>
-    <option value="200">2×</option>
-    <option value="100">4×</option>
-  </select>
-  <button class="code-toggle" id="codeToggle">{ code }</button>
+<div class="viz-inputs">
+  <div class="field">
+    <label>Preset</label>
+    <select id="presetSel" onchange="loadPreset()">
+      <option value="">— pick a preset —</option>
+      <option value="default">Default (5 cars)</option>
+      <option value="simple">Simple (3 cars)</option>
+      <option value="single">Single Car</option>
+      <option value="dense">Dense (5 cars)</option>
+    </select>
+  </div>
+  <div class="field">
+    <label>Target</label>
+    <input type="number" id="inp-target" value="12" min="1" style="width:64px;" />
+  </div>
+  <div class="field">
+    <label>Positions</label>
+    <input type="text" id="inp-positions" value="10,8,0,5,3" style="width:140px;" />
+  </div>
+  <div class="field">
+    <label>Speeds</label>
+    <input type="text" id="inp-speeds" value="2,4,1,1,3" style="width:140px;" />
+  </div>
+  <button onclick="buildAndRun()" style="padding:7px 18px;background:var(--accent);color:#fff;border:none;border-radius:6px;font-weight:600;cursor:pointer;align-self:flex-end;">Run</button>
+  <button onclick="randomExample()" style="padding:7px 14px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:6px;cursor:pointer;align-self:flex-end;">&#127922; Random</button>
 </div>
 
-<div class="road-panel" id="roadPanel">
-  <div class="road-surface"></div>
-  <div class="target-line" id="targetLine"></div>
-  <div class="target-flag" id="targetFlag">🏁 target=12</div>
-  <!-- cars injected by JS -->
+<div class="controls"></div>
+
+<div id="header">
+  <span id="phase-badge">&#8212;</span>
+  <span style="font-size:13px;font-weight:700;">Car Fleet</span>
+  <span id="step-counter">Step 0 / 0</span>
 </div>
 
-<div class="message-bar" id="msgBar">Initializing…</div>
+<div id="main">
+  <div id="viz-area">
+    <div class="road-panel" id="roadPanel">
+      <div class="road-surface"></div>
+      <div class="target-line" id="targetLine"></div>
+      <div class="target-flag" id="targetFlag">&#127937; target=12</div>
+    </div>
 
-<div class="bottom-row">
-  <div class="stack-panel">
-    <div class="stack-header">Monotonic Stack (fleets)</div>
-    <div class="stack-body" id="stackBody">
-      <div class="stack-empty" id="stackEmpty">empty</div>
+    <div class="message-bar" id="msgBar">Initializing&#8230;</div>
+
+    <div class="bottom-row">
+      <div class="stack-panel">
+        <div class="stack-header">Monotonic Stack (fleets)</div>
+        <div class="stack-body" id="stackBody">
+          <div class="stack-empty" id="stackEmpty">empty</div>
+        </div>
+      </div>
+
+      <div class="info-panel">
+        <div class="info-card" id="infoCard">
+          <div class="info-card-title">Current Car</div>
+          <div id="infoContent" style="color:var(--text-dim);font-size:12px;">&#8212;</div>
+        </div>
+        <div class="compare-card" id="compareCard">
+          <div class="info-card-title">Decision</div>
+          <div id="compareContent" style="color:var(--text-dim);font-size:12px;">&#8212;</div>
+        </div>
+      </div>
     </div>
   </div>
 
-  <div class="info-panel">
-    <div class="info-card" id="infoCard">
-      <div class="info-card-title">Current Car</div>
-      <div id="infoContent" style="color:var(--text-dim);font-size:12px;">—</div>
-    </div>
-    <div class="compare-card" id="compareCard">
-      <div class="info-card-title">Decision</div>
-      <div id="compareContent" style="color:var(--text-dim);font-size:12px;">—</div>
-    </div>
-  </div>
+  <div id="resize-handle"></div>
 
-  <div class="code-panel" id="codePanel">
+  <div id="code-panel">
+    <div class="code-panel-title">Code</div>
     <div class="code-inner" id="codeInner"></div>
   </div>
+
+  <div id="sidebar">
+    <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-dim);margin-bottom:4px;">Info</div>
+    <div style="font-size:11px;color:var(--text-muted);line-height:1.5;">Cars are sorted by position descending. For each car, compute time to target. If time &gt; stack top, it forms a new fleet (push). Otherwise it merges into the fleet ahead.</div>
+  </div>
+</div>
+
+<div id="nav-row">
+  <button id="prevBtn" class="btn-step">&#8592; Prev</button>
+  <button id="stepBtn" class="btn-step">Step &#8594;</button>
+  <button id="playBtn" class="btn-play">Play</button>
+  <button id="resetBtn" class="btn-step">&#8635; Reset</button>
+  <select id="speedSel">
+    <option value="800">0.5&#215;</option>
+    <option value="400" selected>1&#215;</option>
+    <option value="200">2&#215;</option>
+    <option value="100">4&#215;</option>
+  </select>
 </div>
 
 <script src="../shared/gsap.min.js"></script>
 <script src="../shared/viz.js"></script>
 <script>
+// ── PRESETS ───────────────────────────────────────────────────────────────────
+var PRESETS = {
+  'default': {target:12, positions:'10,8,0,5,3', speeds:'2,4,1,1,3'},
+  'simple':  {target:10, positions:'3,5,8',       speeds:'3,2,1'},
+  'single':  {target:5,  positions:'2',            speeds:'1'},
+  'dense':   {target:15, positions:'1,2,3,4,5',   speeds:'5,4,3,2,1'},
+};
+
+function loadPreset() {
+  var sel = document.getElementById('presetSel');
+  if (!sel.value || !PRESETS[sel.value]) return;
+  var p = PRESETS[sel.value];
+  document.getElementById('inp-target').value = p.target;
+  document.getElementById('inp-positions').value = p.positions;
+  document.getElementById('inp-speeds').value = p.speeds;
+  buildAndRun();
+}
+
+function randomExample() {
+  var n = 2 + Math.floor(Math.random() * 4);
+  var target = 10 + Math.floor(Math.random() * 10);
+  var pos = [], sp = [];
+  for (var i = 0; i < n; i++) {
+    pos.push(Math.floor(Math.random() * target));
+    sp.push(1 + Math.floor(Math.random() * 4));
+  }
+  document.getElementById('inp-target').value = target;
+  document.getElementById('inp-positions').value = pos.join(',');
+  document.getElementById('inp-speeds').value = sp.join(',');
+  document.getElementById('presetSel').value = '';
+  buildAndRun();
+}
+
 // ── DATA ──────────────────────────────────────────────────────────────────
-const TARGET = 12;
-const POSITIONS = [10, 8, 0, 5, 3];
-const SPEEDS    = [2,  4, 1, 1, 3];
+var TARGET = 12;
+var POSITIONS = [10, 8, 0, 5, 3];
+var SPEEDS    = [2,  4, 1, 1, 3];
 
 const FLEET_COLORS = ['#4ade80','#60a5fa','#f472b6','#fb923c','#a78bfa'];
 
@@ -150,7 +239,7 @@ function buildSnaps() {
   // Step 0 INIT
   snaps.push({
     step: 0, phase: 'INIT',
-    message: `Given target=${TARGET}, pos=[${POSITIONS}], speed=[${SPEEDS}]. Sort cars by position descending.`,
+    message: 'Given target=' + TARGET + ', pos=[' + POSITIONS + '], speed=[' + SPEEDS + ']. Sort cars by position descending.',
     active_index: -1, sorted_pairs: null,
     current_car: null, action: null, merged_into: null,
     stack: [], stack_colors: [], fleet_groups: {},
@@ -163,7 +252,7 @@ function buildSnaps() {
   // Step 1 SORT
   snaps.push({
     step: 1, phase: 'SORT',
-    message: `Cars sorted by position desc: [${sorted.map(([p,s])=>`(${p},${s})`).join(', ')}]. Process each from closest to target.`,
+    message: 'Cars sorted by position desc: [' + sorted.map(([p,s])=>'('+p+','+s+')').join(', ') + ']. Process each from closest to target.',
     active_index: -1, sorted_pairs: sorted,
     current_car: null, action: null, merged_into: null,
     stack: [], stack_colors: [], fleet_groups: {},
@@ -172,14 +261,14 @@ function buildSnaps() {
 
   let stack = [];
   let stackColors = [];
-  let fleetGroups = {}; // repIndex -> [indices]
+  let fleetGroups = {};
   let fleetIndex = 0;
-  let mergeMap = {}; // sortedIndex -> rep sortedIndex
+  let mergeMap = {};
 
   for (let i = 0; i < sorted.length; i++) {
     const [pos, spd] = sorted[i];
     const time = (TARGET - pos) / spd;
-    const timeStr = `(${TARGET}-${pos})/${spd}`;
+    const timeStr = '(' + TARGET + '-' + pos + ')/' + spd;
 
     const isPush = stack.length === 0 || time > stack[stack.length - 1];
     const action = isPush ? 'PUSH' : 'MERGE';
@@ -191,12 +280,9 @@ function buildSnaps() {
       fleetGroups = { ...fleetGroups, [i]: [i] };
       fleetIndex++;
     } else {
-      // find rep: the last pushed car (stack top's original pusher)
-      // find who pushed the current stack top
       let rep = null;
       for (let r in fleetGroups) {
         if (fleetGroups[r].length > 0) {
-          // rep pushed the stack top if rep's time matches stack top
           const [rp, rs] = sorted[r];
           const rt = (TARGET - rp) / rs;
           if (Math.abs(rt - stack[stack.length-1]) < 1e-9) {
@@ -211,10 +297,9 @@ function buildSnaps() {
       }
     }
 
-    // intermediate "compute time" step for pedagogical clarity
     snaps.push({
       step: snaps.length, phase: 'PROCESS',
-      message: `Car pos=${pos}, speed=${spd} → time=${timeStr}=${time.toFixed(1)}. ${stack.length === 0 ? 'Stack empty →' : `Compare ${time.toFixed(1)} vs stack top ${stack[stack.length-1].toFixed(1)} →`} ${action === 'PUSH' ? 'New fleet, push!' : 'Catches fleet ahead, MERGE.'}`,
+      message: 'Car pos=' + pos + ', speed=' + spd + ' → time=' + timeStr + '=' + time.toFixed(1) + '. ' + (stack.length === 0 ? 'Stack empty →' : 'Compare ' + time.toFixed(1) + ' vs stack top ' + stack[stack.length-1].toFixed(1) + ' →') + ' ' + (action === 'PUSH' ? 'New fleet, push!' : 'Catches fleet ahead, MERGE.'),
       active_index: i, sorted_pairs: sorted,
       current_car: { pos, spd, time, timeStr, fleet: action === 'PUSH' ? fleetIndex-1 : null },
       action,
@@ -232,7 +317,7 @@ function buildSnaps() {
   // DONE
   snaps.push({
     step: snaps.length, phase: 'DONE',
-    message: `Done! Stack has ${stack.length} entr${stack.length === 1 ? 'y' : 'ies'} → ${stack.length} fleet${stack.length !== 1 ? 's' : ''} reach the target.`,
+    message: 'Done! Stack has ' + stack.length + ' entr' + (stack.length === 1 ? 'y' : 'ies') + ' → ' + stack.length + ' fleet' + (stack.length !== 1 ? 's' : '') + ' reach the target.',
     active_index: -1, sorted_pairs: sorted,
     current_car: null, action: null, merged_into: null,
     stack, stack_colors: stackColors,
@@ -242,8 +327,6 @@ function buildSnaps() {
 
   return snaps;
 }
-
-const SNAPS = buildSnaps();
 
 // ── CODE DISPLAY ─────────────────────────────────────────────────────────
 const CODE_LINES = [
@@ -271,13 +354,13 @@ function renderCode(hl) {
     const lineNum = i + 1;
     const active = lineNum === hl;
     const display = line === '' ? '&nbsp;' : line;
-    return `<div class="code-line${active ? ' hl' : ''}">${display}</div>`;
+    return '<div class="code-line' + (active ? ' hl' : '') + '">' + display + '</div>';
   }).join('');
 }
 
 // ── ROAD SETUP ────────────────────────────────────────────────────────────
 const CAR_W = 68;
-let roadCarEls = {}; // sortedIndex -> DOM el
+let roadCarEls = {};
 
 function getRoadMetrics() {
   const panel = document.getElementById('roadPanel');
@@ -294,21 +377,19 @@ function posToLeft(pos, roadLeft, roadW) {
 
 function initRoad(sorted) {
   const panel = document.getElementById('roadPanel');
-  // clear existing cars
   panel.querySelectorAll('.car').forEach(e => e.remove());
   panel.querySelectorAll('.road-tick,.road-tick-line').forEach(e => e.remove());
   roadCarEls = {};
 
   const { roadLeft, roadRight, roadW, panelH } = getRoadMetrics();
-  const roadBottom = panelH * 0.70; // bottom of road surface
-  const carTop = roadBottom - 36 - 10; // sit on road
+  const roadBottom = panelH * 0.70;
+  const carTop = roadBottom - 36 - 10;
 
-  // target line and flag
   const tLeft = posToLeft(TARGET, roadLeft, roadW) + CAR_W;
   document.getElementById('targetLine').style.left = tLeft + 'px';
   document.getElementById('targetFlag').style.left = tLeft + 'px';
+  document.getElementById('targetFlag').textContent = '🏁 target=' + TARGET;
 
-  // tick marks
   for (let t = 0; t <= TARGET; t += 2) {
     const x = roadLeft + (t / TARGET) * roadW;
     const tick = document.createElement('div');
@@ -324,19 +405,16 @@ function initRoad(sorted) {
     panel.appendChild(line);
   }
 
-  // Create cars in sorted order
   if (!sorted) {
-    // INIT: use original positions
     POSITIONS.forEach((pos, i) => {
       const el = document.createElement('div');
       el.className = 'car';
       el.style.background = '#475569';
       el.style.top = carTop + 'px';
       el.style.left = posToLeft(pos, roadLeft, roadW) + 'px';
-      el.innerHTML = `<div class="car-id">i=${i}</div><span>P=${pos} V=${SPEEDS[i]}</span>`;
+      el.innerHTML = '<div class="car-id">i=' + i + '</div><span>P=' + pos + ' V=' + SPEEDS[i] + '</span>';
       panel.appendChild(el);
-      // store by original index for INIT
-      roadCarEls[`orig_${i}`] = el;
+      roadCarEls['orig_' + i] = el;
     });
   } else {
     sorted.forEach(([pos, spd], si) => {
@@ -346,7 +424,7 @@ function initRoad(sorted) {
       el.style.top = carTop + 'px';
       el.style.left = posToLeft(pos, roadLeft, roadW) + 'px';
       const time = ((TARGET - pos) / spd).toFixed(1);
-      el.innerHTML = `<div class="car-id">si=${si}</div><span>P=${pos} V=${spd}</span><span class="car-time">t=${time}</span>`;
+      el.innerHTML = '<div class="car-id">si=' + si + '</div><span>P=' + pos + ' V=' + spd + '</span><span class="car-time">t=' + time + '</span>';
       panel.appendChild(el);
       roadCarEls[si] = el;
     });
@@ -369,13 +447,11 @@ function renderStack(snap) {
     emptyEl.style.display = 'flex';
   } else {
     emptyEl.style.display = 'none';
-    // render bottom-first (flex-direction: column-reverse handles visual order)
     stack.forEach((t, i) => {
       const cell = document.createElement('div');
       cell.className = 'stack-cell';
       cell.style.background = colors[i] || '#475569';
-      cell.innerHTML = `<span>${t.toFixed(1)}</span><span class="sc-label">fleet ${i}</span>`;
-      // Animate only the newly pushed cell (last one)
+      cell.innerHTML = '<span>' + t.toFixed(1) + '</span><span class="sc-label">fleet ' + i + '</span>';
       if (action === 'PUSH' && i === stack.length - 1) {
         cell.style.animation = 'pushIn 0.4s ease';
       } else {
@@ -383,7 +459,6 @@ function renderStack(snap) {
       }
       body.appendChild(cell);
     });
-    // Pulse top if MERGE
     if (action === 'MERGE') {
       const cells = body.querySelectorAll('.stack-cell');
       const topCell = cells[cells.length - 1];
@@ -403,88 +478,63 @@ function renderInfo(snap) {
   const compareContent = document.getElementById('compareContent');
 
   if (snap.phase === 'INIT') {
-    infoContent.innerHTML = `<span style="color:var(--text-dim)">Waiting to sort cars…</span>`;
-    compareContent.innerHTML = `<span style="color:var(--text-dim)">—</span>`;
+    infoContent.innerHTML = '<span style="color:var(--text-dim)">Waiting to sort cars…</span>';
+    compareContent.innerHTML = '<span style="color:var(--text-dim)">—</span>';
     return;
   }
   if (snap.phase === 'SORT') {
-    infoContent.innerHTML = `<span style="color:var(--text-dim)">Cars sorted. Processing one by one…</span>`;
-    compareContent.innerHTML = `<span style="color:var(--text-dim)">—</span>`;
+    infoContent.innerHTML = '<span style="color:var(--text-dim)">Cars sorted. Processing one by one…</span>';
+    compareContent.innerHTML = '<span style="color:var(--text-dim)">—</span>';
     return;
   }
   if (snap.phase === 'DONE') {
-    infoContent.innerHTML = `<div class="result-pill">Answer: ${snap.result} fleet${snap.result !== 1 ? 's' : ''}</div>`;
-    compareContent.innerHTML = `<span style="color:var(--text-dim)">Stack size = ${snap.stack.length}</span>`;
+    infoContent.innerHTML = '<div class="result-pill">Answer: ' + snap.result + ' fleet' + (snap.result !== 1 ? 's' : '') + '</div>';
+    compareContent.innerHTML = '<span style="color:var(--text-dim)">Stack size = ' + snap.stack.length + '</span>';
     return;
   }
 
   const c = snap.current_car;
   if (!c) { infoContent.innerHTML = '—'; compareContent.innerHTML = '—'; return; }
 
-  const stackTop = snap.stack.length > 0
-    ? snap.stack[snap.stack.length - 1 - (snap.action === 'PUSH' ? 0 : 0)]
-    : null;
-  // get previous stack top (before this step's push)
   const prevTop = snap.action === 'PUSH' && snap.stack.length > 1
     ? snap.stack[snap.stack.length - 2]
     : snap.action === 'MERGE' && snap.stack.length > 0
     ? snap.stack[snap.stack.length - 1]
     : null;
 
-  infoContent.innerHTML = `
-    <div class="info-row"><span class="info-label">Position</span><span class="info-val">${c.pos}</span></div>
-    <div class="info-row"><span class="info-label">Speed</span><span class="info-val">${c.spd}</span></div>
-    <div class="info-row"><span class="info-label">Formula</span><span class="info-formula">${c.timeStr} = ${c.time.toFixed(1)}</span></div>
-  `;
+  infoContent.innerHTML =
+    '<div class="info-row"><span class="info-label">Position</span><span class="info-val">' + c.pos + '</span></div>' +
+    '<div class="info-row"><span class="info-label">Speed</span><span class="info-val">' + c.spd + '</span></div>' +
+    '<div class="info-row"><span class="info-label">Formula</span><span class="info-formula">' + c.timeStr + ' = ' + c.time.toFixed(1) + '</span></div>';
 
-  if (snap.stack.length === 0 && snap.action === 'PUSH' && snap.stack.length > 0) {
-    // edge: stack was empty
-    compareContent.innerHTML = `
-      <div style="color:var(--text-muted);font-size:12px;margin-bottom:4px">Stack was empty</div>
-      <div class="action-badge badge-push">PUSH → New Fleet</div>`;
-  } else if (prevTop !== null || (snap.action === 'PUSH' && snap.stack.length === 1)) {
+  if (prevTop !== null || (snap.action === 'PUSH' && snap.stack.length === 1)) {
     const top = snap.action === 'PUSH' && snap.stack.length === 1 ? null : prevTop;
-    compareContent.innerHTML = top !== null ? `
-      <div class="compare-row">
-        <span class="compare-num" style="color:var(--accent)">${c.time.toFixed(1)}</span>
-        <span class="compare-op">${snap.action === 'PUSH' ? '>' : '≤'}</span>
-        <span class="compare-num">${top.toFixed(1)}</span>
-      </div>
-      <div style="font-size:10px;color:var(--text-dim);text-align:center">this car &nbsp;vs&nbsp; stack top</div>
-      <div class="action-badge ${snap.action === 'PUSH' ? 'badge-push' : 'badge-merge'}">${snap.action === 'PUSH' ? 'PUSH → New Fleet' : 'MERGE → Same Fleet'}</div>
-    ` : `
-      <div style="color:var(--text-muted);font-size:12px;margin-bottom:4px">Stack was empty</div>
-      <div class="action-badge badge-push">PUSH → New Fleet</div>
-    `;
+    compareContent.innerHTML = top !== null ?
+      '<div class="compare-row"><span class="compare-num" style="color:var(--accent)">' + c.time.toFixed(1) + '</span><span class="compare-op">' + (snap.action === 'PUSH' ? '>' : '≤') + '</span><span class="compare-num">' + top.toFixed(1) + '</span></div>' +
+      '<div style="font-size:10px;color:var(--text-dim);text-align:center">this car &nbsp;vs&nbsp; stack top</div>' +
+      '<div class="action-badge ' + (snap.action === 'PUSH' ? 'badge-push' : 'badge-merge') + '">' + (snap.action === 'PUSH' ? 'PUSH → New Fleet' : 'MERGE → Same Fleet') + '</div>' :
+      '<div style="color:var(--text-muted);font-size:12px;margin-bottom:4px">Stack was empty</div><div class="action-badge badge-push">PUSH → New Fleet</div>';
   } else {
-    compareContent.innerHTML = `<div class="action-badge ${snap.action === 'PUSH' ? 'badge-push' : 'badge-merge'}">${snap.action === 'PUSH' ? 'PUSH → New Fleet' : 'MERGE → Same Fleet'}</div>`;
+    compareContent.innerHTML = '<div class="action-badge ' + (snap.action === 'PUSH' ? 'badge-push' : 'badge-merge') + '">' + (snap.action === 'PUSH' ? 'PUSH → New Fleet' : 'MERGE → Same Fleet') + '</div>';
   }
 }
 
 // ── APPLY STEP ─────────────────────────────────────────────────────────────
 function applyStep(snap, _animated) {
-  // message
   document.getElementById('msgBar').textContent = snap.message;
 
-  // road: init on SORT or INIT
   if (snap.phase === 'INIT') {
     initRoad(null);
   } else if (snap.phase === 'SORT') {
     initRoad(snap.sorted_pairs);
   } else {
-    // update car highlights & merged positions
     if (snap.sorted_pairs) {
       const { roadLeft, roadW, panelH } = getRoadMetrics();
       const roadBottom = panelH * 0.70;
       const carTop = roadBottom - 36 - 10;
-      const fleetColorMap = {}; // si -> color
-      // assign colors from fleet_groups
+      const fleetColorMap = {};
       const groups = snap.fleet_groups || {};
       Object.entries(groups).forEach(([rep, members], fi) => {
-        const color = snap.stack_colors && snap.stack_colors[parseInt(rep)] !== undefined
-          ? null // will use actual color
-          : FLEET_COLORS[fi % FLEET_COLORS.length];
-        // find stack index for this rep
         members.forEach(si => { fleetColorMap[si] = FLEET_COLORS[fi % FLEET_COLORS.length]; });
       });
 
@@ -492,11 +542,9 @@ function applyStep(snap, _animated) {
         const el = roadCarEls[si];
         if (!el) return;
         el.classList.toggle('active', si === snap.active_index);
-        // color
         const col = fleetColorMap[si] || '#475569';
         el.style.background = col;
 
-        // merged positioning: stack above fleet leader
         let isMerged = false;
         let mergeDepth = 0;
         Object.entries(groups).forEach(([rep, members]) => {
@@ -506,11 +554,10 @@ function applyStep(snap, _animated) {
           }
         });
         if (isMerged) {
-          const [repPos] = snap.sorted_pairs[parseInt(Object.keys(groups).find(r => groups[r].includes(si) && parseInt(r) !== si) || si)];
           const leaderEl = roadCarEls[Object.keys(groups).find(r => groups[r].includes(si) && parseInt(r) !== si)];
           if (leaderEl) {
             el.style.left = leaderEl.style.left;
-            el.style.transform = `translateY(-${mergeDepth * 40}px)`;
+            el.style.transform = 'translateY(-' + (mergeDepth * 40) + 'px)';
           }
           el.classList.add('merged');
         } else {
@@ -528,23 +575,28 @@ function applyStep(snap, _animated) {
 }
 
 function updateStatus(snap, cur, total) {
-  // Could update a progress indicator; message bar is handled in applyStep
+  var counter = document.getElementById('step-counter');
+  if (counter) counter.textContent = 'Step ' + (cur + 1) + ' / ' + total;
+  var badge = document.getElementById('phase-badge');
+  if (badge) badge.textContent = snap.phase || '—';
+}
+
+// ── BUILD AND RUN ──────────────────────────────────────────────────────────
+function buildAndRun() {
+  TARGET = parseInt(document.getElementById('inp-target').value) || 12;
+  POSITIONS = (document.getElementById('inp-positions').value || '10,8,0,5,3').split(',').map(Number);
+  SPEEDS = (document.getElementById('inp-speeds').value || '2,4,1,1,3').split(',').map(Number);
+  var snaps = buildSnaps();
+  if (nav) nav.load(snaps);
 }
 
 // ── BOOTSTRAP ──────────────────────────────────────────────────────────────
-let nav;
+var nav;
 document.addEventListener('DOMContentLoaded', () => {
   renderCode(1);
 
-  // Code toggle
-  const codePanel = document.getElementById('codePanel');
-  document.getElementById('codeToggle').addEventListener('click', () => {
-    codePanel.classList.toggle('open');
-  });
-
-  // Reset button
-  document.getElementById('resetBtn').addEventListener('click', () => {
-    if (nav) nav.reset();
+  document.getElementById('resetBtn').addEventListener('click', function() {
+    if (nav) { nav.stopPlay(); nav.goTo(0); }
   });
 
   nav = VizNav({
@@ -555,7 +607,40 @@ document.addEventListener('DOMContentLoaded', () => {
     render: function(snap, cur, total) { applyStep(snap, cur > 0); updateStatus(snap, cur, total); }
   });
 
-  nav.load(SNAPS);
+  buildAndRun();
+});
+</script>
+<script>
+// resize handle
+(function() {
+  var handle = document.getElementById('resize-handle');
+  var panel  = document.getElementById('code-panel');
+  var dragging = false, startX = 0, startW = 0;
+  handle.addEventListener('mousedown', function(e) {
+    dragging = true; startX = e.clientX; startW = panel.offsetWidth;
+    handle.classList.add('dragging'); e.preventDefault();
+  });
+  document.addEventListener('mousemove', function(e) {
+    if (!dragging) return;
+    var delta = startX - e.clientX;
+    panel.style.width = Math.min(480, Math.max(120, startW + delta)) + 'px';
+  });
+  document.addEventListener('mouseup', function() {
+    if (!dragging) return;
+    dragging = false; handle.classList.remove('dragging');
+  });
+})();
+// postMessage bridge
+window.addEventListener('message', function(e) {
+  if (!nav) return;
+  if (e.data === 'prev') { nav.stopPlay(); nav.goTo(nav.cursor() - 1); }
+  else if (e.data === 'step') { nav.stopPlay(); nav.goTo(nav.cursor() + 1); }
+  else if (e.data === 'play') { document.getElementById('playBtn').click(); }
+  else if (e.data === 'reset') { nav.stopPlay(); nav.goTo(0); }
+  else if (e.data && e.data.type === 'speed') {
+    var sel = document.getElementById('speedSel');
+    if (sel) sel.value = e.data.value;
+  }
 });
 </script>
 </body>

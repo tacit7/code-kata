@@ -1,361 +1,171 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>N-Queens</title>
-  <link rel="stylesheet" href="../shared/style.css" />
-  <script src="../shared/gsap.min.js"></script>
-  <script src="../shared/viz.js"></script>
-  <style>
-    body.page { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>N-Queens</title>
+<link rel="stylesheet" href="../shared/style.css" />
+<script src="../shared/gsap.min.js"></script>
+<script src="../shared/viz.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: "Fira Code", "Cascadia Code", monospace; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+  #header { padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+  #phase-badge { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; padding: 3px 10px; border-radius: var(--radius-sm); background: #1e3a5f; color: var(--blue); border: 1px solid var(--blue); }
+  #step-counter { font-size: 12px; color: var(--text-muted); margin-left: auto; }
+  .viz-inputs { width: 100%; max-width: 100%; padding: 10px 16px; background: var(--surface); border: none; border-bottom: 1px solid var(--border); border-radius: 0; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; flex-shrink: 0; }
+  .viz-inputs label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); display: block; margin-bottom: 3px; }
+  .viz-inputs select, .viz-inputs input { background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 0 8px; height: 30px; font-size: 0.82rem; font-family: inherit; appearance: none; -webkit-appearance: none; }
+  .vi-btn-run { padding: 6px 14px; border-radius: 6px; font-size: 0.82rem; font-weight: 600; cursor: pointer; font-family: inherit; background: var(--accent); color: #fff; border: none; }
+  .vi-btn-rand { padding: 6px 14px; border-radius: 6px; font-size: 0.82rem; cursor: pointer; font-family: inherit; background: var(--bg); color: var(--text); border: 1px solid var(--border); }
+  #main { display: flex; flex: 1; overflow: hidden; }
+  #viz-area { flex: 1; display: flex; align-items: center; justify-content: center; padding: 12px 20px; gap: 24px; overflow-y: auto; }
+  #desc { font-size: 13px; color: var(--text-muted); text-align: center; max-width: 560px; min-height: 36px; line-height: 1.5; }
+  #resize-handle { width: 5px; flex-shrink: 0; cursor: col-resize; background: transparent; border-left: 1px solid var(--border); transition: background .15s; z-index: 10; }
+  #resize-handle:hover, #resize-handle.dragging { background: var(--accent); }
+  #code-panel { width: 280px; min-width: 120px; max-width: 560px; flex-shrink: 0; background: #0d1117; border-right: 1px solid var(--border); overflow-y: auto; overflow-x: auto; padding: 10px 12px; display: flex; flex-direction: column; }
+  .cl { display: flex; align-items: stretch; padding: 2px 0; white-space: pre; border-left: 2px solid transparent; padding-left: 6px; color: var(--text-muted); transition: all 0.2s; font-family: 'Fira Code', 'Cascadia Code', monospace; font-size: 0.75rem; line-height: 1.8; }
+  .cl.hl { background: rgba(122,162,247,0.12); border-left-color: var(--accent); color: var(--text); }
+  .ln { display: inline-block; width: 20px; text-align: right; color: var(--text-dim); user-select: none; margin-right: 10px; font-size: 0.7rem; }
+  #sidebar { width: 220px; flex-shrink: 0; background: var(--surface); border-left: 1px solid var(--border); overflow-y: auto; padding: 14px 12px; display: flex; flex-direction: column; gap: 12px; }
+  .sidebar-section { font-size: 11px; }
+  .sidebar-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--text-dim); margin-bottom: 6px; }
+  #nav-row { flex-shrink: 0; display: flex; align-items: center; gap: 8px; padding: 10px 16px; background: var(--surface); border-top: 1px solid var(--border); }
+  .btn-step, .btn-play { padding: 6px 14px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--surface); color: var(--text); font-family: inherit; font-size: 12px; cursor: pointer; transition: background .15s; }
+  .btn-step:hover { background: #334155; }
+  .btn-play { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn-play:hover { background: var(--accent-hover); }
+  select { padding: 5px 8px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: #1e293b; color: var(--text); font-size: 12px; font-family: inherit; cursor: pointer; }
 
-    .page-sub { font-size: 0.8rem; color: var(--text-dim); margin-left: auto; white-space: nowrap; }
-
-    /* Board area */
-    .board-wrap {
-      flex: 1;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 12px 20px;
-      min-height: 0;
-      gap: 24px;
-    }
-
-    .board-container {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 8px;
-    }
-
-    #board {
-      display: grid;
-      border: 2px solid var(--border);
-      border-radius: 6px;
-      overflow: hidden;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.4);
-    }
-
-    .cell {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1.4rem;
-      position: relative;
-      transition: background 0.15s, border 0.15s;
-    }
-    .cell.light { background: #2a2d3e; }
-    .cell.dark  { background: #1e2030; }
-
-    .cell.trying {
-      background: #2a2000 !important;
-      outline: 2px solid var(--yellow);
-      outline-offset: -2px;
-      z-index: 1;
-    }
-    .cell.safe {
-      background: #0d2016 !important;
-      outline: 2px solid var(--green);
-      outline-offset: -2px;
-      z-index: 1;
-    }
-    .cell.conflict {
-      background: #200a0a !important;
-      outline: 2px solid var(--red);
-      outline-offset: -2px;
-      z-index: 1;
-    }
-    .cell.queen {
-      background: #0d2016 !important;
-    }
-    .cell.threat {
-      background: rgba(247,118,142,0.07) !important;
-    }
-
-    .queen-icon {
-      font-size: 1.6rem;
-      line-height: 1;
-      filter: drop-shadow(0 0 4px rgba(158,206,106,0.6));
-      user-select: none;
-    }
-
-    /* Side panel */
-    .side-panel {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      min-width: 200px;
-      max-width: 240px;
-    }
-
-    .sect {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-lg);
-      padding: 12px 14px;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-
-    .sets-grid {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-      font-family: monospace;
-      font-size: 0.75rem;
-    }
-    .set-row {
-      display: flex;
-      align-items: baseline;
-      gap: 6px;
-    }
-    .set-label {
-      color: var(--text-dim);
-      min-width: 54px;
-      font-size: 0.7rem;
-    }
-    .set-val {
-      color: var(--text-bright);
-      word-break: break-all;
-    }
-    .set-val.empty { color: var(--text-ghost); font-style: italic; }
-
-    /* Solutions list */
-    .sol-list {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-      max-height: 130px;
-      overflow-y: auto;
-    }
-    .sol-item {
-      font-family: monospace;
-      font-size: 0.72rem;
-      color: var(--green);
-      background: var(--green-bg);
-      border: 1px solid var(--green-border);
-      border-radius: 4px;
-      padding: 4px 8px;
-    }
-    .sol-empty { color: var(--text-ghost); font-size: 0.78rem; font-style: italic; }
-
-    /* Bottom nav bar */
-    .bottom-bar {
-      flex-shrink: 0;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      padding: 10px 20px;
-      background: var(--surface);
-      border-top: 1px solid var(--border);
-    }
-
-    .playBtn {
-      background: #15803d; border: none; border-radius: var(--radius-sm);
-      color: #fff; cursor: pointer; font-size: 0.88rem; font-weight: 600;
-      padding: 8px 14px; transition: background 0.2s; white-space: nowrap;
-    }
-    .playBtn:hover { background: #166534; }
-    .playBtn.playing { background: #c2410c; }
-    .playBtn.playing:hover { background: #9a3412; }
-    .playBtn:disabled { opacity: 0.4; cursor: not-allowed; }
-
-    .speedSel {
-      background: var(--bg); border: 1px solid var(--border);
-      border-radius: var(--radius-sm); color: var(--text);
-      font-size: 0.82rem; padding: 6px 8px; outline: none;
-    }
-
-    .step-info {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      gap: 2px;
-      min-width: 0;
-    }
-    .step-label {
-      font-size: 0.72rem;
-      color: var(--text-dim);
-      font-family: monospace;
-    }
-    .step-desc {
-      font-size: 0.82rem;
-      color: var(--text-muted);
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    .sol-counter {
-      font-family: monospace;
-      font-size: 0.9rem;
-      color: var(--green);
-      white-space: nowrap;
-      padding: 6px 12px;
-      background: var(--green-bg);
-      border: 1px solid var(--green-border);
-      border-radius: var(--radius-sm);
-    }
-    .sol-counter .sol-num {
-      font-size: 1.2rem;
-      font-weight: 700;
-    }
-
-    .legend-row {
-      display: flex;
-      flex-direction: column;
-      gap: 5px;
-      font-size: 0.72rem;
-      color: var(--text-muted);
-    }
-    .legend-item {
-      display: flex;
-      align-items: center;
-      gap: 7px;
-    }
-    .legend-swatch {
-      width: 14px; height: 14px;
-      border-radius: 3px;
-      flex-shrink: 0;
-    }
-
-    .row-indicator {
-      font-family: monospace;
-      font-size: 0.78rem;
-      color: var(--text-dim);
-      text-align: center;
-    }
-
-    @media (max-width: 640px) {
-      .side-panel { display: none; }
-      .step-desc { font-size: 0.75rem; }
-    }
-  </style>
+  /* N-Queens unique CSS */
+  #board { display: grid; border: 2px solid var(--border); border-radius: 6px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.4); }
+  .cell { display: flex; align-items: center; justify-content: center; font-size: 1.4rem; position: relative; transition: background 0.15s, border 0.15s; }
+  .cell.light { background: #2a2d3e; }
+  .cell.dark  { background: #1e2030; }
+  .cell.trying { background: #2a2000 !important; outline: 2px solid var(--yellow); outline-offset: -2px; z-index: 1; }
+  .cell.safe { background: #0d2016 !important; outline: 2px solid var(--green); outline-offset: -2px; z-index: 1; }
+  .cell.conflict { background: #200a0a !important; outline: 2px solid var(--red); outline-offset: -2px; z-index: 1; }
+  .cell.queen { background: #0d2016 !important; }
+  .cell.threat { background: rgba(247,118,142,0.07) !important; }
+  .queen-icon { font-size: 1.6rem; line-height: 1; filter: drop-shadow(0 0 4px rgba(158,206,106,0.6)); user-select: none; }
+  .board-container { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+  .row-indicator { font-family: monospace; font-size: 0.78rem; color: var(--text-dim); text-align: center; }
+  .sol-counter { font-family: monospace; font-size: 0.9rem; color: var(--green); white-space: nowrap; padding: 6px 12px; background: var(--green-bg); border: 1px solid var(--green-border); border-radius: var(--radius-sm); }
+  .sol-counter .sol-num { font-size: 1.2rem; font-weight: 700; }
+  .sets-grid { display: flex; flex-direction: column; gap: 4px; font-family: monospace; font-size: 0.75rem; }
+  .set-row { display: flex; align-items: baseline; gap: 6px; }
+  .set-label { color: var(--text-dim); min-width: 54px; font-size: 0.7rem; }
+  .set-val { color: var(--text-bright); word-break: break-all; }
+  .set-val.empty { color: var(--text-ghost); font-style: italic; }
+  .sol-list { display: flex; flex-direction: column; gap: 4px; max-height: 130px; overflow-y: auto; }
+  .sol-item { font-family: monospace; font-size: 0.72rem; color: var(--green); background: var(--green-bg); border: 1px solid var(--green-border); border-radius: 4px; padding: 4px 8px; }
+  .sol-empty { color: var(--text-ghost); font-size: 0.78rem; font-style: italic; }
+  .legend-row { display: flex; flex-direction: column; gap: 5px; font-size: 0.72rem; color: var(--text-muted); }
+  .legend-item { display: flex; align-items: center; gap: 7px; }
+  .legend-swatch { width: 14px; height: 14px; border-radius: 3px; flex-shrink: 0; }
+</style>
 </head>
-<body class="page">
-
-<div class="page-header">
-  <a class="back-link" href="../index.html">&larr; All Algorithms</a>
-  <div class="page-title">N-Queens</div>
-  <div class="page-sub">LeetCode 51 &middot; Backtracking &middot; col + diag sets &middot; row-by-row placement</div>
-</div>
+<body>
 
 <div class="viz-inputs">
-  <div class="field">
+  <div>
     <label>Board size (n)</label>
     <input id="inp-n" type="number" value="4" min="4" max="8" style="width:70px" />
   </div>
-  <button class="btn-primary" onclick="buildAndRun()">Build &amp; Run</button>
+  <button class="vi-btn-run" onclick="buildAndRun()">Build &amp; Run</button>
+  <button class="vi-btn-rand" onclick="randomExample()">&#127922; Random</button>
+</div>
+<div class="controls"></div>
+
+<div id="header">
+  <span id="phase-badge">Setup</span>
+  <span style="font-size:13px;font-weight:700;">N-Queens</span>
+  <span id="step-counter">Step 0 / 0</span>
 </div>
 
-<div class="board-wrap">
-  <!-- Chess board -->
-  <div class="board-container">
-    <div id="board"></div>
-    <div class="row-indicator" id="row-indicator"></div>
+<div id="main">
+  <div id="viz-area">
+    <div class="board-container">
+      <div id="board"></div>
+      <div class="row-indicator" id="row-indicator"></div>
+    </div>
   </div>
 
-  <!-- Side panel -->
-  <div class="side-panel">
-    <!-- Sets -->
-    <div class="sect">
-      <div class="panel-title">Constraint Sets</div>
-      <div class="sets-grid">
-        <div class="set-row">
-          <span class="set-label">col_set</span>
-          <span class="set-val" id="set-col"><em class="sol-empty">{ }</em></span>
-        </div>
-        <div class="set-row">
-          <span class="set-label">diag1 (r-c)</span>
-          <span class="set-val" id="set-d1"><em class="sol-empty">{ }</em></span>
-        </div>
-        <div class="set-row">
-          <span class="set-label">diag2 (r+c)</span>
-          <span class="set-val" id="set-d2"><em class="sol-empty">{ }</em></span>
-        </div>
-      </div>
-    </div>
+  <div id="resize-handle"></div>
 
-    <!-- Solutions -->
-    <div class="sect">
-      <div class="panel-title">Solutions <span class="panel-sub" id="sol-count-label"></span></div>
+  <div id="code-panel">
+    <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--text-dim);margin-bottom:8px;">Pseudocode</div>
+    <div id="code-body">
+      <div class="cl"><span class="ln">1</span><span style="color:#bb9af7">def</span> solve(row):</div>
+      <div class="cl"><span class="ln">2</span>  if row == n: solution found</div>
+      <div class="cl"><span class="ln">3</span>  for col in range(n):</div>
+      <div class="cl"><span class="ln">4</span>    if col not in col_set</div>
+      <div class="cl"><span class="ln">5</span>    and (r-c) not in diag1</div>
+      <div class="cl"><span class="ln">6</span>    and (r+c) not in diag2:</div>
+      <div class="cl"><span class="ln">7</span>      place queen</div>
+      <div class="cl"><span class="ln">8</span>      solve(row+1)</div>
+      <div class="cl"><span class="ln">9</span>      remove queen</div>
+    </div>
+  </div>
+
+  <div id="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-title">Solutions</div>
+      <div class="sol-counter" style="margin-bottom:8px;">
+        <span class="sol-num" id="sol-num">0</span> solution<span id="sol-plural">s</span>
+      </div>
       <div class="sol-list" id="sol-list">
         <span class="sol-empty">None yet.</span>
       </div>
     </div>
-
-    <!-- Legend -->
-    <div class="sect">
-      <div class="panel-title">Legend</div>
+    <div class="sidebar-section">
+      <div class="sidebar-title">Constraint Sets</div>
+      <div class="sets-grid">
+        <div class="set-row"><span class="set-label">col_set</span><span class="set-val" id="set-col"><em class="sol-empty">{ }</em></span></div>
+        <div class="set-row"><span class="set-label">diag1</span><span class="set-val" id="set-d1"><em class="sol-empty">{ }</em></span></div>
+        <div class="set-row"><span class="set-label">diag2</span><span class="set-val" id="set-d2"><em class="sol-empty">{ }</em></span></div>
+      </div>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-title">Legend</div>
       <div class="legend-row">
-        <div class="legend-item">
-          <div class="legend-swatch" style="background:#2a2000;outline:2px solid var(--yellow);outline-offset:-2px"></div>
-          <span>Cell being tried</span>
-        </div>
-        <div class="legend-item">
-          <div class="legend-swatch" style="background:#0d2016;outline:2px solid var(--green);outline-offset:-2px"></div>
-          <span>Safe — queen placed</span>
-        </div>
-        <div class="legend-item">
-          <div class="legend-swatch" style="background:#200a0a;outline:2px solid var(--red);outline-offset:-2px"></div>
-          <span>Conflict — rejected</span>
-        </div>
-        <div class="legend-item">
-          <div class="legend-swatch" style="background:rgba(247,118,142,0.15);border:1px solid rgba(247,118,142,0.3)"></div>
-          <span>Threatened by queen</span>
-        </div>
-        <div class="legend-item">
-          <span style="font-size:1rem">♛</span>
-          <span>Placed queen</span>
-        </div>
+        <div class="legend-item"><div class="legend-swatch" style="background:#2a2000;outline:2px solid var(--yellow);outline-offset:-2px"></div><span>Trying</span></div>
+        <div class="legend-item"><div class="legend-swatch" style="background:#0d2016;outline:2px solid var(--green);outline-offset:-2px"></div><span>Safe / placed</span></div>
+        <div class="legend-item"><div class="legend-swatch" style="background:#200a0a;outline:2px solid var(--red);outline-offset:-2px"></div><span>Conflict</span></div>
+        <div class="legend-item"><div class="legend-swatch" style="background:rgba(247,118,142,0.15);border:1px solid rgba(247,118,142,0.3)"></div><span>Threatened</span></div>
       </div>
     </div>
   </div>
 </div>
 
-<!-- Bottom nav bar -->
-<div class="bottom-bar">
-  <button class="stepBtn" id="prevBtn" disabled>&larr;</button>
-  <button class="stepBtn" id="stepBtn" disabled>&rarr;</button>
-  <button class="playBtn" id="playBtn" disabled>&#9654; Play</button>
-  <select class="speedSel" id="speedSel">
-    <option value="900">Slow</option>
-    <option value="450" selected>Medium</option>
-    <option value="150">Fast</option>
+<div id="nav-row">
+  <button id="prevBtn" class="btn-step">&#8592; Prev</button>
+  <button id="stepBtn" class="btn-step">Step &#8594;</button>
+  <button id="playBtn" class="btn-play">Play</button>
+  <button id="resetBtn" class="btn-step">&#8635; Reset</button>
+  <select id="speedSel">
+    <option value="800">0.5&#215;</option>
+    <option value="400" selected>1&#215;</option>
+    <option value="200">2&#215;</option>
+    <option value="100">4&#215;</option>
   </select>
-
-  <div class="step-info">
-    <div class="step-label" id="step-label">&mdash;</div>
-    <div class="step-desc" id="step-desc">Set n and click Build &amp; Run.</div>
-  </div>
-
-  <div class="sol-counter">
-    <span class="sol-num" id="sol-num">0</span> solution<span id="sol-plural">s</span>
-  </div>
 </div>
 
 <script>
 var simSteps = [], nav;
 var currentN = 4;
 
-// ── Simulate ──────────────────────────────────────────────────────────────────
 function simulate(n) {
   var steps = [];
   var solutions = [];
-  var queens = [];   // queens[row] = col
+  var queens = [];
   var colSet  = {};
-  var diag1   = {};  // row - col
-  var diag2   = {};  // row + col
+  var diag1   = {};
+  var diag2   = {};
 
   function snap(phase, desc, row, col) {
     steps.push({
-      phase: phase,
-      desc: desc,
-      row: row,
-      col: col,
+      phase: phase, desc: desc, row: row, col: col,
       queens: queens.slice(),
       colSet:  Object.keys(colSet).map(Number).sort(function(a,b){return a-b;}),
       diag1:   Object.keys(diag1).map(Number).sort(function(a,b){return a-b;}),
@@ -367,83 +177,39 @@ function simulate(n) {
   function backtrack(row) {
     if (row === n) {
       solutions.push(queens.slice());
-      snap('solution',
-        'All ' + n + ' queens placed! Solution #' + solutions.length + ': [' + queens.join(', ') + ']',
-        -1, -1);
+      snap('solution', 'All ' + n + ' queens placed! Solution #' + solutions.length + ': [' + queens.join(', ') + ']', -1, -1);
       return;
     }
-
     for (var col = 0; col < n; col++) {
-      var d1 = row - col;
-      var d2 = row + col;
+      var d1 = row - col, d2 = row + col;
       var safe = !colSet[col] && !diag1[d1] && !diag2[d2];
-
-      snap('try',
-        'Row ' + row + ', col ' + col + ': ' +
-        (safe
-          ? 'col ' + col + ' free, diag1=' + d1 + ' free, diag2=' + d2 + ' free. Safe!'
-          : 'Conflict — ' +
-            (colSet[col] ? 'col ' + col + ' occupied' :
-             diag1[d1]   ? 'diag1=' + d1 + ' blocked' :
-                           'diag2=' + d2 + ' blocked') + '.'),
-        row, col);
-
-      if (!safe) {
-        snap('conflict',
-          'Reject (' + row + ',' + col + '). Try next column.',
-          row, col);
-        continue;
-      }
-
-      // Place
-      queens[row] = col;
-      colSet[col] = true;
-      diag1[d1]   = true;
-      diag2[d2]   = true;
-
-      snap('place',
-        'Place queen at (' + row + ',' + col + '). Recurse to row ' + (row + 1) + '.',
-        row, col);
-
+      snap('try', 'Row ' + row + ', col ' + col + ': ' + (safe ? 'Safe!' : 'Conflict.'), row, col);
+      if (!safe) { snap('conflict', 'Reject (' + row + ',' + col + '). Try next column.', row, col); continue; }
+      queens[row] = col; colSet[col] = true; diag1[d1] = true; diag2[d2] = true;
+      snap('place', 'Place queen at (' + row + ',' + col + '). Recurse to row ' + (row + 1) + '.', row, col);
       backtrack(row + 1);
-
-      // Remove
-      delete queens[row];
-      delete colSet[col];
-      delete diag1[d1];
-      delete diag2[d2];
-
-      snap('remove',
-        'Backtrack — remove queen from (' + row + ',' + col + '). Try next column.',
-        row, col);
+      delete queens[row]; delete colSet[col]; delete diag1[d1]; delete diag2[d2];
+      snap('remove', 'Backtrack — remove queen from (' + row + ',' + col + ').', row, col);
     }
   }
 
   backtrack(0);
-
-  snap('done',
-    solutions.length + ' solution' + (solutions.length === 1 ? '' : 's') +
-    ' found for n=' + n + '.',
-    -1, -1);
-
+  snap('done', solutions.length + ' solution(s) found for n=' + n + '.', -1, -1);
   return steps;
 }
 
-// ── Board rendering ───────────────────────────────────────────────────────────
 function buildBoard(n) {
   var board = document.getElementById('board');
-  var cellSize = Math.min(Math.floor((window.innerHeight * 0.55) / n), 72);
+  var cellSize = Math.min(Math.floor((window.innerHeight * 0.5) / n), 72);
   board.style.gridTemplateColumns = 'repeat(' + n + ', ' + cellSize + 'px)';
   board.style.gridTemplateRows    = 'repeat(' + n + ', ' + cellSize + 'px)';
-
   board.innerHTML = '';
   for (var r = 0; r < n; r++) {
     for (var c = 0; c < n; c++) {
       var cell = document.createElement('div');
       cell.id = 'cell-' + r + '-' + c;
       cell.className = 'cell ' + ((r + c) % 2 === 0 ? 'light' : 'dark');
-      cell.style.width  = cellSize + 'px';
-      cell.style.height = cellSize + 'px';
+      cell.style.width = cell.style.height = cellSize + 'px';
       board.appendChild(cell);
     }
   }
@@ -451,89 +217,50 @@ function buildBoard(n) {
 
 function renderBoard(s, animate) {
   var n = currentN;
-
-  // Compute threatened cells from placed queens
   var threatened = {};
   for (var qr = 0; qr < s.queens.length; qr++) {
     var qc = s.queens[qr];
     if (qc === undefined || qc === null) continue;
-    // same col
-    for (var r2 = 0; r2 < n; r2++) {
-      if (r2 !== qr) threatened[r2 + ',' + qc] = true;
-    }
-    // diagonals
+    for (var r2 = 0; r2 < n; r2++) { if (r2 !== qr) threatened[r2 + ',' + qc] = true; }
     for (var d = 1; d < n; d++) {
       [[-1,-1],[-1,1],[1,-1],[1,1]].forEach(function(delta) {
         var nr = qr + delta[0]*d, nc = qc + delta[1]*d;
-        if (nr >= 0 && nr < n && nc >= 0 && nc < n) {
-          threatened[nr + ',' + nc] = true;
-        }
+        if (nr >= 0 && nr < n && nc >= 0 && nc < n) threatened[nr + ',' + nc] = true;
       });
     }
   }
-
   for (var row = 0; row < n; row++) {
     for (var col = 0; col < n; col++) {
       var cell = document.getElementById('cell-' + row + '-' + col);
       if (!cell) continue;
-
       var base = (row + col) % 2 === 0 ? 'light' : 'dark';
       cell.className = 'cell ' + base;
       cell.innerHTML = '';
-
       var hasQueen = (s.queens[row] === col);
       var isTrying = (s.phase === 'try' || s.phase === 'conflict') && s.row === row && s.col === col;
       var isConflict = s.phase === 'conflict' && s.row === row && s.col === col;
       var isPlace = s.phase === 'place' && s.row === row && s.col === col;
-
-      if (isConflict) {
-        cell.classList.add('conflict');
-      } else if (isTrying) {
-        cell.classList.add(hasQueen ? 'queen' : 'trying');
-      } else if (isPlace) {
-        cell.classList.add('safe');
-      } else if (hasQueen) {
-        cell.classList.add('queen');
-      } else if (threatened[row + ',' + col] && !isTrying) {
-        cell.classList.add('threat');
-      }
-
+      if (isConflict) cell.classList.add('conflict');
+      else if (isTrying) cell.classList.add(hasQueen ? 'queen' : 'trying');
+      else if (isPlace) cell.classList.add('safe');
+      else if (hasQueen) cell.classList.add('queen');
+      else if (threatened[row + ',' + col] && !isTrying) cell.classList.add('threat');
       if (hasQueen) {
         var icon = document.createElement('span');
         icon.className = 'queen-icon';
         icon.textContent = '♛';
         cell.appendChild(icon);
-
-        if (animate && isPlace) {
-          gsap.fromTo(icon, { scale: 0, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.25, ease: 'back.out(2)' });
-        }
-        if (animate && s.phase === 'solution') {
-          gsap.fromTo(icon, { scale: 1 }, { scale: 1.3, duration: 0.15, yoyo: true, repeat: 1 });
-        }
+        if (animate && isPlace) gsap.fromTo(icon, { scale: 0, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.25, ease: 'back.out(2)' });
+        if (animate && s.phase === 'solution') gsap.fromTo(icon, { scale: 1 }, { scale: 1.3, duration: 0.15, yoyo: true, repeat: 1 });
       }
     }
   }
-
-  // Row indicator
   var ri = document.getElementById('row-indicator');
-  if (ri) {
-    if (s.row >= 0) {
-      ri.textContent = 'Current row: ' + s.row;
-    } else if (s.phase === 'solution') {
-      ri.textContent = 'Solution found!';
-    } else if (s.phase === 'done') {
-      ri.textContent = 'Done';
-    } else {
-      ri.textContent = '';
-    }
-  }
+  if (ri) ri.textContent = s.row >= 0 ? 'Current row: ' + s.row : (s.phase === 'solution' ? 'Solution found!' : (s.phase === 'done' ? 'Done' : ''));
 }
 
-function renderSets(s, animate) {
-  function fmt(arr) {
-    if (!arr || arr.length === 0) return '<em class="sol-empty">{ }</em>';
-    return '{ ' + arr.join(', ') + ' }';
-  }
+function renderSets(s) {
+  function fmt(arr) { return (!arr || arr.length === 0) ? '<em class="sol-empty">{ }</em>' : '{ ' + arr.join(', ') + ' }'; }
   document.getElementById('set-col').innerHTML = fmt(s.colSet);
   document.getElementById('set-d1').innerHTML  = fmt(s.diag1);
   document.getElementById('set-d2').innerHTML  = fmt(s.diag2);
@@ -541,78 +268,86 @@ function renderSets(s, animate) {
 
 function renderSolutions(s, animate) {
   var list  = document.getElementById('sol-list');
-  var label = document.getElementById('sol-count-label');
   var numEl = document.getElementById('sol-num');
   var plural = document.getElementById('sol-plural');
-
   var count = s.solutions.length;
   if (numEl) numEl.textContent = count;
   if (plural) plural.textContent = count === 1 ? '' : 's';
-  if (label) label.textContent = count ? '(' + count + ')' : '';
-
   if (!list) return;
-  if (count === 0) {
-    list.innerHTML = '<span class="sol-empty">None yet.</span>';
-    return;
-  }
-
+  if (count === 0) { list.innerHTML = '<span class="sol-empty">None yet.</span>'; return; }
   list.innerHTML = s.solutions.map(function(sol, idx) {
     return '<div class="sol-item">#' + (idx+1) + ': [' + sol.join(', ') + ']</div>';
   }).join('');
-
   if (animate && s.phase === 'solution') {
     var last = list.querySelector('.sol-item:last-child');
     if (last) gsap.fromTo(last, { x: -8, opacity: 0 }, { x: 0, opacity: 1, duration: 0.25, ease: 'power2.out' });
   }
 }
 
-// ── Main render ───────────────────────────────────────────────────────────────
-function renderStep(s, animate, cur, total) {
-  var label = document.getElementById('step-label');
-  var desc  = document.getElementById('step-desc');
-
-  if (label) label.textContent = 'Step ' + (cur+1) + ' / ' + total + '  ·  ' + s.phase;
-  if (desc) {
-    if (animate) gsap.fromTo(desc, { opacity: 0 }, { opacity: 1, duration: 0.12 });
-    desc.textContent = s.desc;
-  }
-
+function applyStep(s, animate) {
   renderBoard(s, animate);
-  renderSets(s, animate);
+  renderSets(s);
   renderSolutions(s, animate);
 }
 
-// ── Build & run ───────────────────────────────────────────────────────────────
+function updateStatus(snap, cur, total) {
+  document.getElementById('phase-badge').textContent = snap.phase || '';
+  document.getElementById('step-counter').textContent = 'Step ' + (cur+1) + ' / ' + total;
+  var desc = document.getElementById('desc');
+  if (desc) desc.textContent = snap.desc || '';
+}
+
+function buildAndRun() {
+  var n = parseInt(document.getElementById('inp-n').value, 10);
+  if (isNaN(n) || n < 4 || n > 8) return;
+  currentN = n;
+  buildBoard(n);
+  simSteps = simulate(n);
+  nav.load(simSteps);
+  if (simSteps.length > 0) applyStep(simSteps[0], false);
+}
+
+function loadPreset() {
+  var sel = document.getElementById('presetSel');
+  if (sel && sel.value) { document.getElementById('inp-n').value = sel.value; buildAndRun(); }
+}
+
+function randomExample() {
+  var ns = [4, 5, 6];
+  document.getElementById('inp-n').value = ns[Math.floor(Math.random() * ns.length)];
+  buildAndRun();
+}
+
 window.addEventListener('DOMContentLoaded', function() {
   nav = VizNav({
     btnPrev:  document.getElementById('prevBtn'),
     btnNext:  document.getElementById('stepBtn'),
     btnPlay:  document.getElementById('playBtn'),
     speedSel: document.getElementById('speedSel'),
-    render: function(s, cur, total) { renderStep(s, true, cur, total); },
+    render: function(s, cur, total) { applyStep(s, cur > 0); updateStatus(s, cur, total); }
   });
+  document.getElementById('resetBtn').addEventListener('click', function() { buildAndRun(); });
   buildAndRun();
 });
 
-function buildAndRun() {
-  var n = parseInt(document.getElementById('inp-n').value, 10);
-  if (isNaN(n) || n < 4 || n > 8) return;
-  currentN = n;
-
-  buildBoard(n);
-  simSteps = simulate(n);
-  nav.load(simSteps);
-
-  // Show step 0 immediately (no animation)
-  if (simSteps.length > 0) renderStep(simSteps[0], false, 0, simSteps.length);
-}
-</script>
-
-<script>
-  if (window.self !== window.top) {
-    var bl = document.querySelector('.back-link');
-    if (bl) bl.style.display = 'none';
-  }
+(function() {
+  var handle = document.getElementById('resize-handle');
+  var panel  = document.getElementById('code-panel');
+  var dragging = false, startX = 0, startW = 0;
+  handle.addEventListener('mousedown', function(e) {
+    dragging = true; startX = e.clientX; startW = panel.offsetWidth;
+    handle.classList.add('dragging'); e.preventDefault();
+  });
+  document.addEventListener('mousemove', function(e) {
+    if (!dragging) return;
+    var delta = startX - e.clientX;
+    panel.style.width = Math.min(560, Math.max(120, startW + delta)) + 'px';
+  });
+  document.addEventListener('mouseup', function() {
+    if (!dragging) return;
+    dragging = false; handle.classList.remove('dragging');
+  });
+})();
 </script>
 </body>
 </html>

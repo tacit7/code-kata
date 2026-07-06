@@ -1,171 +1,67 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Permutations</title>
-  <link rel="stylesheet" href="../shared/style.css" />
-  <script src="../shared/gsap.min.js"></script>
-  <script src="../shared/viz.js"></script>
-  <style>
-    .viz-area { width: 100%; max-width: 96%; display: flex; flex-direction: column; gap: 12px; }
-
-    .main-layout { display: grid; grid-template-columns: 1fr 320px; gap: 12px; align-items: start; }
-    @media (max-width: 860px) { .main-layout { grid-template-columns: 1fr; } }
-
-    /* tree */
-    .tree-wrap {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--radius-lg); overflow: hidden;
-    }
-    #tree-svg { display: block; width: 100%; }
-
-    /* right panel */
-    .right-col { display: flex; flex-direction: column; gap: 10px; }
-
-    .panel-box {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--radius-lg); padding: 13px 16px;
-      display: flex; flex-direction: column; gap: 8px;
-    }
-    .panel-title {
-      font-size: 0.67rem; font-weight: 700;
-      text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-dim);
-    }
-
-    /* array boxes */
-    .arr-boxes { display: flex; gap: 6px; flex-wrap: wrap; align-items: flex-end; }
-    .arr-cell-wrap { display: flex; flex-direction: column; align-items: center; gap: 3px; }
-    .arr-cell {
-      width: 40px; height: 40px;
-      display: flex; align-items: center; justify-content: center;
-      border: 2px solid var(--border); border-radius: 6px;
-      background: var(--bg);
-      font-family: 'JetBrains Mono', monospace; font-size: 1.1rem; font-weight: 700;
-      color: var(--text-dim);
-      transition: border-color 0.18s, background 0.18s, color 0.18s;
-    }
-    .arr-cell.fixed   { border-color: #16a34a; background: rgba(22,163,74,0.1); color: #4ade80; }
-    .arr-cell.current { border-color: var(--accent); background: rgba(99,102,241,0.14); color: #a5b4fc; }
-    .arr-cell.swap-a  { border-color: #d97706; background: rgba(234,179,8,0.13); color: #fbbf24; }
-    .arr-cell.swap-b  { border-color: #ea580c; background: rgba(249,115,22,0.13); color: #fb923c; }
-    .arr-idx { font-size: 0.6rem; color: var(--text-faint); font-family: monospace; }
-
-    /* permutation chips */
-    #perms-list {
-      display: flex; flex-wrap: wrap; gap: 6px;
-      max-height: 200px; overflow-y: auto;
-    }
-    .perm-chip {
-      background: var(--bg); border: 1px solid var(--border);
-      border-radius: 5px; padding: 3px 9px;
-      font-family: monospace; font-size: 0.82rem; color: var(--text-dim);
-    }
-    .perm-chip.new {
-      border-color: var(--green); color: var(--green); background: rgba(22,163,74,0.08);
-    }
-
-    /* code */
-    .code-panel {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--radius-lg); overflow: hidden;
-    }
-    .code-header {
-      padding: 8px 14px; font-size: 0.67rem; font-weight: 700;
-      text-transform: uppercase; letter-spacing: 0.1em;
-      color: var(--text-dim); border-bottom: 1px solid var(--border);
-      background: var(--bg);
-    }
-    .code-body {
-      padding: 8px 0; font-size: 0.76rem; line-height: 1.72;
-      font-family: 'JetBrains Mono', 'Fira Code', monospace; overflow-x: auto;
-    }
-    .cl {
-      display: flex; align-items: stretch;
-      border-left: 3px solid transparent; padding: 0 14px 0 0;
-      white-space: pre;
-    }
-    .cl .ln { width: 26px; min-width: 26px; text-align: right; color: #3d4468; user-select: none; padding-right: 12px; font-size: 0.7rem; line-height: 1.72; }
-    .cl .code { color: var(--text-muted); }
-
-    /* nav */
-    .playBtn {
-      background: #15803d; border: none; border-radius: var(--radius-sm);
-      color: #fff; cursor: pointer; font-size: 0.88rem; font-weight: 600;
-      padding: 8px 14px; transition: background 0.2s;
-    }
-    .playBtn:hover { background: #166534; }
-    .playBtn.playing { background: #c2410c; }
-    .playBtn.playing:hover { background: #9a3412; }
-    .playBtn:disabled { opacity: 0.4; cursor: not-allowed; }
-    .speedSel {
-      background: var(--bg); border: 1px solid var(--border);
-      border-radius: var(--radius-sm); color: var(--text);
-      font-size: 0.84rem; padding: 7px 9px; outline: none;
-    }
-    .nav-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-
-    /* legend */
-    .leg-row { display: flex; gap: 14px; flex-wrap: wrap; font-size: 0.76rem; color: var(--text-muted); }
-    .leg-item { display: flex; align-items: center; gap: 6px; }
-    .leg-box { width: 14px; height: 14px; border-radius: 3px; border: 2px solid; flex-shrink: 0; }
-
-    .kw  { color: var(--purple); }
-    .fn  { color: var(--blue); }
-    .bi  { color: var(--orange); }
-    .cm  { color: #3d4468; font-style: italic; }
-    .op  { color: var(--text); }
-    .nb  { color: var(--green); }
-
-    /* viz-inputs */
-    .viz-inputs {
-      display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end;
-      padding: 10px 0 14px; width: 100%; max-width: 90%;
-    }
-    .viz-inputs .field {
-      display: flex; flex-direction: column; gap: 4px;
-    }
-    .viz-inputs label {
-      font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
-      letter-spacing: 0.08em; color: var(--text-dim);
-    }
-    .viz-inputs input[type="text"] {
-      background: var(--surface); border: 1px solid var(--border);
-      color: var(--text); border-radius: var(--radius-sm);
-      padding: 6px 10px; font-size: 0.85rem; width: 180px;
-    }
-    .viz-inputs input[type="number"] {
-      background: var(--surface); border: 1px solid var(--border);
-      color: var(--text); border-radius: var(--radius-sm);
-      padding: 6px 10px; font-size: 0.85rem; width: 80px;
-    }
-    .viz-inputs select {
-      background: var(--surface); border: 1px solid var(--border);
-      color: var(--text); border-radius: var(--radius-sm);
-      padding: 6px 10px; font-size: 0.85rem; cursor: pointer;
-    }
-    .viz-inputs button {
-      padding: 7px 18px; background: var(--accent); color: #fff;
-      border: none; border-radius: var(--radius-sm); font-weight: 600;
-      cursor: pointer; font-size: 0.85rem;
-    }
-    .viz-inputs button:hover { opacity: 0.9; }
-    .viz-inputs .btn-secondary {
-      background: var(--surface); color: var(--text);
-      border: 1px solid var(--border);
-    }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Permutations</title>
+<link rel="stylesheet" href="../shared/style.css" />
+<script src="../shared/gsap.min.js"></script>
+<script src="../shared/viz.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: "Fira Code", "Cascadia Code", monospace; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+  #header { padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+  #phase-badge { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; padding: 3px 10px; border-radius: var(--radius-sm); background: #1e3a5f; color: var(--blue); border: 1px solid var(--blue); }
+  #step-counter { font-size: 12px; color: var(--text-muted); margin-left: auto; }
+  .viz-inputs { width: 100%; max-width: 100%; padding: 10px 16px; background: var(--surface); border: none; border-bottom: 1px solid var(--border); border-radius: 0; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; flex-shrink: 0; }
+  .viz-inputs label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); display: block; margin-bottom: 3px; }
+  .viz-inputs select, .viz-inputs input { background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 0 8px; height: 30px; font-size: 0.82rem; font-family: inherit; }
+  .vi-btn-run { padding: 6px 14px; border-radius: 6px; font-size: 0.82rem; font-weight: 600; cursor: pointer; font-family: inherit; background: var(--accent); color: #fff; border: none; }
+  .vi-btn-rand { padding: 6px 14px; border-radius: 6px; font-size: 0.82rem; cursor: pointer; font-family: inherit; background: var(--bg); color: var(--text); border: 1px solid var(--border); }
+  #main { display: flex; flex: 1; overflow: hidden; }
+  #viz-area { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 16px; gap: 12px; overflow-y: auto; }
+  #desc { font-size: 13px; color: var(--text-muted); text-align: center; max-width: 560px; min-height: 36px; line-height: 1.5; }
+  #resize-handle { width: 5px; flex-shrink: 0; cursor: col-resize; background: transparent; border-left: 1px solid var(--border); transition: background .15s; z-index: 10; }
+  #resize-handle:hover, #resize-handle.dragging { background: var(--accent); }
+  #code-panel { width: 350px; min-width: 120px; max-width: 560px; flex-shrink: 0; background: #0d1117; overflow-y: auto; overflow-x: auto; padding: 10px 12px; display: flex; flex-direction: column; }
+  .cl { display: flex; align-items: stretch; border-left: 3px solid transparent; padding: 0 4px; white-space: pre; color: var(--text-muted); font-family: 'Fira Code','Cascadia Code',monospace; font-size: 0.76rem; line-height: 1.72; }
+  .cl .ln { width: 26px; min-width: 26px; text-align: right; color: #3d4468; user-select: none; padding-right: 12px; font-size: 0.7rem; line-height: 1.72; }
+  .cl .code { color: var(--text-muted); }
+  .kw { color: var(--purple); } .fn { color: var(--blue); } .bi { color: var(--orange); } .cm { color: #3d4468; font-style: italic; } .op { color: var(--text); } .nb { color: var(--green); }
+  #sidebar { width: 240px; flex-shrink: 0; background: var(--surface); border-left: 1px solid var(--border); overflow-y: auto; padding: 14px 12px; display: flex; flex-direction: column; gap: 12px; }
+  .sidebar-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--text-dim); margin-bottom: 6px; }
+  #nav-row { flex-shrink: 0; display: flex; align-items: center; gap: 8px; padding: 10px 16px; background: var(--surface); border-top: 1px solid var(--border); }
+  .btn-step { padding: 6px 14px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--surface); color: var(--text); font-family: inherit; font-size: 12px; cursor: pointer; }
+  .btn-step:hover { background: #334155; }
+  .btn-play { padding: 6px 14px; border-radius: var(--radius-sm); border-color: var(--accent); background: var(--accent); color: #fff; font-family: inherit; font-size: 12px; cursor: pointer; }
+  .btn-play:hover { background: var(--accent-hover); }
+  #nav-row select { padding: 5px 8px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: #1e293b; color: var(--text); font-size: 12px; font-family: inherit; cursor: pointer; }
+  /* tree */
+  .tree-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; width: 100%; }
+  #tree-svg { display: block; width: 100%; }
+  /* array boxes */
+  .arr-boxes { display: flex; gap: 6px; flex-wrap: wrap; align-items: flex-end; }
+  .arr-cell-wrap { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+  .arr-cell { width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border: 2px solid var(--border); border-radius: 6px; background: var(--bg); font-family: monospace; font-size: 1rem; font-weight: 700; color: var(--text-dim); transition: border-color 0.18s, background 0.18s, color 0.18s; }
+  .arr-cell.fixed   { border-color: #16a34a; background: rgba(22,163,74,0.1); color: #4ade80; }
+  .arr-cell.current { border-color: var(--accent); background: rgba(99,102,241,0.14); color: #a5b4fc; }
+  .arr-cell.swap-a  { border-color: #d97706; background: rgba(234,179,8,0.13); color: #fbbf24; }
+  .arr-cell.swap-b  { border-color: #ea580c; background: rgba(249,115,22,0.13); color: #fb923c; }
+  .arr-idx { font-size: 0.6rem; color: var(--text-faint); font-family: monospace; }
+  /* perms */
+  #perms-list { display: flex; flex-wrap: wrap; gap: 5px; max-height: 150px; overflow-y: auto; }
+  .perm-chip { background: var(--bg); border: 1px solid var(--border); border-radius: 5px; padding: 2px 7px; font-family: monospace; font-size: 0.8rem; color: var(--text-dim); }
+  .perm-chip.new { border-color: var(--green); color: var(--green); background: rgba(22,163,74,0.08); }
+  /* legend */
+  .leg-row { display: flex; gap: 10px; flex-wrap: wrap; font-size: 0.72rem; color: var(--text-muted); }
+  .leg-item { display: flex; align-items: center; gap: 5px; }
+  .leg-box { width: 13px; height: 13px; border-radius: 3px; border: 2px solid; flex-shrink: 0; }
+</style>
 </head>
-<body class="page">
-
-<div class="page-header">
-  <a class="back-link" href="../index.html">&larr; All Algorithms</a>
-  <div class="page-title">Permutations</div>
-  <div class="page-sub">LeetCode 46 &middot; Backtracking: swap current index with each remaining element, recurse, then swap back &middot; O(n &times; n!) time &middot; O(n) stack space</div>
-</div>
+<body>
 
 <div class="viz-inputs">
-  <div class="field">
+  <div style="display:flex;flex-direction:column;gap:3px">
     <label>Preset</label>
     <select id="preset-sel" onchange="loadPreset()">
       <option value="">— pick a preset —</option>
@@ -177,108 +73,79 @@
       <option value='{"nums":"3,1,2"}'>Unordered [3,1,2]</option>
     </select>
   </div>
-  <div class="field">
+  <div style="display:flex;flex-direction:column;gap:3px">
     <label>Custom (comma-sep)</label>
-    <input id="inp-nums" type="text" value="1,2,3" />
+    <input id="inp-nums" type="text" value="1,2,3" style="width:160px" />
   </div>
-  <button onclick="buildAndRun()">Run</button>
-  <button onclick="randomExample()" class="btn-secondary">🎲 Random</button>
+  <button class="vi-btn-run" onclick="buildAndRun()">Run</button>
+  <button class="vi-btn-rand" onclick="randomExample()">&#127922; Random</button>
+</div>
+<div class="controls"></div>
+
+<div id="header">
+  <span id="phase-badge">Setup</span>
+  <span style="font-size:13px;font-weight:700;">Permutations</span>
+  <span id="step-counter">Step 0 / 0</span>
 </div>
 
-<div class="controls">
-</div>
-
-<div class="viz-area">
-  <div class="main-layout">
-
-    <div style="display:flex;flex-direction:column;gap:10px">
-      <div class="tree-wrap">
-        <svg id="tree-svg" viewBox="0 0 800 400" preserveAspectRatio="xMidYMid meet"></svg>
-      </div>
-      <div class="code-panel">
-        <div class="code-header">Python</div>
-        <div class="code-body" id="code-body"></div>
-      </div>
+<div id="main">
+  <div id="viz-area">
+    <div class="tree-wrap">
+      <svg id="tree-svg" viewBox="0 0 800 400" preserveAspectRatio="xMidYMid meet"></svg>
     </div>
-
-    <div class="right-col">
-
-      <div class="panel-box">
-        <div class="nav-row">
-          <button class="stepBtn" id="prevBtn" disabled>&larr;</button>
-          <button class="stepBtn" id="stepBtn" disabled>&rarr;</button>
-          <button class="playBtn" id="playBtn" disabled>&#9654; Play</button>
-          <select class="speedSel" id="speedSel">
-            <option value="900">Slow</option>
-            <option value="420" selected>Medium</option>
-            <option value="120">Fast</option>
-          </select>
-        </div>
-        <div class="panel-title" id="phase-label">&mdash;</div>
-        <div style="font-size:0.82rem;color:var(--text-muted)" id="step-desc">Choose a preset or enter numbers, then click Run.</div>
+    <div id="desc">Choose a preset or enter numbers, then click Run.</div>
+  </div>
+  <div id="resize-handle"></div>
+  <div id="code-panel">
+    <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--text-dim);margin-bottom:8px;">Python</div>
+    <div id="code-body"></div>
+  </div>
+  <div id="sidebar">
+    <div>
+      <div class="sidebar-title">Current Array</div>
+      <div class="arr-boxes" id="arr-display"></div>
+      <div style="font-size:0.72rem;color:var(--text-muted);margin-top:4px" id="arr-hint"></div>
+      <div style="font-size:0.7rem;color:var(--text-faint);margin-top:2px" id="depth-label"></div>
+    </div>
+    <div>
+      <div class="sidebar-title">Permutations <span id="perm-count" style="font-weight:400;color:var(--text-faint)"></span></div>
+      <div id="perms-list"><span style="color:var(--text-faint);font-size:0.78rem;font-style:italic">none yet</span></div>
+    </div>
+    <div>
+      <div class="sidebar-title">Legend</div>
+      <div class="leg-row">
+        <div class="leg-item"><div class="leg-box" style="border-color:#16a34a;background:rgba(22,163,74,0.1)"></div>Fixed prefix</div>
+        <div class="leg-item"><div class="leg-box" style="border-color:var(--accent);background:rgba(99,102,241,0.14)"></div>Current pos</div>
+        <div class="leg-item"><div class="leg-box" style="border-color:#d97706;background:rgba(234,179,8,0.13)"></div>Swap A</div>
+        <div class="leg-item"><div class="leg-box" style="border-color:#ea580c;background:rgba(249,115,22,0.13)"></div>Swap B</div>
       </div>
-
-      <div class="panel-box">
-        <div class="panel-title">
-          Current array
-          <span id="depth-label" style="font-weight:400;color:var(--text-faint);margin-left:6px"></span>
-        </div>
-        <div class="arr-boxes" id="arr-display"></div>
-        <div style="font-size:0.73rem;color:var(--text-muted)" id="arr-hint"></div>
+      <div class="leg-row" style="margin-top:6px">
+        <div class="leg-item"><svg width="12" height="12"><circle cx="6" cy="6" r="5" fill="#1e2130" stroke="#2d3148" stroke-width="2"/></svg>Unvisited</div>
+        <div class="leg-item"><svg width="12" height="12"><circle cx="6" cy="6" r="5" fill="#4338ca" stroke="var(--accent)" stroke-width="2"/></svg>Active</div>
+        <div class="leg-item"><svg width="12" height="12"><circle cx="6" cy="6" r="5" fill="#052e16" stroke="#16a34a" stroke-width="2"/></svg>Done/leaf</div>
       </div>
-
-      <div class="panel-box">
-        <div class="panel-title">Collected permutations <span id="perm-count" style="font-weight:400;color:var(--text-faint)"></span></div>
-        <div id="perms-list"><span style="color:var(--text-faint);font-size:0.8rem;font-style:italic">none yet</span></div>
-      </div>
-
-      <div class="panel-box">
-        <div class="panel-title">Legend</div>
-        <div class="leg-row">
-          <div class="leg-item">
-            <div class="leg-box" style="border-color:#16a34a;background:rgba(22,163,74,0.1)"></div>
-            Fixed prefix
-          </div>
-          <div class="leg-item">
-            <div class="leg-box" style="border-color:var(--accent);background:rgba(99,102,241,0.14)"></div>
-            Current pos
-          </div>
-          <div class="leg-item">
-            <div class="leg-box" style="border-color:#d97706;background:rgba(234,179,8,0.13)"></div>
-            Swap A
-          </div>
-          <div class="leg-item">
-            <div class="leg-box" style="border-color:#ea580c;background:rgba(249,115,22,0.13)"></div>
-            Swap B
-          </div>
-        </div>
-        <div class="leg-row" style="margin-top:6px">
-          <div class="leg-item">
-            <svg width="14" height="14"><circle cx="7" cy="7" r="6" fill="#1e2130" stroke="#2d3148" stroke-width="2"/></svg>
-            Unvisited
-          </div>
-          <div class="leg-item">
-            <svg width="14" height="14"><circle cx="7" cy="7" r="6" fill="#4338ca" stroke="var(--accent)" stroke-width="2"/></svg>
-            Active
-          </div>
-          <div class="leg-item">
-            <svg width="14" height="14"><circle cx="7" cy="7" r="6" fill="#052e16" stroke="#16a34a" stroke-width="2"/></svg>
-            Done/leaf
-          </div>
-        </div>
-      </div>
-
     </div>
   </div>
+</div>
+
+<div id="nav-row">
+  <button id="prevBtn" class="btn-step">&#8592; Prev</button>
+  <button id="stepBtn" class="btn-step">Step &#8594;</button>
+  <button id="playBtn" class="btn-play">Play</button>
+  <button id="resetBtn" class="btn-step">&#8635; Reset</button>
+  <select id="speedSel">
+    <option value="900">Slow</option>
+    <option value="420" selected>Medium</option>
+    <option value="120">Fast</option>
+  </select>
 </div>
 
 <script>
-// ── Code lines ──────────────────────────────────────────────────────────────
 var CODE_LINES = [
   [1,  '<span class="kw">def</span> <span class="fn">permute</span><span class="op">(</span>nums<span class="op">):</span>'],
   [2,  '    res <span class="op">=</span> <span class="op">[]</span>'],
   [3,  '    <span class="kw">def</span> <span class="fn">backtrack</span><span class="op">(</span>start<span class="op">):</span>'],
-  [4,  '        <span class="kw">if</span> start <span class="op">==</span> <span class="bi">len</span><span class="op">(</span>nums<span class="op">):</span>  <span class="cm"># leaf: all positions filled</span>'],
+  [4,  '        <span class="kw">if</span> start <span class="op">==</span> <span class="bi">len</span><span class="op">(</span>nums<span class="op">):</span>  <span class="cm"># leaf</span>'],
   [5,  '            res<span class="op">.</span><span class="fn">append</span><span class="op">(</span>nums<span class="op">[:])</span>'],
   [6,  '            <span class="kw">return</span>'],
   [7,  '        <span class="kw">for</span> i <span class="kw">in</span> <span class="bi">range</span><span class="op">(</span>start<span class="op">,</span> <span class="bi">len</span><span class="op">(</span>nums<span class="op">)):</span>'],
@@ -292,20 +159,16 @@ var CODE_LINES = [
 function buildCodePanel() {
   var body = document.getElementById('code-body');
   body.innerHTML = CODE_LINES.map(function(e) {
-    return '<div class="cl" id="cl-' + e[0] + '">'
-      + '<span class="ln">' + e[0] + '</span>'
-      + '<span class="code">' + e[1] + '</span></div>';
+    return '<div class="cl" id="cl-' + e[0] + '"><span class="ln">' + e[0] + '</span><span class="code">' + e[1] + '</span></div>';
   }).join('');
 }
 
-// ── SVG helpers ─────────────────────────────────────────────────────────────
 function svgEl(tag, attrs) {
   var el = document.createElementNS('http://www.w3.org/2000/svg', tag);
   Object.keys(attrs).forEach(function(k) { el.setAttribute(k, attrs[k]); });
   return el;
 }
 
-// ── Colors ──────────────────────────────────────────────────────────────────
 var C = {
   idle:   { fill: '#1e2130', stroke: '#2d3148', text: '#7b82a3' },
   active: { fill: '#4338ca', stroke: '#818cf8', text: '#e0e7ff' },
@@ -314,48 +177,25 @@ var C = {
   done:   { stroke: '#2d3148' },
 };
 
-// ── Globals ──────────────────────────────────────────────────────────────────
-var gNums = [];
-var gNodes = [];
-var gSteps = [];
-var prevLines = [];
-var nav;
+var gNums = [], gNodes = [], gSteps = [], prevLines = [], nav;
 
-// ── Build permutation tree ───────────────────────────────────────────────────
 function buildPermTree(nums) {
-  var nodes = [];
-  var id = 0;
-
+  var nodes = [], id = 0;
   function rec(arr, start, parentId, edgeLabel, swapI) {
-    var nid = id++;
-    var isLeaf = (start === arr.length);
-    nodes.push({
-      id: nid,
-      arr: arr.slice(),
-      start: start,
-      parentId: parentId,
-      edgeLabel: edgeLabel,
-      swapI: swapI,   // index i that was swapped with (start-1) in the parent
-      isLeaf: isLeaf,
-      children: [],
-    });
+    var nid = id++, isLeaf = (start === arr.length);
+    nodes.push({ id: nid, arr: arr.slice(), start: start, parentId: parentId, edgeLabel: edgeLabel, swapI: swapI, isLeaf: isLeaf, children: [] });
     if (parentId >= 0) nodes[parentId].children.push(nid);
-
     if (!isLeaf) {
       for (var i = start; i < arr.length; i++) {
-        var newArr = arr.slice();
-        var tmp = newArr[start]; newArr[start] = newArr[i]; newArr[i] = tmp;
-        var lbl = 'fix ' + newArr[start];
-        rec(newArr, start + 1, nid, lbl, i);
+        var newArr = arr.slice(), tmp = newArr[start]; newArr[start] = newArr[i]; newArr[i] = tmp;
+        rec(newArr, start + 1, nid, 'fix ' + newArr[start], i);
       }
     }
   }
-
   rec(nums.slice(), 0, -1, '', -1);
   return nodes;
 }
 
-// ── Layout (leaf-spanning, same as subsets) ──────────────────────────────────
 function layoutTree(nodes) {
   function countLeaves(nid) {
     var node = nodes[nid];
@@ -364,169 +204,90 @@ function layoutTree(nodes) {
     node._leafSpan = node.children.reduce(function(s, cid) { return s + nodes[cid]._leafSpan; }, 0);
   }
   countLeaves(0);
-  var totalLeaves = nodes[0]._leafSpan;
-
-  var leafIdx = 0;
+  var totalLeaves = nodes[0]._leafSpan, leafIdx = 0;
   function assignX(nid) {
     var node = nodes[nid];
     if (node.children.length === 0) { node._leafIdx = leafIdx++; node.x = node._leafIdx; return; }
     node.children.forEach(function(cid) { assignX(cid); });
-    var first = nodes[node.children[0]].x;
-    var last  = nodes[node.children[node.children.length - 1]].x;
+    var first = nodes[node.children[0]].x, last = nodes[node.children[node.children.length - 1]].x;
     node.x = (first + last) / 2;
   }
   assignX(0);
-
   function depth(nid) {
     var node = nodes[nid];
     node.depth = node.parentId < 0 ? 0 : nodes[node.parentId].depth + 1;
     node.children.forEach(function(cid) { depth(cid); });
   }
   depth(0);
-
   var maxDepth = 0;
   nodes.forEach(function(nd) { if (nd.depth > maxDepth) maxDepth = nd.depth; });
-
   return { totalLeaves: totalLeaves, maxDepth: maxDepth };
 }
 
-// ── Render tree ──────────────────────────────────────────────────────────────
 function renderTree(nodes, totalLeaves, maxDepth) {
   var svg = document.getElementById('tree-svg');
   svg.innerHTML = '';
-
-  var n = gNums.length;
-  var R = n <= 2 ? 18 : n <= 3 ? 17 : 15;
+  var n = gNums.length, R = n <= 2 ? 18 : n <= 3 ? 17 : 15;
   var PAD_X = 30, PAD_Y = 34;
   var Y_STEP = Math.min(70, Math.max(48, 280 / Math.max(1, maxDepth)));
   var xUnit = Math.max(32, Math.min(80, (920 - PAD_X * 2) / Math.max(1, totalLeaves - 1)));
-
   var VW = Math.max(480, PAD_X * 2 + (totalLeaves - 1) * xUnit);
   var VH = PAD_Y * 2 + maxDepth * Y_STEP + R * 2 + 28;
   svg.setAttribute('viewBox', '0 0 ' + VW + ' ' + VH);
-
-  nodes.forEach(function(nd) {
-    nd.px = PAD_X + nd.x * xUnit;
-    nd.py = PAD_Y + nd.depth * Y_STEP + R;
-  });
-
+  nodes.forEach(function(nd) { nd.px = PAD_X + nd.x * xUnit; nd.py = PAD_Y + nd.depth * Y_STEP + R; });
   var edgeG = document.createElementNS('http://www.w3.org/2000/svg', 'g'); edgeG.id = 'edges';
   var nodeG = document.createElementNS('http://www.w3.org/2000/svg', 'g'); nodeG.id = 'nodes';
-  svg.appendChild(edgeG);
-  svg.appendChild(nodeG);
-
-  // Edges
+  svg.appendChild(edgeG); svg.appendChild(nodeG);
   nodes.forEach(function(nd) {
     if (nd.parentId < 0) return;
     var par = nodes[nd.parentId];
-    edgeG.appendChild(svgEl('line', {
-      id: 'edge-' + par.id + '-' + nd.id,
-      x1: par.px, y1: par.py, x2: nd.px, y2: nd.py,
-      stroke: C.done.stroke, 'stroke-width': 1.5, 'stroke-linecap': 'round',
-    }));
+    edgeG.appendChild(svgEl('line', { id: 'edge-' + par.id + '-' + nd.id, x1: par.px, y1: par.py, x2: nd.px, y2: nd.py, stroke: C.done.stroke, 'stroke-width': 1.5, 'stroke-linecap': 'round' }));
     var mx = (par.px + nd.px) / 2, my = (par.py + nd.py) / 2;
-    var lbl = svgEl('text', {
-      id: 'elbl-' + par.id + '-' + nd.id,
-      x: mx, y: my,
-      'text-anchor': 'middle', 'dominant-baseline': 'middle',
-      fill: '#3d4468',
-      'font-size': Math.max(7, Math.min(10, xUnit * 0.16)),
-      'font-family': 'JetBrains Mono, monospace',
-    });
+    var lbl = svgEl('text', { id: 'elbl-' + par.id + '-' + nd.id, x: mx, y: my, 'text-anchor': 'middle', 'dominant-baseline': 'middle', fill: '#3d4468', 'font-size': Math.max(7, Math.min(10, xUnit * 0.16)), 'font-family': 'monospace' });
     lbl.textContent = nd.edgeLabel;
     edgeG.appendChild(lbl);
   });
-
-  // Nodes
   nodes.forEach(function(nd) {
-    var g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-    g.id = 'node-g-' + nd.id;
-
-    g.appendChild(svgEl('circle', {
-      id: 'nc-' + nd.id, cx: nd.px, cy: nd.py, r: R,
-      fill: C.idle.fill, stroke: C.idle.stroke, 'stroke-width': 2,
-    }));
-
-    var label = nd.arr.join(',');
-    var fontSize = n <= 2 ? 11 : n <= 3 ? 9 : 7;
-    var txt = svgEl('text', {
-      id: 'nt-' + nd.id, x: nd.px, y: nd.py,
-      'text-anchor': 'middle', 'dominant-baseline': 'middle',
-      fill: C.idle.text,
-      'font-size': fontSize, 'font-weight': '700',
-      'font-family': 'JetBrains Mono, monospace',
-    });
+    var g = document.createElementNS('http://www.w3.org/2000/svg', 'g'); g.id = 'node-g-' + nd.id;
+    g.appendChild(svgEl('circle', { id: 'nc-' + nd.id, cx: nd.px, cy: nd.py, r: R, fill: C.idle.fill, stroke: C.idle.stroke, 'stroke-width': 2 }));
+    var label = nd.arr.join(','), fontSize = n <= 2 ? 11 : n <= 3 ? 9 : 7;
+    var txt = svgEl('text', { id: 'nt-' + nd.id, x: nd.px, y: nd.py, 'text-anchor': 'middle', 'dominant-baseline': 'middle', fill: C.idle.text, 'font-size': fontSize, 'font-weight': '700', 'font-family': 'monospace' });
     txt.textContent = label;
-    g.appendChild(txt);
-    nodeG.appendChild(g);
+    g.appendChild(txt); nodeG.appendChild(g);
   });
 }
 
-// ── Simulate ─────────────────────────────────────────────────────────────────
 function simulate(nums, nodes) {
-  var steps = [];
-  var collected = [];
-  var stateMap = {};
+  var steps = [], collected = [], stateMap = {};
   nodes.forEach(function(nd) { stateMap[nd.id] = 'idle'; });
 
   function snap(phase, desc, lines, activeId, arr, swapA, swapB, start, newPerm) {
-    steps.push({
-      phase: phase, desc: desc, lines: lines,
-      activeId: activeId,
-      stateMap: Object.assign({}, stateMap),
-      arr: arr.slice(),
-      swapA: swapA,
-      swapB: swapB,
-      start: start,
-      collected: collected.slice(),
-      newPerm: newPerm || null,
-    });
+    steps.push({ phase: phase, desc: desc, lines: lines, activeId: activeId, stateMap: Object.assign({}, stateMap), arr: arr.slice(), swapA: swapA, swapB: swapB, start: start, collected: collected.slice(), newPerm: newPerm || null });
   }
 
   function rec(nodeId) {
     var nd = nodes[nodeId];
     stateMap[nodeId] = 'active';
-
     if (nd.isLeaf) {
-      var perm = nd.arr.slice();
-      collected.push(perm);
-      snap('Leaf', 'All positions filled → permutation [' + perm.join(', ') + '].', [4, 5, 6], nodeId, nd.arr, -1, -1, nd.start, perm);
-      stateMap[nodeId] = 'leaf';
-      return;
+      var perm = nd.arr.slice(); collected.push(perm);
+      snap('Leaf', 'All positions filled -> permutation [' + perm.join(', ') + '].', [4, 5, 6], nodeId, nd.arr, -1, -1, nd.start, perm);
+      stateMap[nodeId] = 'leaf'; return;
     }
-
     var rangeStr = nd.start + '..' + (nd.arr.length - 1);
     snap('Enter', 'backtrack(' + nd.start + '): try each of nums[' + rangeStr + '] at position ' + nd.start + '.', [3, 7], nodeId, nd.arr, -1, nd.start, nd.start, null);
-
     nd.children.forEach(function(cid) {
-      var child = nodes[cid];
-      var swapA = nd.start;
-      var swapB = child.swapI;
-      var chosenVal = child.arr[nd.start];
-
-      var swapDesc;
-      if (swapA === swapB) {
-        swapDesc = 'nums[' + swapA + '] = ' + chosenVal + ' stays in place. Array: [' + child.arr.join(', ') + ']';
-      } else {
-        swapDesc = 'Swap nums[' + swapA + '] (' + nd.arr[swapA] + ') ↔ nums[' + swapB + '] (' + nd.arr[swapB] + '). Fix ' + chosenVal + ' at position ' + swapA + '. Array: [' + child.arr.join(', ') + ']';
-      }
+      var child = nodes[cid], swapA = nd.start, swapB = child.swapI, chosenVal = child.arr[nd.start];
+      var swapDesc = swapA === swapB
+        ? 'nums[' + swapA + '] = ' + chosenVal + ' stays. Array: [' + child.arr.join(', ') + ']'
+        : 'Swap nums[' + swapA + '] <-> nums[' + swapB + ']. Fix ' + chosenVal + '. Array: [' + child.arr.join(', ') + ']';
       snap('Swap', swapDesc, [7, 8], nodeId, child.arr, swapA, swapB, nd.start, null);
-
       rec(cid);
-
-      // After child returns, restore
-      var restDesc;
-      if (swapA === swapB) {
-        restDesc = 'No restore needed (no swap was done).';
-      } else {
-        restDesc = 'Restore: swap back nums[' + swapA + '] ↔ nums[' + swapB + ']. Array: [' + nd.arr.join(', ') + ']';
-      }
+      var restDesc = swapA === swapB ? 'No restore needed.' : 'Restore: swap back nums[' + swapA + '] <-> nums[' + swapB + ']. Array: [' + nd.arr.join(', ') + ']';
       snap('Restore', restDesc, [10], nodeId, nd.arr, swapA, swapB, nd.start, null);
       stateMap[cid] = 'leaf';
     });
-
     stateMap[nodeId] = 'leaf';
-    snap('Return', 'All choices for position ' + nd.start + ' exhausted. Return up.', [11], nodeId, nd.arr, -1, -1, nd.start, null);
+    snap('Return', 'All choices for position ' + nd.start + ' exhausted.', [11], nodeId, nd.arr, -1, -1, nd.start, null);
   }
 
   snap('Start', 'Call backtrack(0) on nums = [' + nums.join(', ') + ']. Will collect all ' + factorial(nums.length) + ' permutations.', [1, 11], 0, nums.slice(), -1, -1, 0, null);
@@ -535,13 +296,8 @@ function simulate(nums, nodes) {
   return steps;
 }
 
-function factorial(n) {
-  var f = 1;
-  for (var i = 2; i <= n; i++) f *= i;
-  return f;
-}
+function factorial(n) { var f = 1; for (var i = 2; i <= n; i++) f *= i; return f; }
 
-// ── Apply step ───────────────────────────────────────────────────────────────
 function applyStep(s, animate) {
   applyTreeNodes(s, animate);
   applyArrDisplay(s, animate);
@@ -552,26 +308,16 @@ function applyStep(s, animate) {
 
 function applyTreeNodes(s, animate) {
   Object.keys(s.stateMap).forEach(function(idStr) {
-    var id = +idStr;
-    var st = s.stateMap[id];
-    var c = st === 'active' ? C.active : st === 'leaf' ? C.leaf : C.idle;
-    var nc = document.getElementById('nc-' + id);
-    var nt = document.getElementById('nt-' + id);
+    var id = +idStr, st = s.stateMap[id], c = st === 'active' ? C.active : st === 'leaf' ? C.leaf : C.idle;
+    var nc = document.getElementById('nc-' + id), nt = document.getElementById('nt-' + id);
     if (!nc) return;
-    if (animate) {
-      gsap.to(nc, { duration: 0.25, attr: { fill: c.fill, stroke: c.stroke } });
-      if (nt) gsap.to(nt, { duration: 0.25, attr: { fill: c.text } });
-    } else {
-      nc.setAttribute('fill', c.fill); nc.setAttribute('stroke', c.stroke);
-      if (nt) nt.setAttribute('fill', c.text);
-    }
+    if (animate) { gsap.to(nc, { duration: 0.25, attr: { fill: c.fill, stroke: c.stroke } }); if (nt) gsap.to(nt, { duration: 0.25, attr: { fill: c.text } }); }
+    else { nc.setAttribute('fill', c.fill); nc.setAttribute('stroke', c.stroke); if (nt) nt.setAttribute('fill', c.text); }
   });
-
   if (animate && s.activeId >= 0) {
     var nc = document.getElementById('nc-' + s.activeId);
     if (nc) gsap.fromTo(nc, { attr: { r: 17 } }, { attr: { r: 21 }, duration: 0.15, yoyo: true, repeat: 1 });
   }
-
   gNodes.forEach(function(nd) {
     if (nd.parentId < 0) return;
     var edge = document.getElementById('edge-' + nd.parentId + '-' + nd.id);
@@ -588,69 +334,40 @@ function applyTreeNodes(s, animate) {
 function applyArrDisplay(s, animate) {
   var container = document.getElementById('arr-display');
   if (!container) return;
-
   var html = s.arr.map(function(val, idx) {
     var cls = 'arr-cell';
-    if (s.start < 0) {
-      cls += ' fixed';
-    } else if (s.swapA >= 0 && idx === s.swapA) {
-      cls += (s.swapA === s.swapB) ? ' current' : ' swap-a';
-    } else if (s.swapB >= 0 && idx === s.swapB && s.swapA !== s.swapB) {
-      cls += ' swap-b';
-    } else if (idx < s.start) {
-      cls += ' fixed';
-    } else if (idx === s.start && s.swapA < 0) {
-      cls += ' current';
-    }
-    return '<div class="arr-cell-wrap">'
-      + '<div class="' + cls + '">' + val + '</div>'
-      + '<div class="arr-idx">' + idx + '</div>'
-      + '</div>';
+    if (s.start < 0) { cls += ' fixed'; }
+    else if (s.swapA >= 0 && idx === s.swapA) { cls += (s.swapA === s.swapB) ? ' current' : ' swap-a'; }
+    else if (s.swapB >= 0 && idx === s.swapB && s.swapA !== s.swapB) { cls += ' swap-b'; }
+    else if (idx < s.start) { cls += ' fixed'; }
+    else if (idx === s.start && s.swapA < 0) { cls += ' current'; }
+    return '<div class="arr-cell-wrap"><div class="' + cls + '">' + val + '</div><div class="arr-idx">' + idx + '</div></div>';
   }).join('');
   container.innerHTML = html;
-
   var depthEl = document.getElementById('depth-label');
-  if (depthEl) {
-    if (s.start >= 0 && s.start < s.arr.length) {
-      depthEl.textContent = '(depth ' + s.start + ')';
-    } else {
-      depthEl.textContent = s.start === s.arr.length ? '(leaf)' : '';
-    }
-  }
-
+  if (depthEl) depthEl.textContent = s.start >= 0 && s.start < s.arr.length ? '(depth ' + s.start + ')' : s.start === s.arr.length ? '(leaf)' : '';
   var hintEl = document.getElementById('arr-hint');
   if (hintEl) {
     if (s.swapA >= 0 && s.swapB >= 0 && s.swapA !== s.swapB) {
-      var action = s.phase === 'Restore' ? 'Restoring' : 'Swapping';
-      hintEl.textContent = action + ': position ' + s.swapA + ' ↔ position ' + s.swapB;
+      hintEl.textContent = (s.phase === 'Restore' ? 'Restoring' : 'Swapping') + ': pos ' + s.swapA + ' <-> pos ' + s.swapB;
     } else if (s.start >= 0 && s.start < s.arr.length) {
-      hintEl.textContent = 'Filling position ' + s.start + ' (prefix ' + s.start + ' elements fixed)';
-    } else if (s.start < 0) {
-      hintEl.textContent = 'All permutations collected';
-    } else {
-      hintEl.textContent = '';
-    }
+      hintEl.textContent = 'Filling position ' + s.start;
+    } else { hintEl.textContent = ''; }
   }
-
   if (animate && (s.phase === 'Swap' || s.phase === 'Restore') && s.swapA !== s.swapB) {
     var cells = container.querySelectorAll('.swap-a, .swap-b');
-    cells.forEach(function(el) {
-      gsap.fromTo(el, { scale: 0.8 }, { scale: 1, duration: 0.2, ease: 'back.out(1.7)' });
-    });
+    cells.forEach(function(el) { gsap.fromTo(el, { scale: 0.8 }, { scale: 1, duration: 0.2, ease: 'back.out(1.7)' }); });
   }
 }
 
 function applyPermsPanel(s, animate) {
-  var listEl = document.getElementById('perms-list');
-  var countEl = document.getElementById('perm-count');
+  var listEl = document.getElementById('perms-list'), countEl = document.getElementById('perm-count');
   if (!listEl) return;
-
   if (s.collected.length === 0) {
-    listEl.innerHTML = '<span style="color:var(--text-faint);font-size:0.8rem;font-style:italic">none yet</span>';
+    listEl.innerHTML = '<span style="color:var(--text-faint);font-size:0.78rem;font-style:italic">none yet</span>';
   } else {
     listEl.innerHTML = s.collected.map(function(perm, idx) {
-      var label = '[' + perm.join(',') + ']';
-      var isNew = s.newPerm && idx === s.collected.length - 1;
+      var label = '[' + perm.join(',') + ']', isNew = s.newPerm && idx === s.collected.length - 1;
       return '<span class="perm-chip' + (isNew ? ' new' : '') + '">' + label + '</span>';
     }).join('');
     if (animate && s.newPerm) {
@@ -662,42 +379,27 @@ function applyPermsPanel(s, animate) {
 }
 
 function setCodeLines(oldLines, newLines, animate) {
-  var HL_BG = 'rgba(99,102,241,0.13)';
-  var HL_BD = 'var(--accent)';
-  var DUR = 0.2;
+  var HL_BG = 'rgba(99,102,241,0.13)', HL_BD = 'var(--accent)', DUR = 0.2;
   (oldLines || []).filter(function(n) { return (newLines || []).indexOf(n) < 0; }).forEach(function(n) {
-    var el = document.getElementById('cl-' + n);
-    if (!el) return;
+    var el = document.getElementById('cl-' + n); if (!el) return;
     if (animate) gsap.to(el, { backgroundColor: 'transparent', borderLeftColor: 'transparent', duration: DUR });
     else { el.style.backgroundColor = ''; el.style.borderLeftColor = ''; }
   });
   (newLines || []).filter(function(n) { return (oldLines || []).indexOf(n) < 0; }).forEach(function(n) {
-    var el = document.getElementById('cl-' + n);
-    if (!el) return;
+    var el = document.getElementById('cl-' + n); if (!el) return;
     if (animate) gsap.to(el, { backgroundColor: HL_BG, borderLeftColor: HL_BD, duration: DUR, delay: 0.06 });
     else { el.style.backgroundColor = HL_BG; el.style.borderLeftColor = HL_BD; }
   });
 }
 
-// ── Build & Run ──────────────────────────────────────────────────────────────
 function buildAndRun() {
   var raw = document.getElementById('inp-nums').value;
   var nums = raw.split(',').map(function(s) { return parseInt(s.trim(), 10); }).filter(function(n) { return !isNaN(n); });
-  if (nums.length === 0 || nums.length > 4) {
-    alert('Please enter 1–4 unique integers.');
-    return;
-  }
-
-  gNums = nums;
-  prevLines = [];
-
+  if (nums.length === 0 || nums.length > 4) { alert('Please enter 1-4 unique integers.'); return; }
+  gNums = nums; prevLines = [];
   buildCodePanel();
-
-  var nodes = buildPermTree(nums);
-  var info = layoutTree(nodes);
-  gNodes = nodes;
-  renderTree(nodes, info.totalLeaves, info.maxDepth);
-
+  var nodes = buildPermTree(nums), info = layoutTree(nodes);
+  gNodes = nodes; renderTree(nodes, info.totalLeaves, info.maxDepth);
   gSteps = simulate(nums, nodes);
   nav.load(gSteps);
 }
@@ -716,19 +418,15 @@ function randomExample() {
   var nums = [];
   for (var i = 0; i < len; i++) {
     var val = Math.floor(Math.random() * 10) - 2;
-    if (nums.indexOf(val) === -1) nums.push(val);
-    else i--;
+    if (nums.indexOf(val) === -1) nums.push(val); else i--;
   }
-  nums.sort(function() { return Math.random() - 0.5; });
   document.getElementById('inp-nums').value = nums.join(',');
   document.getElementById('preset-sel').value = '';
   buildAndRun();
 }
 
-// ── Init ─────────────────────────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', function() {
   buildCodePanel();
-
   nav = VizNav({
     btnPrev: document.getElementById('prevBtn'),
     btnNext: document.getElementById('stepBtn'),
@@ -736,18 +434,23 @@ window.addEventListener('DOMContentLoaded', function() {
     speedSel: document.getElementById('speedSel'),
     render: function(snap, cur, total) {
       applyStep(snap, cur > 0);
-      var pl = document.getElementById('phase-label');
-      if (pl) pl.textContent = 'Step ' + (cur + 1) + ' / ' + total + '  \xb7  ' + snap.phase;
-      var sd = document.getElementById('step-desc');
-      if (sd) { gsap.fromTo(sd, { opacity: 0.3 }, { opacity: 1, duration: 0.15 }); sd.textContent = snap.desc; }
+      document.getElementById('phase-badge').textContent = snap.phase || 'Setup';
+      document.getElementById('step-counter').textContent = 'Step ' + (cur + 1) + ' / ' + total;
+      var desc = document.getElementById('desc');
+      if (desc) { gsap.fromTo(desc, { opacity: 0.3 }, { opacity: 1, duration: 0.15 }); desc.textContent = snap.desc; }
     }
   });
-
+  document.getElementById('resetBtn').addEventListener('click', function() { buildAndRun(); });
   buildAndRun();
 });
-</script>
-<script>
-if (window.self !== window.top) { var bl = document.querySelector('.back-link'); if (bl) bl.style.display = 'none'; }
+
+(function() {
+  var handle = document.getElementById('resize-handle'), panel = document.getElementById('code-panel');
+  var dragging = false, startX = 0, startW = 0;
+  handle.addEventListener('mousedown', function(e) { dragging = true; startX = e.clientX; startW = panel.offsetWidth; handle.classList.add('dragging'); e.preventDefault(); });
+  document.addEventListener('mousemove', function(e) { if (!dragging) return; var delta = startX - e.clientX; panel.style.width = Math.min(560, Math.max(120, startW + delta)) + 'px'; });
+  document.addEventListener('mouseup', function() { if (!dragging) return; dragging = false; handle.classList.remove('dragging'); });
+})();
 </script>
 </body>
 </html>

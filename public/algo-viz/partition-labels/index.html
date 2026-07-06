@@ -8,9 +8,26 @@
   <script src="../shared/gsap.min.js"></script>
   <script src="../shared/viz.js"></script>
   <style>
-    .viz-area { width: 100%; max-width: 960px; display: flex; flex-direction: column; gap: 16px; flex: 1; min-height: 0; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: "Fira Code", "Cascadia Code", monospace; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
 
-    /* ── string display ── */
+    #header { padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+    #phase-badge { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; padding: 3px 10px; border-radius: var(--radius-sm); background: #1e3a5f; color: var(--blue); border: 1px solid var(--blue); }
+    #step-counter { font-size: 12px; color: var(--text-muted); margin-left: auto; }
+
+    .viz-inputs { width: 100%; padding: 10px 16px; background: var(--surface); border: none; border-bottom: 1px solid var(--border); border-radius: 0; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; flex-shrink: 0; }
+    .viz-inputs label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); display: block; margin-bottom: 3px; }
+    .viz-inputs select, .viz-inputs input { background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 0 8px; height: 30px; font-size: 0.82rem; font-family: inherit; }
+    .viz-inputs input.inp-str { width: 280px; }
+    .vi-btn-run { padding: 6px 14px; border-radius: 6px; font-size: 0.82rem; font-weight: 600; cursor: pointer; font-family: inherit; background: var(--accent); color: #fff; border: none; }
+    .vi-btn-rand { padding: 6px 14px; border-radius: 6px; font-size: 0.82rem; cursor: pointer; font-family: inherit; background: var(--bg); color: var(--text); border: 1px solid var(--border); }
+
+    #main { display: flex; flex: 1; overflow: hidden; }
+    #viz-area { flex: 1; overflow: auto; display: flex; flex-direction: column; gap: 16px; padding: 18px 20px; }
+
+    #desc { font-size: 0.83rem; color: var(--text-muted); line-height: 1.5; min-height: 20px; }
+
+    /* string display */
     .string-section {
       background: var(--surface); border: 1px solid var(--border);
       border-radius: var(--radius-lg); padding: 14px 16px;
@@ -50,7 +67,7 @@
       flex-shrink: 0;
     }
 
-    /* ── bottom panels ── */
+    /* bottom panels */
     .panels-row { display: flex; gap: 12px; flex-wrap: wrap; }
 
     .panel-box {
@@ -103,99 +120,45 @@
       background: #052e16; border: 1px solid #166534; color: #86efac;
     }
 
-    /* nav + desc */
-    .nav-desc-row { display: flex; gap: 10px; align-items: stretch; flex-wrap: wrap; }
-    .nav-box {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--radius-lg); padding: 10px 14px;
-      display: flex; gap: 8px; align-items: center; flex-shrink: 0;
-    }
-    .desc-box {
-      flex: 1; min-width: 0;
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--radius-lg); padding: 10px 14px;
-      display: flex; flex-direction: column; gap: 2px;
-    }
-    .desc-phase { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); }
-    .desc-text  { font-size: 0.83rem; color: var(--text-muted); }
-
-    .playBtn {
-      background: #15803d; border: none; border-radius: var(--radius-sm);
-      color: #fff; cursor: pointer; font-size: 0.88rem; font-weight: 600;
-      padding: 9px 16px; transition: background 0.2s;
-    }
-    .playBtn:hover { background: #166534; }
-    .playBtn.playing { background: #c2410c; }
-    .playBtn.playing:hover { background: #9a3412; }
-    .playBtn:disabled { opacity: 0.4; cursor: not-allowed; }
-    .speedSel {
-      background: var(--bg); border: 1px solid var(--border);
-      border-radius: var(--radius-sm); color: var(--text);
-      font-size: 0.85rem; padding: 8px 10px; outline: none; width: 80px;
-    }
-
     .legend-row { display: flex; gap: 10px; flex-wrap: wrap; }
     .legend-item { display: flex; align-items: center; gap: 5px; font-size: 0.68rem; color: var(--text-faint); }
     .legend-dot { width: 10px; height: 10px; border-radius: 2px; border: 1px solid transparent; }
 
-    .inp-str { width: 320px; font-family: monospace; }
+    /* resize handle + code panel + sidebar */
+    #resize-handle { width: 5px; flex-shrink: 0; cursor: col-resize; background: transparent; border-left: 1px solid var(--border); transition: background .15s; z-index: 10; }
+    #resize-handle:hover, #resize-handle.dragging { background: var(--accent); }
 
-    /* viz-inputs */
-    .viz-inputs {
-      display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end;
-      padding: 10px 0 14px; width: 100%; max-width: 90%;
-    }
-    .viz-inputs .field {
-      display: flex; flex-direction: column; gap: 4px;
-    }
-    .viz-inputs label {
-      font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
-      letter-spacing: 0.08em; color: var(--text-dim);
-    }
-    .viz-inputs input[type="text"] {
-      background: var(--surface); border: 1px solid var(--border);
-      color: var(--text); border-radius: var(--radius-sm);
-      padding: 6px 10px; font-size: 0.85rem; width: 240px;
-    }
-    .viz-inputs select {
-      background: var(--surface); border: 1px solid var(--border);
-      color: var(--text); border-radius: var(--radius-sm);
-      padding: 6px 10px; font-size: 0.85rem; cursor: pointer;
-    }
-    .viz-inputs button {
-      padding: 7px 18px;
-      background: var(--accent); color: #fff; border: none;
-      border-radius: var(--radius-sm); font-weight: 600;
-      cursor: pointer; font-size: 0.85rem;
-      transition: background 0.2s;
-    }
-    .viz-inputs button:hover {
-      background: var(--accent-bright);
-    }
-    .viz-inputs .btn-random {
-      padding: 7px 14px;
-      background: var(--surface); color: var(--text);
-      border: 1px solid var(--border);
-    }
-    .viz-inputs .btn-random:hover {
-      background: var(--bg);
-    }
+    #code-panel { width: 350px; min-width: 120px; max-width: 560px; flex-shrink: 0; background: #0d1117; border-right: 1px solid var(--border); overflow: auto; padding: 10px 12px; display: flex; flex-direction: column; }
+    .code-panel-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--text-dim); margin-bottom: 8px; }
+    .cl { display: flex; align-items: stretch; padding: 2px 0; white-space: pre; border-left: 2px solid transparent; padding-left: 6px; color: var(--text-muted); transition: all 0.2s; font-family: 'Fira Code', 'Cascadia Code', monospace; font-size: 0.75rem; line-height: 1.8; }
+    .cl.hl { background: rgba(122,162,247,0.12); border-left-color: var(--accent); color: var(--text); }
+    .ln { display: inline-block; width: 20px; text-align: right; color: var(--text-dim); user-select: none; margin-right: 10px; font-size: 0.7rem; }
+    .kw { color: var(--purple); }
+    .nb { color: var(--green); }
+    .cm { color: var(--text-dim); font-style: italic; }
+
+    #sidebar { width: 220px; flex-shrink: 0; background: var(--surface); border-left: 1px solid var(--border); overflow-y: auto; padding: 14px 12px; display: flex; flex-direction: column; gap: 14px; }
+    .sidebar-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--text-dim); margin-bottom: 8px; }
+    .side-ptr-col { display: flex; flex-direction: column; gap: 8px; }
+    .side-ptr-col .ptr-box { flex: none; flex-direction: row; justify-content: space-between; align-items: center; }
+    .side-ptr-col .ptr-val { font-size: 1.1rem; }
+
+    #nav-row { flex-shrink: 0; display: flex; align-items: center; gap: 8px; padding: 10px 16px; background: var(--surface); border-top: 1px solid var(--border); }
+    .btn-step, .btn-play { padding: 6px 14px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--surface); color: var(--text); font-family: inherit; font-size: 12px; cursor: pointer; transition: background .15s; }
+    .btn-step:hover { background: #334155; }
+    .btn-play { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .btn-play:hover { background: var(--accent-hover); }
+    #nav-row select { padding: 5px 8px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: #1e293b; color: var(--text); font-size: 12px; font-family: inherit; cursor: pointer; }
   </style>
 </head>
-<body class="page">
-
-<div class="page-header">
-  <a class="back-link" href="../index.html">&larr; All Algorithms</a>
-  <div class="page-title">Partition Labels</div>
-  <div class="page-sub">LeetCode 763 &middot; Greedy &middot; O(n) time &middot; O(1) space</div>
-</div>
+<body>
 
 <div class="viz-inputs">
-  <div class="field">
+  <div>
     <label>Preset</label>
-    <select id="presetSel" onchange="loadPreset()">
+    <select id="presetSel" onchange="loadPreset()" style="width:200px;">
       <option value="">— pick a preset —</option>
-      <option value='{"str":"ababcbacadefegdehijhklij"}'>Complex (default)</option>
+      <option value='{"str":"ababcbacadefegdehijhklij"}' selected>Complex (default)</option>
       <option value='{"str":"eccbbbbdec"}'>Simple</option>
       <option value='{"str":"abcdef"}'>All unique</option>
       <option value='{"str":"aaaaaa"}'>All same</option>
@@ -203,42 +166,66 @@
       <option value='{"str":"abcabcabc"}'>Repeating pattern</option>
     </select>
   </div>
-  <div class="field">
+  <div>
     <label>String</label>
     <input id="inp-str" class="inp-str" type="text" value="ababcbacadefegdehijhklij" />
   </div>
-  <button onclick="buildAndRun()" style="padding:7px 18px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);font-weight:600;cursor:pointer;">Run</button>
-  <button class="btn-random" onclick="randomExample()">🎲 Random</button>
+  <button class="vi-btn-run" onclick="buildAndRun()">Run</button>
+  <button class="vi-btn-rand" onclick="randomExample()">🎲 Random</button>
 </div>
 
-<div class="controls">
-  <button class="stepBtn" id="prevBtn" disabled>&larr;</button>
-  <button class="stepBtn" id="stepBtn" disabled>&rarr;</button>
-  <button class="playBtn" id="playBtn" disabled>&#9654; Play</button>
-  <select class="speedSel" id="speedSel">
-    <option value="700">Slow</option>
-    <option value="350" selected>Medium</option>
-    <option value="120">Fast</option>
-  </select>
+<div class="controls"></div>
+
+<div id="header">
+  <span id="phase-badge">Setup</span>
+  <span style="font-size:13px;font-weight:700;">Partition Labels</span>
+  <span id="step-counter">Step 0 / 0</span>
 </div>
 
-<div class="viz-area">
+<div id="main">
+  <div id="viz-area">
 
-  <div class="string-section" id="string-section">
-    <span style="color:var(--text-dim);font-size:0.82rem">Enter a string and click Build &amp; Run.</span>
-  </div>
+    <div id="desc">Enter a string and click Run.</div>
 
-  <div class="panels-row">
-    <div class="panel-box" style="flex:1;min-width:220px">
-      <div class="panel-title">last_occurrence</div>
-      <div class="last-occ-grid" id="lo-grid">
-        <span style="color:var(--text-ghost);font-size:0.78rem">—</span>
+    <div class="string-section" id="string-section">
+      <span style="color:var(--text-dim);font-size:0.82rem">Enter a string and click Run.</span>
+    </div>
+
+    <div class="panels-row">
+      <div class="panel-box" style="flex:1;min-width:220px">
+        <div class="panel-title">last_occurrence</div>
+        <div class="last-occ-grid" id="lo-grid">
+          <span style="color:var(--text-ghost);font-size:0.78rem">—</span>
+        </div>
+      </div>
+
+      <div class="panel-box" style="flex:1;min-width:200px">
+        <div class="panel-title">Partitions found</div>
+        <div class="parts-list" id="parts-list">
+          <span style="color:var(--text-ghost);font-size:0.78rem">—</span>
+        </div>
+        <div class="legend-row" style="margin-top:4px">
+          <div class="legend-item"><div class="legend-dot" style="background:var(--surface-dark);border-color:var(--accent)"></div>current i</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#1e1030;border-color:#7c3aed"></div>in window</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#1c1000;border-color:#d97706"></div>extends end</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#052e16;border-color:#15803d"></div>partition close</div>
+        </div>
       </div>
     </div>
 
-    <div class="panel-box" style="flex:0 0 auto">
-      <div class="panel-title">Pointers</div>
-      <div class="ptr-row">
+  </div>
+
+  <div id="resize-handle"></div>
+
+  <div id="code-panel">
+    <div class="code-panel-title">Code</div>
+    <div id="code-body"></div>
+  </div>
+
+  <div id="sidebar">
+    <div>
+      <div class="sidebar-title">Pointers</div>
+      <div class="side-ptr-col">
         <div class="ptr-box ptr-i">
           <div class="ptr-label">i</div>
           <div class="ptr-val" id="vv-i">&mdash;</div>
@@ -257,59 +244,71 @@
         </div>
       </div>
     </div>
-
-    <div class="panel-box" style="flex:1;min-width:200px">
-      <div class="panel-title">Partitions found</div>
-      <div class="parts-list" id="parts-list">
-        <span style="color:var(--text-ghost);font-size:0.78rem">—</span>
-      </div>
-      <div class="legend-row" style="margin-top:4px">
-        <div class="legend-item"><div class="legend-dot" style="background:var(--surface-dark);border-color:var(--accent)"></div>current i</div>
-        <div class="legend-item"><div class="legend-dot" style="background:#1e1030;border-color:#7c3aed"></div>in window</div>
-        <div class="legend-item"><div class="legend-dot" style="background:#1c1000;border-color:#d97706"></div>extends end</div>
-        <div class="legend-item"><div class="legend-dot" style="background:#052e16;border-color:#15803d"></div>partition close</div>
-      </div>
-    </div>
   </div>
+</div>
 
-  <div class="nav-desc-row">
-    <div class="nav-box">
-      <button class="stepBtn" id="prevBtn-copy" disabled>&larr;</button>
-      <button class="stepBtn" id="stepBtn-copy" disabled>&rarr;</button>
-      <button class="playBtn" id="playBtn-copy" disabled>&#9654; Play</button>
-      <select class="speedSel" id="speedSel-copy">
-        <option value="700">Slow</option>
-        <option value="350" selected>Medium</option>
-        <option value="120">Fast</option>
-      </select>
-    </div>
-    <div class="desc-box">
-      <div class="desc-phase" id="phase-label">&mdash;</div>
-      <div class="desc-text"  id="step-desc">Enter a string and click Build &amp; Run.</div>
-    </div>
-  </div>
-
+<div id="nav-row">
+  <button id="prevBtn" class="btn-step">&#8592; Prev</button>
+  <button id="stepBtn" class="btn-step">Step &#8594;</button>
+  <button id="playBtn" class="btn-play">Play</button>
+  <button id="resetBtn" class="btn-step">&#8635; Reset</button>
+  <select id="speedSel">
+    <option value="800">0.5&#215;</option>
+    <option value="400" selected>1&#215;</option>
+    <option value="200">2&#215;</option>
+    <option value="100">4&#215;</option>
+  </select>
 </div>
 
 <script>
-var simSteps = [], nav;
-var strLen = 0;
+var simSteps = [], strLen = 0;
+
+var codeLines = [
+  { n: 1,  t: '<span class="kw">def</span> <span class="nb">partition_labels</span>(s):' },
+  { n: 2,  t: '  last = {c: i <span class="kw">for</span> i, c <span class="kw">in</span> <span class="nb">enumerate</span>(s)}' },
+  { n: 3,  t: '  result = []' },
+  { n: 4,  t: '  start = end = 0' },
+  { n: 5,  t: '  <span class="kw">for</span> i, c <span class="kw">in</span> <span class="nb">enumerate</span>(s):' },
+  { n: 6,  t: '    end = <span class="nb">max</span>(end, last[c])' },
+  { n: 7,  t: '    <span class="kw">if</span> i == end:' },
+  { n: 8,  t: '      result.append(end - start + 1)' },
+  { n: 9,  t: '      start = i + 1' },
+  { n: 10, t: '  <span class="kw">return</span> result' },
+];
 
 window.addEventListener('DOMContentLoaded', function() {
-  nav = VizNav({
+  var codeBody = document.getElementById('code-body');
+  codeLines.forEach(function(line) {
+    var el = document.createElement('div');
+    el.className = 'cl';
+    el.id = 'cl-' + (line.n - 1);
+    el.innerHTML = '<span class="ln">' + line.n + '</span>' + line.t;
+    codeBody.appendChild(el);
+  });
+
+  window.nav = VizNav({
     btnPrev:  document.getElementById('prevBtn'),
     btnNext:  document.getElementById('stepBtn'),
     btnPlay:  document.getElementById('playBtn'),
     speedSel: document.getElementById('speedSel'),
     render: function(snap, cur, total) {
       applyStep(snap, cur > 0);
-      document.getElementById('phase-label').textContent =
-        'Step ' + (cur + 1) + ' / ' + total + '  ·  ' + snap.phase;
-      document.getElementById('step-desc').textContent = snap.desc;
+      updateStatus(snap, cur, total);
     }
   });
+
+  document.getElementById('resetBtn').addEventListener('click', function() {
+    if (window.nav) window.nav.goTo(0);
+  });
+
   buildAndRun();
 });
+
+function updateStatus(snap, cur, total) {
+  document.getElementById('phase-badge').textContent = snap.phase || 'Step';
+  document.getElementById('step-counter').textContent = 'Step ' + cur + ' / ' + total;
+  document.getElementById('desc').textContent = snap.desc || '';
+}
 
 function loadPreset() {
   var sel = document.getElementById('presetSel');
@@ -337,10 +336,10 @@ function buildAndRun() {
   strLen = s.length;
   buildStringSection(s);
   simSteps = simulate(s);
-  nav.load(simSteps);
+  window.nav.load(simSteps);
 }
 
-/* ── string display ── */
+/* string display */
 function buildStringSection(s) {
   var n = s.length;
   var html = '';
@@ -373,7 +372,7 @@ var PART_COLORS = [
   '#7c3aed','#0284c7','#d97706','#b91c1c','#166534','#0e7490','#c2410c','#7e22ce',
 ];
 
-/* ── simulation ── */
+/* simulation */
 function simulate(s) {
   var n = s.length;
   var steps = [];
@@ -400,31 +399,32 @@ function simulate(s) {
       start: null,
       end:   null,
       maxend: null,
+      lines: [],
     }, extra || {}));
   }
 
   // Phase 1 — build last_occurrence
-  push('Phase 1: Build last_occurrence', 'Scan s right-to-left to record the last index of every character.');
+  push('Phase 1: Build last_occurrence', 'Scan s right-to-left to record the last index of every character.', { lines: [1] });
 
   for (var k = 0; k < n; k++) {
     var ch = s[k];
     cellStates[k] = 'building';
     loRevealed[ch] = last[ch];
     push('Phase 1: Build last_occurrence',
-      'last['' + ch + ''] = ' + last[ch] + ' (last time '' + ch + '' appears).',
-      { activeChar: ch, i: k });
+      'last[' + ch + '] = ' + last[ch] + ' (last time ' + ch + ' appears).',
+      { activeChar: ch, i: k, lines: [1] });
     cellStates[k] = 'idle';
   }
   // Reset cells after phase 1
   cellStates = Array(n).fill('idle');
   push('Phase 1: Build last_occurrence',
-    'last_occurrence map complete. Every character's final index is recorded.',
-    { i: null });
+    'last_occurrence map complete. Every character final index is recorded.',
+    { i: null, lines: [1] });
 
   // Phase 2 — scan with greedy window
   var start = 0, end = 0;
   push('Phase 2: Greedy scan', 'start=0, end=0. Expand the window: end = max(end, last[s[i]]). When i==end, close the partition.',
-    { start: 0, end: 0 });
+    { start: 0, end: 0, lines: [2, 3] });
 
   for (var i = 0; i < n; i++) {
     var ch = s[i];
@@ -440,8 +440,8 @@ function simulate(s) {
       }
       cellStates[i] = 'extend';
       push('Phase 2: Greedy scan',
-        'i=' + i + ' ('' + ch + ''): last['' + ch + '']=' + chLast + ' > end=' + prevEnd + '. Extend end → ' + end + '.',
-        { i: i, start: start, end: end, maxend: chLast, activeChar: ch });
+        'i=' + i + ' (' + ch + '): last[' + ch + ']=' + chLast + ' > end=' + prevEnd + '. Extend end -> ' + end + '.',
+        { i: i, start: start, end: end, maxend: chLast, activeChar: ch, lines: [4, 5] });
     } else {
       // In window, not extending
       for (var j = start; j <= end; j++) {
@@ -449,8 +449,8 @@ function simulate(s) {
       }
       cellStates[i] = 'current';
       push('Phase 2: Greedy scan',
-        'i=' + i + ' ('' + ch + ''): last['' + ch + '']=' + chLast + ' ≤ end=' + end + '. No extension.',
-        { i: i, start: start, end: end, maxend: chLast, activeChar: ch });
+        'i=' + i + ' (' + ch + '): last[' + ch + ']=' + chLast + ' <= end=' + end + '. No extension.',
+        { i: i, start: start, end: end, maxend: chLast, activeChar: ch, lines: [4, 5] });
     }
 
     if (i === end) {
@@ -461,8 +461,8 @@ function simulate(s) {
       }
       partitions.push({ start: start, end: end });
       push('Phase 2: Greedy scan',
-        'i=' + i + ' == end=' + end + '. Close partition [' + start + '..' + end + '] → size ' + size + '. New start = ' + (end + 1) + '.',
-        { i: i, start: start, end: end, maxend: chLast, activeChar: ch });
+        'i=' + i + ' == end=' + end + '. Close partition [' + start + '..' + end + '] -> size ' + size + '. New start = ' + (end + 1) + '.',
+        { i: i, start: start, end: end, maxend: chLast, activeChar: ch, lines: [6, 7, 8] });
 
       // Transition closed cells to done
       for (var j = start; j <= end; j++) {
@@ -476,18 +476,27 @@ function simulate(s) {
   var sizes = partitions.map(function(p) { return p.end - p.start + 1; });
   push('Done',
     'All partitions found: [' + sizes.join(', ') + ']. Each letter appears in exactly one part.',
-    { i: null, start: null, end: null, partitions: partitions.map(function(p) { return Object.assign({}, p); }) });
+    { i: null, start: null, end: null, partitions: partitions.map(function(p) { return Object.assign({}, p); }), lines: [9] });
 
   return steps;
 }
 
-/* ── render ── */
+/* render */
 function applyStep(s, animate) {
   applyCharCells(s.cellStates, s.i, animate);
   applyLoGrid(s.loRevealed, s.activeChar);
   applyPointers(s, animate);
   applyPartitions(s.partitions);
   applyPartBar(s.partitions);
+  applyCodeHighlight(s.lines);
+}
+
+function applyCodeHighlight(lines) {
+  document.querySelectorAll('.cl').forEach(function(cl) { cl.classList.remove('hl'); });
+  (lines || []).forEach(function(idx) {
+    var el = document.getElementById('cl-' + idx);
+    if (el) el.classList.add('hl');
+  });
 }
 
 function applyCharCells(states, curI, animate) {
@@ -568,12 +577,14 @@ function applyPartBar(parts) {
     }
   });
 }
-</script>
-<script>
-  if (window.self !== window.top) {
-    var bl = document.querySelector('.back-link');
-    if (bl) bl.style.display = 'none';
-  }
+
+/* resize handle */
+(function() {
+  var h = document.getElementById('resize-handle'), p = document.getElementById('code-panel'), d = false, sx = 0, sw = 0;
+  h.addEventListener('mousedown', function(e) { d = true; sx = e.clientX; sw = p.offsetWidth; h.classList.add('dragging'); e.preventDefault(); });
+  document.addEventListener('mousemove', function(e) { if (!d) return; p.style.width = Math.min(560, Math.max(120, sw + (sx - e.clientX))) + 'px'; });
+  document.addEventListener('mouseup', function() { if (!d) return; d = false; h.classList.remove('dragging'); });
+})();
 </script>
 </body>
 </html>

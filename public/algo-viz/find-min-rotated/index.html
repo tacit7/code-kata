@@ -8,114 +8,50 @@
   <script src="../shared/gsap.min.js"></script>
   <script src="../shared/viz.js"></script>
   <style>
-    .viz-area {
-      width: 100%;
-      max-width: 920px;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: "Fira Code", "Cascadia Code", monospace; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
 
-    /* ── Preset row ── */
-    .preset-row {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      flex-wrap: wrap;
-      max-width: 920px;
-      width: 100%;
-    }
-    .preset-label {
-      font-size: 0.72rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      color: var(--text-dim);
-    }
-    .preset-btn {
-      font-size: 0.75rem;
-      padding: 5px 11px;
-      border-radius: var(--radius-sm);
-      border: 1px solid var(--border);
-      background: var(--surface);
-      color: var(--text-muted);
-      cursor: pointer;
-      transition: all 0.2s;
-    }
+    #header { padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+    #phase-badge { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; padding: 3px 10px; border-radius: var(--radius-sm); background: #1e3a5f; color: var(--blue); border: 1px solid var(--blue); }
+    #step-counter { font-size: 12px; color: var(--text-muted); margin-left: auto; }
+
+    .viz-inputs { width: 100%; max-width: 100%; padding: 10px 16px; background: var(--surface); border: none; border-bottom: 1px solid var(--border); border-radius: 0; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; flex-shrink: 0; }
+    .viz-inputs label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); }
+    .preset-btn { font-size: 0.75rem; padding: 5px 11px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--surface); color: var(--text-muted); cursor: pointer; transition: all 0.2s; }
     .preset-btn:hover { background: var(--border); color: var(--text); }
     .preset-btn.active { border-color: var(--accent); color: var(--accent); background: rgba(122,162,247,0.08); }
+    .vi-btn-rand { padding: 5px 11px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--bg); color: var(--text); font-size: 0.75rem; cursor: pointer; }
 
-    /* ── Generic panel ── */
-    .panel {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-md);
-      overflow: hidden;
-    }
-    .panel-header {
-      padding: 8px 14px;
-      background: var(--surface-dark);
-      border-bottom: 1px solid var(--border);
-      font-size: 0.67rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.11em;
-      color: var(--text-dim);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
+    #main { display: flex; flex: 1; overflow: hidden; }
+    #viz-area { flex: 1; display: flex; flex-direction: column; align-items: flex-start; padding: 16px; gap: 12px; overflow-y: auto; }
 
-    /* ── Array section ── */
+    #resize-handle { width: 5px; flex-shrink: 0; cursor: col-resize; background: transparent; border-left: 1px solid var(--border); transition: background .15s; z-index: 10; }
+    #resize-handle:hover, #resize-handle.dragging { background: var(--accent); }
+
+    #code-panel { width: 350px; min-width: 120px; max-width: 560px; flex-shrink: 0; background: #0d1117; border-right: 1px solid var(--border); overflow-y: auto; overflow-x: auto; padding: 10px 12px; display: flex; flex-direction: column; }
+    .code-panel-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--text-dim); margin-bottom: 6px; }
+
+    #sidebar { width: 200px; flex-shrink: 0; background: var(--surface); border-left: 1px solid var(--border); overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+    .sidebar-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--text-dim); margin-bottom: 6px; }
+
+    #nav-row { flex-shrink: 0; display: flex; align-items: center; gap: 8px; padding: 10px 16px; background: var(--surface); border-top: 1px solid var(--border); }
+    .btn-step { padding: 6px 14px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--surface); color: var(--text); font-family: inherit; font-size: 12px; cursor: pointer; transition: background .15s; font-weight: 600; }
+    .btn-step:hover:not(:disabled) { background: #334155; }
+    .btn-step:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-play { padding: 6px 18px; border-radius: var(--radius-sm); border: 1px solid var(--accent); background: rgba(122,162,247,0.12); color: var(--accent); font-family: inherit; font-size: 12px; cursor: pointer; font-weight: 700; }
+    .btn-play:hover:not(:disabled) { background: rgba(122,162,247,0.22); }
+    .btn-play:disabled { opacity: 0.4; cursor: not-allowed; }
+    #speedSel { padding: 5px 8px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--surface); color: var(--text-muted); font-size: 12px; font-family: inherit; cursor: pointer; }
+
+    /* Array */
+    .panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); overflow: hidden; width: 100%; }
+    .panel-header { padding: 8px 14px; background: var(--surface-dark); border-bottom: 1px solid var(--border); font-size: 0.67rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.11em; color: var(--text-dim); display: flex; align-items: center; justify-content: space-between; }
     .array-panel { padding-bottom: 16px; }
-    #array-wrap {
-      padding: 24px 20px 4px;
-      display: flex;
-      gap: 8px;
-      justify-content: center;
-      flex-wrap: wrap;
-    }
-    .cell {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 4px;
-      position: relative;
-    }
-    .cell-label {
-      height: 22px;
-      font-size: 0.7rem;
-      font-weight: 800;
-      letter-spacing: 0.04em;
-      display: flex;
-      align-items: flex-end;
-      justify-content: center;
-      min-width: 56px;
-      color: transparent;
-      transition: color 0.2s;
-    }
-    .cell-box {
-      width: 56px;
-      height: 56px;
-      border-radius: var(--radius-sm);
-      border: 2px solid var(--border);
-      background: var(--surface-dark);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1.1rem;
-      font-weight: 700;
-      font-family: monospace;
-      color: var(--text);
-      transition: background 0.25s ease, border-color 0.25s ease, color 0.25s ease, opacity 0.25s ease, box-shadow 0.25s ease;
-    }
-    .cell-idx {
-      font-size: 0.62rem;
-      color: var(--text-dim);
-      font-family: monospace;
-    }
-
-    /* Cell states */
+    #array-wrap { padding: 24px 20px 4px; display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+    .cell { display: flex; flex-direction: column; align-items: center; gap: 4px; position: relative; }
+    .cell-label { height: 22px; font-size: 0.7rem; font-weight: 800; letter-spacing: 0.04em; display: flex; align-items: flex-end; justify-content: center; min-width: 56px; color: transparent; transition: color 0.2s; }
+    .cell-box { width: 56px; height: 56px; border-radius: var(--radius-sm); border: 2px solid var(--border); background: var(--surface-dark); display: flex; align-items: center; justify-content: center; font-size: 1.1rem; font-weight: 700; font-family: monospace; color: var(--text); transition: background 0.25s ease, border-color 0.25s ease, color 0.25s ease, opacity 0.25s ease, box-shadow 0.25s ease; }
+    .cell-idx { font-size: 0.62rem; color: var(--text-dim); font-family: monospace; }
     .cell-box.default   { background: var(--surface-dark); border-color: var(--border); color: var(--text); }
     .cell-box.active-l  { background: rgba(125,207,255,0.18); border-color: var(--blue); color: var(--blue-light); }
     .cell-box.active-r  { background: rgba(187,154,247,0.18); border-color: var(--purple); color: var(--purple); }
@@ -124,97 +60,39 @@
     .cell-box.active-lr { background: rgba(158,206,106,0.2); border-color: var(--green); color: var(--green-light); }
     .cell-box.active-lmr{ background: rgba(158,206,106,0.2); border-color: var(--green); color: var(--green-light); }
     .cell-box.eliminated{ background: #1a1d2e; border-color: #2a2d40; color: #3d4168; opacity: 0.45; }
-    .cell-box.found     { background: rgba(158,206,106,0.22); border-color: var(--green); color: var(--green-light);
-                          box-shadow: 0 0 14px rgba(158,206,106,0.4); }
-
-    /* Label colors */
-    .lbl-l   { color: var(--blue); }
-    .lbl-m   { color: var(--orange); }
-    .lbl-r   { color: var(--purple); }
-    .lbl-lm  { color: var(--blue); }
-    .lbl-lr  { color: var(--green); }
-    .lbl-lmr { color: var(--green); }
+    .cell-box.found     { background: rgba(158,206,106,0.22); border-color: var(--green); color: var(--green-light); box-shadow: 0 0 14px rgba(158,206,106,0.4); }
+    .lbl-l   { color: var(--blue); } .lbl-m   { color: var(--orange); } .lbl-r   { color: var(--purple); }
+    .lbl-lm  { color: var(--blue); } .lbl-lr  { color: var(--green); } .lbl-lmr { color: var(--green); }
     .lbl-min { color: var(--green); }
 
-    /* ── Comparison banner ── */
-    .compare-banner {
-      padding: 11px 18px;
-      border-radius: var(--radius-sm);
-      border: 1px solid var(--border);
-      background: var(--surface-dark);
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      font-family: monospace;
-      font-size: 0.88rem;
-      transition: opacity 0.2s;
-    }
+    /* Compare banner */
+    .compare-banner { padding: 11px 18px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--surface-dark); display: flex; align-items: center; gap: 12px; font-family: monospace; font-size: 0.88rem; transition: opacity 0.2s; width: 100%; }
     .compare-banner.hidden { display: none; }
     .compare-expr { color: var(--text-muted); }
     .compare-result-yes { color: var(--green); font-weight: 800; padding: 2px 8px; border-radius: 4px; background: rgba(158,206,106,0.12); }
     .compare-result-no  { color: var(--blue);  font-weight: 800; padding: 2px 8px; border-radius: 4px; background: rgba(125,207,255,0.1); }
     .compare-verdict    { color: var(--text-dim); font-size: 0.78rem; margin-left: auto; }
 
-    /* ── Action text ── */
-    .action-text {
-      padding: 9px 16px;
-      font-size: 0.82rem;
-      color: var(--text-muted);
-      background: var(--surface);
-      border: 1px solid var(--border-soft);
-      border-radius: var(--radius-sm);
-      min-height: 36px;
-    }
+    /* Action text */
+    .action-text { padding: 9px 16px; font-size: 0.82rem; color: var(--text-muted); background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius-sm); min-height: 36px; width: 100%; }
 
-    /* ── Info row ── */
-    .info-row {
-      display: grid;
-      grid-template-columns: 200px 1fr;
-      gap: 12px;
-      align-items: start;
-    }
+    /* Info row */
+    .info-row { display: grid; grid-template-columns: 200px 1fr; gap: 12px; align-items: start; width: 100%; }
     @media (max-width: 640px) { .info-row { grid-template-columns: 1fr; } }
 
-    /* ── Pointer table ── */
-    .ptr-table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 0.82rem;
-      font-family: monospace;
-    }
-    .ptr-table th {
-      padding: 6px 10px;
-      text-align: left;
-      font-size: 0.62rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      color: var(--text-dim);
-      border-bottom: 1px solid var(--border-soft);
-    }
+    /* Pointer table */
+    .ptr-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; font-family: monospace; }
+    .ptr-table th { padding: 6px 10px; text-align: left; font-size: 0.62rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); border-bottom: 1px solid var(--border-soft); }
     .ptr-table td { padding: 7px 10px; }
     .ptr-row { transition: background 0.2s; }
     .ptr-row.hl { background: rgba(122,162,247,0.08); }
     .ptr-name { font-weight: 800; font-size: 0.85rem; }
     .ptr-table td:not(.ptr-name) { color: var(--text-bright); }
 
-    /* ── Decision log ── */
+    /* Decision log */
     .decision-panel { flex: 1; }
-    .decision-log {
-      max-height: 180px;
-      overflow-y: auto;
-      padding: 6px 0;
-    }
-    .log-entry {
-      display: flex;
-      align-items: baseline;
-      gap: 8px;
-      padding: 6px 14px;
-      font-size: 0.75rem;
-      font-family: monospace;
-      border-left: 3px solid transparent;
-      transition: background 0.2s;
-    }
+    .decision-log { max-height: 180px; overflow-y: auto; padding: 6px 0; }
+    .log-entry { display: flex; align-items: baseline; gap: 8px; padding: 6px 14px; font-size: 0.75rem; font-family: monospace; border-left: 3px solid transparent; transition: background 0.2s; }
     .log-entry.current { background: rgba(122,162,247,0.07); border-left-color: var(--accent); }
     .log-num { color: var(--text-faint); min-width: 18px; font-size: 0.65rem; }
     .log-expr { color: var(--text-muted); }
@@ -222,104 +100,23 @@
     .log-verdict-no  { color: var(--blue);  font-weight: 700; margin-left: 4px; }
     .log-move { color: var(--text-dim); margin-left: auto; font-size: 0.68rem; }
 
-    /* ── Code panel ── */
-    .code-panel .panel-header { cursor: pointer; user-select: none; }
-    .code-panel .panel-header:hover { color: var(--text-muted); }
-    .code-toggle { font-size: 0.65rem; color: var(--text-faint); transition: transform 0.2s; display: inline-block; }
-    .code-body {
-      padding: 10px 0;
-      font-family: 'JetBrains Mono', 'Fira Code', monospace;
-      font-size: 0.75rem;
-      line-height: 1.75;
-      background: #0a0d14;
-      overflow: hidden;
-      transition: max-height 0.3s ease;
-      max-height: 400px;
-    }
+    /* Code */
+    .code-body { padding: 10px 0; font-family: 'JetBrains Mono', 'Fira Code', monospace; font-size: 0.75rem; line-height: 1.75; background: #0a0d14; overflow: hidden; transition: max-height 0.3s ease; max-height: 400px; }
     .code-body.collapsed { max-height: 0; padding: 0; }
-    .code-line {
-      display: flex;
-      align-items: stretch;
-      border-left: 3px solid transparent;
-      padding: 0 14px 0 0;
-      white-space: pre;
-      transition: background 0.2s, border-color 0.2s;
-    }
+    .code-line { display: flex; align-items: stretch; border-left: 3px solid transparent; padding: 0 14px 0 0; white-space: pre; transition: background 0.2s, border-color 0.2s; }
     .code-line.hl { background: rgba(224,175,104,0.1); border-left-color: var(--yellow); }
-    .code-line .ln {
-      width: 28px; min-width: 28px;
-      text-align: right;
-      color: #3d4468;
-      user-select: none;
-      padding-right: 12px;
-      font-size: 0.68rem;
-    }
+    .code-line .ln { width: 28px; min-width: 28px; text-align: right; color: #3d4468; user-select: none; padding-right: 12px; font-size: 0.68rem; }
     .code-line .code { color: var(--text-muted); }
-    .kw  { color: var(--purple); }
-    .fn  { color: var(--blue); }
-    .cm  { color: var(--text-dim); font-style: italic; }
-    .nm  { color: var(--orange); }
-    .op  { color: var(--text); }
+    .kw  { color: var(--purple); } .fn  { color: var(--blue); }
+    .cm  { color: var(--text-dim); font-style: italic; } .nm  { color: var(--orange); } .op  { color: var(--text); }
 
-    /* ── Nav row ── */
-    .nav-row {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      flex-wrap: wrap;
-    }
-    .btn-step {
-      padding: 7px 14px;
-      border-radius: var(--radius-sm);
-      border: 1px solid var(--border);
-      background: var(--surface);
-      color: var(--text-muted);
-      cursor: pointer;
-      font-size: 0.82rem;
-      font-weight: 600;
-      transition: all 0.2s;
-    }
-    .btn-step:hover:not(:disabled) { background: var(--border); color: var(--text); }
-    .btn-step:disabled { opacity: 0.35; cursor: not-allowed; }
-    .btn-play {
-      padding: 7px 18px;
-      border-radius: var(--radius-sm);
-      border: 1px solid var(--accent);
-      background: rgba(122,162,247,0.12);
-      color: var(--accent);
-      cursor: pointer;
-      font-size: 0.82rem;
-      font-weight: 700;
-      transition: all 0.2s;
-    }
-    .btn-play:hover:not(:disabled) { background: rgba(122,162,247,0.22); }
-    .btn-play:disabled { opacity: 0.35; cursor: not-allowed; }
-    #speedSel {
-      padding: 6px 10px;
-      border-radius: var(--radius-sm);
-      border: 1px solid var(--border);
-      background: var(--surface);
-      color: var(--text-muted);
-      font-size: 0.78rem;
-      cursor: pointer;
-    }
-    .step-counter { font-size: 0.7rem; color: var(--text-dim); font-weight: 400; text-transform: none; letter-spacing: 0; margin-left: auto; }
+    /* Code toggle */
+    .code-toggle-header { cursor: pointer; user-select: none; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--text-dim); margin-bottom: 4px; display: flex; align-items: center; gap: 6px; }
+    .code-toggle-header:hover { color: var(--text-muted); }
+    .code-toggle { font-size: 0.65rem; color: var(--text-faint); transition: transform 0.2s; display: inline-block; }
 
-    /* ── Result banner ── */
-    .result-banner {
-      position: fixed;
-      bottom: 24px;
-      right: 24px;
-      background: var(--surface);
-      border: 1px solid var(--green-border);
-      border-radius: var(--radius-lg);
-      padding: 16px 24px;
-      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
-      z-index: 100;
-      opacity: 0;
-      transform: translateY(12px);
-      transition: opacity 0.4s ease, transform 0.4s ease;
-    }
+    /* Result banner */
+    .result-banner { position: fixed; bottom: 24px; right: 24px; background: var(--surface); border: 1px solid var(--green-border); border-radius: var(--radius-lg); padding: 16px 24px; box-shadow: 0 8px 32px rgba(0,0,0,0.5); z-index: 100; opacity: 0; transform: translateY(12px); transition: opacity 0.4s ease, transform 0.4s ease; }
     .result-banner.visible { opacity: 1; transform: translateY(0); }
     .result-banner.hidden { display: none; }
     .result-title { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--green); margin-bottom: 4px; }
@@ -328,507 +125,450 @@
   </style>
 </head>
 <body>
-  <div class="page">
-    <div class="page-header">
-      <a class="back-link" href="../index.html">← All Algorithms</a>
-      <div class="page-title">Find Minimum in Rotated Sorted Array</div>
+
+<div class="viz-inputs">
+  <span class="preset-btn" style="cursor:default;background:transparent;border:none;color:var(--text-dim);font-weight:700;padding:5px 0">Preset:</span>
+  <button class="preset-btn active" id="p0" onclick="loadPreset(0)">Rotated &#215;4 [4,5,6,7,0,1,2]</button>
+  <button class="preset-btn"        id="p1" onclick="loadPreset(1)">Not rotated [1,2,3,4,5]</button>
+  <button class="preset-btn"        id="p2" onclick="loadPreset(2)">Rotated &#215;1 [3,1,2]</button>
+  <button class="vi-btn-rand" onclick="randomExample()">&#127922; Random</button>
+</div>
+
+<div class="controls"></div>
+
+<div id="header">
+  <span id="phase-badge">&#8212;</span>
+  <span style="font-size:13px;font-weight:600;color:var(--text)">Find Minimum in Rotated Sorted Array</span>
+  <span style="font-size:11px;color:var(--text-dim)">LC 153 &middot; Binary Search &middot; O(log n)</span>
+  <span id="step-counter">Step 0 of 0</span>
+</div>
+
+<div id="main">
+  <div id="viz-area">
+    <div class="panel array-panel" style="width:100%">
+      <div class="panel-header">Array</div>
+      <div id="array-wrap"></div>
     </div>
 
-    <div class="preset-row">
-      <span class="preset-label">Preset:</span>
-      <button class="preset-btn active" id="p0" onclick="loadPreset(0)">Rotated ×4 [4,5,6,7,0,1,2]</button>
-      <button class="preset-btn"        id="p1" onclick="loadPreset(1)">Not rotated [1,2,3,4,5]</button>
-      <button class="preset-btn"        id="p2" onclick="loadPreset(2)">Rotated ×1 [3,1,2]</button>
+    <div class="compare-banner hidden" id="compare-banner">
+      <span class="compare-expr" id="compare-expr"></span>
+      <span id="compare-res"></span>
+      <span class="compare-verdict" id="compare-verdict"></span>
     </div>
 
-    <div class="viz-area">
+    <div class="action-text" id="action-text">Ready.</div>
 
-      <!-- Array panel -->
-      <div class="panel array-panel">
-        <div class="panel-header">Array <span class="step-counter" id="step-counter">Step 0 of 0</span></div>
-        <div id="array-wrap"></div>
+    <div class="info-row">
+      <div class="panel">
+        <div class="panel-header">Pointers</div>
+        <table class="ptr-table">
+          <thead><tr><th>Ptr</th><th>Idx</th><th>Val</th></tr></thead>
+          <tbody>
+            <tr class="ptr-row" id="row-l">
+              <td class="ptr-name" style="color:var(--blue)">L</td>
+              <td id="pl-idx">&#8212;</td><td id="pl-val">&#8212;</td>
+            </tr>
+            <tr class="ptr-row" id="row-m">
+              <td class="ptr-name" style="color:var(--orange)">M</td>
+              <td id="pm-idx">&#8212;</td><td id="pm-val">&#8212;</td>
+            </tr>
+            <tr class="ptr-row" id="row-r">
+              <td class="ptr-name" style="color:var(--purple)">R</td>
+              <td id="pr-idx">&#8212;</td><td id="pr-val">&#8212;</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
 
-      <!-- Comparison banner -->
-      <div class="compare-banner hidden" id="compare-banner">
-        <span class="compare-expr" id="compare-expr"></span>
-        <span id="compare-res"></span>
-        <span class="compare-verdict" id="compare-verdict"></span>
-      </div>
-
-      <!-- Action text -->
-      <div class="action-text" id="action-text">Ready.</div>
-
-      <!-- Info row: pointer table + decision log -->
-      <div class="info-row">
-        <div class="panel">
-          <div class="panel-header">Pointers</div>
-          <table class="ptr-table">
-            <thead><tr><th>Ptr</th><th>Idx</th><th>Val</th></tr></thead>
-            <tbody>
-              <tr class="ptr-row" id="row-l">
-                <td class="ptr-name" style="color:var(--blue)">L</td>
-                <td id="pl-idx">—</td><td id="pl-val">—</td>
-              </tr>
-              <tr class="ptr-row" id="row-m">
-                <td class="ptr-name" style="color:var(--orange)">M</td>
-                <td id="pm-idx">—</td><td id="pm-val">—</td>
-              </tr>
-              <tr class="ptr-row" id="row-r">
-                <td class="ptr-name" style="color:var(--purple)">R</td>
-                <td id="pr-idx">—</td><td id="pr-val">—</td>
-              </tr>
-            </tbody>
-          </table>
+      <div class="panel decision-panel">
+        <div class="panel-header">Decision Log</div>
+        <div class="decision-log" id="decision-log">
+          <div style="padding:10px 14px; font-size:0.75rem; color:var(--text-dim)">No decisions yet.</div>
         </div>
-
-        <div class="panel decision-panel">
-          <div class="panel-header">Decision Log</div>
-          <div class="decision-log" id="decision-log">
-            <div style="padding:10px 14px; font-size:0.75rem; color:var(--text-dim)">No decisions yet.</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Code panel (collapsible) -->
-      <div class="panel code-panel">
-        <div class="panel-header" onclick="toggleCode()">
-          Code (Python) <span class="code-toggle" id="code-toggle">▼</span>
-        </div>
-        <div class="code-body" id="code-body"></div>
-      </div>
-
-      <!-- Nav controls -->
-      <div class="nav-row">
-        <button id="prevBtn" class="btn-step">← Prev</button>
-        <button id="stepBtn" class="btn-step">Step →</button>
-        <button id="playBtn" class="btn-play">Play</button>
-        <button id="resetBtn" class="btn-step">↺ Reset</button>
-        <select id="speedSel">
-          <option value="800">0.5×</option>
-          <option value="400" selected>1×</option>
-          <option value="200">2×</option>
-          <option value="100">4×</option>
-        </select>
       </div>
     </div>
   </div>
 
-  <!-- Result banner -->
-  <div class="result-banner hidden" id="result-banner">
-    <div class="result-title">Minimum Found</div>
-    <div class="result-value" id="result-value"></div>
-    <div class="result-idx"   id="result-idx"></div>
+  <div id="resize-handle"></div>
+
+  <div id="code-panel">
+    <div class="code-toggle-header" onclick="toggleCode()">
+      Code (Python) <span class="code-toggle" id="code-toggle">&#9660;</span>
+    </div>
+    <div class="code-body" id="code-body"></div>
   </div>
 
-  <script>
-  // ── Code lines ──────────────────────────────────────────────────────────────
-  var CODE = [
-    { ln: 1,  raw: '<span class="kw">def</span> <span class="fn">findMin</span>(nums):' },
-    { ln: 2,  raw: '    left, right = <span class="nm">0</span>, <span class="fn">len</span>(nums) - <span class="nm">1</span>' },
-    { ln: 3,  raw: '    <span class="kw">while</span> left &lt; right:' },
-    { ln: 4,  raw: '        mid = (left + right) // <span class="nm">2</span>' },
-    { ln: 5,  raw: '        <span class="kw">if</span> nums[mid] &gt; nums[right]:' },
-    { ln: 6,  raw: '            left = mid + <span class="nm">1</span>' },
-    { ln: 7,  raw: '        <span class="kw">else</span>:' },
-    { ln: 8,  raw: '            right = mid' },
-    { ln: 9,  raw: '    <span class="kw">return</span> nums[left]' },
-  ];
+  <div id="sidebar">
+    <div>
+      <div class="sidebar-title">Pointers</div>
+      <div style="font-size:0.75rem;font-family:monospace;color:var(--text-muted)">
+        <div style="margin-bottom:4px"><span style="color:var(--blue);font-weight:700">L</span> = Left</div>
+        <div style="margin-bottom:4px"><span style="color:var(--orange);font-weight:700">M</span> = Mid</div>
+        <div><span style="color:var(--purple);font-weight:700">R</span> = Right</div>
+      </div>
+    </div>
+    <div>
+      <div class="sidebar-title">Strategy</div>
+      <div style="font-size:0.72rem;color:var(--text-muted);line-height:1.6">
+        If nums[M] &gt; nums[R]:<br>min is in right half<br><br>
+        Else: min is in left half (incl. M)
+      </div>
+    </div>
+  </div>
+</div>
 
-  // phase → 0-based line index
-  var PHASE_LINE = { init: 1, compute_mid: 3, compare: 4, move_left: 5, move_right: 7, done: 8 };
+<div id="nav-row">
+  <button id="prevBtn" class="btn-step">&#8592; Prev</button>
+  <button id="stepBtn" class="btn-step">Step &#8594;</button>
+  <button id="playBtn" class="btn-play">Play</button>
+  <button id="resetBtn" class="btn-step">&#8635; Reset</button>
+  <select id="speedSel">
+    <option value="800">0.5&#215;</option>
+    <option value="400" selected>1&#215;</option>
+    <option value="200">2&#215;</option>
+    <option value="100">4&#215;</option>
+  </select>
+</div>
 
-  // ── Presets ─────────────────────────────────────────────────────────────────
-  var PRESETS = [
-    [4, 5, 6, 7, 0, 1, 2],
-    [1, 2, 3, 4, 5],
-    [3, 1, 2],
-  ];
-  var activePreset = 0;
+<div class="result-banner hidden" id="result-banner">
+  <div class="result-title">Minimum Found</div>
+  <div class="result-value" id="result-value"></div>
+  <div class="result-idx"   id="result-idx"></div>
+</div>
 
-  // ── Build steps ─────────────────────────────────────────────────────────────
-  function buildSteps(nums) {
-    var steps = [];
-    var n = nums.length;
-    var left = 0, right = n - 1;
-    var eliminated = [];
-    var decisions = [];
+<script>
+var CODE = [
+  { ln: 1,  raw: '<span class="kw">def</span> <span class="fn">findMin</span>(nums):' },
+  { ln: 2,  raw: '    left, right = <span class="nm">0</span>, <span class="fn">len</span>(nums) - <span class="nm">1</span>' },
+  { ln: 3,  raw: '    <span class="kw">while</span> left &lt; right:' },
+  { ln: 4,  raw: '        mid = (left + right) // <span class="nm">2</span>' },
+  { ln: 5,  raw: '        <span class="kw">if</span> nums[mid] &gt; nums[right]:' },
+  { ln: 6,  raw: '            left = mid + <span class="nm">1</span>' },
+  { ln: 7,  raw: '        <span class="kw">else</span>:' },
+  { ln: 8,  raw: '            right = mid' },
+  { ln: 9,  raw: '    <span class="kw">return</span> nums[left]' },
+];
 
-    function snap(phase, extra) {
-      return Object.assign({
-        left: left, right: right, mid: null,
-        phase: phase,
-        eliminated: eliminated.slice(),
-        decisions: decisions.slice(),
-        nums: nums,
-        result: null,
-      }, extra || {});
-    }
+var PHASE_LINE = { init: 1, compute_mid: 3, compare: 4, move_left: 5, move_right: 7, done: 8 };
 
-    // Step 0 — init
-    steps.push(snap('init', { action: 'Initialize left=' + left + ', right=' + right }));
+var PRESETS = [
+  [4, 5, 6, 7, 0, 1, 2],
+  [1, 2, 3, 4, 5],
+  [3, 1, 2],
+];
+var activePreset = 0;
 
-    while (left < right) {
-      var mid = Math.floor((left + right) / 2);
+function buildSteps(nums) {
+  var steps = [];
+  var n = nums.length;
+  var left = 0, right = n - 1;
+  var eliminated = [];
+  var decisions = [];
 
-      // Step: compute_mid
-      steps.push(snap('compute_mid', {
-        mid: mid,
-        action: 'Compute mid = (' + left + '+' + right + ') // 2 = ' + mid,
-      }));
+  function snap(phase, extra) {
+    return Object.assign({
+      left: left, right: right, mid: null,
+      phase: phase,
+      eliminated: eliminated.slice(),
+      decisions: decisions.slice(),
+      nums: nums,
+      result: null,
+    }, extra || {});
+  }
 
-      // Step: compare
-      var isGreater = nums[mid] > nums[right];
-      steps.push(snap('compare', {
-        mid: mid,
-        action: isGreater
-          ? 'nums[' + mid + ']=' + nums[mid] + ' > nums[' + right + ']=' + nums[right] + ' → minimum in RIGHT half'
-          : 'nums[' + mid + ']=' + nums[mid] + ' ≤ nums[' + right + ']=' + nums[right] + ' → minimum in LEFT half (incl. mid)',
-        comparison: 'nums[' + mid + '] (' + nums[mid] + ')  >  nums[' + right + '] (' + nums[right] + ')',
-        comparisonResult: isGreater,
-      }));
+  steps.push(snap('init', { action: 'Initialize left=' + left + ', right=' + right }));
 
-      if (isGreater) {
-        // eliminate left..mid
-        for (var i = left; i <= mid; i++) {
-          if (eliminated.indexOf(i) === -1) eliminated.push(i);
-        }
-        left = mid + 1;
-        decisions.push({
-          expr: 'arr[' + mid + ']=' + nums[mid] + ' > arr[right]=' + nums[right],
-          result: true,
-          move: 'left → ' + left,
-        });
-        steps.push(snap('move_left', {
-          mid: mid,
-          action: 'left = mid+1 = ' + left,
-        }));
-      } else {
-        // eliminate mid+1..right
-        for (var j = mid + 1; j <= right; j++) {
-          if (eliminated.indexOf(j) === -1) eliminated.push(j);
-        }
-        right = mid;
-        decisions.push({
-          expr: 'arr[' + mid + ']=' + nums[mid] + ' ≤ arr[right]=' + nums[right],
-          result: false,
-          move: 'right → ' + right,
-        });
-        steps.push(snap('move_right', {
-          mid: mid,
-          action: 'right = mid = ' + right,
-        }));
-      }
-    }
-
-    // done
-    steps.push(snap('done', {
-      mid: left,
-      action: 'left == right == ' + left + ' → minimum = ' + nums[left],
-      result: { value: nums[left], index: left },
+  while (left < right) {
+    var mid = Math.floor((left + right) / 2);
+    steps.push(snap('compute_mid', {
+      mid: mid,
+      action: 'Compute mid = (' + left + '+' + right + ') // 2 = ' + mid,
     }));
 
-    return steps;
-  }
+    var isGreater = nums[mid] > nums[right];
+    steps.push(snap('compare', {
+      mid: mid,
+      action: isGreater
+        ? 'nums[' + mid + ']=' + nums[mid] + ' > nums[' + right + ']=' + nums[right] + ' \u2192 minimum in RIGHT half'
+        : 'nums[' + mid + ']=' + nums[mid] + ' \u2264 nums[' + right + ']=' + nums[right] + ' \u2192 minimum in LEFT half (incl. mid)',
+      comparison: 'nums[' + mid + '] (' + nums[mid] + ')  >  nums[' + right + '] (' + nums[right] + ')',
+      comparisonResult: isGreater,
+    }));
 
-  // ── Render ──────────────────────────────────────────────────────────────────
-  var nav;
-  var codeCollapsed = false;
-
-  function buildArray(nums) {
-    var wrap = document.getElementById('array-wrap');
-    wrap.innerHTML = '';
-    for (var i = 0; i < nums.length; i++) {
-      var cell = document.createElement('div');
-      cell.className = 'cell';
-      cell.id = 'cell-' + i;
-
-      var lbl = document.createElement('div');
-      lbl.className = 'cell-label';
-      lbl.id = 'lbl-' + i;
-      cell.appendChild(lbl);
-
-      var box = document.createElement('div');
-      box.className = 'cell-box default';
-      box.id = 'box-' + i;
-      box.textContent = nums[i];
-      cell.appendChild(box);
-
-      var idx = document.createElement('div');
-      idx.className = 'cell-idx';
-      idx.textContent = '[' + i + ']';
-      cell.appendChild(idx);
-
-      wrap.appendChild(cell);
-    }
-  }
-
-  function applyStep(snap, animated) {
-    var nums = snap.nums;
-    var n = nums.length;
-    var elim = snap.eliminated;
-
-    // Update each cell
-    for (var i = 0; i < n; i++) {
-      var box = document.getElementById('box-' + i);
-      var lbl = document.getElementById('lbl-' + i);
-      if (!box) continue;
-
-      var isElim = elim.indexOf(i) !== -1;
-      var isL    = i === snap.left;
-      var isM    = snap.mid !== null && i === snap.mid;
-      var isR    = i === snap.right;
-      var isDone = snap.phase === 'done' && snap.result && i === snap.result.index;
-
-      // Determine state
-      box.className = 'cell-box ';
-      lbl.className = 'cell-label ';
-      lbl.textContent = '';
-
-      if (isDone) {
-        box.className += 'found';
-        lbl.textContent = 'MIN';
-        lbl.className += 'lbl-min';
-      } else if (isElim) {
-        box.className += 'eliminated';
-      } else if (isL && isM && isR) {
-        box.className += 'active-lmr';
-        lbl.textContent = 'L/M/R';
-        lbl.className += 'lbl-lmr';
-      } else if (isL && isR) {
-        box.className += 'active-lr';
-        lbl.textContent = 'L/R';
-        lbl.className += 'lbl-lr';
-      } else if (isL && isM) {
-        box.className += 'active-lm';
-        lbl.textContent = 'L/M';
-        lbl.className += 'lbl-lm';
-      } else if (isL) {
-        box.className += 'active-l';
-        lbl.textContent = 'L';
-        lbl.className += 'lbl-l';
-      } else if (isM) {
-        box.className += 'active-m';
-        lbl.textContent = 'M';
-        lbl.className += 'lbl-m';
-      } else if (isR) {
-        box.className += 'active-r';
-        lbl.textContent = 'R';
-        lbl.className += 'lbl-r';
-      } else {
-        box.className += 'default';
+    if (isGreater) {
+      for (var i = left; i <= mid; i++) {
+        if (eliminated.indexOf(i) === -1) eliminated.push(i);
       }
-    }
-
-    // Pointer table
-    updatePtrTable(snap, nums);
-
-    // Comparison banner
-    var banner = document.getElementById('compare-banner');
-    if (snap.phase === 'compare') {
-      banner.classList.remove('hidden');
-      document.getElementById('compare-expr').textContent = snap.comparison;
-      var resEl = document.getElementById('compare-res');
-      if (snap.comparisonResult) {
-        resEl.className = 'compare-result-yes';
-        resEl.textContent = 'YES';
-      } else {
-        resEl.className = 'compare-result-no';
-        resEl.textContent = 'NO';
+      left = mid + 1;
+      decisions.push({ expr: 'arr[' + mid + ']=' + nums[mid] + ' > arr[right]=' + nums[right], result: true, move: 'left \u2192 ' + left });
+      steps.push(snap('move_left', { mid: mid, action: 'left = mid+1 = ' + left }));
+    } else {
+      for (var j = mid + 1; j <= right; j++) {
+        if (eliminated.indexOf(j) === -1) eliminated.push(j);
       }
-      document.getElementById('compare-verdict').textContent =
-        snap.comparisonResult ? '→ go right half' : '→ go left half (incl. mid)';
+      right = mid;
+      decisions.push({ expr: 'arr[' + mid + ']=' + nums[mid] + ' \u2264 arr[right]=' + nums[right], result: false, move: 'right \u2192 ' + right });
+      steps.push(snap('move_right', { mid: mid, action: 'right = mid = ' + right }));
+    }
+  }
+
+  steps.push(snap('done', {
+    mid: left,
+    action: 'left == right == ' + left + ' \u2192 minimum = ' + nums[left],
+    result: { value: nums[left], index: left },
+  }));
+
+  return steps;
+}
+
+var nav;
+var codeCollapsed = false;
+
+function buildArray(nums) {
+  var wrap = document.getElementById('array-wrap');
+  wrap.innerHTML = '';
+  for (var i = 0; i < nums.length; i++) {
+    var cell = document.createElement('div');
+    cell.className = 'cell';
+    cell.id = 'cell-' + i;
+
+    var lbl = document.createElement('div');
+    lbl.className = 'cell-label';
+    lbl.id = 'lbl-' + i;
+    cell.appendChild(lbl);
+
+    var box = document.createElement('div');
+    box.className = 'cell-box default';
+    box.id = 'box-' + i;
+    box.textContent = nums[i];
+    cell.appendChild(box);
+
+    var idx = document.createElement('div');
+    idx.className = 'cell-idx';
+    idx.textContent = '[' + i + ']';
+    cell.appendChild(idx);
+
+    wrap.appendChild(cell);
+  }
+}
+
+function applyStep(snap, animated) {
+  var nums = snap.nums;
+  var n = nums.length;
+  var elim = snap.eliminated;
+
+  for (var i = 0; i < n; i++) {
+    var box = document.getElementById('box-' + i);
+    var lbl = document.getElementById('lbl-' + i);
+    if (!box) continue;
+
+    var isElim = elim.indexOf(i) !== -1;
+    var isL    = i === snap.left;
+    var isM    = snap.mid !== null && i === snap.mid;
+    var isR    = i === snap.right;
+    var isDone = snap.phase === 'done' && snap.result && i === snap.result.index;
+
+    box.className = 'cell-box ';
+    lbl.className = 'cell-label ';
+    lbl.textContent = '';
+
+    if (isDone) {
+      box.className += 'found';
+      lbl.textContent = 'MIN';
+      lbl.className += 'lbl-min';
+    } else if (isElim) {
+      box.className += 'eliminated';
+    } else if (isL && isM && isR) {
+      box.className += 'active-lmr'; lbl.textContent = 'L/M/R'; lbl.className += 'lbl-lmr';
+    } else if (isL && isR) {
+      box.className += 'active-lr'; lbl.textContent = 'L/R'; lbl.className += 'lbl-lr';
+    } else if (isL && isM) {
+      box.className += 'active-lm'; lbl.textContent = 'L/M'; lbl.className += 'lbl-lm';
+    } else if (isL) {
+      box.className += 'active-l'; lbl.textContent = 'L'; lbl.className += 'lbl-l';
+    } else if (isM) {
+      box.className += 'active-m'; lbl.textContent = 'M'; lbl.className += 'lbl-m';
+    } else if (isR) {
+      box.className += 'active-r'; lbl.textContent = 'R'; lbl.className += 'lbl-r';
     } else {
-      banner.classList.add('hidden');
+      box.className += 'default';
     }
+  }
 
-    // Action text
-    document.getElementById('action-text').textContent = snap.action || '';
+  updatePtrTable(snap, nums);
 
-    // Code highlight
-    updateCode(snap.phase);
-
-    // Decision log
-    updateDecisionLog(snap.decisions);
-
-    // Result banner
-    var rb = document.getElementById('result-banner');
-    if (snap.phase === 'done' && snap.result) {
-      rb.classList.remove('hidden');
-      setTimeout(function() { rb.classList.add('visible'); }, 50);
-      document.getElementById('result-value').textContent = snap.result.value;
-      document.getElementById('result-idx').textContent = 'at index ' + snap.result.index;
+  var banner = document.getElementById('compare-banner');
+  if (snap.phase === 'compare') {
+    banner.classList.remove('hidden');
+    document.getElementById('compare-expr').textContent = snap.comparison;
+    var resEl = document.getElementById('compare-res');
+    if (snap.comparisonResult) {
+      resEl.className = 'compare-result-yes'; resEl.textContent = 'YES';
     } else {
-      rb.classList.remove('visible');
-      setTimeout(function() { rb.classList.add('hidden'); }, 400);
+      resEl.className = 'compare-result-no'; resEl.textContent = 'NO';
     }
+    document.getElementById('compare-verdict').textContent =
+      snap.comparisonResult ? '\u2192 go right half' : '\u2192 go left half (incl. mid)';
+  } else {
+    banner.classList.add('hidden');
   }
 
-  function updateStatus(snap, cur, total) {
-    document.getElementById('step-counter').textContent = 'Step ' + (cur + 1) + ' of ' + total;
-  }
+  document.getElementById('action-text').textContent = snap.action || '';
+  updateCode(snap.phase);
+  updateDecisionLog(snap.decisions);
 
-  function updatePtrTable(snap, nums) {
-    var rows = { l: 'row-l', m: 'row-m', r: 'row-r' };
-
-    // left
-    document.getElementById('pl-idx').textContent = snap.left;
-    document.getElementById('pl-val').textContent = nums[snap.left];
-
-    // mid
-    if (snap.mid !== null) {
-      document.getElementById('pm-idx').textContent = snap.mid;
-      document.getElementById('pm-val').textContent = nums[snap.mid];
-    } else {
-      document.getElementById('pm-idx').textContent = '—';
-      document.getElementById('pm-val').textContent = '—';
-    }
-
-    // right
-    document.getElementById('pr-idx').textContent = snap.right;
-    document.getElementById('pr-val').textContent = nums[snap.right];
-
-    // highlight changed rows
-    ['row-l', 'row-m', 'row-r'].forEach(function(id) {
-      document.getElementById(id).classList.remove('hl');
-    });
-    if (snap.phase === 'move_left') document.getElementById('row-l').classList.add('hl');
-    if (snap.phase === 'move_right') document.getElementById('row-r').classList.add('hl');
-    if (snap.phase === 'compute_mid') document.getElementById('row-m').classList.add('hl');
-  }
-
-  function updateCode(phase) {
-    var lines = document.querySelectorAll('.code-line');
-    var activeIdx = PHASE_LINE[phase];
-    lines.forEach(function(line, i) {
-      if (i === activeIdx) {
-        line.classList.add('hl');
-      } else {
-        line.classList.remove('hl');
-      }
-    });
-  }
-
-  function updateDecisionLog(decisions) {
-    var log = document.getElementById('decision-log');
-    if (!decisions || decisions.length === 0) {
-      log.innerHTML = '<div style="padding:10px 14px; font-size:0.75rem; color:var(--text-dim)">No decisions yet.</div>';
-      return;
-    }
-    log.innerHTML = '';
-    for (var i = 0; i < decisions.length; i++) {
-      var d = decisions[i];
-      var entry = document.createElement('div');
-      entry.className = 'log-entry' + (i === decisions.length - 1 ? ' current' : '');
-
-      var num = document.createElement('span');
-      num.className = 'log-num';
-      num.textContent = (i + 1) + '.';
-
-      var expr = document.createElement('span');
-      expr.className = 'log-expr';
-      expr.textContent = d.expr;
-
-      var verdict = document.createElement('span');
-      verdict.className = d.result ? 'log-verdict-yes' : 'log-verdict-no';
-      verdict.textContent = d.result ? '→ right' : '→ left';
-
-      var move = document.createElement('span');
-      move.className = 'log-move';
-      move.textContent = d.move;
-
-      entry.appendChild(num);
-      entry.appendChild(expr);
-      entry.appendChild(verdict);
-      entry.appendChild(move);
-      log.appendChild(entry);
-    }
-    // auto-scroll to bottom
-    log.scrollTop = log.scrollHeight;
-  }
-
-  // ── Code panel ──────────────────────────────────────────────────────────────
-  function buildCodePanel() {
-    var body = document.getElementById('code-body');
-    body.innerHTML = '';
-    for (var i = 0; i < CODE.length; i++) {
-      var line = document.createElement('div');
-      line.className = 'code-line';
-
-      var ln = document.createElement('span');
-      ln.className = 'ln';
-      ln.textContent = CODE[i].ln;
-
-      var code = document.createElement('span');
-      code.className = 'code';
-      code.innerHTML = CODE[i].raw;
-
-      line.appendChild(ln);
-      line.appendChild(code);
-      body.appendChild(line);
-    }
-  }
-
-  function toggleCode() {
-    codeCollapsed = !codeCollapsed;
-    var body = document.getElementById('code-body');
-    var tog  = document.getElementById('code-toggle');
-    if (codeCollapsed) {
-      body.classList.add('collapsed');
-      tog.textContent = '▶';
-    } else {
-      body.classList.remove('collapsed');
-      tog.textContent = '▼';
-    }
-  }
-
-  // ── Preset loading ───────────────────────────────────────────────────────────
-  function loadPreset(idx) {
-    activePreset = idx;
-    [0, 1, 2].forEach(function(i) {
-      var btn = document.getElementById('p' + i);
-      if (btn) btn.classList.toggle('active', i === idx);
-    });
-
-    // hide result banner immediately
-    var rb = document.getElementById('result-banner');
+  var rb = document.getElementById('result-banner');
+  if (snap.phase === 'done' && snap.result) {
+    rb.classList.remove('hidden');
+    setTimeout(function() { rb.classList.add('visible'); }, 50);
+    document.getElementById('result-value').textContent = snap.result.value;
+    document.getElementById('result-idx').textContent = 'at index ' + snap.result.index;
+  } else {
     rb.classList.remove('visible');
-    rb.classList.add('hidden');
-
-    var nums = PRESETS[idx];
-    buildArray(nums);
-    var steps = buildSteps(nums);
-    nav.load(steps);
+    setTimeout(function() { rb.classList.add('hidden'); }, 400);
   }
+}
 
-  // ── Init ────────────────────────────────────────────────────────────────────
-  window.addEventListener('DOMContentLoaded', function() {
-    buildCodePanel();
+function updateStatus(snap, cur, total) {
+  document.getElementById('step-counter').textContent = 'Step ' + (cur + 1) + ' of ' + total;
+  var badge = document.getElementById('phase-badge');
+  if (badge) badge.textContent = snap.phase || '\u2014';
+}
 
-    nav = VizNav({
-      btnPrev: document.getElementById('prevBtn'),
-      btnNext: document.getElementById('stepBtn'),
-      btnPlay: document.getElementById('playBtn'),
-      speedSel: document.getElementById('speedSel'),
-      render: function(snap, cur, total) {
-        applyStep(snap, cur > 0);
-        updateStatus(snap, cur, total);
-      }
-    });
+function updatePtrTable(snap, nums) {
+  document.getElementById('pl-idx').textContent = snap.left;
+  document.getElementById('pl-val').textContent = nums[snap.left];
+  if (snap.mid !== null) {
+    document.getElementById('pm-idx').textContent = snap.mid;
+    document.getElementById('pm-val').textContent = nums[snap.mid];
+  } else {
+    document.getElementById('pm-idx').textContent = '\u2014';
+    document.getElementById('pm-val').textContent = '\u2014';
+  }
+  document.getElementById('pr-idx').textContent = snap.right;
+  document.getElementById('pr-val').textContent = nums[snap.right];
+  ['row-l', 'row-m', 'row-r'].forEach(function(id) {
+    document.getElementById(id).classList.remove('hl');
+  });
+  if (snap.phase === 'move_left') document.getElementById('row-l').classList.add('hl');
+  if (snap.phase === 'move_right') document.getElementById('row-r').classList.add('hl');
+  if (snap.phase === 'compute_mid') document.getElementById('row-m').classList.add('hl');
+}
 
-    document.getElementById('resetBtn').addEventListener('click', function() {
-      nav.stopPlay();
-      loadPreset(activePreset);
-    });
+function updateCode(phase) {
+  var lines = document.querySelectorAll('.code-line');
+  var activeIdx = PHASE_LINE[phase];
+  lines.forEach(function(line, i) {
+    if (i === activeIdx) line.classList.add('hl');
+    else line.classList.remove('hl');
+  });
+}
 
-    loadPreset(0);
+function updateDecisionLog(decisions) {
+  var log = document.getElementById('decision-log');
+  if (!decisions || decisions.length === 0) {
+    log.innerHTML = '<div style="padding:10px 14px; font-size:0.75rem; color:var(--text-dim)">No decisions yet.</div>';
+    return;
+  }
+  log.innerHTML = '';
+  for (var i = 0; i < decisions.length; i++) {
+    var d = decisions[i];
+    var entry = document.createElement('div');
+    entry.className = 'log-entry' + (i === decisions.length - 1 ? ' current' : '');
+    var num = document.createElement('span'); num.className = 'log-num'; num.textContent = (i + 1) + '.';
+    var expr = document.createElement('span'); expr.className = 'log-expr'; expr.textContent = d.expr;
+    var verdict = document.createElement('span'); verdict.className = d.result ? 'log-verdict-yes' : 'log-verdict-no'; verdict.textContent = d.result ? '\u2192 right' : '\u2192 left';
+    var move = document.createElement('span'); move.className = 'log-move'; move.textContent = d.move;
+    entry.appendChild(num); entry.appendChild(expr); entry.appendChild(verdict); entry.appendChild(move);
+    log.appendChild(entry);
+  }
+  log.scrollTop = log.scrollHeight;
+}
 
-    // hide back-link in iframe
-    if (window.self !== window.top) {
-      var bl = document.querySelector('.back-link');
-      if (bl) bl.style.display = 'none';
+function buildCodePanel() {
+  var body = document.getElementById('code-body');
+  body.innerHTML = '';
+  for (var i = 0; i < CODE.length; i++) {
+    var line = document.createElement('div');
+    line.className = 'code-line';
+    var ln = document.createElement('span'); ln.className = 'ln'; ln.textContent = CODE[i].ln;
+    var code = document.createElement('span'); code.className = 'code'; code.innerHTML = CODE[i].raw;
+    line.appendChild(ln); line.appendChild(code);
+    body.appendChild(line);
+  }
+}
+
+function toggleCode() {
+  codeCollapsed = !codeCollapsed;
+  var body = document.getElementById('code-body');
+  var tog  = document.getElementById('code-toggle');
+  if (codeCollapsed) { body.classList.add('collapsed'); tog.textContent = '\u25b6'; }
+  else { body.classList.remove('collapsed'); tog.textContent = '\u25bc'; }
+}
+
+function loadPreset(idx) {
+  activePreset = idx;
+  [0, 1, 2].forEach(function(i) {
+    var btn = document.getElementById('p' + i);
+    if (btn) btn.classList.toggle('active', i === idx);
+  });
+  var rb = document.getElementById('result-banner');
+  rb.classList.remove('visible');
+  rb.classList.add('hidden');
+  var nums = PRESETS[idx];
+  buildArray(nums);
+  var steps = buildSteps(nums);
+  nav.load(steps);
+}
+
+function randomExample() {
+  var idx = Math.floor(Math.random() * PRESETS.length);
+  loadPreset(idx);
+}
+
+window.addEventListener('DOMContentLoaded', function() {
+  buildCodePanel();
+
+  nav = VizNav({
+    btnPrev: document.getElementById('prevBtn'),
+    btnNext: document.getElementById('stepBtn'),
+    btnPlay: document.getElementById('playBtn'),
+    speedSel: document.getElementById('speedSel'),
+    render: function(snap, cur, total) {
+      applyStep(snap, cur > 0);
+      updateStatus(snap, cur, total);
     }
   });
-  </script>
+
+  document.getElementById('resetBtn').addEventListener('click', function() {
+    nav.stopPlay();
+    loadPreset(activePreset);
+  });
+
+  loadPreset(0);
+});
+</script>
+
+<script>
+(function() {
+  var handle = document.getElementById('resize-handle');
+  var panel  = document.getElementById('code-panel');
+  var dragging = false, startX = 0, startW = 0;
+  handle.addEventListener('mousedown', function(e) {
+    dragging = true; startX = e.clientX; startW = panel.offsetWidth;
+    handle.classList.add('dragging');
+    e.preventDefault();
+  });
+  document.addEventListener('mousemove', function(e) {
+    if (!dragging) return;
+    var delta = startX - e.clientX;
+    panel.style.width = Math.min(560, Math.max(120, startW + delta)) + 'px';
+  });
+  document.addEventListener('mouseup', function() {
+    if (!dragging) return;
+    dragging = false; handle.classList.remove('dragging');
+  });
+})();
+</script>
 </body>
 </html>

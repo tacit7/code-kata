@@ -8,183 +8,122 @@
   <script src="../shared/gsap.min.js"></script>
   <script src="../shared/viz.js"></script>
   <style>
-    .viz-area { width: 100%; max-width: 90%; }
-    .main-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
-    .left-col, .right-col { display: flex; flex-direction: column; gap: 12px; }
-    @media (max-width: 700px) { .main-row { grid-template-columns: 1fr; } }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: "Fira Code","Cascadia Code",monospace; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+    #header { padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+    #phase-badge { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; padding: 3px 10px; border-radius: var(--radius-sm); background: #1e3a5f; color: var(--blue); border: 1px solid var(--blue); }
+    #step-counter { font-size: 12px; color: var(--text-muted); margin-left: auto; }
+    .viz-inputs { width: 100%; padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; flex-wrap: wrap; gap: 12px; align-items: center; flex-shrink: 0; }
+    #main { display: flex; flex: 1; overflow: hidden; }
+    #viz-area { flex: 1; display: flex; flex-direction: column; padding: 14px; gap: 14px; overflow-y: auto; }
+    #resize-handle { width: 5px; flex-shrink: 0; cursor: col-resize; background: transparent; border-left: 1px solid var(--border); transition: background .15s; }
+    #code-panel { width: 320px; min-width: 120px; max-width: 560px; flex-shrink: 0; background: #0d1117; border-right: 1px solid var(--border); overflow-y: auto; padding: 10px 12px; display: flex; flex-direction: column; }
+    .code-panel-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--text-dim); margin-bottom: 8px; }
+    #sidebar { width: 240px; flex-shrink: 0; background: var(--surface); border-left: 1px solid var(--border); overflow-y: auto; padding: 14px 12px; display: flex; flex-direction: column; gap: 12px; }
+    #nav-row { flex-shrink: 0; display: flex; align-items: center; gap: 8px; padding: 10px 16px; background: var(--surface); border-top: 1px solid var(--border); }
+    .btn-step { padding: 6px 14px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--surface); color: var(--text); font-family: inherit; font-size: 12px; cursor: pointer; }
+    .btn-play { padding: 6px 14px; border-radius: var(--radius-sm); background: var(--accent); border-color: var(--accent); color: #fff; font-family: inherit; font-size: 12px; cursor: pointer; }
+    #speedSel { background: var(--surface); border: 1px solid var(--border); color: var(--text); border-radius: var(--radius-sm); padding: 5px 8px; font-size: 12px; }
+    .vi-label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--text-dim); margin-bottom: 4px; display: block; }
+    .vi-btn { padding: 6px 14px; border-radius: var(--radius-sm); border: none; background: var(--accent); color: #fff; font-family: inherit; font-size: 12px; cursor: pointer; font-weight: 600; }
+    .vi-btn-sec { padding: 6px 14px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--surface); color: var(--text); font-family: inherit; font-size: 12px; cursor: pointer; }
 
-    .timeline-panel {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--radius-lg); padding: 16px;
-      display: flex; flex-direction: column; gap: 10px;
-    }
-    .panel-title {
-      font-size: 0.72rem; font-weight: 700;
-      text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim);
-    }
+    .timeline-panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+    .panel-title { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); }
     #timeline-svg { width: 100%; display: block; overflow: visible; }
 
-    .panel-box {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--radius-lg); padding: 14px 16px;
-      display: flex; flex-direction: column; gap: 8px;
-    }
-
+    .panel-box { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; }
     .var-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
-    .var-box {
-      padding: 10px 8px; background: var(--bg); border: 1px solid var(--border);
-      border-radius: var(--radius-sm);
-      display: flex; flex-direction: column; align-items: center; gap: 3px;
-    }
+    .var-box { padding: 10px 8px; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm); display: flex; flex-direction: column; align-items: center; gap: 3px; }
     .var-box.accent-border { border-color: var(--accent); }
     .var-box.yellow-border { border-color: var(--yellow); }
-    .var-box.red-border    { border-color: #f7768e; }
+    .var-box.red-border { border-color: #f7768e; }
     .var-label { font-size: 0.65rem; font-family: monospace; color: var(--text-faint); text-align: center; }
-    .var-val   { font-size: 1.1rem; font-weight: 700; color: var(--text-bright); font-family: monospace; }
-
-    .cmp-box {
-      background: var(--bg); border: 1px solid var(--border-soft);
-      border-radius: var(--radius-sm); padding: 10px 12px;
-      display: flex; flex-direction: column; gap: 6px;
-    }
+    .var-val { font-size: 1.1rem; font-weight: 700; color: var(--text-bright); font-family: monospace; }
+    .cmp-box { background: var(--bg); border: 1px solid var(--border-soft); border-radius: var(--radius-sm); padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; }
     .cmp-row { display: flex; align-items: center; gap: 8px; font-family: monospace; font-size: 0.85rem; }
     .cmp-side { color: var(--text-dim); }
     .cmp-op { color: var(--yellow); font-weight: 700; }
-    .cmp-badge {
-      padding: 3px 10px; border-radius: 5px; font-size: 0.8rem; font-weight: 700;
-      display: none; font-family: monospace;
-    }
-    .cmp-badge.keep   { display: inline-block; background: #1a2b14; color: #9ece6a; border: 1px solid #4d7a23; }
+    .cmp-badge { padding: 3px 10px; border-radius: 5px; font-size: 0.8rem; font-weight: 700; display: none; font-family: monospace; }
+    .cmp-badge.keep { display: inline-block; background: #1a2b14; color: #9ece6a; border: 1px solid #4d7a23; }
     .cmp-badge.remove { display: inline-block; background: #2b1420; color: #f7768e; border: 1px solid #8b3a4a; }
-
-    .result-badge {
-      font-size: 0.82rem; font-weight: 600; padding: 5px 12px; border-radius: 6px;
-      font-family: monospace; display: none;
-    }
+    .result-badge { font-size: 0.82rem; font-weight: 600; padding: 5px 12px; border-radius: 6px; font-family: monospace; display: none; }
     .result-badge.show { display: block; background: #1a2b14; color: #9ece6a; border: 1px solid #4d7a23; }
-
-    .code-panel {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--radius-lg); overflow: hidden;
-    }
-    .code-header { padding: 8px 14px; font-size: 0.72rem; font-weight: 600; color: var(--text-dim); border-bottom: 1px solid var(--border); background: var(--bg); }
-    .code-body { padding: 10px 0; font-size: 0.78rem; line-height: 1.75; white-space: pre; }
-    .code-line { display: flex; align-items: center; padding: 0 14px; }
-    .code-line.hl { background: var(--border-soft); border-left: 2px solid var(--accent); }
-    .ln { min-width: 24px; color: var(--text-ghost); user-select: none; font-size: 0.7rem; }
-
-    .playBtn {
-      background: #15803d; border: none; border-radius: var(--radius-sm);
-      color: #fff; cursor: pointer; font-size: 0.88rem; font-weight: 600;
-      padding: 9px 16px; transition: background 0.2s;
-    }
-    .playBtn:hover { background: #166534; }
-    .playBtn.playing { background: #c2410c; }
-    .playBtn.playing:hover { background: #9a3412; }
-    .playBtn:disabled { opacity: 0.4; cursor: not-allowed; }
-    .speedSel {
-      background: var(--bg); border: 1px solid var(--border);
-      border-radius: var(--radius-sm); color: var(--text);
-      font-size: 0.85rem; padding: 8px 10px; outline: none; width: 80px;
-    }
-    .nav-row { display: flex; gap: 8px; align-items: center; }
-
-    .preset-row { display: flex; gap: 8px; flex-wrap: wrap; }
-    .btn-preset {
-      background: var(--bg); border: 1px solid var(--border);
-      border-radius: var(--radius-sm); color: var(--text-dim);
-      font-size: 0.78rem; padding: 5px 10px; cursor: pointer;
-      transition: border-color 0.15s, color 0.15s;
-    }
-    .btn-preset:hover { border-color: var(--accent); color: var(--accent-pale); }
-    .btn-preset.active { border-color: var(--accent); color: var(--accent-pale); background: var(--surface-dark); }
-
-    .legend-row { display: flex; align-items: center; gap: 8px; font-size: 0.78rem; color: var(--text-muted); }
-    .legend-swatch { width: 28px; height: 14px; border-radius: 3px; flex-shrink: 0; }
-
-    .kw { color: #bb9af7; }
-    .fn { color: #7dcfff; }
-    .bi { color: #ff9e64; }
-    .op { color: #c0caf5; }
-    .nb { color: #9ece6a; }
-    .cm { color: #3b4261; }
-    .str { color: #9ece6a; }
+    .code-body-inner { padding: 4px 0; font-size: 0.75rem; line-height: 1.75; white-space: pre; flex: 1; }
+    .code-line { display: flex; align-items: center; padding: 0 4px; border-left: 3px solid transparent; }
+    .code-line.hl { background: rgba(122,162,247,0.12); border-left-color: var(--accent); }
+    .ln { min-width: 20px; color: var(--text-ghost); user-select: none; font-size: 0.68rem; }
+    .legend-row-item { display: flex; align-items: center; gap: 8px; font-size: 0.75rem; color: var(--text-muted); }
+    .legend-swatch { width: 24px; height: 12px; border-radius: 3px; flex-shrink: 0; }
+    .preset-btns { display: flex; gap: 6px; flex-wrap: wrap; }
+    .btn-preset { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text-dim); font-size: 0.75rem; padding: 4px 10px; cursor: pointer; }
+    .btn-preset:hover, .btn-preset.active { border-color: var(--accent); color: var(--accent); }
+    .kw { color: #bb9af7; } .fn { color: #7dcfff; } .bi { color: #ff9e64; } .op { color: #c0caf5; } .nb { color: #9ece6a; } .cm { color: #3b4261; }
+    .step-desc { font-size: 0.82rem; color: var(--text-muted); line-height: 1.5; }
   </style>
 </head>
-<body class="page">
-
-<div class="page-header">
-  <a class="back-link" href="../index.html">&larr; All Algorithms</a>
-  <div class="page-title">Non-Overlapping Intervals</div>
-  <div class="page-sub">LeetCode 435 &middot; Sort by end time, greedily keep non-overlapping intervals &middot; O(n log n) time &middot; O(1) extra space</div>
-</div>
-
-<div class="viz-inputs">
-  <div class="field">
-    <label>Preset</label>
-    <div class="preset-row" id="preset-row">
-      <button class="btn-preset active" onclick="loadPreset(0,this)">Classic</button>
-      <button class="btn-preset" onclick="loadPreset(1,this)">No removals</button>
-      <button class="btn-preset" onclick="loadPreset(2,this)">Heavy overlap</button>
+<body>
+  <div class="viz-inputs">
+    <div>
+      <label class="vi-label">Preset</label>
+      <div class="preset-btns" id="preset-row">
+        <button class="btn-preset active" onclick="loadPreset(0,this)">Classic</button>
+        <button class="btn-preset" onclick="loadPreset(1,this)">No removals</button>
+        <button class="btn-preset" onclick="loadPreset(2,this)">Heavy overlap</button>
+      </div>
     </div>
+    <div>
+      <label class="vi-label">Intervals (flat pairs: s,e,s,e,...)</label>
+      <input id="inp-intervals" type="text" value="1,2,2,3,3,4,1,3" style="width:220px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:var(--radius-sm);padding:5px 8px;font-size:0.82rem;" />
+    </div>
+    <button class="vi-btn" onclick="buildAndRun()">Build &amp; Run</button>
+    <button class="vi-btn-sec" onclick="randomExample()">🎲 Random</button>
   </div>
-  <div class="field">
-    <label>Intervals (flat pairs: s,e,s,e,...)</label>
-    <input id="inp-intervals" type="text" value="1,2,2,3,3,4,1,3" style="width:240px" />
-  </div>
-  <button class="btn-primary" onclick="buildAndRun()">Build &amp; Run</button>
-</div>
+  <div class="controls"></div>
 
-<div class="viz-area">
-  <div class="main-row">
-    <div class="left-col">
+  <div id="header">
+    <span id="phase-badge">Setup</span>
+    <span style="font-size:13px;font-weight:700;">Non-Overlapping Intervals</span>
+    <span id="step-counter">Step 0 / 0</span>
+  </div>
+
+  <div id="main">
+    <div id="viz-area">
       <div class="timeline-panel">
         <div class="panel-title">Timeline</div>
         <svg id="timeline-svg" viewBox="0 0 700 100" preserveAspectRatio="xMidYMid meet">
           <text x="350" y="55" text-anchor="middle" fill="#3b4261" font-size="13" font-family="monospace">Run simulation to see timeline</text>
         </svg>
       </div>
-      <div class="code-panel">
-        <div class="code-header">Python</div>
-        <div class="code-body" id="code-body"></div>
+      <div class="panel-box">
+        <div class="panel-title" id="phase-label">—</div>
+        <div class="step-desc" id="step-desc">Choose a preset and click Build &amp; Run.</div>
+        <div class="result-badge" id="result-badge"></div>
       </div>
     </div>
 
-    <div class="right-col">
-      <div style="display:flex;gap:12px">
-        <div class="panel-box" style="flex:0 0 auto">
-          <div class="nav-row">
-            <button class="stepBtn" id="prevBtn" disabled>&larr;</button>
-            <button class="stepBtn" id="stepBtn" disabled>&rarr;</button>
-            <button class="playBtn" id="playBtn" disabled>&#9654; Play</button>
-            <select class="speedSel" id="speedSel">
-              <option value="900">Slow</option>
-              <option value="450" selected>Medium</option>
-              <option value="150">Fast</option>
-            </select>
-          </div>
-        </div>
-        <div class="panel-box" style="flex:1;min-width:0">
-          <div class="panel-title" id="phase-label">&mdash;</div>
-          <div style="font-size:0.82rem;color:var(--text-muted);margin-top:2px" id="step-desc">Choose a preset and click Build &amp; Run.</div>
-          <div class="result-badge" id="result-badge"></div>
-        </div>
-      </div>
+    <div id="resize-handle"></div>
 
+    <div id="code-panel">
+      <div class="code-panel-title">Python</div>
+      <div class="code-body-inner" id="code-body"></div>
+    </div>
+
+    <div id="sidebar">
       <div class="panel-box">
         <div class="panel-title">Variables</div>
         <div class="var-grid">
           <div class="var-box yellow-border">
             <div class="var-label">current interval</div>
-            <div class="var-val" id="vv-curr">&mdash;</div>
+            <div class="var-val" id="vv-curr">—</div>
           </div>
           <div class="var-box accent-border">
             <div class="var-label">last_end</div>
-            <div class="var-val" id="vv-last-end">&mdash;</div>
+            <div class="var-val" id="vv-last-end">—</div>
           </div>
           <div class="var-box red-border">
             <div class="var-label">removals</div>
-            <div class="var-val" id="vv-removals">&mdash;</div>
+            <div class="var-val" id="vv-removals">—</div>
           </div>
         </div>
         <div class="cmp-box">
@@ -197,57 +136,52 @@
           </div>
         </div>
       </div>
-
       <div class="panel-box">
         <div class="panel-title">Legend</div>
         <div style="display:flex;flex-direction:column;gap:7px">
-          <div class="legend-row">
-            <div class="legend-swatch" style="background:#2a2007;border:1.5px solid #e0af68"></div>
-            <span>Current interval (being examined)</span>
-          </div>
-          <div class="legend-row">
-            <div class="legend-swatch" style="background:#1a2b14;border:1.5px solid #4d7a23"></div>
-            <span>Kept — no overlap with last_end</span>
-          </div>
-          <div class="legend-row">
-            <div class="legend-swatch" style="background:#2b1420;border:1.5px solid #8b3a4a"></div>
-            <span>Removed — overlaps, counted</span>
-          </div>
-          <div class="legend-row">
-            <div class="legend-swatch" style="background:#1a1b26;border:1.5px solid #414868"></div>
-            <span>Pending / not yet processed</span>
-          </div>
-          <div class="legend-row">
-            <div class="legend-swatch" style="background:#0d1a35;border:1.5px solid #7aa2f7"></div>
-            <span>last_end pointer (vertical line)</span>
-          </div>
+          <div class="legend-row-item"><div class="legend-swatch" style="background:#2a2007;border:1.5px solid #e0af68"></div><span>Current interval</span></div>
+          <div class="legend-row-item"><div class="legend-swatch" style="background:#1a2b14;border:1.5px solid #4d7a23"></div><span>Kept</span></div>
+          <div class="legend-row-item"><div class="legend-swatch" style="background:#2b1420;border:1.5px solid #8b3a4a"></div><span>Removed</span></div>
+          <div class="legend-row-item"><div class="legend-swatch" style="background:#1a1b26;border:1.5px solid #414868"></div><span>Pending</span></div>
+          <div class="legend-row-item"><div class="legend-swatch" style="background:#0d1a35;border:1.5px solid #7aa2f7"></div><span>last_end pointer</span></div>
         </div>
       </div>
     </div>
   </div>
-</div>
+
+  <div id="nav-row">
+    <button id="prevBtn" class="btn-step">&#8592; Prev</button>
+    <button id="stepBtn" class="btn-step">Step &#8594;</button>
+    <button id="playBtn" class="btn-play">Play</button>
+    <button id="resetBtn" class="btn-step">&#8635; Reset</button>
+    <select id="speedSel">
+      <option value="800">0.5&#215;</option>
+      <option value="400" selected>1&#215;</option>
+      <option value="200">2&#215;</option>
+      <option value="100">4&#215;</option>
+    </select>
+  </div>
 
 <script>
 var PRESETS = [
-  { label: 'Classic',      raw: '1,2,2,3,3,4,1,3' },
-  { label: 'No removals',  raw: '1,2,2,3,3,4,4,5' },
+  { label: 'Classic',       raw: '1,2,2,3,3,4,1,3' },
+  { label: 'No removals',   raw: '1,2,2,3,3,4,4,5' },
   { label: 'Heavy overlap', raw: '1,4,1,3,2,5,3,6' },
 ];
 
 var simSteps = [], nav;
 var activePresetIdx = 0;
 
-// ── Code panel ──────────────────────────────────────────────────────────────
 var CODE = [
-  [1,  '<span class="kw">def</span> <span class="fn">eraseOverlapIntervals</span><span class="op">(</span>intervals<span class="op">):</span>'],
-  [2,  '    intervals<span class="op">.</span><span class="bi">sort</span><span class="op">(</span><span class="kw">key</span><span class="op">=</span><span class="kw">lambda</span> x<span class="op">:</span> x<span class="op">[</span><span class="nb">1</span><span class="op">])</span>  <span class="cm"># sort by end</span>'],
-  [3,  '    removals <span class="op">=</span> <span class="nb">0</span>'],
-  [4,  '    last_end <span class="op">=</span> intervals<span class="op">[</span><span class="nb">0</span><span class="op">][</span><span class="nb">1</span><span class="op">]</span>'],
-  [5,  '    <span class="kw">for</span> i <span class="kw">in</span> <span class="bi">range</span><span class="op">(</span><span class="nb">1</span><span class="op">,</span> <span class="bi">len</span><span class="op">(</span>intervals<span class="op">)):</span>'],
-  [6,  '        <span class="kw">if</span> intervals<span class="op">[</span>i<span class="op">][</span><span class="nb">0</span><span class="op">]</span> <span class="op">&gt;=</span> last_end<span class="op">:</span>'],
-  [7,  '            last_end <span class="op">=</span> intervals<span class="op">[</span>i<span class="op">][</span><span class="nb">1</span><span class="op">]</span>'],
-  [8,  '        <span class="kw">else</span><span class="op">:</span>'],
-  [9,  '            removals <span class="op">+=</span> <span class="nb">1</span>'],
+  [1,  '<span class="kw">def</span> <span class="fn">eraseOverlapIntervals</span>(intervals):'],
+  [2,  '    intervals.sort(key=lambda x: x[1])  <span class="cm"># sort by end</span>'],
+  [3,  '    removals = 0'],
+  [4,  '    last_end = intervals[0][1]'],
+  [5,  '    <span class="kw">for</span> i <span class="kw">in</span> range(1, len(intervals)):'],
+  [6,  '        <span class="kw">if</span> intervals[i][0] >= last_end:'],
+  [7,  '            last_end = intervals[i][1]'],
+  [8,  '        <span class="kw">else</span>:'],
+  [9,  '            removals += 1'],
   [10, '    <span class="kw">return</span> removals'],
 ];
 
@@ -262,24 +196,21 @@ window.addEventListener('DOMContentLoaded', function() {
     speedSel: document.getElementById('speedSel'),
     render: function(snap, cur, total) {
       renderStep(snap, cur > 0);
-      var phaseEl = document.getElementById('phase-label');
-      var descEl  = document.getElementById('step-desc');
-      if (phaseEl) phaseEl.textContent = 'Step ' + (cur + 1) + ' / ' + total + '  ·  ' + snap.phase;
-      if (descEl) {
-        gsap.fromTo(descEl, { opacity: 0 }, { opacity: 1, duration: 0.15 });
-        descEl.textContent = snap.desc;
-      }
+      document.getElementById('phase-label').textContent = 'Step ' + (cur+1) + ' / ' + total + '  ·  ' + snap.phase;
+      document.getElementById('phase-badge').textContent = snap.phase;
+      document.getElementById('step-counter').textContent = 'Step ' + (cur+1) + ' / ' + total;
+      var descEl = document.getElementById('step-desc');
+      if (descEl) { gsap.fromTo(descEl, { opacity: 0 }, { opacity: 1, duration: 0.15 }); descEl.textContent = snap.desc; }
       var badge = document.getElementById('result-badge');
       if (badge) {
         badge.className = 'result-badge';
         badge.textContent = '';
-        if (snap.phase === 'Done') {
-          badge.className = 'result-badge show';
-          badge.textContent = 'Removals: ' + snap.removals;
-        }
+        if (snap.phase === 'Done') { badge.className = 'result-badge show'; badge.textContent = 'Removals: ' + snap.removals; }
       }
     }
   });
+
+  document.getElementById('resetBtn').addEventListener('click', function() { nav.load(simSteps); });
 });
 
 function buildCodePanel() {
@@ -296,315 +227,143 @@ function loadPreset(idx, btn) {
   document.getElementById('inp-intervals').value = PRESETS[idx].raw;
 }
 
+function randomExample() {
+  var pairs = [];
+  var n = 4 + Math.floor(Math.random() * 4);
+  for (var i = 0; i < n; i++) {
+    var s = Math.floor(Math.random() * 8);
+    var e = s + 1 + Math.floor(Math.random() * 4);
+    pairs.push(s + ',' + e);
+  }
+  document.getElementById('inp-intervals').value = pairs.join(',');
+  document.querySelectorAll('.btn-preset').forEach(function(b) { b.classList.remove('active'); });
+  buildAndRun();
+}
+
 function parseIntervals(raw) {
   var nums = raw.split(',').map(function(s) { return parseInt(s.trim(), 10); }).filter(function(n) { return !isNaN(n); });
   var result = [];
-  for (var i = 0; i + 1 < nums.length; i += 2) {
-    if (nums[i] <= nums[i + 1]) result.push([nums[i], nums[i + 1]]);
-  }
+  for (var i = 0; i + 1 < nums.length; i += 2) { if (nums[i] <= nums[i+1]) result.push([nums[i], nums[i+1]]); }
   return result;
 }
 
 function buildAndRun() {
   var raw = document.getElementById('inp-intervals').value;
   var intervals = parseIntervals(raw);
-  if (intervals.length < 2) {
-    alert('Need at least 2 intervals.');
-    return;
-  }
+  if (intervals.length < 2) { alert('Need at least 2 intervals.'); return; }
   simSteps = simulate(intervals);
   nav.load(simSteps);
 }
 
-// ── Simulation ───────────────────────────────────────────────────────────────
 function fmtIv(iv) { return '[' + iv[0] + ',' + iv[1] + ']'; }
 
 function simulate(intervals) {
   var steps = [];
-
-  // keepStatus: array parallel to sorted — 'keep', 'remove', or null (pending)
   function snap(phase, desc, lines, opts) {
     opts = opts || {};
-    steps.push({
-      phase: phase,
-      desc: desc,
-      lines: lines,
-      sorted:     (opts.sorted     || intervals).slice(),
-      isSorted:   !!opts.isSorted,
-      currentIdx: opts.currentIdx !== undefined ? opts.currentIdx : -1,
-      keepStatus: (opts.keepStatus || []).slice(),
-      lastEnd:    opts.lastEnd !== undefined ? opts.lastEnd : null,
-      removals:   opts.removals !== undefined ? opts.removals : 0,
-      decision:   opts.decision !== undefined ? opts.decision : null,  // 'keep', 'remove', or null
-    });
+    steps.push({ phase: phase, desc: desc, lines: lines, sorted: (opts.sorted || intervals).slice(), isSorted: !!opts.isSorted, currentIdx: opts.currentIdx !== undefined ? opts.currentIdx : -1, keepStatus: (opts.keepStatus || []).slice(), lastEnd: opts.lastEnd !== undefined ? opts.lastEnd : null, removals: opts.removals !== undefined ? opts.removals : 0, decision: opts.decision !== undefined ? opts.decision : null });
   }
 
-  // Step 1: Input
-  snap('Input', 'Input: ' + intervals.length + ' intervals. Goal: minimum removals so none overlap.', [1], {
-    sorted: intervals.slice(),
-    isSorted: false,
-    keepStatus: new Array(intervals.length).fill(null),
-    removals: 0,
-  });
+  snap('Input', 'Input: ' + intervals.length + ' intervals. Goal: minimum removals so none overlap.', [1], { sorted: intervals.slice(), isSorted: false, keepStatus: new Array(intervals.length).fill(null), removals: 0 });
 
-  // Step 2: Sort by end time
   var sorted = intervals.slice().sort(function(a, b) { return a[1] - b[1]; });
-  snap('Sort', 'Sort by end time: ' + sorted.map(fmtIv).join(' → ') + '. Sorting by end leaves maximum room for future intervals.', [2], {
-    sorted: sorted.slice(),
-    isSorted: true,
-    keepStatus: new Array(sorted.length).fill(null),
-    removals: 0,
-  });
+  snap('Sort', 'Sort by end time: ' + sorted.map(fmtIv).join(' → ') + '.', [2], { sorted: sorted.slice(), isSorted: true, keepStatus: new Array(sorted.length).fill(null), removals: 0 });
 
-  // Step 3: Init — keep first interval
-  var removals = 0;
-  var lastEnd = sorted[0][1];
+  var removals = 0, lastEnd = sorted[0][1];
   var keepStatus = new Array(sorted.length).fill(null);
   keepStatus[0] = 'keep';
-  snap('Init', 'Keep first interval ' + fmtIv(sorted[0]) + '. Set last_end = ' + lastEnd + '.', [3, 4], {
-    sorted: sorted,
-    isSorted: true,
-    currentIdx: 0,
-    keepStatus: keepStatus.slice(),
-    lastEnd: lastEnd,
-    removals: 0,
-  });
+  snap('Init', 'Keep first interval ' + fmtIv(sorted[0]) + '. Set last_end = ' + lastEnd + '.', [3,4], { sorted: sorted, isSorted: true, currentIdx: 0, keepStatus: keepStatus.slice(), lastEnd: lastEnd, removals: 0 });
 
-  // Step 4: Process remaining
   for (var i = 1; i < sorted.length; i++) {
     var cur = sorted[i];
-
-    // Compare step
-    snap('Compare', 'Examine ' + fmtIv(cur) + '. Is ' + cur[0] + ' ≥ last_end (' + lastEnd + ')?', [5, 6], {
-      sorted: sorted,
-      isSorted: true,
-      currentIdx: i,
-      keepStatus: keepStatus.slice(),
-      lastEnd: lastEnd,
-      removals: removals,
-      decision: null,
-    });
-
+    snap('Compare', 'Examine ' + fmtIv(cur) + '. Is ' + cur[0] + ' ≥ last_end (' + lastEnd + ')?', [5,6], { sorted: sorted, isSorted: true, currentIdx: i, keepStatus: keepStatus.slice(), lastEnd: lastEnd, removals: removals, decision: null });
     if (cur[0] >= lastEnd) {
-      // Keep: no overlap
       keepStatus[i] = 'keep';
-      var oldEnd = lastEnd;
-      lastEnd = cur[1];
-      snap('Keep', cur[0] + ' ≥ ' + oldEnd + ' → no overlap. Keep ' + fmtIv(cur) + ', update last_end = ' + lastEnd + '.', [6, 7], {
-        sorted: sorted,
-        isSorted: true,
-        currentIdx: i,
-        keepStatus: keepStatus.slice(),
-        lastEnd: lastEnd,
-        removals: removals,
-        decision: 'keep',
-      });
+      var oldEnd = lastEnd; lastEnd = cur[1];
+      snap('Keep', cur[0] + ' ≥ ' + oldEnd + ' → no overlap. Keep ' + fmtIv(cur) + ', update last_end = ' + lastEnd + '.', [6,7], { sorted: sorted, isSorted: true, currentIdx: i, keepStatus: keepStatus.slice(), lastEnd: lastEnd, removals: removals, decision: 'keep' });
     } else {
-      // Remove: overlaps — discard current (it has larger/equal end since sorted)
-      keepStatus[i] = 'remove';
-      removals++;
-      snap('Remove', cur[0] + ' < ' + lastEnd + ' → overlap! Remove ' + fmtIv(cur) + '. removals = ' + removals + '.', [8, 9], {
-        sorted: sorted,
-        isSorted: true,
-        currentIdx: i,
-        keepStatus: keepStatus.slice(),
-        lastEnd: lastEnd,
-        removals: removals,
-        decision: 'remove',
-      });
+      keepStatus[i] = 'remove'; removals++;
+      snap('Remove', cur[0] + ' < ' + lastEnd + ' → overlap! Remove ' + fmtIv(cur) + '. removals = ' + removals + '.', [8,9], { sorted: sorted, isSorted: true, currentIdx: i, keepStatus: keepStatus.slice(), lastEnd: lastEnd, removals: removals, decision: 'remove' });
     }
   }
 
-  // Done
-  snap('Done', 'All intervals processed. Minimum removals = ' + removals + '. Kept ' + (sorted.length - removals) + ' intervals.', [10], {
-    sorted: sorted,
-    isSorted: true,
-    currentIdx: -1,
-    keepStatus: keepStatus.slice(),
-    lastEnd: lastEnd,
-    removals: removals,
-    decision: null,
-  });
-
+  snap('Done', 'All intervals processed. Minimum removals = ' + removals + '. Kept ' + (sorted.length - removals) + ' intervals.', [10], { sorted: sorted, isSorted: true, currentIdx: -1, keepStatus: keepStatus.slice(), lastEnd: lastEnd, removals: removals, decision: null });
   return steps;
 }
 
-// ── Render ───────────────────────────────────────────────────────────────────
-function renderStep(snap, animate) {
-  renderSVG(snap, animate);
-  renderVars(snap, animate);
-  renderCode(snap.lines);
-}
+var C = { pending: { fill: '#1a1b26', stroke: '#414868', text: '#565f89' }, current: { fill: '#2a2007', stroke: '#e0af68', text: '#e0af68' }, keep: { fill: '#1a2b14', stroke: '#4d7a23', text: '#9ece6a' }, remove: { fill: '#2b1420', stroke: '#8b3a4a', text: '#f7768e' }, axis: '#414868', axisText: '#565f89', label: '#3b4261', lastEnd: '#7aa2f7' };
 
-// Color constants
-var C = {
-  pending:  { fill: '#1a1b26', stroke: '#414868', text: '#565f89' },
-  current:  { fill: '#2a2007', stroke: '#e0af68', text: '#e0af68' },
-  keep:     { fill: '#1a2b14', stroke: '#4d7a23', text: '#9ece6a' },
-  remove:   { fill: '#2b1420', stroke: '#8b3a4a', text: '#f7768e' },
-  axis:     '#414868',
-  axisText: '#565f89',
-  label:    '#3b4261',
-  divider:  '#292e42',
-  lastEnd:  '#7aa2f7',
-};
+function renderStep(snap, animate) { renderSVG(snap, animate); renderVars(snap, animate); renderCode(snap.lines); }
 
 function renderSVG(snap, animate) {
   var svg = document.getElementById('timeline-svg');
   if (!snap.sorted || snap.sorted.length === 0) return;
-
-  var n = snap.sorted.length;
-  var W = 700;
-  var PAD_L = 58;
-  var PAD_R = 24;
-  var CW = W - PAD_L - PAD_R;
-  var BAR_H = 20;
-  var ROW_H = 28;
-
-  // Compute value range
-  var allVals = [];
-  snap.sorted.forEach(function(iv) { allVals.push(iv[0], iv[1]); });
-  var minV = Math.min.apply(null, allVals);
-  var maxV = Math.max.apply(null, allVals);
-  var span = maxV - minV || 1;
-  var vPad = span * 0.08;
-  var vMin = minV - vPad;
-  var vMax = maxV + vPad;
-
+  var n = snap.sorted.length, W = 700, PAD_L = 58, PAD_R = 24, CW = W - PAD_L - PAD_R, BAR_H = 20, ROW_H = 28;
+  var allVals = []; snap.sorted.forEach(function(iv) { allVals.push(iv[0], iv[1]); });
+  var minV = Math.min.apply(null, allVals), maxV = Math.max.apply(null, allVals), span = maxV - minV || 1;
+  var vPad = span * 0.08, vMin = minV - vPad, vMax = maxV + vPad;
   function xS(v) { return PAD_L + (v - vMin) / (vMax - vMin) * CW; }
-
-  // Layout
-  var AXIS_Y   = 22;
-  var INPUT_Y0 = 42;
-  var TOTAL_H  = INPUT_Y0 + n * ROW_H + 20;
-
+  var AXIS_Y = 22, INPUT_Y0 = 42, TOTAL_H = INPUT_Y0 + n * ROW_H + 20;
   svg.setAttribute('viewBox', '0 0 ' + W + ' ' + TOTAL_H);
-
   var parts = [];
-
-  // ── Axis ──
-  var rawStep = span / 5;
-  var step = Math.max(1, Math.round(rawStep));
-  var tickStart = Math.ceil(minV / step) * step;
-  parts.push('<line x1="' + PAD_L + '" y1="' + AXIS_Y + '" x2="' + (W - PAD_R) + '" y2="' + AXIS_Y + '" stroke="' + C.axis + '" stroke-width="1"/>');
-  for (var tv = tickStart; tv <= maxV; tv += step) {
-    var tx = xS(tv);
-    parts.push('<line x1="' + tx + '" y1="' + (AXIS_Y - 4) + '" x2="' + tx + '" y2="' + (AXIS_Y + 4) + '" stroke="' + C.axis + '" stroke-width="1"/>');
-    parts.push('<text x="' + tx + '" y="' + (AXIS_Y + 16) + '" text-anchor="middle" fill="' + C.axisText + '" font-size="10" font-family="monospace">' + tv + '</text>');
-  }
-
-  // ── Section label ──
-  parts.push('<text x="' + (PAD_L - 4) + '" y="' + (INPUT_Y0 - 6) + '" text-anchor="end" fill="' + C.label + '" font-size="10" font-weight="600" letter-spacing="0.05em">SORTED</text>');
-
-  // ── Interval rows ──
+  var rawStep = span / 5, step = Math.max(1, Math.round(rawStep)), tickStart = Math.ceil(minV / step) * step;
+  parts.push('<line x1="' + PAD_L + '" y1="' + AXIS_Y + '" x2="' + (W-PAD_R) + '" y2="' + AXIS_Y + '" stroke="' + C.axis + '" stroke-width="1"/>');
+  for (var tv = tickStart; tv <= maxV; tv += step) { var tx = xS(tv); parts.push('<line x1="' + tx + '" y1="' + (AXIS_Y-4) + '" x2="' + tx + '" y2="' + (AXIS_Y+4) + '" stroke="' + C.axis + '" stroke-width="1"/>'); parts.push('<text x="' + tx + '" y="' + (AXIS_Y+16) + '" text-anchor="middle" fill="' + C.axisText + '" font-size="10" font-family="monospace">' + tv + '</text>'); }
+  parts.push('<text x="' + (PAD_L-4) + '" y="' + (INPUT_Y0-6) + '" text-anchor="end" fill="' + C.label + '" font-size="10" font-weight="600" letter-spacing="0.05em">SORTED</text>');
   snap.sorted.forEach(function(iv, idx) {
-    var barY = INPUT_Y0 + idx * ROW_H;
-    var barCy = barY + BAR_H / 2;
-    var x1 = xS(iv[0]);
-    var x2 = xS(iv[1]);
-    var bw = Math.max(x2 - x1, 2);
-
+    var barY = INPUT_Y0 + idx * ROW_H, barCy = barY + BAR_H/2, x1 = xS(iv[0]), x2 = xS(iv[1]), bw = Math.max(x2-x1, 2);
     var status = snap.keepStatus[idx] || null;
-    var style;
-    if (idx === snap.currentIdx) {
-      style = C.current;
-    } else if (status === 'keep') {
-      style = C.keep;
-    } else if (status === 'remove') {
-      style = C.remove;
-    } else {
-      style = C.pending;
-    }
-
-    // Row label on left
-    parts.push('<text x="' + (PAD_L - 5) + '" y="' + (barCy + 4) + '" text-anchor="end" fill="' + style.text + '" font-size="10" font-family="monospace">' + fmtIv(iv) + '</text>');
-
-    // Bar
+    var style = idx === snap.currentIdx ? C.current : status === 'keep' ? C.keep : status === 'remove' ? C.remove : C.pending;
+    parts.push('<text x="' + (PAD_L-5) + '" y="' + (barCy+4) + '" text-anchor="end" fill="' + style.text + '" font-size="10" font-family="monospace">' + fmtIv(iv) + '</text>');
     parts.push('<rect x="' + x1 + '" y="' + barY + '" width="' + bw + '" height="' + BAR_H + '" rx="4" fill="' + style.fill + '" stroke="' + style.stroke + '" stroke-width="1.5"/>');
-
-    // Label inside bar
-    if (bw > 30) {
-      parts.push('<text x="' + (x1 + bw / 2) + '" y="' + (barCy + 4) + '" text-anchor="middle" fill="' + style.text + '" font-size="9.5" font-family="monospace" font-weight="600">' + fmtIv(iv) + '</text>');
-    }
-
-    // Remove strike-through
-    if (status === 'remove') {
-      parts.push('<line x1="' + x1 + '" y1="' + barCy + '" x2="' + (x1 + bw) + '" y2="' + barCy + '" stroke="#f7768e" stroke-width="2" opacity="0.6"/>');
-    }
+    if (bw > 30) parts.push('<text x="' + (x1+bw/2) + '" y="' + (barCy+4) + '" text-anchor="middle" fill="' + style.text + '" font-size="9.5" font-family="monospace" font-weight="600">' + fmtIv(iv) + '</text>');
+    if (status === 'remove') parts.push('<line x1="' + x1 + '" y1="' + barCy + '" x2="' + (x1+bw) + '" y2="' + barCy + '" stroke="#f7768e" stroke-width="2" opacity="0.6"/>');
   });
-
-  // ── last_end vertical line ──
   if (snap.lastEnd !== null) {
-    var lex = xS(snap.lastEnd);
-    var lineTop = INPUT_Y0 - 4;
-    var lineBot = INPUT_Y0 + n * ROW_H + 4;
+    var lex = xS(snap.lastEnd), lineTop = INPUT_Y0-4, lineBot = INPUT_Y0 + n * ROW_H + 4;
     parts.push('<line x1="' + lex + '" y1="' + lineTop + '" x2="' + lex + '" y2="' + lineBot + '" stroke="' + C.lastEnd + '" stroke-width="2" stroke-dasharray="5,3" opacity="0.8"/>');
-    parts.push('<text x="' + lex + '" y="' + (lineBot + 12) + '" text-anchor="middle" fill="' + C.lastEnd + '" font-size="9.5" font-family="monospace" font-weight="700">last_end=' + snap.lastEnd + '</text>');
-    // Triangle pointer at top
-    var tx = lex;
-    var ty = lineTop;
-    parts.push('<polygon points="' + tx + ',' + ty + ' ' + (tx - 5) + ',' + (ty - 8) + ' ' + (tx + 5) + ',' + (ty - 8) + '" fill="' + C.lastEnd + '" opacity="0.8"/>');
+    parts.push('<text x="' + lex + '" y="' + (lineBot+12) + '" text-anchor="middle" fill="' + C.lastEnd + '" font-size="9.5" font-family="monospace" font-weight="700">last_end=' + snap.lastEnd + '</text>');
+    parts.push('<polygon points="' + lex + ',' + lineTop + ' ' + (lex-5) + ',' + (lineTop-8) + ' ' + (lex+5) + ',' + (lineTop-8) + '" fill="' + C.lastEnd + '" opacity="0.8"/>');
   }
-
   svg.innerHTML = parts.join('');
 }
 
 function renderVars(snap, animate) {
   function setVal(id, val) {
-    var el = document.getElementById(id);
-    if (!el) return;
+    var el = document.getElementById(id); if (!el) return;
     var text = (val === null || val === undefined) ? '—' : String(val);
-    if (animate && el.textContent !== text) {
-      gsap.fromTo(el, { scale: 0.85, opacity: 0.4 }, { scale: 1, opacity: 1, duration: 0.2, ease: 'back.out(1.7)' });
-    }
+    if (animate && el.textContent !== text) gsap.fromTo(el, { scale: 0.85, opacity: 0.4 }, { scale: 1, opacity: 1, duration: 0.2, ease: 'back.out(1.7)' });
     el.textContent = text;
   }
-
   var cur = snap.currentIdx >= 0 ? snap.sorted[snap.currentIdx] : null;
   setVal('vv-curr', cur ? fmtIv(cur) : null);
   setVal('vv-last-end', snap.lastEnd !== null ? snap.lastEnd : null);
   setVal('vv-removals', snap.removals !== undefined ? snap.removals : null);
-
-  // Comparison zone
-  var lhsEl   = document.getElementById('cmp-lhs');
-  var rhsEl   = document.getElementById('cmp-rhs');
-  var badgeEl = document.getElementById('cmp-badge');
-
+  var lhsEl = document.getElementById('cmp-lhs'), rhsEl = document.getElementById('cmp-rhs'), badgeEl = document.getElementById('cmp-badge');
   if (cur && snap.lastEnd !== null) {
-    lhsEl.textContent = cur[0];
-    rhsEl.textContent = snap.lastEnd;
+    lhsEl.textContent = cur[0]; rhsEl.textContent = snap.lastEnd;
     badgeEl.className = 'cmp-badge';
-    if (snap.decision === 'keep') {
-      badgeEl.className = 'cmp-badge keep';
-      badgeEl.textContent = 'no overlap → keep';
-    } else if (snap.decision === 'remove') {
-      badgeEl.className = 'cmp-badge remove';
-      badgeEl.textContent = 'overlap → remove';
-    } else {
-      badgeEl.textContent = '';
-    }
-  } else {
-    lhsEl.textContent = 'current.start';
-    rhsEl.textContent = 'last_end';
-    badgeEl.className = 'cmp-badge';
-    badgeEl.textContent = '';
-  }
+    if (snap.decision === 'keep') { badgeEl.className = 'cmp-badge keep'; badgeEl.textContent = 'no overlap → keep'; }
+    else if (snap.decision === 'remove') { badgeEl.className = 'cmp-badge remove'; badgeEl.textContent = 'overlap → remove'; }
+    else badgeEl.textContent = '';
+  } else { lhsEl.textContent = 'current.start'; rhsEl.textContent = 'last_end'; badgeEl.className = 'cmp-badge'; badgeEl.textContent = ''; }
 }
 
 function renderCode(lines) {
   CODE.forEach(function(e) {
-    var el = document.getElementById('cl-' + e[0]);
-    if (!el) return;
-    if (lines.indexOf(e[0]) >= 0) el.classList.add('hl');
-    else el.classList.remove('hl');
+    var el = document.getElementById('cl-' + e[0]); if (!el) return;
+    if (lines.indexOf(e[0]) >= 0) el.classList.add('hl'); else el.classList.remove('hl');
   });
 }
 </script>
 <script>
-  if (window.self !== window.top) {
-    var bl = document.querySelector('.back-link');
-    if (bl) bl.style.display = 'none';
-  }
+(function() {
+  var handle = document.getElementById('resize-handle'), panel = document.getElementById('code-panel');
+  var dragging = false, startX = 0, startW = 0;
+  handle.addEventListener('mousedown', function(e) { dragging = true; startX = e.clientX; startW = panel.offsetWidth; e.preventDefault(); });
+  document.addEventListener('mousemove', function(e) { if (!dragging) return; panel.style.width = Math.min(560, Math.max(120, startW + (startX - e.clientX))) + 'px'; });
+  document.addEventListener('mouseup', function() { dragging = false; });
+})();
 </script>
 </body>
 </html>

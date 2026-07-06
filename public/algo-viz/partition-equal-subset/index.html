@@ -1,279 +1,147 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Partition Equal Subset Sum</title>
-  <link rel="stylesheet" href="../shared/style.css" />
-  <script src="../shared/gsap.min.js"></script>
-  <script src="../shared/viz.js"></script>
-  <style>
-    .viz-area {
-      display: flex;
-      flex-direction: column;
-      flex: 1;
-      min-height: 0;
-      gap: 12px;
-    }
-
-    /* ── DP 2-D grid ── */
-    .grid-wrap {
-      flex: 1;
-      overflow: auto;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-lg);
-      padding: 16px;
-      min-height: 0;
-    }
-
-    .dp-grid {
-      display: grid;
-      gap: 3px;
-      min-width: max-content;
-    }
-
-    .hdr-cell {
-      width: 44px; height: 26px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 0.6rem; color: var(--text-ghost); font-family: monospace; font-weight: 600;
-    }
-    .hdr-cell.target-col { color: var(--accent-pale); }
-    .hdr-corner { width: 80px; }
-
-    .row-label {
-      width: 80px; height: 44px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 0.75rem; font-family: monospace; font-weight: 600;
-      color: var(--text-dim);
-      background: var(--bg);
-      border: 1px solid var(--border);
-      border-radius: 5px;
-      transition: border-color 0.15s, color 0.15s, background 0.15s;
-    }
-    .row-label.active  { border-color: var(--accent); color: var(--accent-pale); background: var(--surface-dark); }
-    .row-label.done    { color: var(--text-ghost); border-color: var(--border-soft); }
-
-    .dp-cell {
-      width: 44px; height: 44px;
-      display: flex; align-items: center; justify-content: center;
-      border: 1px solid var(--border-soft);
-      border-radius: 4px;
-      background: var(--bg);
-      font-size: 0.75rem; font-weight: 700; font-family: monospace;
-      color: var(--text-ghost);
-      transition: border-color 0.12s, background 0.12s, color 0.12s;
-    }
-    .dp-cell[data-v="T"]  { background: #052e16; border-color: #166534; color: #4ade80; }
-    .dp-cell[data-v="F"]  { background: var(--bg); border-color: var(--border-soft); color: var(--text-ghost); }
-    .dp-cell.active-row   { background: #0d1117; }
-    .dp-cell.active-row[data-v="T"] { background: #062e16; }
-
-    .dp-cell.cell-current {
-      border-color: var(--accent) !important;
-      background: var(--surface-dark) !important;
-      outline: 2px solid var(--accent);
-      outline-offset: 1px;
-      color: var(--accent-pale);
-    }
-    .dp-cell.cell-current[data-v="T"] { color: #4ade80; }
-
-    .dp-cell.cell-lookback {
-      border-color: #b45309 !important;
-      background: #1c0e00 !important;
-    }
-    .dp-cell.cell-lookback[data-v="T"] { color: #fbbf24; }
-
-    .dp-cell.cell-just-set {
-      border-color: #15803d !important;
-      background: #052e16 !important;
-      box-shadow: 0 0 0 2px #22c55e;
-      color: #4ade80 !important;
-    }
-
-    .dp-cell.cell-answer {
-      border-color: #15803d !important;
-      background: #052e16 !important;
-      box-shadow: 0 0 0 3px #4ade80;
-      color: #4ade80 !important;
-    }
-
-    .dp-cell.target-col { border-color: rgba(125,125,200,0.2); }
-
-    /* ── Bottom panel ── */
-    .bottom-section {
-      display: flex;
-      gap: 10px;
-      flex-shrink: 0;
-    }
-
-    .nav-panel {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--radius-lg); padding: 12px 14px;
-      display: flex; gap: 8px; align-items: center; flex-shrink: 0;
-    }
-
-    .info-panel {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--radius-lg); padding: 12px 16px;
-      flex: 1; min-width: 0;
-    }
-
-    .vars-panel {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--radius-lg); padding: 12px 14px;
-      flex-shrink: 0;
-    }
-
-    .panel-title {
-      font-size: 0.68rem; font-weight: 700;
-      text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim);
-      margin-bottom: 6px;
-    }
-
-    .var-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
-    .var-box {
-      padding: 8px 7px; background: var(--bg); border: 1px solid var(--border);
-      border-radius: var(--radius-sm); display: flex; flex-direction: column;
-      align-items: center; gap: 2px; min-width: 68px;
-    }
-    .var-label { font-size: 0.58rem; font-family: monospace; color: var(--text-faint); text-align: center; }
-    .var-val   { font-size: 1rem; font-weight: 700; color: var(--text-bright); font-family: monospace; }
-    .var-box.accent-border { border-color: var(--accent); }
-    .var-box.amber-border  { border-color: #b45309; }
-    .var-box.purple-border { border-color: #7c3aed; }
-    .var-box.green-border  { border-color: #166534; }
-
-    .result-badge {
-      font-size: 0.85rem; font-weight: 700; padding: 4px 12px;
-      border-radius: 5px; display: none; width: fit-content; margin-top: 6px;
-    }
-    .result-badge.yes { background: var(--green-bg); color: var(--green); border: 1px solid var(--green-border); display: block; }
-    .result-badge.no  { background: #1c0000; color: #f87171; border: 1px solid #7f1d1d; display: block; }
-
-    .speedSel {
-      background: var(--bg); border: 1px solid var(--border);
-      border-radius: var(--radius-sm); color: var(--text);
-      font-size: 0.85rem; padding: 8px 10px; outline: none; width: 80px;
-    }
-
-    .odd-sum-msg {
-      padding: 16px 20px; font-size: 0.88rem;
-      color: #f87171; background: #1c0000;
-      border: 1px solid #7f1d1d; border-radius: var(--radius-lg);
-    }
-
-    /* ── viz-inputs styles ── */
-    .viz-inputs {
-      display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end;
-      padding: 10px 0 14px; width: 100%; max-width: 90%;
-    }
-    .viz-inputs .field {
-      display: flex; flex-direction: column; gap: 4px;
-    }
-    .viz-inputs label {
-      font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
-      letter-spacing: 0.08em; color: var(--text-dim);
-    }
-    .viz-inputs input[type="text"] {
-      background: var(--surface); border: 1px solid var(--border);
-      color: var(--text); border-radius: var(--radius-sm);
-      padding: 6px 10px; font-size: 0.85rem; width: 180px;
-    }
-    .viz-inputs select {
-      background: var(--surface); border: 1px solid var(--border);
-      color: var(--text); border-radius: var(--radius-sm);
-      padding: 6px 10px; font-size: 0.85rem; cursor: pointer;
-    }
-    .viz-inputs button {
-      padding: 7px 18px; background: var(--accent); color: #fff;
-      border: none; border-radius: var(--radius-sm); font-weight: 600;
-      cursor: pointer; font-size: 0.85rem;
-    }
-    .viz-inputs .btn-secondary {
-      background: var(--surface); color: var(--text); border: 1px solid var(--border);
-    }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Partition Equal Subset Sum</title>
+<link rel="stylesheet" href="../shared/style.css" />
+<script src="../shared/gsap.min.js"></script>
+<script src="../shared/viz.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: "Fira Code", "Cascadia Code", monospace; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+  #header { padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+  #phase-badge { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; padding: 3px 10px; border-radius: var(--radius-sm); background: #1e3a5f; color: var(--blue); border: 1px solid var(--blue); }
+  #step-counter { font-size: 12px; color: var(--text-muted); margin-left: auto; }
+  .viz-inputs { width: 100%; padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; flex-wrap: wrap; gap: 12px; align-items: center; flex-shrink: 0; }
+  .viz-inputs label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); display: block; margin-bottom: 3px; }
+  .viz-inputs select, .viz-inputs input { background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 0 8px; height: 30px; font-size: 0.82rem; font-family: inherit; }
+  .vi-btn-run { padding: 6px 14px; border-radius: 6px; font-size: 0.82rem; font-weight: 600; cursor: pointer; font-family: inherit; background: var(--accent); color: #fff; border: none; }
+  .vi-btn-rand { padding: 6px 14px; border-radius: 6px; font-size: 0.82rem; cursor: pointer; font-family: inherit; background: var(--bg); color: var(--text); border: 1px solid var(--border); }
+  #main { display: flex; flex: 1; overflow: hidden; }
+  #viz-area { flex: 1; display: flex; flex-direction: column; align-items: flex-start; justify-content: flex-start; padding: 16px; gap: 14px; overflow-y: auto; }
+  #desc { font-size: 13px; color: var(--text-muted); max-width: 560px; min-height: 36px; line-height: 1.5; align-self: center; text-align: center; }
+  .panel-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--text-dim); margin-bottom: 8px; }
+  #resize-handle { width: 5px; flex-shrink: 0; cursor: col-resize; background: transparent; border-left: 1px solid var(--border); transition: background .15s; z-index: 10; }
+  #resize-handle:hover, #resize-handle.dragging { background: var(--accent); }
+  #code-panel { width: 320px; min-width: 120px; max-width: 560px; flex-shrink: 0; background: #0d1117; border-right: 1px solid var(--border); overflow-y: auto; overflow-x: auto; padding: 10px 12px; display: flex; flex-direction: column; }
+  .code-panel-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--text-dim); margin-bottom: 8px; }
+  #sidebar { width: 200px; flex-shrink: 0; background: var(--surface); border-left: 1px solid var(--border); overflow-y: auto; padding: 14px 12px; display: flex; flex-direction: column; gap: 10px; }
+  .sidebar-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--text-dim); margin-bottom: 6px; }
+  #nav-row { flex-shrink: 0; display: flex; align-items: center; gap: 8px; padding: 10px 16px; background: var(--surface); border-top: 1px solid var(--border); }
+  .btn-step { padding: 6px 14px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--surface); color: var(--text); font-family: inherit; font-size: 12px; cursor: pointer; }
+  .btn-step:hover { background: #334155; }
+  .btn-play { padding: 6px 14px; border-radius: var(--radius-sm); background: var(--accent); border: none; color: #fff; font-family: inherit; font-size: 12px; cursor: pointer; font-weight: 600; }
+  #nav-row select { padding: 5px 8px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: #1e293b; color: var(--text); font-size: 12px; font-family: inherit; cursor: pointer; }
+  /* page-specific */
+  .grid-wrap { flex: 1; overflow: auto; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 14px; min-height: 100px; width: 100%; }
+  .dp-grid { display: grid; gap: 3px; min-width: max-content; }
+  .hdr-cell { width: 44px; height: 26px; display: flex; align-items: center; justify-content: center; font-size: 0.6rem; color: var(--text-ghost); font-family: monospace; font-weight: 600; }
+  .hdr-cell.target-col { color: var(--accent-pale); }
+  .hdr-corner { width: 80px; }
+  .row-label { width: 80px; height: 44px; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-family: monospace; font-weight: 600; color: var(--text-dim); background: var(--bg); border: 1px solid var(--border); border-radius: 5px; transition: border-color 0.15s, color 0.15s, background 0.15s; }
+  .row-label.active { border-color: var(--accent); color: var(--accent-pale); background: var(--surface-dark); }
+  .row-label.done { color: var(--text-ghost); border-color: var(--border-soft); }
+  .dp-cell { width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; border: 1px solid var(--border-soft); border-radius: 4px; background: var(--bg); font-size: 0.75rem; font-weight: 700; font-family: monospace; color: var(--text-ghost); transition: border-color 0.12s, background 0.12s, color 0.12s; }
+  .dp-cell[data-v="T"] { background: #052e16; border-color: #166534; color: #4ade80; }
+  .dp-cell[data-v="F"] { background: var(--bg); border-color: var(--border-soft); color: var(--text-ghost); }
+  .dp-cell.active-row { background: #0d1117; }
+  .dp-cell.active-row[data-v="T"] { background: #062e16; }
+  .dp-cell.cell-current { border-color: var(--accent) !important; background: var(--surface-dark) !important; outline: 2px solid var(--accent); outline-offset: 1px; color: var(--accent-pale); }
+  .dp-cell.cell-current[data-v="T"] { color: #4ade80; }
+  .dp-cell.cell-lookback { border-color: #b45309 !important; background: #1c0e00 !important; }
+  .dp-cell.cell-lookback[data-v="T"] { color: #fbbf24; }
+  .dp-cell.cell-just-set { border-color: #15803d !important; background: #052e16 !important; box-shadow: 0 0 0 2px #22c55e; color: #4ade80 !important; }
+  .dp-cell.cell-answer { border-color: #15803d !important; background: #052e16 !important; box-shadow: 0 0 0 3px #4ade80; color: #4ade80 !important; }
+  .dp-cell.target-col { border-color: rgba(125,125,200,0.2); }
+  .var-box { padding: 8px 6px; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm); display: flex; flex-direction: column; align-items: center; gap: 2px; margin-bottom: 6px; }
+  .var-box.accent-border { border-color: var(--accent); }
+  .var-box.amber-border { border-color: #b45309; }
+  .var-box.purple-border { border-color: #7c3aed; }
+  .var-box.green-border { border-color: #166534; }
+  .var-label { font-size: 0.58rem; font-family: monospace; color: var(--text-faint); text-align: center; }
+  .var-val { font-size: 1rem; font-weight: 700; color: var(--text-bright); font-family: monospace; }
+  .result-badge { font-size: 0.78rem; font-weight: 700; padding: 4px 10px; border-radius: 5px; display: none; }
+  .result-badge.yes { background: #052e16; color: #4ade80; border: 1px solid #166534; display: block; }
+  .result-badge.no { background: #1c0000; color: #f87171; border: 1px solid #7f1d1d; display: block; }
+  .odd-sum-msg { padding: 14px 18px; font-size: 0.85rem; color: #f87171; background: #1c0000; border: 1px solid #7f1d1d; border-radius: var(--radius-lg); }
+</style>
 </head>
-<body class="page">
-
-<div class="page-header">
-  <a class="back-link" href="../index.html">&larr; All Algorithms</a>
-  <div class="page-title">Partition Equal Subset Sum</div>
-  <div class="page-sub">LeetCode 416 &middot; 0/1 Knapsack DP &middot; dp[j] = can a subset achieve sum j &middot; O(n&middot;target) time &middot; O(target) space</div>
-</div>
+<body>
 
 <div class="viz-inputs">
-  <div class="field">
+  <div>
     <label>Preset</label>
     <select id="presetSel" onchange="loadPresetFromSelect()">
-      <option value="">— pick a preset —</option>
-      <option value='{"nums":"1,5,11,5"}'>✓ [1,5,11,5]</option>
-      <option value='{"nums":"1,2,3,5"}'>✗ [1,2,3,5]</option>
-      <option value='{"nums":"3,1,1,2,2,1"}'>✓ [3,1,1,2,2,1]</option>
-      <option value='{"nums":"2,2,1,1"}'>✓ [2,2,1,1]</option>
-      <option value='{"nums":"1,1,1,1,1"}'>✗ [1,1,1,1,1]</option>
-      <option value='{"nums":"2,4,6,8"}'>✓ [2,4,6,8]</option>
+      <option value="">&#8212; pick a preset &#8212;</option>
+      <option value='{"nums":"1,5,11,5"}'>&#10003; [1,5,11,5]</option>
+      <option value='{"nums":"1,2,3,5"}'>&#10007; [1,2,3,5]</option>
+      <option value='{"nums":"3,1,1,2,2,1"}'>&#10003; [3,1,1,2,2,1]</option>
+      <option value='{"nums":"2,2,1,1"}'>&#10003; [2,2,1,1]</option>
+      <option value='{"nums":"1,1,1,1,1"}'>&#10007; [1,1,1,1,1]</option>
+      <option value='{"nums":"2,4,6,8"}'>&#10003; [2,4,6,8]</option>
     </select>
   </div>
-  <div class="field">
+  <div>
     <label>Numbers</label>
-    <input id="inp-nums" type="text" value="1,5,11,5" />
+    <input id="inp-nums" type="text" value="1,5,11,5" style="width:160px" />
   </div>
-  <button onclick="buildAndRun()">Run</button>
-  <button class="btn-secondary" onclick="randomExample()">🎲 Random</button>
+  <button class="vi-btn-run" onclick="buildAndRun()">Run</button>
+  <button class="vi-btn-rand" onclick="randomExample()">&#127922; Random</button>
+</div>
+<div class="controls"></div>
+
+<div id="header">
+  <span id="phase-badge">Setup</span>
+  <span style="font-size:13px;font-weight:700;">Partition Equal Subset Sum</span>
+  <span id="step-counter">Step 0 / 0</span>
 </div>
 
-<div class="controls">
+<div id="main">
+  <div id="viz-area">
+    <div id="desc">Enter numbers and click Run.</div>
+    <div class="grid-wrap" id="grid-wrap">
+      <div style="color:var(--text-dim);font-size:0.85rem">Enter numbers and click Run.</div>
+    </div>
+  </div>
+  <div id="resize-handle"></div>
+  <div id="code-panel">
+    <div class="code-panel-title">Code</div>
+    <div id="code-body"><span style="color:var(--text-dim);font-size:0.75rem">No code panel for this viz.</span></div>
+  </div>
+  <div id="sidebar">
+    <div class="sidebar-title">Variables</div>
+    <div class="var-box accent-border">
+      <div class="var-label">num</div>
+      <div class="var-val" id="vv-num">&mdash;</div>
+    </div>
+    <div class="var-box amber-border">
+      <div class="var-label">j</div>
+      <div class="var-val" id="vv-j">&mdash;</div>
+    </div>
+    <div class="var-box purple-border">
+      <div class="var-label">dp[j&#8722;num]</div>
+      <div class="var-val" id="vv-src">&mdash;</div>
+    </div>
+    <div class="var-box green-border">
+      <div class="var-label">dp[j]</div>
+      <div class="var-val" id="vv-dst">&mdash;</div>
+    </div>
+    <div class="result-badge" id="result-badge"></div>
+  </div>
 </div>
 
-<div class="viz-area" id="viz-area">
-
-  <div class="grid-wrap" id="grid-wrap">
-    <div style="color:var(--text-dim);font-size:0.85rem">Enter numbers and click Run.</div>
-  </div>
-
-  <div class="bottom-section">
-    <div class="nav-panel">
-      <button class="stepBtn" id="prevBtn" disabled>&larr;</button>
-      <button class="stepBtn" id="stepBtn" disabled>&rarr;</button>
-      <button class="playBtn" id="playBtn" disabled>&#9654; Play</button>
-      <select class="speedSel" id="speedSel">
-        <option value="700">Slow</option>
-        <option value="350" selected>Med</option>
-        <option value="100">Fast</option>
-      </select>
-    </div>
-
-    <div class="info-panel">
-      <div class="panel-title" id="phase-label">&mdash;</div>
-      <div style="font-size:0.82rem;color:var(--text-muted)" id="step-desc">Enter numbers and click Run.</div>
-      <div class="result-badge" id="result-badge"></div>
-    </div>
-
-    <div class="vars-panel">
-      <div class="panel-title">Variables</div>
-      <div class="var-grid">
-        <div class="var-box accent-border">
-          <div class="var-label">num</div>
-          <div class="var-val" id="vv-num">&mdash;</div>
-        </div>
-        <div class="var-box amber-border">
-          <div class="var-label">j</div>
-          <div class="var-val" id="vv-j">&mdash;</div>
-        </div>
-        <div class="var-box purple-border">
-          <div class="var-label">dp[j&minus;num]</div>
-          <div class="var-val" id="vv-src">&mdash;</div>
-        </div>
-        <div class="var-box green-border">
-          <div class="var-label">dp[j]</div>
-          <div class="var-val" id="vv-dst">&mdash;</div>
-        </div>
-      </div>
-    </div>
-  </div>
-
+<div id="nav-row">
+  <button id="prevBtn" class="btn-step">&#8592; Prev</button>
+  <button id="stepBtn" class="btn-step">Step &#8594;</button>
+  <button id="playBtn" class="btn-play">Play</button>
+  <button id="resetBtn" class="btn-step">&#8635; Reset</button>
+  <select id="speedSel">
+    <option value="800">0.5&#215;</option>
+    <option value="400" selected>1&#215;</option>
+    <option value="200">2&#215;</option>
+    <option value="100">4&#215;</option>
+  </select>
 </div>
 
 <script>
@@ -289,12 +157,9 @@ function loadPresetFromSelect() {
 }
 
 function randomExample() {
-  var lengths = [3, 4, 5, 6];
-  var len = lengths[Math.floor(Math.random() * lengths.length)];
+  var len = [3,4,5,6][Math.floor(Math.random()*4)];
   var nums = [];
-  for (var i = 0; i < len; i++) {
-    nums.push(Math.floor(Math.random() * 12) + 1);
-  }
+  for (var i = 0; i < len; i++) nums.push(Math.floor(Math.random()*12)+1);
   document.getElementById('inp-nums').value = nums.join(',');
   document.getElementById('presetSel').value = '';
   buildAndRun();
@@ -302,333 +167,96 @@ function randomExample() {
 
 window.addEventListener('DOMContentLoaded', function() {
   nav = VizNav({
-    btnPrev:  document.getElementById('prevBtn'),
-    btnNext:  document.getElementById('stepBtn'),
-    btnPlay:  document.getElementById('playBtn'),
+    btnPrev: document.getElementById('prevBtn'),
+    btnNext: document.getElementById('stepBtn'),
+    btnPlay: document.getElementById('playBtn'),
     speedSel: document.getElementById('speedSel'),
     render: function(snap, cur, total) {
       renderSnap(snap, cur > 0);
-      document.getElementById('phase-label').textContent =
-        'Step ' + (cur + 1) + ' / ' + total + '  ·  ' + snap.phase;
-      document.getElementById('step-desc').textContent = snap.desc;
+      document.getElementById('phase-badge').textContent = snap.phase || 'Step';
+      document.getElementById('step-counter').textContent = 'Step ' + cur + ' / ' + total;
+      if (snap.desc) document.getElementById('desc').textContent = snap.desc;
       var badge = document.getElementById('result-badge');
-      badge.className = 'result-badge';
-      badge.textContent = '';
+      badge.className = 'result-badge'; badge.textContent = '';
       if (snap.done) {
-        if (snap.answer) {
-          badge.className = 'result-badge yes';
-          badge.textContent = 'True — equal partition exists';
-        } else {
-          badge.className = 'result-badge no';
-          badge.textContent = 'False — cannot partition equally';
-        }
+        if (snap.answer) { badge.className = 'result-badge yes'; badge.textContent = 'True — equal partition exists'; }
+        else { badge.className = 'result-badge no'; badge.textContent = 'False — cannot partition equally'; }
       }
     }
   });
+  document.getElementById('resetBtn').addEventListener('click', function() { nav.stopPlay(); nav.goTo(0); });
   buildAndRun();
 });
 
 function buildAndRun() {
   var raw = document.getElementById('inp-nums').value.trim();
-  var nums = raw.split(',')
-    .map(function(x) { return parseInt(x.trim(), 10); })
-    .filter(function(x) { return !isNaN(x) && x > 0; });
+  var nums = raw.split(',').map(function(x){return parseInt(x.trim(),10);}).filter(function(x){return !isNaN(x)&&x>0;});
   if (!nums.length) return;
-
   currentNums = nums;
-  var sum = nums.reduce(function(a, b) { return a + b; }, 0);
-
-  if (sum % 2 !== 0) {
-    currentTarget = -1;
-    buildOddSumGrid(nums, sum);
-    simSteps = buildOddSumSteps(nums, sum);
-    nav.load(simSteps);
-    return;
-  }
-
-  var target = sum / 2;
-  currentTarget = target;
-  buildGrid(nums, target);
-  simSteps = buildSteps(nums, target);
-  nav.load(simSteps);
+  var sum = nums.reduce(function(a,b){return a+b;},0);
+  if (sum%2!==0) { currentTarget=-1; buildOddSumGrid(nums,sum); simSteps=buildOddSumSteps(nums,sum); nav.load(simSteps); return; }
+  var target=sum/2; currentTarget=target; buildGrid(nums,target); simSteps=buildSteps(nums,target); nav.load(simSteps);
 }
 
-/* ── Grid construction ── */
+function buildOddSumGrid(nums,sum){var wrap=document.getElementById('grid-wrap');wrap.innerHTML='<div class="odd-sum-msg">Sum = '+sum+' is <strong>odd</strong> &mdash; cannot split into two equal halves. Result: <strong>False</strong>.</div>';}
 
-function buildOddSumGrid(nums, sum) {
-  var wrap = document.getElementById('grid-wrap');
-  wrap.innerHTML =
-    '<div class="odd-sum-msg">Sum = ' + sum + ' is <strong>odd</strong> &mdash; ' +
-    'cannot split into two equal halves. Result: <strong>False</strong>.</div>';
-}
-
-function buildGrid(nums, target) {
-  var n = nums.length;
-  var wrap = document.getElementById('grid-wrap');
-  wrap.innerHTML = '';
-
-  var grid = document.createElement('div');
-  grid.className = 'dp-grid';
-  // columns: row-label + (target+1) dp columns
-  var colTemplate = '80px ' + ('44px '.repeat(target + 1)).trim();
-  grid.style.gridTemplateColumns = colTemplate;
-
-  // Header row
-  var corner = document.createElement('div');
-  corner.className = 'hdr-cell hdr-corner';
-  grid.appendChild(corner);
-
-  for (var c = 0; c <= target; c++) {
-    var hdr = document.createElement('div');
-    hdr.className = 'hdr-cell' + (c === target ? ' target-col' : '');
-    hdr.textContent = c;
-    if (c === target) hdr.title = 'target = ' + target;
-    grid.appendChild(hdr);
+function buildGrid(nums,target){
+  var n=nums.length,wrap=document.getElementById('grid-wrap');wrap.innerHTML='';
+  var grid=document.createElement('div');grid.className='dp-grid';
+  grid.style.gridTemplateColumns='80px '+('44px '.repeat(target+1)).trim();
+  var corner=document.createElement('div');corner.className='hdr-cell hdr-corner';grid.appendChild(corner);
+  for(var c=0;c<=target;c++){var hdr=document.createElement('div');hdr.className='hdr-cell'+(c===target?' target-col':'');hdr.textContent=c;if(c===target)hdr.title='target = '+target;grid.appendChild(hdr);}
+  for(var r=0;r<=n;r++){
+    var label=document.createElement('div');label.className='row-label';label.id='rl-'+r;label.textContent=r===0?'init':'num='+nums[r-1];grid.appendChild(label);
+    for(var c2=0;c2<=target;c2++){var cell=document.createElement('div');cell.className='dp-cell'+(c2===target?' target-col':'');cell.id='dc-'+r+'-'+c2;cell.dataset.v='?';cell.textContent='?';grid.appendChild(cell);}
   }
-
-  // Data rows: row 0 = init, rows 1..n = after each item
-  for (var r = 0; r <= n; r++) {
-    var label = document.createElement('div');
-    label.className = 'row-label';
-    label.id = 'rl-' + r;
-    label.textContent = r === 0 ? 'init' : 'num=' + nums[r - 1];
-    grid.appendChild(label);
-
-    for (var c2 = 0; c2 <= target; c2++) {
-      var cell = document.createElement('div');
-      cell.className = 'dp-cell' + (c2 === target ? ' target-col' : '');
-      cell.id = 'dc-' + r + '-' + c2;
-      cell.dataset.v = '?';
-      cell.textContent = '?';
-      grid.appendChild(cell);
-    }
-  }
-
   wrap.appendChild(grid);
 }
 
-/* ── Step builder ── */
+function buildOddSumSteps(nums,sum){return[{phase:'Odd Sum',desc:'sum = '+sum+' is odd. No way to split into two equal halves. Return False immediately.',done:true,answer:false,rowStates:null,activeRow:-1,activeJ:-1,lookbackJ:-1,justSet:false,nums:nums,n:nums.length,target:-1}];}
 
-function buildOddSumSteps(nums, sum) {
-  return [{
-    phase: 'Odd Sum',
-    desc: 'sum = ' + sum + ' is odd. No way to split into two equal halves. Return False immediately.',
-    done: true,
-    answer: false,
-    rowStates: null,
-    activeRow: -1,
-    activeJ: -1,
-    lookbackJ: -1,
-    justSet: false,
-    nums: nums,
-    n: nums.length,
-    target: -1,
-  }];
-}
-
-function buildSteps(nums, target) {
-  var n = nums.length;
-  var dp = new Array(target + 1).fill(false);
-  dp[0] = true;
-  var history = [dp.slice()]; // history[i+1] = dp after processing nums[i]
-  var steps = [];
-  var totalSum = nums.reduce(function(a, b) { return a + b; }, 0);
-
-  function makeRowStates(ai) {
-    var rs = [];
-    for (var r = 0; r <= n; r++) {
-      if (r === 0) {
-        rs.push(history[0].slice());
-      } else {
-        var ii = r - 1; // 0-based item index
-        if (ai === -1) {
-          rs.push(history[r] ? history[r].slice() : null);
-        } else if (ii < ai) {
-          rs.push(history[r] ? history[r].slice() : null);
-        } else if (ii === ai) {
-          rs.push(dp.slice());
-        } else {
-          rs.push(null);
-        }
-      }
+function buildSteps(nums,target){
+  var n=nums.length,dp=new Array(target+1).fill(false),history=[dp.slice()],steps=[];
+  var totalSum=nums.reduce(function(a,b){return a+b;},0);
+  function makeRowStates(ai){var rs=[];for(var r=0;r<=n;r++){if(r===0)rs.push(history[0].slice());else{var ii=r-1;if(ai===-1)rs.push(history[r]?history[r].slice():null);else if(ii<ai)rs.push(history[r]?history[r].slice():null);else if(ii===ai)rs.push(dp.slice());else rs.push(null);}}return rs;}
+  function addStep(opts){var ai=opts.activeRow!==undefined?opts.activeRow:-1;steps.push({rowStates:makeRowStates(ai),nums:nums,n:n,target:target,phase:opts.phase||'',desc:opts.desc||'',activeRow:ai,activeJ:opts.activeJ!==undefined?opts.activeJ:-1,lookbackJ:opts.lookbackJ!==undefined?opts.lookbackJ:-1,justSet:opts.justSet||false,done:opts.done||false,answer:opts.answer!==undefined?opts.answer:null});}
+  dp[0]=true;
+  addStep({phase:'Init',desc:'sum = '+totalSum+', target = '+target+'. Create dp[0…'+target+']. Set dp[0] = True (empty subset has sum 0). All others False.',activeRow:-1});
+  for(var i=0;i<n;i++){
+    var num=nums[i];
+    addStep({phase:'Item '+(i+1)+' / '+n,desc:'num = '+num+'. Iterate j from '+target+' down to '+num+'. Right-to-left ensures each item is used at most once (0/1 knapsack).',activeRow:i,activeJ:-1});
+    for(var j=target;j>=num;j--){
+      var before=dp[j],lookback=dp[j-num],newVal=before||lookback,justSet=!before&&newVal;
+      dp[j]=newVal;
+      addStep({phase:'Item '+(i+1)+' · j = '+j,desc:'dp['+j+'] |= dp['+(j-num)+']: '+(before?'T':'F')+' |= '+(lookback?'T':'F')+'  →  dp['+j+'] = '+(newVal?'T':'F')+(justSet?'  ✓ newly reachable!':''),activeRow:i,activeJ:j,lookbackJ:j-num,justSet:justSet});
     }
-    return rs;
+    history.push(dp.slice());
   }
-
-  function addStep(opts) {
-    var ai = opts.activeRow !== undefined ? opts.activeRow : -1;
-    steps.push({
-      rowStates: makeRowStates(ai),
-      nums: nums,
-      n: n,
-      target: target,
-      phase: opts.phase || '',
-      desc: opts.desc || '',
-      activeRow: ai,
-      activeJ: opts.activeJ !== undefined ? opts.activeJ : -1,
-      lookbackJ: opts.lookbackJ !== undefined ? opts.lookbackJ : -1,
-      justSet: opts.justSet || false,
-      done: opts.done || false,
-      answer: opts.answer !== undefined ? opts.answer : null,
-    });
-  }
-
-  addStep({
-    phase: 'Init',
-    desc: 'sum = ' + totalSum + ', target = ' + target + '. Create dp[0…' + target + ']. ' +
-          'Set dp[0] = True (empty subset has sum 0). All others False.',
-    activeRow: -1,
-  });
-
-  for (var i = 0; i < n; i++) {
-    var num = nums[i];
-
-    addStep({
-      phase: 'Item ' + (i + 1) + ' / ' + n,
-      desc: 'num = ' + num + '. Iterate j from ' + target + ' down to ' + num + '. ' +
-            'Right-to-left ensures each item is used at most once (0/1 knapsack).',
-      activeRow: i,
-      activeJ: -1,
-    });
-
-    for (var j = target; j >= num; j--) {
-      var before = dp[j];
-      var lookback = dp[j - num];
-      var newVal = before || lookback;
-      var justSet = !before && newVal;
-      dp[j] = newVal;
-
-      addStep({
-        phase: 'Item ' + (i + 1) + ' · j = ' + j,
-        desc: 'dp[' + j + '] |= dp[' + (j - num) + ']:  ' +
-              (before ? 'T' : 'F') + ' |= ' + (lookback ? 'T' : 'F') +
-              '  →  dp[' + j + '] = ' + (newVal ? 'T' : 'F') +
-              (justSet ? '  ✓ newly reachable!' : ''),
-        activeRow: i,
-        activeJ: j,
-        lookbackJ: j - num,
-        justSet: justSet,
-      });
-    }
-
-    history.push(dp.slice()); // snapshot after this item
-  }
-
-  var answer = dp[target];
-  addStep({
-    phase: 'Done',
-    desc: 'dp[' + target + '] = ' + (answer ? 'True' : 'False') + '. ' +
-          'The array ' + (answer ? 'CAN' : 'CANNOT') + ' be partitioned into two equal subsets.',
-    activeRow: -1,
-    done: true,
-    answer: answer,
-  });
-
+  var answer=dp[target];
+  addStep({phase:'Done',desc:'dp['+target+'] = '+(answer?'True':'False')+'. The array '+(answer?'CAN':'CANNOT')+' be partitioned into two equal subsets.',activeRow:-1,done:true,answer:answer});
   return steps;
 }
 
-/* ── Renderer ── */
-
-function renderSnap(snap, animate) {
-  if (!snap.rowStates) return; // odd sum case — grid shows static message
-
-  var n = snap.n;
-  var target = snap.target;
-  var isDone = snap.done;
-
-  // Row labels
-  for (var r = 0; r <= n; r++) {
-    var rl = document.getElementById('rl-' + r);
-    if (!rl) continue;
-    var itemIdx = r - 1;
-    rl.className = 'row-label';
-    if (r === 0) {
-      if (isDone) rl.className = 'row-label done';
-    } else if (snap.activeRow === itemIdx) {
-      rl.className = 'row-label active';
-    } else if (itemIdx < snap.activeRow || isDone) {
-      rl.className = 'row-label done';
-    }
-  }
-
-  // Cells
-  for (var r2 = 0; r2 <= n; r2++) {
-    var rowDp = snap.rowStates[r2];
-    var isActiveRow = (r2 > 0) && (snap.activeRow === r2 - 1);
-
-    for (var c = 0; c <= target; c++) {
-      var cell = document.getElementById('dc-' + r2 + '-' + c);
-      if (!cell) continue;
-
-      var prevV = cell.dataset.v;
-      var v = rowDp === null ? '?' : (rowDp[c] ? 'T' : 'F');
-
-      // Build class string
-      var cls = ['dp-cell'];
-      if (c === target) cls.push('target-col');
-      if (isActiveRow) cls.push('active-row');
-
-      if (isActiveRow && snap.activeJ >= 0) {
-        if (c === snap.activeJ) {
-          if (snap.justSet) cls.push('cell-just-set');
-          else cls.push('cell-current');
-        } else if (c === snap.lookbackJ) {
-          cls.push('cell-lookback');
-        }
-      }
-
-      if (isDone && r2 === n && c === target) {
-        cls.push('cell-answer');
-      }
-
-      var clsStr = cls.join(' ');
-      if (cell.className !== clsStr) cell.className = clsStr;
-
-      if (cell.dataset.v !== v) {
-        cell.dataset.v = v;
-        cell.textContent = v;
-        if (animate && v === 'T' && prevV !== 'T') {
-          gsap.fromTo(cell,
-            { scale: 0.45, opacity: 0.2 },
-            { scale: 1, opacity: 1, duration: 0.28, ease: 'back.out(2)' });
-        }
-      }
-    }
-  }
-
-  // Variable panel
-  function setV(id, val) {
-    var el = document.getElementById(id);
-    if (!el) return;
-    var s = (val !== null && val !== undefined) ? String(val) : '—';
-    if (animate && el.textContent !== s) {
-      gsap.fromTo(el,
-        { scale: 0.75, opacity: 0.3 },
-        { scale: 1, opacity: 1, duration: 0.18, ease: 'back.out(1.5)' });
-    }
-    el.textContent = s;
-  }
-
-  var hasItem = snap.activeRow >= 0;
-  setV('vv-num', hasItem ? snap.nums[snap.activeRow] : null);
-  setV('vv-j', snap.activeJ >= 0 ? snap.activeJ : null);
-
-  if (snap.activeJ >= 0 && snap.activeRow >= 0 && snap.rowStates) {
-    var rowDp2 = snap.rowStates[snap.activeRow + 1];
-    setV('vv-src', rowDp2 && snap.lookbackJ >= 0 ? (rowDp2[snap.lookbackJ] ? 'T' : 'F') : null);
-    setV('vv-dst', rowDp2 ? (rowDp2[snap.activeJ] ? 'T' : 'F') : null);
-  } else {
-    setV('vv-src', null);
-    setV('vv-dst', null);
-  }
+function renderSnap(snap,animate){
+  if(!snap.rowStates)return;
+  var n=snap.n,target=snap.target,isDone=snap.done;
+  for(var r=0;r<=n;r++){var rl=document.getElementById('rl-'+r);if(!rl)continue;var itemIdx=r-1;rl.className='row-label';if(r===0){if(isDone)rl.className='row-label done';}else if(snap.activeRow===itemIdx)rl.className='row-label active';else if(itemIdx<snap.activeRow||isDone)rl.className='row-label done';}
+  for(var r2=0;r2<=n;r2++){var rowDp=snap.rowStates[r2];var isActiveRow=(r2>0)&&(snap.activeRow===r2-1);for(var c=0;c<=target;c++){var cell=document.getElementById('dc-'+r2+'-'+c);if(!cell)continue;var prevV=cell.dataset.v;var v=rowDp===null?'?':(rowDp[c]?'T':'F');var cls=['dp-cell'];if(c===target)cls.push('target-col');if(isActiveRow)cls.push('active-row');if(isActiveRow&&snap.activeJ>=0){if(c===snap.activeJ){if(snap.justSet)cls.push('cell-just-set');else cls.push('cell-current');}else if(c===snap.lookbackJ)cls.push('cell-lookback');}if(isDone&&r2===n&&c===target)cls.push('cell-answer');var clsStr=cls.join(' ');if(cell.className!==clsStr)cell.className=clsStr;if(cell.dataset.v!==v){cell.dataset.v=v;cell.textContent=v;if(animate&&v==='T'&&prevV!=='T')gsap.fromTo(cell,{scale:0.45,opacity:0.2},{scale:1,opacity:1,duration:0.28,ease:'back.out(2)'});}}}
+  function setV(id,val){var el=document.getElementById(id);if(!el)return;var s=(val!==null&&val!==undefined)?String(val):'—';if(animate&&el.textContent!==s)gsap.fromTo(el,{scale:0.75,opacity:0.3},{scale:1,opacity:1,duration:0.18,ease:'back.out(1.5)'});el.textContent=s;}
+  var hasItem=snap.activeRow>=0;
+  setV('vv-num',hasItem?snap.nums[snap.activeRow]:null);
+  setV('vv-j',snap.activeJ>=0?snap.activeJ:null);
+  if(snap.activeJ>=0&&snap.activeRow>=0&&snap.rowStates){var rowDp2=snap.rowStates[snap.activeRow+1];setV('vv-src',rowDp2&&snap.lookbackJ>=0?(rowDp2[snap.lookbackJ]?'T':'F'):null);setV('vv-dst',rowDp2?(rowDp2[snap.activeJ]?'T':'F'):null);}
+  else{setV('vv-src',null);setV('vv-dst',null);}
 }
-</script>
 
-<script>
-  if (window.self !== window.top) {
-    var bl = document.querySelector('.back-link');
-    if (bl) bl.style.display = 'none';
-  }
+(function(){
+  var handle=document.getElementById('resize-handle'),panel=document.getElementById('code-panel');
+  var dragging=false,startX=0,startW=0;
+  handle.addEventListener('mousedown',function(e){dragging=true;startX=e.clientX;startW=panel.offsetWidth;handle.classList.add('dragging');e.preventDefault();});
+  document.addEventListener('mousemove',function(e){if(!dragging)return;panel.style.width=Math.min(560,Math.max(120,startW+(startX-e.clientX)))+'px';});
+  document.addEventListener('mouseup',function(){if(dragging){dragging=false;handle.classList.remove('dragging');}});
+})();
 </script>
 </body>
 </html>

@@ -3,189 +3,106 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>House Robber II — DP Visualization</title>
+  <title>House Robber II</title>
   <link rel="stylesheet" href="../shared/style.css" />
   <script src="../shared/gsap.min.js"></script>
   <script src="../shared/viz.js"></script>
   <style>
-    .viz-area { width: 100%; max-width: 90%; display: flex; flex-direction: column; gap: 16px; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: "Fira Code", "Cascadia Code", monospace; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+
+    #header { padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+    #phase-badge { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; padding: 3px 10px; border-radius: var(--radius-sm); background: #1e3a5f; color: var(--blue); border: 1px solid var(--blue); }
+    #step-counter { font-size: 12px; color: var(--text-muted); margin-left: auto; }
+
+    .viz-inputs { width: 100%; max-width: 100%; padding: 10px 16px; background: var(--surface); border: none; border-bottom: 1px solid var(--border); border-radius: 0; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; flex-shrink: 0; }
+    .viz-inputs label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); display: block; margin-bottom: 3px; }
+    .viz-inputs select, .viz-inputs input { background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 0 8px; height: 30px; font-size: 0.82rem; font-family: inherit; }
+    .vi-btn-run { padding: 6px 14px; border-radius: 6px; font-size: 0.82rem; font-weight: 600; cursor: pointer; font-family: inherit; background: var(--accent); color: #fff; border: none; }
+    .vi-btn-rand { padding: 6px 14px; border-radius: 6px; font-size: 0.82rem; cursor: pointer; font-family: inherit; background: var(--bg); color: var(--text); border: 1px solid var(--border); }
+
+    #main { display: flex; flex: 1; overflow: hidden; }
+    #viz-area { flex: 1; display: flex; flex-direction: column; align-items: flex-start; padding: 16px; gap: 12px; overflow-y: auto; }
+
+    #resize-handle { width: 5px; flex-shrink: 0; cursor: col-resize; background: transparent; border-left: 1px solid var(--border); transition: background .15s; z-index: 10; }
+    #resize-handle:hover, #resize-handle.dragging { background: var(--accent); }
+
+    #code-panel { width: 300px; min-width: 120px; max-width: 560px; flex-shrink: 0; background: #0d1117; border-right: 1px solid var(--border); overflow-y: auto; overflow-x: auto; padding: 10px 12px; display: flex; flex-direction: column; }
+    .code-panel-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--text-dim); margin-bottom: 6px; }
+    .code-placeholder { font-size: 0.72rem; color: var(--text-dim); font-family: monospace; line-height: 1.8; white-space: pre; }
+
+    #sidebar { width: 200px; flex-shrink: 0; background: var(--surface); border-left: 1px solid var(--border); overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+    .sidebar-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--text-dim); margin-bottom: 6px; }
+
+    #nav-row { flex-shrink: 0; display: flex; align-items: center; gap: 8px; padding: 10px 16px; background: var(--surface); border-top: 1px solid var(--border); }
+    .btn-step { padding: 6px 14px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--surface); color: var(--text); font-family: inherit; font-size: 12px; cursor: pointer; transition: background .15s; }
+    .btn-step:hover:not(:disabled) { background: #334155; }
+    .btn-step:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-play { padding: 6px 14px; border-radius: var(--radius-sm); border: 1px solid var(--accent); background: var(--accent); color: #fff; font-family: inherit; font-size: 12px; cursor: pointer; font-weight: 600; }
+    .btn-play:disabled { opacity: 0.4; cursor: not-allowed; }
+    #speedSel { padding: 5px 8px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: #1e293b; color: var(--text); font-size: 12px; font-family: inherit; cursor: pointer; }
 
     /* Pass sections */
-    .pass-section {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-lg);
-      padding: 14px 16px;
-      transition: opacity 0.3s, border-color 0.3s;
-    }
+    .pass-section { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 14px 16px; transition: opacity 0.3s, border-color 0.3s; width: 100%; }
     .pass-section.inactive { opacity: 0.45; }
     .pass-section.active   { border-color: var(--accent); }
-
-    .pass-header {
-      display: flex; align-items: center; gap: 10px; margin-bottom: 10px;
-      flex-wrap: wrap;
-    }
-    .pass-badge {
-      font-size: 0.68rem; font-weight: 700; text-transform: uppercase;
-      letter-spacing: 0.1em; padding: 3px 9px; border-radius: 4px;
-      background: var(--bg); border: 1px solid var(--border); color: var(--text-dim);
-      transition: background 0.3s, border-color 0.3s, color 0.3s;
-    }
-    .pass-section.active .pass-badge {
-      background: rgba(122,162,247,0.12); border-color: var(--accent); color: var(--accent);
-    }
+    .pass-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+    .pass-badge { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; padding: 3px 9px; border-radius: 4px; background: var(--bg); border: 1px solid var(--border); color: var(--text-dim); transition: background 0.3s, border-color 0.3s, color 0.3s; }
+    .pass-section.active .pass-badge { background: rgba(122,162,247,0.12); border-color: var(--accent); color: var(--accent); }
     .pass-hint { font-size: 0.78rem; color: var(--text-dim); }
-    .pass-result-badge {
-      margin-left: auto; font-size: 0.82rem; font-weight: 700;
-      color: var(--green); display: none;
-    }
+    .pass-result-badge { margin-left: auto; font-size: 0.82rem; font-weight: 700; color: var(--green); display: none; }
     .pass-result-badge.visible { display: block; }
-
-    .houses-wrap {
-      display: flex; gap: 10px; flex-wrap: wrap; align-items: center; min-height: 70px;
-    }
+    .houses-wrap { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; min-height: 70px; }
     .house { display: flex; flex-direction: column; align-items: center; gap: 3px; }
-    .house-cell {
-      width: 52px; height: 52px;
-      display: flex; align-items: center; justify-content: center;
-      border-radius: var(--radius-sm);
-      border: 1px solid var(--border);
-      background: #0f0f0f;
-      font-size: 0.92rem; font-weight: 700;
-      color: var(--text-ghost); font-family: monospace;
-    }
-    .house-cell.excluded {
-      background: transparent !important;
-      border-color: var(--text-ghost) !important;
-      color: var(--text-ghost) !important;
-      opacity: 0.25;
-      text-decoration: line-through;
-    }
+    .house-cell { width: 52px; height: 52px; display: flex; align-items: center; justify-content: center; border-radius: var(--radius-sm); border: 1px solid var(--border); background: #0f0f0f; font-size: 0.92rem; font-weight: 700; color: var(--text-ghost); font-family: monospace; }
+    .house-cell.excluded { background: transparent !important; border-color: var(--text-ghost) !important; color: var(--text-ghost) !important; opacity: 0.25; text-decoration: line-through; }
     .house-idx { font-size: 0.65rem; color: var(--text-faint); font-family: monospace; }
 
-    /* DP + Decision row */
-    .main-row {
-      display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start;
-    }
-    @media (max-width: 700px) { .main-row { grid-template-columns: 1fr; } }
-
-    .panel-box {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--radius-lg); padding: 14px 16px;
-      display: flex; flex-direction: column; gap: 8px;
-    }
-    .panel-title {
-      font-size: 0.72rem; font-weight: 700; text-transform: uppercase;
-      letter-spacing: 0.08em; color: var(--text-dim);
-    }
-
+    /* DP + Decision */
+    .panel-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; width: 100%; }
+    @media (max-width: 700px) { .panel-row { grid-template-columns: 1fr; } }
+    .panel-box { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; }
+    .panel-title { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); }
     .dp-boxes { display: flex; gap: 10px; }
-    .dp-box {
-      flex: 1; display: flex; flex-direction: column;
-      align-items: center; gap: 3px; padding: 10px 6px;
-      background: var(--bg); border: 1px solid var(--border);
-      border-radius: var(--radius-sm);
-    }
+    .dp-box { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 10px 6px; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm); }
     .dp-box.accent { border-color: var(--accent); }
     .dp-box-label { font-size: 0.68rem; font-family: monospace; color: var(--text-faint); }
     .dp-box-val   { font-size: 1.4rem; font-weight: 700; color: var(--text-bright); }
-
     .dec-row { display: flex; gap: 10px; }
-    .dec-card {
-      flex: 1; padding: 10px 12px;
-      background: var(--bg); border: 1px solid var(--border);
-      border-radius: var(--radius-sm);
-      display: flex; flex-direction: column; gap: 4px;
-      opacity: 0.25;
-    }
+    .dec-card { flex: 1; padding: 10px 12px; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm); display: flex; flex-direction: column; gap: 4px; opacity: 0.25; }
     .dec-card.visible { opacity: 1; }
     .dec-card.winner  { border-color: #15803d; background: #052e16; opacity: 1; }
     .dec-card.loser   { opacity: 0.3; }
     .dec-label   { font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-faint); }
     .dec-formula { font-size: 0.73rem; font-family: monospace; color: var(--text-dim); min-height: 16px; }
     .dec-val     { font-size: 1.2rem; font-weight: 700; color: var(--text-bright); }
-    .dec-result  {
-      font-size: 0.8rem; font-family: monospace; color: var(--text-muted);
-      padding-top: 6px; border-top: 1px solid var(--border); min-height: 20px;
-    }
+    .dec-result  { font-size: 0.8rem; font-family: monospace; color: var(--text-muted); padding-top: 6px; border-top: 1px solid var(--border); min-height: 20px; }
     .dec-result strong { color: var(--text-bright); }
 
     /* Result panel */
-    .result-panel {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--radius-lg); padding: 16px 20px;
-      display: flex; flex-direction: column; gap: 10px;
-    }
+    .result-panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 14px 18px; display: flex; flex-direction: column; gap: 10px; width: 100%; }
     .result-row { display: flex; gap: 14px; align-items: stretch; flex-wrap: wrap; }
-    .result-box {
-      flex: 1; min-width: 100px; padding: 10px 14px;
-      background: var(--bg); border: 1px solid var(--border);
-      border-radius: var(--radius-sm);
-      display: flex; flex-direction: column; gap: 3px;
-      transition: border-color 0.3s, background 0.3s;
-    }
+    .result-box { flex: 1; min-width: 90px; padding: 10px 14px; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm); display: flex; flex-direction: column; gap: 3px; transition: border-color 0.3s, background 0.3s; }
     .result-box.winner { border-color: var(--green-border); background: var(--green-bg); }
     .result-box-label { font-size: 0.68rem; font-family: monospace; color: var(--text-faint); text-transform: uppercase; }
     .result-box-val   { font-size: 1.4rem; font-weight: 700; color: var(--text-muted); }
     .result-box.winner .result-box-val { color: var(--green); }
-
-    .result-max {
-      flex: 0 0 auto; text-align: center; padding: 10px 24px;
-      background: var(--green-bg); border: 1px solid var(--green-border);
-      border-radius: var(--radius-sm); display: none;
-    }
+    .result-max { flex: 0 0 auto; text-align: center; padding: 10px 24px; background: var(--green-bg); border: 1px solid var(--green-border); border-radius: var(--radius-sm); display: none; }
     .result-max.visible { display: block; }
     .result-max-label { font-size: 0.65rem; color: var(--green); font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; }
     .result-max-val   { font-size: 2rem; font-weight: 700; color: var(--green); }
 
-    /* Nav */
-    .btn-play {
-      background: #15803d; border: none; border-radius: var(--radius-sm);
-      color: #fff; cursor: pointer; font-size: 0.88rem; font-weight: 600;
-      padding: 9px 16px; transition: background 0.2s;
-    }
-    .btn-play:hover:not(:disabled) { background: #166534; }
-    .btn-play.playing              { background: #c2410c; }
-    .btn-play.playing:hover        { background: #9a3412; }
-    .btn-play:disabled             { opacity: 0.4; cursor: not-allowed; }
-
-    /* Viz Inputs */
-    .viz-inputs {
-      display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end;
-      padding: 10px 0 14px; width: 100%; max-width: 90%;
-    }
-    .viz-inputs .field {
-      display: flex; flex-direction: column; gap: 4px;
-    }
-    .viz-inputs label {
-      font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
-      letter-spacing: 0.08em; color: var(--text-dim);
-    }
-    .viz-inputs input[type="text"] {
-      background: var(--surface); border: 1px solid var(--border);
-      color: var(--text); border-radius: var(--radius-sm);
-      padding: 6px 10px; font-size: 0.85rem; width: 220px;
-    }
-    .viz-inputs select {
-      background: var(--surface); border: 1px solid var(--border);
-      color: var(--text); border-radius: var(--radius-sm);
-      padding: 6px 10px; font-size: 0.85rem; cursor: pointer;
-    }
+    /* Step desc */
+    #desc { font-size: 0.82rem; color: var(--text-muted); padding: 8px 12px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); width: 100%; min-height: 36px; }
   </style>
 </head>
-<body class="page">
-
-<div class="page-header">
-  <a class="back-link" href="../index.html">&larr; All Algorithms</a>
-  <div class="page-title">House Robber II</div>
-  <div style="font-size:0.82rem;color:var(--text-dim)">LeetCode 213 &middot; Two-Pass DP &middot; O(n) time &middot; O(1) space</div>
-</div>
+<body>
 
 <div class="viz-inputs">
-  <div class="field">
+  <div style="display:flex;flex-direction:column;gap:3px">
     <label>Preset</label>
     <select id="presetSel" onchange="loadPreset()">
-      <option value="">— pick a preset —</option>
+      <option value="">&#8212; pick a preset &#8212;</option>
       <option value='{"nums":"1, 2, 3, 1"}'>Example 1: [1, 2, 3, 1]</option>
       <option value='{"nums":"2, 3, 2"}'>Example 2: [2, 3, 2]</option>
       <option value='{"nums":"5, 3, 4, 11, 2"}'>Example 3: [5, 3, 4, 11, 2]</option>
@@ -194,111 +111,161 @@
       <option value='{"nums":"10, 1, 1, 10"}'>Example 6: [10, 1, 1, 10]</option>
     </select>
   </div>
-  <div class="field">
+  <div style="display:flex;flex-direction:column;gap:3px">
     <label>nums (circular houses)</label>
-    <input id="inp-nums" type="text" value="2, 3, 2" />
+    <input id="inp-nums" type="text" value="2, 3, 2" style="width:220px" />
   </div>
-  <button class="btn-primary" onclick="buildAndRun()">Run</button>
-  <button class="btn-primary" onclick="randomExample()" style="background:var(--surface);color:var(--text);border:1px solid var(--border);">🎲 Random</button>
+  <button class="vi-btn-run" onclick="buildAndRun()">Run</button>
+  <button class="vi-btn-rand" onclick="randomExample()">&#127922; Random</button>
 </div>
 
 <div class="controls"></div>
 
-<div class="viz-area">
-
-  <!-- Pass 1 -->
-  <div class="pass-section" id="pass1-section">
-    <div class="pass-header">
-      <div class="pass-badge">Pass 1</div>
-      <span class="pass-hint">Skip last house [n-1]</span>
-      <span class="pass-result-badge" id="pass1-result-badge"></span>
-    </div>
-    <div class="houses-wrap" id="houses-row1">
-      <span style="color:var(--text-dim);font-size:0.82rem">Enter nums and click Run.</span>
-    </div>
-  </div>
-
-  <!-- Pass 2 -->
-  <div class="pass-section" id="pass2-section">
-    <div class="pass-header">
-      <div class="pass-badge">Pass 2</div>
-      <span class="pass-hint">Skip first house [0]</span>
-      <span class="pass-result-badge" id="pass2-result-badge"></span>
-    </div>
-    <div class="houses-wrap" id="houses-row2">
-      <span style="color:var(--text-dim);font-size:0.82rem">Enter nums and click Run.</span>
-    </div>
-  </div>
-
-  <!-- DP Variables + Decision -->
-  <div class="main-row">
-    <div class="panel-box">
-      <div class="panel-title">DP Variables</div>
-      <div class="dp-boxes">
-        <div class="dp-box" id="dp-pt">
-          <div class="dp-box-label">prev_two</div>
-          <div class="dp-box-val" id="dp-pt-val">&mdash;</div>
-        </div>
-        <div class="dp-box" id="dp-po">
-          <div class="dp-box-label">prev_one</div>
-          <div class="dp-box-val" id="dp-po-val">&mdash;</div>
-        </div>
-        <div class="dp-box accent">
-          <div class="dp-box-label">current</div>
-          <div class="dp-box-val" id="dp-cur-val">&mdash;</div>
-        </div>
-      </div>
-    </div>
-
-    <div class="panel-box">
-      <div class="panel-title">Decision</div>
-      <div class="dec-row">
-        <div class="dec-card" id="dec-skip">
-          <div class="dec-label">A &middot; Skip</div>
-          <div class="dec-formula" id="dec-skip-f">prev_one</div>
-          <div class="dec-val" id="dec-skip-v">&mdash;</div>
-        </div>
-        <div class="dec-card" id="dec-rob">
-          <div class="dec-label">B &middot; Rob</div>
-          <div class="dec-formula" id="dec-rob-f">prev_two + money</div>
-          <div class="dec-val" id="dec-rob-v">&mdash;</div>
-        </div>
-      </div>
-      <div class="dec-result" id="dec-result"></div>
-    </div>
-  </div>
-
-  <!-- Final Result -->
-  <div class="result-panel">
-    <div class="panel-title">Final Result</div>
-    <div class="result-row">
-      <div class="result-box" id="res-box1">
-        <div class="result-box-label">Pass 1 result</div>
-        <div class="result-box-val" id="res-val1">&mdash;</div>
-      </div>
-      <div class="result-box" id="res-box2">
-        <div class="result-box-label">Pass 2 result</div>
-        <div class="result-box-val" id="res-val2">&mdash;</div>
-      </div>
-      <div class="result-max" id="result-max">
-        <div class="result-max-label">max(p1, p2)</div>
-        <div class="result-max-val" id="result-max-val">&mdash;</div>
-      </div>
-    </div>
-  </div>
-
+<div id="header">
+  <span id="phase-badge">&#8212;</span>
+  <span style="font-size:13px;font-weight:600;color:var(--text)">House Robber II</span>
+  <span style="font-size:11px;color:var(--text-dim)">LC 213 &middot; Two-Pass DP &middot; O(n)</span>
+  <span id="step-counter"></span>
 </div>
 
-<div class="status-bar">
-  <div class="phase-label" id="phase-label">&mdash;</div>
-  <div class="step-desc" id="step-desc">Enter nums and click Run.</div>
+<div id="main">
+  <div id="viz-area">
+    <div id="desc">Enter nums and click Run.</div>
+
+    <div class="pass-section" id="pass1-section">
+      <div class="pass-header">
+        <div class="pass-badge">Pass 1</div>
+        <span class="pass-hint">Skip last house [n-1]</span>
+        <span class="pass-result-badge" id="pass1-result-badge"></span>
+      </div>
+      <div class="houses-wrap" id="houses-row1">
+        <span style="color:var(--text-dim);font-size:0.82rem">Enter nums and click Run.</span>
+      </div>
+    </div>
+
+    <div class="pass-section" id="pass2-section">
+      <div class="pass-header">
+        <div class="pass-badge">Pass 2</div>
+        <span class="pass-hint">Skip first house [0]</span>
+        <span class="pass-result-badge" id="pass2-result-badge"></span>
+      </div>
+      <div class="houses-wrap" id="houses-row2">
+        <span style="color:var(--text-dim);font-size:0.82rem">Enter nums and click Run.</span>
+      </div>
+    </div>
+
+    <div class="panel-row">
+      <div class="panel-box">
+        <div class="panel-title">DP Variables</div>
+        <div class="dp-boxes">
+          <div class="dp-box" id="dp-pt">
+            <div class="dp-box-label">prev_two</div>
+            <div class="dp-box-val" id="dp-pt-val">&#8212;</div>
+          </div>
+          <div class="dp-box" id="dp-po">
+            <div class="dp-box-label">prev_one</div>
+            <div class="dp-box-val" id="dp-po-val">&#8212;</div>
+          </div>
+          <div class="dp-box accent">
+            <div class="dp-box-label">current</div>
+            <div class="dp-box-val" id="dp-cur-val">&#8212;</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel-box">
+        <div class="panel-title">Decision</div>
+        <div class="dec-row">
+          <div class="dec-card" id="dec-skip">
+            <div class="dec-label">A &middot; Skip</div>
+            <div class="dec-formula" id="dec-skip-f">prev_one</div>
+            <div class="dec-val" id="dec-skip-v">&#8212;</div>
+          </div>
+          <div class="dec-card" id="dec-rob">
+            <div class="dec-label">B &middot; Rob</div>
+            <div class="dec-formula" id="dec-rob-f">prev_two + money</div>
+            <div class="dec-val" id="dec-rob-v">&#8212;</div>
+          </div>
+        </div>
+        <div class="dec-result" id="dec-result"></div>
+      </div>
+    </div>
+
+    <div class="result-panel">
+      <div class="panel-title">Final Result</div>
+      <div class="result-row">
+        <div class="result-box" id="res-box1">
+          <div class="result-box-label">Pass 1 result</div>
+          <div class="result-box-val" id="res-val1">&#8212;</div>
+        </div>
+        <div class="result-box" id="res-box2">
+          <div class="result-box-label">Pass 2 result</div>
+          <div class="result-box-val" id="res-val2">&#8212;</div>
+        </div>
+        <div class="result-max" id="result-max">
+          <div class="result-max-label">max(p1, p2)</div>
+          <div class="result-max-val" id="result-max-val">&#8212;</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="resize-handle"></div>
+
+  <div id="code-panel">
+    <div class="code-panel-title">Python</div>
+    <div class="code-placeholder">
+def rob(nums):
+    n = len(nums)
+    if n == 1:
+        return nums[0]
+
+    def rob_range(start, end):
+        prev_two = 0
+        prev_one = 0
+        for i in range(start, end):
+            cur = max(prev_one,
+                      prev_two + nums[i])
+            prev_two = prev_one
+            prev_one = cur
+        return prev_one
+
+    # Pass 1: skip last house
+    p1 = rob_range(0, n - 1)
+    # Pass 2: skip first house
+    p2 = rob_range(1, n)
+    return max(p1, p2)
+    </div>
+  </div>
+
+  <div id="sidebar">
+    <div>
+      <div class="sidebar-title">Algorithm</div>
+      <div style="font-size:0.72rem;color:var(--text-muted);line-height:1.6">
+        Two-pass DP on a circular array.<br><br>
+        <strong style="color:var(--accent)">Pass 1:</strong> Rob houses 0 to n-2 (skip last)<br><br>
+        <strong style="color:var(--accent)">Pass 2:</strong> Rob houses 1 to n-1 (skip first)<br><br>
+        Answer = max(P1, P2)
+      </div>
+    </div>
+    <div>
+      <div class="sidebar-title">Recurrence</div>
+      <div style="font-size:0.72rem;color:var(--text-muted);font-family:monospace;line-height:1.8">
+        cur = max(<br>
+        &nbsp;&nbsp;prev_one,<br>
+        &nbsp;&nbsp;prev_two + nums[i]<br>
+        )
+      </div>
+    </div>
+  </div>
 </div>
 
-<div class="step-nav">
-  <button class="stepBtn" id="prevBtn" disabled>&larr;</button>
-  <button class="stepBtn" id="stepBtn" disabled>&rarr;</button>
-  <button class="playBtn" id="playBtn" disabled>&#9654; Play</button>
-  <select class="speedSel" id="speedSel">
+<div id="nav-row">
+  <button class="btn-step" id="prevBtn" disabled>&#8592; Prev</button>
+  <button class="btn-step" id="stepBtn" disabled>Step &#8594;</button>
+  <button class="btn-play" id="playBtn" disabled>&#9654; Play</button>
+  <button class="btn-step" id="resetBtn">&#8635; Reset</button>
+  <select id="speedSel">
     <option value="700">Slow</option>
     <option value="250" selected>Medium</option>
     <option value="80">Fast</option>
@@ -316,10 +283,18 @@ window.addEventListener('DOMContentLoaded', function() {
     speedSel: document.getElementById('speedSel'),
     render: function(snap, cur, total) {
       applyStep(snap, cur > 0);
-      document.getElementById('phase-label').textContent =
-        'Step ' + (cur + 1) + ' / ' + total + '  ·  ' + snap.phase;
-      document.getElementById('step-desc').textContent = snap.desc;
+      var badge = document.getElementById('phase-badge');
+      var desc  = document.getElementById('desc');
+      var ctr   = document.getElementById('step-counter');
+      if (badge) badge.textContent = snap.phase;
+      if (desc)  desc.textContent  = snap.desc;
+      if (ctr)   ctr.textContent   = 'Step ' + (cur + 1) + ' / ' + total;
     }
+  });
+
+  document.getElementById('resetBtn').addEventListener('click', function() {
+    nav.stopPlay();
+    buildAndRun();
   });
 });
 
@@ -353,8 +328,6 @@ function randomExample() {
   buildAndRun();
 }
 
-// ── DOM builders ─────────────────────────────────────────────────────────────
-
 function buildHouseRows(nums) {
   buildRow(nums, 'houses-row1', 1);
   buildRow(nums, 'houses-row2', 2);
@@ -375,8 +348,6 @@ function buildRow(nums, rowId, pass) {
   });
 }
 
-// ── Simulation ───────────────────────────────────────────────────────────────
-
 function simulate(nums) {
   var n = nums.length;
   var steps = [];
@@ -393,7 +364,7 @@ function simulate(nums) {
     steps.push({ pass: 1, houseStates1: ['current'], houseStates2: ['current'],
       dp0: 0, dp1: nums[0], curVal: nums[0], skipVal: null, robVal: null, winner: null,
       pass1Result: nums[0], pass2Result: nums[0],
-      phase: 'Result', desc: 'Single house — rob it. Answer: $' + nums[0] + '.' });
+      phase: 'Result', desc: 'Single house \u2014 rob it. Answer: $' + nums[0] + '.' });
     return steps;
   }
 
@@ -411,8 +382,7 @@ function simulate(nums) {
   function snap(pass, phase, desc, dp0, dp1, curVal, skipVal, robVal, winner, p1r, p2r) {
     steps.push({
       pass: pass,
-      houseStates1: hs1.slice(),
-      houseStates2: hs2.slice(),
+      houseStates1: hs1.slice(), houseStates2: hs2.slice(),
       dp0: dp0, dp1: dp1, curVal: curVal,
       skipVal: skipVal, robVal: robVal, winner: winner,
       pass1Result: p1r, pass2Result: p2r,
@@ -420,64 +390,58 @@ function simulate(nums) {
     });
   }
 
-  // ── Pass 1: houses 0 .. n-2 ─────────────────────────────────────────────
   var dp0 = 0, dp1 = 0;
-  snap(1, 'Pass 1 · Init',
-    'Pass 1: rob from houses [0..' + (n - 2) + '] (skip last). Init prev_two = 0, prev_one = 0.',
-    0, 0, null, null, null, null, null, null);
+  snap(1, 'Pass 1 \u00b7 Init', 'Pass 1: rob from houses [0..' + (n - 2) + '] (skip last). Init prev_two = 0, prev_one = 0.', 0, 0, null, null, null, null, null, null);
 
   for (var i = 0; i < n - 1; i++) {
     var money = nums[i];
     hs1[i] = 'current';
-    snap(1, 'Pass 1 · Loop', 'House [' + i + ']: $' + money + '.', dp0, dp1, null, null, null, null, null, null);
+    snap(1, 'Pass 1 \u00b7 Loop', 'House [' + i + ']: $' + money + '.', dp0, dp1, null, null, null, null, null, null);
 
     var skipVal = dp1;
     var robVal  = dp0 + money;
-    snap(1, 'Pass 1 · Loop', 'Option A — skip house [' + i + ']: keep prev_one = ' + skipVal + '.', dp0, dp1, null, skipVal, null, null, null, null);
-    snap(1, 'Pass 1 · Loop', 'Option B — rob house [' + i + ']: prev_two + $' + money + ' = ' + dp0 + ' + ' + money + ' = ' + robVal + '.', dp0, dp1, null, skipVal, robVal, null, null, null);
+    snap(1, 'Pass 1 \u00b7 Loop', 'Option A \u2014 skip house [' + i + ']: keep prev_one = ' + skipVal + '.', dp0, dp1, null, skipVal, null, null, null, null);
+    snap(1, 'Pass 1 \u00b7 Loop', 'Option B \u2014 rob house [' + i + ']: prev_two + $' + money + ' = ' + dp0 + ' + ' + money + ' = ' + robVal + '.', dp0, dp1, null, skipVal, robVal, null, null, null);
 
     var cur    = Math.max(skipVal, robVal);
     var winner = robVal > skipVal ? 'rob' : robVal < skipVal ? 'skip' : 'tie';
-    snap(1, 'Pass 1 · Loop', 'current = max(' + skipVal + ', ' + robVal + ') = ' + cur + '. Choose: ' + (winner === 'tie' ? 'tie.' : winner + '.'), dp0, dp1, cur, skipVal, robVal, winner, null, null);
+    snap(1, 'Pass 1 \u00b7 Loop', 'current = max(' + skipVal + ', ' + robVal + ') = ' + cur + '. Choose: ' + (winner === 'tie' ? 'tie.' : winner + '.'), dp0, dp1, cur, skipVal, robVal, winner, null, null);
 
     dp0 = dp1; dp1 = cur;
     hs1[i] = 'done';
-    snap(1, 'Pass 1 · Loop', 'Slide: prev_two ← ' + dp0 + ',  prev_one ← ' + dp1 + '.', dp0, dp1, null, null, null, null, null, null);
+    snap(1, 'Pass 1 \u00b7 Loop', 'Slide: prev_two \u2190 ' + dp0 + ',  prev_one \u2190 ' + dp1 + '.', dp0, dp1, null, null, null, null, null, null);
   }
 
   var pass1Result = dp1;
-  snap(1, 'Pass 1 · Done', 'Pass 1 complete. Result = prev_one = $' + pass1Result + '.', dp0, dp1, null, null, null, null, pass1Result, null);
+  snap(1, 'Pass 1 \u00b7 Done', 'Pass 1 complete. Result = prev_one = $' + pass1Result + '.', dp0, dp1, null, null, null, null, pass1Result, null);
 
-  // ── Pass 2: houses 1 .. n-1 ─────────────────────────────────────────────
   dp0 = 0; dp1 = 0;
   hs2 = initStates(2);
 
-  snap(2, 'Pass 2 · Init',
-    'Pass 2: rob from houses [1..' + (n - 1) + '] (skip first). Init prev_two = 0, prev_one = 0.',
-    0, 0, null, null, null, null, pass1Result, null);
+  snap(2, 'Pass 2 \u00b7 Init', 'Pass 2: rob from houses [1..' + (n - 1) + '] (skip first). Init prev_two = 0, prev_one = 0.', 0, 0, null, null, null, null, pass1Result, null);
 
   for (var j = 0; j < n - 1; j++) {
     var gIdx  = j + 1;
     money = nums[gIdx];
     hs2[gIdx] = 'current';
-    snap(2, 'Pass 2 · Loop', 'House [' + gIdx + ']: $' + money + '.', dp0, dp1, null, null, null, null, pass1Result, null);
+    snap(2, 'Pass 2 \u00b7 Loop', 'House [' + gIdx + ']: $' + money + '.', dp0, dp1, null, null, null, null, pass1Result, null);
 
     skipVal = dp1;
     robVal  = dp0 + money;
-    snap(2, 'Pass 2 · Loop', 'Option A — skip house [' + gIdx + ']: keep prev_one = ' + skipVal + '.', dp0, dp1, null, skipVal, null, null, pass1Result, null);
-    snap(2, 'Pass 2 · Loop', 'Option B — rob house [' + gIdx + ']: prev_two + $' + money + ' = ' + dp0 + ' + ' + money + ' = ' + robVal + '.', dp0, dp1, null, skipVal, robVal, null, pass1Result, null);
+    snap(2, 'Pass 2 \u00b7 Loop', 'Option A \u2014 skip house [' + gIdx + ']: keep prev_one = ' + skipVal + '.', dp0, dp1, null, skipVal, null, null, pass1Result, null);
+    snap(2, 'Pass 2 \u00b7 Loop', 'Option B \u2014 rob house [' + gIdx + ']: prev_two + $' + money + ' = ' + dp0 + ' + ' + money + ' = ' + robVal + '.', dp0, dp1, null, skipVal, robVal, null, pass1Result, null);
 
     cur    = Math.max(skipVal, robVal);
     winner = robVal > skipVal ? 'rob' : robVal < skipVal ? 'skip' : 'tie';
-    snap(2, 'Pass 2 · Loop', 'current = max(' + skipVal + ', ' + robVal + ') = ' + cur + '. Choose: ' + (winner === 'tie' ? 'tie.' : winner + '.'), dp0, dp1, cur, skipVal, robVal, winner, pass1Result, null);
+    snap(2, 'Pass 2 \u00b7 Loop', 'current = max(' + skipVal + ', ' + robVal + ') = ' + cur + '. Choose: ' + (winner === 'tie' ? 'tie.' : winner + '.'), dp0, dp1, cur, skipVal, robVal, winner, pass1Result, null);
 
     dp0 = dp1; dp1 = cur;
     hs2[gIdx] = 'done';
-    snap(2, 'Pass 2 · Loop', 'Slide: prev_two ← ' + dp0 + ',  prev_one ← ' + dp1 + '.', dp0, dp1, null, null, null, null, pass1Result, null);
+    snap(2, 'Pass 2 \u00b7 Loop', 'Slide: prev_two \u2190 ' + dp0 + ',  prev_one \u2190 ' + dp1 + '.', dp0, dp1, null, null, null, null, pass1Result, null);
   }
 
   var pass2Result = dp1;
-  snap(2, 'Pass 2 · Done', 'Pass 2 complete. Result = prev_one = $' + pass2Result + '.', dp0, dp1, null, null, null, null, pass1Result, pass2Result);
+  snap(2, 'Pass 2 \u00b7 Done', 'Pass 2 complete. Result = prev_one = $' + pass2Result + '.', dp0, dp1, null, null, null, null, pass1Result, pass2Result);
 
   var finalResult = Math.max(pass1Result, pass2Result);
   snap(2, 'Result', 'Answer = max(pass1=$' + pass1Result + ', pass2=$' + pass2Result + ') = $' + finalResult + '.', dp0, dp1, null, null, null, null, pass1Result, pass2Result);
@@ -485,10 +449,7 @@ function simulate(nums) {
   return steps;
 }
 
-// ── Render ───────────────────────────────────────────────────────────────────
-
 function applyStep(s, animate) {
-  // Active pass highlighting
   var sec1 = document.getElementById('pass1-section');
   var sec2 = document.getElementById('pass2-section');
   if (s.phase === 'Result') {
@@ -502,11 +463,9 @@ function applyStep(s, animate) {
     sec2.className = 'pass-section active';
   }
 
-  // House rows
   applyHouseRow(s.houseStates1, 1, animate);
   applyHouseRow(s.houseStates2, 2, animate);
 
-  // Pass result badges
   var b1 = document.getElementById('pass1-result-badge');
   var b2 = document.getElementById('pass2-result-badge');
   if (s.pass1Result !== null) {
@@ -522,15 +481,10 @@ function applyStep(s, animate) {
     b2.className = 'pass-result-badge';
   }
 
-  // DP vars
   setDPVal('dp-pt-val', s.dp0, animate);
   setDPVal('dp-po-val', s.dp1, animate);
   setDPVal('dp-cur-val', s.curVal, animate);
-
-  // Decision
   applyDecision(s);
-
-  // Result panel
   applyResult(s, animate);
 }
 
@@ -555,7 +509,7 @@ function applyHouseRow(states, pass, animate) {
 function setDPVal(id, val, animate) {
   var el = document.getElementById(id);
   if (!el) return;
-  var text = (val === null || val === undefined) ? '—' : String(val);
+  var text = (val === null || val === undefined) ? '\u2014' : String(val);
   if (animate && el.textContent !== text) {
     gsap.fromTo(el, { scale: 0.8, opacity: 0.4 }, { scale: 1, opacity: 1, duration: 0.22, ease: 'back.out(1.7)' });
   }
@@ -572,13 +526,12 @@ function applyDecision(s) {
 
   skipCard.className = 'dec-card';
   robCard.className  = 'dec-card';
-  skipV.textContent  = '—';
+  skipV.textContent  = '\u2014';
   robF.textContent   = 'prev_two + money';
-  robV.textContent   = '—';
+  robV.textContent   = '\u2014';
   result.innerHTML   = '';
 
   if (s.skipVal === null || s.skipVal === undefined) return;
-
   skipCard.className = 'dec-card visible';
   skipV.textContent  = String(s.skipVal);
 
@@ -610,9 +563,8 @@ function applyResult(s, animate) {
   var maxDiv = document.getElementById('result-max');
   var maxVal = document.getElementById('result-max-val');
 
-  val1.textContent = s.pass1Result !== null ? '$' + s.pass1Result : '—';
-  val2.textContent = s.pass2Result !== null ? '$' + s.pass2Result : '—';
-
+  val1.textContent = s.pass1Result !== null ? '$' + s.pass1Result : '\u2014';
+  val2.textContent = s.pass2Result !== null ? '$' + s.pass2Result : '\u2014';
   box1.className = 'result-box';
   box2.className = 'result-box';
 
@@ -620,7 +572,6 @@ function applyResult(s, animate) {
     var final = Math.max(s.pass1Result, s.pass2Result);
     if (s.pass1Result >= s.pass2Result) box1.className = 'result-box winner';
     else                                box2.className = 'result-box winner';
-
     var wasHidden = maxDiv.className.indexOf('visible') === -1;
     maxDiv.className = 'result-max visible';
     maxVal.textContent = '$' + final;
@@ -634,10 +585,25 @@ function applyResult(s, animate) {
 </script>
 
 <script>
-if (window.self !== window.top) {
-  var bl = document.querySelector('.back-link');
-  if (bl) bl.style.display = 'none';
-}
+(function() {
+  var handle = document.getElementById('resize-handle');
+  var panel  = document.getElementById('code-panel');
+  var dragging = false, startX = 0, startW = 0;
+  handle.addEventListener('mousedown', function(e) {
+    dragging = true; startX = e.clientX; startW = panel.offsetWidth;
+    handle.classList.add('dragging');
+    e.preventDefault();
+  });
+  document.addEventListener('mousemove', function(e) {
+    if (!dragging) return;
+    var delta = startX - e.clientX;
+    panel.style.width = Math.min(560, Math.max(120, startW + delta)) + 'px';
+  });
+  document.addEventListener('mouseup', function() {
+    if (!dragging) return;
+    dragging = false; handle.classList.remove('dragging');
+  });
+})();
 </script>
 </body>
 </html>

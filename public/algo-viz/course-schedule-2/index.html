@@ -1,318 +1,156 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Course Schedule II</title>
-  <link rel="stylesheet" href="../shared/style.css" />
-  <script src="../shared/viz.js"></script>
-  <style>
-    .viz-area { width: 100%; max-width: 95%; }
-    .main-row { display: grid; grid-template-columns: 1fr 360px; gap: 20px; align-items: start; }
-    @media (max-width: 800px) { .main-row { grid-template-columns: 1fr; } }
-
-    .graph-panel {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--radius-lg); padding: 16px;
-      display: flex; flex-direction: column; gap: 10px;
-    }
-    .graph-svg-wrap {
-      width: 100%; aspect-ratio: 1.4;
-      background: var(--bg); border-radius: var(--radius-sm);
-      overflow: hidden; position: relative;
-    }
-    #graph-svg { width: 100%; height: 100%; }
-
-    .node-circle {
-      stroke-width: 2.5;
-      transition: fill 0.3s, stroke 0.3s;
-    }
-    .node-circle.state-unvisited { fill: #1a1b2e; stroke: #7aa2f7; }
-    .node-circle.state-visiting  { fill: #3d3524; stroke: #e0af68; }
-    .node-circle.state-visited   { fill: #1a2a1a; stroke: #9ece6a; }
-    .node-circle.state-cycle     { fill: #3d1515; stroke: #f7768e; }
-    .node-circle.state-active    { stroke-width: 3.5; }
-
-    .node-label {
-      fill: var(--text-bright); font-size: 13px; font-weight: 700;
-      font-family: monospace; text-anchor: middle; dominant-baseline: central;
-      pointer-events: none;
-    }
-
-    .edge-line {
-      stroke-width: 2; fill: none;
-      stroke: #3b4261; transition: stroke 0.3s;
-    }
-    .edge-line.active { stroke: #e0af68; }
-    .edge-line.cycle  { stroke: #f7768e; }
-    .edge-line.done   { stroke: #9ece6a; }
-
-    .right-col { display: flex; flex-direction: column; gap: 12px; }
-
-    .panel-box {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--radius-lg); padding: 14px 16px;
-      display: flex; flex-direction: column; gap: 8px;
-    }
-    .panel-title {
-      font-size: 0.72rem; font-weight: 700;
-      text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim);
-    }
-
-    .nav-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-    .btn-play {
-      background: #15803d; border: none; border-radius: var(--radius-sm);
-      color: #fff; cursor: pointer; font-size: 0.88rem; font-weight: 600;
-      padding: 9px 16px; transition: background 0.2s;
-    }
-    .btn-play:hover { background: #166534; }
-    .btn-play.playing { background: #c2410c; }
-    .btn-play.playing:hover { background: #9a3412; }
-    .btn-play:disabled { opacity: 0.4; cursor: not-allowed; }
-    .speed-select {
-      background: var(--bg); border: 1px solid var(--border);
-      border-radius: var(--radius-sm); color: var(--text);
-      font-size: 0.85rem; padding: 8px 10px; outline: none; width: 80px;
-    }
-
-    .result-badge {
-      font-size: 0.88rem; font-weight: 700;
-      padding: 5px 14px; border-radius: 6px;
-      display: none; width: fit-content;
-    }
-    .result-badge.valid   { background: #1a2a1a; color: #9ece6a; border: 1px solid #9ece6a; display: block; }
-    .result-badge.invalid { background: #3d1515; color: #f7768e; border: 1px solid #f7768e; display: block; }
-
-    .stack-list {
-      display: flex; gap: 6px; flex-wrap: wrap; min-height: 28px;
-    }
-    .stack-chip {
-      padding: 3px 10px; border-radius: 4px;
-      font-size: 0.8rem; font-family: monospace; font-weight: 700;
-      background: #3d3524; border: 1px solid #e0af68; color: #e0af68;
-    }
-
-    .order-list {
-      display: flex; gap: 6px; flex-wrap: wrap; min-height: 28px;
-      align-items: center;
-    }
-    .order-chip {
-      padding: 3px 10px; border-radius: 4px;
-      font-size: 0.8rem; font-family: monospace; font-weight: 700;
-      background: #1a2a1a; border: 1px solid #9ece6a; color: #9ece6a;
-    }
-    .order-arrow {
-      color: var(--text-ghost); font-size: 0.75rem;
-    }
-
-    .legend-row { display: flex; align-items: center; gap: 8px; font-size: 0.78rem; color: var(--text-muted); }
-    .legend-dot {
-      width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; border: 2px solid;
-    }
-
-    .code-panel {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--radius-lg); overflow: hidden;
-    }
-    .code-header {
-      padding: 8px 14px; font-size: 0.72rem; font-weight: 600;
-      color: var(--text-dim); border-bottom: 1px solid var(--border); background: var(--bg);
-    }
-    .code-body { padding: 10px 0; font-size: 0.78rem; line-height: 1.75; white-space: pre; }
-    .code-line { display: flex; align-items: center; padding: 0 14px; }
-    .code-line.hl { background: var(--border-soft); border-left: 2px solid var(--accent); }
-    .ln { min-width: 24px; color: var(--text-ghost); user-select: none; font-size: 0.7rem; }
-    .kw { color: var(--purple); }
-    .fn { color: var(--blue); }
-    .bi { color: var(--orange); }
-    .cm { color: var(--text-ghost); }
-    .nb { color: var(--green); }
-    .st { color: #ff9e64; }
-
-    .viz-inputs {
-      display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end;
-      padding: 10px 0 14px; width: 100%; max-width: 90%;
-    }
-    .viz-inputs .field {
-      display: flex; flex-direction: column; gap: 4px;
-    }
-    .viz-inputs label {
-      font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
-      letter-spacing: 0.08em; color: var(--text-dim);
-    }
-    .viz-inputs input[type="text"],
-    .viz-inputs input[type="number"] {
-      background: var(--surface); border: 1px solid var(--border);
-      color: var(--text); border-radius: var(--radius-sm);
-      padding: 6px 10px; font-size: 0.85rem;
-    }
-    .viz-inputs input[type="text"] { width: 260px; }
-    .viz-inputs input[type="number"] { width: 70px; }
-    .viz-inputs select {
-      background: var(--surface); border: 1px solid var(--border);
-      color: var(--text); border-radius: var(--radius-sm);
-      padding: 6px 10px; font-size: 0.85rem; cursor: pointer;
-    }
-    .viz-inputs button {
-      padding: 7px 18px; font-weight: 600; border: none;
-      border-radius: var(--radius-sm); cursor: pointer; font-size: 0.85rem;
-    }
-    .viz-inputs button.run {
-      background: var(--accent); color: #fff;
-    }
-    .viz-inputs button.random {
-      background: var(--surface); color: var(--text);
-      border: 1px solid var(--border);
-    }
-
-    .input-row { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
-    .input-field { display: flex; flex-direction: column; gap: 4px; }
-    .input-field label { font-size: 0.75rem; color: var(--text-dim); font-weight: 600; }
-    .input-field input {
-      background: var(--bg); border: 1px solid var(--border);
-      border-radius: var(--radius-sm); color: var(--text);
-      font-size: 0.85rem; padding: 7px 10px; outline: none; min-width: 60px;
-    }
-    .input-field input:focus { border-color: var(--accent); }
-    .input-field input.wide { min-width: 260px; }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Course Schedule II</title>
+<link rel="stylesheet" href="../shared/style.css" />
+<script src="../shared/viz.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: "Fira Code", "Cascadia Code", monospace; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+  #header { padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+  #phase-badge { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; padding: 3px 10px; border-radius: var(--radius-sm); background: #1e3a5f; color: var(--blue); border: 1px solid var(--blue); }
+  #step-counter { font-size: 12px; color: var(--text-muted); margin-left: auto; }
+  .viz-inputs { width: 100%; max-width: 100%; padding: 10px 16px; background: var(--surface); border: none; border-bottom: 1px solid var(--border); border-radius: 0; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; flex-shrink: 0; }
+  .viz-inputs label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); display: block; margin-bottom: 3px; }
+  .viz-inputs select, .viz-inputs input { background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 0 8px; height: 30px; font-size: 0.82rem; font-family: inherit; }
+  .vi-btn-run { padding: 6px 14px; border-radius: 6px; font-size: 0.82rem; font-weight: 600; cursor: pointer; font-family: inherit; background: var(--accent); color: #fff; border: none; }
+  .vi-btn-rand { padding: 6px 14px; border-radius: 6px; font-size: 0.82rem; cursor: pointer; font-family: inherit; background: var(--bg); color: var(--text); border: 1px solid var(--border); }
+  #main { display: flex; flex: 1; overflow: hidden; }
+  #viz-area { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding: 12px; gap: 8px; overflow-y: auto; }
+  #desc { font-size: 13px; color: var(--text-muted); text-align: center; max-width: 560px; min-height: 36px; line-height: 1.5; }
+  #resize-handle { width: 5px; flex-shrink: 0; cursor: col-resize; background: transparent; border-left: 1px solid var(--border); transition: background .15s; z-index: 10; }
+  #resize-handle:hover, #resize-handle.dragging { background: var(--accent); }
+  #code-panel { width: 350px; min-width: 120px; max-width: 560px; flex-shrink: 0; background: #0d1117; border-right: 1px solid var(--border); overflow-y: auto; overflow-x: auto; padding: 10px 12px; display: flex; flex-direction: column; }
+  .cl { display: flex; align-items: stretch; padding: 2px 0; white-space: pre; border-left: 2px solid transparent; padding-left: 6px; color: var(--text-muted); transition: all 0.2s; font-size: 0.75rem; line-height: 1.8; }
+  .cl.hl { background: rgba(122,162,247,0.12); border-left-color: var(--accent); color: var(--text); }
+  .ln { display: inline-block; width: 20px; text-align: right; color: var(--text-dim); user-select: none; margin-right: 10px; font-size: 0.7rem; }
+  #sidebar { width: 220px; flex-shrink: 0; background: var(--surface); border-left: 1px solid var(--border); overflow-y: auto; padding: 14px 12px; display: flex; flex-direction: column; gap: 12px; }
+  .sidebar-section { font-size: 11px; }
+  .sidebar-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--text-dim); margin-bottom: 6px; }
+  #nav-row { flex-shrink: 0; display: flex; align-items: center; gap: 8px; padding: 10px 16px; background: var(--surface); border-top: 1px solid var(--border); }
+  .btn-step, .btn-play { padding: 6px 14px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--surface); color: var(--text); font-family: inherit; font-size: 12px; cursor: pointer; transition: background .15s; }
+  .btn-step:hover { background: #334155; }
+  .btn-play { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn-play:hover { background: var(--accent-hover); }
+  select { padding: 5px 8px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: #1e293b; color: var(--text); font-size: 12px; font-family: inherit; cursor: pointer; }
+  /* UNIQUE VIZ CSS */
+  .graph-svg-wrap { width: 100%; flex: 1; background: var(--bg); border-radius: var(--radius-sm); overflow: hidden; position: relative; min-height: 300px; }
+  #graph-svg { width: 100%; height: 100%; }
+  .node-circle { stroke-width: 2.5; transition: fill 0.3s, stroke 0.3s; }
+  .node-circle.state-unvisited { fill: #1a1b2e; stroke: #7aa2f7; }
+  .node-circle.state-visiting  { fill: #3d3524; stroke: #e0af68; }
+  .node-circle.state-visited   { fill: #1a2a1a; stroke: #9ece6a; }
+  .node-circle.state-cycle     { fill: #3d1515; stroke: #f7768e; }
+  .node-circle.state-active    { stroke-width: 3.5; }
+  .node-label { fill: var(--text-bright); font-size: 13px; font-weight: 700; font-family: monospace; text-anchor: middle; dominant-baseline: central; pointer-events: none; }
+  .edge-line { stroke-width: 2; fill: none; stroke: #3b4261; transition: stroke 0.3s; }
+  .edge-line.active { stroke: #e0af68; }
+  .edge-line.cycle  { stroke: #f7768e; }
+  .edge-line.done   { stroke: #9ece6a; }
+  .result-badge { font-size: 0.82rem; font-weight: 700; padding: 4px 10px; border-radius: 6px; display: none; }
+  .result-badge.valid   { background: #1a2a1a; color: #9ece6a; border: 1px solid #9ece6a; display: block; }
+  .result-badge.invalid { background: #3d1515; color: #f7768e; border: 1px solid #f7768e; display: block; }
+  .stack-list { display: flex; gap: 5px; flex-wrap: wrap; min-height: 22px; }
+  .stack-chip { padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; font-family: monospace; font-weight: 700; background: #3d3524; border: 1px solid #e0af68; color: #e0af68; }
+  .order-list { display: flex; gap: 5px; flex-wrap: wrap; min-height: 22px; align-items: center; }
+  .order-chip { padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; font-family: monospace; font-weight: 700; background: #1a2a1a; border: 1px solid #9ece6a; color: #9ece6a; }
+  .order-arrow { color: var(--text-ghost); font-size: 0.7rem; }
+  .legend-dot { width: 13px; height: 13px; border-radius: 50%; flex-shrink: 0; border: 2px solid; display: inline-block; }
+  .leg-line { display: flex; align-items: center; gap: 6px; font-size: 0.75rem; color: var(--text-muted); margin-bottom: 4px; }
+  .kw { color: var(--purple); } .fn { color: var(--blue); } .bi { color: var(--orange); } .cm { color: var(--text-ghost); } .nb { color: var(--green); } .st { color: #ff9e64; }
+</style>
 </head>
-<body class="page">
-
-<div class="page-header">
-  <a class="back-link" href="../index.html">&larr; All Algorithms</a>
-  <div class="page-title">Course Schedule II</div>
-  <div class="page-sub">LeetCode 210 &middot; DFS topological sort &middot; UNVISITED → VISITING → VISITED &middot; O(V+E)</div>
-</div>
+<body>
 
 <div class="viz-inputs">
-  <div class="field">
+  <div style="display:flex;flex-direction:column">
     <label>Preset</label>
     <select id="presetSel" onchange="loadPreset()">
-      <option value="">— pick a preset —</option>
+      <option value="">&#8212; pick a preset &#8212;</option>
       <option value='{"n":4,"prereqs":"1,0;2,0;3,1;3,2"}'>Simple 4-node DAG</option>
       <option value='{"n":3,"prereqs":"2,0;1,0"}'>Valid: Two prerequisites</option>
       <option value='{"n":2,"prereqs":"1,0"}'>Valid: Linear pair</option>
-      <option value='{"n":3,"prereqs":"0,1;1,2;2,0"}'>Cycle: 0→1→2→0</option>
+      <option value='{"n":3,"prereqs":"0,1;1,2;2,0"}'>Cycle: 0&#8594;1&#8594;2&#8594;0</option>
       <option value='{"n":5,"prereqs":"1,0;2,1;3,1;4,2;4,3"}'>Complex DAG</option>
       <option value='{"n":6,"prereqs":""}'>No prerequisites</option>
     </select>
   </div>
-  <div class="field">
+  <div style="display:flex;flex-direction:column">
     <label>Courses</label>
-    <input type="number" id="inp-courses" value="4" min="1" max="10" />
+    <input type="number" id="inp-courses" value="4" min="1" max="10" style="width:60px" />
   </div>
-  <div class="field">
-    <label>Prerequisites (e.g. 1,0;2,0;3,1;3,2)</label>
-    <input type="text" id="inp-prereqs" value="1,0;2,0;3,1;3,2" />
+  <div style="display:flex;flex-direction:column">
+    <label>Prerequisites (e.g. 1,0;2,0)</label>
+    <input type="text" id="inp-prereqs" value="1,0;2,0;3,1;3,2" style="width:220px" />
   </div>
-  <button class="run" onclick="buildAndRun()">Run</button>
-  <button class="random" onclick="randomExample()">🎲 Random</button>
+  <button class="vi-btn-run" onclick="buildAndRun()">Run</button>
+  <button class="vi-btn-rand" onclick="randomExample()">&#127922; Random</button>
+</div>
+<div class="controls"></div>
+
+<div id="header">
+  <span id="phase-badge">Setup</span>
+  <span style="font-size:13px;font-weight:700;">Course Schedule II</span>
+  <span id="step-counter">Step 0 / 0</span>
 </div>
 
-<div class="controls">
-  <button id="prevBtn" disabled>&larr;</button>
-  <button id="stepBtn" disabled>&rarr;</button>
-  <button id="playBtn" disabled>&#9654; Play</button>
+<div id="main">
+  <div id="viz-area">
+    <div id="desc">Enter prerequisites and click Run.</div>
+    <div class="graph-svg-wrap" style="width:100%">
+      <svg id="graph-svg" viewBox="0 0 560 400" preserveAspectRatio="xMidYMid meet" style="width:100%;height:100%">
+        <defs>
+          <marker id="arrow-default" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#3b4261"/></marker>
+          <marker id="arrow-active"  markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#e0af68"/></marker>
+          <marker id="arrow-cycle"   markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#f7768e"/></marker>
+          <marker id="arrow-done"    markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#9ece6a"/></marker>
+        </defs>
+        <g id="edges-g"></g>
+        <g id="nodes-g"></g>
+      </svg>
+    </div>
+  </div>
+  <div id="resize-handle"></div>
+  <div id="code-panel">
+    <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--text-dim);margin-bottom:8px;">Code</div>
+    <div id="code-body"></div>
+  </div>
+  <div id="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-title">Result</div>
+      <div class="result-badge" id="result-badge"></div>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-title">DFS Path (VISITING)</div>
+      <div class="stack-list" id="stack-list"><span style="color:var(--text-ghost);font-size:0.75rem">empty</span></div>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-title">Post-Order Result</div>
+      <div class="order-list" id="order-list"><span style="color:var(--text-ghost);font-size:0.75rem">none yet</span></div>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-title">Legend</div>
+      <div class="leg-line"><span class="legend-dot" style="background:#1a1b2e;border-color:#7aa2f7"></span>UNVISITED</div>
+      <div class="leg-line"><span class="legend-dot" style="background:#3d3524;border-color:#e0af68"></span>VISITING</div>
+      <div class="leg-line"><span class="legend-dot" style="background:#1a2a1a;border-color:#9ece6a"></span>VISITED</div>
+      <div class="leg-line"><span class="legend-dot" style="background:#3d1515;border-color:#f7768e"></span>CYCLE</div>
+    </div>
+  </div>
+</div>
+
+<div id="nav-row">
+  <button id="prevBtn" class="btn-step">&#8592; Prev</button>
+  <button id="stepBtn" class="btn-step">Step &#8594;</button>
+  <button id="playBtn" class="btn-play">Play</button>
+  <button id="resetBtn" class="btn-step">&#8635; Reset</button>
   <select id="speedSel">
-    <option value="800">Slow</option>
-    <option value="400" selected>Medium</option>
-    <option value="120">Fast</option>
+    <option value="800">0.5&#215;</option>
+    <option value="400" selected>1&#215;</option>
+    <option value="200">2&#215;</option>
+    <option value="100">4&#215;</option>
   </select>
-</div>
-
-<div class="viz-area">
-  <div class="main-row">
-    <!-- Graph -->
-    <div class="graph-panel">
-      <div class="panel-title">Directed Graph — edge a→b means "a requires b"</div>
-      <div class="graph-svg-wrap">
-        <svg id="graph-svg" viewBox="0 0 560 400" preserveAspectRatio="xMidYMid meet">
-          <defs>
-            <marker id="arrow-default" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
-              <path d="M0,0 L0,6 L8,3 z" fill="#3b4261"/>
-            </marker>
-            <marker id="arrow-active" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
-              <path d="M0,0 L0,6 L8,3 z" fill="#e0af68"/>
-            </marker>
-            <marker id="arrow-cycle" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
-              <path d="M0,0 L0,6 L8,3 z" fill="#f7768e"/>
-            </marker>
-            <marker id="arrow-done" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
-              <path d="M0,0 L0,6 L8,3 z" fill="#9ece6a"/>
-            </marker>
-          </defs>
-          <g id="edges-g"></g>
-          <g id="nodes-g"></g>
-        </svg>
-      </div>
-    </div>
-
-    <!-- Right panel -->
-    <div class="right-col">
-
-      <div class="panel-box">
-        <div class="nav-row">
-          <button class="stepBtn" id="prevBtn" disabled>&larr;</button>
-          <button class="stepBtn" id="stepBtn" disabled>&rarr;</button>
-          <button class="playBtn" id="playBtn" disabled>&#9654; Play</button>
-          <select class="speedSel" id="speedSel">
-            <option value="800">Slow</option>
-            <option value="400" selected>Medium</option>
-            <option value="120">Fast</option>
-          </select>
-        </div>
-      </div>
-
-      <div class="panel-box">
-        <div class="panel-title" id="phase-label">&mdash;</div>
-        <div style="font-size:0.82rem;color:var(--text-muted);margin-top:2px;min-height:36px" id="step-desc">Enter prerequisites and click Build &amp; Run.</div>
-        <div class="result-badge" id="result-badge"></div>
-      </div>
-
-      <div class="panel-box">
-        <div class="panel-title">DFS Path (VISITING nodes)</div>
-        <div class="stack-list" id="stack-list">
-          <span style="color:var(--text-ghost);font-size:0.78rem">empty</span>
-        </div>
-      </div>
-
-      <div class="panel-box">
-        <div class="panel-title">Post-Order Result (build order)</div>
-        <div class="order-list" id="order-list">
-          <span style="color:var(--text-ghost);font-size:0.78rem">none yet</span>
-        </div>
-      </div>
-
-      <div class="panel-box">
-        <div class="panel-title">Legend</div>
-        <div style="display:flex;flex-direction:column;gap:6px">
-          <div class="legend-row">
-            <div class="legend-dot" style="background:#1a1b2e;border-color:#7aa2f7"></div>
-            <span>UNVISITED — not yet reached</span>
-          </div>
-          <div class="legend-row">
-            <div class="legend-dot" style="background:#3d3524;border-color:#e0af68"></div>
-            <span>VISITING — in current DFS path</span>
-          </div>
-          <div class="legend-row">
-            <div class="legend-dot" style="background:#1a2a1a;border-color:#9ece6a"></div>
-            <span>VISITED — done, appended to result</span>
-          </div>
-          <div class="legend-row">
-            <div class="legend-dot" style="background:#3d1515;border-color:#f7768e"></div>
-            <span>CYCLE — back edge detected</span>
-          </div>
-        </div>
-      </div>
-
-      <div class="code-panel">
-        <div class="code-header">Python</div>
-        <div class="code-body" id="code-body"></div>
-      </div>
-
-    </div>
-  </div>
 </div>
 
 <script>
@@ -339,11 +177,7 @@ var CODE = [
   [20, '    <span class="kw">return</span> result'],
 ];
 
-var gNodes = [];
-var gEdges = [];
-var simSteps = [];
-var nav;
-var NODE_R = 24;
+var gNodes = [], gEdges = [], simSteps = [], nav, NODE_R = 24;
 
 function parseInputs() {
   var n = parseInt(document.getElementById('inp-courses').value, 10);
@@ -352,15 +186,11 @@ function parseInputs() {
   var edges = [];
   if (raw) {
     raw.split(';').forEach(function(pair) {
-      pair = pair.trim();
-      if (!pair) return;
+      pair = pair.trim(); if (!pair) return;
       var parts = pair.split(',');
       if (parts.length === 2) {
-        var a = parseInt(parts[0].trim(), 10);
-        var b = parseInt(parts[1].trim(), 10);
-        if (!isNaN(a) && !isNaN(b) && a < n && b < n) {
-          edges.push([a, b]);
-        }
+        var a = parseInt(parts[0].trim(), 10), b = parseInt(parts[1].trim(), 10);
+        if (!isNaN(a) && !isNaN(b) && a < n && b < n) edges.push([a, b]);
       }
     });
   }
@@ -368,8 +198,7 @@ function parseInputs() {
 }
 
 function layoutNodes(n) {
-  var nodes = [];
-  var cx = 280, cy = 200, r = Math.min(160, 40 + n * 18);
+  var nodes = [], cx = 280, cy = 200, r = Math.min(160, 40 + n * 18);
   for (var i = 0; i < n; i++) {
     var angle = (2 * Math.PI * i / n) - Math.PI / 2;
     nodes.push({ id: i, x: Math.round(cx + r * Math.cos(angle)), y: Math.round(cy + r * Math.sin(angle)), label: String(i) });
@@ -382,40 +211,26 @@ function edgeKey(u, v) { return u + '-' + v; }
 function getEdgeEndpoints(u, v) {
   var nu = gNodes[u], nv = gNodes[v];
   if (!nu || !nv) return null;
-  var dx = nv.x - nu.x, dy = nv.y - nu.y;
-  var dist = Math.sqrt(dx * dx + dy * dy);
+  var dx = nv.x - nu.x, dy = nv.y - nu.y, dist = Math.sqrt(dx*dx + dy*dy);
   if (dist < 1) return null;
-  var ux = dx / dist, uy = dy / dist;
-  return {
-    x1: nu.x + ux * NODE_R,
-    y1: nu.y + uy * NODE_R,
-    x2: nv.x - ux * (NODE_R + 6),
-    y2: nv.y - uy * (NODE_R + 6)
-  };
+  var ux = dx/dist, uy = dy/dist;
+  return { x1: nu.x + ux*NODE_R, y1: nu.y + uy*NODE_R, x2: nv.x - ux*(NODE_R+6), y2: nv.y - uy*(NODE_R+6) };
 }
 
 function renderGraph(snap) {
-  var edgesG = document.getElementById('edges-g');
-  var nodesG = document.getElementById('nodes-g');
-  edgesG.innerHTML = '';
-  nodesG.innerHTML = '';
-
+  var edgesG = document.getElementById('edges-g'), nodesG = document.getElementById('nodes-g');
+  edgesG.innerHTML = ''; nodesG.innerHTML = '';
   var edgeStates = {};
   if (snap) {
-    (snap.activeEdges || []).forEach(function(e) { edgeStates[edgeKey(e[0], e[1])] = 'active'; });
-    (snap.cycleEdges  || []).forEach(function(e) { edgeStates[edgeKey(e[0], e[1])] = 'cycle'; });
-    (snap.doneEdges   || []).forEach(function(e) { edgeStates[edgeKey(e[0], e[1])] = 'done'; });
+    (snap.activeEdges || []).forEach(function(e) { edgeStates[edgeKey(e[0],e[1])] = 'active'; });
+    (snap.cycleEdges  || []).forEach(function(e) { edgeStates[edgeKey(e[0],e[1])] = 'cycle'; });
+    (snap.doneEdges   || []).forEach(function(e) { edgeStates[edgeKey(e[0],e[1])] = 'done'; });
   }
-
   var nodeStates = {};
   gNodes.forEach(function(n) { nodeStates[n.id] = snap ? (snap.states[n.id] || 'unvisited') : 'unvisited'; });
-
   gEdges.forEach(function(e) {
-    var u = e[0], v = e[1];
-    var pts = getEdgeEndpoints(u, v);
-    if (!pts) return;
-    var key = edgeKey(u, v);
-    var state = edgeStates[key] || 'default';
+    var u = e[0], v = e[1], pts = getEdgeEndpoints(u, v); if (!pts) return;
+    var key = edgeKey(u,v), state = edgeStates[key] || 'default';
     var line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
     line.setAttribute('x1', pts.x1); line.setAttribute('y1', pts.y1);
     line.setAttribute('x2', pts.x2); line.setAttribute('y2', pts.y2);
@@ -423,131 +238,78 @@ function renderGraph(snap) {
     line.setAttribute('marker-end', 'url(#arrow-' + (state === 'default' ? 'default' : state) + ')');
     edgesG.appendChild(line);
   });
-
   gNodes.forEach(function(n) {
     var g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
     var circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-    circle.setAttribute('cx', n.x); circle.setAttribute('cy', n.y);
-    circle.setAttribute('r', NODE_R);
+    circle.setAttribute('cx', n.x); circle.setAttribute('cy', n.y); circle.setAttribute('r', NODE_R);
     var st = nodeStates[n.id];
     var cls = 'node-circle state-' + st;
     if (snap && snap.currentNode === n.id) cls += ' state-active';
     circle.setAttribute('class', cls);
     var text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-    text.setAttribute('x', n.x); text.setAttribute('y', n.y);
-    text.setAttribute('class', 'node-label');
+    text.setAttribute('x', n.x); text.setAttribute('y', n.y); text.setAttribute('class', 'node-label');
     text.textContent = n.label;
-    g.appendChild(circle); g.appendChild(text);
-    nodesG.appendChild(g);
+    g.appendChild(circle); g.appendChild(text); nodesG.appendChild(g);
   });
 }
 
 function simulate(nodes, edges) {
-  var steps = [];
-  var n = nodes.length;
-
-  var adj = {};
-  nodes.forEach(function(nd) { adj[nd.id] = []; });
+  var steps = [], n = nodes.length;
+  var adj = {}; nodes.forEach(function(nd) { adj[nd.id] = []; });
   edges.forEach(function(e) { adj[e[0]].push(e[1]); });
-
   var UNVISITED = 'unvisited', VISITING = 'visiting', VISITED = 'visited', CYCLE = 'cycle';
-  var states = {};
-  nodes.forEach(function(nd) { states[nd.id] = UNVISITED; });
-
-  var stack = [];
-  var result = [];
-  var activeEdges = [];
-  var cycleEdges = [];
-  var doneEdges = [];
-  var foundCycle = false;
+  var states = {}; nodes.forEach(function(nd) { states[nd.id] = UNVISITED; });
+  var stack = [], result = [], activeEdges = [], cycleEdges = [], doneEdges = [], foundCycle = false;
 
   function snap(phase, desc, lines, currentNode) {
     var stSnap = Object.assign({}, states);
-    steps.push({
-      phase: phase,
-      desc: desc,
-      lines: lines,
-      states: stSnap,
-      stack: stack.slice(),
-      result: result.slice(),
-      activeEdges: activeEdges.map(function(e) { return e.slice(); }),
-      cycleEdges: cycleEdges.map(function(e) { return e.slice(); }),
-      doneEdges: doneEdges.map(function(e) { return e.slice(); }),
-      foundCycle: foundCycle,
-      currentNode: currentNode !== undefined ? currentNode : -1,
-    });
+    steps.push({ phase: phase, desc: desc, lines: lines, states: stSnap, stack: stack.slice(), result: result.slice(),
+      activeEdges: activeEdges.map(function(e){return e.slice();}), cycleEdges: cycleEdges.map(function(e){return e.slice();}),
+      doneEdges: doneEdges.map(function(e){return e.slice();}), foundCycle: foundCycle, currentNode: currentNode !== undefined ? currentNode : -1 });
   }
 
   snap('Init', 'All nodes UNVISITED. DFS will run from each unvisited node and build the post-order result.', [4, 5], -1);
 
   function dfs(u) {
     if (foundCycle) return;
-
-    if (states[u] === VISITING) {
-      foundCycle = true;
-      return;
-    }
+    if (states[u] === VISITING) { foundCycle = true; return; }
     if (states[u] === VISITED) return;
-
-    states[u] = VISITING;
-    stack.push(u);
-    snap('Enter', 'Enter node ' + u + ' → mark VISITING (in current DFS path).', [11], u);
-
+    states[u] = VISITING; stack.push(u);
+    snap('Enter', 'Enter node ' + u + ' \u2192 mark VISITING (in current DFS path).', [11], u);
     var prereqs = adj[u];
     for (var i = 0; i < prereqs.length; i++) {
       if (foundCycle) break;
-      var v = prereqs[i];
-      activeEdges = [[u, v]];
-
+      var v = prereqs[i]; activeEdges = [[u, v]];
       if (states[v] === VISITING) {
-        cycleEdges.push([u, v]);
-        foundCycle = true;
-        var old = states[v];
-        states[v] = CYCLE;
-        states[u] = CYCLE;
-        snap('Cycle', 'Edge ' + u + '→' + v + ': node ' + v + ' is VISITING (on current path). Back edge — cycle detected! Return [].', [7, 8], u);
-        states[v] = old;
-        states[u] = VISITING;
-        activeEdges = [];
-        return;
+        cycleEdges.push([u, v]); foundCycle = true;
+        var old = states[v]; states[v] = CYCLE; states[u] = CYCLE;
+        snap('Cycle', 'Edge ' + u + '\u2192' + v + ': node ' + v + ' is VISITING. Back edge \u2014 cycle detected! Return [].', [7, 8], u);
+        states[v] = old; states[u] = VISITING; activeEdges = []; return;
       }
-
       if (states[v] === VISITED) {
         doneEdges.push([u, v]);
-        snap('SkipVisited', 'Edge ' + u + '→' + v + ': node ' + v + ' already VISITED — skip, safe.', [9, 10], u);
+        snap('SkipVisited', 'Edge ' + u + '\u2192' + v + ': node ' + v + ' already VISITED \u2014 skip, safe.', [9, 10], u);
         activeEdges = [];
       } else {
-        snap('Recurse', 'Edge ' + u + '→' + v + ': node ' + v + ' is UNVISITED — recurse DFS(' + v + ').', [12, 13], u);
-        activeEdges = [];
-        dfs(v);
-        if (foundCycle) return;
+        snap('Recurse', 'Edge ' + u + '\u2192' + v + ': node ' + v + ' is UNVISITED \u2014 recurse DFS(' + v + ').', [12, 13], u);
+        activeEdges = []; dfs(v); if (foundCycle) return;
         doneEdges.push([u, v]);
       }
     }
-
     if (!foundCycle) {
-      states[u] = VISITED;
-      stack.pop();
-      result.push(u);
-      snap('Append', 'All prerequisites of node ' + u + ' done → mark VISITED, append ' + u + ' to result.', [15, 16], u);
+      states[u] = VISITED; stack.pop(); result.push(u);
+      snap('Append', 'All prerequisites of node ' + u + ' done \u2192 mark VISITED, append ' + u + ' to result.', [15, 16], u);
     }
   }
 
   for (var i = 0; i < nodes.length; i++) {
     if (foundCycle) break;
     var u = nodes[i].id;
-    if (states[u] === UNVISITED) {
-      snap('StartDFS', 'Node ' + u + ' is UNVISITED — start DFS(' + u + ').', [18, 19], u);
-      dfs(u);
-    }
+    if (states[u] === UNVISITED) { snap('StartDFS', 'Node ' + u + ' is UNVISITED \u2014 start DFS(' + u + ').', [18, 19], u); dfs(u); }
   }
 
-  if (foundCycle) {
-    snap('Done', 'Cycle detected — no valid ordering exists. Return [].', [19], -1);
-  } else {
-    snap('Done', 'All nodes processed. Result = [' + result.join(', ') + '] — a valid topological ordering.', [20], -1);
-  }
-
+  if (foundCycle) snap('Done', 'Cycle detected \u2014 no valid ordering exists. Return [].', [19], -1);
+  else snap('Done', 'All nodes processed. Result = [' + result.join(', ') + '] \u2014 a valid topological ordering.', [20], -1);
   return steps;
 }
 
@@ -556,71 +318,52 @@ function applyStep(snap) {
   updateStack(snap.stack);
   updateOrder(snap.result);
   setCodeLines(snap.lines);
-
   var badge = document.getElementById('result-badge');
-  badge.className = 'result-badge';
-  badge.textContent = '';
+  badge.className = 'result-badge'; badge.textContent = '';
   if (snap.phase === 'Done') {
-    if (snap.foundCycle) {
-      badge.className = 'result-badge invalid';
-      badge.textContent = 'Impossible — cycle detected → []';
-    } else {
-      badge.className = 'result-badge valid';
-      badge.textContent = 'Order: [' + snap.result.join(', ') + ']';
-    }
+    if (snap.foundCycle) { badge.className = 'result-badge invalid'; badge.textContent = 'Impossible \u2014 cycle detected \u2192 []'; }
+    else { badge.className = 'result-badge valid'; badge.textContent = 'Order: [' + snap.result.join(', ') + ']'; }
   }
 }
 
 function updateStack(stack) {
   var el = document.getElementById('stack-list');
-  if (!stack || stack.length === 0) {
-    el.innerHTML = '<span style="color:var(--text-ghost);font-size:0.78rem">empty</span>';
-    return;
-  }
-  el.innerHTML = stack.map(function(n) {
-    return '<div class="stack-chip">' + n + '</div>';
-  }).join('');
+  if (!stack || !stack.length) { el.innerHTML = '<span style="color:var(--text-ghost);font-size:0.75rem">empty</span>'; return; }
+  el.innerHTML = stack.map(function(n) { return '<div class="stack-chip">' + n + '</div>'; }).join('');
 }
 
 function updateOrder(result) {
   var el = document.getElementById('order-list');
-  if (!result || result.length === 0) {
-    el.innerHTML = '<span style="color:var(--text-ghost);font-size:0.78rem">none yet</span>';
-    return;
-  }
+  if (!result || !result.length) { el.innerHTML = '<span style="color:var(--text-ghost);font-size:0.75rem">none yet</span>'; return; }
   el.innerHTML = result.map(function(n, i) {
-    return (i > 0 ? '<span class="order-arrow">→</span>' : '') + '<div class="order-chip">' + n + '</div>';
+    return (i > 0 ? '<span class="order-arrow">\u2192</span>' : '') + '<div class="order-chip">' + n + '</div>';
   }).join('');
 }
 
 function setCodeLines(lines) {
   CODE.forEach(function(e) {
-    var el = document.getElementById('cl-' + e[0]);
-    if (!el) return;
-    if (lines && lines.indexOf(e[0]) >= 0) el.classList.add('hl');
-    else el.classList.remove('hl');
+    var el = document.getElementById('cl-' + e[0]); if (!el) return;
+    if (lines && lines.indexOf(e[0]) >= 0) el.classList.add('hl'); else el.classList.remove('hl');
   });
 }
 
 function buildCodePanel() {
   var body = document.getElementById('code-body');
   body.innerHTML = CODE.map(function(e) {
-    return '<div class="code-line" id="cl-' + e[0] + '"><span class="ln">' + e[0] + '</span><span>' + e[1] + '</span></div>';
+    return '<div class="cl" id="cl-' + e[0] + '"><span class="ln">' + e[0] + '</span><span>' + e[1] + '</span></div>';
   }).join('');
 }
 
 function buildAndRun() {
   var parsed = parseInputs();
-  gNodes = layoutNodes(parsed.n);
-  gEdges = parsed.edges;
+  gNodes = layoutNodes(parsed.n); gEdges = parsed.edges;
   renderGraph(null);
   simSteps = simulate(gNodes, gEdges);
   nav.load(simSteps);
 }
 
 function loadPreset() {
-  var sel = document.getElementById('presetSel');
-  if (!sel.value) return;
+  var sel = document.getElementById('presetSel'); if (!sel.value) return;
   var d = JSON.parse(sel.value);
   document.getElementById('inp-courses').value = d.n;
   document.getElementById('inp-prereqs').value = d.prereqs;
@@ -630,16 +373,11 @@ function loadPreset() {
 function randomExample() {
   var n = Math.floor(Math.random() * 7) + 2;
   document.getElementById('inp-courses').value = n;
-  var edges = [];
+  var edges = [], usedPairs = {};
   var edgeCount = Math.floor(Math.random() * (n * 2 - 1)) + 1;
-  var usedPairs = {};
   for (var i = 0; i < edgeCount; i++) {
-    var a = Math.floor(Math.random() * n);
-    var b = Math.floor(Math.random() * n);
-    if (a !== b && !usedPairs[a + '-' + b]) {
-      edges.push(a + ',' + b);
-      usedPairs[a + '-' + b] = true;
-    }
+    var a = Math.floor(Math.random() * n), b = Math.floor(Math.random() * n);
+    if (a !== b && !usedPairs[a + '-' + b]) { edges.push(a + ',' + b); usedPairs[a + '-' + b] = true; }
   }
   document.getElementById('inp-prereqs').value = edges.join(';');
   document.getElementById('presetSel').value = '';
@@ -655,21 +393,22 @@ window.addEventListener('DOMContentLoaded', function() {
     speedSel: document.getElementById('speedSel'),
     render: function(snap, cur, total) {
       applyStep(snap);
-      var phaseEl = document.getElementById('phase-label');
-      var descEl  = document.getElementById('step-desc');
-      if (phaseEl) phaseEl.textContent = 'Step ' + (cur + 1) + ' / ' + total + '  ·  ' + snap.phase;
-      if (descEl)  descEl.textContent = snap.desc;
+      document.getElementById('phase-badge').textContent = snap.phase || '';
+      document.getElementById('step-counter').textContent = 'Step ' + (cur + 1) + ' / ' + total;
+      var desc = document.getElementById('desc');
+      if (desc) desc.textContent = snap.desc || '';
     }
   });
+  document.getElementById('resetBtn').addEventListener('click', function() { buildAndRun(); });
+  (function() {
+    var handle = document.getElementById('resize-handle'), panel = document.getElementById('code-panel');
+    var dragging = false, startX = 0, startW = 0;
+    handle.addEventListener('mousedown', function(e) { dragging = true; startX = e.clientX; startW = panel.offsetWidth; handle.classList.add('dragging'); e.preventDefault(); });
+    document.addEventListener('mousemove', function(e) { if (!dragging) return; panel.style.width = Math.min(560, Math.max(120, startW + (startX - e.clientX))) + 'px'; });
+    document.addEventListener('mouseup', function() { if (!dragging) return; dragging = false; handle.classList.remove('dragging'); });
+  })();
   buildAndRun();
 });
-</script>
-
-<script>
-  if (window.self !== window.top) {
-    var bl = document.querySelector('.back-link');
-    if (bl) bl.style.display = 'none';
-  }
 </script>
 </body>
 </html>

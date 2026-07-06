@@ -1,173 +1,147 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Course Schedule</title>
-  <link rel="stylesheet" href="../shared/style.css" />
-  <script src="../shared/viz.js"></script>
-  <style>
-    .viz-area { width: 100%; max-width: 95%; }
-    .main-row { display: grid; grid-template-columns: 1fr 380px; gap: 20px; align-items: start; }
-    @media (max-width: 800px) { .main-row { grid-template-columns: 1fr; } }
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Course Schedule</title>
+<link rel="stylesheet" href="../shared/style.css" />
+<script src="../shared/viz.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: "Fira Code", "Cascadia Code", monospace; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
 
-    .graph-panel {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--radius-lg); padding: 16px;
-      display: flex; flex-direction: column; gap: 10px;
-    }
-    .graph-svg-wrap {
-      width: 100%; aspect-ratio: 1.4;
-      background: var(--bg); border-radius: var(--radius-sm);
-      overflow: hidden; position: relative;
-    }
-    #graph-svg { width: 100%; height: 100%; }
+  #header { padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+  #phase-badge { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; padding: 3px 10px; border-radius: var(--radius-sm); background: #1e3a5f; color: var(--blue); border: 1px solid var(--blue); }
+  #step-counter { font-size: 12px; color: var(--text-muted); margin-left: auto; }
 
-    /* Node colors: white=unvisited, gray=in-stack, black=done */
-    .node-circle {
-      stroke-width: 2.5;
-      transition: fill 0.3s, stroke 0.3s;
-    }
-    .node-circle.state-white  { fill: #1a1b2e; stroke: #7aa2f7; }
-    .node-circle.state-gray   { fill: #3d3524; stroke: #e0af68; }
-    .node-circle.state-black  { fill: #1a2a1a; stroke: #9ece6a; }
-    .node-circle.state-cycle  { fill: #3d1515; stroke: #f7768e; }
+  .viz-inputs { width: 100%; padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; flex-wrap: wrap; gap: 12px; align-items: center; flex-shrink: 0; }
+  .viz-inputs label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); display: block; margin-bottom: 3px; }
+  .viz-inputs select, .viz-inputs input { background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 0 8px; height: 30px; font-size: 0.82rem; font-family: inherit; }
+  .vi-btn-run { padding: 6px 14px; border-radius: 6px; font-size: 0.82rem; font-weight: 600; cursor: pointer; background: var(--accent); color: #fff; border: none; }
+  .vi-btn-rand { padding: 6px 14px; border-radius: 6px; font-size: 0.82rem; cursor: pointer; background: var(--bg); color: var(--text); border: 1px solid var(--border); }
 
-    .node-label {
-      fill: var(--text-bright); font-size: 13px; font-weight: 700;
-      font-family: monospace; text-anchor: middle; dominant-baseline: central;
-      pointer-events: none;
-    }
+  #main { display: flex; flex: 1; overflow: hidden; }
+  #viz-area { flex: 1; overflow: auto; display: flex; flex-direction: column; padding: 16px; gap: 12px; }
+  #resize-handle { width: 5px; flex-shrink: 0; cursor: col-resize; background: transparent; border-left: 1px solid var(--border); transition: background .15s; }
+  #resize-handle:hover, #resize-handle.dragging { background: var(--accent); }
+  #code-panel { width: 350px; min-width: 120px; max-width: 560px; flex-shrink: 0; background: #0d1117; overflow: auto; padding: 10px 12px; }
+  #sidebar { width: 240px; flex-shrink: 0; background: var(--surface); border-left: 1px solid var(--border); overflow-y: auto; padding: 14px 12px; display: flex; flex-direction: column; gap: 12px; }
+  #nav-row { flex-shrink: 0; display: flex; align-items: center; gap: 8px; padding: 10px 16px; background: var(--surface); border-top: 1px solid var(--border); }
+  .btn-step { padding: 6px 14px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--surface); color: var(--text); font-family: inherit; font-size: 12px; cursor: pointer; }
+  .btn-step:hover { background: #334155; }
+  .btn-play { padding: 6px 14px; border-radius: var(--radius-sm); background: var(--accent); border: 1px solid var(--accent); color: #fff; font-family: inherit; font-size: 12px; cursor: pointer; }
+  #nav-row select { padding: 5px 8px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: #1e293b; color: var(--text); font-size: 12px; font-family: inherit; cursor: pointer; }
 
-    .edge-line {
-      stroke-width: 2; fill: none;
-      stroke: #3b4261; transition: stroke 0.3s;
-    }
-    .edge-line.active  { stroke: #e0af68; }
-    .edge-line.cycle   { stroke: #f7768e; }
-    .edge-line.done    { stroke: #9ece6a; }
+  /* ---- graph panel ---- */
+  .graph-panel {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius-lg); padding: 16px;
+    display: flex; flex-direction: column; gap: 10px; width: 100%;
+  }
+  .graph-svg-wrap {
+    width: 100%; aspect-ratio: 1.4;
+    background: var(--bg); border-radius: var(--radius-sm);
+    overflow: hidden; position: relative;
+  }
+  #graph-svg { width: 100%; height: 100%; }
 
-    .edge-arrow { fill: #3b4261; transition: fill 0.3s; }
-    .edge-arrow.active { fill: #e0af68; }
-    .edge-arrow.cycle  { fill: #f7768e; }
-    .edge-arrow.done   { fill: #9ece6a; }
+  .panel-title {
+    font-size: 0.72rem; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim);
+  }
 
-    /* right column */
-    .right-col { display: flex; flex-direction: column; gap: 12px; }
+  /* Node colors: white=unvisited, gray=in-stack, black=done */
+  .node-circle { stroke-width: 2.5; transition: fill 0.3s, stroke 0.3s; }
+  .node-circle.state-white  { fill: #1a1b2e; stroke: #7aa2f7; }
+  .node-circle.state-gray   { fill: #3d3524; stroke: #e0af68; }
+  .node-circle.state-black  { fill: #1a2a1a; stroke: #9ece6a; }
+  .node-circle.state-cycle  { fill: #3d1515; stroke: #f7768e; }
 
-    .panel-box {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--radius-lg); padding: 14px 16px;
-      display: flex; flex-direction: column; gap: 8px;
-    }
-    .panel-title {
-      font-size: 0.72rem; font-weight: 700;
-      text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim);
-    }
+  .node-label {
+    fill: var(--text-bright); font-size: 13px; font-weight: 700;
+    font-family: monospace; text-anchor: middle; dominant-baseline: central;
+    pointer-events: none;
+  }
 
-    .nav-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-    .btn-play {
-      background: #15803d; border: none; border-radius: var(--radius-sm);
-      color: #fff; cursor: pointer; font-size: 0.88rem; font-weight: 600;
-      padding: 9px 16px; transition: background 0.2s;
-    }
-    .btn-play:hover { background: #166534; }
-    .btn-play.playing { background: #c2410c; }
-    .btn-play.playing:hover { background: #9a3412; }
-    .btn-play:disabled { opacity: 0.4; cursor: not-allowed; }
-    .speed-select {
-      background: var(--bg); border: 1px solid var(--border);
-      border-radius: var(--radius-sm); color: var(--text);
-      font-size: 0.85rem; padding: 8px 10px; outline: none; width: 80px;
-    }
+  .edge-line { stroke-width: 2; fill: none; stroke: #3b4261; transition: stroke 0.3s; }
+  .edge-line.active  { stroke: #e0af68; }
+  .edge-line.cycle   { stroke: #f7768e; }
+  .edge-line.done    { stroke: #9ece6a; }
 
-    .result-badge {
-      font-size: 0.88rem; font-weight: 700;
-      padding: 5px 14px; border-radius: 6px;
-      display: none; width: fit-content;
-    }
-    .result-badge.possible   { background: #1a2a1a; color: #9ece6a; border: 1px solid #9ece6a; display: block; }
-    .result-badge.impossible { background: #3d1515; color: #f7768e; border: 1px solid #f7768e; display: block; }
+  .edge-arrow { fill: #3b4261; transition: fill 0.3s; }
+  .edge-arrow.active { fill: #e0af68; }
+  .edge-arrow.cycle  { fill: #f7768e; }
+  .edge-arrow.done   { fill: #9ece6a; }
 
-    /* stack display */
-    .stack-list {
-      display: flex; gap: 6px; flex-wrap: wrap; min-height: 28px;
-    }
-    .stack-chip {
-      padding: 3px 10px; border-radius: 4px;
-      font-size: 0.8rem; font-family: monospace; font-weight: 700;
-      background: #3d3524; border: 1px solid #e0af68; color: #e0af68;
-    }
+  /* ---- sidebar panels ---- */
+  .panel-box {
+    background: var(--bg); border: 1px solid var(--border-soft);
+    border-radius: var(--radius-sm); padding: 10px 12px;
+    display: flex; flex-direction: column; gap: 8px;
+  }
 
-    /* order display */
-    .order-list {
-      display: flex; gap: 6px; flex-wrap: wrap; min-height: 28px;
-    }
-    .order-chip {
-      padding: 3px 10px; border-radius: 4px;
-      font-size: 0.8rem; font-family: monospace; font-weight: 700;
-      background: #1a2a1a; border: 1px solid #9ece6a; color: #9ece6a;
-    }
+  .result-badge {
+    font-size: 0.82rem; font-weight: 700;
+    padding: 5px 12px; border-radius: 6px;
+    display: none; width: fit-content;
+  }
+  .result-badge.possible   { background: #1a2a1a; color: #9ece6a; border: 1px solid #9ece6a; display: block; }
+  .result-badge.impossible { background: #3d1515; color: #f7768e; border: 1px solid #f7768e; display: block; }
 
-    /* legend */
-    .legend-row { display: flex; align-items: center; gap: 8px; font-size: 0.78rem; color: var(--text-muted); }
-    .legend-dot {
-      width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; border: 2px solid;
-    }
+  .stack-list, .order-list { display: flex; gap: 6px; flex-wrap: wrap; min-height: 26px; }
+  .stack-chip {
+    padding: 3px 10px; border-radius: 4px;
+    font-size: 0.8rem; font-family: monospace; font-weight: 700;
+    background: #3d3524; border: 1px solid #e0af68; color: #e0af68;
+  }
+  .order-chip {
+    padding: 3px 10px; border-radius: 4px;
+    font-size: 0.8rem; font-family: monospace; font-weight: 700;
+    background: #1a2a1a; border: 1px solid #9ece6a; color: #9ece6a;
+  }
 
-    /* code panel */
-    .code-panel {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--radius-lg); overflow: hidden;
-    }
-    .code-header {
-      padding: 8px 14px; font-size: 0.72rem; font-weight: 600;
-      color: var(--text-dim); border-bottom: 1px solid var(--border); background: var(--bg);
-    }
-    .code-body { padding: 10px 0; font-size: 0.78rem; line-height: 1.75; white-space: pre; }
-    .code-line { display: flex; align-items: center; padding: 0 14px; }
-    .code-line.hl { background: var(--border-soft); border-left: 2px solid var(--accent); }
-    .ln { min-width: 24px; color: var(--text-ghost); user-select: none; font-size: 0.7rem; }
-    .kw { color: var(--purple); }
-    .fn { color: var(--blue); }
-    .bi { color: var(--orange); }
-    .cm { color: var(--text-ghost); }
-    .nb { color: var(--green); }
+  .legend-row { display: flex; align-items: center; gap: 8px; font-size: 0.74rem; color: var(--text-muted); }
+  .legend-dot { width: 13px; height: 13px; border-radius: 50%; flex-shrink: 0; border: 2px solid; }
 
-    /* preset buttons */
-    .preset-row { display: flex; gap: 8px; flex-wrap: wrap; }
-    .btn-preset {
-      padding: 6px 12px; border-radius: var(--radius-sm);
-      background: var(--bg); border: 1px solid var(--border);
-      color: var(--text-dim); font-size: 0.8rem; cursor: pointer;
-      transition: border-color 0.15s, color 0.15s;
-    }
-    .btn-preset:hover, .btn-preset.active { border-color: var(--accent); color: var(--accent-pale); }
-  </style>
+  /* ---- code panel ---- */
+  .code-panel-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--text-dim); margin-bottom: 8px; }
+  .code-body { font-size: 0.78rem; line-height: 1.75; white-space: pre; }
+  .code-line { display: flex; align-items: center; padding: 1px 2px; border-left: 2px solid transparent; }
+  .code-line.hl { background: rgba(122,162,247,0.12); border-left-color: var(--accent); }
+  .ln { min-width: 24px; color: var(--text-ghost); user-select: none; font-size: 0.7rem; }
+  .kw { color: var(--purple); }
+  .fn { color: var(--blue); }
+  .bi { color: var(--orange); }
+  .cm { color: var(--text-ghost); }
+  .nb { color: var(--green); }
+</style>
 </head>
-<body class="page">
+<body>
 
-<div class="page-header">
-  <a class="back-link" href="../index.html">&larr; All Algorithms</a>
-  <div class="page-title">Course Schedule</div>
-  <div class="page-sub">LeetCode 207 &middot; DFS cycle detection on directed graph &middot; WHITE / GRAY / BLACK coloring &middot; O(V+E)</div>
-</div>
-
-<div class="controls">
-  <div class="field">
+<div class="viz-inputs">
+  <div>
     <label>Preset</label>
-    <div class="preset-row">
-      <button class="btn-preset active" id="preset-dag" onclick="loadPreset('dag')">DAG (Possible)</button>
-      <button class="btn-preset" id="preset-cycle" onclick="loadPreset('cycle')">Cycle (Impossible)</button>
-      <button class="btn-preset" id="preset-multi" onclick="loadPreset('multi')">Multi-Component</button>
-    </div>
+    <select id="presetSel" onchange="loadPreset()" style="width:220px;">
+      <option value="">— custom —</option>
+      <option value="dag" selected>DAG — 6 nodes (Possible)</option>
+      <option value="cycle">Cycle — 5 nodes (Impossible)</option>
+      <option value="multi">Multi-Component — 7 nodes</option>
+    </select>
   </div>
-  <button class="btn-primary" onclick="buildAndRun()">Build &amp; Run</button>
+  <button class="vi-btn-run" onclick="buildAndRun()">Run</button>
+  <button class="vi-btn-rand" onclick="randomExample()">Random</button>
 </div>
 
-<div class="viz-area">
-  <div class="main-row">
-    <!-- Graph -->
+<div class="controls"></div>
+
+<div id="header">
+  <span id="phase-badge">Setup</span>
+  <span style="font-size:13px;font-weight:700;">Course Schedule</span>
+  <span id="step-counter">Step 0 / 0</span>
+</div>
+
+<div id="main">
+  <div id="viz-area">
     <div class="graph-panel">
       <div class="panel-title">Directed Graph (prerequisite edges)</div>
       <div class="graph-svg-wrap">
@@ -191,72 +165,71 @@
         </svg>
       </div>
     </div>
+  </div>
 
-    <!-- Right panel -->
-    <div class="right-col">
+  <div id="resize-handle"></div>
 
-      <div class="panel-box">
-        <div class="nav-row">
-          <button class="stepBtn" id="prevBtn" disabled>&larr;</button>
-          <button class="stepBtn" id="stepBtn" disabled>&rarr;</button>
-          <button class="playBtn" id="playBtn" disabled>&#9654; Play</button>
-          <select class="speedSel" id="speedSel">
-            <option value="800">Slow</option>
-            <option value="400" selected>Medium</option>
-            <option value="120">Fast</option>
-          </select>
+  <div id="code-panel">
+    <div class="code-panel-title">Python</div>
+    <div class="code-body" id="code-body"></div>
+  </div>
+
+  <div id="sidebar">
+    <div class="panel-box">
+      <div class="panel-title" id="phase-label">&mdash;</div>
+      <div style="font-size:0.8rem;color:var(--text-muted);min-height:36px" id="step-desc">Select a preset and click Run.</div>
+      <div class="result-badge" id="result-badge"></div>
+    </div>
+
+    <div class="panel-box">
+      <div class="panel-title">DFS Stack (GRAY nodes)</div>
+      <div class="stack-list" id="stack-list">
+        <span style="color:var(--text-ghost);font-size:0.78rem">empty</span>
+      </div>
+    </div>
+
+    <div class="panel-box">
+      <div class="panel-title">Finished (BLACK nodes)</div>
+      <div class="order-list" id="order-list">
+        <span style="color:var(--text-ghost);font-size:0.78rem">none yet</span>
+      </div>
+    </div>
+
+    <div class="panel-box">
+      <div class="panel-title">Legend</div>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <div class="legend-row">
+          <div class="legend-dot" style="background:#1a1b2e;border-color:#7aa2f7"></div>
+          <span>WHITE — unvisited</span>
+        </div>
+        <div class="legend-row">
+          <div class="legend-dot" style="background:#3d3524;border-color:#e0af68"></div>
+          <span>GRAY — on DFS stack</span>
+        </div>
+        <div class="legend-row">
+          <div class="legend-dot" style="background:#1a2a1a;border-color:#9ece6a"></div>
+          <span>BLACK — done, no cycle</span>
+        </div>
+        <div class="legend-row">
+          <div class="legend-dot" style="background:#3d1515;border-color:#f7768e"></div>
+          <span>CYCLE — back edge to GRAY</span>
         </div>
       </div>
-
-      <div class="panel-box">
-        <div class="panel-title" id="phase-label">&mdash;</div>
-        <div style="font-size:0.82rem;color:var(--text-muted);margin-top:2px;min-height:36px" id="step-desc">Select a preset and click Build &amp; Run.</div>
-        <div class="result-badge" id="result-badge"></div>
-      </div>
-
-      <div class="panel-box">
-        <div class="panel-title">DFS Stack (GRAY nodes)</div>
-        <div class="stack-list" id="stack-list">
-          <span style="color:var(--text-ghost);font-size:0.78rem">empty</span>
-        </div>
-      </div>
-
-      <div class="panel-box">
-        <div class="panel-title">Finished (BLACK nodes)</div>
-        <div class="order-list" id="order-list">
-          <span style="color:var(--text-ghost);font-size:0.78rem">none yet</span>
-        </div>
-      </div>
-
-      <div class="panel-box">
-        <div class="panel-title">Legend</div>
-        <div style="display:flex;flex-direction:column;gap:6px">
-          <div class="legend-row">
-            <div class="legend-dot" style="background:#1a1b2e;border-color:#7aa2f7"></div>
-            <span>WHITE — unvisited</span>
-          </div>
-          <div class="legend-row">
-            <div class="legend-dot" style="background:#3d3524;border-color:#e0af68"></div>
-            <span>GRAY — in current DFS path (on stack)</span>
-          </div>
-          <div class="legend-row">
-            <div class="legend-dot" style="background:#1a2a1a;border-color:#9ece6a"></div>
-            <span>BLACK — fully processed, no cycle found</span>
-          </div>
-          <div class="legend-row">
-            <div class="legend-dot" style="background:#3d1515;border-color:#f7768e"></div>
-            <span>CYCLE — back edge to GRAY node detected</span>
-          </div>
-        </div>
-      </div>
-
-      <div class="code-panel">
-        <div class="code-header">Python</div>
-        <div class="code-body" id="code-body"></div>
-      </div>
-
     </div>
   </div>
+</div>
+
+<div id="nav-row">
+  <button id="prevBtn" class="btn-step">&#8592; Prev</button>
+  <button id="stepBtn" class="btn-step">Step &#8594;</button>
+  <button id="playBtn" class="btn-play">Play</button>
+  <button id="resetBtn" class="btn-step">&#8635; Reset</button>
+  <select id="speedSel">
+    <option value="800">0.5&#215;</option>
+    <option value="400" selected>1&#215;</option>
+    <option value="200">2&#215;</option>
+    <option value="100">4&#215;</option>
+  </select>
 </div>
 
 <script>
@@ -335,15 +308,36 @@ var nav;
 var gNodes = [];
 var gEdges = [];
 
-function loadPreset(name) {
-  currentPreset = name;
-  ['dag','cycle','multi'].forEach(function(p) {
-    document.getElementById('preset-' + p).classList.toggle('active', p === name);
-  });
+function loadPreset() {
+  var sel = document.getElementById('presetSel');
+  if (!sel.value) return;
+  currentPreset = sel.value;
+  buildAndRun();
+}
+
+function randomExample() {
+  var n = 4 + Math.floor(Math.random() * 3); // 4-6 nodes
+  var cx = 280, cy = 200, R = 150;
+  var nodes = [];
+  for (var i = 0; i < n; i++) {
+    var ang = (2 * Math.PI * i / n) - Math.PI / 2;
+    nodes.push({ id: i, x: Math.round(cx + R * Math.cos(ang)), y: Math.round(cy + R * Math.sin(ang)), label: String(i) });
+  }
+  var edges = [];
+  for (var a = 0; a < n; a++) {
+    for (var b = 0; b < n; b++) {
+      if (a !== b && Math.random() < 0.3) edges.push([a, b]);
+    }
+  }
+  PRESETS.random = { label: 'Random graph', nodes: nodes, edges: edges };
+  currentPreset = 'random';
+  document.getElementById('presetSel').value = '';
+  buildAndRun();
 }
 
 function buildAndRun() {
   var preset = PRESETS[currentPreset];
+  if (!preset) return;
   gNodes = preset.nodes;
   gEdges = preset.edges;
   renderGraph(null);
@@ -591,30 +585,43 @@ function buildCodePanel() {
   }).join('');
 }
 
+function updateStatus(snap, cur, total) {
+  document.getElementById('phase-badge').textContent = snap.phase || 'Step';
+  document.getElementById('step-counter').textContent = 'Step ' + cur + ' / ' + total;
+  var phaseEl = document.getElementById('phase-label');
+  var descEl  = document.getElementById('step-desc');
+  if (phaseEl) phaseEl.textContent = 'Step ' + cur + ' / ' + total + '  ·  ' + snap.phase;
+  if (descEl)  descEl.textContent = snap.desc;
+}
+
 window.addEventListener('DOMContentLoaded', function() {
   buildCodePanel();
-  loadPreset('dag');
-  nav = VizNav({
+  nav = window.nav = VizNav({
     btnPrev: document.getElementById('prevBtn'),
     btnNext: document.getElementById('stepBtn'),
     btnPlay: document.getElementById('playBtn'),
     speedSel: document.getElementById('speedSel'),
     render: function(snap, cur, total) {
       applyStep(snap);
-      var phaseEl = document.getElementById('phase-label');
-      var descEl  = document.getElementById('step-desc');
-      if (phaseEl) phaseEl.textContent = 'Step ' + (cur + 1) + ' / ' + total + '  ·  ' + snap.phase;
-      if (descEl)  descEl.textContent = snap.desc;
+      updateStatus(snap, cur, total);
     }
   });
-});
-</script>
 
-<script>
-  if (window.self !== window.top) {
-    var bl = document.querySelector('.back-link');
-    if (bl) bl.style.display = 'none';
-  }
+  document.getElementById('resetBtn').addEventListener('click', function() {
+    if (window.nav) window.nav.goTo(0);
+  });
+
+  buildAndRun();
+});
+
+(function() {
+  var h = document.getElementById('resize-handle'),
+      p = document.getElementById('code-panel'),
+      d = false, sx = 0, sw = 0;
+  h.addEventListener('mousedown', function(e) { d = true; sx = e.clientX; sw = p.offsetWidth; h.classList.add('dragging'); e.preventDefault(); });
+  document.addEventListener('mousemove', function(e) { if (!d) return; p.style.width = Math.min(560, Math.max(120, sw + (sx - e.clientX))) + 'px'; });
+  document.addEventListener('mouseup', function() { if (!d) return; d = false; h.classList.remove('dragging'); });
+})();
 </script>
 </body>
 </html>

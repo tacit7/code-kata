@@ -1,344 +1,147 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Word Break</title>
-  <link rel="stylesheet" href="../shared/style.css" />
-  <script src="../shared/gsap.min.js"></script>
-  <script src="../shared/viz.js"></script>
-  <style>
-    .viz-area { width: 100%; max-width: 92%; }
-    .main-row {
-      display: grid;
-      grid-template-columns: 1fr 340px;
-      gap: 20px;
-      align-items: start;
-    }
-    @media (max-width: 760px) { .main-row { grid-template-columns: 1fr; } }
-
-    /* ── String + DP track ── */
-    .word-track {
-      padding: 20px 16px;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-lg);
-      overflow-x: auto;
-      min-height: 160px;
-    }
-    .track-inner {
-      display: flex;
-      gap: 6px;
-      flex-wrap: nowrap;
-      align-items: flex-end;
-    }
-
-    .track-col {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 5px;
-      flex-shrink: 0;
-    }
-
-    /* String char cells */
-    .str-cell {
-      width: 48px; height: 44px;
-      display: flex; flex-direction: column;
-      align-items: center; justify-content: center;
-      border: 2px solid var(--border);
-      border-radius: 6px;
-      background: #0f0f0f;
-      position: relative;
-      flex-shrink: 0;
-      transition: border-color 0.15s, background 0.15s;
-    }
-    .str-cell[data-hi="start"]  { border-color: #b45309; background: #1c0e00; }
-    .str-cell[data-hi="end"]    { border-color: var(--accent); background: var(--surface-dark); }
-    .str-cell[data-hi="span"]   { border-color: #7c3aed; background: #150d28; }
-    .str-cell[data-hi="match"]  { border-color: #15803d; background: #052e16; }
-
-    .str-idx {
-      position: absolute; top: 2px; left: 0; right: 0;
-      text-align: center;
-      font-size: 0.5rem; color: var(--text-ghost); font-family: monospace;
-    }
-    .str-char {
-      font-size: 1.05rem; font-weight: 700;
-      font-family: monospace; color: var(--text-dim);
-      margin-top: 8px;
-    }
-    .str-cell[data-hi="start"]  .str-char { color: #fbbf24; }
-    .str-cell[data-hi="end"]    .str-char { color: var(--accent-pale); }
-    .str-cell[data-hi="span"]   .str-char { color: #c4b5fd; }
-    .str-cell[data-hi="match"]  .str-char { color: #4ade80; }
-
-    .str-spacer {
-      width: 48px; height: 44px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 0.7rem; color: var(--text-ghost); font-style: italic;
-    }
-
-    /* DP cells */
-    .dp-cell {
-      width: 48px; height: 48px;
-      display: flex; flex-direction: column;
-      align-items: center; justify-content: center;
-      border: 2px solid var(--border-soft);
-      border-radius: 6px;
-      background: #0f0f0f;
-      position: relative;
-      flex-shrink: 0;
-      border-style: dashed;
-      transition: border-color 0.15s, background 0.15s, border-style 0.15s;
-    }
-    .dp-cell[data-state="false"]  { border-style: solid; border-color: #3f1212; }
-    .dp-cell[data-state="true"]   { border-style: solid; border-color: #166534; background: #052e16; }
-    .dp-cell[data-state="current"]{ border-style: solid; border-color: var(--accent); background: var(--surface-dark); }
-    .dp-cell[data-state="start"]  { border-style: solid; border-color: #b45309; background: #1c0e00; }
-    .dp-cell[data-state="answer"] { border-style: solid; border-color: #15803d; background: #052e16; box-shadow: 0 0 0 2px #166534; }
-
-    .dp-idx {
-      position: absolute; top: 3px; left: 0; right: 0;
-      text-align: center;
-      font-size: 0.5rem; color: var(--text-ghost); font-family: monospace;
-    }
-    .dp-val {
-      font-size: 0.7rem; font-weight: 700;
-      font-family: monospace; color: var(--text-ghost);
-      margin-top: 10px;
-    }
-    .dp-cell[data-state="false"]   .dp-val { color: #f87171; }
-    .dp-cell[data-state="true"]    .dp-val { color: #4ade80; }
-    .dp-cell[data-state="current"] .dp-val { color: var(--accent-pale); }
-    .dp-cell[data-state="start"]   .dp-val { color: #fbbf24; }
-    .dp-cell[data-state="answer"]  .dp-val { color: #4ade80; font-size: 0.75rem; }
-
-    /* Dictionary panel */
-    .dict-panel {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--radius-lg); padding: 14px 16px;
-      display: flex; flex-direction: column; gap: 8px;
-    }
-    .dict-words {
-      display: flex; flex-wrap: wrap; gap: 6px;
-    }
-    .dict-word {
-      padding: 5px 10px;
-      border: 2px solid var(--border);
-      border-radius: 5px;
-      background: var(--bg);
-      font-family: monospace; font-size: 0.82rem;
-      color: var(--text-dim);
-      transition: border-color 0.15s, color 0.15s, background 0.15s;
-    }
-    .dict-word.checking { border-color: #7c3aed; color: #c4b5fd; background: #150d28; }
-    .dict-word.matched  { border-color: #15803d; color: #4ade80; background: #052e16; }
-    .dict-word.no-match { opacity: 0.35; }
-
-    /* Code panel */
-    .code-panel {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--radius-lg); overflow: hidden;
-    }
-    .code-header {
-      padding: 8px 14px; font-size: 0.72rem; font-weight: 600;
-      color: var(--text-dim); border-bottom: 1px solid var(--border);
-      background: var(--bg);
-    }
-    .code-body { padding: 10px 0; font-size: 0.8rem; line-height: 1.8; white-space: pre; }
-    .code-line { display: flex; align-items: center; padding: 0 14px; }
-    .code-line.hl { background: var(--border-soft); border-left: 2px solid var(--accent); }
-    .ln { min-width: 24px; color: var(--text-ghost); user-select: none; font-size: 0.7rem; }
-
-    /* panel-box */
-    .panel-box {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--radius-lg); padding: 14px 16px;
-      display: flex; flex-direction: column; gap: 8px;
-    }
-    .panel-title {
-      font-size: 0.72rem; font-weight: 700;
-      text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim);
-    }
-
-    /* Variable boxes */
-    .var-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-    .var-box {
-      padding: 10px 8px;
-      background: var(--bg); border: 1px solid var(--border);
-      border-radius: var(--radius-sm);
-      display: flex; flex-direction: column; align-items: center; gap: 3px;
-    }
-    .var-box.accent-border { border-color: var(--accent); }
-    .var-box.amber-border  { border-color: #b45309; }
-    .var-box.purple-border { border-color: #7c3aed; }
-    .var-box.green-border  { border-color: #166534; }
-    .var-label { font-size: 0.62rem; font-family: monospace; color: var(--text-faint); text-align: center; }
-    .var-val   { font-size: 1.1rem; font-weight: 700; color: var(--text-bright); font-family: monospace; }
-
-    /* Result badge */
-    .result-badge {
-      font-size: 0.88rem; font-weight: 700;
-      padding: 4px 13px; border-radius: 6px;
-      display: none; width: fit-content;
-    }
-    .result-badge.yes { background: var(--green-bg); color: var(--green); border: 1px solid var(--green-border); display: block; }
-    .result-badge.no  { background: #1c0000; color: #f87171; border: 1px solid #7f1d1d; display: block; }
-
-    /* Nav */
-    .btn-play {
-      background: #15803d; border: none;
-      border-radius: var(--radius-sm); color: #fff;
-      cursor: pointer; font-size: 0.88rem; font-weight: 600;
-      padding: 9px 16px; transition: background 0.2s;
-    }
-    .btn-play:hover { background: #166534; }
-    .btn-play.playing { background: #c2410c; }
-    .btn-play.playing:hover { background: #9a3412; }
-    .btn-play:disabled { opacity: 0.4; cursor: not-allowed; }
-    .speed-select {
-      background: var(--bg); border: 1px solid var(--border);
-      border-radius: var(--radius-sm); color: var(--text);
-      font-size: 0.85rem; padding: 8px 10px; outline: none; width: 80px;
-    }
-    .nav-row { display: flex; gap: 8px; align-items: center; }
-
-    /* Presets */
-    .preset-btn {
-      padding: 5px 12px;
-      background: var(--bg); border: 1px solid var(--border);
-      border-radius: var(--radius-sm); color: var(--text-dim);
-      font-size: 0.8rem; cursor: pointer;
-      transition: border-color 0.15s, color 0.15s;
-    }
-    .preset-btn:hover { border-color: var(--accent); color: var(--accent-pale); }
-
-    /* Syntax colors */
-    .kw { color: var(--purple); }
-    .fn { color: var(--blue); }
-    .bi { color: var(--orange); }
-    .op { color: var(--text); }
-    .nb { color: var(--green); }
-    .cm { color: var(--text-ghost); }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Word Break</title>
+<link rel="stylesheet" href="../shared/style.css" />
+<script src="../shared/gsap.min.js"></script>
+<script src="../shared/viz.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: "Fira Code", "Cascadia Code", monospace; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+  #header { padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+  #phase-badge { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; padding: 3px 10px; border-radius: var(--radius-sm); background: #1e3a5f; color: var(--blue); border: 1px solid var(--blue); }
+  #step-counter { font-size: 12px; color: var(--text-muted); margin-left: auto; }
+  .viz-inputs { width: 100%; padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; flex-shrink: 0; }
+  .viz-inputs label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); display: block; margin-bottom: 3px; }
+  .viz-inputs select, .viz-inputs input { background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 0 8px; height: 30px; font-size: 0.82rem; font-family: inherit; }
+  .vi-btn-run { padding: 6px 14px; border-radius: 6px; font-size: 0.82rem; font-weight: 600; cursor: pointer; font-family: inherit; background: var(--accent); color: #fff; border: none; }
+  .vi-btn-sec { padding: 5px 12px; border-radius: 6px; font-size: 0.78rem; cursor: pointer; font-family: inherit; background: var(--bg); color: var(--text-dim); border: 1px solid var(--border); }
+  .vi-btn-sec:hover { border-color: var(--accent); color: var(--accent-pale); }
+  #main { display: flex; flex: 1; overflow: hidden; }
+  #viz-area { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding: 16px; gap: 14px; overflow-y: auto; }
+  #desc { font-size: 13px; color: var(--text-muted); text-align: center; max-width: 560px; min-height: 36px; line-height: 1.5; }
+  #resize-handle { width: 5px; flex-shrink: 0; cursor: col-resize; background: transparent; border-left: 1px solid var(--border); transition: background .15s; z-index: 10; }
+  #resize-handle:hover, #resize-handle.dragging { background: var(--accent); }
+  #code-panel { width: 320px; min-width: 120px; max-width: 560px; flex-shrink: 0; background: #0d1117; border-right: 1px solid var(--border); overflow-y: auto; overflow-x: auto; padding: 10px 12px; display: flex; flex-direction: column; }
+  .code-panel-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--text-dim); margin-bottom: 8px; }
+  .cl { display: flex; align-items: stretch; padding: 2px 0; white-space: pre; border-left: 2px solid transparent; padding-left: 6px; color: var(--text-muted); font-family: 'Fira Code','Cascadia Code',monospace; font-size: 0.75rem; line-height: 1.8; }
+  .cl.hl { background: rgba(122,162,247,0.12); border-left-color: var(--accent); color: var(--text); }
+  .ln { display: inline-block; width: 20px; text-align: right; color: var(--text-dim); user-select: none; margin-right: 10px; font-size: 0.7rem; }
+  .kw { color: var(--purple); } .nb { color: var(--green); } .cm { color: var(--text-dim); font-style: italic; } .fn { color: var(--blue); } .bi { color: var(--orange); } .op { color: var(--text); }
+  #sidebar { width: 220px; flex-shrink: 0; background: var(--surface); border-left: 1px solid var(--border); overflow-y: auto; padding: 14px 12px; display: flex; flex-direction: column; gap: 10px; }
+  .sidebar-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--text-dim); margin-bottom: 6px; }
+  .var-item { font-size: 11px; font-family: monospace; color: var(--text-muted); padding: 4px 0; border-bottom: 1px solid var(--border-soft); }
+  .var-item:last-child { border-bottom: none; }
+  .var-key { color: var(--text-dim); } .var-val { color: var(--accent); font-weight: 700; }
+  #nav-row { flex-shrink: 0; display: flex; align-items: center; gap: 8px; padding: 10px 16px; background: var(--surface); border-top: 1px solid var(--border); }
+  .btn-step { padding: 6px 14px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--surface); color: var(--text); font-family: inherit; font-size: 12px; cursor: pointer; }
+  .btn-step:hover { background: #334155; }
+  .btn-play { padding: 6px 14px; border-radius: var(--radius-sm); background: var(--accent); border: none; color: #fff; font-family: inherit; font-size: 12px; cursor: pointer; font-weight: 600; }
+  #nav-row select { padding: 5px 8px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: #1e293b; color: var(--text); font-size: 12px; font-family: inherit; cursor: pointer; }
+  /* PAGE-SPECIFIC */
+  .word-track { padding: 20px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow-x: auto; min-height: 130px; width: 100%; }
+  .track-inner { display: flex; gap: 6px; flex-wrap: nowrap; align-items: flex-end; }
+  .track-col { display: flex; flex-direction: column; align-items: center; gap: 5px; flex-shrink: 0; }
+  .str-cell { width: 48px; height: 44px; display: flex; flex-direction: column; align-items: center; justify-content: center; border: 2px solid var(--border); border-radius: 6px; background: #0f0f0f; position: relative; flex-shrink: 0; transition: border-color 0.15s, background 0.15s; }
+  .str-cell[data-hi="start"]  { border-color: #b45309; background: #1c0e00; }
+  .str-cell[data-hi="end"]    { border-color: var(--accent); background: var(--surface-dark); }
+  .str-cell[data-hi="span"]   { border-color: #7c3aed; background: #150d28; }
+  .str-cell[data-hi="match"]  { border-color: #15803d; background: #052e16; }
+  .str-idx { position: absolute; top: 2px; left: 0; right: 0; text-align: center; font-size: 0.5rem; color: var(--text-ghost); font-family: monospace; }
+  .str-char { font-size: 1.05rem; font-weight: 700; font-family: monospace; color: var(--text-dim); margin-top: 8px; }
+  .str-cell[data-hi="start"]  .str-char { color: #fbbf24; }
+  .str-cell[data-hi="end"]    .str-char { color: var(--accent-pale); }
+  .str-cell[data-hi="span"]   .str-char { color: #c4b5fd; }
+  .str-cell[data-hi="match"]  .str-char { color: #4ade80; }
+  .str-spacer { width: 48px; height: 44px; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; color: var(--text-ghost); font-style: italic; }
+  .dp-cell { width: 48px; height: 48px; display: flex; flex-direction: column; align-items: center; justify-content: center; border: 2px solid var(--border-soft); border-radius: 6px; background: #0f0f0f; position: relative; flex-shrink: 0; border-style: dashed; transition: border-color 0.15s, background 0.15s, border-style 0.15s; }
+  .dp-cell[data-state="false"]   { border-style: solid; border-color: #3f1212; }
+  .dp-cell[data-state="true"]    { border-style: solid; border-color: #166534; background: #052e16; }
+  .dp-cell[data-state="current"] { border-style: solid; border-color: var(--accent); background: var(--surface-dark); }
+  .dp-cell[data-state="start"]   { border-style: solid; border-color: #b45309; background: #1c0e00; }
+  .dp-cell[data-state="answer"]  { border-style: solid; border-color: #15803d; background: #052e16; box-shadow: 0 0 0 2px #166534; }
+  .dp-idx { position: absolute; top: 3px; left: 0; right: 0; text-align: center; font-size: 0.5rem; color: var(--text-ghost); font-family: monospace; }
+  .dp-val { font-size: 0.7rem; font-weight: 700; font-family: monospace; color: var(--text-ghost); margin-top: 10px; }
+  .dp-cell[data-state="false"]   .dp-val { color: #f87171; }
+  .dp-cell[data-state="true"]    .dp-val { color: #4ade80; }
+  .dp-cell[data-state="current"] .dp-val { color: var(--accent-pale); }
+  .dp-cell[data-state="start"]   .dp-val { color: #fbbf24; }
+  .dp-cell[data-state="answer"]  .dp-val { color: #4ade80; font-size: 0.75rem; }
+  .dict-panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; width: 100%; }
+  .dict-words { display: flex; flex-wrap: wrap; gap: 6px; }
+  .dict-word { padding: 5px 10px; border: 2px solid var(--border); border-radius: 5px; background: var(--bg); font-family: monospace; font-size: 0.82rem; color: var(--text-dim); transition: border-color 0.15s, color 0.15s, background 0.15s; }
+  .dict-word.checking { border-color: #7c3aed; color: #c4b5fd; background: #150d28; }
+  .dict-word.matched  { border-color: #15803d; color: #4ade80; background: #052e16; }
+  .dict-word.no-match { opacity: 0.35; }
+  .panel-title { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); }
+  .result-badge { font-size: 0.88rem; font-weight: 700; padding: 4px 13px; border-radius: 6px; display: none; width: fit-content; }
+  .result-badge.yes { background: var(--green-bg); color: var(--green); border: 1px solid var(--green-border); display: block; }
+  .result-badge.no  { background: #1c0000; color: #f87171; border: 1px solid #7f1d1d; display: block; }
+</style>
 </head>
-<body class="page">
-
-<div class="page-header">
-  <a class="back-link" href="../index.html">&larr; All Algorithms</a>
-  <div class="page-title">Word Break</div>
-  <div class="page-sub">LeetCode 139 &middot; 1-D DP: dp[i] = true if s[0..i] segments into dictionary words &middot; O(n&sup2;) time &middot; O(n) space</div>
-</div>
+<body>
 
 <div class="viz-inputs">
-  <div class="field">
+  <div>
     <label>String s</label>
-    <input id="inp-s" type="text" value="leetcode" style="width:140px" />
+    <input id="inp-s" type="text" value="leetcode" style="width:130px" />
   </div>
-  <div class="field">
+  <div>
     <label>Word Dictionary (comma-separated)</label>
-    <input id="inp-dict" type="text" value="leet,code" style="width:220px" />
+    <input id="inp-dict" type="text" value="leet,code" style="width:200px" />
   </div>
-  <button class="btn-primary" onclick="buildAndRun()">Build &amp; Run</button>
-  <div style="display:flex;gap:6px;align-items:center;margin-left:8px">
-    <span style="font-size:0.75rem;color:var(--text-ghost)">Presets:</span>
-    <button class="preset-btn" onclick="loadPreset(0)">✓ leetcode</button>
-    <button class="preset-btn" onclick="loadPreset(1)">✗ catsandog</button>
-    <button class="preset-btn" onclick="loadPreset(2)">⚡ applepenapple</button>
+  <button class="vi-btn-run" onclick="buildAndRun()">Build &amp; Run</button>
+  <div style="display:flex;gap:6px;align-items:center;margin-left:4px">
+    <span style="font-size:0.72rem;color:var(--text-ghost)">Presets:</span>
+    <button class="vi-btn-sec" onclick="loadPreset(0)">✓ leetcode</button>
+    <button class="vi-btn-sec" onclick="loadPreset(1)">✗ catsandog</button>
+    <button class="vi-btn-sec" onclick="loadPreset(2)">⚡ applepenapple</button>
+  </div>
+</div>
+<div class="controls"></div>
+
+<div id="header">
+  <span id="phase-badge">Setup</span>
+  <span style="font-size:13px;font-weight:700;">Word Break</span>
+  <span id="step-counter">Step 0 / 0</span>
+</div>
+
+<div id="main">
+  <div id="viz-area">
+    <div id="desc">Enter a string and dictionary, then click Build &amp; Run.</div>
+    <div class="word-track" id="word-track">
+      <span style="color:var(--text-dim);font-size:0.82rem">Enter a string and dictionary, then click Build &amp; Run.</span>
+    </div>
+    <div class="dict-panel" id="dict-panel" style="display:none">
+      <div class="panel-title">Dictionary</div>
+      <div class="dict-words" id="dict-words"></div>
+    </div>
+    <div class="result-badge" id="result-badge"></div>
+  </div>
+  <div id="resize-handle"></div>
+  <div id="code-panel">
+    <div class="code-panel-title">Python</div>
+    <div id="code-body"></div>
+  </div>
+  <div id="sidebar">
+    <div class="sidebar-title">Variables</div>
+    <div id="vars-items"><span style="color:var(--text-dim);">—</span></div>
   </div>
 </div>
 
-<div class="viz-area">
-  <div class="main-row">
-    <div class="left-col" style="display:flex;flex-direction:column;gap:12px">
-
-      <div class="word-track" id="word-track">
-        <span style="color:var(--text-dim);font-size:0.82rem">Enter a string and dictionary, then click Build &amp; Run.</span>
-      </div>
-
-      <div class="dict-panel" id="dict-panel" style="display:none">
-        <div class="panel-title">Dictionary</div>
-        <div class="dict-words" id="dict-words"></div>
-      </div>
-
-      <div class="code-panel">
-        <div class="code-header">Python</div>
-        <div class="code-body" id="code-body"></div>
-      </div>
-    </div>
-
-    <div class="right-col" style="display:flex;flex-direction:column;gap:12px">
-
-      <div style="display:flex;gap:12px">
-        <div class="panel-box" style="flex:0 0 auto">
-          <div class="nav-row">
-            <button class="stepBtn" id="prevBtn" disabled>&larr;</button>
-            <button class="stepBtn" id="stepBtn" disabled>&rarr;</button>
-            <button class="playBtn" id="playBtn" disabled>&#9654; Play</button>
-            <select class="speedSel" id="speedSel">
-              <option value="700">Slow</option>
-              <option value="350" selected>Medium</option>
-              <option value="100">Fast</option>
-            </select>
-          </div>
-        </div>
-        <div class="panel-box" style="flex:1;min-width:0">
-          <div class="panel-title" id="phase-label">&mdash;</div>
-          <div style="font-size:0.82rem;color:var(--text-muted);margin-top:2px" id="step-desc">Enter a string and dictionary, then click Build &amp; Run.</div>
-          <div class="result-badge" id="result-badge"></div>
-        </div>
-      </div>
-
-      <div class="panel-box">
-        <div class="panel-title">Variables</div>
-        <div class="var-grid">
-          <div class="var-box accent-border">
-            <div class="var-label">end index (i)</div>
-            <div class="var-val" id="vv-i">&mdash;</div>
-          </div>
-          <div class="var-box amber-border">
-            <div class="var-label">start index (j)</div>
-            <div class="var-val" id="vv-j">&mdash;</div>
-          </div>
-          <div class="var-box purple-border">
-            <div class="var-label">s[j..i]</div>
-            <div class="var-val" id="vv-word" style="font-size:0.85rem">&mdash;</div>
-          </div>
-          <div class="var-box green-border">
-            <div class="var-label">dp[j] &amp; in dict</div>
-            <div class="var-val" id="vv-match">&mdash;</div>
-          </div>
-        </div>
-      </div>
-
-      <div class="panel-box">
-        <div class="panel-title">Legend</div>
-        <div style="display:flex;flex-direction:column;gap:6px;font-size:0.78rem;color:var(--text-muted)">
-          <div style="display:flex;align-items:center;gap:8px">
-            <div style="width:16px;height:16px;border-radius:3px;border:2px solid var(--accent);background:var(--surface-dark)"></div>
-            <span>dp[i] — end index being computed</span>
-          </div>
-          <div style="display:flex;align-items:center;gap:8px">
-            <div style="width:16px;height:16px;border-radius:3px;border:2px solid #b45309;background:#1c0e00"></div>
-            <span>dp[j] — start of candidate word</span>
-          </div>
-          <div style="display:flex;align-items:center;gap:8px">
-            <div style="width:16px;height:16px;border-radius:3px;border:2px solid #7c3aed;background:#150d28"></div>
-            <span>s[j..i] — substring being tested</span>
-          </div>
-          <div style="display:flex;align-items:center;gap:8px">
-            <div style="width:16px;height:16px;border-radius:3px;border:2px solid #166534;background:#052e16"></div>
-            <span>dp[i] = true — reachable position</span>
-          </div>
-          <div style="display:flex;align-items:center;gap:8px">
-            <div style="width:16px;height:16px;border-radius:3px;border:2px solid #7f1d1d;background:#0f0f0f"></div>
-            <span>dp[i] = false — not reachable</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
+<div id="nav-row">
+  <button id="prevBtn" class="btn-step">&#8592; Prev</button>
+  <button id="stepBtn" class="btn-step">Step &#8594;</button>
+  <button id="playBtn" class="btn-play">Play</button>
+  <button id="resetBtn" class="btn-step" onclick="buildAndRun()">&#8635; Reset</button>
+  <select id="speedSel">
+    <option value="800">0.5&#215;</option>
+    <option value="400" selected>1&#215;</option>
+    <option value="200">2&#215;</option>
+    <option value="100">4&#215;</option>
+  </select>
 </div>
 
 <script>
@@ -381,10 +184,9 @@ window.addEventListener('DOMContentLoaded', function() {
     speedSel: document.getElementById('speedSel'),
     render: function(snap, cur, total) {
       renderSnap(snap, cur > 0);
-      var phaseEl = document.getElementById('phase-label');
-      var descEl  = document.getElementById('step-desc');
-      if (phaseEl) phaseEl.textContent = 'Step ' + (cur + 1) + ' / ' + total + '  ·  ' + snap.phase;
-      if (descEl) descEl.textContent = snap.desc;
+      document.getElementById('phase-badge').textContent = snap.phase || 'Step';
+      document.getElementById('step-counter').textContent = 'Step ' + (cur + 1) + ' / ' + total;
+      if (snap.desc) document.getElementById('desc').textContent = snap.desc;
       var badge = document.getElementById('result-badge');
       if (badge) {
         badge.className = 'result-badge';
@@ -400,6 +202,18 @@ window.addEventListener('DOMContentLoaded', function() {
           }
         }
       }
+      // sidebar vars
+      var items = document.getElementById('vars-items');
+      if (items) {
+        var matchVal = (snap.j >= 0 && snap.word)
+          ? (snap.dpJTrue ? 'T' : 'F') + ' & ' + (snap.inDict ? 'yes' : 'no')
+          : '—';
+        items.innerHTML =
+          '<div class="var-item"><span class="var-key">i        </span><span class="var-val">' + (snap.i >= 0 ? snap.i : '—') + '</span></div>' +
+          '<div class="var-item"><span class="var-key">j        </span><span class="var-val">' + (snap.j >= 0 ? snap.j : '—') + '</span></div>' +
+          '<div class="var-item"><span class="var-key">s[j..i]  </span><span class="var-val">' + (snap.word || '—') + '</span></div>' +
+          '<div class="var-item"><span class="var-key">dp[j]&in; </span><span class="var-val">' + matchVal + '</span></div>';
+      }
     }
   });
 
@@ -409,7 +223,7 @@ window.addEventListener('DOMContentLoaded', function() {
 function buildCodePanel() {
   var body = document.getElementById('code-body');
   body.innerHTML = CODE.map(function(e) {
-    return '<div class="code-line" id="cl-' + e[0] + '"><span class="ln">' + e[0] + '</span><span>' + e[1] + '</span></div>';
+    return '<div class="cl" id="cl-' + e[0] + '"><span class="ln">' + e[0] + '</span><span>' + e[1] + '</span></div>';
   }).join('');
 }
 
@@ -470,7 +284,6 @@ function buildTrack(s) {
   }
   track.appendChild(inner);
 
-  // Pre-fill dp[0] = True
   var dpc0 = document.getElementById('dpc-0');
   var dpv0 = document.getElementById('dpv-0');
   if (dpc0) dpc0.dataset.state = 'true';
@@ -599,7 +412,6 @@ function buildSteps(s, dict) {
 function renderSnap(snap, animate) {
   renderTrack(snap, animate);
   renderDict(snap, animate);
-  renderVars(snap, animate);
   setCodeLines(snap.lines);
 }
 
@@ -607,15 +419,14 @@ function renderTrack(snap, animate) {
   var n = snap.n;
   var isDone = snap.phase === 'Done';
 
-  // String cells
   for (var ci = 0; ci < n; ci++) {
     var sc = document.getElementById('sc-' + ci);
     if (!sc) continue;
     var hi = 'none';
     if (snap.i > 0 && snap.j >= 0) {
-      var charIdx = ci; // 0-based char
+      var charIdx = ci;
       var spanStart = snap.j;
-      var spanEnd   = snap.i - 1; // inclusive
+      var spanEnd   = snap.i - 1;
       if (charIdx === spanStart && charIdx === spanEnd) {
         hi = snap.inDict && snap.dpJTrue ? 'match' : 'span';
       } else if (charIdx === spanStart) {
@@ -629,7 +440,6 @@ function renderTrack(snap, animate) {
     sc.dataset.hi = hi;
   }
 
-  // DP cells
   for (var k = 0; k <= n; k++) {
     var dpc = document.getElementById('dpc-' + k);
     var dpv = document.getElementById('dpv-' + k);
@@ -650,7 +460,6 @@ function renderTrack(snap, animate) {
       state = 'false';
     }
 
-    var prevState = dpc.dataset.state;
     dpc.dataset.state = state;
 
     var text = val === null ? '?' : (val ? 'T' : 'F');
@@ -682,25 +491,6 @@ function renderDict(snap, animate) {
   });
 }
 
-function renderVars(snap, animate) {
-  function setVal(id, val) {
-    var el = document.getElementById(id);
-    if (!el) return;
-    var text = (val === null || val === undefined) ? '—' : String(val);
-    if (animate && el.textContent !== text) {
-      gsap.fromTo(el, { scale: 0.75, opacity: 0.3 }, { scale: 1, opacity: 1, duration: 0.2, ease: 'back.out(1.5)' });
-    }
-    el.textContent = text;
-  }
-  setVal('vv-i',    snap.i >= 0 ? snap.i : null);
-  setVal('vv-j',    snap.j >= 0 ? snap.j : null);
-  setVal('vv-word', snap.word || null);
-  var matchVal = (snap.j >= 0 && snap.word)
-    ? (snap.dpJTrue ? 'T' : 'F') + ' & ' + (snap.inDict ? 'yes' : 'no')
-    : null;
-  setVal('vv-match', matchVal);
-}
-
 function setCodeLines(activeLines) {
   CODE.forEach(function(e) {
     var ln = e[0];
@@ -713,10 +503,23 @@ function setCodeLines(activeLines) {
 </script>
 
 <script>
-  if (window.self !== window.top) {
-    var bl = document.querySelector('.back-link');
-    if (bl) bl.style.display = 'none';
-  }
+(function() {
+  var handle = document.getElementById('resize-handle');
+  var panel  = document.getElementById('code-panel');
+  var dragging = false, startX = 0, startW = 0;
+  handle.addEventListener('mousedown', function(e) {
+    dragging = true; startX = e.clientX; startW = panel.offsetWidth;
+    handle.classList.add('dragging'); e.preventDefault();
+  });
+  document.addEventListener('mousemove', function(e) {
+    if (!dragging) return;
+    var delta = startX - e.clientX;
+    panel.style.width = Math.min(560, Math.max(120, startW + delta)) + 'px';
+  });
+  document.addEventListener('mouseup', function() {
+    if (dragging) { dragging = false; handle.classList.remove('dragging'); }
+  });
+})();
 </script>
 </body>
 </html>

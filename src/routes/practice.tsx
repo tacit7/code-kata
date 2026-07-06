@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router";
 import { useKataStore } from "../stores/kata-store";
-import { useSettingsStore } from "../stores/settings-store";
+import { useSettingsStore, type PracticeConfig } from "../stores/settings-store";
 import { useSessionStore, fetchKataStats, medianTime, srWeight } from "../stores/session-store";
 import { useTimerStore } from "../stores/timer-store";
 import type { KataStats } from "../stores/session-store";
@@ -9,8 +9,9 @@ import type { Kata } from "../types/editor";
 import { LEVELS, CATEGORY_LEVEL } from "../lib/levels";
 
 type Mode = "sr" | "daily" | "weak" | "speed" | "level";
-type SizeOpt = 5 | 10 | 15 | 20 | "all";
+type SizeOpt = 3 | 5 | 10 | 15 | 20 | "all";
 type KataStatus = "new" | "failed" | "slow" | "due" | "ok";
+type DifficultyFilter = "" | "easy" | "medium" | "hard";
 
 interface QueueItem {
   kata: Kata;
@@ -49,7 +50,14 @@ const MODES: { id: Mode; title: string; desc: string }[] = [
   },
 ];
 
-const SIZE_OPTIONS: SizeOpt[] = [5, 10, 15, 20, "all"];
+const SIZE_OPTIONS: SizeOpt[] = [3, 5, 10, 15, 20, "all"];
+
+const DIFFICULTY_OPTIONS: { id: DifficultyFilter; label: string }[] = [
+  { id: "", label: "All" },
+  { id: "easy", label: "Easy" },
+  { id: "medium", label: "Medium" },
+  { id: "hard", label: "Hard" },
+];
 
 function computeStatus(score: number): KataStatus {
   if (score >= 10) return "new";
@@ -132,20 +140,43 @@ export function PracticeQueuePage() {
   const bestTimes = useKataStore((s) => s.bestTimes);
   const streaks = useKataStore((s) => s.streaks);
   const dailyKataIds = useSettingsStore((s) => s.dailyKataIds);
+  const practiceConfig = useSettingsStore((s) => s.practiceConfig);
+  const setSetting = useSettingsStore((s) => s.setSetting);
   const startSession = useSessionStore((s) => s.startSession);
   const startSessionTimer = useTimerStore((s) => s.startSessionTimer);
   const resetKataTimer = useTimerStore((s) => s.resetKataTimer);
   const navigate = useNavigate();
 
-  const [mode, setMode] = useState<Mode>("sr");
-  const [dailyRandomize, setDailyRandomize] = useState(false);
-  const [categoryFilter, setCategoryFilter] = useState("");
-  const [selectedLevels, setSelectedLevels] = useState<Set<number>>(new Set());
-  const [sessionSize, setSessionSize] = useState<SizeOpt>(10);
+  const mode = practiceConfig.mode as Mode;
+  const dailyRandomize = practiceConfig.dailyRandomize;
+  const categoryFilter = practiceConfig.categoryFilter;
+  const difficultyFilter = practiceConfig.difficultyFilter as DifficultyFilter;
+  const sessionSize = practiceConfig.sessionSize as SizeOpt;
+  const maxTestRuns = practiceConfig.maxTestRuns;
+  const selectedLevels = useMemo(
+    () => new Set(practiceConfig.selectedLevels),
+    [practiceConfig.selectedLevels],
+  );
+
+  const updateConfig = useCallback(
+    (patch: Partial<PracticeConfig>) => {
+      setSetting("practiceConfig", { ...practiceConfig, ...patch });
+    },
+    [practiceConfig, setSetting],
+  );
+
+  const setMode = (m: Mode) => updateConfig({ mode: m });
+  const setDailyRandomize = (v: boolean) => updateConfig({ dailyRandomize: v });
+  const setCategoryFilter = (c: string) => updateConfig({ categoryFilter: c });
+  const setDifficultyFilter = (d: DifficultyFilter) => updateConfig({ difficultyFilter: d });
+  const setSelectedLevels = (levels: Set<number>) =>
+    updateConfig({ selectedLevels: [...levels] });
+  const setSessionSize = (s: SizeOpt) => updateConfig({ sessionSize: s });
+  const setMaxTestRuns = (n: number | null) => updateConfig({ maxTestRuns: n });
+
   const [statsMap, setStatsMap] = useState<Map<number, KataStats>>(new Map());
   const [medianMs, setMedianMs] = useState(Infinity);
   const [launching, setLaunching] = useState(false);
-  const [maxTestRuns, setMaxTestRuns] = useState<number | null>(null);
 
   useEffect(() => {
     if (katas.length === 0) return;
@@ -164,6 +195,10 @@ export function PracticeQueuePage() {
     let pool = categoryFilter
       ? katas.filter((k) => k.category === categoryFilter)
       : [...katas];
+
+    if (difficultyFilter) {
+      pool = pool.filter((k) => k.difficulty === difficultyFilter);
+    }
 
     switch (mode) {
       case "daily": {
@@ -217,7 +252,7 @@ export function PracticeQueuePage() {
     }
 
     return items;
-  }, [katas, statsMap, medianMs, mode, categoryFilter, selectedLevels, dailyKataIds, streaks, bestTimes, dailyRandomize]);
+  }, [katas, statsMap, medianMs, mode, categoryFilter, difficultyFilter, selectedLevels, dailyKataIds, streaks, bestTimes, dailyRandomize]);
 
   const modeCounts = useMemo(() => {
     const dailySet = new Set(dailyKataIds);
@@ -377,6 +412,28 @@ export function PracticeQueuePage() {
             </div>
           </div>
         )}
+
+        {/* Difficulty filter */}
+        <div>
+          <p className="text-[11px] font-bold uppercase tracking-widest text-base-content/35 mb-2">
+            Difficulty
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {DIFFICULTY_OPTIONS.map(({ id, label }) => (
+              <button
+                key={id || "all"}
+                onClick={() => setDifficultyFilter(id)}
+                className={`text-[11px] font-semibold px-2.5 py-1 rounded-full border transition-all ${
+                  difficultyFilter === id
+                    ? "border-primary/50 bg-primary/10 text-primary"
+                    : "border-base-300/60 text-base-content/40 hover:border-base-300 hover:text-base-content/60"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
 
         {/* Daily order toggle */}
         {mode === "daily" && (

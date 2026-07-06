@@ -1,214 +1,129 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Generate Parentheses</title>
-  <link rel="stylesheet" href="../shared/style.css" />
-  <script src="../shared/gsap.min.js"></script>
-  <script src="../shared/viz.js"></script>
-  <style>
-    .viz-area { width: 100%; max-width: 98%; }
-    .main-row { display: grid; grid-template-columns: 1fr 340px; gap: 16px; align-items: start; }
-    @media (max-width: 800px) { .main-row { grid-template-columns: 1fr; } }
-
-    /* tree */
-    .tree-wrap {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--radius-lg); overflow: hidden;
-    }
-    #tree-svg { display: block; width: 100%; }
-
-    /* right col */
-    .right-col { display: flex; flex-direction: column; gap: 12px; }
-
-    .panel-box {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--radius-lg); padding: 14px 16px;
-      display: flex; flex-direction: column; gap: 8px;
-    }
-    .panel-title {
-      font-size: 0.67rem; font-weight: 700;
-      text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-dim);
-    }
-
-    /* nav row */
-    .nav-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-    .btn-play {
-      background: #15803d; border: none; border-radius: var(--radius-sm);
-      color: #fff; cursor: pointer; font-size: 0.88rem; font-weight: 600;
-      padding: 8px 14px; transition: background 0.2s; white-space: nowrap;
-    }
-    .btn-play:hover { background: #166534; }
-    .btn-play.playing { background: #c2410c; }
-    .btn-play.playing:hover { background: #9a3412; }
-    .btn-play:disabled { opacity: 0.4; cursor: not-allowed; }
-    .speed-select {
-      background: var(--bg); border: 1px solid var(--border);
-      border-radius: var(--radius-sm); color: var(--text);
-      font-size: 0.85rem; padding: 8px 10px; outline: none; width: 80px;
-    }
-
-    /* var grid */
-    .var-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
-    .var-box {
-      padding: 10px 8px; background: var(--bg); border: 1px solid var(--border);
-      border-radius: var(--radius-sm);
-      display: flex; flex-direction: column; align-items: center; gap: 3px;
-    }
-    .var-box.accent-border { border-color: var(--accent); }
-    .var-box.green-border  { border-color: var(--green-border); }
-    .var-box.amber-border  { border-color: #b45309; }
-    .var-label { font-size: 0.62rem; font-family: monospace; color: var(--text-faint); text-align: center; }
-    .var-val   { font-size: 1.1rem; font-weight: 700; color: var(--text-bright); font-family: monospace; }
-
-    /* results list */
-    .results-list {
-      display: flex; flex-direction: column; gap: 4px;
-      max-height: 220px; overflow-y: auto;
-    }
-    .result-item {
-      font-family: monospace; font-size: 0.9rem; font-weight: 700;
-      padding: 5px 10px; border-radius: 5px;
-      background: var(--green-bg); color: var(--green);
-      border: 1px solid var(--green-border);
-      opacity: 0;
-    }
-    .result-item.visible { opacity: 1; }
-
-    /* legend */
-    .leg-row { display: flex; flex-direction: column; gap: 6px; font-size: 0.78rem; color: var(--text-muted); }
-    .leg-item { display: flex; align-items: center; gap: 8px; }
-    .leg-swatch { width: 16px; height: 16px; border-radius: 50%; flex-shrink: 0; }
-
-    /* code */
-    .code-panel {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--radius-lg); overflow: hidden;
-    }
-    .code-header {
-      padding: 8px 14px; font-size: 0.67rem; font-weight: 700;
-      text-transform: uppercase; letter-spacing: 0.1em;
-      color: var(--text-dim); border-bottom: 1px solid var(--border); background: var(--bg);
-    }
-    .code-body { padding: 10px 0; font-size: 0.78rem; line-height: 1.75; white-space: pre; }
-    .cl {
-      display: flex; align-items: stretch; border-left: 3px solid transparent;
-      padding: 0 14px 0 0; white-space: pre;
-    }
-    .cl .ln {
-      width: 26px; min-width: 26px; text-align: right;
-      color: #3d4468; user-select: none; padding-right: 14px;
-      font-size: 0.7rem; line-height: 1.75;
-    }
-    .kw { color: var(--purple); }
-    .fn { color: var(--blue); }
-    .bi { color: var(--orange); }
-    .cm { color: #3d4468; font-style: italic; }
-    .op { color: var(--text); }
-    .nb { color: var(--green); }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Generate Parentheses</title>
+<link rel="stylesheet" href="../shared/style.css" />
+<script src="../shared/gsap.min.js"></script>
+<script src="../shared/viz.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: "Fira Code", "Cascadia Code", monospace; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+  #header { padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+  #phase-badge { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; padding: 3px 10px; border-radius: var(--radius-sm); background: #1e3a5f; color: var(--blue); border: 1px solid var(--blue); }
+  #step-counter { font-size: 12px; color: var(--text-muted); margin-left: auto; }
+  .viz-inputs { width: 100%; max-width: 100%; padding: 10px 16px; background: var(--surface); border: none; border-bottom: 1px solid var(--border); border-radius: 0; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; flex-shrink: 0; }
+  .viz-inputs label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); display: block; margin-bottom: 3px; }
+  .viz-inputs select, .viz-inputs input { background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 0 8px; height: 30px; font-size: 0.82rem; font-family: inherit; appearance: none; -webkit-appearance: none; }
+  .vi-btn-run { padding: 6px 14px; border-radius: 6px; font-size: 0.82rem; font-weight: 600; cursor: pointer; font-family: inherit; background: var(--accent); color: #fff; border: none; }
+  .vi-btn-rand { padding: 6px 14px; border-radius: 6px; font-size: 0.82rem; cursor: pointer; font-family: inherit; background: var(--bg); color: var(--text); border: 1px solid var(--border); }
+  #main { display: flex; flex: 1; overflow: hidden; }
+  #viz-area { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding: 16px; gap: 16px; overflow-y: auto; }
+  #desc { font-size: 13px; color: var(--text-muted); text-align: center; max-width: 560px; min-height: 36px; line-height: 1.5; }
+  #resize-handle { width: 5px; flex-shrink: 0; cursor: col-resize; background: transparent; border-left: 1px solid var(--border); transition: background .15s; z-index: 10; }
+  #resize-handle:hover, #resize-handle.dragging { background: var(--accent); }
+  #code-panel { width: 350px; min-width: 120px; max-width: 560px; flex-shrink: 0; background: #0d1117; border-right: 1px solid var(--border); overflow-y: auto; overflow-x: auto; padding: 10px 12px; display: flex; flex-direction: column; }
+  .cl { display: flex; align-items: stretch; padding: 2px 0; white-space: pre; border-left: 2px solid transparent; padding-left: 6px; color: var(--text-muted); transition: all 0.2s; font-family: "Fira Code","Cascadia Code",monospace; font-size: 0.75rem; line-height: 1.8; }
+  .ln { display: inline-block; width: 20px; text-align: right; color: var(--text-dim); user-select: none; margin-right: 10px; font-size: 0.7rem; }
+  .kw { color: var(--purple); } .nb { color: var(--green); } .cm { color: var(--text-dim); font-style: italic; }
+  #sidebar { width: 220px; flex-shrink: 0; background: var(--surface); border-left: 1px solid var(--border); overflow-y: auto; padding: 14px 12px; display: flex; flex-direction: column; gap: 12px; }
+  .sidebar-section { font-size: 11px; }
+  .sidebar-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--text-dim); margin-bottom: 6px; }
+  #nav-row { flex-shrink: 0; display: flex; align-items: center; gap: 8px; padding: 10px 16px; background: var(--surface); border-top: 1px solid var(--border); }
+  .btn-step, .btn-play { padding: 6px 14px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--surface); color: var(--text); font-family: inherit; font-size: 12px; cursor: pointer; transition: background .15s; }
+  .btn-step:hover { background: #334155; }
+  .btn-play { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn-play:hover { background: var(--accent-hover); }
+  select { padding: 5px 8px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: #1e293b; color: var(--text); font-size: 12px; font-family: inherit; cursor: pointer; }
+  /* UNIQUE VIZ CSS */
+  .tree-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; width: 100%; }
+  #tree-svg { display: block; width: 100%; }
+  .var-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+  .var-box { padding: 10px 8px; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm); display: flex; flex-direction: column; align-items: center; gap: 3px; }
+  .var-box.accent-border { border-color: var(--accent); }
+  .var-box.amber-border { border-color: #b45309; }
+  .var-label { font-size: 0.62rem; font-family: monospace; color: var(--text-faint); text-align: center; }
+  .var-val { font-size: 1.1rem; font-weight: 700; color: var(--text-bright); font-family: monospace; }
+  .results-list { display: flex; flex-direction: column; gap: 4px; max-height: 180px; overflow-y: auto; margin-top: 4px; }
+  .result-item { font-family: monospace; font-size: 0.9rem; font-weight: 700; padding: 5px 10px; border-radius: 5px; background: var(--green-bg); color: var(--green); border: 1px solid var(--green-border); opacity: 0; }
+  .result-item.visible { opacity: 1; }
+  .leg-row { display: flex; flex-direction: column; gap: 6px; font-size: 0.78rem; color: var(--text-muted); }
+  .leg-item { display: flex; align-items: center; gap: 8px; }
+  .leg-swatch { width: 16px; height: 16px; border-radius: 50%; flex-shrink: 0; }
+  .fn { color: var(--blue); }
+  .bi { color: var(--orange); }
+  .op { color: var(--text); }
+</style>
 </head>
-<body class="page">
+<body>
 
-<div class="page-header">
-  <a class="back-link" href="../index.html">&larr; All Algorithms</a>
-  <div class="page-title">Generate Parentheses</div>
-  <div class="page-sub">LeetCode 22 &middot; Backtracking with open/close counters &middot; O(4ⁿ/√n) time</div>
+<div class="viz-inputs">
+  <div><label>Preset</label><select id="presetSel" onchange="loadPreset()"><option value="2">n = 2</option><option value="3" selected>n = 3</option><option value="4">n = 4</option></select></div>
+  <div><label>n (pairs)</label><select id="inp-n"><option value="2">n = 2</option><option value="3" selected>n = 3</option><option value="4">n = 4</option></select></div>
+  <button onclick="buildAndRun()" class="vi-btn-run">Run</button>
+  <button onclick="randomExample()" class="vi-btn-rand">&#127922; Random</button>
+</div>
+<div class="controls"></div>
+
+<div id="header">
+  <span id="phase-badge">Setup</span>
+  <span style="font-size:13px;font-weight:700;">Generate Parentheses</span>
+  <span id="step-counter">Step 0 / 0</span>
 </div>
 
-<div class="controls">
-  <div class="field">
-    <label>n (pairs)</label>
-    <select id="inp-n" style="background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:0.9rem;padding:7px 10px;outline:none;">
-      <option value="2">n = 2</option>
-      <option value="3" selected>n = 3</option>
-      <option value="4">n = 4</option>
-    </select>
+<div id="main">
+  <div id="viz-area">
+    <div id="desc">Select n and click Run.</div>
+    <div class="tree-wrap">
+      <svg id="tree-svg" viewBox="0 0 800 400" preserveAspectRatio="xMidYMid meet"></svg>
+    </div>
   </div>
-  <button class="btn-primary" onclick="buildAndRun()">Build &amp; Run</button>
-</div>
-
-<div class="viz-area">
-  <div class="main-row">
-    <div style="display:flex;flex-direction:column;gap:12px">
-      <div class="tree-wrap">
-        <svg id="tree-svg" viewBox="0 0 800 400" preserveAspectRatio="xMidYMid meet"></svg>
+  <div id="resize-handle"></div>
+  <div id="code-panel">
+    <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--text-dim);margin-bottom:8px;">Code</div>
+    <div id="code-body"></div>
+  </div>
+  <div id="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-title">State</div>
+      <div class="var-grid">
+        <div class="var-box"><div class="var-label">n</div><div class="var-val" id="vv-n">&mdash;</div></div>
+        <div class="var-box accent-border"><div class="var-label">open</div><div class="var-val" id="vv-open">&mdash;</div></div>
+        <div class="var-box amber-border"><div class="var-label">close</div><div class="var-val" id="vv-close">&mdash;</div></div>
       </div>
-      <div class="code-panel">
-        <div class="code-header">Python</div>
-        <div class="code-body" id="code-body"></div>
+      <div style="margin-top:8px">
+        <div class="var-label" style="margin-bottom:4px">current string</div>
+        <div id="vv-str" style="font-family:monospace;font-size:1.1rem;font-weight:700;color:var(--text-bright);letter-spacing:0.12em;min-height:24px">&mdash;</div>
       </div>
     </div>
-
-    <div class="right-col">
-      <div class="panel-box">
-        <div class="nav-row">
-          <button class="stepBtn" id="prevBtn" disabled>&larr;</button>
-          <button class="stepBtn" id="stepBtn" disabled>&rarr;</button>
-          <button class="playBtn" id="playBtn" disabled>&#9654; Play</button>
-          <select class="speedSel" id="speedSel">
-            <option value="700">Slow</option>
-            <option value="380" selected>Med</option>
-            <option value="120">Fast</option>
-          </select>
-        </div>
-        <div style="font-size:0.72rem;color:var(--text-dim);margin-top:2px" id="phase-label">&mdash;</div>
-        <div style="font-size:0.82rem;color:var(--text-muted)" id="step-desc">Select n and click Build &amp; Run.</div>
-      </div>
-
-      <div class="panel-box">
-        <div class="panel-title">State</div>
-        <div class="var-grid">
-          <div class="var-box">
-            <div class="var-label">n</div>
-            <div class="var-val" id="vv-n">&mdash;</div>
-          </div>
-          <div class="var-box accent-border">
-            <div class="var-label">open</div>
-            <div class="var-val" id="vv-open">&mdash;</div>
-          </div>
-          <div class="var-box amber-border">
-            <div class="var-label">close</div>
-            <div class="var-val" id="vv-close">&mdash;</div>
-          </div>
-        </div>
-        <div style="margin-top:4px">
-          <div class="var-label" style="margin-bottom:4px">current string</div>
-          <div id="vv-str" style="font-family:monospace;font-size:1.1rem;font-weight:700;color:var(--text-bright);letter-spacing:0.12em;min-height:24px">&mdash;</div>
-        </div>
-      </div>
-
-      <div class="panel-box">
-        <div class="panel-title">Results <span id="result-count" style="font-weight:400;color:var(--text-faint)"></span></div>
-        <div class="results-list" id="results-list">
-          <span style="color:var(--text-faint);font-size:0.82rem;font-style:italic">None yet.</span>
-        </div>
-      </div>
-
-      <div class="panel-box">
-        <div class="panel-title">Legend</div>
-        <div class="leg-row">
-          <div class="leg-item">
-            <div class="leg-swatch" style="background:#1e2130;border:2px solid #2d3148"></div>
-            Unvisited node
-          </div>
-          <div class="leg-item">
-            <div class="leg-swatch" style="background:#4338ca;border:2px solid var(--accent)"></div>
-            Active call
-          </div>
-          <div class="leg-item">
-            <div class="leg-swatch" style="background:#052e16;border:2px solid #16a34a"></div>
-            Leaf — valid combo
-          </div>
-          <div class="leg-item">
-            <div class="leg-swatch" style="background:#1c0d00;border:2px solid #b45309"></div>
-            Returned (explored)
-          </div>
-        </div>
+    <div class="sidebar-section">
+      <div class="sidebar-title">Results <span id="result-count" style="font-weight:400;color:var(--text-faint)"></span></div>
+      <div class="results-list" id="results-list"><span style="color:var(--text-faint);font-size:0.82rem;font-style:italic">None yet.</span></div>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-title">Legend</div>
+      <div class="leg-row">
+        <div class="leg-item"><div class="leg-swatch" style="background:#1e2130;border:2px solid #2d3148"></div>Unvisited</div>
+        <div class="leg-item"><div class="leg-swatch" style="background:#4338ca;border:2px solid var(--accent)"></div>Active call</div>
+        <div class="leg-item"><div class="leg-swatch" style="background:#052e16;border:2px solid #16a34a"></div>Leaf (valid)</div>
+        <div class="leg-item"><div class="leg-swatch" style="background:#1c0d00;border:2px solid #b45309"></div>Returned</div>
       </div>
     </div>
   </div>
+</div>
+
+<div id="nav-row">
+  <button id="prevBtn" class="btn-step">&#8592; Prev</button>
+  <button id="stepBtn" class="btn-step">Step &#8594;</button>
+  <button id="playBtn" class="btn-play">Play</button>
+  <button id="resetBtn" class="btn-step">&#8635; Reset</button>
+  <select id="speedSel">
+    <option value="800">0.5&#215;</option>
+    <option value="400" selected>1&#215;</option>
+    <option value="200">2&#215;</option>
+    <option value="100">4&#215;</option>
+  </select>
 </div>
 
 <script>
@@ -232,26 +147,15 @@ var CODE_LINES = [
   [15, '    <span class="kw">return</span> res'],
 ];
 
-// ─── SVG helpers ──────────────────────────────────────────────────────────────
 function svgEl(tag, attrs) {
   var el = document.createElementNS('http://www.w3.org/2000/svg', tag);
   Object.keys(attrs).forEach(function(k) { el.setAttribute(k, attrs[k]); });
   return el;
 }
 
-// ─── Layout ───────────────────────────────────────────────────────────────────
 var nodeMap = {};
 
 function layoutTree(nodes) {
-  // nodes: [{id, parentId, label, depth, childIndex (among siblings)}]
-  // compute x by in-order traversal order
-  var byDepth = {};
-  nodes.forEach(function(n) {
-    if (!byDepth[n.depth]) byDepth[n.depth] = [];
-    byDepth[n.depth].push(n);
-  });
-
-  // assign in-order index
   var inIdx = 0;
   function inorder(nodeId) {
     var node = nodeMap[nodeId];
@@ -260,37 +164,29 @@ function layoutTree(nodes) {
     node._inIdx = inIdx++;
     if (node.rightChildId) inorder(node.rightChildId);
   }
-  // find root
   var root = nodes.find(function(n) { return n.parentId === null; });
   if (!root) return;
   inorder(root.id);
-
   var count = nodes.length;
   var maxDepth = 0;
   nodes.forEach(function(n) { if (n.depth > maxDepth) maxDepth = n.depth; });
-
   var xSpace = Math.max(50, Math.min(90, 760 / Math.max(1, count)));
   var ySpace = 72;
   var padX = 36, padY = 36;
   var VW = padX * 2 + (count - 1) * xSpace;
   var VH = padY * 2 + maxDepth * ySpace + 44;
   if (VW < 500) VW = 500;
-
   var svg = document.getElementById('tree-svg');
   svg.setAttribute('viewBox', '0 0 ' + VW + ' ' + VH);
-
   var R = VW > 700 ? 20 : 16;
-
   nodes.forEach(function(n) {
     n.x = padX + n._inIdx * xSpace;
     n.y = padY + n.depth * ySpace + R;
     n.R = R;
   });
-
   return { VW: VW, VH: VH, R: R };
 }
 
-// ─── SVG render ───────────────────────────────────────────────────────────────
 var COLORS = {
   idle:   { fill: '#1e2130', stroke: '#2d3148', text: 'var(--text-muted)' },
   active: { fill: '#4338ca', stroke: 'var(--accent)', text: '#fff' },
@@ -298,97 +194,16 @@ var COLORS = {
   done:   { fill: '#1c0d00', stroke: '#b45309', text: '#d97706' },
 };
 
-function renderSVG(nodes) {
-  var svg = document.getElementById('tree-svg');
-  svg.innerHTML = '';
-
-  var edgeG = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-  edgeG.id = 'edges';
-  var nodeG = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-  nodeG.id = 'nodes-g';
-  svg.appendChild(edgeG);
-  svg.appendChild(nodeG);
-
-  // draw edges
-  nodes.forEach(function(n) {
-    if (n.parentId === null) return;
-    var parent = nodeMap[n.parentId];
-    if (!parent) return;
-    var line = svgEl('line', {
-      id: 'edge-' + parent.id + '-' + n.id,
-      x1: parent.x, y1: parent.y, x2: n.x, y2: n.y,
-      stroke: '#2d3148', 'stroke-width': 1.5, 'stroke-linecap': 'round',
-    });
-    edgeG.appendChild(line);
-
-    // edge label
-    var mx = (parent.x + n.x) / 2;
-    var my = (parent.y + n.y) / 2;
-    var lbl = svgEl('text', {
-      id: 'elbl-' + parent.id + '-' + n.id,
-      x: mx + (n.x < parent.x ? -8 : 8),
-      y: my,
-      'text-anchor': 'middle', 'dominant-baseline': 'middle',
-      fill: '#6b7280', 'font-size': 11, 'font-weight': '700',
-      'font-family': 'monospace',
-    });
-    lbl.textContent = n.edgeLabel;
-    edgeG.appendChild(lbl);
-  });
-
-  // draw nodes
-  nodes.forEach(function(n) {
-    var g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-    g.id = 'node-g-' + n.id;
-
-    var c = svgEl('circle', {
-      id: 'nc-' + n.id,
-      cx: n.x, cy: n.y, r: n.R,
-      fill: COLORS.idle.fill, stroke: COLORS.idle.stroke, 'stroke-width': 2,
-    });
-    g.appendChild(c);
-
-    // label: short string or counters
-    var displayLabel = n.label.length > 5 ? n.label.slice(-4) + '…' : n.label;
-    var t = svgEl('text', {
-      id: 'nt-' + n.id,
-      x: n.x, y: n.y,
-      'text-anchor': 'middle', 'dominant-baseline': 'middle',
-      fill: COLORS.idle.text,
-      'font-size': Math.max(8, Math.round(n.R * 0.6)),
-      'font-weight': 'bold',
-      'font-family': 'monospace',
-    });
-    // show o/c counts to keep nodes small
-    t.textContent = n.open + ',' + n.close;
-    g.appendChild(t);
-
-    // tooltip title
-    var title = document.createElementNS('http://www.w3.org/2000/svg', 'title');
-    title.textContent = '"' + n.label + '" open=' + n.open + ' close=' + n.close;
-    g.appendChild(title);
-
-    nodeG.appendChild(g);
-  });
-}
-
-// ─── Simulation ───────────────────────────────────────────────────────────────
 function simulate(n) {
   var steps = [];
   var allNodes = [];
   var idCounter = 0;
   nodeMap = {};
-
   function makeNode(parentId, label, open, close, edgeLabel) {
     var id = idCounter++;
     var parent = parentId !== null ? nodeMap[parentId] : null;
     var depth = parent ? parent.depth + 1 : 0;
-    var node = {
-      id: id, parentId: parentId, label: label,
-      open: open, close: close, edgeLabel: edgeLabel || '',
-      depth: depth, state: 'idle',
-      leftChildId: null, rightChildId: null, _inIdx: 0, x: 0, y: 0, R: 20,
-    };
+    var node = { id: id, parentId: parentId, label: label, open: open, close: close, edgeLabel: edgeLabel || '', depth: depth, state: 'idle', leftChildId: null, rightChildId: null, _inIdx: 0, x: 0, y: 0, R: 20 };
     nodeMap[id] = node;
     allNodes.push(node);
     if (parent) {
@@ -397,77 +212,16 @@ function simulate(n) {
     }
     return node;
   }
-
   var results = [];
-  var stateSnap = {}; // id -> state
-
   function snap(phase, desc, lines, activeId) {
     var sm = {};
     allNodes.forEach(function(nd) { sm[nd.id] = nd.state; });
-    steps.push({
-      phase: phase, desc: desc, lines: lines,
-      activeId: activeId !== null ? activeId : -1,
-      stateMap: JSON.parse(JSON.stringify(sm)),
-      results: results.slice(),
-      nodesSnapshot: allNodes.map(function(nd) {
-        return { id: nd.id, x: nd.x, y: nd.y, R: nd.R, open: nd.open, close: nd.close, label: nd.label, parentId: nd.parentId, edgeLabel: nd.edgeLabel, depth: nd.depth, leftChildId: nd.leftChildId, rightChildId: nd.rightChildId, _inIdx: nd._inIdx };
-      }),
-    });
+    steps.push({ phase: phase, desc: desc, lines: lines, activeId: activeId !== null ? activeId : -1, stateMap: JSON.parse(JSON.stringify(sm)), results: results.slice(), nodesSnapshot: allNodes.map(function(nd) { return { id: nd.id, x: nd.x, y: nd.y, R: nd.R, open: nd.open, close: nd.close, label: nd.label, parentId: nd.parentId, edgeLabel: nd.edgeLabel, depth: nd.depth, leftChildId: nd.leftChildId, rightChildId: nd.rightChildId, _inIdx: nd._inIdx }; }) });
   }
-
-  function backtrack(parentId, s, open, close, edgeLabel) {
-    var node = makeNode(parentId, s, open, close, edgeLabel);
-    node.state = 'active';
-
-    if (s.length === 2 * n) {
-      snap('Leaf', '"' + s + '" — length = 2n. Valid combination found!', [5, 6, 7], node.id);
-      results.push(s);
-      node.state = 'leaf';
-      snap('Result', 'Added "' + s + '" to results.', [6], node.id);
-      return;
-    }
-
-    snap('Enter', 'backtrack("' + s + '", open=' + open + ', close=' + close + ')', [4, 5], node.id);
-
-    var addedOpen = false, addedClose = false;
-
-    if (open < n) {
-      snap('Branch', 'open (' + open + ') < n (' + n + '). Can add "(". Branching left.', [9, 10], node.id);
-      backtrack(node.id, s + '(', open + 1, close, '(');
-      addedOpen = true;
-      node.state = 'active';
-    }
-
-    if (close < open) {
-      snap('Branch', 'close (' + close + ') < open (' + open + '). Can add ")". Branching right.', [11, 12], node.id);
-      backtrack(node.id, s + ')', open, close + 1, ')');
-      addedClose = true;
-      node.state = 'active';
-    }
-
-    node.state = 'done';
-    snap('Return', 'Done exploring "' + s + '". Backtrack.', [4], node.id);
-  }
-
-  // root call
-  var rootNode = makeNode(null, '', 0, 0, '');
-  rootNode.state = 'active';
-  snap('Start', 'Call backtrack("", 0, 0). Starting recursion.', [14], rootNode.id);
-
-  // now actually run (re-simulate properly by tracking the tree structure)
-  // reset
-  allNodes = [];
-  nodeMap = {};
-  idCounter = 0;
-  results = [];
-  steps = [];
-
   function bt2(parentId, s, open, close, edgeLabel) {
     var node = makeNode(parentId, s, open, close, edgeLabel);
-    // layout immediately so coords exist when we snapshot
     layoutTree(allNodes);
     node.state = 'active';
-
     if (s.length === 2 * n) {
       snap('Leaf', '"' + s + '" — length = 2n. Valid combination found!', [5, 6, 7], node.id);
       results.push(s);
@@ -475,57 +229,42 @@ function simulate(n) {
       snap('Result', 'Added "' + s + '" to results (' + results.length + ' so far).', [6], node.id);
       return;
     }
-
     snap('Enter', 'backtrack("' + s + '", open=' + open + ', close=' + close + ')', [4, 5], node.id);
-
     if (open < n) {
-      snap('Branch→(', 'open (' + open + ') < n (' + n + ') → can add "(". Recurse.', [9, 10], node.id);
+      snap('Branch(', 'open (' + open + ') < n (' + n + ') → can add "(". Recurse.', [9, 10], node.id);
       bt2(node.id, s + '(', open + 1, close, '(');
       node.state = 'active';
       layoutTree(allNodes);
     }
-
     if (close < open) {
-      snap('Branch→)', 'close (' + close + ') < open (' + open + ') → can add ")". Recurse.', [11, 12], node.id);
+      snap('Branch)', 'close (' + close + ') < open (' + open + ') → can add ")". Recurse.', [11, 12], node.id);
       bt2(node.id, s + ')', open, close + 1, ')');
       node.state = 'active';
       layoutTree(allNodes);
     }
-
     node.state = 'done';
     snap('Return', 'Explored all branches of "' + s + '". Backtrack.', [4], node.id);
   }
-
   bt2(null, '', 0, 0, '');
-
   var finalSnap = JSON.parse(JSON.stringify(steps[steps.length - 1]));
   finalSnap.phase = 'Done';
   finalSnap.desc = 'Complete. Found ' + results.length + ' valid combination' + (results.length === 1 ? '' : 's') + ' for n=' + n + '.';
   finalSnap.lines = [15];
   steps.push(finalSnap);
-
   return steps;
 }
 
-// ─── Apply step ──────────────────────────────────────────────────────────────
 var prevLines = [];
 
 function applyStep(s, animate) {
-  // Rebuild SVG from snapshot if node count changed
   var nodes = s.nodesSnapshot;
   var svg = document.getElementById('tree-svg');
-
-  // Check if we need to rebuild (new nodes added)
   var existingNodes = svg.querySelectorAll('circle[id^="nc-"]');
   if (existingNodes.length !== nodes.length) {
-    // Rebuild from snapshot
     var snapshotNodeMap = {};
     nodes.forEach(function(n) { snapshotNodeMap[n.id] = n; });
-    // temporarily replace nodeMap for renderSVG
     var savedNodeMap = nodeMap;
     nodeMap = snapshotNodeMap;
-
-    // Find VW/VH from snapshot layout
     var maxDepth = 0, count = nodes.length;
     nodes.forEach(function(n) { if (n.depth > maxDepth) maxDepth = n.depth; });
     var xSpace = Math.max(50, Math.min(90, 760 / Math.max(1, count)));
@@ -535,29 +274,18 @@ function applyStep(s, animate) {
     var R = VW > 700 ? 20 : 16;
     var VH = padY * 2 + maxDepth * ySpace + R + 44;
     svg.setAttribute('viewBox', '0 0 ' + VW + ' ' + VH);
-
     nodeMap = savedNodeMap;
     renderSVGFromSnapshot(nodes, VW, VH, R);
   }
-
-  // Apply states
   nodes.forEach(function(n) {
     var state = s.stateMap[n.id] || 'idle';
     setNodeColor(n.id, state, animate);
   });
-
-  // Highlight active node
   if (s.activeId >= 0) {
     var activeNode = nodes.find(function(n) { return n.id === s.activeId; });
-    if (activeNode) {
-      updateVars(activeNode, s, animate);
-    }
+    if (activeNode) updateVars(activeNode, s, animate);
   }
-
-  // Results
   updateResults(s.results, animate);
-
-  // Code
   setCodeLines(prevLines, s.lines, animate);
   prevLines = s.lines || [];
 }
@@ -566,55 +294,29 @@ function renderSVGFromSnapshot(nodes, VW, VH, R) {
   var svg = document.getElementById('tree-svg');
   svg.innerHTML = '';
   svg.setAttribute('viewBox', '0 0 ' + VW + ' ' + VH);
-
   var edgeG = document.createElementNS('http://www.w3.org/2000/svg', 'g');
   var nodeG = document.createElementNS('http://www.w3.org/2000/svg', 'g');
   svg.appendChild(edgeG);
   svg.appendChild(nodeG);
-
   var nm = {};
   nodes.forEach(function(n) { nm[n.id] = n; });
-
   nodes.forEach(function(n) {
     if (n.parentId === null) return;
     var parent = nm[n.parentId];
     if (!parent) return;
-    edgeG.appendChild(svgEl('line', {
-      id: 'edge-' + parent.id + '-' + n.id,
-      x1: parent.x, y1: parent.y, x2: n.x, y2: n.y,
-      stroke: '#2d3148', 'stroke-width': 1.5, 'stroke-linecap': 'round',
-    }));
-    var mx = (parent.x + n.x) / 2;
-    var my = (parent.y + n.y) / 2;
-    var lbl = svgEl('text', {
-      id: 'elbl-' + parent.id + '-' + n.id,
-      x: mx + (n.x < parent.x ? -9 : 9), y: my,
-      'text-anchor': 'middle', 'dominant-baseline': 'middle',
-      fill: '#6272a4', 'font-size': 11, 'font-weight': '700', 'font-family': 'monospace',
-    });
+    edgeG.appendChild(svgEl('line', { id: 'edge-' + parent.id + '-' + n.id, x1: parent.x, y1: parent.y, x2: n.x, y2: n.y, stroke: '#2d3148', 'stroke-width': 1.5, 'stroke-linecap': 'round' }));
+    var mx = (parent.x + n.x) / 2, my = (parent.y + n.y) / 2;
+    var lbl = svgEl('text', { id: 'elbl-' + parent.id + '-' + n.id, x: mx + (n.x < parent.x ? -9 : 9), y: my, 'text-anchor': 'middle', 'dominant-baseline': 'middle', fill: '#6272a4', 'font-size': 11, 'font-weight': '700', 'font-family': 'monospace' });
     lbl.textContent = n.edgeLabel;
     edgeG.appendChild(lbl);
   });
-
   nodes.forEach(function(n) {
     var g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
     g.id = 'node-g-' + n.id;
-    g.appendChild(svgEl('circle', {
-      id: 'nc-' + n.id, cx: n.x, cy: n.y, r: R,
-      fill: COLORS.idle.fill, stroke: COLORS.idle.stroke, 'stroke-width': 2,
-    }));
-    var t = svgEl('text', {
-      id: 'nt-' + n.id, x: n.x, y: n.y,
-      'text-anchor': 'middle', 'dominant-baseline': 'middle',
-      fill: COLORS.idle.text,
-      'font-size': Math.max(8, Math.round(R * 0.6)),
-      'font-weight': 'bold', 'font-family': 'monospace',
-    });
+    g.appendChild(svgEl('circle', { id: 'nc-' + n.id, cx: n.x, cy: n.y, r: R, fill: COLORS.idle.fill, stroke: COLORS.idle.stroke, 'stroke-width': 2 }));
+    var t = svgEl('text', { id: 'nt-' + n.id, x: n.x, y: n.y, 'text-anchor': 'middle', 'dominant-baseline': 'middle', fill: COLORS.idle.text, 'font-size': Math.max(8, Math.round(R * 0.6)), 'font-weight': 'bold', 'font-family': 'monospace' });
     t.textContent = n.open + ',' + n.close;
     g.appendChild(t);
-    var title = document.createElementNS('http://www.w3.org/2000/svg', 'title');
-    title.textContent = '"' + n.label + '" open=' + n.open + ' close=' + n.close;
-    g.appendChild(title);
     nodeG.appendChild(g);
   });
 }
@@ -648,9 +350,7 @@ function updateVars(node, s, animate) {
   var strEl = document.getElementById('vv-str');
   if (strEl) {
     var display = node.label || '""';
-    if (animate && strEl.textContent !== display) {
-      gsap.fromTo(strEl, { opacity: 0 }, { opacity: 1, duration: 0.2 });
-    }
+    if (animate && strEl.textContent !== display) gsap.fromTo(strEl, { opacity: 0 }, { opacity: 1, duration: 0.2 });
     strEl.textContent = display;
   }
 }
@@ -664,9 +364,8 @@ function updateResults(results, animate) {
     return;
   }
   if (count) count.textContent = '(' + results.length + ')';
-  // Build items
   list.innerHTML = '';
-  results.forEach(function(r, i) {
+  results.forEach(function(r) {
     var item = document.createElement('div');
     item.className = 'result-item visible';
     item.textContent = r;
@@ -674,8 +373,7 @@ function updateResults(results, animate) {
   });
 }
 
-// ─── Code highlighting ────────────────────────────────────────────────────────
-var HL_BG   = 'rgba(99,102,241,0.12)';
+var HL_BG = 'rgba(99,102,241,0.12)';
 var HL_NONE = 'rgba(99,102,241,0)';
 var HL_BORD = 'var(--accent)';
 var NO_BORD = 'transparent';
@@ -685,35 +383,25 @@ function setCodeLines(oldLines, newLines, animate) {
   (oldLines || []).filter(function(n) { return !(newLines || []).includes(n); }).forEach(function(n) {
     var el = document.getElementById('cl-' + n);
     if (!el) return;
-    if (animate) {
-      gsap.to(el, { backgroundColor: HL_NONE, borderLeftColor: NO_BORD, duration: DUR });
-    } else {
-      el.style.backgroundColor = ''; el.style.borderLeftColor = '';
-    }
+    if (animate) gsap.to(el, { backgroundColor: HL_NONE, borderLeftColor: NO_BORD, duration: DUR });
+    else { el.style.backgroundColor = ''; el.style.borderLeftColor = ''; }
   });
   (newLines || []).filter(function(n) { return !(oldLines || []).includes(n); }).forEach(function(n) {
     var el = document.getElementById('cl-' + n);
     if (!el) return;
-    if (animate) {
-      gsap.to(el, { backgroundColor: HL_BG, borderLeftColor: HL_BORD, duration: DUR, delay: 0.06 });
-    } else {
-      el.style.backgroundColor = HL_BG; el.style.borderLeftColor = HL_BORD;
-    }
+    if (animate) gsap.to(el, { backgroundColor: HL_BG, borderLeftColor: HL_BORD, duration: DUR, delay: 0.06 });
+    else { el.style.backgroundColor = HL_BG; el.style.borderLeftColor = HL_BORD; }
   });
 }
 
-// ─── Build code panel ─────────────────────────────────────────────────────────
 function buildCodePanel() {
   var body = document.getElementById('code-body');
   body.innerHTML = CODE_LINES.map(function(e) {
     var ln = e[0], html = e[1];
-    return '<div class="cl"' + (ln > 0 ? ' id="cl-' + ln + '"' : '') + '>'
-      + '<span class="ln">' + (ln > 0 ? ln : '') + '</span>'
-      + '<span>' + html + '</span></div>';
+    return '<div class="cl"' + (ln > 0 ? ' id="cl-' + ln + '"' : '') + '><span class="ln">' + (ln > 0 ? ln : '') + '</span><span>' + html + '</span></div>';
   }).join('');
 }
 
-// ─── Build & Run ──────────────────────────────────────────────────────────────
 function buildAndRun() {
   currentN = parseInt(document.getElementById('inp-n').value, 10);
   buildCodePanel();
@@ -724,39 +412,65 @@ function buildAndRun() {
   document.getElementById('vv-open').textContent = '—';
   document.getElementById('vv-close').textContent = '—';
   document.getElementById('vv-str').textContent = '—';
-  document.getElementById('step-desc').textContent = 'Running…';
-
   simSteps = simulate(currentN);
   nav.load(simSteps);
 }
 
-// ─── Init ─────────────────────────────────────────────────────────────────────
+function loadPreset() {
+  var v = document.getElementById('presetSel').value;
+  document.getElementById('inp-n').value = v;
+  buildAndRun();
+}
+
+function randomExample() {
+  var ns = [2, 3, 4];
+  var v = String(ns[Math.floor(Math.random() * ns.length)]);
+  document.getElementById('inp-n').value = v;
+  document.getElementById('presetSel').value = v;
+  buildAndRun();
+}
+
+function updateStatus(snap, cur, total) {
+  document.getElementById('phase-badge').textContent = snap.phase || '';
+  document.getElementById('step-counter').textContent = 'Step ' + (cur + 1) + ' / ' + total;
+  var desc = document.getElementById('desc');
+  if (desc) desc.textContent = snap.desc || '';
+}
+
 window.addEventListener('DOMContentLoaded', function() {
   buildCodePanel();
   nav = VizNav({
-    btnPrev: document.getElementById('prevBtn'),
-    btnNext: document.getElementById('stepBtn'),
-    btnPlay: document.getElementById('playBtn'),
+    btnPrev:  document.getElementById('prevBtn'),
+    btnNext:  document.getElementById('stepBtn'),
+    btnPlay:  document.getElementById('playBtn'),
     speedSel: document.getElementById('speedSel'),
     render: function(s, cur, total) {
       applyStep(s, cur > 0);
-      var pl = document.getElementById('phase-label');
-      var sd = document.getElementById('step-desc');
-      if (pl) pl.textContent = 'Step ' + (cur + 1) + ' / ' + total + '  ·  ' + s.phase;
-      if (sd) {
-        gsap.fromTo(sd, { opacity: 0 }, { opacity: 1, duration: 0.15 });
-        sd.textContent = s.desc;
-      }
+      updateStatus(s, cur, total);
     }
   });
+  document.getElementById('resetBtn').addEventListener('click', function() { buildAndRun(); });
   buildAndRun();
 });
-</script>
-<script>
-  if (window.self !== window.top) {
-    var bl = document.querySelector('.back-link');
-    if (bl) bl.style.display = 'none';
-  }
+
+(function() {
+  var handle = document.getElementById('resize-handle');
+  var panel  = document.getElementById('code-panel');
+  var dragging = false, startX = 0, startW = 0;
+  handle.addEventListener('mousedown', function(e) {
+    dragging = true; startX = e.clientX; startW = panel.offsetWidth;
+    handle.classList.add('dragging'); e.preventDefault();
+  });
+  document.addEventListener('mousemove', function(e) {
+    if (!dragging) return;
+    var delta = startX - e.clientX;
+    panel.style.width = Math.min(560, Math.max(120, startW + delta)) + 'px';
+  });
+  document.addEventListener('mouseup', function() {
+    if (!dragging) return;
+    dragging = false; handle.classList.remove('dragging');
+  });
+})();
 </script>
 </body>
 </html>

@@ -1,379 +1,162 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Pacific Atlantic Water Flow</title>
-  <link rel="stylesheet" href="../shared/style.css" />
-  <script src="../shared/gsap.min.js"></script>
-  <script src="../shared/viz.js"></script>
-  <style>
-    .viz-area {
-      width: 100%; max-width: 90%;
-      display: flex; flex-direction: column; gap: 12px;
-    }
-
-    .grid-wrap {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-md);
-      padding: 20px;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      min-height: 120px;
-      position: relative;
-    }
-
-    .ocean-label {
-      position: absolute;
-      font-size: 0.62rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-      opacity: 0.55;
-    }
-    .ocean-label.pacific  { top: 6px; left: 10px; color: #7aa2f7; }
-    .ocean-label.atlantic { bottom: 6px; right: 10px; color: #ff9e64; }
-
-    #grid {
-      display: grid;
-      gap: 4px;
-      user-select: none;
-    }
-
-    .cell {
-      border-radius: 5px;
-      box-sizing: border-box;
-      border: 2px solid transparent;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 0.68rem;
-      font-weight: 700;
-      font-family: monospace;
-      color: rgba(255,255,255,0.55);
-      transition: none;
-    }
-
-    .bottom-row {
-      display: grid;
-      grid-template-columns: 55% 1fr;
-      gap: 12px;
-      align-items: start;
-    }
-    .right-col { display: flex; flex-direction: column; gap: 12px; }
-
-    @media (max-width: 680px) { .bottom-row { grid-template-columns: 1fr; } }
-
-    .code-panel {
-      background: #0a0d14;
-      border: 1px solid var(--border);
-      border-radius: var(--radius-md);
-      overflow: hidden;
-      display: flex;
-      flex-direction: column;
-    }
-    .code-header {
-      padding: 9px 14px;
-      background: var(--surface);
-      border-bottom: 1px solid var(--border);
-      font-size: 0.67rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.11em;
-      color: var(--text-dim);
-    }
-    .code-body {
-      padding: 10px 0;
-      flex: 1;
-      font-family: 'JetBrains Mono','Fira Code','Cascadia Code',monospace;
-      font-size: 0.73rem;
-      line-height: 1.7;
-      overflow-x: auto;
-    }
-    .cl {
-      display: flex;
-      align-items: stretch;
-      border-left: 3px solid transparent;
-      padding: 0 14px 0 0;
-      white-space: pre;
-    }
-    .cl .ln {
-      width: 28px; min-width: 28px;
-      text-align: right;
-      color: #3d4468;
-      user-select: none;
-      padding-right: 14px;
-      font-size: 0.68rem;
-      line-height: 1.7;
-    }
-    .cl .code { color: var(--text-muted); }
-    .kw  { color: var(--purple); }
-    .fn  { color: var(--blue); }
-    .bi  { color: var(--orange); }
-    .op  { color: var(--text); }
-    .cm  { color: #3d4468; font-style: italic; }
-    .nb  { color: var(--green); }
-    .st  { color: var(--yellow); }
-
-    .panel-box {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-md);
-      padding: 13px 18px;
-    }
-    .panel-title {
-      font-size: 0.67rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.11em;
-      color: var(--text-dim);
-      margin-bottom: 10px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .panel-sub {
-      font-size: 0.72rem; font-weight: 400;
-      text-transform: none; letter-spacing: 0; color: var(--text-faint);
-    }
-
-    .phase-chips {
-      display: flex;
-      gap: 8px;
-      margin-bottom: 10px;
-      flex-wrap: wrap;
-    }
-    .phase-chip {
-      font-size: 0.7rem;
-      font-weight: 700;
-      padding: 3px 10px;
-      border-radius: 20px;
-      border: 1px solid;
-      opacity: 0.35;
-      transition: opacity 0.2s;
-    }
-    .phase-chip.active { opacity: 1; }
-    .phase-chip.pac  { color: #7aa2f7; border-color: #7aa2f7; background: rgba(122,162,247,0.1); }
-    .phase-chip.atl  { color: #ff9e64; border-color: #ff9e64; background: rgba(255,158,100,0.1); }
-    .phase-chip.both { color: #9ece6a; border-color: #9ece6a; background: rgba(158,206,106,0.1); }
-
-    .count-row {
-      display: flex;
-      gap: 18px;
-    }
-    .count-item { display: flex; flex-direction: column; gap: 2px; }
-    .count-label {
-      font-size: 0.63rem;
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-      color: var(--text-dim);
-      font-weight: 700;
-    }
-    .count-val {
-      font-size: 1.7rem;
-      font-weight: 700;
-      font-family: monospace;
-      line-height: 1;
-    }
-    .count-val.pac  { color: #7aa2f7; }
-    .count-val.atl  { color: #ff9e64; }
-    .count-val.both { color: #9ece6a; }
-
-    .queue-list {
-      display: flex;
-      gap: 6px;
-      flex-wrap: wrap;
-      min-height: 36px;
-      max-height: 100px;
-      overflow-y: auto;
-      align-items: flex-start;
-      align-content: flex-start;
-    }
-    .q-chip {
-      border-radius: 5px;
-      padding: 3px 9px;
-      font-size: 0.75rem;
-      font-weight: 700;
-      white-space: nowrap;
-      flex-shrink: 0;
-      font-family: monospace;
-    }
-    .q-chip.pac  { background: #1a2040; color: #7aa2f7; border: 1px solid #7aa2f7; }
-    .q-chip.atl  { background: #2a1800; color: #ff9e64; border: 1px solid #ff9e64; }
-    .q-chip.both { background: #182010; color: #9ece6a; border: 1px solid #9ece6a; }
-    .q-empty { color: var(--text-faint); font-size: 0.82rem; font-style: italic; }
-
-    .playBtn {
-      background: #15803d;
-      border: none;
-      border-radius: var(--radius-sm);
-      color: #fff;
-      cursor: pointer;
-      font-size: 0.88rem;
-      font-weight: 600;
-      padding: 9px 20px;
-      transition: background 0.2s;
-    }
-    .playBtn:hover { background: #166534; }
-    .playBtn.playing { background: #c2410c; }
-    .playBtn.playing:hover { background: #9a3412; }
-    .playBtn:disabled { opacity: 0.4; cursor: not-allowed; }
-
-    .speedSel {
-      background: var(--bg);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-sm);
-      color: var(--text);
-      font-size: 0.85rem;
-      padding: 8px 10px;
-      outline: none;
-    }
-
-    .nav-row {
-      display: flex;
-      gap: 12px;
-      align-items: center;
-      flex-wrap: wrap;
-      width: 100%;
-      max-width: 90%;
-    }
-
-    textarea {
-      background: var(--bg);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-sm);
-      color: var(--text);
-      font-family: 'JetBrains Mono','Fira Code',monospace;
-      font-size: 0.9rem;
-      padding: 8px 11px;
-      resize: vertical;
-      outline: none;
-      transition: border-color 0.2s;
-      line-height: 1.6;
-      width: 100%;
-      min-height: 80px;
-    }
-    textarea:focus { border-color: var(--accent); }
-
-    select.preset-sel {
-      background: var(--bg);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-sm);
-      color: var(--text);
-      font-size: 0.88rem;
-      padding: 8px 12px;
-      outline: none;
-      cursor: pointer;
-    }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Pacific Atlantic Water Flow</title>
+<link rel="stylesheet" href="../shared/style.css" />
+<script src="../shared/gsap.min.js"></script>
+<script src="../shared/viz.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: "Fira Code", "Cascadia Code", monospace; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+  #header { padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+  #phase-badge { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; padding: 3px 10px; border-radius: var(--radius-sm); background: #1e3a5f; color: var(--blue); border: 1px solid var(--blue); }
+  #step-counter { font-size: 12px; color: var(--text-muted); margin-left: auto; }
+  .viz-inputs { width: 100%; max-width: 100%; padding: 10px 16px; background: var(--surface); border: none; border-bottom: 1px solid var(--border); border-radius: 0; display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; flex-shrink: 0; }
+  .viz-inputs label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); display: block; margin-bottom: 3px; }
+  .viz-inputs select, .viz-inputs input { background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 0 8px; height: 30px; font-size: 0.82rem; font-family: inherit; }
+  .viz-inputs textarea { background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 6px 8px; font-size: 0.82rem; font-family: inherit; resize: vertical; min-height: 70px; width: 260px; }
+  .vi-btn-run { padding: 6px 14px; border-radius: 6px; font-size: 0.82rem; font-weight: 600; cursor: pointer; font-family: inherit; background: var(--accent); color: #fff; border: none; }
+  .vi-btn-rand { padding: 6px 14px; border-radius: 6px; font-size: 0.82rem; cursor: pointer; font-family: inherit; background: var(--bg); color: var(--text); border: 1px solid var(--border); }
+  #main { display: flex; flex: 1; overflow: hidden; }
+  #viz-area { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding: 16px; gap: 12px; overflow-y: auto; }
+  #desc { font-size: 13px; color: var(--text-muted); text-align: center; max-width: 560px; min-height: 36px; line-height: 1.5; }
+  #resize-handle { width: 5px; flex-shrink: 0; cursor: col-resize; background: transparent; border-left: 1px solid var(--border); transition: background .15s; z-index: 10; }
+  #resize-handle:hover, #resize-handle.dragging { background: var(--accent); }
+  #code-panel { width: 350px; min-width: 120px; max-width: 560px; flex-shrink: 0; background: #0d1117; overflow-y: auto; overflow-x: auto; padding: 10px 12px; display: flex; flex-direction: column; }
+  .cl { display: flex; align-items: stretch; border-left: 3px solid transparent; padding: 0 4px; white-space: pre; color: var(--text-muted); font-family: 'Fira Code','Cascadia Code',monospace; font-size: 0.73rem; line-height: 1.7; }
+  .cl .ln { width: 28px; min-width: 28px; text-align: right; color: #3d4468; user-select: none; padding-right: 14px; font-size: 0.68rem; line-height: 1.7; }
+  .cl .code { color: var(--text-muted); }
+  .cl[style*="background"] .ln, .cl.hl .ln { color: var(--accent); }
+  .kw { color: var(--purple); } .fn { color: var(--blue); } .bi { color: var(--orange); } .op { color: var(--text); } .cm { color: #3d4468; font-style: italic; } .nb { color: var(--green); } .st { color: var(--yellow); }
+  #sidebar { width: 220px; flex-shrink: 0; background: var(--surface); border-left: 1px solid var(--border); overflow-y: auto; padding: 14px 12px; display: flex; flex-direction: column; gap: 12px; }
+  .sidebar-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--text-dim); margin-bottom: 6px; }
+  #nav-row { flex-shrink: 0; display: flex; align-items: center; gap: 8px; padding: 10px 16px; background: var(--surface); border-top: 1px solid var(--border); }
+  .btn-step { padding: 6px 14px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--surface); color: var(--text); font-family: inherit; font-size: 12px; cursor: pointer; }
+  .btn-step:hover { background: #334155; }
+  .btn-play { padding: 6px 14px; border-radius: var(--radius-sm); border-color: var(--accent); background: var(--accent); color: #fff; font-family: inherit; font-size: 12px; cursor: pointer; }
+  .btn-play:hover { background: var(--accent-hover); }
+  #nav-row select { padding: 5px 8px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: #1e293b; color: var(--text); font-size: 12px; font-family: inherit; cursor: pointer; }
+  /* grid viz */
+  .grid-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 16px; display: flex; justify-content: center; align-items: center; min-height: 120px; position: relative; width: 100%; }
+  .ocean-label { position: absolute; font-size: 0.62rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; opacity: 0.55; }
+  .ocean-label.pacific { top: 6px; left: 10px; color: #7aa2f7; }
+  .ocean-label.atlantic { bottom: 6px; right: 10px; color: #ff9e64; }
+  #grid { display: grid; gap: 4px; user-select: none; }
+  .cell { border-radius: 5px; box-sizing: border-box; border: 2px solid transparent; display: flex; align-items: center; justify-content: center; font-size: 0.68rem; font-weight: 700; font-family: monospace; color: rgba(255,255,255,0.55); transition: none; }
+  /* legend */
+  .legend-row { display: flex; flex-wrap: wrap; gap: 8px; }
+  .leg-item { display: flex; align-items: center; gap: 5px; font-size: 0.7rem; color: var(--text-muted); }
+  .leg-swatch { width: 16px; height: 16px; border-radius: 3px; border: 2px solid; flex-shrink: 0; }
+  /* phase chips */
+  .phase-chips { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
+  .phase-chip { font-size: 0.68rem; font-weight: 700; padding: 2px 8px; border-radius: 20px; border: 1px solid; opacity: 0.35; transition: opacity 0.2s; }
+  .phase-chip.active { opacity: 1; }
+  .phase-chip.pac { color: #7aa2f7; border-color: #7aa2f7; background: rgba(122,162,247,0.1); }
+  .phase-chip.atl { color: #ff9e64; border-color: #ff9e64; background: rgba(255,158,100,0.1); }
+  .phase-chip.both { color: #9ece6a; border-color: #9ece6a; background: rgba(158,206,106,0.1); }
+  .count-row { display: flex; gap: 12px; margin-top: 6px; }
+  .count-item { display: flex; flex-direction: column; gap: 2px; }
+  .count-label { font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-dim); font-weight: 700; }
+  .count-val { font-size: 1.4rem; font-weight: 700; font-family: monospace; line-height: 1; }
+  .count-val.pac { color: #7aa2f7; } .count-val.atl { color: #ff9e64; } .count-val.both { color: #9ece6a; }
+  .queue-list { display: flex; gap: 5px; flex-wrap: wrap; min-height: 30px; max-height: 90px; overflow-y: auto; align-content: flex-start; }
+  .q-chip { border-radius: 5px; padding: 2px 7px; font-size: 0.72rem; font-weight: 700; white-space: nowrap; font-family: monospace; }
+  .q-chip.pac { background: #1a2040; color: #7aa2f7; border: 1px solid #7aa2f7; }
+  .q-chip.atl { background: #2a1800; color: #ff9e64; border: 1px solid #ff9e64; }
+  .q-chip.both { background: #182010; color: #9ece6a; border: 1px solid #9ece6a; }
+  .q-empty { color: var(--text-faint); font-size: 0.8rem; font-style: italic; }
+</style>
 </head>
-<body class="page">
+<body>
 
-<div class="page-header">
-  <a class="back-link" href="../index.html">&larr; All Algorithms</a>
-  <h1 class="page-title">Pacific Atlantic Water Flow</h1>
-</div>
-
-<div class="controls">
-  <div class="field">
+<div class="viz-inputs">
+  <div style="display:flex;flex-direction:column;gap:3px">
     <label>Preset</label>
-    <select class="preset-sel" id="preset-sel" onchange="loadPreset()">
+    <select id="preset-sel" onchange="loadPreset()">
       <option value="0">Classic 5&times;5 &mdash; 7 cells reach both</option>
       <option value="1">All Plateau &mdash; all cells reach both</option>
       <option value="2">Funnel &mdash; 3 cells reach both</option>
     </select>
   </div>
-  <div class="field" style="flex: 2; min-width: 200px;">
-    <label>Grid heights (one row per line, space-separated)</label>
+  <div style="display:flex;flex-direction:column;gap:3px">
+    <label>Grid heights (one row per line)</label>
     <textarea id="inp-grid">1 2 2 3 5
 3 2 3 4 4
 2 4 5 3 1
 6 7 1 4 5
 5 1 1 2 4</textarea>
   </div>
-  <button class="btn-primary" onclick="buildViz()">Build</button>
+  <button class="vi-btn-run" onclick="buildAndRun()">Run</button>
+  <button class="vi-btn-rand" onclick="randomExample()">&#127922; Random</button>
+</div>
+<div class="controls"></div>
+
+<div id="header">
+  <span id="phase-badge">Setup</span>
+  <span style="font-size:13px;font-weight:700;">Pacific Atlantic Water Flow</span>
+  <span id="step-counter">Step 0 / 0</span>
 </div>
 
-<div class="viz-area">
-  <div class="grid-wrap">
-    <span class="ocean-label pacific">&#9650; Pacific (top &amp; left)</span>
-    <span class="ocean-label atlantic">Atlantic (bottom &amp; right) &#9660;</span>
-    <div id="grid"></div>
-  </div>
-
-  <div class="status-bar" style="max-width:100%">
-    <span class="phase-label" id="phase-label">&mdash;</span>
-    <span class="step-desc" id="step-desc">Choose a preset or edit the grid above, then click Build.</span>
-  </div>
-
-  <div class="bottom-row">
-    <div class="code-panel">
-      <div class="code-header">Python &mdash; Reverse BFS from Ocean Borders</div>
-      <div class="code-body" id="code-body"></div>
+<div id="main">
+  <div id="viz-area">
+    <div class="grid-wrap" style="flex-shrink:0">
+      <span class="ocean-label pacific">&#9650; Pacific (top &amp; left)</span>
+      <span class="ocean-label atlantic">Atlantic (bottom &amp; right) &#9660;</span>
+      <div id="grid"></div>
     </div>
-
-    <div class="right-col">
-      <div class="panel-box">
-        <div class="panel-title">Phase</div>
-        <div class="phase-chips">
-          <div class="phase-chip pac" id="chip-pac">Pacific BFS</div>
-          <div class="phase-chip atl" id="chip-atl">Atlantic BFS</div>
-          <div class="phase-chip both" id="chip-both">Intersection</div>
-        </div>
-        <div class="count-row">
-          <div class="count-item">
-            <div class="count-label">Pacific</div>
-            <div class="count-val pac" id="cnt-pac">&mdash;</div>
-          </div>
-          <div class="count-item">
-            <div class="count-label">Atlantic</div>
-            <div class="count-val atl" id="cnt-atl">&mdash;</div>
-          </div>
-          <div class="count-item">
-            <div class="count-label">Both</div>
-            <div class="count-val both" id="cnt-both">&mdash;</div>
-          </div>
-        </div>
-      </div>
-
-      <div class="panel-box">
-        <div class="panel-title">BFS Queue <span class="panel-sub">(current wave)</span></div>
-        <div id="queue-items" class="queue-list"><span class="q-empty">not started</span></div>
-      </div>
+    <div id="desc">Choose a preset or edit the grid above, then click Run.</div>
+    <div class="legend-row">
+      <div class="leg-item"><div class="leg-swatch" style="background:#111420;border-color:#1a1e2a"></div>Unvisited</div>
+      <div class="leg-item"><div class="leg-swatch" style="background:#1a2a4a;border-color:#7aa2f7"></div>Pacific</div>
+      <div class="leg-item"><div class="leg-swatch" style="background:#3a2010;border-color:#ff9e64"></div>Atlantic</div>
+      <div class="leg-item"><div class="leg-swatch" style="background:#2a4060;border-color:#fff"></div>Frontier (Pac)</div>
+      <div class="leg-item"><div class="leg-swatch" style="background:#5a3010;border-color:#fff"></div>Frontier (Atl)</div>
+      <div class="leg-item"><div class="leg-swatch" style="background:#1a3a10;border-color:#9ece6a"></div>Both &mdash; answer</div>
     </div>
   </div>
+  <div id="resize-handle"></div>
+  <div id="code-panel">
+    <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--text-dim);margin-bottom:8px;">Python &mdash; Reverse BFS from Ocean Borders</div>
+    <div id="code-body"></div>
+  </div>
+  <div id="sidebar">
+    <div>
+      <div class="sidebar-title">Phase</div>
+      <div class="phase-chips">
+        <div class="phase-chip pac" id="chip-pac">Pacific BFS</div>
+        <div class="phase-chip atl" id="chip-atl">Atlantic BFS</div>
+        <div class="phase-chip both" id="chip-both">Intersection</div>
+      </div>
+      <div class="count-row">
+        <div class="count-item">
+          <div class="count-label">Pacific</div>
+          <div class="count-val pac" id="cnt-pac">&mdash;</div>
+        </div>
+        <div class="count-item">
+          <div class="count-label">Atlantic</div>
+          <div class="count-val atl" id="cnt-atl">&mdash;</div>
+        </div>
+        <div class="count-item">
+          <div class="count-label">Both</div>
+          <div class="count-val both" id="cnt-both">&mdash;</div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="sidebar-title">BFS Queue</div>
+      <div id="queue-items" class="queue-list"><span class="q-empty">not started</span></div>
+    </div>
+  </div>
 </div>
 
-<div class="legend">
-  <div class="leg-item">
-    <div class="leg-swatch square" style="background:#111420;border:1px solid #1a1e2a"></div>Unvisited
-  </div>
-  <div class="leg-item">
-    <div class="leg-swatch square" style="background:#1a2a4a;border:2px solid #7aa2f7"></div>Reaches Pacific
-  </div>
-  <div class="leg-item">
-    <div class="leg-swatch square" style="background:#3a2010;border:2px solid #ff9e64"></div>Reaches Atlantic
-  </div>
-  <div class="leg-item">
-    <div class="leg-swatch square" style="background:#2a4060;border:2px solid #fff"></div>BFS frontier (Pacific)
-  </div>
-  <div class="leg-item">
-    <div class="leg-swatch square" style="background:#5a3010;border:2px solid #fff"></div>BFS frontier (Atlantic)
-  </div>
-  <div class="leg-item">
-    <div class="leg-swatch square" style="background:#1a3a10;border:2px solid #9ece6a"></div>Reaches both &mdash; answer
-  </div>
-</div>
-
-<div class="nav-row">
-  <div class="step-nav">
-    <button class="stepBtn" id="prevBtn" disabled>&larr; Back</button>
-    <button class="stepBtn" id="stepBtn" disabled>Next &rarr;</button>
-  </div>
-  <button class="playBtn" id="playBtn" disabled>&#9654; Play</button>
-  <select class="speedSel" id="speedSel">
+<div id="nav-row">
+  <button id="prevBtn" class="btn-step">&#8592; Prev</button>
+  <button id="stepBtn" class="btn-step">Step &#8594;</button>
+  <button id="playBtn" class="btn-play">Play</button>
+  <button id="resetBtn" class="btn-step">&#8635; Reset</button>
+  <select id="speedSel">
     <option value="700">Slow</option>
     <option value="280" selected>Medium</option>
     <option value="80">Fast</option>
@@ -381,7 +164,6 @@
 </div>
 
 <script>
-// ── Presets ────────────────────────────────────────────────────────────────────
 var PRESETS = [
   { grid: '1 2 2 3 5\n3 2 3 4 4\n2 4 5 3 1\n6 7 1 4 5\n5 1 1 2 4' },
   { grid: '3 3 3\n3 3 3\n3 3 3' },
@@ -391,10 +173,16 @@ var PRESETS = [
 function loadPreset() {
   var idx = parseInt(document.getElementById('preset-sel').value);
   document.getElementById('inp-grid').value = PRESETS[idx].grid;
-  buildViz();
+  buildAndRun();
 }
 
-// ── Code panel ─────────────────────────────────────────────────────────────────
+function randomExample() {
+  var idx = Math.floor(Math.random() * PRESETS.length);
+  document.getElementById('inp-grid').value = PRESETS[idx].grid;
+  document.getElementById('preset-sel').value = String(idx);
+  buildAndRun();
+}
+
 var CODE = [
   [1,  '<span class="kw">from</span> collections <span class="kw">import</span> <span class="bi">deque</span>'],
   [0,  ''],
@@ -441,11 +229,9 @@ function buildCodePanel() {
   });
 }
 
-// ── State ──────────────────────────────────────────────────────────────────────
 var ROWS = 0, COLS = 0;
 var simSteps = [];
 
-// ── Parse grid ─────────────────────────────────────────────────────────────────
 function parseGrid() {
   var raw = document.getElementById('inp-grid').value.trim();
   var lines = raw.split(/\n+/).map(function(l) { return l.trim(); }).filter(function(l) { return l.length > 0; });
@@ -462,268 +248,96 @@ function parseGrid() {
   return parsed;
 }
 
-// ── BFS simulation ─────────────────────────────────────────────────────────────
-function runBFS(heights, seeds) {
-  var rows = heights.length, cols = heights[0].length;
-  var visited = {};
-  var waves = [];
-  seeds.forEach(function(rc) { visited[rc[0]+','+rc[1]] = true; });
-  var current = seeds.slice();
-  waves.push(current.slice());
-  var DIRS = [[-1,0],[1,0],[0,-1],[0,1]];
-  while (current.length > 0) {
-    var next = [];
-    var nextKeys = {};
-    current.forEach(function(rc) {
-      var r = rc[0], c = rc[1];
-      DIRS.forEach(function(d) {
-        var nr = r + d[0], nc = c + d[1];
-        var key = nr + ',' + nc;
-        if (nr >= 0 && nr < rows && nc >= 0 && nc < cols
-            && !visited[key] && !nextKeys[key]
-            && heights[nr][nc] >= heights[r][c]) {
-          nextKeys[key] = true;
-          visited[key] = true;
-          next.push([nr, nc]);
-        }
-      });
-    });
-    if (next.length) waves.push(next.slice());
-    current = next;
-  }
-  return { visited: visited, waves: waves };
-}
-
-// ── Build simulation steps ─────────────────────────────────────────────────────
 function buildSteps(heights) {
   var rows = heights.length, cols = heights[0].length;
   var steps = [];
   var DIRS = [[-1,0],[1,0],[0,-1],[0,1]];
-
-  // cell state: 'none','pac','atl','both','frontier-pac','frontier-atl'
   var cellSt = [];
   for (var r = 0; r < rows; r++) {
     cellSt.push([]);
     for (var c = 0; c < cols; c++) cellSt[r].push('none');
   }
-
   var pacVisited = {};
   var atlVisited = {};
 
   function snap(phase, desc, lines, queue, qType) {
     steps.push({
-      phase: phase,
-      desc: desc,
-      lines: lines || [],
+      phase: phase, desc: desc, lines: lines || [],
       cells: cellSt.map(function(row) { return row.slice(); }),
-      queue: (queue || []).slice(),
-      qType: qType || 'pac',
+      queue: (queue || []).slice(), qType: qType || 'pac',
       pacCount: Object.keys(pacVisited).length,
       atlCount: Object.keys(atlVisited).length,
     });
   }
 
-  // Seeds
-  var pacSeeds = [];
-  var atlSeeds = [];
-  for (var r = 0; r < rows; r++) {
-    pacSeeds.push([r, 0]);
-    atlSeeds.push([r, cols - 1]);
-  }
+  var pacSeeds = [], atlSeeds = [];
+  for (var r = 0; r < rows; r++) { pacSeeds.push([r, 0]); atlSeeds.push([r, cols - 1]); }
   for (var c = 1; c < cols; c++) pacSeeds.push([0, c]);
   for (var c = 0; c < cols - 1; c++) atlSeeds.push([rows - 1, c]);
 
-  // Deduplicate seeds
   var pacSeedMap = {};
-  pacSeeds = pacSeeds.filter(function(rc) {
-    var k = rc[0]+','+rc[1];
-    if (pacSeedMap[k]) return false;
-    pacSeedMap[k] = true; return true;
-  });
+  pacSeeds = pacSeeds.filter(function(rc) { var k = rc[0]+','+rc[1]; if (pacSeedMap[k]) return false; pacSeedMap[k] = true; return true; });
   var atlSeedMap = {};
-  atlSeeds = atlSeeds.filter(function(rc) {
-    var k = rc[0]+','+rc[1];
-    if (atlSeedMap[k]) return false;
-    atlSeedMap[k] = true; return true;
-  });
+  atlSeeds = atlSeeds.filter(function(rc) { var k = rc[0]+','+rc[1]; if (atlSeedMap[k]) return false; atlSeedMap[k] = true; return true; });
 
-  snap('Init',
-    'Seed Pacific queue with top row + left column (' + pacSeeds.length + ' cells). Seed Atlantic queue with bottom row + right column (' + atlSeeds.length + ' cells).',
-    [22, 23, 24, 25],
-    [], 'pac'
-  );
+  snap('Init', 'Seed Pacific queue with top row + left column (' + pacSeeds.length + ' cells). Seed Atlantic queue with bottom row + right column (' + atlSeeds.length + ' cells).', [22, 23, 24, 25], [], 'pac');
 
-  // ── Phase 1: Pacific BFS ──────────────────────────────────────────────────────
-  pacSeeds.forEach(function(rc) {
-    pacVisited[rc[0]+','+rc[1]] = true;
-    cellSt[rc[0]][rc[1]] = 'pac';
-  });
-
-  snap('Pacific BFS',
-    'Mark all Pacific border cells as reachable. Enqueue ' + pacSeeds.length + ' seed(s).',
-    [27, 6, 7, 8],
-    pacSeeds.map(function(rc) { return [rc[0], rc[1]]; }),
-    'pac'
-  );
+  pacSeeds.forEach(function(rc) { pacVisited[rc[0]+','+rc[1]] = true; cellSt[rc[0]][rc[1]] = 'pac'; });
+  snap('Pacific BFS', 'Mark all Pacific border cells as reachable. Enqueue ' + pacSeeds.length + ' seed(s).', [27, 6, 7, 8], pacSeeds.map(function(rc) { return [rc[0], rc[1]]; }), 'pac');
 
   var current = pacSeeds.slice();
   while (current.length > 0) {
-    // show frontier
     current.forEach(function(rc) { cellSt[rc[0]][rc[1]] = 'frontier-pac'; });
-    snap('Pacific BFS',
-      'Dequeuing ' + current.length + ' cell(s). Checking neighbors with height ≥ current cell.',
-      [9, 10, 11, 12, 13, 14, 15, 16, 17],
-      current.map(function(rc) { return [rc[0], rc[1]]; }),
-      'pac'
-    );
-
-    var next = [];
-    var nextKeys = {};
+    snap('Pacific BFS', 'Dequeuing ' + current.length + ' cell(s). Checking neighbors with height >= current cell.', [9, 10, 11, 12, 13, 14, 15, 16, 17], current.map(function(rc) { return [rc[0], rc[1]]; }), 'pac');
+    var next = [], nextKeys = {};
     current.forEach(function(rc) {
       var r = rc[0], c = rc[1];
       DIRS.forEach(function(d) {
-        var nr = r + d[0], nc = c + d[1];
-        var key = nr + ',' + nc;
-        if (nr >= 0 && nr < rows && nc >= 0 && nc < cols
-            && !pacVisited[key] && !nextKeys[key]
-            && heights[nr][nc] >= heights[r][c]) {
-          nextKeys[key] = true;
-          pacVisited[key] = true;
-          next.push([nr, nc]);
-        }
+        var nr = r + d[0], nc = c + d[1], key = nr + ',' + nc;
+        if (nr >= 0 && nr < rows && nc >= 0 && nc < cols && !pacVisited[key] && !nextKeys[key] && heights[nr][nc] >= heights[r][c]) { nextKeys[key] = true; pacVisited[key] = true; next.push([nr, nc]); }
       });
     });
-
     current.forEach(function(rc) { cellSt[rc[0]][rc[1]] = 'pac'; });
-
     if (next.length > 0) {
       next.forEach(function(rc) { cellSt[rc[0]][rc[1]] = 'pac'; });
-      snap('Pacific BFS',
-        'Added ' + next.length + ' new cell(s) reachable from Pacific. ' + Object.keys(pacVisited).length + ' total Pacific cells so far.',
-        [18, 19],
-        next.map(function(rc) { return [rc[0], rc[1]]; }),
-        'pac'
-      );
+      snap('Pacific BFS', 'Added ' + next.length + ' new cell(s) reachable from Pacific. ' + Object.keys(pacVisited).length + ' total Pacific cells so far.', [18, 19], next.map(function(rc) { return [rc[0], rc[1]]; }), 'pac');
     }
-
     current = next;
   }
+  snap('Pacific BFS', 'Pacific BFS complete. ' + Object.keys(pacVisited).length + ' cell(s) can flow to the Pacific Ocean.', [20, 27], [], 'pac');
 
-  snap('Pacific BFS',
-    'Pacific BFS complete. ' + Object.keys(pacVisited).length + ' cell(s) can flow to the Pacific Ocean.',
-    [20, 27],
-    [], 'pac'
-  );
-
-  // ── Phase 2: Atlantic BFS ─────────────────────────────────────────────────────
-  atlSeeds.forEach(function(rc) {
-    atlVisited[rc[0]+','+rc[1]] = true;
-    var k = rc[0]+','+rc[1];
-    cellSt[rc[0]][rc[1]] = pacVisited[k] ? 'both' : 'atl';
-  });
-
-  snap('Atlantic BFS',
-    'Mark all Atlantic border cells as reachable. Enqueue ' + atlSeeds.length + ' seed(s). Now running second BFS.',
-    [28, 6, 7, 8],
-    atlSeeds.map(function(rc) { return [rc[0], rc[1]]; }),
-    'atl'
-  );
+  atlSeeds.forEach(function(rc) { atlVisited[rc[0]+','+rc[1]] = true; var k = rc[0]+','+rc[1]; cellSt[rc[0]][rc[1]] = pacVisited[k] ? 'both' : 'atl'; });
+  snap('Atlantic BFS', 'Mark all Atlantic border cells as reachable. Enqueue ' + atlSeeds.length + ' seed(s).', [28, 6, 7, 8], atlSeeds.map(function(rc) { return [rc[0], rc[1]]; }), 'atl');
 
   current = atlSeeds.slice();
   while (current.length > 0) {
     current.forEach(function(rc) { cellSt[rc[0]][rc[1]] = 'frontier-atl'; });
-    snap('Atlantic BFS',
-      'Dequeuing ' + current.length + ' cell(s). Checking neighbors with height ≥ current cell.',
-      [9, 10, 11, 12, 13, 14, 15, 16, 17],
-      current.map(function(rc) { return [rc[0], rc[1]]; }),
-      'atl'
-    );
-
-    var next = [];
-    var nextKeys = {};
+    snap('Atlantic BFS', 'Dequeuing ' + current.length + ' cell(s). Checking neighbors with height >= current cell.', [9, 10, 11, 12, 13, 14, 15, 16, 17], current.map(function(rc) { return [rc[0], rc[1]]; }), 'atl');
+    var next = [], nextKeys = {};
     current.forEach(function(rc) {
       var r = rc[0], c = rc[1];
       DIRS.forEach(function(d) {
-        var nr = r + d[0], nc = c + d[1];
-        var key = nr + ',' + nc;
-        if (nr >= 0 && nr < rows && nc >= 0 && nc < cols
-            && !atlVisited[key] && !nextKeys[key]
-            && heights[nr][nc] >= heights[r][c]) {
-          nextKeys[key] = true;
-          atlVisited[key] = true;
-          next.push([nr, nc]);
-        }
+        var nr = r + d[0], nc = c + d[1], key = nr + ',' + nc;
+        if (nr >= 0 && nr < rows && nc >= 0 && nc < cols && !atlVisited[key] && !nextKeys[key] && heights[nr][nc] >= heights[r][c]) { nextKeys[key] = true; atlVisited[key] = true; next.push([nr, nc]); }
       });
     });
-
-    current.forEach(function(rc) {
-      var k = rc[0]+','+rc[1];
-      cellSt[rc[0]][rc[1]] = pacVisited[k] ? 'both' : 'atl';
-    });
-
+    current.forEach(function(rc) { var k = rc[0]+','+rc[1]; cellSt[rc[0]][rc[1]] = pacVisited[k] ? 'both' : 'atl'; });
     if (next.length > 0) {
-      next.forEach(function(rc) {
-        var k = rc[0]+','+rc[1];
-        cellSt[rc[0]][rc[1]] = pacVisited[k] ? 'both' : 'atl';
-      });
-      snap('Atlantic BFS',
-        'Added ' + next.length + ' new cell(s) reachable from Atlantic. ' + Object.keys(atlVisited).length + ' total Atlantic cells.',
-        [18, 19],
-        next.map(function(rc) { return [rc[0], rc[1]]; }),
-        'atl'
-      );
+      next.forEach(function(rc) { var k = rc[0]+','+rc[1]; cellSt[rc[0]][rc[1]] = pacVisited[k] ? 'both' : 'atl'; });
+      snap('Atlantic BFS', 'Added ' + next.length + ' new cell(s) reachable from Atlantic. ' + Object.keys(atlVisited).length + ' total Atlantic cells.', [18, 19], next.map(function(rc) { return [rc[0], rc[1]]; }), 'atl');
     }
-
     current = next;
   }
 
-  // Final intersection count
   var bothCount = 0;
   for (var key in pacVisited) { if (atlVisited[key]) bothCount++; }
-
-  // Mark all both cells
-  for (var r = 0; r < rows; r++) {
-    for (var c = 0; c < cols; c++) {
-      var k = r + ',' + c;
-      if (pacVisited[k] && atlVisited[k]) cellSt[r][c] = 'both';
-    }
-  }
-
-  snap('Done',
-    'Intersection: ' + bothCount + ' cell(s) can flow to both Pacific and Atlantic. These are the answer.',
-    [30],
-    [], 'both'
-  );
-
+  for (var r = 0; r < rows; r++) { for (var c = 0; c < cols; c++) { var k = r + ',' + c; if (pacVisited[k] && atlVisited[k]) cellSt[r][c] = 'both'; } }
+  snap('Done', 'Intersection: ' + bothCount + ' cell(s) can flow to both Pacific and Atlantic.', [30], [], 'both');
+  steps[steps.length - 1]._bothCount = bothCount;
   return steps;
 }
 
-// ── Grid shell ─────────────────────────────────────────────────────────────────
 var gridHeights = [];
-
-function renderGridShell() {
-  var container = document.getElementById('grid');
-  var maxW = container.parentElement.clientWidth - 40;
-  var cellSize = Math.max(26, Math.min(72, Math.floor(maxW / COLS) - 4));
-  container.style.gridTemplateColumns = 'repeat(' + COLS + ', ' + cellSize + 'px)';
-  container.innerHTML = '';
-
-  for (var r = 0; r < ROWS; r++) {
-    for (var c = 0; c < COLS; c++) {
-      var cell = document.createElement('div');
-      cell.className = 'cell';
-      cell.id = 'cell-' + r + '-' + c;
-      cell.style.width = cellSize + 'px';
-      cell.style.height = cellSize + 'px';
-      if (cellSize >= 30 && gridHeights[r]) {
-        cell.textContent = gridHeights[r][c];
-      }
-      container.appendChild(cell);
-    }
-  }
-}
-
-// ── Cell colors ────────────────────────────────────────────────────────────────
 var CELL_COLORS = {
   'none':         { bg: '#111420', border: '#1a1e2a' },
   'pac':          { bg: '#1a2a4a', border: '#7aa2f7' },
@@ -745,26 +359,27 @@ function applyCellColor(r, c, st, animate) {
   }
 }
 
-function applyStep(s, animate) {
+function renderGridShell() {
+  var container = document.getElementById('grid');
+  var maxW = container.parentElement.clientWidth - 40;
+  var cellSize = Math.max(26, Math.min(72, Math.floor(maxW / COLS) - 4));
+  container.style.gridTemplateColumns = 'repeat(' + COLS + ', ' + cellSize + 'px)';
+  container.innerHTML = '';
   for (var r = 0; r < ROWS; r++) {
     for (var c = 0; c < COLS; c++) {
-      applyCellColor(r, c, s.cells[r][c], animate);
+      var cell = document.createElement('div');
+      cell.className = 'cell'; cell.id = 'cell-' + r + '-' + c;
+      cell.style.width = cellSize + 'px'; cell.style.height = cellSize + 'px';
+      if (cellSize >= 30 && gridHeights[r]) cell.textContent = gridHeights[r][c];
+      container.appendChild(cell);
     }
   }
-  renderQueue(s.queue, s.qType);
-  renderCounts(s.pacCount, s.atlCount, s.phase);
-  setPhaseChips(s.phase);
-  setCodeLines(s.lines || []);
 }
 
-// ── Queue display ──────────────────────────────────────────────────────────────
 function renderQueue(queue, qType) {
   var container = document.getElementById('queue-items');
   container.innerHTML = '';
-  if (!queue || queue.length === 0) {
-    container.innerHTML = '<span class="q-empty">empty</span>';
-    return;
-  }
+  if (!queue || queue.length === 0) { container.innerHTML = '<span class="q-empty">empty</span>'; return; }
   queue.forEach(function(rc) {
     var chip = document.createElement('div');
     chip.className = 'q-chip ' + (qType || 'pac');
@@ -773,28 +388,20 @@ function renderQueue(queue, qType) {
   });
 }
 
-// ── Phase chips ────────────────────────────────────────────────────────────────
 function setPhaseChips(phase) {
   document.getElementById('chip-pac').className = 'phase-chip pac' + (phase === 'Pacific BFS' || phase === 'Init' ? ' active' : '');
   document.getElementById('chip-atl').className = 'phase-chip atl' + (phase === 'Atlantic BFS' ? ' active' : '');
   document.getElementById('chip-both').className = 'phase-chip both' + (phase === 'Done' ? ' active' : '');
 }
 
-// ── Counts ─────────────────────────────────────────────────────────────────────
 function renderCounts(pac, atl, phase) {
   document.getElementById('cnt-pac').textContent = pac > 0 ? pac : '—';
   document.getElementById('cnt-atl').textContent = atl > 0 ? atl : '—';
-  // both is only meaningful at done
   var bothEl = document.getElementById('cnt-both');
-  if (phase === 'Done' && pac > 0 && atl > 0) {
-    // count intersection from last step
-    bothEl.textContent = simSteps[simSteps.length - 1]._bothCount || '—';
-  } else {
-    bothEl.textContent = '—';
-  }
+  if (phase === 'Done') { bothEl.textContent = simSteps[simSteps.length - 1]._bothCount || '—'; }
+  else { bothEl.textContent = '—'; }
 }
 
-// ── Code highlighting ──────────────────────────────────────────────────────────
 var HL_BG = 'rgba(122,162,247,0.12)';
 var prevLines = [];
 
@@ -802,16 +409,14 @@ function setCodeLines(newLines) {
   prevLines.forEach(function(n) {
     if (newLines.indexOf(n) === -1) {
       var el = document.getElementById('cl-' + n); if (!el) return;
-      el.style.backgroundColor = '';
-      el.style.borderLeftColor = '';
+      el.style.backgroundColor = ''; el.style.borderLeftColor = '';
       var ln = el.querySelector('.ln'); if (ln) ln.style.color = '';
     }
   });
   newLines.forEach(function(n) {
     if (prevLines.indexOf(n) === -1) {
       var el = document.getElementById('cl-' + n); if (!el) return;
-      el.style.backgroundColor = HL_BG;
-      el.style.borderLeftColor = 'var(--accent)';
+      el.style.backgroundColor = HL_BG; el.style.borderLeftColor = 'var(--accent)';
       var ln = el.querySelector('.ln'); if (ln) ln.style.color = 'var(--accent)';
     }
   });
@@ -822,29 +427,27 @@ function setCodeLines(newLines) {
   prevLines = newLines.slice();
 }
 
-// ── Build viz ──────────────────────────────────────────────────────────────────
-function buildViz() {
-  nav.stopPlay();
+function applyStep(s, animate) {
+  for (var r = 0; r < ROWS; r++) {
+    for (var c = 0; c < COLS; c++) { applyCellColor(r, c, s.cells[r][c], animate); }
+  }
+  renderQueue(s.queue, s.qType);
+  renderCounts(s.pacCount, s.atlCount, s.phase);
+  setPhaseChips(s.phase);
+  setCodeLines(s.lines || []);
+}
+
+var nav;
+
+function buildAndRun() {
+  if (nav) nav.stopPlay();
   var grid = parseGrid();
   if (!grid) {
-    document.getElementById('step-desc').textContent = 'Could not parse grid. Enter integer heights, one row per line.';
+    document.getElementById('desc').textContent = 'Could not parse grid.';
     return;
   }
-  ROWS = grid.length;
-  COLS = grid[0].length;
-  gridHeights = grid;
+  ROWS = grid.length; COLS = grid[0].length; gridHeights = grid;
   simSteps = buildSteps(grid);
-
-  // stash bothCount on last step
-  var lastStep = simSteps[simSteps.length - 1];
-  var bothCount = 0;
-  if (lastStep) {
-    lastStep.cells.forEach(function(row) {
-      row.forEach(function(st) { if (st === 'both') bothCount++; });
-    });
-    lastStep._bothCount = bothCount;
-  }
-
   renderGridShell();
   prevLines = [];
   document.getElementById('cnt-pac').textContent = '—';
@@ -855,32 +458,44 @@ function buildViz() {
   nav.load(simSteps);
 }
 
-// ── VizNav ─────────────────────────────────────────────────────────────────────
-var nav = VizNav({
-  btnPrev: document.getElementById('prevBtn'),
-  btnNext: document.getElementById('stepBtn'),
-  btnPlay: document.getElementById('playBtn'),
-  speedSel: document.getElementById('speedSel'),
-  render: function(s, cur, total) {
-    applyStep(s, cur > 0);
-    var phaseEl = document.getElementById('phase-label');
-    var descEl  = document.getElementById('step-desc');
-    if (phaseEl) phaseEl.textContent = 'Step ' + (cur + 1) + ' / ' + total + '  \xb7  ' + s.phase;
-    if (descEl)  descEl.textContent  = s.desc;
-  }
+window.addEventListener('DOMContentLoaded', function() {
+  buildCodePanel();
+  nav = VizNav({
+    btnPrev: document.getElementById('prevBtn'),
+    btnNext: document.getElementById('stepBtn'),
+    btnPlay: document.getElementById('playBtn'),
+    speedSel: document.getElementById('speedSel'),
+    render: function(s, cur, total) {
+      applyStep(s, cur > 0);
+      document.getElementById('phase-badge').textContent = s.phase || 'Setup';
+      document.getElementById('step-counter').textContent = 'Step ' + (cur + 1) + ' / ' + total;
+      var desc = document.getElementById('desc');
+      if (desc) desc.textContent = s.desc || '';
+    }
+  });
+  document.getElementById('resetBtn').addEventListener('click', function() { buildAndRun(); });
+  window.addEventListener('resize', function() { if (ROWS > 0) renderGridShell(); });
+  buildAndRun();
 });
 
-window.addEventListener('resize', function() { if (ROWS > 0) renderGridShell(); });
-
-buildCodePanel();
-buildViz();
-</script>
-
-<script>
-if (window.self !== window.top) {
-  var bl = document.querySelector('.back-link');
-  if (bl) bl.style.display = 'none';
-}
+(function() {
+  var handle = document.getElementById('resize-handle');
+  var panel  = document.getElementById('code-panel');
+  var dragging = false, startX = 0, startW = 0;
+  handle.addEventListener('mousedown', function(e) {
+    dragging = true; startX = e.clientX; startW = panel.offsetWidth;
+    handle.classList.add('dragging'); e.preventDefault();
+  });
+  document.addEventListener('mousemove', function(e) {
+    if (!dragging) return;
+    var delta = startX - e.clientX;
+    panel.style.width = Math.min(560, Math.max(120, startW + delta)) + 'px';
+  });
+  document.addEventListener('mouseup', function() {
+    if (!dragging) return;
+    dragging = false; handle.classList.remove('dragging');
+  });
+})();
 </script>
 </body>
 </html>

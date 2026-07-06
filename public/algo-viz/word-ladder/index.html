@@ -7,17 +7,39 @@
   <link rel="stylesheet" href="../shared/style.css" />
   <script src="../shared/viz.js"></script>
   <style>
-    .viz-area { width: 100%; max-width: 95%; }
-    .main-row { display: grid; grid-template-columns: 1fr 340px; gap: 20px; align-items: start; }
-    @media (max-width: 800px) { .main-row { grid-template-columns: 1fr; } }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: "Fira Code","Cascadia Code",monospace; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
 
+    #header { padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+    #phase-badge { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; padding: 3px 10px; border-radius: var(--radius-sm); background: #1e3a5f; color: var(--blue); border: 1px solid var(--blue); }
+    #step-counter { font-size: 12px; color: var(--text-muted); margin-left: auto; }
+
+    .viz-inputs { width: 100%; padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; flex-wrap: wrap; gap: 12px; align-items: center; flex-shrink: 0; }
+    .viz-inputs label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); display: block; margin-bottom: 3px; }
+    .viz-inputs select, .viz-inputs input { background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 0 8px; height: 30px; font-size: 0.82rem; font-family: inherit; }
+    .vi-btn-run { padding: 6px 14px; border-radius: 6px; font-size: 0.82rem; font-weight: 600; cursor: pointer; background: var(--accent); color: #fff; border: none; }
+    .vi-btn-rand { padding: 6px 14px; border-radius: 6px; font-size: 0.82rem; cursor: pointer; background: var(--bg); color: var(--text); border: 1px solid var(--border); }
+
+    #main { display: flex; flex: 1; overflow: hidden; }
+    #viz-area { flex: 1; overflow: auto; display: flex; flex-direction: column; gap: 10px; padding: 14px 16px; }
+    #resize-handle { width: 5px; flex-shrink: 0; cursor: col-resize; background: transparent; border-left: 1px solid var(--border); transition: background .15s; }
+    #resize-handle:hover, #resize-handle.dragging { background: var(--accent); }
+    #code-panel { width: 350px; min-width: 120px; max-width: 560px; flex-shrink: 0; background: #0d1117; overflow: auto; padding: 10px 12px; }
+    #sidebar { width: 240px; flex-shrink: 0; background: var(--surface); border-left: 1px solid var(--border); overflow-y: auto; padding: 14px 12px; display: flex; flex-direction: column; gap: 10px; }
+
+    #nav-row { flex-shrink: 0; display: flex; align-items: center; gap: 8px; padding: 10px 16px; background: var(--surface); border-top: 1px solid var(--border); }
+    .btn-step { padding: 6px 14px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--surface); color: var(--text); font-family: inherit; font-size: 12px; cursor: pointer; }
+    .btn-play { padding: 6px 14px; border-radius: var(--radius-sm); background: var(--accent); border: 1px solid var(--accent); color: #fff; font-family: inherit; font-size: 12px; cursor: pointer; }
+    #speedSel { padding: 5px 8px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: #1e293b; color: var(--text); font-size: 12px; font-family: inherit; cursor: pointer; }
+
+    /* ── viz-specific ─────────────────────────────────────────── */
     .graph-panel {
       background: var(--surface); border: 1px solid var(--border);
       border-radius: var(--radius-lg); padding: 16px;
-      display: flex; flex-direction: column; gap: 10px;
+      display: flex; flex-direction: column; gap: 10px; flex: 1; min-height: 300px;
     }
     .graph-svg-wrap {
-      width: 100%; aspect-ratio: 1.6;
+      width: 100%; flex: 1; min-height: 260px;
       background: var(--bg); border-radius: var(--radius-sm); overflow: hidden;
     }
     #graph-svg { width: 100%; height: 100%; }
@@ -49,29 +71,13 @@
       text-anchor: end; dominant-baseline: central;
     }
 
-    .right-col { display: flex; flex-direction: column; gap: 10px; }
     .panel-box {
       background: var(--surface); border: 1px solid var(--border);
       border-radius: var(--radius-lg); padding: 12px 14px;
       display: flex; flex-direction: column; gap: 8px;
     }
     .panel-title { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); }
-
-    .nav-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-    .btn-play {
-      background: #15803d; border: none; border-radius: var(--radius-sm);
-      color: #fff; cursor: pointer; font-size: 0.88rem; font-weight: 600;
-      padding: 9px 16px; transition: background 0.2s;
-    }
-    .btn-play:hover { background: #166534; }
-    .btn-play.playing { background: #c2410c; }
-    .btn-play.playing:hover { background: #9a3412; }
-    .btn-play:disabled { opacity: 0.4; cursor: not-allowed; }
-    .speed-select {
-      background: var(--bg); border: 1px solid var(--border);
-      border-radius: var(--radius-sm); color: var(--text);
-      font-size: 0.85rem; padding: 8px 10px; outline: none;
-    }
+    .section-label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); }
 
     .lvl-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
     .level-badge {
@@ -95,52 +101,59 @@
     .legend-row { display: flex; align-items: center; gap: 7px; font-size: 0.74rem; color: var(--text-muted); }
     .legend-dot { width: 11px; height: 11px; border-radius: 50%; flex-shrink: 0; border: 2px solid; }
 
-    .code-panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
     .code-header { padding: 7px 12px; font-size: 0.7rem; font-weight: 600; color: var(--text-dim); border-bottom: 1px solid var(--border); background: var(--bg); }
     .code-body { padding: 8px 0; font-size: 0.74rem; line-height: 1.7; white-space: pre; }
     .code-line { display: flex; align-items: center; padding: 0 12px; }
-    .code-line.hl { background: var(--border-soft); border-left: 2px solid var(--accent); }
+    .code-line.hl { background: rgba(122,162,247,0.12); border-left: 2px solid var(--accent); }
     .ln { min-width: 22px; color: var(--text-ghost); user-select: none; font-size: 0.67rem; }
     .kw { color: var(--purple); } .fn { color: var(--blue); }
     .bi { color: var(--orange); } .cm { color: var(--text-ghost); }
     .nb { color: var(--green); }  .st { color: #e0af68; }
-
-    .preset-row { display: flex; gap: 8px; flex-wrap: wrap; }
-    .btn-preset {
-      padding: 5px 11px; border-radius: var(--radius-sm); background: var(--bg);
-      border: 1px solid var(--border); color: var(--text-dim); font-size: 0.78rem; cursor: pointer;
-      transition: border-color 0.15s, color 0.15s;
-    }
-    .btn-preset:hover, .btn-preset.active { border-color: var(--accent); color: var(--accent-pale); }
-    .section-label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); }
   </style>
 </head>
-<body class="page">
+<body>
 
-<div class="page-header">
-  <a class="back-link" href="../index.html">&larr; All Algorithms</a>
-  <div class="page-title">Word Ladder</div>
-  <div class="page-sub">LeetCode 127 &middot; BFS shortest transformation sequence, one letter at a time &middot; O(N &middot; M&sup2; &middot; 26)</div>
-</div>
-
-<div class="controls">
-  <div class="field">
+<div class="viz-inputs">
+  <div>
     <label>Preset</label>
-    <div class="preset-row">
-      <button class="btn-preset active" id="preset-default" onclick="loadPreset('default')">hit &rarr; cog (5 steps)</button>
-      <button class="btn-preset" id="preset-short" onclick="loadPreset('short')">hot &rarr; dog (3 steps)</button>
-      <button class="btn-preset" id="preset-nope" onclick="loadPreset('nope')">No path</button>
-    </div>
+    <select id="presetSel" onchange="loadPreset()" style="width:200px;">
+      <option value="">— custom —</option>
+      <option value="default" selected>hit → cog (5 steps)</option>
+      <option value="short">hot → dog (3 steps)</option>
+      <option value="cat">cat → dog</option>
+      <option value="big">big → dog</option>
+      <option value="nope">No path</option>
+    </select>
   </div>
-  <button class="btn-primary" onclick="buildAndRun()">Build &amp; Run</button>
+  <div>
+    <label>Begin</label>
+    <input type="text" id="beginInput" value="hit" style="width:80px;" />
+  </div>
+  <div>
+    <label>End</label>
+    <input type="text" id="endInput" value="cog" style="width:80px;" />
+  </div>
+  <div>
+    <label>Word List</label>
+    <input type="text" id="listInput" value="hot,dot,dog,lot,log,cog" style="width:240px;" />
+  </div>
+  <button class="vi-btn-run" onclick="buildAndRun()">Run</button>
+  <button class="vi-btn-rand" onclick="randomExample()">Random</button>
 </div>
 
-<div class="viz-area">
-  <div class="main-row">
+<div class="controls"></div>
 
-    <!-- Left: word ladder graph -->
+<div id="header">
+  <span id="phase-badge">Setup</span>
+  <span style="font-size:13px;font-weight:700;">Word Ladder</span>
+  <span id="step-counter">Step 0 / 0</span>
+</div>
+
+<div id="main">
+  <div id="viz-area">
+    <div class="section-label" id="graph-label">Word Ladder — BFS Frontier Expansion</div>
+    <div style="font-size:0.82rem;color:var(--text-muted);min-height:20px" id="step-desc">Select a preset and click Run.</div>
     <div class="graph-panel">
-      <div class="section-label" id="graph-label">Word Ladder &mdash; BFS Frontier Expansion</div>
       <div class="graph-svg-wrap">
         <svg id="graph-svg" viewBox="0 0 580 340" preserveAspectRatio="xMidYMid meet">
           <defs>
@@ -160,65 +173,60 @@
         </svg>
       </div>
     </div>
+  </div>
 
-    <!-- Right panel -->
-    <div class="right-col">
+  <div id="resize-handle"></div>
 
-      <div class="panel-box">
-        <div class="nav-row">
-          <button class="stepBtn" id="prevBtn" disabled>&larr;</button>
-          <button class="stepBtn" id="stepBtn" disabled>&rarr;</button>
-          <button class="playBtn" id="playBtn" disabled>&#9654; Play</button>
-          <select class="speedSel" id="speedSel">
-            <option value="900">Slow</option>
-            <option value="450" selected>Med</option>
-            <option value="130">Fast</option>
-          </select>
-        </div>
+  <div id="code-panel">
+    <div class="code-header">Python</div>
+    <div class="code-body" id="code-body"></div>
+  </div>
+
+  <div id="sidebar">
+    <div class="panel-box">
+      <div class="panel-title">Status</div>
+      <div class="lvl-row">
+        <div class="level-badge" id="level-badge">Level —</div>
+        <div class="result-badge" id="result-badge"></div>
       </div>
-
-      <div class="panel-box">
-        <div class="panel-title" id="phase-label">&mdash;</div>
-        <div style="font-size:0.82rem;color:var(--text-muted);min-height:38px" id="step-desc">Select a preset and click Build &amp; Run.</div>
-        <div class="lvl-row">
-          <div class="level-badge" id="level-badge">Level &mdash;</div>
-          <div class="result-badge" id="result-badge"></div>
-        </div>
+    </div>
+    <div class="panel-box">
+      <div class="panel-title">BFS Queue</div>
+      <div class="chip-list" id="queue-list">
+        <span style="color:var(--text-ghost);font-size:0.76rem">empty</span>
       </div>
-
-      <div class="panel-box">
-        <div class="panel-title">BFS Queue</div>
-        <div class="chip-list" id="queue-list">
-          <span style="color:var(--text-ghost);font-size:0.76rem">empty</span>
-        </div>
+    </div>
+    <div class="panel-box">
+      <div class="panel-title">Visited</div>
+      <div class="chip-list" id="visited-list">
+        <span style="color:var(--text-ghost);font-size:0.76rem">none</span>
       </div>
-
-      <div class="panel-box">
-        <div class="panel-title">Visited</div>
-        <div class="chip-list" id="visited-list">
-          <span style="color:var(--text-ghost);font-size:0.76rem">none</span>
-        </div>
+    </div>
+    <div class="panel-box">
+      <div class="panel-title">Legend</div>
+      <div style="display:flex;flex-direction:column;gap:5px">
+        <div class="legend-row"><div class="legend-dot" style="background:#1a2540;border-color:#7aa2f7"></div>beginWord</div>
+        <div class="legend-row"><div class="legend-dot" style="background:#3d2010;border-color:#ff9e64"></div>processing (dequeued)</div>
+        <div class="legend-row"><div class="legend-dot" style="background:#2d2010;border-color:#e0af68"></div>frontier (current level)</div>
+        <div class="legend-row"><div class="legend-dot" style="background:#0d2535;border-color:#7dcfff"></div>just discovered</div>
+        <div class="legend-row"><div class="legend-dot" style="background:#1a2b14;border-color:#9ece6a"></div>visited (prev levels)</div>
+        <div class="legend-row"><div class="legend-dot" style="background:#2a0a3a;border-color:#bb9af7"></div>endWord reached!</div>
       </div>
-
-      <div class="panel-box">
-        <div class="panel-title">Legend</div>
-        <div style="display:flex;flex-direction:column;gap:5px">
-          <div class="legend-row"><div class="legend-dot" style="background:#1a2540;border-color:#7aa2f7"></div>beginWord</div>
-          <div class="legend-row"><div class="legend-dot" style="background:#3d2010;border-color:#ff9e64"></div>processing (dequeued)</div>
-          <div class="legend-row"><div class="legend-dot" style="background:#2d2010;border-color:#e0af68"></div>frontier (current level)</div>
-          <div class="legend-row"><div class="legend-dot" style="background:#0d2535;border-color:#7dcfff"></div>just discovered</div>
-          <div class="legend-row"><div class="legend-dot" style="background:#1a2b14;border-color:#9ece6a"></div>visited (prev levels)</div>
-          <div class="legend-row"><div class="legend-dot" style="background:#2a0a3a;border-color:#bb9af7"></div>endWord reached!</div>
-        </div>
-      </div>
-
-      <div class="code-panel">
-        <div class="code-header">Python</div>
-        <div class="code-body" id="code-body"></div>
-      </div>
-
     </div>
   </div>
+</div>
+
+<div id="nav-row">
+  <button id="prevBtn" class="btn-step">&#8592; Prev</button>
+  <button id="stepBtn" class="btn-step">Step &#8594;</button>
+  <button id="playBtn" class="btn-play">Play</button>
+  <button id="resetBtn" class="btn-step">&#8635; Reset</button>
+  <select id="speedSel">
+    <option value="800">0.5&#215;</option>
+    <option value="400" selected>1&#215;</option>
+    <option value="200">2&#215;</option>
+    <option value="100">4&#215;</option>
+  </select>
 </div>
 
 <script>
@@ -244,19 +252,35 @@ var CODE = [
 var PRESETS = {
   'default': {beginWord: 'hit', endWord: 'cog', wordList: ['hot','dot','dog','lot','log','cog']},
   'short':   {beginWord: 'hot', endWord: 'dog', wordList: ['hot','dot','dog','lot','log']},
+  'cat':     {beginWord: 'cat', endWord: 'dog', wordList: ['cat','cot','cog','dog','bat','bag']},
+  'big':     {beginWord: 'big', endWord: 'dog', wordList: ['big','bog','dog','bag','bat']},
   'nope':    {beginWord: 'hit', endWord: 'cog', wordList: ['hot','dot','lot']},
 };
 
-var currentPreset = 'default';
+var RANDOM_POOL = ['default','short','cat','big','nope'];
+
 var currentData = null;
 var simSteps = [];
-var nav;
 
-function loadPreset(name) {
-  currentPreset = name;
-  Object.keys(PRESETS).forEach(function(p) {
-    document.getElementById('preset-' + p).classList.toggle('active', p === name);
-  });
+function loadPreset() {
+  var sel = document.getElementById('presetSel');
+  if (!sel.value) return;
+  var p = PRESETS[sel.value];
+  if (!p) return;
+  document.getElementById('beginInput').value = p.beginWord;
+  document.getElementById('endInput').value = p.endWord;
+  document.getElementById('listInput').value = p.wordList.join(',');
+  buildAndRun();
+}
+
+function randomExample() {
+  var key = RANDOM_POOL[Math.floor(Math.random() * RANDOM_POOL.length)];
+  var p = PRESETS[key];
+  document.getElementById('beginInput').value = p.beginWord;
+  document.getElementById('endInput').value = p.endWord;
+  document.getElementById('listInput').value = p.wordList.join(',');
+  document.getElementById('presetSel').value = '';
+  buildAndRun();
 }
 
 // ── Full BFS: discover all reachable nodes for layout ─────────────────────
@@ -589,29 +613,38 @@ function applyStep(snap) {
   });
 }
 
+function updateStatus(snap, cur, total) {
+  document.getElementById('phase-badge').textContent = snap.phase || 'Step';
+  document.getElementById('step-counter').textContent = 'Step ' + cur + ' / ' + total;
+}
+
 // ── Build & Run ───────────────────────────────────────────────────────────
 function buildAndRun() {
-  var p = PRESETS[currentPreset];
+  var beginWord = (document.getElementById('beginInput').value || '').trim();
+  var endWord   = (document.getElementById('endInput').value || '').trim();
+  var wordList  = (document.getElementById('listInput').value || '')
+                    .split(',').map(function(s){ return s.trim(); }).filter(Boolean);
+  if (!beginWord || !endWord || wordList.length === 0) return;
 
-  var bfsResult    = fullBFS(p.beginWord, p.wordList);
+  var bfsResult    = fullBFS(beginWord, wordList);
   var layoutResult = computeLayout(bfsResult.nodes, SVG_W, SVG_H);
 
   currentData = {
     nodes:     bfsResult.nodes,
     edges:     bfsResult.edges,
     positions: layoutResult.positions,
-    beginWord: p.beginWord,
-    endWord:   p.endWord,
+    beginWord: beginWord,
+    endWord:   endWord,
   };
 
   renderDepthLabels(layoutResult);
   renderGraph(null);
 
-  simSteps = simulate(p.beginWord, p.endWord, p.wordList);
-  nav.load(simSteps);
+  simSteps = simulate(beginWord, endWord, wordList);
+  window.nav.load(simSteps);
 
   document.getElementById('graph-label').textContent =
-    p.beginWord + ' → ' + p.endWord + '  —  wordList: [' + p.wordList.join(', ') + ']';
+    beginWord + ' → ' + endWord + '  —  wordList: [' + wordList.join(', ') + ']';
 }
 
 function buildCodePanel() {
@@ -623,27 +656,43 @@ function buildCodePanel() {
 
 window.addEventListener('DOMContentLoaded', function() {
   buildCodePanel();
-  loadPreset('default');
-  nav = VizNav({
+
+  window.nav = VizNav({
     btnPrev:  document.getElementById('prevBtn'),
     btnNext:  document.getElementById('stepBtn'),
     btnPlay:  document.getElementById('playBtn'),
     speedSel: document.getElementById('speedSel'),
     render: function(snap, cur, total) {
       applyStep(snap);
-      document.getElementById('phase-label').textContent =
-        'Step ' + (cur + 1) + ' / ' + total + '  \xb7  ' + snap.phase;
+      updateStatus(snap, cur, total);
       document.getElementById('step-desc').textContent = snap.desc;
     }
   });
-});
-</script>
 
-<script>
-  if (window.self !== window.top) {
-    var bl = document.querySelector('.back-link');
-    if (bl) bl.style.display = 'none';
-  }
+  document.getElementById('resetBtn').addEventListener('click', function() {
+    if (window.nav) window.nav.goTo(0);
+  });
+
+  document.getElementById('presetSel').value = 'default';
+  loadPreset();
+});
+
+(function() {
+  var h = document.getElementById('resize-handle'),
+      p = document.getElementById('code-panel'),
+      d = false, sx = 0, sw = 0;
+  h.addEventListener('mousedown', function(e) {
+    d = true; sx = e.clientX; sw = p.offsetWidth; h.classList.add('dragging'); e.preventDefault();
+  });
+  document.addEventListener('mousemove', function(e) {
+    if (!d) return;
+    p.style.width = Math.min(560, Math.max(120, sw + (sx - e.clientX))) + 'px';
+  });
+  document.addEventListener('mouseup', function() {
+    if (!d) return;
+    d = false; h.classList.remove('dragging');
+  });
+})();
 </script>
 </body>
 </html>

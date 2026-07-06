@@ -1,202 +1,99 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Reconstruct Itinerary</title>
-  <link rel="stylesheet" href="../shared/style.css" />
-  <script src="../shared/viz.js"></script>
-  <style>
-    body {
-      display: flex; flex-direction: column;
-      height: 100vh; overflow: hidden; margin: 0;
-    }
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Reconstruct Itinerary</title>
+<link rel="stylesheet" href="../shared/style.css" />
+<script src="../shared/viz.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: "Fira Code", "Cascadia Code", monospace; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
 
-    /* ── Top bar ──────────────────────────────────────── */
-    .top-bar {
-      display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
-      padding: 9px 14px; border-bottom: 1px solid var(--border);
-      background: var(--surface); flex-shrink: 0;
-    }
-    .page-title { font-size: 0.95rem; font-weight: 700; color: var(--text-bright); }
-    .back-link  { font-size: 0.75rem; color: var(--text-dim); text-decoration: none; }
-    .back-link:hover { color: var(--accent); }
+  #header { padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+  #phase-badge { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; padding: 3px 10px; border-radius: var(--radius-sm); background: #1e3a5f; color: var(--blue); border: 1px solid var(--blue); }
+  #step-counter { font-size: 12px; color: var(--text-muted); margin-left: auto; }
 
-    /* ── Viz Inputs ───────────────────────────────────── */
-    .viz-inputs {
-      display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end;
-      padding: 10px 14px 14px; width: 100%; max-width: 90%;
-      background: var(--surface); border-bottom: 1px solid var(--border);
-      flex-shrink: 0;
-    }
-    .viz-inputs .field {
-      display: flex; flex-direction: column; gap: 4px;
-    }
-    .viz-inputs label {
-      font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
-      letter-spacing: 0.08em; color: var(--text-dim);
-    }
-    .viz-inputs select {
-      background: var(--bg); border: 1px solid var(--border);
-      color: var(--text); border-radius: var(--radius-sm);
-      padding: 6px 10px; font-size: 0.85rem; cursor: pointer;
-    }
-    .viz-inputs input[type="text"] {
-      background: var(--bg); border: 1px solid var(--border);
-      color: var(--text); border-radius: var(--radius-sm);
-      padding: 6px 10px; font-size: 0.85rem; width: 220px;
-    }
-    .viz-inputs button {
-      padding: 7px 18px; background: var(--accent); color: #fff;
-      border: none; border-radius: var(--radius-sm);
-      font-weight: 600; cursor: pointer; font-size: 0.82rem;
-    }
-    .viz-inputs button:hover { opacity: 0.85; }
-    .viz-inputs .btn-random {
-      background: var(--bg); color: var(--text);
-      border: 1px solid var(--border);
-      padding: 7px 14px;
-    }
-    .viz-inputs .btn-random:hover { border-color: var(--accent); }
+  .viz-inputs { width: 100%; padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; flex-wrap: wrap; gap: 12px; align-items: center; flex-shrink: 0; }
+  .viz-inputs label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); display: block; margin-bottom: 3px; }
+  .viz-inputs select, .viz-inputs input { background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 0 8px; height: 30px; font-size: 0.82rem; font-family: inherit; }
+  .viz-inputs input[type="text"] { width: 260px; }
+  .vi-btn-run { padding: 6px 14px; border-radius: 6px; font-size: 0.82rem; font-weight: 600; cursor: pointer; background: var(--accent); color: #fff; border: none; }
+  .vi-btn-rand { padding: 6px 14px; border-radius: 6px; font-size: 0.82rem; cursor: pointer; background: var(--bg); color: var(--text); border: 1px solid var(--border); }
 
-    /* ── Middle ───────────────────────────────────────── */
-    .middle {
-      flex: 1; display: flex; flex-direction: column; min-height: 0;
-    }
-    .content-row {
-      flex: 1; display: flex; min-height: 0; overflow: hidden;
-    }
+  #main { display: flex; flex: 1; overflow: hidden; }
+  #viz-area { flex: 1; overflow: auto; display: flex; flex-direction: column; }
 
-    /* ── Graph panel ──────────────────────────────────── */
-    .graph-panel {
-      flex: 1; display: flex; flex-direction: column;
-      padding: 10px; min-width: 0; border-right: 1px solid var(--border);
-    }
-    .graph-svg-wrap {
-      flex: 1; background: var(--bg); border-radius: var(--radius-sm); overflow: hidden;
-    }
-    #graph-svg { width: 100%; height: 100%; }
+  #step-desc { font-size: 0.78rem; color: var(--text-muted); line-height: 1.4; padding: 10px 14px 6px; flex-shrink: 0; }
 
-    /* ── Right panel ──────────────────────────────────── */
-    .right-panel {
-      width: 240px; flex-shrink: 0; display: flex; flex-direction: column;
-      overflow-y: auto; border-left: 1px solid var(--border);
-    }
-    .panel-box {
-      padding: 10px 12px; border-bottom: 1px solid var(--border);
-    }
-    .panel-title {
-      font-size: 0.64rem; font-weight: 700; text-transform: uppercase;
-      letter-spacing: 0.08em; color: var(--text-dim); margin-bottom: 7px;
-    }
+  /* graph panel */
+  .graph-panel { flex: 1; display: flex; flex-direction: column; padding: 10px; min-width: 0; min-height: 0; }
+  .graph-svg-wrap { flex: 1; min-height: 260px; background: var(--bg); border-radius: var(--radius-sm); overflow: hidden; }
+  #graph-svg { width: 100%; height: 100%; }
 
-    /* adj list */
-    .adj-row {
-      display: flex; align-items: flex-start; gap: 5px;
-      margin-bottom: 4px; font-size: 0.75rem;
-    }
-    .adj-node {
-      font-family: monospace; font-weight: 700; min-width: 28px;
-      padding: 1px 5px; border-radius: 3px; flex-shrink: 0;
-      border: 1.5px solid var(--border); color: var(--text-dim);
-      font-size: 0.72rem; line-height: 1.5;
-    }
-    .adj-node.hl { border-color: var(--accent); color: var(--accent); }
-    .adj-arrow { color: var(--text-ghost); margin-top: 1px; }
-    .adj-neigh { display: flex; flex-wrap: wrap; gap: 3px; }
-    .adj-tag {
-      font-family: monospace; font-size: 0.7rem; font-weight: 600;
-      padding: 1px 5px; border-radius: 3px;
-      background: #1a1f2e; border: 1px solid #3b4261; color: var(--text);
-    }
-    .adj-empty { color: var(--text-ghost); font-size: 0.7rem; }
+  /* itinerary row */
+  .itin-row { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; padding: 8px 12px; border-top: 1px solid var(--border); background: var(--surface); flex-shrink: 0; min-height: 40px; }
+  .itin-label { font-size: 0.64rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); white-space: nowrap; margin-right: 4px; }
+  .itin-chip { font-family: monospace; font-size: 0.8rem; font-weight: 700; padding: 2px 9px; border-radius: 4px; }
+  .itin-chip.post  { background: #1a1f3a; border: 1px solid #7dcfff; color: #7dcfff; }
+  .itin-chip.final { background: #1a2a1a; border: 1px solid #9ece6a; color: #9ece6a; }
+  .itin-sep  { color: var(--text-ghost); font-size: 0.75rem; }
+  .itin-hint { color: var(--text-ghost); font-size: 0.72rem; font-style: italic; }
 
-    /* call stack */
-    .stack-list { display: flex; flex-direction: column-reverse; gap: 3px; min-height: 24px; }
-    .stack-frame {
-      font-family: monospace; font-size: 0.74rem; font-weight: 600;
-      padding: 2px 8px; border-radius: 3px;
-      background: var(--bg); border: 1px solid var(--border); color: var(--text-dim);
-    }
-    .stack-frame.top { background: #1a1f3a; border-color: #7dcfff; color: #7dcfff; }
+  #resize-handle { width: 5px; flex-shrink: 0; cursor: col-resize; background: transparent; border-left: 1px solid var(--border); transition: background .15s; z-index: 10; }
+  #resize-handle:hover, #resize-handle.dragging { background: var(--accent); }
 
-    /* ── Itinerary row ────────────────────────────────── */
-    .itin-row {
-      display: flex; align-items: center; gap: 5px; flex-wrap: wrap;
-      padding: 8px 12px; border-top: 1px solid var(--border);
-      background: var(--surface); flex-shrink: 0; min-height: 40px;
-    }
-    .itin-label {
-      font-size: 0.64rem; font-weight: 700; text-transform: uppercase;
-      letter-spacing: 0.08em; color: var(--text-dim); white-space: nowrap;
-      margin-right: 4px;
-    }
-    .itin-chip {
-      font-family: monospace; font-size: 0.8rem; font-weight: 700;
-      padding: 2px 9px; border-radius: 4px;
-    }
-    .itin-chip.post  { background: #1a1f3a; border: 1px solid #7dcfff; color: #7dcfff; }
-    .itin-chip.final { background: #1a2a1a; border: 1px solid #9ece6a; color: #9ece6a; }
-    .itin-sep  { color: var(--text-ghost); font-size: 0.75rem; }
-    .itin-hint { color: var(--text-ghost); font-size: 0.72rem; font-style: italic; }
+  #code-panel { width: 300px; min-width: 120px; max-width: 560px; flex-shrink: 0; background: #0d1117; overflow: auto; padding: 10px 12px; display: flex; flex-direction: column; }
+  .code-panel-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--text-dim); margin-bottom: 8px; }
+  .cl { display: flex; align-items: stretch; padding: 2px 0; white-space: pre; border-left: 2px solid transparent; padding-left: 6px; color: var(--text-muted); transition: all 0.2s; font-family: 'Fira Code', 'Cascadia Code', monospace; font-size: 0.75rem; line-height: 1.8; }
+  .cl.hl { background: rgba(122,162,247,0.12); border-left-color: var(--accent); color: var(--text); }
+  .ln { display: inline-block; width: 20px; text-align: right; color: var(--text-dim); user-select: none; margin-right: 10px; font-size: 0.7rem; }
+  .kw { color: var(--purple); }
+  .nb { color: var(--green); }
+  .cm { color: var(--text-dim); font-style: italic; }
 
-    /* ── Bottom nav ───────────────────────────────────── */
-    .nav-bar {
-      display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
-      padding: 8px 12px; border-top: 1px solid var(--border);
-      background: var(--bg); flex-shrink: 0;
-    }
-    .stepBtn {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--radius-sm); color: var(--text);
-      cursor: pointer; font-size: 0.88rem; padding: 6px 12px;
-    }
-    .stepBtn:hover:not(:disabled) { border-color: var(--accent); }
-    .stepBtn:disabled { opacity: 0.3; cursor: not-allowed; }
-    .playBtn {
-      background: #15803d; border: none; border-radius: var(--radius-sm);
-      color: #fff; cursor: pointer; font-size: 0.82rem; font-weight: 600;
-      padding: 7px 13px; transition: background 0.2s;
-    }
-    .playBtn:hover { background: #166534; }
-    .playBtn.playing { background: #c2410c; }
-    .playBtn:disabled { opacity: 0.4; cursor: not-allowed; }
-    .speedSel {
-      background: var(--bg); border: 1px solid var(--border);
-      border-radius: var(--radius-sm); color: var(--text);
-      font-size: 0.8rem; padding: 6px 8px; outline: none;
-    }
-    .step-ctr  { font-size: 0.74rem; color: var(--text-dim); white-space: nowrap; }
-    .step-desc { flex: 1; font-size: 0.78rem; color: var(--text-muted); line-height: 1.4; }
+  #sidebar { width: 240px; flex-shrink: 0; background: var(--surface); border-left: 1px solid var(--border); overflow-y: auto; padding: 0; }
+  .panel-box { padding: 10px 12px; border-bottom: 1px solid var(--border); }
+  .panel-title { font-size: 0.64rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); margin-bottom: 7px; }
 
-    /* ── SVG elements ─────────────────────────────────── */
-    .node-circle { stroke-width: 2.5; transition: fill 0.25s, stroke 0.25s; }
-    .n-default { fill: #1a1b2e; stroke: #414868; }
-    .n-stack   { fill: #1a1f3a; stroke: #7dcfff; }
-    .n-active  { fill: #2a1f10; stroke: #e0af68; }
-    .n-done    { fill: #1a2a1a; stroke: #9ece6a; }
+  /* adj list */
+  .adj-row { display: flex; align-items: flex-start; gap: 5px; margin-bottom: 4px; font-size: 0.75rem; }
+  .adj-node { font-family: monospace; font-weight: 700; min-width: 28px; padding: 1px 5px; border-radius: 3px; flex-shrink: 0; border: 1.5px solid var(--border); color: var(--text-dim); font-size: 0.72rem; line-height: 1.5; }
+  .adj-node.hl { border-color: var(--accent); color: var(--accent); }
+  .adj-arrow { color: var(--text-ghost); margin-top: 1px; }
+  .adj-neigh { display: flex; flex-wrap: wrap; gap: 3px; }
+  .adj-tag { font-family: monospace; font-size: 0.7rem; font-weight: 600; padding: 1px 5px; border-radius: 3px; background: #1a1f2e; border: 1px solid #3b4261; color: var(--text); }
+  .adj-empty { color: var(--text-ghost); font-size: 0.7rem; }
 
-    .node-label {
-      fill: var(--text-bright); font-size: 10px; font-weight: 700;
-      font-family: monospace; text-anchor: middle; dominant-baseline: central;
-      pointer-events: none;
-    }
+  /* call stack */
+  .stack-list { display: flex; flex-direction: column-reverse; gap: 3px; min-height: 24px; }
+  .stack-frame { font-family: monospace; font-size: 0.74rem; font-weight: 600; padding: 2px 8px; border-radius: 3px; background: var(--bg); border: 1px solid var(--border); color: var(--text-dim); }
+  .stack-frame.top { background: #1a1f3a; border-color: #7dcfff; color: #7dcfff; }
 
-    .edge-path { fill: none; stroke-width: 2; transition: stroke 0.25s, opacity 0.25s; }
-    .e-default { stroke: #3b4261; }
-    .e-active  { stroke: #e0af68; stroke-width: 2.5; }
-    .e-used    { stroke: #9ece6a; opacity: 0.35; }
-  </style>
+  /* SVG elements */
+  .node-circle { stroke-width: 2.5; transition: fill 0.25s, stroke 0.25s; }
+  .n-default { fill: #1a1b2e; stroke: #414868; }
+  .n-stack   { fill: #1a1f3a; stroke: #7dcfff; }
+  .n-active  { fill: #2a1f10; stroke: #e0af68; }
+  .n-done    { fill: #1a2a1a; stroke: #9ece6a; }
+  .node-label { fill: var(--text-bright); font-size: 10px; font-weight: 700; font-family: monospace; text-anchor: middle; dominant-baseline: central; pointer-events: none; }
+  .edge-path { fill: none; stroke-width: 2; transition: stroke 0.25s, opacity 0.25s; }
+  .e-default { stroke: #3b4261; }
+  .e-active  { stroke: #e0af68; stroke-width: 2.5; }
+  .e-used    { stroke: #9ece6a; opacity: 0.35; }
+
+  #nav-row { flex-shrink: 0; display: flex; align-items: center; gap: 8px; padding: 10px 16px; background: var(--surface); border-top: 1px solid var(--border); }
+  .btn-step { padding: 6px 14px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--surface); color: var(--text); font-family: inherit; font-size: 12px; cursor: pointer; }
+  .btn-step:hover:not(:disabled) { background: #334155; }
+  .btn-step:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-play { padding: 6px 14px; border-radius: var(--radius-sm); background: var(--accent); border: 1px solid var(--accent); color: #fff; font-family: inherit; font-size: 12px; cursor: pointer; }
+  #speedSel { padding: 5px 8px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: #1e293b; color: var(--text); font-size: 12px; font-family: inherit; cursor: pointer; }
+</style>
 </head>
 <body>
 
-<div class="top-bar">
-  <span class="page-title">Reconstruct Itinerary</span>
-  <a class="back-link" href="../index.html">&larr; All</a>
-</div>
-
 <div class="viz-inputs">
-  <div class="field">
+  <div>
     <label>Preset</label>
     <select id="presetSel" onchange="loadPreset()">
       <option value="">— pick a preset —</option>
@@ -208,19 +105,25 @@
       <option value='{"tickets":"JFK,MUC"}'>Simple One Flight</option>
     </select>
   </div>
-  <div class="field">
+  <div>
     <label>Tickets (src,dst;...)</label>
-    <input class="tickets-input" id="tickets-input"
-      value="JFK,MUC;MUC,LHR;LHR,SFO;SFO,JFK;JFK,SFO;SFO,SJC"
-      placeholder="src,dst;src,dst;...">
+    <input type="text" id="tickets-input" value="JFK,MUC;MUC,LHR;LHR,SFO;SFO,JFK;JFK,SFO;SFO,SJC" placeholder="src,dst;src,dst;..." />
   </div>
-  <button onclick="buildAndRun()">Run</button>
-  <button class="btn-random" onclick="randomExample()">🎲 Random</button>
+  <button class="vi-btn-run" onclick="buildAndRun()">Run</button>
+  <button class="vi-btn-rand" onclick="randomExample()">🎲 Random</button>
 </div>
 
-<div class="middle">
-  <div class="content-row">
+<div class="controls"></div>
 
+<div id="header">
+  <span id="phase-badge">Setup</span>
+  <span style="font-size:13px;font-weight:700;">Reconstruct Itinerary</span>
+  <span id="step-counter">Step 0 / 0</span>
+</div>
+
+<div id="main">
+  <div id="viz-area">
+    <div id="step-desc">Select a preset or enter tickets, then click Run.</div>
     <div class="graph-panel">
       <div class="graph-svg-wrap">
         <svg id="graph-svg" viewBox="0 0 510 310" preserveAspectRatio="xMidYMid meet">
@@ -240,43 +143,74 @@
         </svg>
       </div>
     </div>
-
-    <div class="right-panel">
-      <div class="panel-box">
-        <div class="panel-title">Adjacency List (sorted)</div>
-        <div id="adj-body"></div>
-      </div>
-      <div class="panel-box">
-        <div class="panel-title">DFS Call Stack</div>
-        <div class="stack-list" id="stack-body"></div>
+    <div class="itin-row">
+      <span class="itin-label">Result</span>
+      <div id="itin-body" style="display:flex;align-items:center;gap:4px;flex-wrap:wrap">
+        <span class="itin-hint">—</span>
       </div>
     </div>
-
   </div>
 
-  <div class="itin-row">
-    <span class="itin-label">Result</span>
-    <div id="itin-body" style="display:flex;align-items:center;gap:4px;flex-wrap:wrap">
-      <span class="itin-hint">—</span>
+  <div id="resize-handle"></div>
+
+  <div id="code-panel">
+    <div class="code-panel-title">Code</div>
+    <div id="code-body"></div>
+  </div>
+
+  <div id="sidebar">
+    <div class="panel-box">
+      <div class="panel-title">Adjacency List (sorted)</div>
+      <div id="adj-body"></div>
+    </div>
+    <div class="panel-box">
+      <div class="panel-title">DFS Call Stack</div>
+      <div class="stack-list" id="stack-body"></div>
     </div>
   </div>
 </div>
 
-<div class="nav-bar">
-  <button class="stepBtn" id="prevBtn" disabled>&#8592;</button>
-  <button class="playBtn" id="playBtn" disabled>&#9654; Play</button>
-  <button class="stepBtn" id="stepBtn" disabled>&#8594;</button>
-  <select class="speedSel" id="speedSel">
-    <option value="900">Slow</option>
-    <option value="450" selected>Medium</option>
-    <option value="150">Fast</option>
+<div id="nav-row">
+  <button id="prevBtn" class="btn-step">&#8592; Prev</button>
+  <button id="stepBtn" class="btn-step">Step &#8594;</button>
+  <button id="playBtn" class="btn-play">Play</button>
+  <button id="resetBtn" class="btn-step">&#8635; Reset</button>
+  <select id="speedSel">
+    <option value="800">0.5&#215;</option>
+    <option value="400" selected>1&#215;</option>
+    <option value="200">2&#215;</option>
+    <option value="100">4&#215;</option>
   </select>
-  <span class="step-ctr" id="step-ctr"></span>
-  <span class="step-desc" id="step-desc">Select a preset or enter tickets, then click Run.</span>
 </div>
 
 <script>
-// ── Constants ────────────────────────────────────────────────────────────
+// -- Code panel (Hierholzer's DFS) --------------------------------------------
+var codeLines = [
+  { n: 0,  t: '<span class="kw">def</span> <span class="nb">findItinerary</span>(tickets):' },
+  { n: 1,  t: '  adj = defaultdict(list)' },
+  { n: 2,  t: '  <span class="kw">for</span> src, dst <span class="kw">in</span> <span class="nb">sorted</span>(tickets):' },
+  { n: 3,  t: '    adj[src].append(dst)' },
+  { n: 4,  t: '  route = []' },
+  { n: 5,  t: '  <span class="kw">def</span> <span class="nb">dfs</span>(node):' },
+  { n: 6,  t: '    <span class="kw">while</span> adj[node]:' },
+  { n: 7,  t: '      dfs(adj[node].pop(0))' },
+  { n: 8,  t: '    route.append(node)' },
+  { n: 9,  t: '  dfs(<span class="nb">"JFK"</span>)' },
+  { n: 10, t: '  <span class="kw">return</span> route[::-1]' },
+];
+var PHASE_LINES = { init: [0,1,2,3], sort: [2], enter: [5,6], pop: [6,7], exit: [8], reverse: [10] };
+(function() {
+  var cb = document.getElementById('code-body');
+  codeLines.forEach(function(line) {
+    var el = document.createElement('div');
+    el.className = 'cl';
+    el.id = 'cl-' + line.n;
+    el.innerHTML = '<span class="ln">' + (line.n + 1) + '</span>' + line.t;
+    cb.appendChild(el);
+  });
+})();
+
+// -- Constants ----------------------------------------------------------------
 var R = 22;  // node radius
 
 // Fixed positions for common airport codes
@@ -293,11 +227,11 @@ var FIXED_POS = {
 // State
 var allNodes = [];
 var nodePos  = {};
-var edgeDefs = [];   // [{src, dst, id, d}] — unique (src,dst) visual edges
-var edgeTotals = {}; // "src→dst" → count of tickets
+var edgeDefs = [];   // [{src, dst, id, d}] -- unique (src,dst) visual edges
+var edgeTotals = {}; // "src->dst" -> count of tickets
 var steps    = [];
 
-// ── Layout helpers ────────────────────────────────────────────────────────
+// -- Layout helpers -----------------------------------------------------------
 function computePositions(nodeList) {
   var pos = {}, free = [];
   nodeList.forEach(function(n) {
@@ -314,12 +248,12 @@ function computePositions(nodeList) {
 
 function computeEdgeDefs(uniqueEdges, pos) {
   // detect bidirectional pairs for offset
-  var pairSet = new Set(uniqueEdges.map(function(e){ return e.src+'→'+e.dst; }));
+  var pairSet = new Set(uniqueEdges.map(function(e){ return e.src+'->'+e.dst; }));
   return uniqueEdges.map(function(e, idx) {
     var s = pos[e.src], d = pos[e.dst];
     var dx = d.x-s.x, dy = d.y-s.y, len = Math.sqrt(dx*dx+dy*dy);
     var ux = dx/len, uy = dy/len;
-    var hasBidi = pairSet.has(e.dst+'→'+e.src);
+    var hasBidi = pairSet.has(e.dst+'->'+e.src);
     var off = hasBidi ? 13 : 0;
     var px = -uy*off, py = ux*off;
     var x1 = s.x + ux*R + px,     y1 = s.y + uy*R + py;
@@ -332,14 +266,14 @@ function computeEdgeDefs(uniqueEdges, pos) {
   });
 }
 
-// ── Copy adj ──────────────────────────────────────────────────────────────
+// -- Copy adj -----------------------------------------------------------------
 function copyAdj(adj) {
   var out = {};
   Object.keys(adj).forEach(function(k){ out[k] = adj[k].slice(); });
   return out;
 }
 
-// ── Step builder ──────────────────────────────────────────────────────────
+// -- Step builder -------------------------------------------------------------
 function buildSteps(tickets) {
   var adj = {}, allN = new Set();
   tickets.forEach(function(t){
@@ -373,7 +307,7 @@ function buildSteps(tickets) {
   sortedNodes.forEach(function(n){ if (adj[n]) adj[n].sort(); });
   stps.push(snap({
     phase: 'sort',
-    desc: 'Sort adjacency lists lexicographically. Hierholzer's DFS always picks the smallest available neighbor first.'
+    desc: "Sort adjacency lists lexicographically. Hierholzer's DFS always picks the smallest available neighbor first."
   }));
 
   var result = [], callStack = [], edgeUsed = {};
@@ -398,11 +332,11 @@ function buildSteps(tickets) {
         edgeUsed: Object.assign({}, edgeUsed),
         activeEdge: {src: node, dst: next},
         currentNode: node,
-        desc: 'Pop '' + next + '' from ' + node + ''s list → fly ' + node + ' → ' + next
+        desc: "Pop '" + next + "' from " + node + "'s list → fly " + node + " → " + next
       }));
 
       adj[node].shift();
-      var ek = node+'→'+next;
+      var ek = node+'->'+next;
       edgeUsed[ek] = (edgeUsed[ek]||0) + 1;
 
       dfs(next);
@@ -417,7 +351,7 @@ function buildSteps(tickets) {
       result: result.slice(),
       edgeUsed: Object.assign({}, edgeUsed),
       currentNode: caller,
-      desc: node + ' has no neighbors left. Append '' + node + '' post-order. result = [' + result.join(', ') + ']'
+      desc: node + " has no neighbors left. Append '" + node + "' post-order. result = [" + result.join(', ') + "]"
     }));
   }
 
@@ -434,7 +368,7 @@ function buildSteps(tickets) {
   return stps;
 }
 
-// ── Parse input ───────────────────────────────────────────────────────────
+// -- Parse input --------------------------------------------------------------
 function parseTickets(str) {
   var out = [];
   str.split(';').forEach(function(p){
@@ -445,7 +379,7 @@ function parseTickets(str) {
   return out;
 }
 
-// ── Build SVG ─────────────────────────────────────────────────────────────
+// -- Build SVG ----------------------------------------------------------------
 function buildSVG() {
   var eg = document.getElementById('edges-g');
   var ng = document.getElementById('nodes-g');
@@ -480,10 +414,16 @@ function buildSVG() {
   });
 }
 
-// ── Render ────────────────────────────────────────────────────────────────
-function render(snap, cursor, total) {
-  document.getElementById('step-ctr').textContent = 'Step '+(cursor+1)+'/'+total;
+// -- Render -------------------------------------------------------------------
+function render(snap) {
   document.getElementById('step-desc').textContent = snap.desc;
+
+  // code highlight
+  document.querySelectorAll('.cl').forEach(function(cl){ cl.classList.remove('hl'); });
+  (PHASE_LINES[snap.phase] || []).forEach(function(i){
+    var el = document.getElementById('cl-' + i);
+    if (el) el.classList.add('hl');
+  });
 
   var done = new Set(snap.result || []);
   var stackSet = new Set(snap.callStack || []);
@@ -507,7 +447,7 @@ function render(snap, cursor, total) {
   edgeDefs.forEach(function(e){
     var el = document.getElementById(e.id);
     if (!el) return;
-    var ek = e.src+'→'+e.dst;
+    var ek = e.src+'->'+e.dst;
     var usedCount = (snap.edgeUsed && snap.edgeUsed[ek]) || 0;
     var total_tickets = edgeTotals[ek] || 1;
     var cl, marker;
@@ -603,7 +543,13 @@ function render(snap, cursor, total) {
   }
 }
 
-// ── Load & build ──────────────────────────────────────────────────────────
+function updateStatus(snap, cur, total) {
+  var labels = { init: 'Build Graph', sort: 'Sort', enter: 'Enter DFS', pop: 'Traverse', exit: 'Post-order', reverse: 'Reverse' };
+  document.getElementById('phase-badge').textContent = labels[snap.phase] || snap.phase || 'Step';
+  document.getElementById('step-counter').textContent = 'Step ' + cur + ' / ' + total;
+}
+
+// -- Load & build -------------------------------------------------------------
 function buildAndRun() {
   var tickets = parseTickets(document.getElementById('tickets-input').value);
   if (!tickets.length) {
@@ -620,7 +566,7 @@ function buildAndRun() {
   edgeTotals = {};
   tickets.forEach(function(t){
     nodeSet.add(t[0]); nodeSet.add(t[1]);
-    var ek = t[0]+'→'+t[1];
+    var ek = t[0]+'->'+t[1];
     edgeTotals[ek] = (edgeTotals[ek]||0) + 1;
     if (!uEdgeMap[ek]) { uEdgeMap[ek] = true; uEdges.push({src:t[0], dst:t[1]}); }
   });
@@ -631,7 +577,7 @@ function buildAndRun() {
 
   buildSVG();
   steps = buildSteps(tickets);
-  nav.load(steps);
+  window.nav.load(steps);
 }
 
 function loadPreset() {
@@ -667,14 +613,36 @@ function randomExample() {
   buildAndRun();
 }
 
-// ── VizNav ────────────────────────────────────────────────────────────────
-var nav = VizNav({
+// -- VizNav -------------------------------------------------------------------
+window.nav = VizNav({
   btnPrev:  document.getElementById('prevBtn'),
   btnNext:  document.getElementById('stepBtn'),
   btnPlay:  document.getElementById('playBtn'),
   speedSel: document.getElementById('speedSel'),
-  render:   render
+  render:   function(snap, cur, total) { render(snap); updateStatus(snap, cur, total); }
 });
+
+document.getElementById('resetBtn').addEventListener('click', function() {
+  if (window.nav) window.nav.goTo(0);
+});
+
+// -- Resize handle ------------------------------------------------------------
+(function() {
+  var h = document.getElementById('resize-handle'),
+      p = document.getElementById('code-panel'),
+      d = false, sx = 0, sw = 0;
+  h.addEventListener('mousedown', function(e) {
+    d = true; sx = e.clientX; sw = p.offsetWidth; h.classList.add('dragging'); e.preventDefault();
+  });
+  document.addEventListener('mousemove', function(e) {
+    if (!d) return;
+    p.style.width = Math.min(560, Math.max(120, sw + (sx - e.clientX))) + 'px';
+  });
+  document.addEventListener('mouseup', function() {
+    if (!d) return;
+    d = false; h.classList.remove('dragging');
+  });
+})();
 
 // Auto-load default
 buildAndRun();

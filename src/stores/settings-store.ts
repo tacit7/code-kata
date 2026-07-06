@@ -21,6 +21,28 @@ export const DEFAULT_SHORTCUTS: Record<ShortcutAction, string> = {
 
 export type KataLanguage = "javascript" | "python";
 
+export type PracticeMode = "sr" | "daily" | "weak" | "speed" | "level";
+
+export interface PracticeConfig {
+  mode: PracticeMode;
+  categoryFilter: string;
+  difficultyFilter: "" | "easy" | "medium" | "hard";
+  selectedLevels: number[];
+  dailyRandomize: boolean;
+  sessionSize: number | "all";
+  maxTestRuns: number | null;
+}
+
+export const DEFAULT_PRACTICE_CONFIG: PracticeConfig = {
+  mode: "sr",
+  categoryFilter: "",
+  difficultyFilter: "",
+  selectedLevels: [],
+  dailyRandomize: false,
+  sessionSize: 10,
+  maxTestRuns: null,
+};
+
 const DEFAULTS = {
   theme: "dark" as AppTheme,
   vimMode: false,
@@ -35,6 +57,7 @@ const DEFAULTS = {
   shortcuts: { ...DEFAULT_SHORTCUTS },
   dailyKataIds: [] as number[],
   doneKataIds: [] as number[],
+  practiceConfig: { ...DEFAULT_PRACTICE_CONFIG },
 };
 
 interface SettingsState {
@@ -57,6 +80,8 @@ interface SettingsState {
   dailyKataIds: number[];
   // Completed katas
   doneKataIds: number[];
+  // Practice page config
+  practiceConfig: PracticeConfig;
   // Actions
   loadSettings: () => Promise<void>;
   setSetting: (key: string, value: unknown) => Promise<void>;
@@ -135,6 +160,10 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
         (patch.dailyKataIds as number[]) ?? DEFAULTS.dailyKataIds,
       doneKataIds:
         (patch.doneKataIds as number[]) ?? DEFAULTS.doneKataIds,
+      practiceConfig: {
+        ...DEFAULT_PRACTICE_CONFIG,
+        ...((patch.practiceConfig as Partial<PracticeConfig>) ?? {}),
+      },
       loaded: true,
     });
   },

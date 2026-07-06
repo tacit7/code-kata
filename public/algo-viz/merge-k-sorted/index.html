@@ -5,44 +5,56 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Merge K Sorted Lists</title>
 <link rel="stylesheet" href="../shared/style.css">
+<script src="../shared/gsap.min.js"></script>
+<script src="../shared/viz.js"></script>
 <style>
-  body { margin: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; background: var(--bg-main); color: var(--text-main); font-family: var(--font); }
-  .viz-inputs { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; padding: 10px 14px 0; flex-shrink: 0; }
+  body { margin: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+  .viz-inputs { width: 100%; padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; flex-shrink: 0; }
   .viz-inputs label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); display: block; margin-bottom: 4px; }
-  .viz-inputs select, .viz-inputs input { background: var(--bg-card); color: var(--text-main); border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px; font-size: 0.85rem; }
+  .viz-inputs select, .viz-inputs input { background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px; font-size: 0.85rem; }
   .viz-inputs input { width: 220px; }
   .viz-inputs button { padding: 7px 18px; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 0.85rem; }
   .btn-run { background: var(--accent); color: #fff; }
-  .btn-rand { background: var(--bg-card); color: var(--text-main); border: 1px solid var(--border); }
-  #viz-root { flex: 1; display: flex; gap: 0; overflow: hidden; min-height: 0; }
-  #viz-left { flex: 1; display: flex; flex-direction: column; gap: 10px; padding: 12px 14px; overflow-y: auto; min-width: 0; }
-  #code-panel { width: 260px; flex-shrink: 0; background: var(--bg-card); border-left: 1px solid var(--border); overflow-y: auto; padding: 12px; }
+  .btn-rand { background: var(--surface); color: var(--text); border: 1px solid var(--border) !important; border-radius: 6px; }
+  .controls { display: none; }
+  #header { padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+  #phase-badge { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; padding: 3px 10px; border-radius: 4px; background: #1e3a5f; color: var(--blue, #7aa2f7); border: 1px solid var(--blue, #7aa2f7); }
+  #step-counter { font-size: 12px; color: var(--text-dim); margin-left: auto; }
+  #main { display: flex; flex: 1; overflow: hidden; min-height: 0; }
+  #viz-area { flex: 1; display: flex; flex-direction: column; gap: 10px; padding: 12px 14px; overflow-y: auto; min-width: 0; }
+  #resize-handle { width: 5px; flex-shrink: 0; cursor: col-resize; background: transparent; border-left: 1px solid var(--border); transition: background .15s; z-index: 10; }
+  #resize-handle:hover, #resize-handle.dragging { background: var(--accent); }
+  #code-panel { width: 280px; min-width: 120px; max-width: 560px; flex-shrink: 0; background: var(--surface); border-right: 1px solid var(--border); overflow-y: auto; padding: 12px; display: flex; flex-direction: column; }
   #code-panel h3 { margin: 0 0 8px; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); }
   #code-body { margin: 0; font-size: 0.78rem; line-height: 1.7; font-family: monospace; }
-  .cl { padding: 0 6px; border-radius: 3px; white-space: pre; }
-  .cl.hl { background: var(--accent); color: #fff; }
+  #sidebar { width: 200px; flex-shrink: 0; background: var(--surface); border-left: 1px solid var(--border); overflow-y: auto; padding: 14px 12px; display: flex; flex-direction: column; gap: 12px; }
+  #nav-row { flex-shrink: 0; display: flex; align-items: center; gap: 8px; padding: 10px 16px; background: var(--surface); border-top: 1px solid var(--border); }
+  .btn-step { background: var(--surface); border: 1px solid var(--border); color: var(--text); border-radius: 4px; padding: 6px 14px; cursor: pointer; font-size: 0.82rem; }
+  .btn-play-nav { background: #15803d; border: none; color: #fff; border-radius: 4px; padding: 6px 14px; cursor: pointer; font-size: 0.82rem; font-weight: 600; }
+  .btn-play-nav.playing { background: #c2410c; }
   .section-label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); margin-bottom: 6px; }
   #lists-area { display: flex; flex-direction: column; gap: 8px; }
   .list-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
   .list-label { font-size: 0.75rem; color: var(--text-dim); width: 36px; flex-shrink: 0; }
-  .node-box { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 6px; border: 2px solid var(--border); background: var(--bg-card); font-size: 0.9rem; font-weight: 700; transition: all 0.2s; }
+  .node-box { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 6px; border: 2px solid var(--border); background: var(--surface); font-size: 0.9rem; font-weight: 700; transition: all 0.2s; }
   .node-box.consumed { opacity: 0.2; border-style: dashed; }
   .node-box.upcoming { opacity: 0.45; }
   .node-box.in-heap { border-color: #f59e0b; background: rgba(245,158,11,0.18); }
   .node-box.extracting { border-color: var(--accent); background: rgba(99,102,241,0.25); transform: scale(1.18); box-shadow: 0 0 0 3px rgba(99,102,241,0.3); }
   .node-arrow { color: var(--text-dim); font-size: 0.8rem; }
-  #heap-area { background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; }
+  #heap-area { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; }
   #heap-items { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; min-height: 44px; }
   .heap-node { display: inline-flex; flex-direction: column; align-items: center; background: rgba(245,158,11,0.18); border: 2px solid #f59e0b; border-radius: 6px; padding: 4px 12px; font-size: 0.9rem; font-weight: 700; min-width: 36px; }
   .heap-node.top { border-color: var(--accent); background: rgba(99,102,241,0.18); }
   .heap-node .hn-sub { font-size: 0.6rem; color: var(--text-dim); font-weight: 400; }
-  #result-area { background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; }
+  #result-area { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; }
   #result-nodes { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; min-height: 44px; }
-  .result-node { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 6px; border: 2px solid var(--success); background: rgba(34,197,94,0.15); font-size: 0.9rem; font-weight: 700; color: var(--success); }
+  .result-node { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 6px; border: 2px solid var(--success, #22c55e); background: rgba(34,197,94,0.15); font-size: 0.9rem; font-weight: 700; color: var(--success, #22c55e); }
   .result-arrow { color: var(--text-dim); font-size: 0.8rem; }
-  #step-msg { font-size: 0.85rem; color: var(--text-dim); min-height: 22px; padding: 2px 0; }
   .empty-hint { color: var(--text-dim); font-size: 0.8rem; font-style: italic; }
-  .controls { display: none; }
+  #step-msg { font-size: 0.82rem; color: var(--text-dim); line-height: 1.5; }
+  .cl { padding: 0 6px; border-radius: 3px; white-space: pre; display: block; }
+  .cl.hl { background: var(--accent); color: #fff; }
 </style>
 </head>
 <body>
@@ -51,7 +63,7 @@
   <div>
     <label>Preset</label>
     <select id="presetSel" onchange="loadPreset()">
-      <option value="">— pick a preset —</option>
+      <option value="">&#8212; pick a preset &#8212;</option>
       <option value="1,4,7|2,5,8|3,6,9">3 lists of 3 (interleaved)</option>
       <option value="1,3,5,7,9|2,4,6,8,10">2 lists of 5</option>
       <option value="1,2,3|2,3,4|3,4,5">Overlapping ranges</option>
@@ -68,20 +80,26 @@
   <button class="btn-run" onclick="buildAndRun()">Run</button>
   <button class="btn-rand" onclick="randomExample()">&#x1F3B2; Random</button>
 </div>
+<div class="controls"></div>
 
-<div id="viz-root">
-  <div id="viz-left">
+<div id="header">
+  <span id="phase-badge">&#8212;</span>
+  <span style="font-size:13px;font-weight:700;">Merge K Sorted Lists</span>
+  <span id="step-counter">&#8212;</span>
+</div>
+
+<div id="main">
+  <div id="viz-area">
     <div>
       <div class="section-label">Input Lists</div>
       <div id="lists-area"></div>
     </div>
     <div>
-      <div class="section-label">Min-Heap (priority queue &mdash; smallest at left)</div>
+      <div class="section-label">Min-Heap (priority queue &#8212; smallest at left)</div>
       <div id="heap-area">
         <div id="heap-items"><span class="empty-hint">heap is empty</span></div>
       </div>
     </div>
-    <div id="step-msg"></div>
     <div>
       <div class="section-label">Merged Result</div>
       <div id="result-area">
@@ -89,15 +107,32 @@
       </div>
     </div>
   </div>
+
+  <div id="resize-handle"></div>
+
   <div id="code-panel">
     <h3>Pseudocode</h3>
     <pre id="code-body"><div id="cl0" class="cl">def mergeKLists(lists):</div><div id="cl1" class="cl">  heap = MinHeap()</div><div id="cl2" class="cl">  for i, head in enumerate(lists):</div><div id="cl3" class="cl">    if head:</div><div id="cl4" class="cl">      heap.push((head.val,i,head))</div><div id="cl5" class="cl">  dummy = ListNode(0)</div><div id="cl6" class="cl">  cur = dummy</div><div id="cl7" class="cl">  while heap:</div><div id="cl8" class="cl">    val,i,node = heap.pop()</div><div id="cl9" class="cl">    cur.next = node</div><div id="cl10" class="cl">    cur = cur.next</div><div id="cl11" class="cl">    if node.next:</div><div id="cl12" class="cl">      heap.push((node.next.val,</div><div id="cl13" class="cl">                  i, node.next))</div><div id="cl14" class="cl">  return dummy.next</div></pre>
   </div>
-</div>
-<div class="controls"></div>
 
-<script src="../shared/gsap.min.js"></script>
-<script src="../shared/viz.js"></script>
+  <div id="sidebar">
+    <div id="step-msg" style="font-size:0.82rem;color:var(--text-dim);line-height:1.5;"></div>
+  </div>
+</div>
+
+<div id="nav-row">
+  <button id="prevBtn" class="btn-step">&#8592; Prev</button>
+  <button id="stepBtn" class="btn-step">Step &#8594;</button>
+  <button id="playBtn" class="btn-play-nav">Play</button>
+  <button id="resetBtn" class="btn-step">&#8635; Reset</button>
+  <select id="speedSel">
+    <option value="800">0.5&#215;</option>
+    <option value="400" selected>1&#215;</option>
+    <option value="200">2&#215;</option>
+    <option value="100">4&#215;</option>
+  </select>
+</div>
+
 <script>
 var steps = [];
 var currentStep = 0;
@@ -109,40 +144,22 @@ function parseLists(raw) {
   }).filter(function(arr) { return arr.length > 0; });
 }
 
-// Simple min-heap
 function MinHeap() { this.data = []; }
-MinHeap.prototype.push = function(item) {
-  this.data.push(item);
-  this._up(this.data.length - 1);
-};
+MinHeap.prototype.push = function(item) { this.data.push(item); this._up(this.data.length - 1); };
 MinHeap.prototype.pop = function() {
-  var top = this.data[0];
-  var last = this.data.pop();
+  var top = this.data[0]; var last = this.data.pop();
   if (this.data.length > 0) { this.data[0] = last; this._down(0); }
   return top;
 };
 MinHeap.prototype._up = function(i) {
-  while (i > 0) {
-    var p = (i - 1) >> 1;
-    if (this.data[p][0] <= this.data[i][0]) break;
-    var tmp = this.data[p]; this.data[p] = this.data[i]; this.data[i] = tmp;
-    i = p;
-  }
+  while (i > 0) { var p = (i - 1) >> 1; if (this.data[p][0] <= this.data[i][0]) break; var tmp = this.data[p]; this.data[p] = this.data[i]; this.data[i] = tmp; i = p; }
 };
 MinHeap.prototype._down = function(i) {
   var n = this.data.length;
-  while (true) {
-    var s = i, l = 2*i+1, r = 2*i+2;
-    if (l < n && this.data[l][0] < this.data[s][0]) s = l;
-    if (r < n && this.data[r][0] < this.data[s][0]) s = r;
-    if (s === i) break;
-    var tmp = this.data[s]; this.data[s] = this.data[i]; this.data[i] = tmp;
-    i = s;
-  }
+  while (true) { var s = i, l = 2*i+1, r = 2*i+2; if (l < n && this.data[l][0] < this.data[s][0]) s = l; if (r < n && this.data[r][0] < this.data[s][0]) s = r; if (s === i) break; var tmp = this.data[s]; this.data[s] = this.data[i]; this.data[i] = tmp; i = s; }
 };
 MinHeap.prototype.size = function() { return this.data.length; };
 MinHeap.prototype.toArray = function() { return this.data.map(function(h) { return h.slice(); }); };
-
 function cloneHeap(h) { return h.map(function(x) { return x.slice(); }); }
 
 function buildAndRun() {
@@ -154,87 +171,33 @@ function buildAndRun() {
   var heap = new MinHeap();
   var result = [];
 
-  // Step: show initial state
-  steps.push({
-    phase: 'init',
-    heap: [],
-    result: [],
-    extracting: null,
-    msg: 'Starting: insert the head of each list into the min-heap.',
-    lines: [0, 1, 2]
-  });
+  steps.push({ phase: 'init', heap: [], result: [], extracting: null, msg: 'Starting: insert the head of each list into the min-heap.', lines: [0, 1, 2] });
 
-  // Insert heads
   for (var i = 0; i < parsedLists.length; i++) {
     if (parsedLists[i].length > 0) {
       heap.push([parsedLists[i][0], i, 0]);
-      steps.push({
-        phase: 'insert-head',
-        heap: cloneHeap(heap.data),
-        result: result.slice(),
-        extracting: null,
-        msg: 'Inserted head of list ' + (i+1) + ' (val=' + parsedLists[i][0] + ') into heap.',
-        lines: [3, 4]
-      });
+      steps.push({ phase: 'insert-head', heap: cloneHeap(heap.data), result: result.slice(), extracting: null, msg: 'Inserted head of list ' + (i+1) + ' (val=' + parsedLists[i][0] + ') into heap.', lines: [3, 4] });
     }
   }
 
-  steps.push({
-    phase: 'loop-start',
-    heap: cloneHeap(heap.data),
-    result: result.slice(),
-    extracting: null,
-    msg: 'Heap initialized with ' + heap.size() + ' node(s). Begin extraction loop.',
-    lines: [5, 6, 7]
-  });
+  steps.push({ phase: 'loop-start', heap: cloneHeap(heap.data), result: result.slice(), extracting: null, msg: 'Heap initialized with ' + heap.size() + ' node(s). Begin extraction loop.', lines: [5, 6, 7] });
 
   while (heap.size() > 0) {
     var item = heap.pop();
     var val = item[0], listIdx = item[1], nodeIdx = item[2];
-
-    steps.push({
-      phase: 'extract',
-      heap: cloneHeap(heap.data),
-      result: result.slice(),
-      extracting: { val: val, listIdx: listIdx, nodeIdx: nodeIdx },
-      msg: 'Extract min from heap: val=' + val + ' (from list ' + (listIdx+1) + '). Append to result.',
-      lines: [8, 9, 10]
-    });
-
+    steps.push({ phase: 'extract', heap: cloneHeap(heap.data), result: result.slice(), extracting: { val: val, listIdx: listIdx, nodeIdx: nodeIdx }, msg: 'Extract min from heap: val=' + val + ' (from list ' + (listIdx+1) + '). Append to result.', lines: [8, 9, 10] });
     result.push({ val: val, listIdx: listIdx, nodeIdx: nodeIdx });
-
     var nextIdx = nodeIdx + 1;
     if (nextIdx < parsedLists[listIdx].length) {
       var nextVal = parsedLists[listIdx][nextIdx];
       heap.push([nextVal, listIdx, nextIdx]);
-      steps.push({
-        phase: 'push-next',
-        heap: cloneHeap(heap.data),
-        result: result.slice(),
-        extracting: null,
-        msg: 'Next node in list ' + (listIdx+1) + ' (val=' + nextVal + ') pushed to heap.',
-        lines: [11, 12, 13]
-      });
+      steps.push({ phase: 'push-next', heap: cloneHeap(heap.data), result: result.slice(), extracting: null, msg: 'Next node in list ' + (listIdx+1) + ' (val=' + nextVal + ') pushed to heap.', lines: [11, 12, 13] });
     } else {
-      steps.push({
-        phase: 'no-next',
-        heap: cloneHeap(heap.data),
-        result: result.slice(),
-        extracting: null,
-        msg: 'List ' + (listIdx+1) + ' is exhausted — no next node to push.',
-        lines: [11]
-      });
+      steps.push({ phase: 'no-next', heap: cloneHeap(heap.data), result: result.slice(), extracting: null, msg: 'List ' + (listIdx+1) + ' is exhausted — no next node to push.', lines: [11] });
     }
   }
 
-  steps.push({
-    phase: 'done',
-    heap: [],
-    result: result.slice(),
-    extracting: null,
-    msg: 'Done! Merged ' + result.length + ' nodes in sorted order.',
-    lines: [14]
-  });
+  steps.push({ phase: 'done', heap: [], result: result.slice(), extracting: null, msg: 'Done! Merged ' + result.length + ' nodes in sorted order.', lines: [14] });
 
   currentStep = 0;
   render(0);
@@ -246,13 +209,16 @@ function render(idx) {
   currentStep = idx;
   var s = steps[idx];
 
-  // Code highlight
+  var sc = document.getElementById('step-counter');
+  if (sc) sc.textContent = 'Step ' + (idx+1) + ' / ' + steps.length;
+  var pb = document.getElementById('phase-badge');
+  if (pb) pb.textContent = s.phase || '—';
+
   for (var i = 0; i <= 14; i++) {
     var el = document.getElementById('cl' + i);
     if (el) el.classList.toggle('hl', !!(s.lines && s.lines.indexOf(i) !== -1));
   }
 
-  // Input lists
   var listsArea = document.getElementById('lists-area');
   listsArea.innerHTML = '';
   parsedLists.forEach(function(list, li) {
@@ -262,26 +228,17 @@ function render(idx) {
     lbl.className = 'list-label';
     lbl.textContent = 'L' + (li+1) + ':';
     row.appendChild(lbl);
-
     list.forEach(function(val, ni) {
       var box = document.createElement('div');
       box.className = 'node-box';
       box.textContent = val;
-
       var isExtracting = s.extracting && s.extracting.listIdx === li && s.extracting.nodeIdx === ni;
       var inHeap = s.heap && s.heap.some(function(h) { return h[1] === li && h[2] === ni; });
       var inResult = s.result && s.result.some(function(r) { return r.listIdx === li && r.nodeIdx === ni; });
-
-      if (isExtracting) {
-        box.classList.add('extracting');
-      } else if (inHeap) {
-        box.classList.add('in-heap');
-      } else if (inResult) {
-        box.classList.add('consumed');
-      } else {
-        box.classList.add('upcoming');
-      }
-
+      if (isExtracting) box.classList.add('extracting');
+      else if (inHeap) box.classList.add('in-heap');
+      else if (inResult) box.classList.add('consumed');
+      else box.classList.add('upcoming');
       row.appendChild(box);
       if (ni < list.length - 1) {
         var arr = document.createElement('span');
@@ -293,7 +250,6 @@ function render(idx) {
     listsArea.appendChild(row);
   });
 
-  // Heap
   var heapItems = document.getElementById('heap-items');
   if (!s.heap || s.heap.length === 0) {
     heapItems.innerHTML = '<span class="empty-hint">heap is empty</span>';
@@ -303,18 +259,13 @@ function render(idx) {
     sorted.forEach(function(h, hi) {
       var node = document.createElement('div');
       node.className = 'heap-node' + (hi === 0 ? ' top' : '');
-      var valSpan = document.createElement('span');
-      valSpan.textContent = h[0];
-      var sub = document.createElement('span');
-      sub.className = 'hn-sub';
-      sub.textContent = 'L' + (h[1]+1);
-      node.appendChild(valSpan);
-      node.appendChild(sub);
+      var valSpan = document.createElement('span'); valSpan.textContent = h[0];
+      var sub = document.createElement('span'); sub.className = 'hn-sub'; sub.textContent = 'L' + (h[1]+1);
+      node.appendChild(valSpan); node.appendChild(sub);
       heapItems.appendChild(node);
     });
   }
 
-  // Result
   var resultNodes = document.getElementById('result-nodes');
   if (!s.result || s.result.length === 0) {
     resultNodes.innerHTML = '<span class="empty-hint">result list is empty</span>';
@@ -326,9 +277,7 @@ function render(idx) {
       node.textContent = r.val;
       resultNodes.appendChild(node);
       if (ri < s.result.length - 1) {
-        var arr = document.createElement('span');
-        arr.className = 'result-arrow';
-        arr.textContent = '→';
+        var arr = document.createElement('span'); arr.className = 'result-arrow'; arr.textContent = '→';
         resultNodes.appendChild(arr);
       }
     });
@@ -337,17 +286,14 @@ function render(idx) {
   document.getElementById('step-msg').textContent = s.msg || '';
 }
 
-// viz.js bridge
+// Old viz.js bridge (postMessage parent control)
 window.__vizGetStepCount = function() { return steps.length; };
 window.__vizRender = function(idx) { render(idx); };
 window.__vizGetCurrentStep = function() { return currentStep; };
 
 function loadPreset() {
   var val = document.getElementById('presetSel').value;
-  if (val) {
-    document.getElementById('listsInput').value = val;
-    buildAndRun();
-  }
+  if (val) { document.getElementById('listsInput').value = val; buildAndRun(); }
 }
 
 function randomExample() {
@@ -357,10 +303,7 @@ function randomExample() {
   for (var i = 0; i < k; i++) {
     var start = Math.floor(Math.random() * 10) + 1;
     var arr = [];
-    for (var j = 0; j < len; j++) {
-      arr.push(start);
-      start += Math.floor(Math.random() * 5) + 1;
-    }
+    for (var j = 0; j < len; j++) { arr.push(start); start += Math.floor(Math.random() * 5) + 1; }
     lists.push(arr.join(','));
   }
   document.getElementById('listsInput').value = lists.join(' | ');
@@ -368,7 +311,54 @@ function randomExample() {
   buildAndRun();
 }
 
+// Local button handlers
+var _playTimer = null;
+document.getElementById('prevBtn').onclick = function() { if (currentStep > 0) render(currentStep - 1); };
+document.getElementById('stepBtn').onclick = function() { if (currentStep < steps.length - 1) render(currentStep + 1); };
+document.getElementById('resetBtn').onclick = function() { if (steps.length) render(0); };
+document.getElementById('playBtn').onclick = function() {
+  if (_playTimer) {
+    clearInterval(_playTimer); _playTimer = null;
+    document.getElementById('playBtn').textContent = 'Play';
+    document.getElementById('playBtn').classList.remove('playing');
+    return;
+  }
+  document.getElementById('playBtn').textContent = 'Pause';
+  document.getElementById('playBtn').classList.add('playing');
+  _playTimer = setInterval(function() {
+    if (currentStep < steps.length - 1) {
+      render(currentStep + 1);
+    } else {
+      clearInterval(_playTimer); _playTimer = null;
+      document.getElementById('playBtn').textContent = 'Play';
+      document.getElementById('playBtn').classList.remove('playing');
+    }
+  }, parseInt(document.getElementById('speedSel').value) || 400);
+};
+
 buildAndRun();
 </script>
+
+<script>
+(function() {
+  var handle = document.getElementById('resize-handle');
+  var panel  = document.getElementById('code-panel');
+  var dragging = false, startX = 0, startW = 0;
+  handle.addEventListener('mousedown', function(e) {
+    dragging = true; startX = e.clientX; startW = panel.offsetWidth;
+    handle.classList.add('dragging'); e.preventDefault();
+  });
+  document.addEventListener('mousemove', function(e) {
+    if (!dragging) return;
+    var delta = startX - e.clientX;
+    panel.style.width = Math.min(560, Math.max(120, startW + delta)) + 'px';
+  });
+  document.addEventListener('mouseup', function() {
+    if (!dragging) return;
+    dragging = false; handle.classList.remove('dragging');
+  });
+})();
+</script>
+
 </body>
 </html>

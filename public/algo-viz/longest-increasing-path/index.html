@@ -5,57 +5,42 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Longest Increasing Path in a Matrix</title>
   <link rel="stylesheet" href="../shared/style.css" />
-  <script src="../shared/viz.js"></script>
   <style>
-    .viz-area { width: 100%; max-width: 96%; }
-    .main-row { display: grid; grid-template-columns: 1fr 320px; gap: 18px; align-items: start; }
-    @media (max-width: 780px) { .main-row { grid-template-columns: 1fr; } }
+    /* ── CANONICAL LAYOUT ── */
+    body { background: var(--bg); color: var(--text); font-family: "Fira Code", monospace; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+    .viz-inputs { width: 100%; padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; flex-wrap: wrap; gap: 12px; align-items: center; flex-shrink: 0; }
+    #header { padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+    #phase-badge { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; padding: 3px 10px; border-radius: var(--radius-sm); background: #1e3a5f; color: var(--blue); border: 1px solid var(--blue); }
+    #step-counter { font-size: 12px; color: var(--text-muted); margin-left: auto; }
+    #main { display: flex; flex: 1; overflow: hidden; }
+    #viz-area { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding: 16px; gap: 16px; overflow-y: auto; }
+    #resize-handle { width: 5px; flex-shrink: 0; cursor: col-resize; background: transparent; border-left: 1px solid var(--border); transition: background .15s; z-index: 10; }
+    #resize-handle:hover, #resize-handle.dragging { background: var(--accent); }
+    #code-panel { width: 0; min-width: 0; flex-shrink: 0; background: #0d1117; overflow: hidden; padding: 0; display: flex; flex-direction: column; }
+    #sidebar { width: 260px; flex-shrink: 0; background: var(--surface); border-left: 1px solid var(--border); overflow-y: auto; padding: 14px 12px; display: flex; flex-direction: column; gap: 12px; }
+    #nav-row { flex-shrink: 0; display: flex; align-items: center; gap: 8px; padding: 10px 16px; background: var(--surface); border-top: 1px solid var(--border); }
+    .btn-step { background: var(--surface); border: 1px solid var(--border); color: var(--text); border-radius: var(--radius-sm); padding: 6px 14px; cursor: pointer; font-size: 0.82rem; }
+    .btn-step:disabled { opacity: 0.35; cursor: not-allowed; }
+    .btn-play { background: #15803d; border: none; color: #fff; border-radius: var(--radius-sm); padding: 6px 14px; cursor: pointer; font-size: 0.82rem; font-weight: 600; }
+    .btn-play.paused { background: #b45309; }
+    #speedSel { background: var(--surface); border: 1px solid var(--border); color: var(--text); border-radius: var(--radius-sm); padding: 6px 10px; font-size: 0.85rem; cursor: pointer; }
+
+    /* ── VIZ-SPECIFIC STYLES ── */
+    .viz-inputs .field { display: flex; flex-direction: column; gap: 4px; }
+    .viz-inputs label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); }
+    .viz-inputs select { background: var(--surface); border: 1px solid var(--border); color: var(--text); border-radius: var(--radius-sm); padding: 6px 10px; font-size: 0.85rem; cursor: pointer; }
+    .viz-inputs textarea { background: #0a0d14; border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text); font-size: 0.8rem; font-family: monospace; padding: 6px 10px; resize: vertical; min-height: 44px; width: 220px; }
+    .viz-inputs textarea:focus { outline: none; border-color: var(--accent); }
 
     /* Grid */
-    .grid-panel {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--radius-lg); padding: 18px;
-      display: flex; flex-direction: column; gap: 14px; align-items: center;
-    }
-    .panel-title {
-      font-size: 0.72rem; font-weight: 700; text-transform: uppercase;
-      letter-spacing: 0.08em; color: var(--text-dim); align-self: flex-start;
-    }
-    #cell-grid {
-      display: grid;
-      gap: 6px;
-    }
-    .grid-cell {
-      width: 68px; height: 68px;
-      border-radius: 8px;
-      border: 2px solid var(--border);
-      display: flex; flex-direction: column;
-      align-items: center; justify-content: center;
-      gap: 4px;
-      font-family: monospace;
-      position: relative;
-      background: #0d0f1a;
-      transition: background 0.2s, border-color 0.2s;
-    }
-    .cell-val {
-      font-size: 1.15rem; font-weight: 800;
-      color: var(--text-bright);
-      transition: color 0.2s;
-    }
-    .cell-memo {
-      font-size: 0.62rem; font-weight: 600;
-      color: var(--text-dim);
-      background: rgba(255,255,255,0.05);
-      border-radius: 3px; padding: 1px 4px;
-      min-width: 16px; text-align: center;
-      transition: color 0.2s, background 0.2s;
-    }
-    .cell-coords {
-      position: absolute; top: 2px; left: 4px;
-      font-size: 0.48rem; color: var(--text-ghost); font-family: monospace;
-    }
+    .grid-panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 18px; display: flex; flex-direction: column; gap: 14px; align-items: center; }
+    .panel-title { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); align-self: flex-start; }
+    #cell-grid { display: grid; gap: 6px; }
+    .grid-cell { width: 68px; height: 68px; border-radius: 8px; border: 2px solid var(--border); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; font-family: monospace; position: relative; background: #0d0f1a; transition: background 0.2s, border-color 0.2s; }
+    .cell-val { font-size: 1.15rem; font-weight: 800; color: var(--text-bright); transition: color 0.2s; }
+    .cell-memo { font-size: 0.62rem; font-weight: 600; color: var(--text-dim); background: rgba(255,255,255,0.05); border-radius: 3px; padding: 1px 4px; min-width: 16px; text-align: center; transition: color 0.2s, background 0.2s; }
+    .cell-coords { position: absolute; top: 2px; left: 4px; font-size: 0.48rem; color: var(--text-ghost); font-family: monospace; }
 
-    /* Cell states */
     .cell-unvisited { background: #0d0f1a; border-color: #1e2235; }
     .cell-active    { background: #1a1040; border-color: #9d7cd8; }
     .cell-active .cell-val { color: #9d7cd8; }
@@ -72,218 +57,139 @@
     .cell-checking .cell-val { color: #f7768e; }
 
     /* Legend */
-    .legend {
-      display: flex; flex-wrap: wrap; gap: 8px;
-      align-self: flex-start;
-    }
-    .legend-item {
-      display: flex; align-items: center; gap: 5px;
-      font-size: 0.67rem; color: var(--text-dim);
-    }
-    .legend-dot {
-      width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0;
-    }
+    .legend { display: flex; flex-wrap: wrap; gap: 8px; align-self: flex-start; }
+    .legend-item { display: flex; align-items: center; gap: 5px; font-size: 0.67rem; color: var(--text-dim); }
+    .legend-dot { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
     .dot-active   { background: #9d7cd8; }
     .dot-done     { background: #7dcfff; }
     .dot-best     { background: #9ece6a; }
     .dot-path     { background: #e0af68; }
     .dot-check    { background: #f7768e; }
 
+    /* Progress */
+    .progress-wrap { display: flex; flex-direction: column; gap: 4px; width: 100%; }
+    .progress-bar-track { height: 6px; border-radius: 3px; background: #1a1d2e; border: 1px solid var(--border); overflow: hidden; }
+    .progress-bar-fill { height: 100%; border-radius: 3px; background: linear-gradient(to right, #9d7cd8, #7aa2f7); transition: width 0.3s; }
+    .progress-text { font-size: 0.67rem; color: var(--text-dim); display: flex; justify-content: space-between; }
+
+    /* Sidebar panels */
+    .panel-box { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
+    .sidebar-title { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-dim); margin-bottom: 6px; }
+
     /* Call stack */
-    .stack-list {
-      display: flex; flex-direction: column; gap: 4px;
-      max-height: 160px; overflow-y: auto;
-    }
-    .stack-frame {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 5px 9px; border-radius: 5px;
-      background: #0d0f1a; border: 1px solid var(--border);
-      font-family: monospace; font-size: 0.72rem;
-    }
+    .stack-list { display: flex; flex-direction: column; gap: 4px; max-height: 160px; overflow-y: auto; }
+    .stack-frame { display: flex; align-items: center; justify-content: space-between; padding: 5px 9px; border-radius: 5px; background: #0d0f1a; border: 1px solid var(--border); font-family: monospace; font-size: 0.72rem; }
     .stack-frame.top-frame { border-color: #9d7cd8; background: #130e20; }
     .stack-frame .sf-cell { color: var(--text-bright); }
     .stack-frame .sf-val  { color: var(--accent); }
 
-    /* Right panel */
-    .right-col { display: flex; flex-direction: column; gap: 12px; }
-    .panel-box {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--radius-lg); padding: 14px 16px;
-      display: flex; flex-direction: column; gap: 10px;
-    }
-
     /* Log */
-    .log-list {
-      display: flex; flex-direction: column; gap: 3px;
-      max-height: 140px; overflow-y: auto;
-    }
-    .log-entry {
-      font-size: 0.7rem; color: var(--text-dim);
-      padding: 3px 7px; border-radius: 4px;
-      border-left: 2px solid var(--border);
-      line-height: 1.4;
-    }
+    .log-list { display: flex; flex-direction: column; gap: 3px; max-height: 160px; overflow-y: auto; }
+    .log-entry { font-size: 0.7rem; color: var(--text-dim); padding: 3px 7px; border-radius: 4px; border-left: 2px solid var(--border); line-height: 1.4; }
     .log-entry.log-dfs   { border-color: #9d7cd8; color: #c0a8f0; }
     .log-entry.log-memo  { border-color: #7dcfff; color: #7dcfff; }
     .log-entry.log-best  { border-color: #9ece6a; color: #9ece6a; }
     .log-entry.log-check { border-color: #f7768e; color: #f7768e; }
 
     /* Result */
-    .result-box {
-      text-align: center; padding: 12px;
-      background: #0a0d14; border: 1px solid var(--border);
-      border-radius: var(--radius-md);
-    }
+    .result-box { text-align: center; padding: 12px; background: #0a0d14; border: 1px solid var(--border); border-radius: var(--radius-md); }
     .result-label { font-size: 0.68rem; color: var(--text-dim); margin-bottom: 6px; }
-    .result-val {
-      font-size: 2rem; font-weight: 800; font-family: monospace;
-      color: var(--text-ghost);
-    }
+    .result-val { font-size: 2rem; font-weight: 800; font-family: monospace; color: var(--text-ghost); }
     .result-val.revealed { color: #9ece6a; }
-
-    /* Progress */
-    .progress-wrap { display: flex; flex-direction: column; gap: 4px; }
-    .progress-bar-track {
-      height: 6px; border-radius: 3px; background: #1a1d2e;
-      border: 1px solid var(--border); overflow: hidden;
-    }
-    .progress-bar-fill {
-      height: 100%; border-radius: 3px;
-      background: linear-gradient(to right, #9d7cd8, #7aa2f7);
-      transition: width 0.3s;
-    }
-    .progress-text {
-      font-size: 0.67rem; color: var(--text-dim);
-      display: flex; justify-content: space-between;
-    }
-
-    /* Nav / buttons */
-    .nav-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-    .btn-sm {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--radius-sm); color: var(--text);
-      cursor: pointer; font-size: 0.82rem; font-weight: 600;
-      padding: 5px 12px; transition: border-color 0.15s, background 0.15s;
-    }
-    .btn-sm:hover { border-color: var(--accent); }
-    .btn-sm:disabled { opacity: 0.35; cursor: default; }
-    .btn-play {
-      background: #15803d; border: none; border-radius: var(--radius-sm);
-      color: #fff; cursor: pointer; font-size: 0.88rem; font-weight: 600;
-      padding: 6px 18px; transition: background 0.15s;
-    }
-    .btn-play:hover { background: #16a34a; }
-    .btn-play.paused { background: #b45309; }
-    .btn-play.paused:hover { background: #d97706; }
-    .speed-label { font-size: 0.72rem; color: var(--text-dim); white-space: nowrap; }
-
-    /* Input */
-    .input-row { display: flex; flex-direction: column; gap: 8px; }
-    .input-group { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-    .input-group label { font-size: 0.75rem; color: var(--text-dim); min-width: 60px; }
-    .input-group textarea {
-      flex: 1; background: #0a0d14; border: 1px solid var(--border);
-      border-radius: var(--radius-sm); color: var(--text);
-      font-size: 0.8rem; font-family: monospace;
-      padding: 6px 10px; resize: vertical; min-height: 60px;
-    }
-    .input-group textarea:focus { outline: none; border-color: var(--accent); }
-    .btn-build {
-      background: var(--accent); border: none; border-radius: var(--radius-sm);
-      color: #1a1b26; cursor: pointer; font-size: 0.85rem; font-weight: 700;
-      padding: 7px 16px; transition: opacity 0.15s;
-    }
-    .btn-build:hover { opacity: 0.85; }
   </style>
 </head>
 <body>
-<div class="page">
-  <div class="viz-area">
 
-    <!-- Inputs -->
-    <div class="panel-box" style="margin-bottom:10px;">
-      <div class="input-row">
-        <div class="input-group">
-          <label>Matrix</label>
-          <textarea id="inp-matrix">[[9,9,4],[6,6,8],[2,1,1]]</textarea>
+<div class="viz-inputs">
+  <div class="field">
+    <label>Preset</label>
+    <select id="presetSel" onchange="loadPreset()">
+      <option value="">— pick a preset —</option>
+      <option value="default">Default 3x3</option>
+      <option value="monotone">Monotone 3x3</option>
+      <option value="decreasing">Decreasing 3x3</option>
+      <option value="small">Small 3x3</option>
+      <option value="large">Larger 4x4</option>
+    </select>
+  </div>
+  <div class="field">
+    <label>Matrix (JSON)</label>
+    <textarea id="inp-matrix">[[9,9,4],[6,6,8],[2,1,1]]</textarea>
+  </div>
+  <button onclick="buildViz()" style="padding:7px 18px;background:var(--accent);color:#fff;border:none;border-radius:6px;font-weight:600;cursor:pointer;align-self:flex-end;">Run</button>
+  <button onclick="randomExample()" style="padding:7px 14px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:6px;cursor:pointer;align-self:flex-end;">&#127922; Random</button>
+</div>
+
+<div class="controls"></div>
+
+<div id="header">
+  <span id="phase-badge">DFS+Memo</span>
+  <span style="font-size:13px;font-weight:700;">Longest Increasing Path in a Matrix</span>
+  <span id="step-counter">Step 0 / 0</span>
+</div>
+
+<div id="main">
+  <div id="viz-area">
+    <div class="grid-panel">
+      <div class="panel-title">Matrix</div>
+      <div id="cell-grid"></div>
+      <div class="legend">
+        <div class="legend-item"><div class="legend-dot dot-active"></div> Active DFS</div>
+        <div class="legend-item"><div class="legend-dot dot-check"></div> Checking neighbor</div>
+        <div class="legend-item"><div class="legend-dot dot-done"></div> Memo cached</div>
+        <div class="legend-item"><div class="legend-dot dot-best"></div> Global best start</div>
+        <div class="legend-item"><div class="legend-dot dot-path"></div> Optimal path</div>
+      </div>
+      <div class="progress-wrap">
+        <div class="progress-text">
+          <span id="prog-cells">0 / 0 cells processed</span>
+          <span id="prog-calls">0 DFS calls</span>
         </div>
-        <div style="display:flex;gap:8px;justify-content:flex-end;">
-          <button class="btn-build" onclick="buildViz()">Build</button>
+        <div class="progress-bar-track">
+          <div class="progress-bar-fill" id="prog-fill" style="width:0%"></div>
         </div>
       </div>
     </div>
+  </div>
 
-    <div class="main-row">
-      <!-- Left: grid -->
-      <div class="grid-panel">
-        <div class="panel-title">Matrix</div>
-        <div id="cell-grid"></div>
-        <div class="legend">
-          <div class="legend-item"><div class="legend-dot dot-active"></div> Active DFS</div>
-          <div class="legend-item"><div class="legend-dot dot-check"></div> Checking neighbor</div>
-          <div class="legend-item"><div class="legend-dot dot-done"></div> Memo cached</div>
-          <div class="legend-item"><div class="legend-dot dot-best"></div> Global best start</div>
-          <div class="legend-item"><div class="legend-dot dot-path"></div> Optimal path</div>
-        </div>
-        <div class="progress-wrap" style="width:100%;">
-          <div class="progress-text">
-            <span id="prog-cells">0 / 0 cells processed</span>
-            <span id="prog-calls">0 DFS calls</span>
-          </div>
-          <div class="progress-bar-track">
-            <div class="progress-bar-fill" id="prog-fill" style="width:0%"></div>
-          </div>
-        </div>
-      </div>
+  <div id="resize-handle"></div>
 
-      <!-- Right panel -->
-      <div class="right-col">
-        <div class="panel-box">
-          <div class="panel-title">Result</div>
-          <div class="result-box">
-            <div class="result-label">Longest Increasing Path</div>
-            <div class="result-val" id="result-val">—</div>
-          </div>
-        </div>
+  <div id="code-panel"></div>
 
-        <div class="panel-box">
-          <div class="panel-title">Call Stack</div>
-          <div class="stack-list" id="stack-list">
-            <div style="font-size:0.72rem;color:var(--text-ghost);">Not started</div>
-          </div>
-        </div>
-
-        <div class="panel-box">
-          <div class="panel-title">Log</div>
-          <div class="log-list" id="log-list"></div>
-        </div>
-
-        <div class="panel-box">
-          <div class="panel-title">Controls</div>
-          <div class="nav-row">
-            <button class="playBtn" id="playBtn" onclick="togglePlay()">▶ Play</button>
-            <button class="btn-sm" id="stepBtn" onclick="stepFwd()">Step</button>
-            <button class="btn-sm" onclick="buildViz()">Reset</button>
-          </div>
-          <div class="nav-row">
-            <span class="speed-label">Speed:</span>
-            <button class="btn-sm" onclick="setSpeed(800)">Slow</button>
-            <button class="btn-sm" onclick="setSpeed(350)">Med</button>
-            <button class="btn-sm" onclick="setSpeed(120)">Fast</button>
-          </div>
-        </div>
+  <div id="sidebar">
+    <div class="panel-box">
+      <div class="sidebar-title">Result</div>
+      <div class="result-box">
+        <div class="result-label">Longest Increasing Path</div>
+        <div class="result-val" id="result-val">&#8212;</div>
       </div>
     </div>
 
-  </div>
+    <div class="panel-box">
+      <div class="sidebar-title">Call Stack</div>
+      <div class="stack-list" id="stack-list">
+        <div style="font-size:0.72rem;color:var(--text-ghost);">Not started</div>
+      </div>
+    </div>
 
-  <div id="nav-placeholder"></div>
-  <div class="algo-desc">
-    <strong>Longest Increasing Path in a Matrix</strong> — DFS with memoization. From each cell,
-    recurse into the 4 neighbors whose value is strictly greater. The result for a cell is
-    1 + max(results of valid neighbors). Memoize so each cell is computed once: O(m·n) total.
-    For the default matrix the longest path is 1→2→6→9 (length 4).
+    <div class="panel-box">
+      <div class="sidebar-title">Log</div>
+      <div class="log-list" id="log-list"></div>
+    </div>
   </div>
+</div>
+
+<div id="nav-row">
+  <button id="prevBtn" class="btn-step" onclick="stepBack()" disabled>&#8592; Prev</button>
+  <button id="stepBtn" class="btn-step" onclick="stepFwd()" disabled>Step &#8594;</button>
+  <button id="playBtn" class="btn-play" onclick="togglePlay()">&#9654; Play</button>
+  <button id="resetBtn" class="btn-step" onclick="resetToStart()">&#8635; Reset</button>
+  <select id="speedSel" onchange="setSpeed(parseInt(this.value))">
+    <option value="700">0.5&#215;</option>
+    <option value="350" selected>1&#215;</option>
+    <option value="150">2&#215;</option>
+    <option value="80">4&#215;</option>
+  </select>
 </div>
 
 <script>
@@ -294,6 +200,36 @@ let stepIdx = 0;
 let playing = false;
 let playTimer = null;
 let speed = 350;
+
+// ── Presets ───────────────────────────────────────────────────────────────────
+var LIP_PRESETS = {
+  'default':    '[[9,9,4],[6,6,8],[2,1,1]]',
+  'monotone':   '[[1,2,3],[4,5,6],[7,8,9]]',
+  'decreasing': '[[9,8,7],[6,5,4],[3,2,1]]',
+  'small':      '[[3,4,5],[3,2,6],[2,2,1]]',
+  'large':      '[[7,8,9,5],[6,3,2,4],[5,2,1,3],[4,1,2,4]]',
+};
+
+function loadPreset() {
+  var sel = document.getElementById('presetSel');
+  if (!sel.value || !LIP_PRESETS[sel.value]) return;
+  document.getElementById('inp-matrix').value = LIP_PRESETS[sel.value];
+  buildViz();
+}
+
+function randomExample() {
+  var r = 2 + Math.floor(Math.random() * 3);
+  var c = 2 + Math.floor(Math.random() * 3);
+  var mat = [];
+  for (var i = 0; i < r; i++) {
+    var row = [];
+    for (var j = 0; j < c; j++) row.push(1 + Math.floor(Math.random() * 9));
+    mat.push(row);
+  }
+  document.getElementById('inp-matrix').value = JSON.stringify(mat);
+  document.getElementById('presetSel').value = '';
+  buildViz();
+}
 
 function buildViz() {
   stopPlay();
@@ -379,18 +315,17 @@ function generateSteps(mat) {
 // ─── Grid render ─────────────────────────────────────────────────────────────
 function renderGrid() {
   const g = document.getElementById('cell-grid');
-  g.style.gridTemplateColumns = `repeat(${cols}, 68px)`;
+  g.style.gridTemplateColumns = 'repeat(' + cols + ', 68px)';
   g.innerHTML = '';
   for (let r=0; r<rows; r++) {
     for (let c=0; c<cols; c++) {
       const el = document.createElement('div');
       el.className = 'grid-cell cell-unvisited';
-      el.id = `cell-${r}-${c}`;
-      el.innerHTML = `
-        <span class="cell-coords">${r},${c}</span>
-        <span class="cell-val">${matrix[r][c]}</span>
-        <span class="cell-memo" id="memo-${r}-${c}">—</span>
-      `;
+      el.id = 'cell-' + r + '-' + c;
+      el.innerHTML =
+        '<span class="cell-coords">' + r + ',' + c + '</span>' +
+        '<span class="cell-val">' + matrix[r][c] + '</span>' +
+        '<span class="cell-memo" id="memo-' + r + '-' + c + '">—</span>';
       g.appendChild(el);
     }
   }
@@ -407,9 +342,9 @@ function applyStep(idx) {
   // Reset all cells
   for (let r=0; r<R; r++) {
     for (let c=0; c<C; c++) {
-      const el = document.getElementById(`cell-${r}-${c}`);
+      const el = document.getElementById('cell-' + r + '-' + c);
       el.className = 'grid-cell cell-unvisited';
-      const m = document.getElementById(`memo-${r}-${c}`);
+      const m = document.getElementById('memo-' + r + '-' + c);
       m.textContent = memo[r][c] ? memo[r][c] : '—';
     }
   }
@@ -418,41 +353,40 @@ function applyStep(idx) {
   for (let r=0; r<R; r++) {
     for (let c=0; c<C; c++) {
       if (memo[r][c]) {
-        document.getElementById(`cell-${r}-${c}`).className = 'grid-cell cell-done';
+        document.getElementById('cell-' + r + '-' + c).className = 'grid-cell cell-done';
       }
     }
   }
 
   // Mark active stack frames
   for (const frame of s.stack) {
-    const el = document.getElementById(`cell-${frame.r}-${frame.c}`);
+    const el = document.getElementById('cell-' + frame.r + '-' + frame.c);
     if (el) el.className = 'grid-cell cell-active';
   }
 
   // Mark checking neighbor
   if (s.event === 'check' && s.nr !== undefined) {
-    const el = document.getElementById(`cell-${s.nr}-${s.nc}`);
+    const el = document.getElementById('cell-' + s.nr + '-' + s.nc);
     if (el && !memo[s.nr][s.nc]) el.className = 'grid-cell cell-checking';
   }
 
   // Mark best cell
   if (s.bestCell) {
     const {r,c} = s.bestCell;
-    document.getElementById(`cell-${r}-${c}`).className = 'grid-cell cell-best';
+    document.getElementById('cell-' + r + '-' + c).className = 'grid-cell cell-best';
   }
 
   // On final: trace path from best cell
   if (s.event === 'final') {
     for (let r=0; r<R; r++) {
       for (let c=0; c<C; c++) {
-        document.getElementById(`cell-${r}-${c}`).className = 'grid-cell cell-done';
+        document.getElementById('cell-' + r + '-' + c).className = 'grid-cell cell-done';
       }
     }
-    // Trace longest path greedily
     if (s.bestCell) {
       const path = tracePath(memo, s.bestCell.r, s.bestCell.c);
       for (const [r,c] of path) {
-        document.getElementById(`cell-${r}-${c}`).className = 'grid-cell cell-path';
+        document.getElementById('cell-' + r + '-' + c).className = 'grid-cell cell-path';
       }
     }
   }
@@ -460,7 +394,7 @@ function applyStep(idx) {
   // Update memo labels
   for (let r=0; r<R; r++) {
     for (let c=0; c<C; c++) {
-      document.getElementById(`memo-${r}-${c}`).textContent = memo[r][c] ? memo[r][c] : '—';
+      document.getElementById('memo-' + r + '-' + c).textContent = memo[r][c] ? memo[r][c] : '—';
     }
   }
 
@@ -473,9 +407,9 @@ function applyStep(idx) {
   // Update progress
   const processed = s.memo.flat().filter(v=>v>0).length;
   const total = R*C;
-  document.getElementById('prog-cells').textContent = `${processed} / ${total} cells memoized`;
-  document.getElementById('prog-calls').textContent = `${s.dfsCalls} DFS calls`;
-  document.getElementById('prog-fill').style.width = `${Math.round(processed/total*100)}%`;
+  document.getElementById('prog-cells').textContent = processed + ' / ' + total + ' cells memoized';
+  document.getElementById('prog-calls').textContent = s.dfsCalls + ' DFS calls';
+  document.getElementById('prog-fill').style.width = Math.round(processed/total*100) + '%';
 
   // Result
   const rv = document.getElementById('result-val');
@@ -518,10 +452,10 @@ function updateStackPanel(stack) {
     return;
   }
   el.innerHTML = [...stack].reverse().map((f, i) =>
-    `<div class="stack-frame${i===0?' top-frame':''}">
-       <span class="sf-cell">dfs(${f.r},${f.c})</span>
-       <span class="sf-val">val=${f.val}</span>
-     </div>`
+    '<div class="stack-frame' + (i===0?' top-frame':'') + '">' +
+       '<span class="sf-cell">dfs(' + f.r + ',' + f.c + ')</span>' +
+       '<span class="sf-val">val=' + f.val + '</span>' +
+     '</div>'
   ).join('');
 }
 
@@ -530,22 +464,22 @@ const logMessages = [];
 function updateLog(s) {
   let msg = '', cls = '';
   if (s.event === 'enter') {
-    msg = `→ dfs(${s.r},${s.c}) val=${matrix[s.r][s.c]}`;
+    msg = '→ dfs(' + s.r + ',' + s.c + ') val=' + matrix[s.r][s.c];
     cls = 'log-dfs';
   } else if (s.event === 'check') {
-    msg = `  check neighbor (${s.nr},${s.nc}) val=${matrix[s.nr][s.nc]}`;
+    msg = '  check neighbor (' + s.nr + ',' + s.nc + ') val=' + matrix[s.nr][s.nc];
     cls = 'log-check';
   } else if (s.event === 'exit') {
-    msg = `← dfs(${s.r},${s.c}) → memo=${s.val}`;
+    msg = '← dfs(' + s.r + ',' + s.c + ') → memo=' + s.val;
     cls = 'log-memo';
   } else if (s.event === 'start_cell') {
-    msg = `Start cell (${s.r},${s.c}) val=${matrix[s.r][s.c]}`;
+    msg = 'Start cell (' + s.r + ',' + s.c + ') val=' + matrix[s.r][s.c];
     cls = 'log-dfs';
   } else if (s.event === 'cell_done') {
-    msg = `Cell (${s.r},${s.c}) path=${s.res}, global best=${s.globalBest}`;
+    msg = 'Cell (' + s.r + ',' + s.c + ') path=' + s.res + ', global best=' + s.globalBest;
     cls = s.res === s.globalBest ? 'log-best' : 'log-memo';
   } else if (s.event === 'final') {
-    msg = `Done! Longest increasing path = ${s.globalBest}`;
+    msg = 'Done! Longest increasing path = ' + s.globalBest;
     cls = 'log-best';
   }
   if (msg) {
@@ -553,9 +487,9 @@ function updateLog(s) {
     if (logMessages.length > 60) logMessages.shift();
   }
   const el = document.getElementById('log-list');
-  el.innerHTML = logMessages.slice(-20).map(({msg,cls})=>
-    `<div class="log-entry ${cls}">${msg}</div>`
-  ).join('');
+  el.innerHTML = logMessages.slice(-20).map(function(e) {
+    return '<div class="log-entry ' + e.cls + '">' + e.msg + '</div>';
+  }).join('');
   el.scrollTop = el.scrollHeight;
 }
 
@@ -565,6 +499,21 @@ function stepFwd() {
     stepIdx++;
     applyStep(stepIdx);
   }
+  updateControls();
+}
+
+function stepBack() {
+  if (stepIdx > 0) {
+    stepIdx--;
+    applyStep(stepIdx);
+  }
+  updateControls();
+}
+
+function resetToStart() {
+  stopPlay();
+  stepIdx = 0;
+  applyStep(0);
   updateControls();
 }
 
@@ -588,6 +537,7 @@ function advance() {
   if (!playing || stepIdx >= steps.length-1) { stopPlay(); return; }
   stepIdx++;
   applyStep(stepIdx);
+  updateControls();
   playTimer = setTimeout(advance, speed);
 }
 
@@ -603,11 +553,47 @@ function stopPlay() {
 function setSpeed(ms) { speed = ms; }
 
 function updateControls() {
+  document.getElementById('prevBtn').disabled = stepIdx <= 0;
   document.getElementById('stepBtn').disabled = stepIdx >= steps.length-1;
+  var cnt = document.getElementById('step-counter');
+  if (cnt && steps.length) cnt.textContent = 'Step ' + (stepIdx + 1) + ' / ' + steps.length;
 }
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
 buildViz();
+</script>
+<script>
+// resize handle
+(function() {
+  var handle = document.getElementById('resize-handle');
+  var panel  = document.getElementById('code-panel');
+  var dragging = false, startX = 0, startW = 0;
+  handle.addEventListener('mousedown', function(e) {
+    dragging = true; startX = e.clientX; startW = panel.offsetWidth;
+    handle.classList.add('dragging'); e.preventDefault();
+  });
+  document.addEventListener('mousemove', function(e) {
+    if (!dragging) return;
+    var delta = startX - e.clientX;
+    panel.style.width = Math.min(480, Math.max(0, startW + delta)) + 'px';
+  });
+  document.addEventListener('mouseup', function() {
+    if (!dragging) return;
+    dragging = false; handle.classList.remove('dragging');
+  });
+})();
+// postMessage bridge
+window.addEventListener('message', function(e) {
+  if (e.data === 'prev') { stepBack && stepBack(); }
+  else if (e.data === 'step') { stepFwd && stepFwd(); }
+  else if (e.data === 'play') { togglePlay && togglePlay(); }
+  else if (e.data === 'reset') { resetToStart && resetToStart(); }
+  else if (e.data && e.data.type === 'speed') {
+    setSpeed(parseInt(e.data.value) || 350);
+    var sel = document.getElementById('speedSel');
+    if (sel) sel.value = e.data.value;
+  }
+});
 </script>
 </body>
 </html>

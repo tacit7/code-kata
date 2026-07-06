@@ -488,7 +488,9 @@ interface KataEditorProps {
 
 export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataEditorProps) {
   const { theme, vimMode, toggleVimMode, toggleTheme, fontSize, fontFamily, tabSize, hideDescriptionInSession, setSetting } = useSettingsStore();
-  const maxTestRuns = useSessionStore((s) => s.activeSession?.maxTestRuns ?? null);
+  const sessionMaxTestRuns = useSessionStore((s) => s.activeSession?.maxTestRuns ?? null);
+  // Attempt limits only apply inside a practice session, never in the standalone editor
+  const maxTestRuns = isSession ? sessionMaxTestRuns : null;
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
   const vimModeRef = useRef<VimAdapterInstance | null>(null);
   const statusBarRef = useRef<HTMLDivElement | null>(null);

@@ -1,176 +1,77 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Coin Change</title>
-  <link rel="stylesheet" href="../shared/style.css" />
-  <script src="../shared/gsap.min.js"></script>
-  <script src="../shared/viz.js"></script>
-  <style>
-    .viz-area { width: 100%; max-width: 90%; }
-    .main-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
-    .left-col, .right-col { display: flex; flex-direction: column; gap: 12px; }
-    @media (max-width: 700px) { .main-row { grid-template-columns: 1fr; } }
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Coin Change</title>
+<link rel="stylesheet" href="../shared/style.css" />
+<script src="../shared/gsap.min.js"></script>
+<script src="../shared/viz.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: "Fira Code", "Cascadia Code", monospace; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+  #header { padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+  #phase-badge { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; padding: 3px 10px; border-radius: var(--radius-sm); background: #1e3a5f; color: var(--blue); border: 1px solid var(--blue); }
+  #step-counter { font-size: 12px; color: var(--text-muted); margin-left: auto; }
+  .viz-inputs { width: 100%; max-width: 100%; padding: 10px 16px; background: var(--surface); border: none; border-bottom: 1px solid var(--border); border-radius: 0; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; flex-shrink: 0; }
+  .viz-inputs label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); display: block; margin-bottom: 3px; }
+  .viz-inputs select, .viz-inputs input { background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 0 8px; height: 30px; font-size: 0.82rem; font-family: inherit; appearance: none; -webkit-appearance: none; }
+  .vi-btn-run { padding: 6px 14px; border-radius: 6px; font-size: 0.82rem; font-weight: 600; cursor: pointer; font-family: inherit; background: var(--accent); color: #fff; border: none; }
+  .vi-btn-rand { padding: 6px 14px; border-radius: 6px; font-size: 0.82rem; cursor: pointer; font-family: inherit; background: var(--bg); color: var(--text); border: 1px solid var(--border); }
+  #main { display: flex; flex: 1; overflow: hidden; }
+  #viz-area { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding: 16px; gap: 14px; overflow-y: auto; }
+  #desc { font-size: 13px; color: var(--text-muted); text-align: center; max-width: 560px; min-height: 36px; line-height: 1.5; }
+  #resize-handle { width: 5px; flex-shrink: 0; cursor: col-resize; background: transparent; border-left: 1px solid var(--border); transition: background .15s; z-index: 10; }
+  #resize-handle:hover, #resize-handle.dragging { background: var(--accent); }
+  #code-panel { width: 350px; min-width: 120px; max-width: 560px; flex-shrink: 0; background: #0d1117; border-right: 1px solid var(--border); overflow-y: auto; overflow-x: auto; padding: 10px 12px; display: flex; flex-direction: column; }
+  .cl { display: flex; align-items: stretch; padding: 2px 0; white-space: pre; border-left: 2px solid transparent; padding-left: 6px; color: var(--text-muted); transition: all 0.2s; font-family: 'Fira Code', 'Cascadia Code', monospace; font-size: 0.75rem; line-height: 1.8; }
+  .cl.hl { background: rgba(122,162,247,0.12); border-left-color: var(--accent); color: var(--text); }
+  .ln { display: inline-block; width: 20px; text-align: right; color: var(--text-dim); user-select: none; margin-right: 10px; font-size: 0.7rem; }
+  .kw { color: var(--purple); } .nb { color: var(--green); } .cm { color: var(--text-dim); font-style: italic; }
+  #sidebar { width: 220px; flex-shrink: 0; background: var(--surface); border-left: 1px solid var(--border); overflow-y: auto; padding: 14px 12px; display: flex; flex-direction: column; gap: 12px; }
+  .sidebar-section { font-size: 11px; }
+  .sidebar-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--text-dim); margin-bottom: 6px; }
+  #nav-row { flex-shrink: 0; display: flex; align-items: center; gap: 8px; padding: 10px 16px; background: var(--surface); border-top: 1px solid var(--border); }
+  .btn-step, .btn-play { padding: 6px 14px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--surface); color: var(--text); font-family: inherit; font-size: 12px; cursor: pointer; transition: background .15s; }
+  .btn-step:hover { background: #334155; }
+  .btn-play { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn-play:hover { background: var(--accent-hover); }
+  select { padding: 5px 8px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: #1e293b; color: var(--text); font-size: 12px; font-family: inherit; cursor: pointer; }
 
-    /* viz-inputs */
-    .viz-inputs {
-      display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end;
-      padding: 10px 0 14px; width: 100%; max-width: 90%;
-    }
-    .viz-inputs .field {
-      display: flex; flex-direction: column; gap: 4px;
-    }
-    .viz-inputs label {
-      font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
-      letter-spacing: 0.08em; color: var(--text-dim);
-    }
-    .viz-inputs input[type="text"],
-    .viz-inputs input[type="number"],
-    .viz-inputs select {
-      background: var(--surface); border: 1px solid var(--border);
-      color: var(--text); border-radius: var(--radius-sm);
-      padding: 6px 10px; font-size: 0.85rem; cursor: pointer;
-    }
-    .viz-inputs input[type="text"] { width: 180px; }
-    .viz-inputs input[type="number"] { width: 80px; }
-
-    /* dp array */
-    .array-section {
-      padding: 16px;
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--radius-lg);
-      display: flex; flex-direction: column; gap: 10px;
-      min-height: 100px;
-    }
-    .arr-scroll { overflow-x: auto; }
-    .arr-wrap { display: flex; gap: 6px; flex-wrap: nowrap; padding-bottom: 4px; }
-    .arr-cell-group { display: flex; flex-direction: column; align-items: center; gap: 2px; flex-shrink: 0; }
-    .arr-idx {
-      font-size: 0.6rem; color: var(--text-ghost); font-family: monospace;
-      text-align: center;
-    }
-    .arr-cell {
-      width: 48px; height: 48px;
-      display: flex; align-items: center; justify-content: center;
-      border: 2px dashed var(--border-soft); border-radius: 5px;
-      background: #0f0f0f;
-      font-size: 0.9rem; font-weight: 700; font-family: monospace;
-      color: var(--text-ghost);
-    }
-    .arr-cell[data-state="filled"]   { border-style: solid; color: var(--text-dim); border-color: #2d3148; }
-    .arr-cell[data-state="current"]  { border-style: solid; color: var(--accent-pale); border-color: var(--accent); background: var(--surface-dark); }
-    .arr-cell[data-state="source"]   { border-style: solid; color: var(--orange); border-color: #b45309; background: #1c1200; }
-
-    /* coins */
-    .coins-section {
-      padding: 14px 16px;
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--radius-lg);
-      display: flex; flex-direction: column; gap: 8px;
-    }
-    .coins-row { display: flex; gap: 8px; flex-wrap: wrap; }
-    .coin-chip {
-      width: 44px; height: 44px;
-      display: flex; align-items: center; justify-content: center;
-      border: 2px solid var(--border); border-radius: 50%;
-      background: var(--bg);
-      font-size: 0.9rem; font-weight: 700; font-family: monospace;
-      color: var(--text-dim);
-      transition: border-color 0.15s, color 0.15s, background 0.15s;
-    }
-    .coin-chip.active {
-      border-color: var(--accent); color: var(--accent-pale);
-      background: var(--surface-dark);
-    }
-    .coin-chip.skip {
-      border-color: var(--border-soft); color: var(--text-ghost);
-      opacity: 0.45;
-    }
-
-    /* panel-box */
-    .panel-box {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--radius-lg); padding: 14px 16px;
-      display: flex; flex-direction: column; gap: 8px;
-    }
-    .panel-title {
-      font-size: 0.72rem; font-weight: 700;
-      text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim);
-    }
-
-    /* variable boxes */
-    .var-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-    .var-box {
-      padding: 10px 8px;
-      background: var(--bg); border: 1px solid var(--border);
-      border-radius: var(--radius-sm);
-      display: flex; flex-direction: column; align-items: center; gap: 3px;
-    }
-    .var-box.accent-border { border-color: var(--accent); }
-    .var-box.amber-border  { border-color: #b45309; }
-    .var-box.green-border  { border-color: var(--green-border); }
-    .var-label { font-size: 0.65rem; font-family: monospace; color: var(--text-faint); text-align: center; }
-    .var-val   { font-size: 1.3rem; font-weight: 700; color: var(--text-bright); }
-
-    /* code */
-    .code-panel {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--radius-lg); overflow: hidden;
-    }
-    .code-header {
-      padding: 8px 14px; font-size: 0.72rem; font-weight: 600;
-      color: var(--text-dim); border-bottom: 1px solid var(--border); background: var(--bg);
-    }
-    .code-body { padding: 10px 0; font-size: 0.78rem; line-height: 1.75; white-space: pre; }
-    .code-line { display: flex; align-items: center; padding: 0 14px; }
-    .code-line.hl { background: var(--border-soft); border-left: 2px solid var(--accent); }
-    .ln { min-width: 24px; color: var(--text-ghost); user-select: none; font-size: 0.7rem; }
-
-    /* nav */
-    .btn-play {
-      background: #15803d; border: none; border-radius: var(--radius-sm);
-      color: #fff; cursor: pointer; font-size: 0.88rem; font-weight: 600;
-      padding: 9px 16px; transition: background 0.2s;
-    }
-    .btn-play:hover { background: #166534; }
-    .btn-play.playing { background: #c2410c; }
-    .btn-play.playing:hover { background: #9a3412; }
-    .btn-play:disabled { opacity: 0.4; cursor: not-allowed; }
-    .speed-select {
-      background: var(--bg); border: 1px solid var(--border);
-      border-radius: var(--radius-sm); color: var(--text);
-      font-size: 0.85rem; padding: 8px 10px; outline: none; width: 80px;
-    }
-    .nav-row { display: flex; gap: 8px; align-items: center; }
-
-    /* result badge */
-    .result-badge {
-      font-size: 0.88rem; font-weight: 700;
-      padding: 4px 13px; border-radius: 6px;
-      display: none; width: fit-content; margin-top: 2px;
-    }
-    .result-badge.found { background: var(--green-bg); color: var(--green); border: 1px solid var(--green-border); display: block; }
-    .result-badge.none  { background: var(--blue-bg);  color: var(--blue);  border: 1px solid var(--blue-border);  display: block; }
-
-    .kw { color: var(--purple); }
-    .fn { color: var(--blue); }
-    .bi { color: var(--orange); }
-    .op { color: var(--text); }
-    .nb { color: var(--green); }
-    .cm { color: var(--text-ghost); }
-  </style>
+  /* UNIQUE VIZ CSS */
+  .array-section { width: 100%; max-width: 560px; padding: 14px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); display: flex; flex-direction: column; gap: 10px; }
+  .arr-scroll { overflow-x: auto; }
+  .arr-wrap { display: flex; gap: 6px; flex-wrap: nowrap; padding-bottom: 4px; }
+  .arr-cell-group { display: flex; flex-direction: column; align-items: center; gap: 2px; flex-shrink: 0; }
+  .arr-idx { font-size: 0.6rem; color: var(--text-ghost); font-family: monospace; text-align: center; }
+  .arr-cell { width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; border: 2px dashed var(--border-soft); border-radius: 5px; background: #0f0f0f; font-size: 0.9rem; font-weight: 700; font-family: monospace; color: var(--text-ghost); }
+  .arr-cell[data-state="filled"]  { border-style: solid; color: var(--text-dim); border-color: #2d3148; }
+  .arr-cell[data-state="current"] { border-style: solid; color: var(--accent-pale); border-color: var(--accent); background: var(--surface-dark); }
+  .arr-cell[data-state="source"]  { border-style: solid; color: var(--orange); border-color: #b45309; background: #1c1200; }
+  .coins-section { width: 100%; max-width: 560px; padding: 12px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); display: flex; flex-direction: column; gap: 8px; }
+  .coins-row { display: flex; gap: 8px; flex-wrap: wrap; }
+  .coin-chip { width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; border: 2px solid var(--border); border-radius: 50%; background: var(--bg); font-size: 0.9rem; font-weight: 700; font-family: monospace; color: var(--text-dim); transition: border-color .15s, color .15s, background .15s; }
+  .coin-chip.active { border-color: var(--accent); color: var(--accent-pale); background: var(--surface-dark); }
+  .coin-chip.skip   { border-color: var(--border-soft); color: var(--text-ghost); opacity: 0.45; }
+  .var-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .var-box2 { padding: 8px 6px; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm); display: flex; flex-direction: column; align-items: center; gap: 2px; }
+  .var-box2.accent-border { border-color: var(--accent); }
+  .var-box2.amber-border  { border-color: #b45309; }
+  .var-box2.green-border  { border-color: var(--green-border); }
+  .var-label2 { font-size: 0.6rem; font-family: monospace; color: var(--text-faint); text-align: center; }
+  .var-val2   { font-size: 1.1rem; font-weight: 700; color: var(--text-bright); }
+  .result-badge { font-size: 0.82rem; font-weight: 600; padding: 5px 12px; border-radius: 6px; display: none; width: fit-content; margin-top: 2px; }
+  .result-badge.found { background: var(--green-bg); color: var(--green); border: 1px solid var(--green-border); display: block; }
+  .result-badge.none  { background: var(--blue-bg);  color: var(--blue);  border: 1px solid var(--blue-border); display: block; }
+  .fn { color: var(--blue); } .bi { color: var(--orange); } .op { color: var(--text); }
+  .legend-item { display: flex; align-items: center; gap: 7px; font-size: 0.75rem; color: var(--text-muted); margin-bottom: 5px; }
+  .legend-swatch { width: 14px; height: 14px; border-radius: 3px; flex-shrink: 0; }
+</style>
 </head>
-<body class="page">
-
-<div class="page-header">
-  <a class="back-link" href="../index.html">&larr; All Algorithms</a>
-  <div class="page-title">Coin Change</div>
-  <div class="page-sub">LeetCode 322 &middot; Bottom-up DP: dp[i] = min(dp[i-c]+1) &middot; O(amount &times; coins) time &middot; O(amount) space</div>
-</div>
+<body>
 
 <div class="viz-inputs">
-  <div class="field">
+  <div>
     <label>Preset</label>
     <select id="presetSel" onchange="loadPreset()">
       <option value="">— pick a preset —</option>
@@ -182,123 +83,97 @@
       <option value='{"coins":"3,7","amount":"13"}'>Double Path (3,7 → 13)</option>
     </select>
   </div>
-  <div class="field">
+  <div>
     <label>Coins (comma-separated)</label>
-    <input id="inp-coins" type="text" value="1,5,11" />
+    <input id="inp-coins" type="text" value="1,5,11" style="width:160px" />
   </div>
-  <div class="field">
+  <div>
     <label>Amount</label>
-    <input id="inp-amount" type="number" value="15" min="0" max="50" />
+    <input id="inp-amount" type="number" value="15" min="0" max="50" style="width:70px" />
   </div>
-  <button class="btn-primary" onclick="buildAndRun()" style="padding:7px 18px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);font-weight:600;cursor:pointer;">Run</button>
-  <button onclick="randomExample()" style="padding:7px 14px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;">🎲 Random</button>
+  <button class="vi-btn-run" onclick="buildAndRun()">Run</button>
+  <button class="vi-btn-rand" onclick="randomExample()">&#127922; Random</button>
+</div>
+<div class="controls"></div>
+
+<div id="header">
+  <span id="phase-badge">Setup</span>
+  <span style="font-size:13px;font-weight:700;">Coin Change</span>
+  <span id="step-counter">Step 0 / 0</span>
 </div>
 
-<div class="controls">
-  <div class="nav-row">
-    <button class="stepBtn" id="prevBtn" disabled>&larr;</button>
-    <button class="stepBtn" id="stepBtn" disabled>&rarr;</button>
-    <button class="playBtn" id="playBtn" disabled>&#9654; Play</button>
-    <select class="speedSel" id="speedSel">
-      <option value="700">Slow</option>
-      <option value="350" selected>Medium</option>
-      <option value="100">Fast</option>
-    </select>
+<div id="main">
+  <div id="viz-area">
+    <div id="desc">Set coins &amp; amount, then click Run.</div>
+    <div class="array-section" id="array-section">
+      <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text-dim)">dp array</div>
+      <div class="arr-scroll"><div class="arr-wrap" id="arr-wrap"></div></div>
+    </div>
+    <div class="coins-section" id="coins-section" style="display:none">
+      <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text-dim)">Coins</div>
+      <div class="coins-row" id="coins-row"></div>
+    </div>
+  </div>
+  <div id="resize-handle"></div>
+  <div id="code-panel">
+    <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--text-dim);margin-bottom:8px;">Code &mdash; Python</div>
+    <div id="code-body"></div>
+  </div>
+  <div id="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-title">Variables</div>
+      <div class="var-grid2">
+        <div class="var-box2 accent-border">
+          <div class="var-label2">amount (i)</div>
+          <div class="var-val2" id="vv-i">&mdash;</div>
+        </div>
+        <div class="var-box2 amber-border">
+          <div class="var-label2">coin (c)</div>
+          <div class="var-val2" id="vv-coin">&mdash;</div>
+        </div>
+        <div class="var-box2">
+          <div class="var-label2">dp[i - c]</div>
+          <div class="var-val2" id="vv-source">&mdash;</div>
+        </div>
+        <div class="var-box2 green-border">
+          <div class="var-label2">dp[i] (best)</div>
+          <div class="var-val2" id="vv-best">&mdash;</div>
+        </div>
+      </div>
+      <div class="result-badge" id="result-badge" style="margin-top:8px"></div>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-title">Legend</div>
+      <div class="legend-item"><div class="legend-swatch" style="border:2px solid var(--accent);background:var(--surface-dark)"></div>Current cell</div>
+      <div class="legend-item"><div class="legend-swatch" style="border:2px solid #b45309;background:#1c1200"></div>Source dp[i-c]</div>
+      <div class="legend-item"><div class="legend-swatch" style="border:2px solid #2d3148;background:#0f0f0f"></div>Solved cell</div>
+      <div class="legend-item"><div class="legend-swatch" style="border:2px dashed var(--border-soft);background:#0f0f0f"></div>Unsolved (&infin;)</div>
+    </div>
   </div>
 </div>
 
-<div class="viz-area">
-  <div class="main-row">
-    <div class="left-col">
-      <div class="array-section" id="array-section">
-        <span style="color:var(--text-dim);font-size:0.82rem">Set coins &amp; amount, then click Build &amp; Run.</span>
-      </div>
-      <div class="coins-section" id="coins-section" style="display:none">
-        <div class="panel-title">Coins</div>
-        <div class="coins-row" id="coins-row"></div>
-      </div>
-      <div class="code-panel">
-        <div class="code-header">Python</div>
-        <div class="code-body" id="code-body"></div>
-      </div>
-    </div>
-
-    <div class="right-col">
-      <div style="display:flex;gap:12px">
-        <div class="panel-box" style="flex:0 0 auto">
-          <div class="nav-row">
-            <button class="stepBtn" id="prevBtn2" disabled>&larr;</button>
-            <button class="stepBtn" id="stepBtn2" disabled>&rarr;</button>
-            <button class="playBtn" id="playBtn2" disabled>&#9654; Play</button>
-            <select class="speedSel" id="speedSel2">
-              <option value="700">Slow</option>
-              <option value="350" selected>Medium</option>
-              <option value="100">Fast</option>
-            </select>
-          </div>
-        </div>
-        <div class="panel-box" style="flex:1;min-width:0">
-          <div class="panel-title" id="phase-label">&mdash;</div>
-          <div style="font-size:0.82rem;color:var(--text-muted);margin-top:2px" id="step-desc">Set coins &amp; amount, then click Build &amp; Run.</div>
-          <div class="result-badge" id="result-badge"></div>
-        </div>
-      </div>
-
-      <div class="panel-box">
-        <div class="panel-title">Variables</div>
-        <div class="var-grid">
-          <div class="var-box accent-border">
-            <div class="var-label">amount (i)</div>
-            <div class="var-val" id="vv-i">&mdash;</div>
-          </div>
-          <div class="var-box amber-border">
-            <div class="var-label">coin (c)</div>
-            <div class="var-val" id="vv-coin">&mdash;</div>
-          </div>
-          <div class="var-box">
-            <div class="var-label">dp[i - c]</div>
-            <div class="var-val" id="vv-source">&mdash;</div>
-          </div>
-          <div class="var-box green-border">
-            <div class="var-label">dp[i] (best)</div>
-            <div class="var-val" id="vv-best">&mdash;</div>
-          </div>
-        </div>
-      </div>
-
-      <div class="panel-box">
-        <div class="panel-title">Legend</div>
-        <div style="display:flex;flex-direction:column;gap:6px;font-size:0.78rem;color:var(--text-muted)">
-          <div style="display:flex;align-items:center;gap:8px">
-            <div style="width:16px;height:16px;border-radius:3px;border:2px solid var(--accent);background:var(--surface-dark)"></div>
-            <span>Current cell (dp[i] being computed)</span>
-          </div>
-          <div style="display:flex;align-items:center;gap:8px">
-            <div style="width:16px;height:16px;border-radius:3px;border:2px solid #b45309;background:#1c1200"></div>
-            <span>Source cell (dp[i&minus;c])</span>
-          </div>
-          <div style="display:flex;align-items:center;gap:8px">
-            <div style="width:16px;height:16px;border-radius:3px;border:2px solid #2d3148;background:#0f0f0f"></div>
-            <span>Solved cell</span>
-          </div>
-          <div style="display:flex;align-items:center;gap:8px">
-            <div style="width:16px;height:16px;border-radius:3px;border:2px dashed var(--border-soft);background:#0f0f0f"></div>
-            <span>Unsolved (&infin;)</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
+<div id="nav-row">
+  <button id="prevBtn" class="btn-step">&#8592; Prev</button>
+  <button id="stepBtn" class="btn-step">Step &#8594;</button>
+  <button id="playBtn" class="btn-play">Play</button>
+  <button id="resetBtn" class="btn-step">&#8635; Reset</button>
+  <select id="speedSel">
+    <option value="800">0.5&#215;</option>
+    <option value="400" selected>1&#215;</option>
+    <option value="200">2&#215;</option>
+    <option value="100">4&#215;</option>
+  </select>
 </div>
 
 <script>
 var simSteps = [], nav;
 var currentAmount = 0, currentCoins = [];
+var INF = Infinity;
 
 var CODE = [
   [1,  '<span class="kw">def</span> <span class="fn">coin_change</span><span class="op">(</span>coins<span class="op">,</span> amount<span class="op">):</span>'],
-  [2,  '    dp <span class="op">=</span> <span class="op">[</span><span class="bi">float</span><span class="op">(</span><span class="nb">"inf"</span><span class="op">)]</span> <span class="op">*</span> <span class="op">(</span>amount <span class="op">+</span> <span class="nb">1</span><span class="op">)  </span><span class="cm"># ∞ = no solution yet</span>'],
-  [3,  '    dp<span class="op">[</span><span class="nb">0</span><span class="op">]</span> <span class="op">=</span> <span class="nb">0</span><span class="op">                </span><span class="cm"># base case</span>'],
+  [2,  '    dp <span class="op">=</span> <span class="op">[</span><span class="bi">float</span><span class="op">(</span><span class="nb">"inf"</span><span class="op">)]</span> <span class="op">*</span> <span class="op">(</span>amount <span class="op">+</span> <span class="nb">1</span><span class="op">)  </span><span class="cm"># ∞ = no solution</span>'],
+  [3,  '    dp<span class="op">[</span><span class="nb">0</span><span class="op">]</span> <span class="op">=</span> <span class="nb">0</span>                <span class="cm"># base case</span>'],
   [4,  '    <span class="kw">for</span> i <span class="kw">in</span> <span class="bi">range</span><span class="op">(</span><span class="nb">1</span><span class="op">,</span> amount <span class="op">+</span> <span class="nb">1</span><span class="op">):</span>'],
   [5,  '        <span class="kw">for</span> c <span class="kw">in</span> coins<span class="op">:</span>'],
   [6,  '            <span class="kw">if</span> c <span class="op">&lt;=</span> i <span class="kw">and</span> dp<span class="op">[</span>i <span class="op">-</span> c<span class="op">]</span> <span class="op">+</span> <span class="nb">1</span> <span class="op">&lt;</span> dp<span class="op">[</span>i<span class="op">]:</span>'],
@@ -306,7 +181,12 @@ var CODE = [
   [8,  '    <span class="kw">return</span> dp<span class="op">[</span>amount<span class="op">]</span> <span class="kw">if</span> dp<span class="op">[</span>amount<span class="op">]</span> <span class="op">!=</span> <span class="bi">float</span><span class="op">(</span><span class="nb">"inf"</span><span class="op">)</span> <span class="kw">else</span> <span class="op">-</span><span class="nb">1</span>'],
 ];
 
-var INF = Infinity;
+function updateStatus(snap, cur, total) {
+  document.getElementById('phase-badge').textContent = snap.phase || '';
+  document.getElementById('step-counter').textContent = 'Step ' + (cur+1) + ' / ' + total;
+  var desc = document.getElementById('desc');
+  if (desc) desc.textContent = snap.desc || '';
+}
 
 window.addEventListener('DOMContentLoaded', function() {
   buildCodePanel();
@@ -317,13 +197,7 @@ window.addEventListener('DOMContentLoaded', function() {
     speedSel: document.getElementById('speedSel'),
     render: function(snap, cur, total) {
       applyStep(snap, cur > 0);
-      var phaseEl = document.getElementById('phase-label');
-      var descEl  = document.getElementById('step-desc');
-      if (phaseEl) phaseEl.textContent = 'Step ' + (cur + 1) + ' / ' + total + '  ·  ' + snap.phase;
-      if (descEl) {
-        gsap.fromTo(descEl, { opacity: 0 }, { opacity: 1, duration: 0.15 });
-        descEl.textContent = snap.desc;
-      }
+      updateStatus(snap, cur, total);
       var badge = document.getElementById('result-badge');
       if (badge) {
         badge.className = 'result-badge';
@@ -341,12 +215,33 @@ window.addEventListener('DOMContentLoaded', function() {
       }
     }
   });
+
+  document.getElementById('resetBtn').addEventListener('click', function() { buildAndRun(); });
 });
+
+(function() {
+  var handle = document.getElementById('resize-handle');
+  var panel  = document.getElementById('code-panel');
+  var dragging = false, startX = 0, startW = 0;
+  handle.addEventListener('mousedown', function(e) {
+    dragging = true; startX = e.clientX; startW = panel.offsetWidth;
+    handle.classList.add('dragging'); e.preventDefault();
+  });
+  document.addEventListener('mousemove', function(e) {
+    if (!dragging) return;
+    var delta = startX - e.clientX;
+    panel.style.width = Math.min(560, Math.max(120, startW + delta)) + 'px';
+  });
+  document.addEventListener('mouseup', function() {
+    if (!dragging) return;
+    dragging = false; handle.classList.remove('dragging');
+  });
+})();
 
 function buildCodePanel() {
   var body = document.getElementById('code-body');
   body.innerHTML = CODE.map(function(e) {
-    return '<div class="code-line" id="cl-' + e[0] + '"><span class="ln">' + e[0] + '</span><span>' + e[1] + '</span></div>';
+    return '<div class="cl" id="cl-' + e[0] + '"><span class="ln">' + e[0] + '</span><span>' + e[1] + '</span></div>';
   }).join('');
 }
 
@@ -354,13 +249,10 @@ function buildAndRun() {
   var raw = document.getElementById('inp-coins').value;
   var amount = parseInt(document.getElementById('inp-amount').value, 10);
   if (isNaN(amount) || amount < 0 || amount > 50) return;
-
   var coins = raw.split(',').map(function(s) { return parseInt(s.trim(), 10); }).filter(function(n) { return !isNaN(n) && n > 0; });
   if (coins.length === 0) return;
-
   currentAmount = amount;
   currentCoins = coins;
-
   buildArraySection(amount);
   buildCoinsSection(coins);
   simSteps = simulate(coins, amount);
@@ -377,36 +269,24 @@ function loadPreset() {
 }
 
 function randomExample() {
-  var coinSets = [
-    '1,5,10',
-    '1,2,5',
-    '2,5,10',
-    '1,3,4',
-    '1,5,6',
-    '2,3,7',
-    '1,10,25',
-  ];
-  var amounts = [5, 10, 15, 20, 25, 30, 35, 40, 45];
-  var randomCoins = coinSets[Math.floor(Math.random() * coinSets.length)];
-  var randomAmount = amounts[Math.floor(Math.random() * amounts.length)];
-  document.getElementById('inp-coins').value = randomCoins;
-  document.getElementById('inp-amount').value = randomAmount;
+  var coinSets = ['1,5,10','1,2,5','2,5,10','1,3,4','1,5,6','2,3,7','1,10,25'];
+  var amounts = [5,10,15,20,25,30,35,40,45];
+  document.getElementById('inp-coins').value = coinSets[Math.floor(Math.random()*coinSets.length)];
+  document.getElementById('inp-amount').value = amounts[Math.floor(Math.random()*amounts.length)];
   document.getElementById('presetSel').value = '';
   buildAndRun();
 }
 
 function buildArraySection(amount) {
-  var sec = document.getElementById('array-section');
-  var html = '<div class="arr-scroll"><div class="arr-wrap" id="arr-wrap">';
+  var wrap = document.getElementById('arr-wrap');
+  var html = '';
   for (var i = 0; i <= amount; i++) {
     html += '<div class="arr-cell-group">'
       + '<div class="arr-idx">' + i + '</div>'
       + '<div class="arr-cell" id="ac-' + i + '" data-state="empty">&#x221e;</div>'
       + '</div>';
   }
-  html += '</div></div>';
-  sec.innerHTML = html;
-  // dp[0] = 0 pre-filled
+  wrap.innerHTML = html;
   var c0 = document.getElementById('ac-0');
   if (c0) { c0.textContent = '0'; c0.dataset.state = 'filled'; }
 }
@@ -420,25 +300,19 @@ function buildCoinsSection(coins) {
   }).join('');
 }
 
-// --- Simulate ---
 function simulate(coins, amount) {
   var steps = [];
   var dp = new Array(amount + 1).fill(INF);
   dp[0] = 0;
 
   function snap(phase, desc, lines, i, coinIdx, sourceIdx, dpSnap) {
-    steps.push({
-      phase: phase,
-      desc: desc,
-      lines: lines,
+    steps.push({ phase: phase, desc: desc, lines: lines,
       i: i !== undefined ? i : -1,
       coinIdx: coinIdx !== undefined ? coinIdx : -1,
       sourceIdx: sourceIdx !== undefined ? sourceIdx : -1,
-      dp: dpSnap.slice(),
-    });
+      dp: dpSnap.slice() });
   }
 
-  // Handle amount=0 edge case
   if (amount === 0) {
     snap('Done', 'amount = 0. dp[0] = 0. Answer: 0 coins.', [3, 8], -1, -1, -1, dp);
     return steps;
@@ -448,44 +322,30 @@ function simulate(coins, amount) {
 
   for (var i = 1; i <= amount; i++) {
     snap('start-amount', 'Computing dp[' + i + ']. Try each coin.', [4], i, -1, -1, dp);
-
     for (var ci = 0; ci < coins.length; ci++) {
       var c = coins[ci];
       if (c > i) {
-        snap('skip-coin',
-          'Coin ' + c + ' > ' + i + '. Skip (can\'t use a coin larger than current amount).',
-          [5, 6], i, ci, -1, dp);
+        snap('skip-coin', 'Coin ' + c + ' > ' + i + '. Skip.', [5, 6], i, ci, -1, dp);
         continue;
       }
       var srcIdx = i - c;
       var srcVal = dp[srcIdx];
       var candidate = srcVal === INF ? INF : srcVal + 1;
-
       if (candidate < dp[i]) {
-        snap('try-coin',
-          'dp[' + i + '-' + c + '] = dp[' + srcIdx + '] = ' + (srcVal === INF ? '∞' : srcVal) + '. New candidate: ' + (candidate === INF ? '∞' : candidate) + ' < ' + (dp[i] === INF ? '∞' : dp[i]) + '. Improvement!',
-          [5, 6, 7], i, ci, srcIdx, dp);
+        snap('try-coin', 'dp[' + i + '-' + c + '] = ' + (srcVal === INF ? '∞' : srcVal) + '. Candidate: ' + (candidate === INF ? '∞' : candidate) + ' < ' + (dp[i] === INF ? '∞' : dp[i]) + '. Improvement!', [5, 6, 7], i, ci, srcIdx, dp);
         dp[i] = candidate;
-        snap('improved',
-          'dp[' + i + '] updated to ' + dp[i] + ' (using coin ' + c + ').',
-          [7], i, ci, srcIdx, dp);
+        snap('improved', 'dp[' + i + '] updated to ' + dp[i] + ' (using coin ' + c + ').', [7], i, ci, srcIdx, dp);
       } else {
-        snap('try-coin',
-          'dp[' + i + '-' + c + '] = dp[' + srcIdx + '] = ' + (srcVal === INF ? '∞' : srcVal) + '. Candidate: ' + (candidate === INF ? '∞' : candidate) + ' ≥ ' + (dp[i] === INF ? '∞' : dp[i]) + '. No improvement.',
-          [5, 6], i, ci, srcIdx, dp);
+        snap('try-coin', 'dp[' + i + '-' + c + '] = ' + (srcVal === INF ? '∞' : srcVal) + '. Candidate: ' + (candidate === INF ? '∞' : candidate) + ' ≥ ' + (dp[i] === INF ? '∞' : dp[i]) + '. No improvement.', [5, 6], i, ci, srcIdx, dp);
       }
     }
   }
 
   var finalVal = dp[amount];
-  var doneDesc = finalVal === INF
-    ? 'No solution exists for amount=' + amount + '. Return -1.'
-    : 'dp[' + amount + '] = ' + finalVal + '. Minimum ' + finalVal + ' coin' + (finalVal === 1 ? '' : 's') + ' needed.';
-  snap('Done', doneDesc, [8], -1, -1, -1, dp);
+  snap('Done', finalVal === INF ? 'No solution for amount=' + amount + '. Return -1.' : 'dp[' + amount + '] = ' + finalVal + '. Min ' + finalVal + ' coin' + (finalVal === 1 ? '' : 's') + '.', [8], -1, -1, -1, dp);
   return steps;
 }
 
-// --- Render ---
 function applyStep(s, animate) {
   applyArrayCells(s, animate);
   applyCoins(s, animate);
@@ -498,28 +358,16 @@ function applyArrayCells(s, animate) {
     var el = document.getElementById('ac-' + i);
     if (!el) continue;
     var val = s.dp[i];
-
     var state = 'empty';
-    if (i === s.i && i === s.sourceIdx) {
-      state = 'current'; // current takes priority when both
-    } else if (i === s.i) {
-      state = 'current';
-    } else if (i === s.sourceIdx) {
-      state = 'source';
-    } else if (val !== INF) {
-      state = 'filled';
-    }
-
+    if (i === s.i && i === s.sourceIdx) { state = 'current'; }
+    else if (i === s.i)       { state = 'current'; }
+    else if (i === s.sourceIdx) { state = 'source'; }
+    else if (val !== INF)     { state = 'filled'; }
     el.dataset.state = state;
     el.textContent = val === INF ? '∞' : String(val);
-
     if (animate && s.phase === 'improved' && i === s.i) {
       gsap.fromTo(el, { scale: 0.5 }, { scale: 1.15, duration: 0.18, ease: 'power2.out',
-        onComplete: function(el2) { gsap.to(el2, { scale: 1, duration: 0.12 }); }.bind(null, el)
-      });
-    }
-    if (animate && (s.phase === 'try-coin' || s.phase === 'improved') && i === s.sourceIdx && i !== s.i) {
-      gsap.fromTo(el, { backgroundColor: '#3d2500' }, { backgroundColor: '#1c1200', duration: 0.3 });
+        onComplete: function(el2) { gsap.to(el2, { scale: 1, duration: 0.12 }); }.bind(null, el) });
     }
   }
 }
@@ -531,9 +379,7 @@ function applyCoins(s, animate) {
     el.className = 'coin-chip';
     if (idx === s.coinIdx) {
       el.classList.add('active');
-      if (animate) {
-        gsap.fromTo(el, { scale: 1 }, { scale: 1.2, duration: 0.12, yoyo: true, repeat: 1 });
-      }
+      if (animate) gsap.fromTo(el, { scale: 1 }, { scale: 1.2, duration: 0.12, yoyo: true, repeat: 1 });
     } else if (s.coinIdx >= 0 && idx < s.coinIdx) {
       el.classList.add('skip');
     }
@@ -558,19 +404,12 @@ function applyVars(s, animate) {
 
 function setCodeLines(lines) {
   CODE.forEach(function(e) {
-    var ln = e[0];
-    var el = document.getElementById('cl-' + ln);
+    var el = document.getElementById('cl-' + e[0]);
     if (!el) return;
-    if (lines.indexOf(ln) >= 0) el.classList.add('hl');
+    if (lines.indexOf(e[0]) >= 0) el.classList.add('hl');
     else el.classList.remove('hl');
   });
 }
-</script>
-<script>
-  if (window.self !== window.top) {
-    var bl = document.querySelector('.back-link');
-    if (bl) bl.style.display = 'none';
-  }
 </script>
 </body>
 </html>

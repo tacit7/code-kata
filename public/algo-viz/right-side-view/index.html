@@ -8,105 +8,57 @@
   <script src="../shared/gsap.min.js"></script>
   <script src="../shared/viz.js"></script>
   <style>
-    .viz-area {
-      width: 100%; max-width: 90%;
-      display: flex; flex-direction: column; gap: 12px;
-    }
+    body { background: var(--bg); color: var(--text); font-family: "Fira Code", monospace; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+    .viz-inputs { width: 100%; padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; flex-wrap: wrap; gap: 12px; align-items: center; flex-shrink: 0; }
+    #header { padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+    #main { display: flex; flex: 1; overflow: hidden; }
+    #viz-area { flex: 1; display: flex; flex-direction: column; align-items: stretch; justify-content: flex-start; padding: 20px; gap: 16px; overflow-y: auto; }
+    #resize-handle { width: 5px; flex-shrink: 0; cursor: col-resize; background: transparent; border-left: 1px solid var(--border); transition: background .15s; z-index: 10; }
+    #resize-handle:hover, #resize-handle.dragging { background: var(--accent); }
+    #code-panel { width: 240px; min-width: 120px; max-width: 400px; flex-shrink: 0; background: #0d1117; border-right: 1px solid var(--border); overflow-y: auto; overflow-x: auto; padding: 10px 12px; display: flex; flex-direction: column; }
+    #sidebar { width: 200px; flex-shrink: 0; background: var(--surface); border-left: 1px solid var(--border); overflow-y: auto; padding: 14px 12px; display: flex; flex-direction: column; gap: 12px; }
+    #nav-row { flex-shrink: 0; display: flex; align-items: center; gap: 8px; padding: 10px 16px; background: var(--surface); border-top: 1px solid var(--border); }
+    .btn-step { background: var(--surface); border: 1px solid var(--border); color: var(--text); border-radius: var(--radius-sm); padding: 6px 14px; cursor: pointer; font-size: 0.82rem; }
+    .btn-play { background: #15803d; border: none; color: #fff; border-radius: var(--radius-sm); padding: 6px 14px; cursor: pointer; font-size: 0.82rem; font-weight: 600; }
+    .code-panel-title { font-size: 0.67rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-dim); margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+    #nav-row select { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text); font-size: 0.85rem; padding: 6px 8px; outline: none; }
 
-    .tree-wrap {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-md);
-      overflow: hidden;
-    }
+    .tree-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); overflow: hidden; }
     #tree-svg { display: block; width: 100%; }
 
-    .bottom-row {
-      display: grid;
-      grid-template-columns: 1fr 220px;
-      gap: 12px;
-      align-items: start;
-    }
+    .bottom-row { display: grid; grid-template-columns: 1fr 220px; gap: 12px; align-items: start; }
     @media (max-width: 640px) { .bottom-row { grid-template-columns: 1fr; } }
 
-    /* Queue panel */
-    #queue-pills {
-      display: flex; flex-wrap: wrap; gap: 7px;
-      min-height: 34px; align-items: center;
-    }
-    .q-pill {
-      display: inline-flex; align-items: center; justify-content: center;
-      width: 34px; height: 34px; border-radius: 50%;
-      font-size: 0.84rem; font-weight: 700;
-      border: 2px solid;
-      transition: all 0.2s;
-    }
+    #queue-pills { display: flex; flex-wrap: wrap; gap: 7px; min-height: 34px; align-items: center; }
+    .q-pill { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: 50%; font-size: 0.84rem; font-weight: 700; border: 2px solid; transition: all 0.2s; }
     .q-pill.idle      { background: #1e2130; border-color: #2d3148; color: var(--text-muted); }
     .q-pill.queued    { background: #1a2b3c; border-color: var(--blue); color: var(--blue); }
     .q-pill.active    { background: #2d1f6a; border-color: var(--accent); color: var(--accent-pale); }
     .q-pill.rightmost { background: #3d1a00; border-color: var(--orange); color: var(--orange); }
     .q-empty { font-size: 0.82rem; color: var(--text-faint); font-style: italic; }
 
-    /* Result panel */
-    #result-list {
-      display: flex; flex-direction: column; gap: 6px; min-height: 34px;
-    }
-    .r-row {
-      display: flex; align-items: center; gap: 8px;
-      font-size: 0.88rem; color: var(--text-muted);
-      padding: 5px 10px; border-radius: 6px;
-      background: var(--surface-dark); border: 1px solid var(--border-soft);
-      transition: all 0.25s;
-    }
-    .r-row.new {
-      background: rgba(255,158,100,0.12);
-      border-color: var(--orange);
-      color: var(--orange);
-    }
+    #result-list { display: flex; flex-direction: column; gap: 6px; min-height: 34px; }
+    .r-row { display: flex; align-items: center; gap: 8px; font-size: 0.88rem; color: var(--text-muted); padding: 5px 10px; border-radius: 6px; background: var(--surface-dark); border: 1px solid var(--border-soft); transition: all 0.25s; }
+    .r-row.new { background: rgba(255,158,100,0.12); border-color: var(--orange); color: var(--orange); }
     .r-lbl { font-size: 0.72rem; color: var(--text-dim); min-width: 52px; }
     .r-val { font-weight: 700; font-size: 1rem; }
     .r-empty { font-size: 0.82rem; color: var(--text-faint); font-style: italic; }
 
-    /* Viz inputs */
-    .viz-inputs {
-      display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end;
-      padding: 10px 0 14px; width: 100%; max-width: 90%;
-    }
-    .viz-inputs .field {
-      display: flex; flex-direction: column; gap: 4px;
-    }
-    .viz-inputs label {
-      font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
-      letter-spacing: 0.08em; color: var(--text-dim);
-    }
-    .viz-inputs input[type="text"] {
-      background: var(--surface); border: 1px solid var(--border);
-      color: var(--text); border-radius: var(--radius-sm);
-      padding: 6px 10px; font-size: 0.85rem; width: 280px;
-    }
-    .viz-inputs select {
-      background: var(--surface); border: 1px solid var(--border);
-      color: var(--text); border-radius: var(--radius-sm);
-      padding: 6px 10px; font-size: 0.85rem; cursor: pointer;
-    }
-    .viz-inputs button {
-      padding: 7px 18px; border: none; border-radius: var(--radius-sm);
-      font-weight: 600; cursor: pointer; font-size: 0.85rem;
-    }
-    .viz-inputs button.btn-primary {
-      background: var(--accent); color: #fff;
-    }
-    .viz-inputs button.btn-random {
-      background: var(--surface); color: var(--text); border: 1px solid var(--border);
-    }
+    .panel-box { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px; display: flex; flex-direction: column; gap: 8px; }
+    .panel-title { font-size: 0.67rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); }
+    .panel-sub { font-size: 0.62rem; color: var(--text-ghost); font-weight: 400; text-transform: none; letter-spacing: 0; }
+
+    .viz-inputs .field { display: flex; flex-direction: column; gap: 4px; }
+    .viz-inputs label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); }
+    .viz-inputs input[type="text"] { background: var(--surface); border: 1px solid var(--border); color: var(--text); border-radius: var(--radius-sm); padding: 6px 10px; font-size: 0.85rem; width: 280px; }
+    .viz-inputs select { background: var(--surface); border: 1px solid var(--border); color: var(--text); border-radius: var(--radius-sm); padding: 6px 10px; font-size: 0.85rem; cursor: pointer; }
+    .viz-inputs button { padding: 7px 18px; border: none; border-radius: var(--radius-sm); font-weight: 600; cursor: pointer; font-size: 0.85rem; }
+    .viz-inputs button.btn-primary { background: var(--accent); color: #fff; }
+    .viz-inputs button.btn-random { background: var(--surface); color: var(--text); border: 1px solid var(--border); }
+    .leg-row { display: flex; align-items: center; gap: 8px; font-size: 0.76rem; color: var(--text-muted); }
   </style>
 </head>
-<body class="page">
-
-<div class="page-header">
-  <a class="back-link" href="../index.html">← All Algorithms</a>
-  <h1 class="page-title">Binary Tree Right Side View</h1>
-</div>
+<body>
 
 <div class="viz-inputs">
   <div class="field">
@@ -126,75 +78,92 @@
     <input id="inp-tree" type="text" value="1,2,3,null,5,null,4" />
   </div>
   <button class="btn-primary" onclick="buildAndRun()">Run</button>
-  <button class="btn-random" onclick="randomExample()">🎲 Random</button>
+  <button class="btn-random" onclick="randomExample()">&#127922; Random</button>
+</div>
+<div class="controls"></div>
+
+<div id="header">
+  <span id="phase-label" style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:3px 10px;border-radius:var(--radius-sm);background:#1e3a5f;color:var(--blue);border:1px solid var(--blue);">&#8212;</span>
+  <span style="font-size:13px;font-weight:700;">Binary Tree Right Side View</span>
 </div>
 
-<div class="viz-inputs">
-</div>
-
-<div class="viz-area">
-
-  <div class="tree-wrap">
-    <svg id="tree-svg" viewBox="0 0 800 320"
-         preserveAspectRatio="xMidYMid meet"></svg>
+<div id="main">
+  <div id="viz-area">
+    <div class="tree-wrap">
+      <svg id="tree-svg" viewBox="0 0 800 320" preserveAspectRatio="xMidYMid meet"></svg>
+    </div>
+    <div class="bottom-row">
+      <div class="panel-box">
+        <div class="panel-title">BFS Queue <span class="panel-sub">(front &#8594; back)</span></div>
+        <div id="queue-pills"><span class="q-empty">empty</span></div>
+      </div>
+      <div class="panel-box">
+        <div class="panel-title">Right Side View</div>
+        <div id="result-list"><span class="r-empty">none yet</span></div>
+      </div>
+    </div>
   </div>
 
-  <div class="status-bar" style="max-width:100%">
-    <span class="phase-label" id="phase-label">—</span>
-    <span class="step-desc"   id="step-desc">Click Run to start.</span>
+  <div id="resize-handle"></div>
+
+  <div id="code-panel">
+    <div class="code-panel-title">Algorithm</div>
+    <div style="font-size:0.78rem;color:var(--text-dim);line-height:1.7;white-space:pre-wrap;">BFS level-by-level.
+
+For each level, the last
+node dequeued is the one
+visible from the right.
+
+Time:  O(n)
+Space: O(n) — queue</div>
   </div>
 
-  <div class="bottom-row">
+  <div id="sidebar">
+    <div id="step-desc" style="font-size:0.8rem;color:var(--text-muted);line-height:1.45;">Click Run to start.</div>
 
     <div class="panel-box">
-      <div class="panel-title">BFS Queue <span class="panel-sub">(front → back)</span></div>
-      <div id="queue-pills"><span class="q-empty">empty</span></div>
+      <div class="panel-title">Legend</div>
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <div class="leg-row">
+          <svg width="14" height="14"><circle cx="7" cy="7" r="6" fill="#1e2130" stroke="#2d3148" stroke-width="2"/></svg>
+          Idle
+        </div>
+        <div class="leg-row">
+          <svg width="14" height="14"><circle cx="7" cy="7" r="6" fill="#1a2b3c" stroke="var(--blue)" stroke-width="2"/></svg>
+          In Queue
+        </div>
+        <div class="leg-row">
+          <svg width="14" height="14"><circle cx="7" cy="7" r="6" fill="#2d1f6a" stroke="var(--accent)" stroke-width="2"/></svg>
+          Active
+        </div>
+        <div class="leg-row">
+          <svg width="14" height="14"><circle cx="7" cy="7" r="6" fill="#3d1a00" stroke="var(--orange)" stroke-width="2.5"/></svg>
+          Rightmost
+        </div>
+        <div class="leg-row">
+          <svg width="14" height="14"><circle cx="7" cy="7" r="6" fill="#052e16" stroke="#16a34a" stroke-width="2"/></svg>
+          Done
+        </div>
+      </div>
     </div>
-
-    <div class="panel-box">
-      <div class="panel-title">Right Side View</div>
-      <div id="result-list"><span class="r-empty">none yet</span></div>
-    </div>
-
-  </div>
-
-</div>
-
-<div class="legend">
-  <div class="leg-item">
-    <svg width="14" height="14"><circle cx="7" cy="7" r="6" fill="#1e2130" stroke="#2d3148" stroke-width="2"/></svg>
-    Idle
-  </div>
-  <div class="leg-item">
-    <svg width="14" height="14"><circle cx="7" cy="7" r="6" fill="#1a2b3c" stroke="var(--blue)" stroke-width="2"/></svg>
-    In Queue
-  </div>
-  <div class="leg-item">
-    <svg width="14" height="14"><circle cx="7" cy="7" r="6" fill="#2d1f6a" stroke="var(--accent)" stroke-width="2"/></svg>
-    Active
-  </div>
-  <div class="leg-item">
-    <svg width="14" height="14"><circle cx="7" cy="7" r="6" fill="#3d1a00" stroke="var(--orange)" stroke-width="2.5"/></svg>
-    Rightmost
-  </div>
-  <div class="leg-item">
-    <svg width="14" height="14"><circle cx="7" cy="7" r="6" fill="#052e16" stroke="#16a34a" stroke-width="2"/></svg>
-    Done
   </div>
 </div>
 
-<div class="step-nav">
-  <button class="stepBtn" id="prevBtn" disabled>← Back</button>
-  <button class="stepBtn" id="stepBtn" disabled>Next →</button>
-  <button id="playBtn" style="background:#15803d;color:#fff;border:none;border-radius:4px;padding:6px 14px;font-weight:600;cursor:pointer">&#9654; Play</button>
-  <select id="speedSel" style="background:var(--bg);border:1px solid var(--border);color:var(--text);border-radius:4px;padding:6px 8px;font-size:0.85rem">
-    <option value="900">Slow</option>
-    <option value="450" selected>Medium</option>
-    <option value="150">Fast</option>
+<div id="nav-row">
+  <button id="prevBtn" class="btn-step">&#8592; Prev</button>
+  <button id="stepBtn" class="btn-step">Step &#8594;</button>
+  <button id="playBtn" class="btn-play">Play</button>
+  <button id="resetBtn" class="btn-step">&#8635; Reset</button>
+  <select id="speedSel">
+    <option value="800">0.5&#215;</option>
+    <option value="400" selected>1&#215;</option>
+    <option value="200">2&#215;</option>
+    <option value="100">4&#215;</option>
   </select>
 </div>
 
 <script>
+
 // ─── Node state colors ────────────────────────────────────────────────────────
 const COLORS = {
   idle:      { fill: '#1e2130', stroke: '#2d3148',       text: 'var(--text-muted)' },
@@ -540,10 +509,30 @@ var nav = VizNav({
 buildAndRun();
 </script>
 <script>
-  if (window.self !== window.top) {
+if (window.self !== window.top) {
     var bl = document.querySelector('.back-link');
     if (bl) bl.style.display = 'none';
   }
+</script>
+<script>
+(function() {
+  var handle = document.getElementById('resize-handle');
+  var panel  = document.getElementById('code-panel');
+  var dragging = false, startX = 0, startW = 0;
+  handle.addEventListener('mousedown', function(e) {
+    dragging = true; startX = e.clientX; startW = panel.offsetWidth;
+    handle.classList.add('dragging'); e.preventDefault();
+  });
+  document.addEventListener('mousemove', function(e) {
+    if (!dragging) return;
+    var delta = startX - e.clientX;
+    panel.style.width = Math.min(400, Math.max(120, startW + delta)) + 'px';
+  });
+  document.addEventListener('mouseup', function() {
+    if (!dragging) return;
+    dragging = false; handle.classList.remove('dragging');
+  });
+})();
 </script>
 </body>
 </html>

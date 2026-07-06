@@ -1,281 +1,65 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Construct Binary Tree from Preorder &amp; Inorder</title>
-  <link rel="stylesheet" href="../shared/style.css" />
-  <script src="../shared/gsap.min.js"></script>
-  <script src="../shared/viz.js"></script>
-  <style>
-    .main-area {
-      flex: 1;
-      display: flex;
-      gap: 14px;
-      min-height: 0;
-      overflow: hidden;
-      padding: 0 16px;
-    }
-
-    .left-panel {
-      width: 320px;
-      min-width: 260px;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      overflow-y: auto;
-      padding-bottom: 8px;
-    }
-
-    .right-panel {
-      flex: 1;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-md);
-      overflow: hidden;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    #tree-svg {
-      display: block;
-      width: 100%;
-      height: 100%;
-    }
-
-    .array-panel {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-md);
-      padding: 12px 14px 22px;
-    }
-
-    .panel-label {
-      font-size: 0.67rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.11em;
-      color: var(--text-dim);
-      margin-bottom: 10px;
-    }
-
-    .array-cells {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 5px;
-    }
-
-    .arr-cell {
-      width: 36px;
-      height: 36px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      border-radius: 6px;
-      font-size: 0.88rem;
-      font-weight: 700;
-      font-family: 'JetBrains Mono', monospace;
-      border: 2px solid var(--border);
-      background: var(--bg);
-      color: var(--text-faint);
-      position: relative;
-      transition: background 0.18s, border-color 0.18s, color 0.18s;
-    }
-
-    .arr-cell .idx-label {
-      position: absolute;
-      bottom: -16px;
-      font-size: 0.6rem;
-      color: var(--text-faint);
-      font-weight: 400;
-      font-family: monospace;
-    }
-
-    .arr-cell.in-slice {
-      background: rgba(99, 102, 241, 0.12);
-      border-color: var(--accent);
-      color: var(--text);
-    }
-
-    .arr-cell.is-root {
-      background: #9a3412;
-      border-color: var(--orange);
-      color: #fff;
-    }
-
-    .arr-cell.left-part {
-      background: rgba(29, 78, 216, 0.22);
-      border-color: #3b82f6;
-      color: #93c5fd;
-    }
-
-    .arr-cell.right-part {
-      background: rgba(20, 83, 45, 0.3);
-      border-color: #22c55e;
-      color: #86efac;
-    }
-
-    .info-box {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-md);
-      padding: 12px 14px;
-    }
-
-    .info-row {
-      display: flex;
-      align-items: baseline;
-      gap: 8px;
-      margin-bottom: 6px;
-      font-size: 0.82rem;
-    }
-
-    .info-key {
-      font-size: 0.65rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.09em;
-      color: var(--text-dim);
-      min-width: 76px;
-    }
-
-    .info-val {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 0.8rem;
-      color: var(--text);
-    }
-
-    .info-val.orange { color: var(--orange); font-weight: 700; }
-    .info-val.blue   { color: #93c5fd; }
-    .info-val.green  { color: #86efac; }
-
-    #call-stack {
-      display: flex;
-      flex-direction: column-reverse;
-      gap: 4px;
-    }
-
-    .cs-frame {
-      background: #1e1a3a;
-      color: var(--accent-pale);
-      border: 1px solid var(--accent);
-      border-radius: 5px;
-      padding: 4px 10px;
-      font-size: 0.72rem;
-      font-family: 'JetBrains Mono', monospace;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    .cs-frame.top {
-      background: #312e81;
-      color: #e0e7ff;
-      border-color: #6366f1;
-    }
-
-    .cs-empty {
-      color: var(--text-faint);
-      font-size: 0.78rem;
-      font-style: italic;
-    }
-
-    .legend-row {
-      display: flex;
-      gap: 14px;
-      flex-wrap: wrap;
-      padding: 6px 16px 4px;
-      font-size: 0.75rem;
-      color: var(--text-dim);
-    }
-
-    .leg-item { display: flex; align-items: center; gap: 6px; }
-
-    .leg-swatch {
-      width: 13px; height: 13px;
-      border-radius: 3px;
-      border: 2px solid;
-      flex-shrink: 0;
-    }
-
-    .viz-inputs {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      align-items: flex-end;
-      padding: 10px 0 14px;
-      width: 100%;
-      max-width: 90%;
-    }
-
-    .viz-inputs .field {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }
-
-    .viz-inputs label {
-      font-size: 0.7rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      color: var(--text-dim);
-    }
-
-    .viz-inputs input[type="text"] {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      color: var(--text);
-      border-radius: var(--radius-sm);
-      padding: 6px 10px;
-      font-size: 0.85rem;
-      width: 180px;
-    }
-
-    .viz-inputs select {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      color: var(--text);
-      border-radius: var(--radius-sm);
-      padding: 6px 10px;
-      font-size: 0.85rem;
-      cursor: pointer;
-    }
-
-    .viz-inputs button {
-      padding: 7px 18px;
-      background: var(--accent);
-      color: #fff;
-      border: none;
-      border-radius: var(--radius-sm);
-      font-weight: 600;
-      cursor: pointer;
-      font-size: 0.85rem;
-    }
-
-    .viz-inputs button.secondary {
-      background: var(--surface);
-      color: var(--text);
-      border: 1px solid var(--border);
-    }
-
-    @media (max-width: 720px) {
-      .main-area { flex-direction: column; }
-      .left-panel { width: 100%; min-width: unset; }
-      .right-panel { min-height: 220px; }
-    }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Construct Binary Tree</title>
+<link rel="stylesheet" href="../shared/style.css" />
+<script src="../shared/gsap.min.js"></script>
+<script src="../shared/viz.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: "Fira Code", "Cascadia Code", monospace; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+  #header { padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+  #phase-badge { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; padding: 3px 10px; border-radius: var(--radius-sm); background: #1e3a5f; color: var(--blue); border: 1px solid var(--blue); }
+  #step-counter { font-size: 12px; color: var(--text-muted); margin-left: auto; }
+  .viz-inputs { width: 100%; max-width: 100%; padding: 10px 16px; background: var(--surface); border: none; border-bottom: 1px solid var(--border); border-radius: 0; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; flex-shrink: 0; }
+  .viz-inputs label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); display: block; margin-bottom: 3px; }
+  .viz-inputs select, .viz-inputs input { background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 0 8px; height: 30px; font-size: 0.82rem; font-family: inherit; }
+  .vi-btn-run { padding: 6px 14px; border-radius: 6px; font-size: 0.82rem; font-weight: 600; cursor: pointer; font-family: inherit; background: var(--accent); color: #fff; border: none; }
+  .vi-btn-rand { padding: 6px 14px; border-radius: 6px; font-size: 0.82rem; cursor: pointer; font-family: inherit; background: var(--bg); color: var(--text); border: 1px solid var(--border); }
+  #main { display: flex; flex: 1; overflow: hidden; }
+  #viz-area { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding: 12px; gap: 8px; overflow-y: auto; }
+  #desc { font-size: 13px; color: var(--text-muted); text-align: center; max-width: 560px; min-height: 36px; line-height: 1.5; }
+  #resize-handle { width: 5px; flex-shrink: 0; cursor: col-resize; background: transparent; border-left: 1px solid var(--border); transition: background .15s; z-index: 10; }
+  #resize-handle:hover, #resize-handle.dragging { background: var(--accent); }
+  #code-panel { width: 220px; min-width: 120px; max-width: 400px; flex-shrink: 0; background: #0d1117; border-right: 1px solid var(--border); overflow-y: auto; padding: 10px 12px; display: flex; flex-direction: column; }
+  #sidebar { width: 220px; flex-shrink: 0; background: var(--surface); border-left: 1px solid var(--border); overflow-y: auto; padding: 12px 10px; display: flex; flex-direction: column; gap: 10px; }
+  .sidebar-section { font-size: 11px; }
+  .sidebar-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--text-dim); margin-bottom: 6px; }
+  .var-item { font-size: 11px; font-family: monospace; color: var(--text-muted); padding: 3px 0; border-bottom: 1px solid var(--border-soft); display: flex; gap: 4px; }
+  .var-item:last-child { border-bottom: none; }
+  .var-key { color: var(--text-dim); } .var-val { color: var(--accent); font-weight: 700; }
+  #nav-row { flex-shrink: 0; display: flex; align-items: center; gap: 8px; padding: 10px 16px; background: var(--surface); border-top: 1px solid var(--border); }
+  .btn-step, .btn-play { padding: 6px 14px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--surface); color: var(--text); font-family: inherit; font-size: 12px; cursor: pointer; transition: background .15s; }
+  .btn-step:hover { background: #334155; }
+  .btn-play { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn-play:hover { background: var(--accent-hover); }
+  select { padding: 5px 8px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: #1e293b; color: var(--text); font-size: 12px; font-family: inherit; cursor: pointer; }
+  /* UNIQUE VIZ CSS */
+  .array-panel { margin-bottom: 2px; }
+  .array-cells { display: flex; flex-wrap: wrap; gap: 4px; }
+  .arr-cell { width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; border-radius: 5px; font-size: 0.8rem; font-weight: 700; font-family: monospace; border: 2px solid var(--border); background: var(--bg); color: var(--text-faint); position: relative; transition: background 0.18s, border-color 0.18s, color 0.18s; }
+  .arr-cell .idx-label { position: absolute; bottom: -14px; font-size: 0.55rem; color: var(--text-faint); font-weight: 400; }
+  .arr-cell.in-slice { background: rgba(99,102,241,0.12); border-color: var(--accent); color: var(--text); }
+  .arr-cell.is-root { background: #9a3412; border-color: var(--orange); color: #fff; }
+  .arr-cell.left-part { background: rgba(29,78,216,0.22); border-color: #3b82f6; color: #93c5fd; }
+  .arr-cell.right-part { background: rgba(20,83,45,0.3); border-color: #22c55e; color: #86efac; }
+  #call-stack { display: flex; flex-direction: column-reverse; gap: 3px; }
+  .cs-frame { background: #1e1a3a; color: var(--accent-pale); border: 1px solid var(--accent); border-radius: 4px; padding: 3px 7px; font-size: 0.65rem; font-family: monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .cs-frame.top { background: #312e81; color: #e0e7ff; border-color: #6366f1; }
+  .cs-empty { color: var(--text-faint); font-size: 0.72rem; font-style: italic; }
+  .legend-row { display: flex; gap: 10px; flex-wrap: wrap; font-size: 0.72rem; color: var(--text-dim); }
+  .leg-item { display: flex; align-items: center; gap: 5px; }
+  .leg-swatch { width: 12px; height: 12px; border-radius: 3px; border: 2px solid; flex-shrink: 0; }
+  #tree-wrap { flex: 1; width: 100%; display: flex; align-items: center; justify-content: center; }
+  #tree-svg { display: block; width: 100%; height: 100%; }
+</style>
 </head>
-<body class="page">
-
-<div class="page-header">
-  <a class="back-link" href="../index.html">← All Algorithms</a>
-  <h1 class="page-title">Construct Binary Tree from Preorder &amp; Inorder</h1>
-</div>
+<body>
 
 <div class="viz-inputs">
-  <div class="field">
+  <div style="display:flex;flex-direction:column">
     <label>Preset</label>
     <select id="presetSel" onchange="loadPreset()">
       <option value="">— pick a preset —</option>
@@ -288,151 +72,123 @@
       <option value='{"pre":"1,2,3,4,5,6,7,8,9,10","in":"5,3,7,2,8,4,9,1,6,10"}'>Larger tree</option>
     </select>
   </div>
-  <div class="field">
+  <div style="display:flex;flex-direction:column">
     <label>Preorder</label>
-    <input id="inp-pre" type="text" value="3,9,20,15,7" />
+    <input id="inp-pre" type="text" value="3,9,20,15,7" style="width:160px" />
   </div>
-  <div class="field">
+  <div style="display:flex;flex-direction:column">
     <label>Inorder</label>
-    <input id="inp-in" type="text" value="9,3,15,20,7" />
+    <input id="inp-in" type="text" value="9,3,15,20,7" style="width:160px" />
   </div>
-  <button onclick="buildAndRun()">Run</button>
-  <button class="secondary" onclick="randomExample()">🎲 Random</button>
+  <button class="vi-btn-run" onclick="buildAndRun()">Run</button>
+  <button class="vi-btn-rand" onclick="randomExample()">&#127922; Random</button>
 </div>
-
 <div class="controls"></div>
 
-<div class="main-area">
+<div id="header">
+  <span id="phase-badge">Setup</span>
+  <span style="font-size:13px;font-weight:700;">Construct Binary Tree</span>
+  <span id="step-counter">Step 0 / 0</span>
+</div>
 
-  <!-- LEFT -->
-  <div class="left-panel">
-
-    <div class="array-panel">
-      <div class="panel-label">Preorder</div>
-      <div class="array-cells" id="pre-cells"></div>
+<div id="main">
+  <div id="viz-area">
+    <div id="desc">Enter arrays and click Run.</div>
+    <div id="tree-wrap">
+      <svg id="tree-svg" viewBox="0 0 500 340" preserveAspectRatio="xMidYMid meet"></svg>
     </div>
-
-    <div class="array-panel">
-      <div class="panel-label">Inorder</div>
-      <div class="array-cells" id="in-cells"></div>
+    <div class="legend-row">
+      <div class="leg-item"><div class="leg-swatch" style="background:#9a3412;border-color:var(--orange)"></div>Root</div>
+      <div class="leg-item"><div class="leg-swatch" style="background:rgba(99,102,241,0.15);border-color:var(--accent)"></div>Active slice</div>
+      <div class="leg-item"><div class="leg-swatch" style="background:rgba(29,78,216,0.25);border-color:#3b82f6"></div>Left</div>
+      <div class="leg-item"><div class="leg-swatch" style="background:rgba(20,83,45,0.3);border-color:#22c55e"></div>Right</div>
     </div>
-
-    <div class="info-box">
-      <div class="panel-label">Current Slice</div>
-      <div class="info-row">
-        <span class="info-key">Root val</span>
-        <span class="info-val orange" id="info-root">—</span>
-      </div>
-      <div class="info-row">
-        <span class="info-key">Pre slice</span>
-        <span class="info-val" id="info-pre-slice">—</span>
-      </div>
-      <div class="info-row">
-        <span class="info-key">In slice</span>
-        <span class="info-val" id="info-in-slice">—</span>
-      </div>
-      <div class="info-row">
-        <span class="info-key">Left size</span>
-        <span class="info-val blue" id="info-left-size">—</span>
-      </div>
-      <div class="info-row">
-        <span class="info-key">Right size</span>
-        <span class="info-val green" id="info-right-size">—</span>
+  </div>
+  <div id="resize-handle"></div>
+  <div id="code-panel">
+    <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--text-dim);margin-bottom:8px;">Algorithm</div>
+    <div style="font-size:0.72rem;color:var(--text-muted);line-height:1.7">
+      preorder[0] is always root.<br>
+      Find it in inorder to split<br>
+      left / right subtrees.<br>
+      Recurse on each slice.
+    </div>
+  </div>
+  <div id="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-title">Preorder</div>
+      <div class="array-cells" id="pre-cells" style="margin-top:6px;margin-bottom:16px"></div>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-title">Inorder</div>
+      <div class="array-cells" id="in-cells" style="margin-top:6px;margin-bottom:16px"></div>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-title">Current Slice</div>
+      <div>
+        <div class="var-item"><span class="var-key">Root val&nbsp;</span><span class="var-val" id="info-root">—</span></div>
+        <div class="var-item"><span class="var-key">Pre slice&nbsp;</span><span style="color:var(--text)" id="info-pre-slice">—</span></div>
+        <div class="var-item"><span class="var-key">In slice&nbsp;</span><span style="color:var(--text)" id="info-in-slice">—</span></div>
+        <div class="var-item"><span class="var-key">Left size&nbsp;</span><span style="color:#93c5fd" id="info-left-size">—</span></div>
+        <div class="var-item"><span class="var-key">Right size&nbsp;</span><span style="color:#86efac" id="info-right-size">—</span></div>
       </div>
     </div>
-
-    <div class="info-box">
-      <div class="panel-label">Call Stack <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text-faint);font-size:0.7rem">(top = active)</span></div>
+    <div class="sidebar-section">
+      <div class="sidebar-title">Call Stack <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text-faint);font-size:0.7rem">(top=active)</span></div>
       <div id="call-stack"><span class="cs-empty">empty</span></div>
     </div>
-
-  </div>
-
-  <!-- RIGHT: tree -->
-  <div class="right-panel">
-    <svg id="tree-svg" viewBox="0 0 500 340"
-         preserveAspectRatio="xMidYMid meet"></svg>
-  </div>
-
-</div>
-
-<div class="legend-row">
-  <div class="leg-item">
-    <div class="leg-swatch" style="background:#9a3412;border-color:var(--orange)"></div>
-    Current root (preorder[0])
-  </div>
-  <div class="leg-item">
-    <div class="leg-swatch" style="background:rgba(99,102,241,0.15);border-color:var(--accent)"></div>
-    Active slice
-  </div>
-  <div class="leg-item">
-    <div class="leg-swatch" style="background:rgba(29,78,216,0.25);border-color:#3b82f6"></div>
-    Left partition
-  </div>
-  <div class="leg-item">
-    <div class="leg-swatch" style="background:rgba(20,83,45,0.3);border-color:#22c55e"></div>
-    Right partition
   </div>
 </div>
 
-<div class="status-bar" style="margin: 0 16px 4px">
-  <span class="phase-label" id="phase-label">—</span>
-  <span class="step-desc" id="step-desc">Enter arrays and click Run.</span>
-</div>
-
-<div class="step-nav">
-  <button class="stepBtn" id="prevBtn" disabled>← Back</button>
-  <button class="stepBtn" id="stepBtn" disabled>Next →</button>
-  <button id="playBtn" style="background:#15803d;color:#fff;border:none;border-radius:4px;padding:6px 14px;font-weight:600;cursor:pointer">&#9654; Play</button>
-  <select id="speedSel" style="background:var(--bg);border:1px solid var(--border);color:var(--text);border-radius:4px;padding:6px 8px;font-size:0.85rem">
-    <option value="900">Slow</option>
-    <option value="500" selected>Medium</option>
-    <option value="160">Fast</option>
+<div id="nav-row">
+  <button id="prevBtn" class="btn-step">&#8592; Prev</button>
+  <button id="stepBtn" class="btn-step">Step &#8594;</button>
+  <button id="playBtn" class="btn-play">Play</button>
+  <button id="resetBtn" class="btn-step">&#8635; Reset</button>
+  <select id="speedSel">
+    <option value="800">0.5&#215;</option>
+    <option value="400" selected>1&#215;</option>
+    <option value="200">2&#215;</option>
+    <option value="100">4&#215;</option>
   </select>
 </div>
 
 <script>
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// ─── Helpers ─────────────────────────────────────────────────────────────────
 function parseArr(s) {
-  return s.split(',').map(t => parseInt(t.trim(), 10)).filter(v => !isNaN(v));
+  return s.split(',').map(function(t) { return parseInt(t.trim(), 10); }).filter(function(v) { return !isNaN(v); });
 }
-
 function svgEl(tag, attrs) {
-  const el = document.createElementNS('http://www.w3.org/2000/svg', tag);
-  Object.entries(attrs).forEach(([k, v]) => el.setAttribute(k, v));
+  var el = document.createElementNS('http://www.w3.org/2000/svg', tag);
+  Object.entries(attrs).forEach(function(kv) { el.setAttribute(kv[0], kv[1]); });
   return el;
 }
 
 // ─── Tree layout globals ──────────────────────────────────────────────────────
-let treeNodes = {};  // id -> node
-let allNodes = [];
-let nextId = 0;
-let VW = 600, VH = 380;
-const R = 22;
-
-// node colors
-const C = {
+var treeNodes = {};
+var allNodes = [];
+var nextId = 0;
+var VW = 600, VH = 380;
+var R = 22;
+var C = {
   ghost:  { fill: '#0d0f17', stroke: '#1a1d2e', text: '#252840' },
   done:   { fill: '#052e16', stroke: '#16a34a', text: '#86efac' },
   active: { fill: '#312e81', stroke: '#6366f1', text: '#c7d2fe' },
 };
 
-// ─── Build tree structure (for positions only) ────────────────────────────────
 function buildTreeStructure(preorder, inorder) {
   treeNodes = {};
   allNodes = [];
   nextId = 0;
-
   function rec(preArr, inArr, depth) {
     if (!preArr.length) return null;
-    const rootVal = preArr[0];
-    const node = { id: nextId++, val: rootVal, left: null, right: null,
-                   x: 0, y: 0, depth };
+    var rootVal = preArr[0];
+    var node = { id: nextId++, val: rootVal, left: null, right: null, x: 0, y: 0, depth: depth };
     treeNodes[node.id] = node;
     allNodes.push(node);
-    const mid = inArr.indexOf(rootVal);
-    const leftIn  = inArr.slice(0, mid);
-    const rightIn = inArr.slice(mid + 1);
+    var mid = inArr.indexOf(rootVal);
+    var leftIn = inArr.slice(0, mid);
+    var rightIn = inArr.slice(mid + 1);
     node.left  = rec(preArr.slice(1, 1 + leftIn.length), leftIn,  depth + 1);
     node.right = rec(preArr.slice(1 + leftIn.length),    rightIn, depth + 1);
     return node;
@@ -441,9 +197,8 @@ function buildTreeStructure(preorder, inorder) {
 }
 
 function layoutTree(root) {
-  let counter = 0;
-  let maxDepth = 0;
-
+  var counter = 0;
+  var maxDepth = 0;
   function inorder(n) {
     if (!n) return;
     inorder(n.left);
@@ -452,336 +207,197 @@ function layoutTree(root) {
     inorder(n.right);
   }
   inorder(root);
-
-  const count = counter;
-  const xPad = 38, yPad = 34;
-  const xStep = Math.max(48, Math.min(95, 520 / Math.max(1, count - 1)));
-  const yStep = 68;
-
+  var count = counter;
+  var xPad = 38, yPad = 34;
+  var xStep = Math.max(48, Math.min(95, 520 / Math.max(1, count - 1)));
+  var yStep = 68;
   VW = Math.max(380, xPad * 2 + (count - 1) * xStep);
   VH = yPad * 2 + maxDepth * yStep + R * 2 + 10;
-
-  for (const id in treeNodes) {
-    const n = treeNodes[id];
+  for (var id in treeNodes) {
+    var n = treeNodes[id];
     n.x = xPad + n._inIdx * xStep;
     n.y = yPad + n.depth * yStep + R;
   }
 }
 
-// ─── SVG render (ghost tree) ──────────────────────────────────────────────────
 function renderSVG() {
-  const svg = document.getElementById('tree-svg');
+  var svg = document.getElementById('tree-svg');
   svg.innerHTML = '';
-  svg.setAttribute('viewBox', `0 0 ${VW} ${VH}`);
-
-  const edgeG = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-  edgeG.id = 'edges';
-  const nodeG = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-  nodeG.id = 'nodes';
-  svg.appendChild(edgeG);
-  svg.appendChild(nodeG);
-
-  // ghost edges
-  for (const id in treeNodes) {
-    const n = treeNodes[id];
-    for (const child of [n.left, n.right]) {
+  svg.setAttribute('viewBox', '0 0 ' + VW + ' ' + VH);
+  var edgeG = document.createElementNS('http://www.w3.org/2000/svg', 'g'); edgeG.id = 'edges';
+  var nodeG = document.createElementNS('http://www.w3.org/2000/svg', 'g'); nodeG.id = 'nodes';
+  svg.appendChild(edgeG); svg.appendChild(nodeG);
+  for (var id in treeNodes) {
+    var n = treeNodes[id];
+    for (var ci = 0; ci < [n.left, n.right].length; ci++) {
+      var child = [n.left, n.right][ci];
       if (!child) continue;
-      edgeG.appendChild(svgEl('line', {
-        id: `edge-${n.id}-${child.id}`,
-        x1: n.x, y1: n.y, x2: child.x, y2: child.y,
-        stroke: '#1a1d2e', 'stroke-width': 1.5,
-        'stroke-dasharray': '4 3', opacity: 0.5,
-      }));
+      edgeG.appendChild(svgEl('line', { id: 'edge-' + n.id + '-' + child.id, x1: n.x, y1: n.y, x2: child.x, y2: child.y, stroke: '#1a1d2e', 'stroke-width': 1.5, 'stroke-dasharray': '4 3', opacity: 0.5 }));
     }
   }
-
-  // ghost nodes
-  for (const id in treeNodes) {
-    const n = treeNodes[id];
-    const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-    g.id = `ng-${n.id}`;
-    g.appendChild(svgEl('circle', {
-      id: `nc-${n.id}`, cx: n.x, cy: n.y, r: R,
-      fill: C.ghost.fill, stroke: C.ghost.stroke, 'stroke-width': 2,
-    }));
-    const t = svgEl('text', {
-      id: `nt-${n.id}`, x: n.x, y: n.y,
-      'text-anchor': 'middle', 'dominant-baseline': 'middle',
-      fill: C.ghost.text, 'font-size': 13, 'font-weight': 'bold',
-      'font-family': 'Segoe UI, system-ui, sans-serif',
-    });
+  for (var id in treeNodes) {
+    var n = treeNodes[id];
+    var g = document.createElementNS('http://www.w3.org/2000/svg', 'g'); g.id = 'ng-' + n.id;
+    g.appendChild(svgEl('circle', { id: 'nc-' + n.id, cx: n.x, cy: n.y, r: R, fill: C.ghost.fill, stroke: C.ghost.stroke, 'stroke-width': 2 }));
+    var t = svgEl('text', { id: 'nt-' + n.id, x: n.x, y: n.y, 'text-anchor': 'middle', 'dominant-baseline': 'middle', fill: C.ghost.text, 'font-size': 13, 'font-weight': 'bold', 'font-family': 'Segoe UI, system-ui, sans-serif' });
     t.textContent = n.val;
-    g.appendChild(t);
-    nodeG.appendChild(g);
+    g.appendChild(t); nodeG.appendChild(g);
   }
 }
 
-// ─── Array panels ─────────────────────────────────────────────────────────────
-let origPre = [], origIn = [];
-
+var origPre = [], origIn = [];
 function renderArrays(pre, inArr) {
-  origPre = pre;
-  origIn  = inArr;
-
-  ['pre-cells', 'in-cells'].forEach(id => {
-    document.getElementById(id).innerHTML = '';
-  });
-
-  pre.forEach((v, i) => {
-    const el = document.createElement('div');
-    el.className = 'arr-cell';
-    el.id = `pre-${i}`;
-    el.textContent = v;
-    const lbl = document.createElement('span');
-    lbl.className = 'idx-label';
-    lbl.textContent = i;
-    el.appendChild(lbl);
+  origPre = pre; origIn = inArr;
+  ['pre-cells', 'in-cells'].forEach(function(id) { document.getElementById(id).innerHTML = ''; });
+  pre.forEach(function(v, i) {
+    var el = document.createElement('div'); el.className = 'arr-cell'; el.id = 'pre-' + i; el.textContent = v;
+    var lbl = document.createElement('span'); lbl.className = 'idx-label'; lbl.textContent = i; el.appendChild(lbl);
     document.getElementById('pre-cells').appendChild(el);
   });
-
-  inArr.forEach((v, i) => {
-    const el = document.createElement('div');
-    el.className = 'arr-cell';
-    el.id = `in-${i}`;
-    el.textContent = v;
-    const lbl = document.createElement('span');
-    lbl.className = 'idx-label';
-    lbl.textContent = i;
-    el.appendChild(lbl);
+  inArr.forEach(function(v, i) {
+    var el = document.createElement('div'); el.className = 'arr-cell'; el.id = 'in-' + i; el.textContent = v;
+    var lbl = document.createElement('span'); lbl.className = 'idx-label'; lbl.textContent = i; el.appendChild(lbl);
     document.getElementById('in-cells').appendChild(el);
   });
 }
 
-// ─── Simulation ───────────────────────────────────────────────────────────────
 function simulate(preorder, inorder, treeRoot) {
-  const out = [];
-  const placedSet = new Set();
-  const callStack = [];
-
+  var out = [];
+  var placedSet = new Set();
+  var callStack = [];
   function findNode(n, val) {
     if (!n) return null;
     if (n.val === val) return n;
     return findNode(n.left, val) || findNode(n.right, val);
   }
-
   function snap(phase, desc, preStart, preEnd, inStart, inEnd, rootInIdx, showPartition) {
-    out.push({
-      phase, desc,
-      preStart, preEnd, inStart, inEnd,
-      rootInIdx: (rootInIdx !== undefined) ? rootInIdx : -1,
-      showPartition: !!showPartition,
-      placed: new Set(placedSet),
-      callStack: [...callStack],
-    });
+    out.push({ phase: phase, desc: desc, preStart: preStart, preEnd: preEnd, inStart: inStart, inEnd: inEnd, rootInIdx: (rootInIdx !== undefined) ? rootInIdx : -1, showPartition: !!showPartition, placed: new Set(placedSet), callStack: callStack.slice() });
   }
-
   function rec(preStart, preEnd, inStart, inEnd) {
     if (preStart > preEnd) {
-      callStack.push(`rec(∅, ∅)`);
-      snap('Base Case', `Slice is empty — return null (no node here).`, preStart, preEnd, inStart, inEnd);
-      callStack.pop();
-      return;
+      callStack.push('rec(\u2205, \u2205)');
+      snap('Base Case', 'Slice is empty \u2014 return null (no node here).', preStart, preEnd, inStart, inEnd);
+      callStack.pop(); return;
     }
-
-    const rootVal = preorder[preStart];
-    const frame = `rec(pre[${preStart}..${preEnd}], in[${inStart}..${inEnd}])`;
+    var rootVal = preorder[preStart];
+    var frame = 'rec(pre[' + preStart + '..' + preEnd + '], in[' + inStart + '..' + inEnd + '])';
     callStack.push(frame);
-
-    snap('Enter',
-      `preorder[${preStart}] = ${rootVal} is the root of this subtree.`,
-      preStart, preEnd, inStart, inEnd);
-
-    // find root in inorder
-    let rootInIdx = inStart;
+    snap('Enter', 'preorder[' + preStart + '] = ' + rootVal + ' is the root of this subtree.', preStart, preEnd, inStart, inEnd);
+    var rootInIdx = inStart;
     while (rootInIdx <= inEnd && inorder[rootInIdx] !== rootVal) rootInIdx++;
-    const leftSize  = rootInIdx - inStart;
-    const rightSize = inEnd - rootInIdx;
-
-    snap('Find Root',
-      `Found ${rootVal} at inorder[${rootInIdx}]. Left size = ${leftSize}, right size = ${rightSize}.`,
-      preStart, preEnd, inStart, inEnd, rootInIdx, true);
-
-    // place node
-    const node = findNode(treeRoot, rootVal);
+    var leftSize = rootInIdx - inStart, rightSize = inEnd - rootInIdx;
+    snap('Find Root', 'Found ' + rootVal + ' at inorder[' + rootInIdx + ']. Left size = ' + leftSize + ', right size = ' + rightSize + '.', preStart, preEnd, inStart, inEnd, rootInIdx, true);
+    var node = findNode(treeRoot, rootVal);
     if (node) placedSet.add(node.id);
-
-    snap('Place Node',
-      `Place node ${rootVal}. Left inorder: [${inStart}..${rootInIdx - 1}]. Right inorder: [${rootInIdx + 1}..${inEnd}].`,
-      preStart, preEnd, inStart, inEnd, rootInIdx, true);
-
-    // recurse left
+    snap('Place Node', 'Place node ' + rootVal + '. Left inorder: [' + inStart + '..' + (rootInIdx - 1) + ']. Right inorder: [' + (rootInIdx + 1) + '..' + inEnd + '].', preStart, preEnd, inStart, inEnd, rootInIdx, true);
     if (leftSize > 0) {
-      snap('Recurse Left',
-        `Recurse left: preorder[${preStart + 1}..${preStart + leftSize}], inorder[${inStart}..${rootInIdx - 1}].`,
-        preStart, preEnd, inStart, inEnd, rootInIdx, false);
+      snap('Recurse Left', 'Recurse left: preorder[' + (preStart+1) + '..' + (preStart+leftSize) + '], inorder[' + inStart + '..' + (rootInIdx-1) + '].', preStart, preEnd, inStart, inEnd, rootInIdx, false);
       rec(preStart + 1, preStart + leftSize, inStart, rootInIdx - 1);
     } else {
-      snap('Recurse Left',
-        `No left subtree for ${rootVal} — left slice is empty.`,
-        preStart, preEnd, inStart, inEnd, -1, false);
+      snap('Recurse Left', 'No left subtree for ' + rootVal + ' \u2014 left slice is empty.', preStart, preEnd, inStart, inEnd, -1, false);
     }
-
-    // recurse right
     if (rightSize > 0) {
-      snap('Recurse Right',
-        `Recurse right: preorder[${preStart + leftSize + 1}..${preEnd}], inorder[${rootInIdx + 1}..${inEnd}].`,
-        preStart, preEnd, inStart, inEnd, rootInIdx, false);
+      snap('Recurse Right', 'Recurse right: preorder[' + (preStart+leftSize+1) + '..' + preEnd + '], inorder[' + (rootInIdx+1) + '..' + inEnd + '].', preStart, preEnd, inStart, inEnd, rootInIdx, false);
       rec(preStart + leftSize + 1, preEnd, rootInIdx + 1, inEnd);
     } else {
-      snap('Recurse Right',
-        `No right subtree for ${rootVal} — right slice is empty.`,
-        preStart, preEnd, inStart, inEnd, -1, false);
+      snap('Recurse Right', 'No right subtree for ' + rootVal + ' \u2014 right slice is empty.', preStart, preEnd, inStart, inEnd, -1, false);
     }
-
-    snap('Return',
-      `Return node ${rootVal} to caller.`,
-      preStart, preEnd, inStart, inEnd, -1, false);
+    snap('Return', 'Return node ' + rootVal + ' to caller.', preStart, preEnd, inStart, inEnd, -1, false);
     callStack.pop();
   }
-
-  snap('Start',
-    `Build tree: preorder[0] is always the root. Find it in inorder to split left/right.`,
-    0, preorder.length - 1, 0, inorder.length - 1);
+  snap('Start', 'Build tree: preorder[0] is always the root. Find it in inorder to split left/right.', 0, preorder.length - 1, 0, inorder.length - 1);
   rec(0, preorder.length - 1, 0, inorder.length - 1);
-  snap('Done',
-    `Tree fully constructed! All nodes placed.`,
-    0, preorder.length - 1, 0, inorder.length - 1);
-
+  snap('Done', 'Tree fully constructed! All nodes placed.', 0, preorder.length - 1, 0, inorder.length - 1);
   return out;
 }
 
-// ─── Apply step ───────────────────────────────────────────────────────────────
-function applyStep(s) {
-  applyArrays(s);
-  applyTree(s);
-  applyCallStack(s.callStack);
-  applyInfo(s);
-}
+function applyStep(s) { applyArrays(s); applyTree(s); applyCallStack(s.callStack); applyInfo(s); }
 
 function applyArrays(s) {
-  // reset all
-  origPre.forEach((_, i) => { const el = document.getElementById(`pre-${i}`); if (el) el.className = 'arr-cell'; });
-  origIn.forEach((_,  i) => { const el = document.getElementById(`in-${i}`);  if (el) el.className = 'arr-cell'; });
-
+  origPre.forEach(function(_, i) { var el = document.getElementById('pre-' + i); if (el) el.className = 'arr-cell'; });
+  origIn.forEach(function(_, i) { var el = document.getElementById('in-' + i); if (el) el.className = 'arr-cell'; });
   if (s.preStart > s.preEnd) return;
-
-  // preorder: first cell is root, rest are slice
-  for (let i = s.preStart; i <= s.preEnd; i++) {
-    const el = document.getElementById(`pre-${i}`);
-    if (!el) continue;
+  for (var i = s.preStart; i <= s.preEnd; i++) {
+    var el = document.getElementById('pre-' + i); if (!el) continue;
     el.className = 'arr-cell ' + (i === s.preStart ? 'is-root' : 'in-slice');
   }
-
-  // inorder
   if (s.showPartition && s.rootInIdx >= 0) {
-    for (let i = s.inStart; i <= s.inEnd; i++) {
-      const el = document.getElementById(`in-${i}`);
-      if (!el) continue;
-      if (i === s.rootInIdx)     el.className = 'arr-cell is-root';
-      else if (i < s.rootInIdx)  el.className = 'arr-cell left-part';
-      else                       el.className = 'arr-cell right-part';
+    for (var i = s.inStart; i <= s.inEnd; i++) {
+      var el = document.getElementById('in-' + i); if (!el) continue;
+      if (i === s.rootInIdx) el.className = 'arr-cell is-root';
+      else if (i < s.rootInIdx) el.className = 'arr-cell left-part';
+      else el.className = 'arr-cell right-part';
     }
   } else if (s.inStart <= s.inEnd) {
-    for (let i = s.inStart; i <= s.inEnd; i++) {
-      const el = document.getElementById(`in-${i}`);
-      if (el) el.className = 'arr-cell in-slice';
+    for (var i = s.inStart; i <= s.inEnd; i++) {
+      var el = document.getElementById('in-' + i); if (el) el.className = 'arr-cell in-slice';
     }
   }
 }
 
 function applyTree(s) {
-  const activeVal = (s.preStart <= s.preEnd) ? origPre[s.preStart] : null;
-  const isActive  = s.phase === 'Enter' || s.phase === 'Find Root' || s.phase === 'Place Node';
-
-  for (const id in treeNodes) {
-    const nid = +id;
-    const n   = treeNodes[nid];
-    const nc  = document.getElementById(`nc-${nid}`);
-    const nt  = document.getElementById(`nt-${nid}`);
+  var activeVal = (s.preStart <= s.preEnd) ? origPre[s.preStart] : null;
+  var isActive = s.phase === 'Enter' || s.phase === 'Find Root' || s.phase === 'Place Node';
+  for (var id in treeNodes) {
+    var nid = +id, n = treeNodes[nid];
+    var nc = document.getElementById('nc-' + nid), nt = document.getElementById('nt-' + nid);
     if (!nc) continue;
-
-    let col;
-    if (s.placed.has(nid)) {
-      col = (isActive && n.val === activeVal) ? C.active : C.done;
-    } else {
-      col = C.ghost;
-    }
-
-    nc.setAttribute('fill',   col.fill);
-    nc.setAttribute('stroke', col.stroke);
-    nt.setAttribute('fill',   col.text);
-
-    // update edges
-    for (const child of [n.left, n.right]) {
-      if (!child) continue;
-      const edge = document.getElementById(`edge-${n.id}-${child.id}`);
-      if (!edge) continue;
-      const solid = s.placed.has(n.id) && s.placed.has(child.id);
-      edge.setAttribute('stroke',           solid ? '#2d3148' : '#1a1d2e');
-      edge.setAttribute('stroke-dasharray', solid ? 'none'    : '4 3');
-      edge.setAttribute('stroke-width',     solid ? 2         : 1.5);
-      edge.setAttribute('opacity',          solid ? 1         : 0.4);
+    var col;
+    if (s.placed.has(nid)) col = (isActive && n.val === activeVal) ? C.active : C.done;
+    else col = C.ghost;
+    nc.setAttribute('fill', col.fill); nc.setAttribute('stroke', col.stroke); nt.setAttribute('fill', col.text);
+    var children = [n.left, n.right];
+    for (var ci = 0; ci < children.length; ci++) {
+      var child = children[ci]; if (!child) continue;
+      var edge = document.getElementById('edge-' + n.id + '-' + child.id); if (!edge) continue;
+      var solid = s.placed.has(n.id) && s.placed.has(child.id);
+      edge.setAttribute('stroke', solid ? '#2d3148' : '#1a1d2e');
+      edge.setAttribute('stroke-dasharray', solid ? 'none' : '4 3');
+      edge.setAttribute('stroke-width', solid ? 2 : 1.5);
+      edge.setAttribute('opacity', solid ? 1 : 0.4);
     }
   }
 }
 
 function applyCallStack(stack) {
-  const c = document.getElementById('call-stack');
+  var c = document.getElementById('call-stack');
   c.innerHTML = '';
-  if (!stack.length) {
-    c.innerHTML = '<span class="cs-empty">empty</span>';
-    return;
-  }
-  stack.forEach((label, i) => {
-    const el = document.createElement('div');
+  if (!stack.length) { c.innerHTML = '<span class="cs-empty">empty</span>'; return; }
+  stack.forEach(function(label, i) {
+    var el = document.createElement('div');
     el.className = 'cs-frame' + (i === stack.length - 1 ? ' top' : '');
-    el.textContent = label;
-    c.appendChild(el);
+    el.textContent = label; c.appendChild(el);
   });
 }
 
 function applyInfo(s) {
-  const hasSlice = s.preStart <= s.preEnd;
-  const rootVal  = hasSlice ? origPre[s.preStart] : '—';
-  const preSlice = hasSlice ? `[${s.preStart}..${s.preEnd}]` : 'empty';
-  const inSlice  = (s.inStart <= s.inEnd) ? `[${s.inStart}..${s.inEnd}]` : 'empty';
-
-  let leftSize = '—', rightSize = '—';
-  if (s.rootInIdx >= 0 && hasSlice) {
-    leftSize  = s.rootInIdx - s.inStart;
-    rightSize = s.inEnd - s.rootInIdx;
-  }
-
-  document.getElementById('info-root').textContent      = rootVal;
-  document.getElementById('info-pre-slice').textContent = preSlice;
-  document.getElementById('info-in-slice').textContent  = inSlice;
+  var hasSlice = s.preStart <= s.preEnd;
+  document.getElementById('info-root').textContent = hasSlice ? origPre[s.preStart] : '\u2014';
+  document.getElementById('info-pre-slice').textContent = hasSlice ? '[' + s.preStart + '..' + s.preEnd + ']' : 'empty';
+  document.getElementById('info-in-slice').textContent = (s.inStart <= s.inEnd) ? '[' + s.inStart + '..' + s.inEnd + ']' : 'empty';
+  var leftSize = '\u2014', rightSize = '\u2014';
+  if (s.rootInIdx >= 0 && hasSlice) { leftSize = s.rootInIdx - s.inStart; rightSize = s.inEnd - s.rootInIdx; }
   document.getElementById('info-left-size').textContent = leftSize;
   document.getElementById('info-right-size').textContent = rightSize;
 }
 
-// ─── Build ────────────────────────────────────────────────────────────────────
 function buildAndRun() {
-  const pre    = parseArr(document.getElementById('inp-pre').value);
-  const inArr  = parseArr(document.getElementById('inp-in').value);
-
+  var pre = parseArr(document.getElementById('inp-pre').value);
+  var inArr = parseArr(document.getElementById('inp-in').value);
   if (!pre.length || pre.length !== inArr.length) {
-    document.getElementById('step-desc').textContent =
-      'Both arrays must be non-empty and the same length.';
+    var d = document.getElementById('desc');
+    if (d) d.textContent = 'Both arrays must be non-empty and the same length.';
     return;
   }
-
-  const root = buildTreeStructure(pre, inArr);
+  var root = buildTreeStructure(pre, inArr);
   if (!root) return;
-
   layoutTree(root);
   renderSVG();
   renderArrays(pre, inArr);
-
-  const steps = simulate(pre, inArr, root);
+  var steps = simulate(pre, inArr, root);
   nav.load(steps);
 }
 
-// ─── Presets and random ────────────────────────────────────────────────────────
 function loadPreset() {
   var sel = document.getElementById('presetSel');
   if (!sel.value) return;
@@ -793,39 +409,45 @@ function loadPreset() {
 
 function randomExample() {
   document.getElementById('presetSel').value = '';
-  const sizes = [2, 3, 4, 5, 6];
-  const n = sizes[Math.floor(Math.random() * sizes.length)];
-  const values = Array.from({length: n}, (_, i) => i + 1);
-  const pre = values.slice();
-  const inArr = values.slice().sort(() => Math.random() - 0.5);
+  var sizes = [2, 3, 4, 5, 6];
+  var n = sizes[Math.floor(Math.random() * sizes.length)];
+  var values = Array.from({length: n}, function(_, i) { return i + 1; });
+  var pre = values.slice();
+  var inArr = values.slice().sort(function() { return Math.random() - 0.5; });
   document.getElementById('inp-pre').value = pre.join(',');
   document.getElementById('inp-in').value = inArr.join(',');
   buildAndRun();
 }
 
-// ─── Nav ──────────────────────────────────────────────────────────────────────
-var nav = VizNav({
-  btnPrev:  document.getElementById('prevBtn'),
-  btnNext:  document.getElementById('stepBtn'),
-  btnPlay:  document.getElementById('playBtn'),
-  speedSel: document.getElementById('speedSel'),
-  render: function(snap, cur, total) {
-    applyStep(snap);
-    var pl = document.getElementById('phase-label');
-    if (pl) pl.textContent = 'Step ' + (cur + 1) + ' / ' + total + '  ·  ' + snap.phase;
-    var sd = document.getElementById('step-desc');
-    if (sd) sd.textContent = snap.desc;
-  },
+var nav;
+
+window.addEventListener('DOMContentLoaded', function() {
+  nav = VizNav({
+    btnPrev:  document.getElementById('prevBtn'),
+    btnNext:  document.getElementById('stepBtn'),
+    btnPlay:  document.getElementById('playBtn'),
+    speedSel: document.getElementById('speedSel'),
+    render: function(snap, cur, total) {
+      applyStep(snap);
+      document.getElementById('phase-badge').textContent = snap.phase || '';
+      document.getElementById('step-counter').textContent = 'Step ' + (cur + 1) + ' / ' + total;
+      var desc = document.getElementById('desc');
+      if (desc) desc.textContent = snap.desc || '';
+    },
+  });
+  document.getElementById('resetBtn').addEventListener('click', function() { buildAndRun(); });
+
+  (function() {
+    var handle = document.getElementById('resize-handle');
+    var panel  = document.getElementById('code-panel');
+    var dragging = false, startX = 0, startW = 0;
+    handle.addEventListener('mousedown', function(e) { dragging = true; startX = e.clientX; startW = panel.offsetWidth; handle.classList.add('dragging'); e.preventDefault(); });
+    document.addEventListener('mousemove', function(e) { if (!dragging) return; panel.style.width = Math.min(400, Math.max(120, startW + (startX - e.clientX))) + 'px'; });
+    document.addEventListener('mouseup', function() { if (!dragging) return; dragging = false; handle.classList.remove('dragging'); });
+  })();
+
+  buildAndRun();
 });
-
-buildAndRun();
-</script>
-
-<script>
-  if (window.self !== window.top) {
-    var bl = document.querySelector('.back-link');
-    if (bl) bl.style.display = 'none';
-  }
 </script>
 </body>
 </html>

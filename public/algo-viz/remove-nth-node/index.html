@@ -5,129 +5,61 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>19. Remove Nth Node From End of List</title>
   <link rel="stylesheet" href="../shared/style.css" />
+  <script src="../shared/gsap.min.js"></script>
   <script src="../shared/viz.js"></script>
   <style>
-    body { display:flex; flex-direction:column; height:100vh; overflow:hidden; }
-    .page-title {
-      font-size:1rem; font-weight:700; color:var(--text-bright);
-      padding:12px 16px 0; letter-spacing:0.01em; flex-shrink:0;
-    }
-    .viz-root {
-      display:flex; flex:1; gap:16px;
-      padding:12px 16px 8px; min-height:0;
-    }
-    .left-col {
-      display:flex; flex-direction:column; gap:12px; flex:0 0 58%; min-width:0;
-    }
-    .right-col {
-      display:flex; flex-direction:column; gap:12px; flex:1; min-width:0;
-    }
-
-    /* list canvas */
-    .list-canvas {
-      display:flex; align-items:flex-start; gap:0;
-      flex-wrap:nowrap; overflow-x:auto;
-      padding:8px 4px 38px;
-    }
-    .node-group {
-      position:relative; display:inline-flex; flex-direction:column;
-      align-items:center; flex-shrink:0;
-    }
-    .list-node {
-      width:48px; height:48px; border-radius:8px;
-      display:flex; align-items:center; justify-content:center;
-      font-size:0.95rem; font-weight:700;
-      border:2px solid var(--border);
-      background:var(--surface-dark); color:var(--text-muted);
-      transition:background 0.15s, border-color 0.15s, opacity 0.15s, color 0.15s;
-      flex-shrink:0;
-    }
-    .list-node.dummy-node {
-      opacity:0.35; border-style:dashed; color:var(--text-ghost);
-      font-size:0.58rem; font-weight:600; letter-spacing:0.04em;
-    }
-    .list-node.null-node {
-      border-style:dashed; border-color:var(--border-soft);
-      color:var(--text-ghost); font-size:0.75rem; font-weight:400;
-      background:transparent;
-    }
-    .list-node.fast-active  { border-color:var(--accent); color:var(--accent); background:rgba(var(--accent-ch),0.12); }
-    .list-node.slow-active  { border-color:var(--blue); color:var(--blue-light); background:rgba(var(--blue-ch),0.12); }
-    .list-node.both-active  { border-color:var(--purple,#a070e0); color:var(--purple,#a070e0); background:rgba(150,100,220,0.12); }
-    .list-node.target-node  { border-color:#e05050; color:#e05050; background:rgba(220,80,80,0.16); }
-    .list-node.bypass-src   { border-color:var(--green); color:var(--green); background:rgba(var(--green-ch),0.12); }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: "Fira Code","Cascadia Code",monospace; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+    #header { padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+    #phase-badge { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; padding: 3px 10px; border-radius: var(--radius-sm); background: #1e3a5f; color: var(--blue); border: 1px solid var(--blue); }
+    #step-counter { font-size: 12px; color: var(--text-muted); margin-left: auto; }
+    .viz-inputs { width: 100%; padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; flex-wrap: wrap; gap: 12px; align-items: center; flex-shrink: 0; }
+    .viz-inputs label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); display: block; margin-bottom: 3px; }
+    .viz-inputs select, .viz-inputs input { background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 0 8px; height: 30px; font-size: 0.82rem; font-family: inherit; }
+    .vi-btn-run { padding: 6px 14px; border-radius: 6px; font-size: 0.82rem; font-weight: 600; cursor: pointer; font-family: inherit; background: var(--accent); color: #fff; border: none; }
+    .vi-btn-rand { padding: 6px 14px; border-radius: 6px; font-size: 0.82rem; cursor: pointer; font-family: inherit; background: var(--bg); color: var(--text); border: 1px solid var(--border); }
+    #main { display: flex; flex: 1; overflow: hidden; }
+    #viz-area { flex: 1; display: flex; flex-direction: column; align-items: flex-start; padding: 16px 20px; gap: 12px; overflow-y: auto; }
+    #resize-handle { width: 5px; flex-shrink: 0; cursor: col-resize; background: transparent; border-left: 1px solid var(--border); transition: background .15s; }
+    #resize-handle:hover, #resize-handle.dragging { background: var(--accent); }
+    #code-panel { width: 350px; min-width: 120px; max-width: 560px; flex-shrink: 0; background: #0d1117; border-right: 1px solid var(--border); overflow-y: auto; overflow-x: auto; padding: 10px 12px; display: flex; flex-direction: column; }
+    .code-panel-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--text-dim); margin-bottom: 8px; }
+    #sidebar { width: 220px; flex-shrink: 0; background: var(--surface); border-left: 1px solid var(--border); overflow-y: auto; padding: 14px 12px; display: flex; flex-direction: column; gap: 12px; }
+    .sidebar-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--text-dim); margin-bottom: 6px; }
+    #nav-row { flex-shrink: 0; display: flex; align-items: center; gap: 8px; padding: 10px 16px; background: var(--surface); border-top: 1px solid var(--border); }
+    .btn-step { padding: 6px 14px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--surface); color: var(--text); font-family: inherit; font-size: 12px; cursor: pointer; }
+    .btn-play { padding: 6px 14px; border-radius: var(--radius-sm); background: var(--accent); border-color: var(--accent); color: #fff; font-family: inherit; font-size: 12px; cursor: pointer; }
+    /* list viz */
+    .list-canvas { display:flex; align-items:flex-start; gap:0; flex-wrap:nowrap; overflow-x:auto; padding:8px 4px 38px; width:100%; }
+    .node-group { position:relative; display:inline-flex; flex-direction:column; align-items:center; flex-shrink:0; }
+    .list-node { width:48px; height:48px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:0.95rem; font-weight:700; border:2px solid var(--border); background:var(--surface-dark); color:var(--text-muted); transition:background 0.15s,border-color 0.15s,opacity 0.15s,color 0.15s; flex-shrink:0; }
+    .list-node.dummy-node { opacity:0.35; border-style:dashed; color:var(--text-ghost); font-size:0.58rem; font-weight:600; letter-spacing:0.04em; }
+    .list-node.null-node { border-style:dashed; border-color:var(--border-soft); color:var(--text-ghost); font-size:0.75rem; font-weight:400; background:transparent; }
+    .list-node.fast-active { border-color:var(--accent); color:var(--accent); background:rgba(var(--accent-ch),0.12); }
+    .list-node.slow-active { border-color:var(--blue); color:var(--blue-light); background:rgba(var(--blue-ch),0.12); }
+    .list-node.both-active { border-color:var(--purple,#a070e0); color:var(--purple,#a070e0); background:rgba(150,100,220,0.12); }
+    .list-node.target-node { border-color:#e05050; color:#e05050; background:rgba(220,80,80,0.16); }
+    .list-node.bypass-src  { border-color:var(--green); color:var(--green); background:rgba(var(--green-ch),0.12); }
     .list-node.removed-node { opacity:0.28; border-color:var(--border-soft); color:var(--text-ghost); text-decoration:line-through; }
-
-    .ptr-badges {
-      position:absolute; bottom:-30px; left:50%; transform:translateX(-50%);
-      display:flex; flex-direction:column; align-items:center; gap:2px;
-    }
-    .ptr-badge {
-      font-size:0.5rem; font-weight:700; letter-spacing:0.06em;
-      padding:1px 5px; border-radius:3px; white-space:nowrap;
-    }
-    .ptr-badge.fast       { background:rgba(var(--accent-ch),0.18); color:var(--accent); }
-    .ptr-badge.slow       { background:rgba(var(--blue-ch),0.18); color:var(--blue); }
+    .ptr-badges { position:absolute; bottom:-30px; left:50%; transform:translateX(-50%); display:flex; flex-direction:column; align-items:center; gap:2px; }
+    .ptr-badge { font-size:0.5rem; font-weight:700; letter-spacing:0.06em; padding:1px 5px; border-radius:3px; white-space:nowrap; }
+    .ptr-badge.fast { background:rgba(var(--accent-ch),0.18); color:var(--accent); }
+    .ptr-badge.slow { background:rgba(var(--blue-ch),0.18); color:var(--blue); }
     .ptr-badge.remove-lbl { background:rgba(220,80,80,0.18); color:#e05050; }
-
-    .node-arrow {
-      display:inline-flex; align-items:center; height:48px;
-      padding:0 3px; color:var(--text-ghost);
-      font-size:0.85rem; flex-shrink:0;
-      transition:color 0.15s;
-    }
-    .node-arrow.bypass-arrow  { color:var(--green); font-size:1.1rem; }
+    .node-arrow { display:inline-flex; align-items:center; height:48px; padding:0 3px; color:var(--text-ghost); font-size:0.85rem; flex-shrink:0; transition:color 0.15s; }
+    .node-arrow.bypass-arrow { color:var(--green); font-size:1.1rem; }
     .node-arrow.removed-arrow { color:rgba(255,255,255,0.08); }
-
-    /* code panel */
-    .code-panel { flex:1; min-height:0; overflow:auto; display:flex; flex-direction:column; }
-    .code-body {
-      font-family:'Fira Code','Cascadia Code',monospace;
-      font-size:0.76rem; line-height:1.72; color:var(--text-muted);
-      flex:1; white-space:pre; margin:0;
-    }
+    .code-body { font-family:'Fira Code','Cascadia Code',monospace; font-size:0.76rem; line-height:1.72; color:var(--text-muted); flex:1; white-space:pre; margin:0; }
     .code-line { display:block; padding:0 6px; border-radius:3px; border-left:2px solid transparent; }
-    .code-line.active {
-      background:rgba(var(--accent-ch),0.14); color:var(--text);
-      border-left-color:var(--accent);
-    }
+    .code-line.active { background:rgba(var(--accent-ch),0.14); color:var(--text); border-left-color:var(--accent); }
     .kw { color:var(--purple,#a070e0); }
     .fn { color:var(--blue); }
     .nb { color:var(--green); }
     .cm { color:var(--text-ghost); font-style:italic; }
-
-    /* controls */
-    .ctrl-row { display:flex; align-items:center; gap:6px; }
-    .btn {
-      background:var(--surface); border:1px solid var(--border);
-      color:var(--text); border-radius:6px; padding:5px 10px;
-      cursor:pointer; font-size:0.78rem;
-    }
-    .btn:hover { border-color:var(--accent); }
-    .btn.primary { background:var(--accent); border-color:var(--accent); color:#fff; }
-    .speed-sel {
-      background:var(--surface); border:1px solid var(--border);
-      color:var(--text); border-radius:6px; padding:5px 6px; font-size:0.75rem; width:78px;
-    }
-    .counter { font-size:0.68rem; color:var(--text-dim); margin-top:4px; }
-
-    /* status */
-    .phase-badge {
-      font-size:0.6rem; font-weight:700; text-transform:uppercase; letter-spacing:0.1em;
-      color:var(--accent); background:rgba(var(--accent-ch),0.08);
-      border:1px solid rgba(var(--accent-ch),0.18);
-      border-radius:4px; padding:2px 7px; display:inline-block;
-    }
-    .status-desc { font-size:0.75rem; color:var(--text-muted); margin-top:6px; line-height:1.5; }
-    .gap-info    { font-size:0.68rem; color:var(--text-dim); margin-top:4px; font-family:monospace; min-height:1.1em; }
-
-    /* pointer vars */
-    .vars-row { display:flex; gap:8px; }
-    .var-box {
-      flex:1; display:flex; flex-direction:column; align-items:center;
-      gap:2px; padding:7px 4px; border-radius:8px;
-      background:var(--surface-dark); border:1px solid var(--border);
-    }
+    .status-desc { font-size:0.75rem; color:var(--text-muted); line-height:1.5; }
+    .gap-info { font-size:0.68rem; color:var(--text-dim); font-family:monospace; min-height:1.1em; }
+    .vars-row { display:flex; flex-direction:column; gap:8px; }
+    .var-box { display:flex; flex-direction:column; align-items:center; gap:2px; padding:7px 4px; border-radius:8px; background:var(--surface-dark); border:1px solid var(--border); }
     .var-box.accent { border-color:rgba(var(--accent-ch),0.4); }
     .var-box.sky    { border-color:rgba(var(--blue-ch),0.4); }
     .var-label { font-size:0.55rem; text-transform:uppercase; letter-spacing:0.1em; color:var(--text-dim); }
@@ -135,141 +67,94 @@
     .var-sub   { font-size:0.52rem; color:var(--text-ghost); font-family:monospace; text-align:center; }
     .var-box.accent .var-value { color:var(--accent); }
     .var-box.sky    .var-value { color:var(--blue); }
-
-    /* viz-inputs */
-    .viz-inputs {
-      display:flex; flex-wrap:wrap; gap:10px; align-items:flex-end;
-      padding:8px 16px 12px; flex-shrink:0;
-      border-top:1px solid var(--border-soft);
-    }
-    .inp-group { display:flex; flex-direction:column; gap:4px; }
-    .inp-label {
-      font-size:0.68rem; font-weight:700; text-transform:uppercase;
-      letter-spacing:0.08em; color:var(--text-dim);
-    }
-    .inp-text {
-      background:var(--surface); border:1px solid var(--border);
-      color:var(--text); border-radius:6px; padding:6px 10px;
-      font-size:0.82rem; width:180px;
-    }
-    .inp-num {
-      background:var(--surface); border:1px solid var(--border);
-      color:var(--text); border-radius:6px; padding:6px 10px;
-      font-size:0.82rem; width:60px;
-    }
-    .inp-sel {
-      background:var(--surface); border:1px solid var(--border);
-      color:var(--text); border-radius:6px; padding:6px 10px;
-      font-size:0.82rem;
-    }
-    .run-btn {
-      padding:7px 18px; background:var(--accent); color:#fff;
-      border:none; border-radius:6px; font-weight:600; cursor:pointer; font-size:0.82rem;
-    }
-    .rand-btn {
-      padding:7px 14px; background:var(--surface); color:var(--text);
-      border:1px solid var(--border); border-radius:6px; cursor:pointer; font-size:0.82rem;
-    }
   </style>
 </head>
 <body>
 
-<div class="page-title">19. Remove Nth Node From End of List &mdash; Two-Pointer Dummy</div>
-
 <div class="viz-inputs">
-  <div class="inp-group">
-    <label class="inp-label">Preset</label>
-    <select class="inp-sel" id="presetSel" onchange="loadPreset()">
-      <option value="">— pick a preset —</option>
-      <option value="0">[1,2,3,4,5], n=2 → remove 4th</option>
-      <option value="1">[1], n=1 → empty list</option>
-      <option value="2">[1,2], n=1 → remove tail</option>
-      <option value="3">[1,2], n=2 → remove head</option>
-      <option value="4">[1,2,3,4,5,6,7], n=3 → middle</option>
-      <option value="5">[10,20,30,40,50], n=5 → remove head</option>
+  <div>
+    <label>Preset</label>
+    <select id="presetSel" onchange="loadPreset()">
+      <option value="">&#8212; pick a preset &#8212;</option>
+      <option value="0">[1,2,3,4,5], n=2 &rarr; remove 4th</option>
+      <option value="1">[1], n=1 &rarr; empty list</option>
+      <option value="2">[1,2], n=1 &rarr; remove tail</option>
+      <option value="3">[1,2], n=2 &rarr; remove head</option>
+      <option value="4">[1,2,3,4,5,6,7], n=3 &rarr; middle</option>
+      <option value="5">[10,20,30,40,50], n=5 &rarr; remove head</option>
     </select>
   </div>
-  <div class="inp-group">
-    <label class="inp-label">List (comma-separated)</label>
-    <input class="inp-text" id="listInput" type="text" value="1,2,3,4,5" placeholder="e.g. 1,2,3,4,5" />
+  <div>
+    <label>List (comma-separated)</label>
+    <input id="listInput" type="text" value="1,2,3,4,5" placeholder="e.g. 1,2,3,4,5" />
   </div>
-  <div class="inp-group">
-    <label class="inp-label">n</label>
-    <input class="inp-num" id="nInput" type="number" min="1" value="2" />
+  <div>
+    <label>n</label>
+    <input id="nInput" type="number" min="1" value="2" style="width:60px" />
   </div>
-  <button class="run-btn" onclick="buildAndRun()">Run</button>
-  <button class="rand-btn" onclick="randomExample()">&#127922; Random</button>
+  <button class="vi-btn-run" onclick="buildAndRun()">Run</button>
+  <button class="vi-btn-rand" onclick="randomExample()">&#127922; Random</button>
 </div>
-
 <div class="controls"></div>
 
-<div class="viz-root">
+<div id="header">
+  <span id="phase-badge">Setup</span>
+  <span style="font-size:13px;font-weight:700;">Remove Nth Node From End</span>
+  <span id="step-counter">Step 0 / 0</span>
+</div>
 
-  <!-- LEFT COLUMN -->
-  <div class="left-col">
-
-    <div class="panel-box">
-      <div class="panel-title">Linked List</div>
+<div id="main">
+  <div id="viz-area">
+    <div style="width:100%;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:14px 16px;">
+      <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-dim);margin-bottom:8px;">Linked List</div>
       <div class="list-canvas" id="list-canvas"></div>
     </div>
-
-    <div class="panel-box code-panel">
-      <div class="panel-title">Code</div>
-      <pre class="code-body" id="code-body"></pre>
-    </div>
-
+    <div class="status-desc" id="status-desc">Load a preset or enter values and press Run.</div>
+    <div class="gap-info" id="gap-info"></div>
   </div>
 
-  <!-- RIGHT COLUMN -->
-  <div class="right-col">
+  <div id="resize-handle"></div>
 
-    <div class="panel-box">
-      <div class="ctrl-row">
-        <button class="btn" id="prevBtn">&larr;</button>
-        <button class="btn" id="stepBtn">&rarr;</button>
-        <button class="btn primary" id="playBtn">Play</button>
-        <button class="btn" id="resetBtn">Reset</button>
-        <select class="speed-sel" id="speedSel">
-          <option value="1400">Slow</option>
-          <option value="800" selected>Normal</option>
-          <option value="380">Fast</option>
-        </select>
-      </div>
-      <div class="counter" id="counter">Step 0 / 0</div>
-    </div>
-
-    <div class="panel-box">
-      <span class="phase-badge" id="phase-badge">&mdash;</span>
-      <div class="status-desc" id="status-desc">Load a preset or enter values and press Run.</div>
-      <div class="gap-info" id="gap-info"></div>
-    </div>
-
-    <div class="panel-box">
-      <div class="panel-title">Pointers</div>
-      <div class="vars-row">
-        <div class="var-box accent">
-          <div class="var-label">fast</div>
-          <div class="var-value" id="val-fast">&mdash;</div>
-          <div class="var-sub" id="sub-fast">&mdash;</div>
-        </div>
-        <div class="var-box sky">
-          <div class="var-label">slow</div>
-          <div class="var-value" id="val-slow">&mdash;</div>
-          <div class="var-sub" id="sub-slow">&mdash;</div>
-        </div>
-        <div class="var-box">
-          <div class="var-label">n</div>
-          <div class="var-value" id="val-n">&mdash;</div>
-          <div class="var-sub">remove nth from end</div>
-        </div>
-      </div>
-    </div>
-
+  <div id="code-panel">
+    <div class="code-panel-title">Code</div>
+    <pre class="code-body" id="code-body"></pre>
   </div>
+
+  <div id="sidebar">
+    <div class="sidebar-title">Pointers</div>
+    <div class="vars-row">
+      <div class="var-box accent">
+        <div class="var-label">fast</div>
+        <div class="var-value" id="val-fast">&mdash;</div>
+        <div class="var-sub" id="sub-fast">&mdash;</div>
+      </div>
+      <div class="var-box sky">
+        <div class="var-label">slow</div>
+        <div class="var-value" id="val-slow">&mdash;</div>
+        <div class="var-sub" id="sub-slow">&mdash;</div>
+      </div>
+      <div class="var-box">
+        <div class="var-label">n</div>
+        <div class="var-value" id="val-n">&mdash;</div>
+        <div class="var-sub">remove nth from end</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="nav-row">
+  <button id="prevBtn" class="btn-step">&#8592; Prev</button>
+  <button id="stepBtn" class="btn-step">Step &#8594;</button>
+  <button id="playBtn" class="btn-play">Play</button>
+  <button id="resetBtn" class="btn-step">&#8635; Reset</button>
+  <select id="speedSel">
+    <option value="1400">Slow</option>
+    <option value="800" selected>Normal</option>
+    <option value="380">Fast</option>
+  </select>
 </div>
 
 <script>
-// pseudocode lines: id is the activeLine key (-1 = comment, not highlighted)
 var CODE_LINES = [
   { id:  0, html: '<span class="kw">def</span> <span class="fn">removeNthFromEnd</span>(head, n):' },
   { id:  1, html: '    dummy = <span class="fn">ListNode</span>(<span class="nb">0</span>); dummy.next = head' },
@@ -302,81 +187,69 @@ function buildSteps(vals, n) {
       vals: vals.slice(), n: n,
       phase: phase, phaseLabel: phaseLabel,
       stepDesc: stepDesc, activeLines: activeLines,
-      fastIdx: fastIdx,     // -1=dummy, 0..len-1=node index, len=null sentinel
-      slowIdx: slowIdx,     // -1=dummy, 0..len-1=node index
-      removeIdx: removeIdx, // -1=none
+      fastIdx: fastIdx,
+      slowIdx: slowIdx,
+      removeIdx: removeIdx,
       deleted: deleted,
       gapInfo: gapInfo || ''
     };
   }
 
   function nodeDesc(idx, vs) {
-    if (idx < 0)         return 'dummy';
+    if (idx < 0)          return 'dummy';
     if (idx >= vs.length) return '∅';
     return 'node[' + idx + ']=' + vs[idx];
   }
 
-  // Init
   steps.push(snap('init', 'Initialize',
-    'Create dummy sentinel. Set fast = slow = dummy. Both pointers start before the list head.',
+    'Create dummy sentinel. Set fast = slow = dummy.',
     [1, 2], -1, -1, -1, false, ''));
 
   var fastIdx = -1;
   var slowIdx = -1;
 
-  // Phase 1: advance fast n+1 times
   for (var i = 0; i < n + 1; i++) {
     fastIdx++;
     var gap = fastIdx - slowIdx;
-    var fi = fastIdx < len ? fastIdx : len; // cap at len for null sentinel
+    var fi = fastIdx < len ? fastIdx : len;
     steps.push(snap(
-      'advance-fast',
-      'Phase 1: Advance fast ' + (n + 1) + ' steps',
+      'advance-fast', 'Phase 1: Advance fast ' + (n + 1) + ' steps',
       'Step ' + (i + 1) + ' of ' + (n + 1) + ': fast → ' + nodeDesc(fastIdx, vals) + '.',
       [3], fi, slowIdx, -1, false,
       'Gap: fast is ' + gap + ' node' + (gap !== 1 ? 's' : '') + ' ahead of slow'
     ));
   }
 
-  // Phase 2: move both until fast reaches null
   while (fastIdx < len) {
     slowIdx++;
     fastIdx++;
     var fi2 = fastIdx < len ? fastIdx : len;
     var gap2 = fastIdx - slowIdx;
     steps.push(snap(
-      'move-both',
-      'Phase 2: Move both pointers',
+      'move-both', 'Phase 2: Move both pointers',
       'slow → ' + nodeDesc(slowIdx, vals) + ', fast → ' + nodeDesc(fastIdx, vals) + '.',
       [4, 5], fi2, slowIdx, -1, false,
       'Gap maintained: fast is ' + gap2 + ' node' + (gap2 !== 1 ? 's' : '') + ' ahead of slow'
     ));
   }
 
-  // Explicit fast-at-null snapshot
   steps.push(snap(
-    'move-both',
-    'Phase 2: fast reached ∅ — loop exits',
-    'fast is null. Loop exits. slow is exactly the node before the ' + n + 'th from end.',
-    [4], len, slowIdx, -1, false,
-    'slow.next is the node to remove'
+    'move-both', 'Phase 2: fast reached ∅ — loop exits',
+    'fast is null. slow is exactly the node before the ' + n + 'th from end.',
+    [4], len, slowIdx, -1, false, 'slow.next is the node to remove'
   ));
 
-  // Phase 3a: identify target
   var removeIdx = slowIdx + 1;
   var removeVal = removeIdx < len ? vals[removeIdx] : '?';
   steps.push(snap(
-    'remove',
-    'Phase 3: Remove target node',
+    'remove', 'Phase 3: Remove target node',
     'Target: slow.next = node[' + removeIdx + '] (val=' + removeVal + '). Execute: slow.next = slow.next.next.',
     [6], len, slowIdx, removeIdx, false, ''
   ));
 
-  // Phase 3b: deletion applied
   var afterVal = (removeIdx + 1 < len) ? 'node[' + (removeIdx + 1) + ']=' + vals[removeIdx + 1] : '∅';
   steps.push(snap(
-    'done',
-    'Done — node removed',
+    'done', 'Done — node removed',
     'slow.next now points to ' + afterVal + '. Node ' + removeVal + ' removed. Return dummy.next.',
     [7], len, slowIdx, removeIdx, true, ''
   ));
@@ -384,13 +257,12 @@ function buildSteps(vals, n) {
   return steps;
 }
 
-// DOM refs
 var listCanvas = document.getElementById('list-canvas');
 var codeBody   = document.getElementById('code-body');
 var phaseBadge = document.getElementById('phase-badge');
 var statusDesc = document.getElementById('status-desc');
 var gapInfoEl  = document.getElementById('gap-info');
-var counterEl  = document.getElementById('counter');
+var counterEl  = document.getElementById('step-counter');
 var valFast    = document.getElementById('val-fast');
 var subFast    = document.getElementById('sub-fast');
 var valSlow    = document.getElementById('val-slow');
@@ -398,12 +270,12 @@ var subSlow    = document.getElementById('sub-slow');
 var valN       = document.getElementById('val-n');
 
 function nodeLabel(idx, vals) {
-  if (idx < 0)           return 'dummy';
+  if (idx < 0)            return 'dummy';
   if (idx >= vals.length) return '∅';
   return String(vals[idx]);
 }
 function nodePos(idx, vals) {
-  if (idx < 0)           return 'dummy';
+  if (idx < 0)            return 'dummy';
   if (idx >= vals.length) return 'null';
   return 'node[' + idx + ']';
 }
@@ -411,12 +283,10 @@ function nodePos(idx, vals) {
 function makeNodeEl(text, extraCls, badges) {
   var group = document.createElement('div');
   group.className = 'node-group';
-
   var node = document.createElement('div');
   node.className = 'list-node' + (extraCls ? ' ' + extraCls : '');
   node.textContent = text;
   group.appendChild(node);
-
   if (badges && badges.length > 0) {
     var bc = document.createElement('div');
     bc.className = 'ptr-badges';
@@ -448,7 +318,6 @@ function render(snap, cursor, total) {
 
   listCanvas.innerHTML = '';
 
-  // Dummy node
   var dF = (fastIdx === -1), dS = (slowIdx === -1);
   var dCls = 'dummy-node';
   if (dF && dS) dCls += ' both-active';
@@ -459,23 +328,17 @@ function render(snap, cursor, total) {
   if (dF) dBadges.push({ cls: 'fast', text: 'fast' });
   listCanvas.appendChild(makeNodeEl('dummy', dCls, dBadges));
 
-  // Arrow after dummy
   var dummyBypass = deleted && slowIdx === -1 && removeIdx === 0;
   listCanvas.appendChild(makeArrow(dummyBypass ? 'bypass-arrow' : ''));
 
-  // Regular nodes
   for (var i = 0; i < len; i++) {
-    var isFast    = (fastIdx === i);
-    var isSlow    = (slowIdx === i);
-    var isTarget  = (removeIdx === i);
-    var isRemoved = (deleted && isTarget);
+    var isFast      = (fastIdx === i);
+    var isSlow      = (slowIdx === i);
+    var isTarget    = (removeIdx === i);
+    var isRemoved   = (deleted && isTarget);
     var isBypassSrc = (deleted && slowIdx === i);
 
-    // Skip the removed node entirely — it's gone
-    if (isRemoved) {
-      // If there's a next node, the arrow connecting bypass-src to next is added below
-      continue;
-    }
+    if (isRemoved) continue;
 
     var cls = '';
     if (isBypassSrc)          cls = 'bypass-src';
@@ -491,28 +354,21 @@ function render(snap, cursor, total) {
 
     listCanvas.appendChild(makeNodeEl(String(vals[i]), cls, badges));
 
-    // Arrow after this node — skip if next node is the removed one (bypass handled by next iteration)
     var nextIdx = i + 1;
     var nextIsRemoved = (deleted && removeIdx === nextIdx);
     if (nextIdx < len && !nextIsRemoved) {
       listCanvas.appendChild(makeArrow(''));
     } else if (nextIdx < len && nextIsRemoved) {
-      // bypass: connect this node directly to the node after the removed one
       listCanvas.appendChild(makeArrow('bypass-arrow'));
-      // skip the removed node (handled by continue above)
     }
   }
 
-  // Arrow before null sentinel
-  var lastIsRemoved = (deleted && removeIdx === len - 1);
   listCanvas.appendChild(makeArrow(''));
 
-  // Null sentinel
   var nullIsFast = (fastIdx === len);
   var nullBadges = nullIsFast ? [{ cls: 'fast', text: 'fast' }] : [];
   listCanvas.appendChild(makeNodeEl('∅', 'null-node', nullBadges));
 
-  // Code highlight — build once
   if (!codeBody.dataset.built) {
     var html = '';
     CODE_LINES.forEach(function(l) {
@@ -526,7 +382,6 @@ function render(snap, cursor, total) {
     el.classList.toggle('active', id >= 0 && snap.activeLines.indexOf(id) >= 0);
   });
 
-  // Right panel
   phaseBadge.textContent = snap.phaseLabel;
   statusDesc.textContent = snap.stepDesc;
   gapInfoEl.textContent  = snap.gapInfo;
@@ -539,7 +394,6 @@ function render(snap, cursor, total) {
   valN.textContent    = snap.n;
 }
 
-// VizNav
 var nav = VizNav({
   btnPrev:  document.getElementById('prevBtn'),
   btnNext:  document.getElementById('stepBtn'),
@@ -582,6 +436,24 @@ function randomExample() {
   document.getElementById('presetSel').value = '';
   buildAndRun();
 }
+
+(function() {
+  var handle = document.getElementById('resize-handle');
+  var panel  = document.getElementById('code-panel');
+  var dragging = false, startX = 0, startW = 0;
+  handle.addEventListener('mousedown', function(e) {
+    dragging = true; startX = e.clientX; startW = panel.offsetWidth;
+    handle.classList.add('dragging'); e.preventDefault();
+  });
+  document.addEventListener('mousemove', function(e) {
+    if (!dragging) return;
+    var delta = startX - e.clientX;
+    panel.style.width = Math.min(560, Math.max(120, startW + delta)) + 'px';
+  });
+  document.addEventListener('mouseup', function() {
+    if (!dragging) return; dragging = false; handle.classList.remove('dragging');
+  });
+})();
 
 window.addEventListener('DOMContentLoaded', function() {
   document.getElementById('presetSel').value = '0';

@@ -1,216 +1,145 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Missing Number</title>
-  <link rel="stylesheet" href="../shared/style.css" />
-  <script src="../shared/gsap.min.js"></script>
-  <script src="../shared/viz.js"></script>
-  <style>
-    .viz-area { width: 100%; max-width: 90%; }
-    .main-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
-    .left-col, .right-col { display: flex; flex-direction: column; gap: 12px; }
-    @media (max-width: 700px) { .main-row { grid-template-columns: 1fr; } }
-
-    .array-section {
-      padding: 16px;
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--radius-lg);
-      display: flex; flex-direction: column; gap: 6px;
-      min-height: 100px;
-    }
-    .arr-label {
-      font-size: 0.62rem; font-family: monospace;
-      color: var(--text-ghost); text-transform: uppercase; letter-spacing: 0.08em;
-    }
-    .arr-row { display: flex; gap: 6px; flex-wrap: nowrap; }
-    .arr-cell {
-      width: 48px; height: 48px; flex-shrink: 0;
-      display: flex; align-items: center; justify-content: center;
-      border: 2px solid var(--border-soft); border-radius: 5px;
-      background: #0f0f0f;
-      font-size: 0.92rem; font-weight: 700; font-family: monospace;
-      color: var(--text-ghost);
-    }
-    .arr-cell[data-state="processed"] { color: var(--text-dim); border-color: #2d3148; }
-    .arr-cell[data-state="current"]   { color: var(--accent-pale); border-color: var(--accent); background: var(--surface-dark); }
-    .arr-cell[data-state="missing"]   { color: #86efac; border-color: #15803d; background: #052e16; }
-
-    .arr-cell.idx-cell { background: transparent; border-color: transparent; color: var(--text-faint); font-weight: 600; font-size: 0.8rem; }
-    .arr-cell.idx-cell[data-state="current"] { color: #fbbf24; background: transparent; border-color: transparent; }
-
-    .legend {
-      display: flex; gap: 14px; margin-top: 4px;
-    }
-    .legend-item { display: flex; align-items: center; gap: 5px; font-size: 0.68rem; color: var(--text-faint); }
-    .legend-dot { width: 12px; height: 8px; border-radius: 2px; border: 1px solid var(--border-soft); }
-    .legend-dot.current { border-color: var(--accent); background: var(--surface-dark); }
-    .legend-dot.processed { border-color: #2d3148; background: #0f0f0f; }
-    .legend-dot.missing { border-color: #15803d; background: #052e16; }
-
-    .panel-box {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--radius-lg); padding: 14px 16px;
-      display: flex; flex-direction: column; gap: 8px;
-    }
-    .panel-title {
-      font-size: 0.72rem; font-weight: 700;
-      text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim);
-    }
-
-    .var-main { display: flex; gap: 10px; }
-    .var-box {
-      flex: 1; padding: 10px 8px;
-      background: var(--bg); border: 1px solid var(--border);
-      border-radius: var(--radius-sm);
-      display: flex; flex-direction: column; align-items: center; gap: 3px;
-    }
-    .var-box.result-accent { border-color: #166534; }
-    .var-label  { font-size: 0.65rem; font-family: monospace; color: var(--text-faint); }
-    .var-val    { font-size: 1.4rem; font-weight: 700; color: var(--text-bright); }
-    .var-bin    { font-size: 0.72rem; font-family: monospace; color: var(--text-muted); letter-spacing: 0.06em; }
-
-    .xor-row {
-      display: flex; align-items: center; gap: 10px; justify-content: center;
-      padding: 8px; background: var(--bg); border: 1px solid var(--border);
-      border-radius: var(--radius-sm); font-family: monospace; font-size: 0.85rem;
-      min-height: 38px;
-    }
-    .xor-row .op { color: var(--accent); font-weight: 700; padding: 0 2px; }
-    .xor-row .arg { color: var(--text-bright); font-weight: 700; }
-    .xor-row .lhs { color: var(--text-muted); }
-    .xor-row .eq { color: var(--text-faint); }
-    .xor-row .new { color: #fbbf24; font-weight: 700; }
-
-    .code-panel {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--radius-lg); overflow: hidden;
-    }
-    .code-header {
-      padding: 8px 14px; font-size: 0.72rem; font-weight: 600;
-      color: var(--text-dim); border-bottom: 1px solid var(--border); background: var(--bg);
-      display: flex; justify-content: space-between; align-items: center;
-    }
-    .code-body { padding: 10px 0; font-size: 0.78rem; line-height: 1.75; flex: 1; white-space: pre; }
-    .code-line { display: flex; align-items: center; padding: 0 14px; }
-    .code-line.hl { background: var(--border-soft); border-left: 2px solid var(--accent); }
-    .ln { min-width: 24px; color: var(--text-ghost); user-select: none; font-size: 0.7rem; }
-
-    .btn-play {
-      background: #15803d; border: none; border-radius: var(--radius-sm);
-      color: #fff; cursor: pointer; font-size: 0.88rem; font-weight: 600;
-      padding: 9px 16px; transition: background 0.2s;
-    }
-    .btn-play:hover { background: #166534; }
-    .btn-play.playing { background: #c2410c; }
-    .btn-play.playing:hover { background: #9a3412; }
-    .btn-play:disabled { opacity: 0.4; cursor: not-allowed; }
-    .speed-select {
-      background: var(--bg); border: 1px solid var(--border);
-      border-radius: var(--radius-sm); color: var(--text);
-      font-size: 0.85rem; padding: 8px 10px; outline: none; width: 80px;
-    }
-    .nav-row { display: flex; gap: 8px; align-items: center; }
-
-    .mode-toggle { display: flex; gap: 0; border: 1px solid var(--border); border-radius: var(--radius-sm); overflow: hidden; }
-    .mode-toggle button {
-      background: var(--bg); border: none; color: var(--text-muted);
-      padding: 7px 14px; font-size: 0.78rem; font-weight: 600; cursor: pointer;
-      font-family: inherit;
-    }
-    .mode-toggle button.active { background: var(--accent); color: #fff; }
-
-    .kw { color: var(--purple); }
-    .fn { color: var(--blue); }
-    .bi { color: var(--orange); }
-    .op { color: var(--text); }
-    .nb { color: var(--green); }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Missing Number</title>
+<link rel="stylesheet" href="../shared/style.css" />
+<script src="../shared/gsap.min.js"></script>
+<script src="../shared/viz.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: "Fira Code", "Cascadia Code", monospace; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+  #header { padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+  #phase-badge { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; padding: 3px 10px; border-radius: var(--radius-sm); background: #1e3a5f; color: var(--blue); border: 1px solid var(--blue); }
+  #step-counter { font-size: 12px; color: var(--text-muted); margin-left: auto; }
+  .viz-inputs { width: 100%; padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; flex-wrap: wrap; gap: 12px; align-items: center; flex-shrink: 0; }
+  .viz-inputs label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); display: block; margin-bottom: 3px; }
+  .viz-inputs input { background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 0 8px; height: 30px; font-size: 0.82rem; font-family: inherit; }
+  .vi-btn-run { padding: 6px 14px; border-radius: 6px; font-size: 0.82rem; font-weight: 600; cursor: pointer; font-family: inherit; background: var(--accent); color: #fff; border: none; }
+  .vi-btn-rand { padding: 6px 14px; border-radius: 6px; font-size: 0.82rem; cursor: pointer; font-family: inherit; background: var(--bg); color: var(--text); border: 1px solid var(--border); }
+  #main { display: flex; flex: 1; overflow: hidden; }
+  #viz-area { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding: 16px; gap: 14px; overflow-y: auto; }
+  #desc { font-size: 13px; color: var(--text-muted); text-align: center; max-width: 560px; min-height: 36px; line-height: 1.5; }
+  .panel-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--text-dim); margin-bottom: 8px; }
+  #resize-handle { width: 5px; flex-shrink: 0; cursor: col-resize; background: transparent; border-left: 1px solid var(--border); transition: background .15s; z-index: 10; }
+  #resize-handle:hover, #resize-handle.dragging { background: var(--accent); }
+  #code-panel { width: 320px; min-width: 120px; max-width: 560px; flex-shrink: 0; background: #0d1117; border-right: 1px solid var(--border); overflow-y: auto; overflow-x: auto; padding: 10px 12px; display: flex; flex-direction: column; }
+  .code-panel-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--text-dim); margin-bottom: 8px; }
+  .code-line { display: flex; align-items: center; padding: 2px 0 2px 6px; white-space: pre; border-left: 2px solid transparent; color: var(--text-muted); font-family: 'Fira Code','Cascadia Code',monospace; font-size: 0.75rem; line-height: 1.8; }
+  .code-line.hl { background: rgba(122,162,247,0.12); border-left-color: var(--accent); color: var(--text); }
+  .ln { display: inline-block; width: 20px; text-align: right; color: var(--text-dim); user-select: none; margin-right: 10px; font-size: 0.7rem; }
+  .kw { color: var(--purple); } .nb { color: var(--green); } .cm { color: var(--text-dim); font-style: italic; } .fn { color: var(--blue); } .bi { color: var(--orange); } .op { color: var(--text); }
+  #sidebar { width: 200px; flex-shrink: 0; background: var(--surface); border-left: 1px solid var(--border); overflow-y: auto; padding: 14px 12px; display: flex; flex-direction: column; gap: 10px; }
+  .sidebar-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--text-dim); margin-bottom: 6px; }
+  .var-item { font-size: 11px; font-family: monospace; color: var(--text-muted); padding: 4px 0; border-bottom: 1px solid var(--border-soft); }
+  .var-item:last-child { border-bottom: none; }
+  .var-key { color: var(--text-dim); } .var-val { color: var(--accent); font-weight: 700; }
+  #nav-row { flex-shrink: 0; display: flex; align-items: center; gap: 8px; padding: 10px 16px; background: var(--surface); border-top: 1px solid var(--border); }
+  .btn-step { padding: 6px 14px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--surface); color: var(--text); font-family: inherit; font-size: 12px; cursor: pointer; }
+  .btn-step:hover { background: #334155; }
+  .btn-play { padding: 6px 14px; border-radius: var(--radius-sm); background: var(--accent); border: none; color: #fff; font-family: inherit; font-size: 12px; cursor: pointer; font-weight: 600; }
+  #nav-row select { padding: 5px 8px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: #1e293b; color: var(--text); font-size: 12px; font-family: inherit; cursor: pointer; }
+  /* page-specific */
+  .array-section { padding: 16px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); display: flex; flex-direction: column; gap: 6px; min-height: 100px; width: 100%; max-width: 600px; }
+  .arr-label { font-size: 0.62rem; font-family: monospace; color: var(--text-ghost); text-transform: uppercase; letter-spacing: 0.08em; }
+  .arr-row { display: flex; gap: 6px; flex-wrap: nowrap; }
+  .arr-cell { width: 48px; height: 48px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border: 2px solid var(--border-soft); border-radius: 5px; background: #0f0f0f; font-size: 0.92rem; font-weight: 700; font-family: monospace; color: var(--text-ghost); }
+  .arr-cell[data-state="processed"] { color: var(--text-dim); border-color: #2d3148; }
+  .arr-cell[data-state="current"] { color: var(--accent-pale); border-color: var(--accent); background: var(--surface-dark); }
+  .arr-cell[data-state="missing"] { color: #86efac; border-color: #15803d; background: #052e16; }
+  .arr-cell.idx-cell { background: transparent; border-color: transparent; color: var(--text-faint); font-weight: 600; font-size: 0.8rem; }
+  .arr-cell.idx-cell[data-state="current"] { color: #fbbf24; background: transparent; border-color: transparent; }
+  .legend { display: flex; gap: 14px; margin-top: 4px; }
+  .legend-item { display: flex; align-items: center; gap: 5px; font-size: 0.68rem; color: var(--text-faint); }
+  .legend-dot { width: 12px; height: 8px; border-radius: 2px; border: 1px solid var(--border-soft); }
+  .legend-dot.current { border-color: var(--accent); background: var(--surface-dark); }
+  .legend-dot.processed { border-color: #2d3148; background: #0f0f0f; }
+  .legend-dot.missing { border-color: #15803d; background: #052e16; }
+  .xor-row { display: flex; align-items: center; gap: 10px; justify-content: center; padding: 8px; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm); font-family: monospace; font-size: 0.85rem; min-height: 38px; width: 100%; max-width: 400px; }
+  .xor-row .op { color: var(--accent); font-weight: 700; padding: 0 2px; }
+  .xor-row .arg { color: var(--text-bright); font-weight: 700; }
+  .xor-row .lhs { color: var(--text-muted); }
+  .xor-row .eq { color: var(--text-faint); }
+  .xor-row .new { color: #fbbf24; font-weight: 700; }
+  .mode-toggle { display: flex; gap: 0; border: 1px solid var(--border); border-radius: var(--radius-sm); overflow: hidden; }
+  .mode-toggle button { background: var(--bg); border: none; color: var(--text-muted); padding: 5px 12px; font-size: 0.78rem; font-weight: 600; cursor: pointer; font-family: inherit; }
+  .mode-toggle button.active { background: var(--accent); color: #fff; }
+  .var-box { padding: 10px 8px; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm); display: flex; flex-direction: column; align-items: center; gap: 3px; margin-bottom: 6px; }
+  .var-box.result-accent { border-color: #166534; }
+  .var-label2 { font-size: 0.65rem; font-family: monospace; color: var(--text-faint); }
+  .var-val2 { font-size: 1.3rem; font-weight: 700; color: var(--text-bright); }
+  .var-bin { font-size: 0.72rem; font-family: monospace; color: var(--text-muted); letter-spacing: 0.06em; }
+</style>
 </head>
-<body class="page">
-
-<div class="page-header">
-  <a class="back-link" href="../index.html">&larr; All Algorithms</a>
-  <div class="page-title">Missing Number</div>
-  <div class="page-sub">LeetCode 268 &middot; Bit Manipulation &middot; O(n) time &middot; O(1) space</div>
-</div>
+<body>
 
 <div class="viz-inputs">
-  <div class="field">
+  <div>
     <label>nums</label>
     <input id="inp-nums" type="text" value="3, 0, 1" style="width:220px" />
   </div>
-  <div class="field">
-    <label>mode</label>
+  <div>
+    <label>Mode</label>
     <div class="mode-toggle">
       <button id="mode-xor" class="active" onclick="setMode('xor')">XOR</button>
       <button id="mode-sum" onclick="setMode('sum')">Sum</button>
     </div>
   </div>
-  <button class="btn-primary" onclick="buildAndRun()">Build &amp; Run</button>
+  <button class="vi-btn-run" onclick="buildAndRun()">Run</button>
+  <button class="vi-btn-rand" onclick="randomExample()">&#127922; Random</button>
+</div>
+<div class="controls"></div>
+
+<div id="header">
+  <span id="phase-badge">Setup</span>
+  <span style="font-size:13px;font-weight:700;">Missing Number</span>
+  <span id="step-counter">Step 0 / 0</span>
 </div>
 
-<div class="viz-area">
-  <div class="main-row">
-    <div class="left-col">
-      <div class="array-section" id="array-section">
-        <span style="color:var(--text-dim);font-size:0.82rem">Enter nums and click Build &amp; Run.</span>
-      </div>
-      <div class="code-panel">
-        <div class="code-header"><span>Python</span><span id="code-mode-label">XOR</span></div>
-        <div class="code-body" id="code-body"></div>
-      </div>
+<div id="main">
+  <div id="viz-area">
+    <div id="desc">Enter nums and click Run.</div>
+    <div class="array-section" id="array-section">
+      <span style="color:var(--text-dim);font-size:0.82rem">Enter nums and click Run.</span>
     </div>
-
-    <div class="right-col">
-      <div style="display:flex;gap:12px">
-        <div class="panel-box" style="flex:0 0 auto">
-          <div class="nav-row">
-            <button class="stepBtn" id="prevBtn" disabled>&larr;</button>
-            <button class="stepBtn" id="stepBtn" disabled>&rarr;</button>
-            <button class="playBtn" id="playBtn" disabled>&#9654; Play</button>
-            <select class="speedSel" id="speedSel">
-              <option value="700">Slow</option>
-              <option value="250" selected>Medium</option>
-              <option value="80">Fast</option>
-            </select>
-          </div>
-        </div>
-        <div class="panel-box" style="flex:1;min-width:0">
-          <div class="panel-title" id="phase-label">&mdash;</div>
-          <div style="font-size:0.82rem;color:var(--text-muted);margin-top:2px" id="step-desc">Enter nums and click Build &amp; Run.</div>
-        </div>
-      </div>
-
-      <div class="panel-box">
-        <div class="panel-title">Variables</div>
-        <div class="var-main">
-          <div class="var-box">
-            <div class="var-label" id="vv-i-lbl">i</div>
-            <div class="var-val" id="vv-i">&mdash;</div>
-          </div>
-          <div class="var-box result-accent">
-            <div class="var-label" id="vv-res-lbl">result</div>
-            <div class="var-val" id="vv-res">&mdash;</div>
-            <div class="var-bin" id="vv-res-bin">&mdash;</div>
-          </div>
-        </div>
-      </div>
-
-      <div class="panel-box">
-        <div class="panel-title" id="op-title">XOR Operation</div>
-        <div class="xor-row" id="xor-row">
-          <span class="lhs">result</span>
-        </div>
-      </div>
+    <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--text-dim)" id="op-title">XOR Operation</div>
+    <div class="xor-row" id="xor-row"><span class="lhs">result</span></div>
+  </div>
+  <div id="resize-handle"></div>
+  <div id="code-panel">
+    <div class="code-panel-title">Code &#8212; <span id="code-mode-label">XOR</span></div>
+    <div id="code-body"></div>
+  </div>
+  <div id="sidebar">
+    <div class="sidebar-title">Variables</div>
+    <div class="var-box">
+      <div class="var-label2" id="vv-i-lbl">i</div>
+      <div class="var-val2" id="vv-i">&mdash;</div>
+    </div>
+    <div class="var-box result-accent">
+      <div class="var-label2" id="vv-res-lbl">result</div>
+      <div class="var-val2" id="vv-res">&mdash;</div>
+      <div class="var-bin" id="vv-res-bin">&mdash;</div>
     </div>
   </div>
 </div>
 
+<div id="nav-row">
+  <button id="prevBtn" class="btn-step">&#8592; Prev</button>
+  <button id="stepBtn" class="btn-step">Step &#8594;</button>
+  <button id="playBtn" class="btn-play">Play</button>
+  <button id="resetBtn" class="btn-step">&#8635; Reset</button>
+  <select id="speedSel">
+    <option value="800">0.5&#215;</option>
+    <option value="400" selected>1&#215;</option>
+    <option value="200">2&#215;</option>
+    <option value="100">4&#215;</option>
+  </select>
+</div>
+
 <script>
 var simSteps = [], nav;
-var numLen = 0;
 var currentMode = 'xor';
 var currentNums = [];
 
@@ -222,7 +151,6 @@ var CODE_XOR = [
   [5, '        result <span class="op">^=</span> nums<span class="op">[</span>i<span class="op">]</span>'],
   [6, '    <span class="kw">return</span> result'],
 ];
-
 var CODE_SUM = [
   [1, '<span class="kw">def</span> <span class="fn">missing_number</span><span class="op">(</span>nums<span class="op">):</span>'],
   [2, '    n <span class="op">=</span> <span class="bi">len</span><span class="op">(</span>nums<span class="op">)</span>'],
@@ -242,12 +170,12 @@ window.addEventListener('DOMContentLoaded', function() {
     speedSel: document.getElementById('speedSel'),
     render: function(snap, cur, total) {
       applyStep(snap, cur > 0);
-      var phaseEl = document.getElementById('phase-label');
-      var descEl  = document.getElementById('step-desc');
-      if (phaseEl) phaseEl.textContent = 'Step ' + (cur + 1) + ' / ' + total + '  ·  ' + snap.phase;
-      if (descEl)  descEl.textContent  = snap.desc;
+      document.getElementById('phase-badge').textContent = snap.phase || 'Step';
+      document.getElementById('step-counter').textContent = 'Step ' + cur + ' / ' + total;
+      if (snap.desc) document.getElementById('desc').textContent = snap.desc;
     }
   });
+  document.getElementById('resetBtn').addEventListener('click', function() { nav.stopPlay(); nav.goTo(0); });
 });
 
 function setMode(mode) {
@@ -271,19 +199,22 @@ function buildCodePanel() {
   }).join('');
 }
 
+function randomExample() {
+  var n = Math.floor(Math.random() * 5) + 2;
+  var nums = Array.from({length: n}, function(_, i) { return i; });
+  var missing = Math.floor(Math.random() * (n + 1));
+  nums.splice(missing, 1);
+  for (var i = nums.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var tmp = nums[i]; nums[i] = nums[j]; nums[j] = tmp; }
+  document.getElementById('inp-nums').value = nums.join(', ');
+}
+
 function buildAndRun() {
   var raw = document.getElementById('inp-nums').value;
   var nums = raw.split(',').map(function(x) { return parseInt(x.trim()); }).filter(function(x) { return !isNaN(x); });
   if (nums.length < 1) return;
-  // Validate: should be distinct from [0..n] with one missing
-  var n = nums.length;
-  var seen = {};
-  for (var k = 0; k < nums.length; k++) {
-    if (nums[k] < 0 || nums[k] > n || seen[nums[k]]) return;
-    seen[nums[k]] = true;
-  }
+  var n = nums.length, seen = {};
+  for (var k = 0; k < nums.length; k++) { if (nums[k] < 0 || nums[k] > n || seen[nums[k]]) return; seen[nums[k]] = true; }
   currentNums = nums;
-  numLen = nums.length;
   buildArraySection(nums);
   simSteps = currentMode === 'xor' ? simulateXor(nums) : simulateSum(nums);
   nav.load(simSteps);
@@ -291,117 +222,40 @@ function buildAndRun() {
 
 function buildArraySection(nums) {
   var sec = document.getElementById('array-section');
-  sec.innerHTML =
-    '<div class="arr-label">nums[i]</div>' +
-    '<div class="arr-row" id="arr-row"></div>' +
-    '<div class="arr-label">index i</div>' +
-    '<div class="arr-row" id="idx-row"></div>' +
-    '<div class="legend">' +
-      '<div class="legend-item"><div class="legend-dot current"></div>current</div>' +
-      '<div class="legend-item"><div class="legend-dot processed"></div>processed</div>' +
-      '<div class="legend-item"><div class="legend-dot missing"></div>missing slot</div>' +
-    '</div>';
-
-  var arrRow = document.getElementById('arr-row');
-  var idxRow = document.getElementById('idx-row');
-
+  sec.innerHTML = '<div class="arr-label">nums[i]</div><div class="arr-row" id="arr-row"></div><div class="arr-label">index i</div><div class="arr-row" id="idx-row"></div><div class="legend"><div class="legend-item"><div class="legend-dot current"></div>current</div><div class="legend-item"><div class="legend-dot processed"></div>processed</div><div class="legend-item"><div class="legend-dot missing"></div>missing slot</div></div>';
+  var arrRow = document.getElementById('arr-row'), idxRow = document.getElementById('idx-row');
   nums.forEach(function(v, i) {
-    var cell = document.createElement('div');
-    cell.className = 'arr-cell'; cell.id = 'ac-' + i; cell.dataset.state = 'idle';
-    cell.textContent = v; arrRow.appendChild(cell);
-
-    var idx = document.createElement('div');
-    idx.className = 'arr-cell idx-cell'; idx.id = 'ix-' + i; idx.dataset.state = 'idle';
-    idx.textContent = i; idxRow.appendChild(idx);
+    var cell = document.createElement('div'); cell.className = 'arr-cell'; cell.id = 'ac-' + i; cell.dataset.state = 'idle'; cell.textContent = v; arrRow.appendChild(cell);
+    var idx = document.createElement('div'); idx.className = 'arr-cell idx-cell'; idx.id = 'ix-' + i; idx.dataset.state = 'idle'; idx.textContent = i; idxRow.appendChild(idx);
   });
-
-  // also display n as a trailing index cell (for XOR: result starts at n)
-  var nCell = document.createElement('div');
-  nCell.className = 'arr-cell idx-cell'; nCell.id = 'ix-n';
-  nCell.textContent = nums.length; nCell.style.color = 'var(--accent-pale)';
-  idxRow.appendChild(nCell);
+  var nCell = document.createElement('div'); nCell.className = 'arr-cell idx-cell'; nCell.id = 'ix-n'; nCell.textContent = nums.length; nCell.style.color = 'var(--accent-pale)'; idxRow.appendChild(nCell);
 }
 
 function simulateXor(nums) {
-  var n = nums.length;
-  var steps = [];
-  var result = n;
-  var cellStates = Array.from({length: n}, function() { return 'idle'; });
-
-  steps.push({
-    phase: 'Init', desc: 'result = n = ' + n + '. (XOR identity: a ^ a = 0, so we XOR all indices 0..n and all values; the missing index survives.)',
-    lines: [2], cellStates: cellStates.slice(),
-    i: null, result: result, op: { lhs: 'init', arg: n, kind: 'init', newVal: result }
-  });
-
+  var n = nums.length, steps = [], result = n, cellStates = Array.from({length: n}, function() { return 'idle'; });
+  steps.push({ phase: 'Init', desc: 'result = n = ' + n + '. XOR identity: a ^ a = 0, so we XOR all indices 0..n and all values; the missing index survives.', lines: [2], cellStates: cellStates.slice(), i: null, result: result, op: { lhs: 'init', arg: n, kind: 'init', newVal: result } });
   for (var i = 0; i < n; i++) {
     cellStates[i] = 'current';
-
-    var prev = result;
-    result ^= i;
-    steps.push({
-      phase: 'Loop · XOR index', desc: 'result ^= i  ⟶  ' + prev + ' ^ ' + i + ' = ' + result + '.',
-      lines: [3, 4], cellStates: cellStates.slice(),
-      i: i, result: result, op: { lhs: prev, arg: i, kind: 'idx', newVal: result }
-    });
-
-    var prev2 = result;
-    result ^= nums[i];
-    steps.push({
-      phase: 'Loop · XOR value', desc: 'result ^= nums[' + i + ']  ⟶  ' + prev2 + ' ^ ' + nums[i] + ' = ' + result + '.',
-      lines: [3, 5], cellStates: cellStates.slice(),
-      i: i, result: result, op: { lhs: prev2, arg: nums[i], kind: 'val', newVal: result }
-    });
-
+    var prev = result; result ^= i;
+    steps.push({ phase: 'Loop · XOR index', desc: 'result ^= i  ⟶  ' + prev + ' ^ ' + i + ' = ' + result + '.', lines: [3, 4], cellStates: cellStates.slice(), i: i, result: result, op: { lhs: prev, arg: i, kind: 'idx', newVal: result } });
+    var prev2 = result; result ^= nums[i];
+    steps.push({ phase: 'Loop · XOR value', desc: 'result ^= nums[' + i + ']  ⟶  ' + prev2 + ' ^ ' + nums[i] + ' = ' + result + '.', lines: [3, 5], cellStates: cellStates.slice(), i: i, result: result, op: { lhs: prev2, arg: nums[i], kind: 'val', newVal: result } });
     cellStates[i] = 'processed';
   }
-
-  // Mark missing
-  var missingIdx = result; // the missing value equals the surviving index
-  steps.push({
-    phase: 'Done', desc: 'return result = ' + result + '. Every paired (index, value) cancels to 0; only the missing value survives.',
-    lines: [6], cellStates: cellStates.slice(),
-    i: null, result: result, op: { lhs: 'return', arg: result, kind: 'done', newVal: result },
-    missing: missingIdx
-  });
-
+  steps.push({ phase: 'Done', desc: 'return result = ' + result + '. Every paired (index, value) cancels to 0; only the missing value survives.', lines: [6], cellStates: cellStates.slice(), i: null, result: result, op: { lhs: 'return', arg: result, kind: 'done', newVal: result }, missing: result });
   return steps;
 }
 
 function simulateSum(nums) {
-  var n = nums.length;
-  var steps = [];
-  var expected = n * (n + 1) / 2;
-  var actual = 0;
-  var cellStates = Array.from({length: n}, function() { return 'idle'; });
-
-  steps.push({
-    phase: 'Init', desc: 'expected = n*(n+1)/2 = ' + n + '*' + (n+1) + '/2 = ' + expected + '. actual = 0.',
-    lines: [3, 4], cellStates: cellStates.slice(),
-    i: null, result: actual, expected: expected, op: { lhs: 'expected', arg: expected, kind: 'init', newVal: actual }
-  });
-
+  var n = nums.length, steps = [], expected = n * (n + 1) / 2, actual = 0, cellStates = Array.from({length: n}, function() { return 'idle'; });
+  steps.push({ phase: 'Init', desc: 'expected = n*(n+1)/2 = ' + n + '*' + (n+1) + '/2 = ' + expected + '. actual = 0.', lines: [3, 4], cellStates: cellStates.slice(), i: null, result: actual, expected: expected, op: { lhs: 'expected', arg: expected, kind: 'init', newVal: actual } });
   for (var i = 0; i < n; i++) {
-    cellStates[i] = 'current';
-    var prev = actual;
-    actual += nums[i];
-    steps.push({
-      phase: 'Loop · Sum', desc: 'actual += nums[' + i + ']  ⟶  ' + prev + ' + ' + nums[i] + ' = ' + actual + '.',
-      lines: [5, 6], cellStates: cellStates.slice(),
-      i: i, result: actual, expected: expected, op: { lhs: prev, arg: nums[i], kind: 'val', newVal: actual }
-    });
+    cellStates[i] = 'current'; var prev = actual; actual += nums[i];
+    steps.push({ phase: 'Loop · Sum', desc: 'actual += nums[' + i + ']  ⟶  ' + prev + ' + ' + nums[i] + ' = ' + actual + '.', lines: [5, 6], cellStates: cellStates.slice(), i: i, result: actual, expected: expected, op: { lhs: prev, arg: nums[i], kind: 'val', newVal: actual } });
     cellStates[i] = 'processed';
   }
-
   var missing = expected - actual;
-  steps.push({
-    phase: 'Done', desc: 'return expected - actual = ' + expected + ' - ' + actual + ' = ' + missing + '.',
-    lines: [7], cellStates: cellStates.slice(),
-    i: null, result: actual, expected: expected,
-    op: { lhs: expected, arg: actual, kind: 'done', newVal: missing },
-    missing: missing
-  });
-
+  steps.push({ phase: 'Done', desc: 'return expected - actual = ' + expected + ' - ' + actual + ' = ' + missing + '.', lines: [7], cellStates: cellStates.slice(), i: null, result: actual, expected: expected, op: { lhs: expected, arg: actual, kind: 'done', newVal: missing }, missing: missing });
   return steps;
 }
 
@@ -414,51 +268,33 @@ function applyStep(s, animate) {
 
 function applyArrayCells(states, curI, missing, animate) {
   states.forEach(function(state, i) {
-    var el = document.getElementById('ac-' + i);
-    var ix = document.getElementById('ix-' + i);
+    var el = document.getElementById('ac-' + i), ix = document.getElementById('ix-' + i);
     if (el) el.dataset.state = state;
     if (ix) ix.dataset.state = (curI === i) ? 'current' : 'idle';
   });
-  // missing reveal: highlight the index cell that matches missing value
   if (missing != null) {
     var target = document.getElementById('ix-' + missing);
     if (!target && missing === states.length) target = document.getElementById('ix-n');
-    if (target) {
-      target.dataset.state = 'current';
-      target.style.color = '#86efac';
-      if (animate) gsap.fromTo(target, { scale: 0.6 }, { scale: 1.4, duration: 0.4, ease: 'back.out(2)', yoyo: true, repeat: 1 });
-    }
+    if (target) { target.dataset.state = 'current'; target.style.color = '#86efac'; if (animate) gsap.fromTo(target, { scale: 0.6 }, { scale: 1.4, duration: 0.4, ease: 'back.out(2)', yoyo: true, repeat: 1 }); }
   } else {
-    var nCell = document.getElementById('ix-n');
-    if (nCell) nCell.style.color = 'var(--accent-pale)';
+    var nCell = document.getElementById('ix-n'); if (nCell) nCell.style.color = 'var(--accent-pale)';
   }
-  if (animate && curI != null) {
-    var cur = document.getElementById('ac-' + curI);
-    if (cur) gsap.fromTo(cur, { scale: 0.85 }, { scale: 1, duration: 0.25, ease: 'back.out(1.6)' });
-  }
+  if (animate && curI != null) { var cur = document.getElementById('ac-' + curI); if (cur) gsap.fromTo(cur, { scale: 0.85 }, { scale: 1, duration: 0.25, ease: 'back.out(1.6)' }); }
 }
 
 function applyVars(s, animate) {
   function setVal(id, val) {
-    var el = document.getElementById(id);
-    if (!el) return;
+    var el = document.getElementById(id); if (!el) return;
     var text = val == null ? '—' : String(val);
-    if (animate && el.textContent !== text) {
-      gsap.fromTo(el, { scale: 0.8, opacity: 0.4 }, { scale: 1, opacity: 1, duration: 0.22, ease: 'back.out(1.7)' });
-    }
+    if (animate && el.textContent !== text) gsap.fromTo(el, { scale: 0.8, opacity: 0.4 }, { scale: 1, opacity: 1, duration: 0.22, ease: 'back.out(1.7)' });
     el.textContent = text;
   }
-  setVal('vv-i',   s.i);
-  setVal('vv-res', s.result);
+  setVal('vv-i', s.i); setVal('vv-res', s.result);
   var binEl = document.getElementById('vv-res-bin');
   if (binEl) {
-    if (currentMode === 'xor' && s.result != null) {
-      binEl.textContent = '0b' + (s.result >>> 0).toString(2);
-    } else if (currentMode === 'sum') {
-      binEl.textContent = s.expected != null ? 'expected ' + s.expected : '—';
-    } else {
-      binEl.textContent = '—';
-    }
+    if (currentMode === 'xor' && s.result != null) binEl.textContent = '0b' + (s.result >>> 0).toString(2);
+    else if (currentMode === 'sum') binEl.textContent = s.expected != null ? 'expected ' + s.expected : '—';
+    else binEl.textContent = '—';
   }
 }
 
@@ -467,18 +303,9 @@ function applyOp(op, animate) {
   if (!op) { row.innerHTML = '<span class="lhs">—</span>'; return; }
   var sym = currentMode === 'xor' ? '^' : '+';
   var html = '';
-  if (op.kind === 'init') {
-    html = '<span class="lhs">' + (currentMode === 'xor' ? 'result' : 'actual') + '</span>'
-         + '<span class="op">=</span><span class="new">' + op.newVal + '</span>';
-  } else if (op.kind === 'done') {
-    html = '<span class="lhs">missing</span><span class="op">=</span><span class="new">' + op.newVal + '</span>';
-  } else {
-    html = '<span class="lhs">' + op.lhs + '</span>'
-         + '<span class="op">' + sym + '</span>'
-         + '<span class="arg">' + op.arg + '</span>'
-         + '<span class="eq">=</span>'
-         + '<span class="new">' + op.newVal + '</span>';
-  }
+  if (op.kind === 'init') html = '<span class="lhs">' + (currentMode === 'xor' ? 'result' : 'actual') + '</span><span class="op">=</span><span class="new">' + op.newVal + '</span>';
+  else if (op.kind === 'done') html = '<span class="lhs">missing</span><span class="op">=</span><span class="new">' + op.newVal + '</span>';
+  else html = '<span class="lhs">' + op.lhs + '</span><span class="op">' + sym + '</span><span class="arg">' + op.arg + '</span><span class="eq">=</span><span class="new">' + op.newVal + '</span>';
   row.innerHTML = html;
   if (animate) gsap.fromTo(row, { opacity: 0.3, y: -4 }, { opacity: 1, y: 0, duration: 0.22, ease: 'power2.out' });
 }
@@ -487,18 +314,18 @@ function setCodeLines(lines) {
   var CODE = currentMode === 'xor' ? CODE_XOR : CODE_SUM;
   CODE.forEach(function(e) {
     var ln = e[0]; if (!ln) return;
-    var el = document.getElementById('cl-' + ln);
-    if (!el) return;
-    if (lines.indexOf(ln) >= 0) el.classList.add('hl');
-    else el.classList.remove('hl');
+    var el = document.getElementById('cl-' + ln); if (!el) return;
+    if (lines.indexOf(ln) >= 0) el.classList.add('hl'); else el.classList.remove('hl');
   });
 }
+
+(function(){
+  var handle=document.getElementById('resize-handle'),panel=document.getElementById('code-panel');
+  var dragging=false,startX=0,startW=0;
+  handle.addEventListener('mousedown',function(e){dragging=true;startX=e.clientX;startW=panel.offsetWidth;handle.classList.add('dragging');e.preventDefault();});
+  document.addEventListener('mousemove',function(e){if(!dragging)return;panel.style.width=Math.min(560,Math.max(120,startW+(startX-e.clientX)))+'px';});
+  document.addEventListener('mouseup',function(){if(dragging){dragging=false;handle.classList.remove('dragging');}});
+})();
 </script>
-  <script>
-    if (window.self !== window.top) {
-      var bl = document.querySelector('.back-link');
-      if (bl) bl.style.display = 'none';
-    }
-  </script>
 </body>
 </html>

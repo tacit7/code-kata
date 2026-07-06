@@ -1,252 +1,168 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Hand of Straights — Visualization</title>
-  <link rel="stylesheet" href="../shared/style.css" />
-  <style>
-    body {
-      display: flex; flex-direction: column; height: 100vh; overflow: hidden;
-      font-family: var(--font); background: var(--bg); color: var(--text);
-    }
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Hand of Straights — Visualization</title>
+<link rel="stylesheet" href="../shared/style.css" />
+<script src="../shared/viz.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: "Fira Code", "Cascadia Code", monospace; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
 
-    /* ── viz-inputs ── */
-    .viz-inputs {
-      display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end;
-      padding: 10px 0 14px; width: 100%; max-width: 90%;
-    }
-    .viz-inputs .field {
-      display: flex; flex-direction: column; gap: 4px;
-    }
-    .viz-inputs label {
-      font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
-      letter-spacing: 0.08em; color: var(--text-dim);
-    }
-    .viz-inputs input[type="text"] {
-      background: var(--surface); border: 1px solid var(--border);
-      color: var(--text); border-radius: var(--radius-sm);
-      padding: 6px 10px; font-size: 0.85rem; width: 180px;
-    }
-    .viz-inputs input[type="number"] {
-      background: var(--surface); border: 1px solid var(--border);
-      color: var(--text); border-radius: var(--radius-sm);
-      padding: 6px 10px; font-size: 0.85rem; width: 80px;
-    }
-    .viz-inputs select {
-      background: var(--surface); border: 1px solid var(--border);
-      color: var(--text); border-radius: var(--radius-sm);
-      padding: 6px 10px; font-size: 0.85rem; cursor: pointer;
-    }
+  #header { padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+  #phase-badge { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; padding: 3px 10px; border-radius: var(--radius-sm); background: #1e3a5f; color: var(--blue); border: 1px solid var(--blue); }
+  #step-counter { font-size: 12px; color: var(--text-muted); margin-left: auto; }
 
-    /* ── top bar ── */
-    #top-bar {
-      display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
-      padding: 10px 16px; border-bottom: 1px solid var(--border);
-      background: var(--surface); flex-shrink: 0;
-    }
-    #top-bar label { font-size: 0.82rem; color: var(--text-dim); white-space: nowrap; }
-    #hand-input {
-      flex: 1; min-width: 160px; font-size: 0.88rem; padding: 5px 10px;
-      background: var(--bg); border: 1px solid var(--border);
-      border-radius: var(--radius); color: var(--text);
-    }
-    #group-input {
-      width: 60px; font-size: 0.88rem; padding: 5px 10px;
-      background: var(--bg); border: 1px solid var(--border);
-      border-radius: var(--radius); color: var(--text);
-    }
-    #btn-build {
-      padding: 5px 14px; font-size: 0.85rem; font-weight: 600;
-      background: var(--accent); color: #1a1b26;
-      border: none; border-radius: var(--radius); cursor: pointer;
-    }
-    #btn-build:hover { opacity: 0.85; }
+  .viz-inputs { width: 100%; padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; flex-wrap: wrap; gap: 12px; align-items: center; flex-shrink: 0; }
+  .viz-inputs label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); display: block; margin-bottom: 3px; }
+  .viz-inputs select, .viz-inputs input { background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 0 8px; height: 30px; font-size: 0.82rem; font-family: inherit; }
+  .vi-btn-run { padding: 6px 14px; border-radius: 6px; font-size: 0.82rem; font-weight: 600; cursor: pointer; background: var(--accent); color: #fff; border: none; }
+  .vi-btn-rand { padding: 6px 14px; border-radius: 6px; font-size: 0.82rem; cursor: pointer; background: var(--bg); color: var(--text); border: 1px solid var(--border); }
 
-    /* ── middle ── */
-    #middle {
-      display: flex; flex: 1; overflow: hidden; gap: 0;
-    }
+  #main { display: flex; flex: 1; overflow: hidden; }
+  #viz-area { flex: 1; overflow: auto; display: flex; flex-direction: column; gap: 14px; padding: 16px; }
+  #resize-handle { width: 5px; flex-shrink: 0; cursor: col-resize; background: transparent; border-left: 1px solid var(--border); transition: background .15s; }
+  #resize-handle:hover, #resize-handle.dragging { background: var(--accent); }
+  #code-panel { width: 350px; min-width: 120px; max-width: 560px; flex-shrink: 0; background: #0d1117; overflow: auto; padding: 10px 12px; }
+  #sidebar { width: 220px; flex-shrink: 0; background: var(--surface); border-left: 1px solid var(--border); overflow-y: auto; padding: 14px 12px; display: flex; flex-direction: column; gap: 10px; }
 
-    /* ── left panel: freq map ── */
-    #freq-panel {
-      flex: 1; overflow: auto; padding: 16px;
-      display: flex; flex-direction: column; gap: 14px;
-    }
-    .panel-title {
-      font-size: 0.75rem; font-weight: 700; text-transform: uppercase;
-      letter-spacing: 0.08em; color: var(--text-dim);
-    }
+  #nav-row { flex-shrink: 0; display: flex; align-items: center; gap: 8px; padding: 10px 16px; background: var(--surface); border-top: 1px solid var(--border); }
+  .btn-step { padding: 6px 14px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--surface); color: var(--text); font-family: inherit; font-size: 12px; cursor: pointer; }
+  .btn-play { padding: 6px 14px; border-radius: var(--radius-sm); background: var(--accent); border: 1px solid var(--accent); color: #fff; font-family: inherit; font-size: 12px; cursor: pointer; }
+  #speedSel { padding: 5px 8px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: #1e293b; color: var(--text); font-size: 12px; font-family: inherit; cursor: pointer; }
 
-    /* freq grid */
-    #freq-grid {
-      display: flex; flex-wrap: wrap; gap: 8px;
-    }
-    .freq-cell {
-      display: flex; flex-direction: column; align-items: center; gap: 4px;
-      padding: 8px 12px; border-radius: var(--radius);
-      background: var(--surface2); border: 2px solid var(--border);
-      min-width: 54px; transition: background 0.15s, border-color 0.15s;
-    }
-    .freq-cell.state-idle    { border-color: var(--border); }
-    .freq-cell.state-active  { border-color: var(--accent); background: rgba(122,162,247,0.12); }
-    .freq-cell.state-zero    { border-color: var(--border); opacity: 0.35; }
-    .freq-cell.state-missing { border-color: #f7768e; background: rgba(247,118,142,0.12); }
-    .freq-cell.state-done    { border-color: #9ece6a; background: rgba(158,206,106,0.08); }
-    .freq-val {
-      font-size: 1.3rem; font-weight: 700; color: var(--text-bright);
-      line-height: 1;
-    }
-    .freq-card {
-      font-size: 0.78rem; font-weight: 600; color: var(--text-dim);
-    }
+  .panel-title { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); margin-bottom: 8px; }
 
-    /* hand cards display */
-    #hand-display {
-      display: flex; flex-wrap: wrap; gap: 5px;
-    }
-    .hand-card {
-      width: 36px; height: 48px;
-      display: flex; align-items: center; justify-content: center;
-      border-radius: 5px; font-size: 1rem; font-weight: 700;
-      border: 2px solid var(--border); background: var(--surface2);
-      color: var(--text-bright); transition: background 0.15s, border-color 0.15s, opacity 0.15s;
-    }
-    .hand-card.state-idle   { }
-    .hand-card.state-used   { opacity: 0.25; background: var(--bg); }
-    .hand-card.state-active { border-color: var(--accent); background: rgba(122,162,247,0.15); }
+  /* freq grid */
+  #freq-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+  .freq-cell {
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    padding: 8px 12px; border-radius: var(--radius);
+    background: var(--surface2); border: 2px solid var(--border);
+    min-width: 54px; transition: background 0.15s, border-color 0.15s;
+  }
+  .freq-cell.state-idle    { border-color: var(--border); }
+  .freq-cell.state-active  { border-color: var(--accent); background: rgba(122,162,247,0.12); }
+  .freq-cell.state-zero    { border-color: var(--border); opacity: 0.35; }
+  .freq-cell.state-missing { border-color: #f7768e; background: rgba(247,118,142,0.12); }
+  .freq-cell.state-done    { border-color: #9ece6a; background: rgba(158,206,106,0.08); }
+  .freq-val { font-size: 1.3rem; font-weight: 700; color: var(--text-bright); line-height: 1; }
+  .freq-card { font-size: 0.78rem; font-weight: 600; color: var(--text-dim); }
 
-    /* ── right panel: groups ── */
-    #groups-panel {
-      width: 220px; flex-shrink: 0;
-      border-left: 1px solid var(--border);
-      background: var(--surface);
-      padding: 14px 12px;
-      display: flex; flex-direction: column; gap: 10px;
-      overflow-y: auto;
-    }
-    #groups-list {
-      display: flex; flex-direction: column; gap: 6px;
-    }
-    .group-row {
-      display: flex; gap: 4px; align-items: center;
-      padding: 6px 8px; border-radius: var(--radius);
-      border: 1px solid var(--border);
-      background: rgba(255,255,255,0.03);
-    }
-    .group-row.group-done  { border-color: #9ece6a; background: rgba(158,206,106,0.08); }
-    .group-row.group-error { border-color: #f7768e; background: rgba(247,118,142,0.1); }
-    .group-card-chip {
-      padding: 3px 8px; border-radius: 3px;
-      font-size: 0.82rem; font-weight: 700;
-      background: rgba(122,162,247,0.15);
-      border: 1px solid var(--accent);
-      color: var(--accent);
-    }
-    #result-box {
-      padding: 10px 12px; border-radius: var(--radius);
-      font-size: 0.9rem; font-weight: 700; text-align: center;
-      display: none;
-    }
-    #result-box.res-true  { background: rgba(158,206,106,0.15); border: 1px solid #9ece6a; color: #9ece6a; }
-    #result-box.res-false { background: rgba(247,118,142,0.15); border: 1px solid #f7768e; color: #f7768e; }
+  /* hand cards display */
+  #hand-display { display: flex; flex-wrap: wrap; gap: 5px; }
+  .hand-card {
+    width: 36px; height: 48px;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 5px; font-size: 1rem; font-weight: 700;
+    border: 2px solid var(--border); background: var(--surface2);
+    color: var(--text-bright); transition: background 0.15s, border-color 0.15s, opacity 0.15s;
+  }
+  .hand-card.state-idle   { }
+  .hand-card.state-used   { opacity: 0.25; background: var(--bg); }
+  .hand-card.state-active { border-color: var(--accent); background: rgba(122,162,247,0.15); }
 
-    /* ── bottom nav ── */
-    #nav-bar {
-      flex-shrink: 0; border-top: 1px solid var(--border);
-      background: var(--surface); padding: 10px 16px;
-      display: flex; flex-direction: column; gap: 8px;
-    }
-    #nav-controls {
-      display: flex; align-items: center; gap: 8px;
-    }
-    .nav-btn {
-      padding: 5px 14px; font-size: 0.82rem; font-weight: 600;
-      background: var(--surface2); border: 1px solid var(--border);
-      border-radius: var(--radius); color: var(--text); cursor: pointer;
-    }
-    .nav-btn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
-    .nav-btn:disabled { opacity: 0.35; cursor: default; }
-    #speed-sel {
-      font-size: 0.8rem; padding: 4px 8px;
-      background: var(--bg); border: 1px solid var(--border);
-      border-radius: var(--radius); color: var(--text);
-    }
-    #step-counter {
-      font-size: 0.75rem; color: var(--text-dim); margin-left: auto;
-    }
-    #step-desc {
-      font-size: 0.85rem; color: var(--text-bright); min-height: 1.4em;
-    }
-  </style>
+  #step-desc { font-size: 0.85rem; color: var(--text-bright); min-height: 1.4em; line-height: 1.5; }
+
+  /* groups (sidebar) */
+  #groups-list { display: flex; flex-direction: column; gap: 6px; }
+  .group-row {
+    display: flex; gap: 4px; align-items: center;
+    padding: 6px 8px; border-radius: var(--radius);
+    border: 1px solid var(--border);
+    background: rgba(255,255,255,0.03);
+  }
+  .group-row.group-done  { border-color: #9ece6a; background: rgba(158,206,106,0.08); }
+  .group-row.group-error { border-color: #f7768e; background: rgba(247,118,142,0.1); }
+  .group-card-chip {
+    padding: 3px 8px; border-radius: 3px;
+    font-size: 0.82rem; font-weight: 700;
+    background: rgba(122,162,247,0.15);
+    border: 1px solid var(--accent);
+    color: var(--accent);
+  }
+  #result-box {
+    padding: 10px 12px; border-radius: var(--radius);
+    font-size: 0.9rem; font-weight: 700; text-align: center;
+    display: none;
+  }
+  #result-box.res-true  { background: rgba(158,206,106,0.15); border: 1px solid #9ece6a; color: #9ece6a; }
+  #result-box.res-false { background: rgba(247,118,142,0.15); border: 1px solid #f7768e; color: #f7768e; }
+</style>
 </head>
 <body>
 
-<!-- TOP BAR (VIZ INPUTS) -->
-<div id="top-bar">
-  <div class="viz-inputs">
-    <div class="field">
-      <label>Preset</label>
-      <select id="presetSel" onchange="loadPreset()">
-        <option value="">— pick a preset —</option>
-        <option value='{"hand":"1,2,3,4","groupSize":"2"}'>Success: Simple pairs</option>
-        <option value='{"hand":"1,2,3,6,2,3,4,7,8","groupSize":"3"}'>Success: Triplets</option>
-        <option value='{"hand":"1,2,4","groupSize":"2"}'>Fail: Missing 3</option>
-        <option value='{"hand":"5,6,7","groupSize":"3"}'>Success: Single group</option>
-        <option value='{"hand":"1,2,3,4,5","groupSize":"5"}'>Success: Large group</option>
-        <option value='{"hand":"1,1,2,2,3,3","groupSize":"3"}'>Success: Duplicates</option>
-      </select>
-    </div>
-    <div class="field">
-      <label for="hand-input">Hand</label>
-      <input id="hand-input" type="text" value="1,2,3,6,2,3,4,7,8" />
-    </div>
-    <div class="field">
-      <label for="group-input">Group Size</label>
-      <input id="group-input" type="number" min="1" value="3" />
-    </div>
-    <button id="btn-build" onclick="buildAndRun()" style="padding:7px 18px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);font-weight:600;cursor:pointer;">Run</button>
-    <button onclick="randomExample()" style="padding:7px 14px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;">🎲 Random</button>
+<div class="viz-inputs">
+  <div>
+    <label>Preset</label>
+    <select id="presetSel" onchange="loadPreset()" style="width:200px;">
+      <option value="">— pick a preset —</option>
+      <option value='{"hand":"1,2,3,4","groupSize":"2"}'>Success: Simple pairs</option>
+      <option value='{"hand":"1,2,3,6,2,3,4,7,8","groupSize":"3"}' selected>Success: Triplets</option>
+      <option value='{"hand":"1,2,4","groupSize":"2"}'>Fail: Missing 3</option>
+      <option value='{"hand":"5,6,7","groupSize":"3"}'>Success: Single group</option>
+      <option value='{"hand":"1,2,3,4,5","groupSize":"5"}'>Success: Large group</option>
+      <option value='{"hand":"1,1,2,2,3,3","groupSize":"3"}'>Success: Duplicates</option>
+    </select>
   </div>
+  <div>
+    <label for="hand-input">Hand</label>
+    <input id="hand-input" type="text" value="1,2,3,6,2,3,4,7,8" style="width:180px;" />
+  </div>
+  <div>
+    <label for="group-input">Group Size</label>
+    <input id="group-input" type="number" min="1" value="3" style="width:70px;" />
+  </div>
+  <button class="vi-btn-run" onclick="buildAndRun()">Run</button>
+  <button class="vi-btn-rand" onclick="randomExample()">🎲 Random</button>
 </div>
 
-<!-- MIDDLE -->
-<div id="middle">
-  <div id="freq-panel">
+<div class="controls"></div>
+
+<div id="header">
+  <span id="phase-badge">Setup</span>
+  <span style="font-size:13px;font-weight:700;">Hand of Straights</span>
+  <span id="step-counter">Step 0 / 0</span>
+</div>
+
+<div id="main">
+  <div id="viz-area">
+    <div id="step-desc">Press Run to start.</div>
     <div>
-      <div class="panel-title" style="margin-bottom:8px">Hand</div>
+      <div class="panel-title">Hand</div>
       <div id="hand-display"></div>
     </div>
     <div>
-      <div class="panel-title" style="margin-bottom:8px">Frequency Map</div>
+      <div class="panel-title">Frequency Map</div>
       <div id="freq-grid"></div>
     </div>
   </div>
-  <div id="groups-panel">
+
+  <div id="resize-handle"></div>
+
+  <div id="code-panel"></div>
+
+  <div id="sidebar">
     <div class="panel-title">Groups Formed</div>
     <div id="result-box"></div>
     <div id="groups-list"></div>
   </div>
 </div>
 
-<!-- BOTTOM NAV -->
-<div id="nav-bar">
-  <div id="nav-controls">
-    <button class="nav-btn" id="prevBtn">&#8592; Prev</button>
-    <button class="nav-btn" id="stepBtn">Next &#8594;</button>
-    <button class="nav-btn" id="playBtn">Play</button>
-    <select id="speedSel">
-      <option value="1200">0.8×</option>
-      <option value="800" selected>1×</option>
-      <option value="500">1.5×</option>
-      <option value="300">2.5×</option>
-    </select>
-    <div id="step-counter">0 / 0</div>
-  </div>
-  <div id="step-desc">Press Build to start.</div>
+<div id="nav-row">
+  <button id="prevBtn" class="btn-step">&#8592; Prev</button>
+  <button id="stepBtn" class="btn-step">Step &#8594;</button>
+  <button id="playBtn" class="btn-play">Play</button>
+  <button id="resetBtn" class="btn-step">&#8635; Reset</button>
+  <select id="speedSel">
+    <option value="800">0.5&#215;</option>
+    <option value="400" selected>1&#215;</option>
+    <option value="200">2&#215;</option>
+    <option value="100">4&#215;</option>
+  </select>
 </div>
 
-<script src="../shared/viz.js"></script>
 <script>
 // ── simulate ───────────────────────────────────────────────────────────────
 function buildSteps(hand, groupSize) {
@@ -385,7 +301,7 @@ function buildSteps(hand, groupSize) {
       groups.push(group);
 
       var afterStates = makeFreqStates(sortedCards, curFreq, card);
-      push('Formed group [' + group.join(', ') + ']. Decremented each card's freq. Groups so far: ' + groups.length + '.', {
+      push('Formed group [' + group.join(', ') + ']. Decremented each card\'s freq. Groups so far: ' + groups.length + '.', {
         freq: Object.assign({}, curFreq),
         sortedCards: sortedCards.slice(),
         freqStates: afterStates,
@@ -445,22 +361,26 @@ function parseHand(raw) {
 // ── render ─────────────────────────────────────────────────────────────────
 var _lastHand = null;
 
-function render(snap, cursor, total) {
-  document.getElementById('step-counter').textContent = (cursor + 1) + ' / ' + total;
+function applyStep(snap) {
   document.getElementById('step-desc').textContent = snap.desc;
-
   renderHand(snap);
   renderFreqGrid(snap);
   renderGroups(snap);
   renderResult(snap.result);
 }
 
+function updateStatus(snap, cur, total) {
+  var phase = 'Step';
+  if (snap.result === true) phase = 'Complete';
+  else if (snap.result === false) phase = 'Failed';
+  else if (cur === 0) phase = 'Setup';
+  document.getElementById('phase-badge').textContent = phase;
+  document.getElementById('step-counter').textContent = 'Step ' + cur + ' / ' + total;
+}
+
 function renderHand(snap) {
   var display = document.getElementById('hand-display');
-  if (!display.children.length || _lastHand !== JSON.stringify(snap.handStates && snap.handStates.length)) {
-    // rebuild if needed — hand display doesn't change length
-    if (!display.children.length) return;
-  }
+  if (!display.children.length) return;
   var cells = display.querySelectorAll('.hand-card');
   cells.forEach(function(el, i) {
     el.className = 'hand-card state-' + (snap.handStates ? snap.handStates[i] : 'idle');
@@ -522,12 +442,19 @@ function setupHandDisplay(hand) {
 }
 
 // ── wire up ────────────────────────────────────────────────────────────────
-var nav = VizNav({
+window.nav = VizNav({
   btnPrev:  document.getElementById('prevBtn'),
   btnNext:  document.getElementById('stepBtn'),
   btnPlay:  document.getElementById('playBtn'),
   speedSel: document.getElementById('speedSel'),
-  render:   render,
+  render:   function(snap, cur, total) {
+    applyStep(snap);
+    updateStatus(snap, cur, total);
+  },
+});
+
+document.getElementById('resetBtn').addEventListener('click', function() {
+  if (window.nav) window.nav.goTo(0);
 });
 
 function doLoad() {
@@ -540,7 +467,7 @@ function doLoad() {
   }
   setupHandDisplay(hand);
   var steps = buildSteps(hand, gs);
-  nav.load(steps);
+  window.nav.load(steps);
 }
 
 function buildAndRun() {
@@ -569,10 +496,17 @@ function randomExample() {
   buildAndRun();
 }
 
-document.getElementById('btn-build').addEventListener('click', doLoad);
 document.getElementById('hand-input').addEventListener('keydown', function(e) {
   if (e.key === 'Enter') doLoad();
 });
+
+// ── resize handle ──────────────────────────────────────────────────────────
+(function(){
+  var h=document.getElementById('resize-handle'),p=document.getElementById('code-panel'),d=false,sx=0,sw=0;
+  h.addEventListener('mousedown',function(e){d=true;sx=e.clientX;sw=p.offsetWidth;h.classList.add('dragging');e.preventDefault();});
+  document.addEventListener('mousemove',function(e){if(!d)return;p.style.width=Math.min(560,Math.max(120,sw+(sx-e.clientX)))+'px';});
+  document.addEventListener('mouseup',function(){if(!d)return;d=false;h.classList.remove('dragging');});
+})();
 
 doLoad();
 </script>

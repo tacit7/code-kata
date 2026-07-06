@@ -8,18 +8,25 @@
   <script src="../shared/gsap.min.js"></script>
   <script src="../shared/viz.js"></script>
   <style>
-    .viz-area {
-      width: 100%; max-width: 90%;
-      display: flex; flex-direction: column; gap: 12px;
-    }
+    /* ── Canonical layout ── */
+    body { background: var(--bg); color: var(--text); font-family: "Fira Code", monospace; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+    .viz-inputs { width: 100%; padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; flex-wrap: wrap; gap: 12px; align-items: center; flex-shrink: 0; }
+    #header { padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+    #phase-label { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; padding: 3px 10px; border-radius: var(--radius-sm); background: #1e3a5f; color: var(--blue); border: 1px solid var(--blue); }
+    #step-counter { font-size: 12px; color: var(--text-muted); margin-left: auto; }
+    #main { display: flex; flex: 1; overflow: hidden; }
+    #viz-area { flex: 1; display: flex; flex-direction: column; align-items: stretch; justify-content: flex-start; padding: 20px; gap: 16px; overflow-y: auto; }
+    #resize-handle { width: 5px; flex-shrink: 0; cursor: col-resize; background: transparent; border-left: 1px solid var(--border); transition: background .15s; z-index: 10; }
+    #resize-handle:hover, #resize-handle.dragging { background: var(--accent); }
+    #code-panel { width: 350px; min-width: 120px; max-width: 560px; flex-shrink: 0; background: #0a0d14; border-right: 1px solid var(--border); overflow-y: auto; overflow-x: auto; padding: 10px 12px; display: flex; flex-direction: column; }
+    #sidebar { width: 220px; flex-shrink: 0; background: var(--surface); border-left: 1px solid var(--border); overflow-y: auto; padding: 14px 12px; display: flex; flex-direction: column; gap: 12px; }
+    #nav-row { flex-shrink: 0; display: flex; align-items: center; gap: 8px; padding: 10px 16px; background: var(--surface); border-top: 1px solid var(--border); }
+    .btn-step { background: var(--surface); border: 1px solid var(--border); color: var(--text); border-radius: var(--radius-sm); padding: 6px 14px; cursor: pointer; font-size: 0.82rem; }
+    .btn-play { background: #15803d; border: none; color: #fff; border-radius: var(--radius-sm); padding: 6px 14px; cursor: pointer; font-size: 0.82rem; font-weight: 600; }
+    .code-panel-title { font-size: 0.67rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-dim); margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
 
-    .viz-inputs {
-      display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end;
-      padding: 10px 0 14px; width: 100%; max-width: 90%;
-    }
-    .viz-inputs .field {
-      display: flex; flex-direction: column; gap: 4px;
-    }
+    /* ── Original contains-duplicate CSS ── */
+    .viz-inputs .field { display: flex; flex-direction: column; gap: 4px; }
     .viz-inputs label {
       font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
       letter-spacing: 0.08em; color: var(--text-dim);
@@ -35,34 +42,12 @@
       padding: 6px 10px; font-size: 0.85rem; cursor: pointer;
     }
 
-    .nav-row {
-      display: flex; gap: 12px; margin-bottom: 0px;
-    }
-
-    .btn-step {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--radius-sm); color: var(--text);
-      cursor: pointer; font-size: 0.88rem; font-weight: 600;
-      padding: 9px 20px; transition: background 0.15s, border-color 0.15s;
-    }
-    .btn-step:hover:not(:disabled) { background: var(--border); border-color: var(--accent); }
-    .btn-step:disabled { opacity: 0.35; cursor: not-allowed; }
-
-    .btn-play {
-      background: var(--accent); border: none;
-      border-radius: var(--radius-sm); color: #fff;
-      cursor: pointer; font-size: 0.88rem; font-weight: 600;
-      padding: 9px 20px; transition: background 0.15s;
-    }
-    .btn-play:hover:not(:disabled) { background: var(--accent-hover); }
-    .btn-play:disabled { opacity: 0.35; cursor: not-allowed; }
-
     .array-wrap {
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: var(--radius-md);
       padding: 16px 14px;
-      min-height: 120px;
+      min-height: 100px;
       display: flex; flex-direction: column; gap: 12px;
     }
 
@@ -150,29 +135,6 @@
       100% { transform: scale(1); }
     }
 
-    .bottom-row {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-      align-items: start;
-    }
-    @media (max-width: 800px) { .bottom-row { grid-template-columns: 1fr; } }
-
-    .code-panel {
-      background: #0a0d14;
-      border: 1px solid var(--border);
-      border-radius: var(--radius-md);
-      overflow: hidden;
-      display: flex; flex-direction: column;
-    }
-    .code-header {
-      padding: 9px 14px;
-      background: var(--surface);
-      border-bottom: 1px solid var(--border);
-      font-size: 0.67rem; font-weight: 700;
-      text-transform: uppercase; letter-spacing: 0.11em;
-      color: var(--text-dim);
-    }
     .code-body {
       padding: 10px 0;
       flex: 1;
@@ -211,10 +173,10 @@
     .op  { color: var(--text); }
 
     .panel-box {
-      background: var(--surface);
+      background: var(--bg);
       border: 1px solid var(--border);
       border-radius: var(--radius-md);
-      padding: 13px 18px;
+      padding: 13px 12px;
     }
     .panel-title {
       font-size: 0.67rem; font-weight: 700;
@@ -222,12 +184,10 @@
       color: var(--text-dim); margin-bottom: 10px;
     }
 
-    .legend {
-      display: flex; gap: 20px; flex-wrap: wrap; justify-content: center;
-    }
     .leg-item {
       display: flex; align-items: center; gap: 7px;
       font-size: 0.78rem; color: var(--text-muted);
+      margin-bottom: 6px;
     }
     .leg-swatch {
       width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0;
@@ -236,17 +196,11 @@
 </head>
 <body class="page">
 
-<div class="page-header">
-  <a class="back-link" href="../index.html">← All Algorithms</a>
-  <div class="page-title">Contains Duplicate</div>
-  <div class="page-sub">LeetCode #217 · hash set · O(n) time · O(n) space</div>
-</div>
-
 <div class="viz-inputs">
   <div class="field">
     <label>Preset</label>
     <select id="presetSel" onchange="loadPreset()">
-      <option value="">— pick a preset —</option>
+      <option value="">&#8212; pick a preset &#8212;</option>
       <option value='{"nums":"1,2,3,1"}'>Basic Duplicate</option>
       <option value='{"nums":"1,2,3,4,5"}'>No Duplicates</option>
       <option value='{"nums":"5,5,5,5"}'>All Same</option>
@@ -260,72 +214,70 @@
     <input id="inp-nums" type="text" value="1,2,3,1" />
   </div>
   <button onclick="buildAndRun()" style="padding:7px 18px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);font-weight:600;cursor:pointer;">Run</button>
-  <button onclick="randomExample()" style="padding:7px 14px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;">🎲 Random</button>
+  <button onclick="randomExample()" style="padding:7px 14px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;">&#127922; Random</button>
 </div>
 
 <div class="controls"></div>
 
-<div class="viz-area">
-
-  <div class="nav-row">
-    <div class="panel-box" style="flex:0 0 auto">
-      <div style="display:flex;gap:8px;align-items:center">
-        <button class="btn-step" id="prevBtn" disabled>&#8592;</button>
-        <button class="btn-step" id="stepBtn" disabled>&#8594;</button>
-        <button class="btn-play" id="playBtn" disabled>&#9654; Play</button>
-        <select id="speedSel" style="background:var(--bg);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:6px 10px;font-size:0.85rem">
-          <option value="700">Slow</option>
-          <option value="250" selected>Medium</option>
-          <option value="80">Fast</option>
-        </select>
-      </div>
-    </div>
-    <div class="panel-box" style="flex:1;min-width:0">
-      <div style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--text-dim)" id="phase-label">—</div>
-      <div style="font-size:0.88rem;color:var(--text-muted);margin-top:3px" id="step-desc">Click Run to start.</div>
-    </div>
-  </div>
-
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start">
-    <div class="array-wrap">
-      <div style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--text-dim)">Input Array</div>
-      <div class="array-row" id="array-row"></div>
-    </div>
-    <div class="set-wrap">
-      <div class="set-label">Seen Set</div>
-      <div class="set-items" id="set-items"></div>
-    </div>
-  </div>
-
-  <div class="bottom-row">
-
-    <div class="code-panel">
-      <div class="code-header">Python</div>
-      <div class="code-body" id="code-body"></div>
-    </div>
-
-    <div class="panel-box">
-      <div class="panel-title">Result</div>
-      <div id="result-box" style="font-size:1.1rem;font-weight:700;color:var(--text);min-height:60px;display:flex;align-items:center">—</div>
-    </div>
-
-  </div>
-
+<div id="header">
+  <span id="phase-label">&#8212;</span>
+  <span style="font-size:13px;font-weight:700;">Contains Duplicate</span>
+  <span id="step-counter" style="margin-left:auto;font-size:12px;color:var(--text-muted)">Step 0 / 0</span>
 </div>
 
-<div class="legend">
-  <div class="leg-item">
-    <div class="leg-swatch" style="background:var(--orange)"></div>
-    Current element
+<div id="main">
+  <div id="viz-area">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start">
+      <div class="array-wrap">
+        <div style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--text-dim)">Input Array</div>
+        <div class="array-row" id="array-row"></div>
+      </div>
+      <div class="set-wrap">
+        <div class="set-label">Seen Set</div>
+        <div class="set-items" id="set-items"></div>
+      </div>
+    </div>
   </div>
-  <div class="leg-item">
-    <div class="leg-swatch" style="background:var(--blue)"></div>
-    In set
+  <div id="resize-handle"></div>
+  <div id="code-panel">
+    <div class="code-panel-title">Python</div>
+    <div class="code-body" id="code-body"></div>
   </div>
-  <div class="leg-item">
-    <div class="leg-swatch" style="background:var(--red)"></div>
-    Duplicate found
+  <div id="sidebar">
+    <div style="font-size:0.88rem;color:var(--text-muted)" id="step-desc">Click Run to start.</div>
+    <div class="panel-box">
+      <div class="panel-title">Result</div>
+      <div id="result-box" style="font-size:1.1rem;font-weight:700;color:var(--text);min-height:40px;display:flex;align-items:center">&#8212;</div>
+    </div>
+    <div class="panel-box">
+      <div class="panel-title">Legend</div>
+      <div class="leg-item">
+        <div class="leg-swatch" style="background:var(--orange)"></div>
+        Current element
+      </div>
+      <div class="leg-item">
+        <div class="leg-swatch" style="background:var(--blue)"></div>
+        In set
+      </div>
+      <div class="leg-item">
+        <div class="leg-swatch" style="background:var(--red)"></div>
+        Duplicate found
+      </div>
+    </div>
   </div>
+</div>
+
+<div id="nav-row">
+  <button id="prevBtn" class="btn-step">&#8592; Prev</button>
+  <button id="stepBtn" class="btn-step">Step &#8594;</button>
+  <button id="playBtn" class="btn-play">Play</button>
+  <button id="resetBtn" class="btn-step">&#8635; Reset</button>
+  <select id="speedSel">
+    <option value="800">0.5&#215;</option>
+    <option value="400" selected>1&#215;</option>
+    <option value="200">2&#215;</option>
+    <option value="100">4&#215;</option>
+  </select>
 </div>
 
 <script>
@@ -510,7 +462,7 @@ function setCodeLines(oldLines, newLines, animate) {
 function renderResult(result) {
   const box = document.getElementById('result-box');
   if (result === null) {
-    box.innerHTML = '—';
+    box.innerHTML = '\u2014';
     box.style.color = 'var(--text)';
   } else if (result === 'True') {
     box.innerHTML = '<span style="color:var(--red)">True</span> (duplicate found!)';
@@ -565,7 +517,7 @@ var nav = VizNav({
   render: function(snap, cur, total) {
     applyStep(snap, cur > 0);
     var el = document.getElementById('phase-label');
-    if (el) el.textContent = 'Step ' + (cur + 1) + ' / ' + total + '  ·  ' + snap.phase;
+    if (el) el.textContent = 'Step ' + (cur + 1) + ' / ' + total + '  \u00b7  ' + snap.phase;
     var d = document.getElementById('step-desc');
     if (d) d.textContent = snap.desc;
   }
@@ -576,13 +528,25 @@ window.addEventListener('DOMContentLoaded', function() {
   buildAndRun();
 });
 </script>
-
 <script>
-  if (window.self !== window.top) {
-    var bl = document.querySelector('.back-link');
-    if (bl) bl.style.display = 'none';
-  }
+(function() {
+  var handle = document.getElementById('resize-handle');
+  var panel  = document.getElementById('code-panel');
+  var dragging = false, startX = 0, startW = 0;
+  handle.addEventListener('mousedown', function(e) {
+    dragging = true; startX = e.clientX; startW = panel.offsetWidth;
+    handle.classList.add('dragging'); e.preventDefault();
+  });
+  document.addEventListener('mousemove', function(e) {
+    if (!dragging) return;
+    var delta = startX - e.clientX;
+    panel.style.width = Math.min(560, Math.max(120, startW + delta)) + 'px';
+  });
+  document.addEventListener('mouseup', function() {
+    if (!dragging) return;
+    dragging = false; handle.classList.remove('dragging');
+  });
+})();
 </script>
-
 </body>
 </html>

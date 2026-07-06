@@ -1,239 +1,133 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Binary Tree DFS Traversal</title>
-  <link rel="stylesheet" href="../shared/style.css" />
-  <script src="../shared/gsap.min.js"></script>
-  <script src="../shared/viz.js"></script>
-  <style>
-    .viz-inputs {
-      display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end;
-      padding: 10px 0 14px; width: 100%; max-width: 90%;
-    }
-    .viz-inputs .field { display: flex; flex-direction: column; gap: 4px; }
-    .viz-inputs label {
-      font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
-      letter-spacing: 0.08em; color: var(--text-dim);
-    }
-    .viz-inputs select, .viz-inputs input[type="text"] {
-      background: var(--surface); border: 1px solid var(--border);
-      color: var(--text); border-radius: var(--radius-sm);
-      padding: 6px 10px; font-size: 0.85rem; cursor: pointer;
-    }
-    .viz-inputs input[type="text"] { width: 220px; cursor: text; }
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>DFS Traversal</title>
+<link rel="stylesheet" href="../shared/style.css" />
+<script src="../shared/gsap.min.js"></script>
+<script src="../shared/viz.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: "Fira Code", "Cascadia Code", monospace; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+  #header { padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+  #phase-badge { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; padding: 3px 10px; border-radius: var(--radius-sm); background: #1e3a5f; color: var(--blue); border: 1px solid var(--blue); }
+  #step-counter { font-size: 12px; color: var(--text-muted); margin-left: auto; }
+  .viz-inputs { width: 100%; max-width: 100%; padding: 10px 16px; background: var(--surface); border: none; border-bottom: 1px solid var(--border); border-radius: 0; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; flex-shrink: 0; }
+  .viz-inputs label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); display: block; margin-bottom: 3px; }
+  .viz-inputs select, .viz-inputs input { background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 0 8px; height: 30px; font-size: 0.82rem; font-family: inherit; appearance: none; -webkit-appearance: none; }
+  .vi-btn-run { padding: 6px 14px; border-radius: 6px; font-size: 0.82rem; font-weight: 600; cursor: pointer; font-family: inherit; background: var(--accent); color: #fff; border: none; }
+  .vi-btn-rand { padding: 6px 14px; border-radius: 6px; font-size: 0.82rem; cursor: pointer; font-family: inherit; background: var(--bg); color: var(--text); border: 1px solid var(--border); }
+  #main { display: flex; flex: 1; overflow: hidden; }
+  #viz-area { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding: 16px; gap: 12px; overflow-y: auto; }
+  #desc { font-size: 13px; color: var(--text-muted); text-align: center; max-width: 560px; min-height: 36px; line-height: 1.5; }
+  #resize-handle { width: 5px; flex-shrink: 0; cursor: col-resize; background: transparent; border-left: 1px solid var(--border); transition: background .15s; z-index: 10; }
+  #resize-handle:hover, #resize-handle.dragging { background: var(--accent); }
+  #code-panel { width: 350px; min-width: 120px; max-width: 560px; flex-shrink: 0; background: #0d1117; border-right: 1px solid var(--border); overflow-y: auto; overflow-x: auto; padding: 10px 12px; display: flex; flex-direction: column; }
+  .cl { display: flex; align-items: stretch; padding: 2px 0; white-space: pre; border-left: 2px solid transparent; padding-left: 6px; color: var(--text-muted); transition: all 0.2s; font-family: 'Fira Code', 'Cascadia Code', monospace; font-size: 0.75rem; line-height: 1.8; }
+  .cl.hl { background: rgba(122,162,247,0.12); border-left-color: var(--accent); color: var(--text); }
+  .ln { display: inline-block; width: 20px; text-align: right; color: var(--text-dim); user-select: none; margin-right: 10px; font-size: 0.7rem; }
+  .kw { color: var(--purple); } .nb { color: var(--green); } .cm { color: var(--text-dim); font-style: italic; }
+  #sidebar { width: 220px; flex-shrink: 0; background: var(--surface); border-left: 1px solid var(--border); overflow-y: auto; padding: 14px 12px; display: flex; flex-direction: column; gap: 12px; }
+  .sidebar-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--text-dim); margin-bottom: 6px; }
+  #nav-row { flex-shrink: 0; display: flex; align-items: center; gap: 8px; padding: 10px 16px; background: var(--surface); border-top: 1px solid var(--border); }
+  .btn-step, .btn-play { padding: 6px 14px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--surface); color: var(--text); font-family: inherit; font-size: 12px; cursor: pointer; transition: background .15s; }
+  .btn-step:hover { background: #334155; }
+  .btn-play { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn-play:hover { background: var(--accent-hover); }
+  #nav-row select { padding: 5px 8px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: #1e293b; color: var(--text); font-size: 12px; font-family: inherit; cursor: pointer; }
 
-    .viz-area {
-      width: 100%; max-width: 90%;
-      display: flex; flex-direction: column; gap: 14px;
-    }
-
-    .nav-row {
-      display: flex; gap: 12px; margin-bottom: 4px;
-    }
-
-    .controls-panel {
-      flex: 0 0 auto; display: flex; gap: 8px; align-items: center;
-    }
-
-    .btn-step {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--radius-sm); color: var(--text);
-      cursor: pointer; font-size: 0.9rem; font-weight: 700;
-      padding: 8px 14px; transition: all 0.15s;
-    }
-    .btn-step:hover:not(:disabled) { background: var(--border); border-color: var(--accent); }
-    .btn-step:disabled { opacity: 0.35; cursor: not-allowed; }
-
-    .btn-play {
-      background: var(--accent); border: none;
-      border-radius: var(--radius-sm); color: #fff;
-      cursor: pointer; font-size: 0.9rem; font-weight: 700;
-      padding: 8px 18px; transition: background 0.15s;
-    }
-    .btn-play:hover:not(:disabled) { opacity: 0.85; }
-    .btn-play:disabled { opacity: 0.35; cursor: not-allowed; }
-
-    #speedSel {
-      background: var(--bg); border: 1px solid var(--border);
-      color: var(--text); border-radius: var(--radius-sm);
-      padding: 6px 10px; font-size: 0.85rem; cursor: pointer;
-    }
-
-    .status-panel {
-      flex: 1; min-width: 0; background: var(--surface);
-      border: 1px solid var(--border); border-radius: var(--radius-lg);
-      padding: 10px 14px;
-    }
-
-    .phase-label {
-      font-size: 0.68rem; font-weight: 700; text-transform: uppercase;
-      letter-spacing: 0.1em; color: var(--text-dim);
-    }
-
-    .step-desc {
-      font-size: 0.88rem; color: var(--text-muted); margin-top: 4px; min-height: 1.4em;
-    }
-
-    .main-row {
-      display: grid; grid-template-columns: 3fr 2fr;
-      gap: 14px; align-items: start;
-    }
-
-    @media (max-width: 900px) { .main-row { grid-template-columns: 1fr; } }
-
-    .tree-panel {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--radius-lg); padding: 14px 16px;
-    }
-
-    .panel-title {
-      font-size: 0.68rem; font-weight: 700; text-transform: uppercase;
-      letter-spacing: 0.1em; color: var(--text-dim); margin-bottom: 10px;
-    }
-
-    #tree-svg {
-      display: block; width: 100%; height: 260px;
-    }
-
-    .right-col { display: flex; flex-direction: column; gap: 14px; }
-
-    .code-panel {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--radius-lg); padding: 14px 16px; overflow-x: auto;
-    }
-
-    #code-body {
-      font-family: "JetBrains Mono", "Fira Code", "Cascadia Code", monospace;
-      font-size: 0.75rem; line-height: 1.8; margin: 0;
-    }
-
-    .cl {
-      display: flex; align-items: stretch; padding: 2px 0;
-      white-space: pre; border-left: 2px solid transparent;
-      padding-left: 6px; color: var(--text-muted); transition: all 0.2s;
-    }
-
-    .cl.hl {
-      background: rgba(122, 162, 247, 0.12);
-      border-left-color: var(--accent); color: var(--text);
-    }
-
-    .ln {
-      display: inline-block; width: 20px; text-align: right;
-      color: var(--text-dim); user-select: none; margin-right: 10px;
-      font-size: 0.7rem;
-    }
-
-    .kw { color: var(--purple); }
-    .nb { color: var(--green); }
-    .cm { color: var(--text-dim); font-style: italic; }
-
-    .result-panel {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--radius-lg); padding: 14px 16px;
-    }
-
-    #result-values {
-      display: flex; flex-wrap: wrap; gap: 6px; min-height: 32px; margin-top: 8px;
-    }
-
-    .result-chip {
-      background: var(--green); color: #fff; border-radius: 6px;
-      padding: 3px 10px; font-size: 0.85rem; font-weight: 700;
-      font-family: monospace;
-    }
-
-    /* SVG tree styles */
-    .tree-edge { stroke: var(--border); stroke-width: 2; fill: none; }
-    .tree-node-bg { fill: var(--bg); stroke: var(--border); stroke-width: 2; transition: fill 0.25s, stroke 0.25s; }
-    .tree-node-bg.visited { fill: var(--green); stroke: var(--green); }
-    .tree-node-bg.current { fill: var(--accent); stroke: var(--accent); }
-    .tree-node-label { fill: var(--text); font-size: 13px; font-weight: 700; text-anchor: middle; dominant-baseline: central; transition: fill 0.25s; }
-    .tree-node-label.visited, .tree-node-label.current { fill: #fff; }
-  </style>
+  /* UNIQUE VIZ CSS */
+  .tree-panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 14px 16px; width: 100%; }
+  .panel-title { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-dim); margin-bottom: 10px; }
+  #tree-svg { display: block; width: 100%; height: 260px; }
+  .tree-edge { stroke: var(--border); stroke-width: 2; fill: none; }
+  .tree-node-bg { fill: var(--bg); stroke: var(--border); stroke-width: 2; transition: fill 0.25s, stroke 0.25s; }
+  .tree-node-bg.visited { fill: var(--green); stroke: var(--green); }
+  .tree-node-bg.current { fill: var(--accent); stroke: var(--accent); }
+  .tree-node-label { fill: var(--text); font-size: 13px; font-weight: 700; text-anchor: middle; dominant-baseline: central; transition: fill 0.25s; }
+  .tree-node-label.visited, .tree-node-label.current { fill: #fff; }
+  #result-values { display: flex; flex-wrap: wrap; gap: 6px; min-height: 32px; margin-top: 6px; }
+  .result-chip { background: var(--green); color: #fff; border-radius: 6px; padding: 3px 10px; font-size: 0.85rem; font-weight: 700; font-family: monospace; }
+</style>
 </head>
+<body>
 
-<body class="page">
-  <div class="page-header">
-    <a class="back-link" href="../index.html">&larr; All Algorithms</a>
+<div class="viz-inputs">
+  <div style="display:flex;flex-direction:column;gap:3px">
+    <label>Preset</label>
+    <select id="presetSel" onchange="loadPreset()">
+      <option value="">&#8212; pick a preset &#8212;</option>
+      <option value="[1,2,3,4,5,null,6]">Balanced [1,2,3,4,5,null,6]</option>
+      <option value="[5,3,8,1,4,7,9]">Full BST [5,3,8,1,4,7,9]</option>
+      <option value="[4,2,6,1,3,5,7]">Perfect tree [4,2,6,1,3,5,7]</option>
+      <option value="[10,5,15,3,7,null,18]">BST with null [10,5,15,3,7,null,18]</option>
+      <option value="[1,2,3]">3-node [1,2,3]</option>
+      <option value="[1,2,null,4,5]">Left-heavy [1,2,null,4,5]</option>
+      <option value="[3,1,4,null,2,null,5]">Varied [3,1,4,null,2,null,5]</option>
+    </select>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:3px">
+    <label>Traversal</label>
+    <select id="traversalSel" onchange="buildAndRun()">
+      <option value="inorder">Inorder (L &rarr; Root &rarr; R)</option>
+      <option value="preorder">Preorder (Root &rarr; L &rarr; R)</option>
+      <option value="postorder">Postorder (L &rarr; R &rarr; Root)</option>
+    </select>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:3px">
+    <label>Tree (level-order array)</label>
+    <input type="text" id="treeInput" value="[1,2,3,4,5,null,6]" placeholder="[1,2,3,null,5]" style="width:200px" />
+  </div>
+  <button class="vi-btn-run" onclick="buildAndRun()">Run</button>
+  <button class="vi-btn-rand" onclick="randomExample()">&#127922; Random</button>
+</div>
+<div class="controls"></div>
+
+<div id="header">
+  <span id="phase-badge">Setup</span>
+  <span style="font-size:13px;font-weight:700;">DFS Traversal</span>
+  <span id="step-counter">Step 0 / 0</span>
+</div>
+
+<div id="main">
+  <div id="viz-area">
+    <div id="desc">Click Run to start.</div>
+    <div class="tree-panel">
+      <div class="panel-title">Binary Tree</div>
+      <svg id="tree-svg" xmlns="http://www.w3.org/2000/svg"></svg>
+    </div>
+  </div>
+
+  <div id="resize-handle"></div>
+
+  <div id="code-panel">
+    <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--text-dim);margin-bottom:8px;">Pseudocode</div>
+    <div id="code-body"></div>
+  </div>
+
+  <div id="sidebar">
     <div>
-      <div class="page-title">Binary Tree DFS Traversal</div>
-      <div style="font-size: 0.78rem; color: var(--text-dim); margin-top: 4px;">Inorder &middot; Preorder &middot; Postorder &middot; O(n) time &middot; O(h) space</div>
+      <div class="sidebar-title">Result Array</div>
+      <div id="result-values"></div>
     </div>
   </div>
+</div>
 
-  <div class="viz-inputs">
-    <div class="field">
-      <label>Preset</label>
-      <select id="presetSel" onchange="loadPreset()">
-        <option value="">&#8212; pick a preset &#8212;</option>
-        <option value="[1,2,3,4,5,null,6]">Balanced [1,2,3,4,5,null,6]</option>
-        <option value="[5,3,8,1,4,7,9]">Full BST [5,3,8,1,4,7,9]</option>
-        <option value="[4,2,6,1,3,5,7]">Perfect tree [4,2,6,1,3,5,7]</option>
-        <option value="[10,5,15,3,7,null,18]">BST with null [10,5,15,3,7,null,18]</option>
-        <option value="[1,2,3]">3-node [1,2,3]</option>
-        <option value="[1,2,null,4,5]">Left-heavy [1,2,null,4,5]</option>
-        <option value="[3,1,4,null,2,null,5]">Varied [3,1,4,null,2,null,5]</option>
-      </select>
-    </div>
-    <div class="field">
-      <label>Traversal</label>
-      <select id="traversalSel" onchange="buildAndRun()">
-        <option value="inorder">Inorder (L &rarr; Root &rarr; R)</option>
-        <option value="preorder">Preorder (Root &rarr; L &rarr; R)</option>
-        <option value="postorder">Postorder (L &rarr; R &rarr; Root)</option>
-      </select>
-    </div>
-    <div class="field">
-      <label>Tree (level-order array)</label>
-      <input type="text" id="treeInput" value="[1,2,3,4,5,null,6]" placeholder="[1,2,3,null,5]" />
-    </div>
-    <button onclick="buildAndRun()" style="background:var(--accent);border:none;color:#fff;border-radius:var(--radius-sm);padding:8px 16px;cursor:pointer;font-size:0.85rem;font-weight:700;">Run</button>
-    <button onclick="randomExample()" style="background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:var(--radius-sm);padding:8px 14px;cursor:pointer;font-size:0.85rem;">&#127922; Random</button>
-  </div>
+<div id="nav-row">
+  <button id="prevBtn" class="btn-step">&#8592; Prev</button>
+  <button id="stepBtn" class="btn-step">Step &#8594;</button>
+  <button id="playBtn" class="btn-play">Play</button>
+  <button id="resetBtn" class="btn-step">&#8635; Reset</button>
+  <select id="speedSel">
+    <option value="800">0.5&#215;</option>
+    <option value="400" selected>1&#215;</option>
+    <option value="200">2&#215;</option>
+    <option value="100">4&#215;</option>
+  </select>
+</div>
 
-  <div class="controls"></div>
-
-  <div class="viz-area">
-    <div class="nav-row">
-      <div class="controls-panel">
-        <button class="btn-step" id="prevBtn" disabled>&#8592;</button>
-        <button class="btn-step" id="stepBtn" disabled>&#8594;</button>
-        <button class="btn-play" id="playBtn" disabled>&#9654; Play</button>
-        <select id="speedSel">
-          <option value="900">Slow</option>
-          <option value="350" selected>Medium</option>
-          <option value="100">Fast</option>
-        </select>
-      </div>
-      <div class="status-panel">
-        <div class="phase-label" id="phase-label">&#8212;</div>
-        <div class="step-desc" id="step-desc">Click Run to start.</div>
-      </div>
-    </div>
-
-    <div class="main-row">
-      <div class="tree-panel">
-        <div class="panel-title">Binary Tree</div>
-        <svg id="tree-svg" xmlns="http://www.w3.org/2000/svg"></svg>
-      </div>
-
-      <div class="right-col">
-        <div class="code-panel">
-          <div class="panel-title">Pseudocode</div>
-          <pre id="code-body"></pre>
-        </div>
-        <div class="result-panel">
-          <div class="panel-title">Result Array</div>
-          <div id="result-values"></div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <script>
+<script>
     // ── Pseudocode definitions ───────────────────────────────────────────────
     var CODE = {
       inorder: [
@@ -259,20 +153,17 @@
       ],
     };
 
-    // codeLine index per action per traversal (1-based → maps to cl1..cl5)
     var LINE_MAP = {
       inorder:   { enter: 1, null_return: 2, go_left: 3, visit: 4, go_right: 5 },
       preorder:  { enter: 1, null_return: 2, visit: 3, go_left: 4, go_right: 5 },
       postorder: { enter: 1, null_return: 2, go_left: 3, go_right: 4, visit: 5 },
     };
 
-    // ── State ────────────────────────────────────────────────────────────────
     var nav;
     var currentNodes = [];
     var positions = {};
     var SVG_W = 500, SVG_H = 240;
 
-    // ── Tree parsing ─────────────────────────────────────────────────────────
     function parseTreeArray(str) {
       str = str.trim();
       try {
@@ -284,7 +175,6 @@
       } catch(e) { return null; }
     }
 
-    // ── Layout ───────────────────────────────────────────────────────────────
     function computePositions(nodes) {
       var pos = {};
       var counter = 0;
@@ -326,7 +216,6 @@
       return pos;
     }
 
-    // ── Build Steps ──────────────────────────────────────────────────────────
     function buildSteps(nodes, type) {
       var steps = [];
       var result = [];
@@ -384,7 +273,6 @@
       return steps;
     }
 
-    // ── SVG Rendering ────────────────────────────────────────────────────────
     var SVG_NS = 'http://www.w3.org/2000/svg';
 
     function renderTree(nodes) {
@@ -395,7 +283,6 @@
       positions = computePositions(nodes);
       var R = 18;
 
-      // Draw edges first (below nodes)
       Object.keys(positions).forEach(function(k) {
         var i = parseInt(k);
         if (i === 0) return;
@@ -410,7 +297,6 @@
         svg.appendChild(line);
       });
 
-      // Draw nodes
       Object.keys(positions).forEach(function(k) {
         var i = parseInt(k);
         var p = positions[i];
@@ -437,7 +323,6 @@
       });
     }
 
-    // ── Code Panel ───────────────────────────────────────────────────────────
     function renderCodePanel(type) {
       var body = document.getElementById('code-body');
       body.innerHTML = '';
@@ -450,7 +335,6 @@
       });
     }
 
-    // ── Apply Step ───────────────────────────────────────────────────────────
     var ACTION_PHASE = {
       enter:       'Enter Node',
       null_return: 'Base Case',
@@ -470,7 +354,6 @@
     }
 
     function applyStep(snap, nodes) {
-      // Update node colors
       Object.keys(positions).forEach(function(k) {
         var i = parseInt(k);
         var circle = document.getElementById('nc-' + i);
@@ -483,13 +366,11 @@
         label.setAttribute('class', 'tree-node-label' + (isCurrent || isVisited ? ' visited' : ''));
       });
 
-      // Highlight code line
       for (var ln = 1; ln <= 5; ln++) {
         var el = document.getElementById('cl' + ln);
         if (el) el.classList.toggle('hl', ln === snap.codeLine);
       }
 
-      // Update result
       var rv = document.getElementById('result-values');
       rv.innerHTML = '';
       snap.result.forEach(function(v) {
@@ -501,18 +382,19 @@
     }
 
     function updateStatus(snap, cursor, total, nodes) {
-      document.getElementById('phase-label').textContent = ACTION_PHASE[snap.action] + '  (' + (cursor + 1) + ' / ' + total + ')';
-      document.getElementById('step-desc').textContent = descForStep(snap, nodes);
+      document.getElementById('phase-badge').textContent = ACTION_PHASE[snap.action] || '';
+      document.getElementById('step-counter').textContent = 'Step ' + (cursor + 1) + ' / ' + total;
+      var desc = document.getElementById('desc');
+      if (desc) desc.textContent = descForStep(snap, nodes);
     }
 
-    // ── Build and Run ────────────────────────────────────────────────────────
     function buildAndRun() {
       var input = document.getElementById('treeInput').value.trim();
       var type  = document.getElementById('traversalSel').value;
 
       var parsed = parseTreeArray(input);
       if (!parsed || parsed.length === 0) {
-        document.getElementById('step-desc').textContent = 'Invalid tree array. Use format: [1,2,3,null,5]';
+        document.getElementById('desc').textContent = 'Invalid tree array. Use format: [1,2,3,null,5]';
         return;
       }
 
@@ -539,7 +421,6 @@
       var vals = [];
       var pool = [];
       for (var i = 1; i <= 15; i++) pool.push(i);
-      // shuffle
       for (var i = pool.length - 1; i > 0; i--) {
         var j = Math.floor(Math.random() * (i + 1));
         var tmp = pool[i]; pool[i] = pool[j]; pool[j] = tmp;
@@ -555,18 +436,9 @@
       buildAndRun();
     }
 
-    // ── Init ─────────────────────────────────────────────────────────────────
     window.addEventListener('DOMContentLoaded', function() {
-      // Hide back-link in iframe
-      if (window.self !== window.top) {
-        var bl = document.querySelector('.back-link');
-        if (bl) bl.style.display = 'none';
-      }
-
-      // Render code panel for default traversal
       renderCodePanel('inorder');
 
-      // Init VizNav
       nav = VizNav({
         btnPrev:  document.getElementById('prevBtn'),
         btnNext:  document.getElementById('stepBtn'),
@@ -578,8 +450,31 @@
         },
       });
 
+      document.getElementById('resetBtn').addEventListener('click', function() { buildAndRun(); });
+
       buildAndRun();
     });
-  </script>
+</script>
+
+<script>
+(function() {
+  var handle = document.getElementById('resize-handle');
+  var panel  = document.getElementById('code-panel');
+  var dragging = false, startX = 0, startW = 0;
+  handle.addEventListener('mousedown', function(e) {
+    dragging = true; startX = e.clientX; startW = panel.offsetWidth;
+    handle.classList.add('dragging'); e.preventDefault();
+  });
+  document.addEventListener('mousemove', function(e) {
+    if (!dragging) return;
+    var delta = startX - e.clientX;
+    panel.style.width = Math.min(560, Math.max(120, startW + delta)) + 'px';
+  });
+  document.addEventListener('mouseup', function() {
+    if (!dragging) return;
+    dragging = false; handle.classList.remove('dragging');
+  });
+})();
+</script>
 </body>
 </html>

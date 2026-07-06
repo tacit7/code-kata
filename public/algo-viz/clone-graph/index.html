@@ -1,162 +1,152 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Clone Graph</title>
-  <link rel="stylesheet" href="../shared/style.css" />
-  <script src="../shared/viz.js"></script>
-  <style>
-    .viz-area { width: 100%; max-width: 98%; }
-    .main-row { display: grid; grid-template-columns: 1fr 300px; gap: 20px; align-items: start; }
-    @media (max-width: 900px) { .main-row { grid-template-columns: 1fr; } }
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Clone Graph</title>
+<link rel="stylesheet" href="../shared/style.css" />
+<script src="../shared/viz.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: "Fira Code","Cascadia Code",monospace; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
 
-    .graphs-section { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-    @media (max-width: 700px) { .graphs-section { grid-template-columns: 1fr; } }
+  #header { padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+  #phase-badge { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; padding: 3px 10px; border-radius: var(--radius-sm); background: #1e3a5f; color: var(--blue); border: 1px solid var(--blue); }
+  #step-counter { font-size: 12px; color: var(--text-muted); margin-left: auto; }
 
-    .graph-panel {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--radius-lg); padding: 14px;
-      display: flex; flex-direction: column; gap: 8px;
-    }
-    .graph-svg-wrap {
-      width: 100%; aspect-ratio: 1.15;
-      background: var(--bg); border-radius: var(--radius-sm); overflow: hidden;
-    }
-    .graph-svg-wrap svg { width: 100%; height: 100%; }
+  .viz-inputs { width: 100%; padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; flex-wrap: wrap; gap: 12px; align-items: center; flex-shrink: 0; }
+  .viz-inputs label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); display: block; margin-bottom: 3px; }
+  .viz-inputs select, .viz-inputs input { background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 0 8px; height: 30px; font-size: 0.82rem; font-family: inherit; }
+  .vi-btn-run { padding: 6px 14px; border-radius: 6px; font-size: 0.82rem; font-weight: 600; cursor: pointer; background: var(--accent); color: #fff; border: none; }
+  .vi-btn-rand { padding: 6px 14px; border-radius: 6px; font-size: 0.82rem; cursor: pointer; background: var(--bg); color: var(--text); border: 1px solid var(--border); }
 
-    /* original node states */
-    .nc-unvisited { fill: #1a1b2e; stroke: #3b4261; }
-    .nc-queued    { fill: #3d3524; stroke: #e0af68; }
-    .nc-current   { fill: #2d1a3d; stroke: #bb9af7; }
-    .nc-done      { fill: #1a2a1a; stroke: #9ece6a; }
-    .nc-neighbor  { fill: #2a1a10; stroke: #ff9e64; }
+  #main { display: flex; flex: 1; overflow: hidden; }
+  #viz-area { flex: 1; overflow: auto; display: flex; flex-direction: column; padding: 16px; gap: 14px; }
+  #resize-handle { width: 5px; flex-shrink: 0; cursor: col-resize; background: transparent; border-left: 1px solid var(--border); transition: background .15s; }
+  #resize-handle:hover, #resize-handle.dragging { background: var(--accent); }
+  #code-panel { width: 350px; min-width: 120px; max-width: 560px; flex-shrink: 0; background: #0d1117; overflow: auto; padding: 10px 12px; }
+  #sidebar { width: 240px; flex-shrink: 0; background: var(--surface); border-left: 1px solid var(--border); overflow-y: auto; padding: 14px 12px; display: flex; flex-direction: column; gap: 12px; }
+  #nav-row { flex-shrink: 0; display: flex; align-items: center; gap: 8px; padding: 10px 16px; background: var(--surface); border-top: 1px solid var(--border); }
+  .btn-step { padding: 6px 14px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--surface); color: var(--text); font-family: inherit; font-size: 12px; cursor: pointer; }
+  .btn-play { padding: 6px 14px; border-radius: var(--radius-sm); background: var(--accent); border: 1px solid var(--accent); color: #fff; font-family: inherit; font-size: 12px; cursor: pointer; }
+  #nav-row select { padding: 5px 8px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: #1e293b; color: var(--text); font-size: 12px; font-family: inherit; cursor: pointer; }
 
-    /* clone node states */
-    .nc-ghost          { fill: #0e1015; stroke: #252830; stroke-dasharray: 3 3; }
-    .nc-cloned         { fill: #1a2035; stroke: #7aa2f7; }
-    .nc-clone-current  { fill: #2d1a3d; stroke: #bb9af7; }
-    .nc-clone-neighbor { fill: #2a1a10; stroke: #ff9e64; }
-    .nc-clone-done     { fill: #1a2a1a; stroke: #9ece6a; }
+  #desc { font-size: 13px; color: var(--text-muted); line-height: 1.5; min-height: 36px; }
 
-    .node-circle { stroke-width: 2.5; transition: fill 0.25s, stroke 0.25s; }
-    .node-label  {
-      fill: var(--text-bright); font-size: 12px; font-weight: 700;
-      font-family: monospace; text-anchor: middle; dominant-baseline: central;
-      pointer-events: none;
-    }
-    .node-label-ghost { fill: #3a3f55; }
+  .graphs-section { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 700px) { .graphs-section { grid-template-columns: 1fr; } }
 
-    .edge-orig      { stroke: #3b4261; stroke-width: 2; }
-    .edge-orig-hi   { stroke: #ff9e64; stroke-width: 2.5; }
-    .edge-clone     { stroke: #9ece6a; stroke-width: 2.5; }
-    .edge-clone-new { stroke: #e0af68; stroke-width: 2.5; }
+  .graph-panel {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius-lg); padding: 14px;
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .graph-svg-wrap {
+    width: 100%; aspect-ratio: 1.15;
+    background: var(--bg); border-radius: var(--radius-sm); overflow: hidden;
+  }
+  .graph-svg-wrap svg { width: 100%; height: 100%; }
 
-    /* right column */
-    .right-col { display: flex; flex-direction: column; gap: 12px; }
+  /* original node states */
+  .nc-unvisited { fill: #1a1b2e; stroke: #3b4261; }
+  .nc-queued    { fill: #3d3524; stroke: #e0af68; }
+  .nc-current   { fill: #2d1a3d; stroke: #bb9af7; }
+  .nc-done      { fill: #1a2a1a; stroke: #9ece6a; }
+  .nc-neighbor  { fill: #2a1a10; stroke: #ff9e64; }
 
-    .panel-box {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--radius-lg); padding: 14px 16px;
-      display: flex; flex-direction: column; gap: 8px;
-    }
-    .panel-title {
-      font-size: 0.72rem; font-weight: 700;
-      text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim);
-    }
+  /* clone node states */
+  .nc-ghost          { fill: #0e1015; stroke: #252830; stroke-dasharray: 3 3; }
+  .nc-cloned         { fill: #1a2035; stroke: #7aa2f7; }
+  .nc-clone-current  { fill: #2d1a3d; stroke: #bb9af7; }
+  .nc-clone-neighbor { fill: #2a1a10; stroke: #ff9e64; }
+  .nc-clone-done     { fill: #1a2a1a; stroke: #9ece6a; }
 
-    .nav-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-    .btn-play {
-      background: #15803d; border: none; border-radius: var(--radius-sm);
-      color: #fff; cursor: pointer; font-size: 0.88rem; font-weight: 600;
-      padding: 9px 16px; transition: background 0.2s;
-    }
-    .btn-play:hover { background: #166534; }
-    .btn-play.playing { background: #c2410c; }
-    .btn-play.playing:hover { background: #9a3412; }
-    .btn-play:disabled { opacity: 0.4; cursor: not-allowed; }
-    .speed-select {
-      background: var(--bg); border: 1px solid var(--border);
-      border-radius: var(--radius-sm); color: var(--text);
-      font-size: 0.85rem; padding: 8px 10px; outline: none; width: 80px;
-    }
+  .node-circle { stroke-width: 2.5; transition: fill 0.25s, stroke 0.25s; }
+  .node-label  {
+    fill: var(--text-bright); font-size: 12px; font-weight: 700;
+    font-family: monospace; text-anchor: middle; dominant-baseline: central;
+    pointer-events: none;
+  }
+  .node-label-ghost { fill: #3a3f55; }
 
-    .queue-list { display: flex; gap: 5px; flex-wrap: wrap; min-height: 26px; }
-    .queue-chip {
-      padding: 2px 9px; border-radius: 4px; font-size: 0.78rem;
-      font-family: monospace; font-weight: 700;
-      background: #3d3524; border: 1px solid #e0af68; color: #e0af68;
-    }
+  .edge-orig      { stroke: #3b4261; stroke-width: 2; }
+  .edge-orig-hi   { stroke: #ff9e64; stroke-width: 2.5; }
+  .edge-clone     { stroke: #9ece6a; stroke-width: 2.5; }
+  .edge-clone-new { stroke: #e0af68; stroke-width: 2.5; }
 
-    .hashmap-list { display: flex; flex-direction: column; gap: 4px; }
-    .hm-row { display: flex; align-items: center; gap: 7px; font-size: 0.78rem; }
-    .hm-key {
-      font-family: monospace; font-weight: 700; color: #7aa2f7;
-      background: #1a2035; border: 1px solid #3b4f8a;
-      padding: 2px 8px; border-radius: 4px; min-width: 24px; text-align: center;
-    }
-    .hm-arrow { color: var(--text-dim); }
-    .hm-val {
-      font-family: monospace; font-weight: 700; color: #9ece6a;
-      background: #1a2a1a; border: 1px solid #3a5a2a;
-      padding: 2px 8px; border-radius: 4px; min-width: 24px; text-align: center;
-    }
+  .panel-box {
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: var(--radius-lg); padding: 12px 14px;
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .panel-title {
+    font-size: 0.72rem; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim);
+  }
 
-    .legend-row { display: flex; align-items: center; gap: 8px; font-size: 0.75rem; color: var(--text-muted); }
-    .legend-dot { width: 13px; height: 13px; border-radius: 50%; flex-shrink: 0; border: 2px solid; }
+  .queue-list { display: flex; gap: 5px; flex-wrap: wrap; min-height: 26px; }
+  .queue-chip {
+    padding: 2px 9px; border-radius: 4px; font-size: 0.78rem;
+    font-family: monospace; font-weight: 700;
+    background: #3d3524; border: 1px solid #e0af68; color: #e0af68;
+  }
 
-    .code-panel {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--radius-lg); overflow: hidden;
-    }
-    .code-header {
-      padding: 8px 14px; font-size: 0.72rem; font-weight: 600;
-      color: var(--text-dim); border-bottom: 1px solid var(--border); background: var(--bg);
-    }
-    .code-body { padding: 10px 0; font-size: 0.75rem; line-height: 1.75; white-space: pre; }
-    .code-line { display: flex; align-items: center; padding: 0 14px; }
-    .code-line.hl { background: var(--border-soft); border-left: 2px solid var(--accent); }
-    .ln { min-width: 22px; color: var(--text-ghost); user-select: none; font-size: 0.68rem; }
-    .kw { color: var(--purple); }
-    .fn { color: var(--blue); }
-    .bi { color: var(--orange); }
-    .cm { color: var(--text-ghost); }
-    .nb { color: var(--green); }
+  .hashmap-list { display: flex; flex-direction: column; gap: 4px; }
+  .hm-row { display: flex; align-items: center; gap: 7px; font-size: 0.78rem; }
+  .hm-key {
+    font-family: monospace; font-weight: 700; color: #7aa2f7;
+    background: #1a2035; border: 1px solid #3b4f8a;
+    padding: 2px 8px; border-radius: 4px; min-width: 24px; text-align: center;
+  }
+  .hm-arrow { color: var(--text-dim); }
+  .hm-val {
+    font-family: monospace; font-weight: 700; color: #9ece6a;
+    background: #1a2a1a; border: 1px solid #3a5a2a;
+    padding: 2px 8px; border-radius: 4px; min-width: 24px; text-align: center;
+  }
 
-    .preset-row { display: flex; gap: 8px; flex-wrap: wrap; }
-    .btn-preset {
-      padding: 6px 12px; border-radius: var(--radius-sm);
-      background: var(--bg); border: 1px solid var(--border);
-      color: var(--text-dim); font-size: 0.8rem; cursor: pointer;
-      transition: border-color 0.15s, color 0.15s;
-    }
-    .btn-preset:hover, .btn-preset.active { border-color: var(--accent); color: var(--accent-pale); }
-  </style>
+  .legend-row { display: flex; align-items: center; gap: 8px; font-size: 0.75rem; color: var(--text-muted); }
+  .legend-dot { width: 13px; height: 13px; border-radius: 50%; flex-shrink: 0; border: 2px solid; }
+
+  .code-panel-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--text-dim); margin-bottom: 8px; }
+  .code-body { font-size: 0.75rem; line-height: 1.75; white-space: pre; }
+  .code-line { display: flex; align-items: center; padding: 0 4px; color: var(--text-muted); border-left: 2px solid transparent; }
+  .code-line.hl { background: rgba(122,162,247,0.12); border-left: 2px solid var(--accent); color: var(--text); }
+  .ln { min-width: 22px; color: var(--text-ghost); user-select: none; font-size: 0.68rem; }
+  .kw { color: var(--purple); }
+  .fn { color: var(--blue); }
+  .bi { color: var(--orange); }
+  .cm { color: var(--text-ghost); }
+  .nb { color: var(--green); }
+</style>
 </head>
-<body class="page">
+<body>
 
-<div class="page-header">
-  <a class="back-link" href="../index.html">&larr; All Algorithms</a>
-  <div class="page-title">Clone Graph</div>
-  <div class="page-sub">LeetCode 133 &middot; BFS with a hash map (original &rarr; clone) &middot; Each node cloned exactly once &middot; O(V+E)</div>
-</div>
-
-<div class="controls">
-  <div class="field">
+<div class="viz-inputs">
+  <div>
     <label>Preset</label>
-    <div class="preset-row">
-      <button class="btn-preset active" id="preset-p1" onclick="loadPreset('p1')">4-node cycle</button>
-      <button class="btn-preset" id="preset-p2" onclick="loadPreset('p2')">5-node star</button>
-      <button class="btn-preset" id="preset-p3" onclick="loadPreset('p3')">6-node hex</button>
-    </div>
+    <select id="presetSel" onchange="loadPreset()" style="width:200px;">
+      <option value="p1" selected>4-node cycle + chord</option>
+      <option value="p2">5-node star</option>
+      <option value="p3">6-node hexagon</option>
+    </select>
   </div>
-  <button class="btn-primary" onclick="buildAndRun()">Build &amp; Run</button>
+  <button class="vi-btn-run" onclick="buildAndRun()">Run</button>
+  <button class="vi-btn-rand" onclick="randomExample()">&#127922; Random</button>
 </div>
 
-<div class="viz-area">
-  <div class="main-row">
+<div class="controls"></div>
 
-    <!-- Two graph panels -->
+<div id="header">
+  <span id="phase-badge">Setup</span>
+  <span style="font-size:13px;font-weight:700;">Clone Graph</span>
+  <span id="step-counter">Step 0 / 0</span>
+</div>
+
+<div id="main">
+  <div id="viz-area">
+    <div id="desc">Select a preset and click Run.</div>
+
     <div class="graphs-section">
       <div class="graph-panel">
         <div class="panel-title">Original Graph</div>
@@ -177,75 +167,69 @@
         </div>
       </div>
     </div>
+  </div>
 
-    <!-- Right column -->
-    <div class="right-col">
+  <div id="resize-handle"></div>
 
-      <div class="panel-box">
-        <div class="nav-row">
-          <button class="stepBtn" id="prevBtn" disabled>&larr;</button>
-          <button class="stepBtn" id="stepBtn" disabled>&rarr;</button>
-          <button class="playBtn" id="playBtn" disabled>&#9654; Play</button>
-          <select class="speedSel" id="speedSel">
-            <option value="800">Slow</option>
-            <option value="400" selected>Medium</option>
-            <option value="120">Fast</option>
-          </select>
+  <div id="code-panel">
+    <div class="code-panel-title">Python</div>
+    <div class="code-body" id="code-body"></div>
+  </div>
+
+  <div id="sidebar">
+    <div class="panel-box">
+      <div class="panel-title">BFS Queue</div>
+      <div class="queue-list" id="queue-list">
+        <span style="color:var(--text-ghost);font-size:0.78rem">empty</span>
+      </div>
+    </div>
+
+    <div class="panel-box">
+      <div class="panel-title">Hash Map &mdash; original &rarr; clone</div>
+      <div class="hashmap-list" id="hashmap-list">
+        <span style="color:var(--text-ghost);font-size:0.78rem">empty</span>
+      </div>
+    </div>
+
+    <div class="panel-box">
+      <div class="panel-title">Legend</div>
+      <div style="display:flex;flex-direction:column;gap:5px">
+        <div class="legend-row">
+          <div class="legend-dot" style="background:#1a1b2e;border-color:#3b4261"></div>
+          <span>Unvisited</span>
+        </div>
+        <div class="legend-row">
+          <div class="legend-dot" style="background:#3d3524;border-color:#e0af68"></div>
+          <span>Queued</span>
+        </div>
+        <div class="legend-row">
+          <div class="legend-dot" style="background:#2d1a3d;border-color:#bb9af7"></div>
+          <span>Current (dequeued)</span>
+        </div>
+        <div class="legend-row">
+          <div class="legend-dot" style="background:#2a1a10;border-color:#ff9e64"></div>
+          <span>Current neighbor</span>
+        </div>
+        <div class="legend-row">
+          <div class="legend-dot" style="background:#1a2a1a;border-color:#9ece6a"></div>
+          <span>Done</span>
         </div>
       </div>
-
-      <div class="panel-box">
-        <div class="panel-title" id="phase-label">&mdash;</div>
-        <div style="font-size:0.82rem;color:var(--text-muted);margin-top:2px;min-height:36px" id="step-desc">Select a preset and click Build &amp; Run.</div>
-      </div>
-
-      <div class="panel-box">
-        <div class="panel-title">BFS Queue</div>
-        <div class="queue-list" id="queue-list">
-          <span style="color:var(--text-ghost);font-size:0.78rem">empty</span>
-        </div>
-      </div>
-
-      <div class="panel-box">
-        <div class="panel-title">Hash Map &mdash; original &rarr; clone</div>
-        <div class="hashmap-list" id="hashmap-list">
-          <span style="color:var(--text-ghost);font-size:0.78rem">empty</span>
-        </div>
-      </div>
-
-      <div class="panel-box">
-        <div class="panel-title">Legend</div>
-        <div style="display:flex;flex-direction:column;gap:5px">
-          <div class="legend-row">
-            <div class="legend-dot" style="background:#1a1b2e;border-color:#3b4261"></div>
-            <span>Unvisited</span>
-          </div>
-          <div class="legend-row">
-            <div class="legend-dot" style="background:#3d3524;border-color:#e0af68"></div>
-            <span>Queued</span>
-          </div>
-          <div class="legend-row">
-            <div class="legend-dot" style="background:#2d1a3d;border-color:#bb9af7"></div>
-            <span>Current (dequeued)</span>
-          </div>
-          <div class="legend-row">
-            <div class="legend-dot" style="background:#2a1a10;border-color:#ff9e64"></div>
-            <span>Current neighbor</span>
-          </div>
-          <div class="legend-row">
-            <div class="legend-dot" style="background:#1a2a1a;border-color:#9ece6a"></div>
-            <span>Done</span>
-          </div>
-        </div>
-      </div>
-
-      <div class="code-panel">
-        <div class="code-header">Python</div>
-        <div class="code-body" id="code-body"></div>
-      </div>
-
     </div>
   </div>
+</div>
+
+<div id="nav-row">
+  <button id="prevBtn" class="btn-step">&#8592; Prev</button>
+  <button id="stepBtn" class="btn-step">Step &#8594;</button>
+  <button id="playBtn" class="btn-play">Play</button>
+  <button id="resetBtn" class="btn-step">&#8635; Reset</button>
+  <select id="speedSel">
+    <option value="800">0.5&#215;</option>
+    <option value="400" selected>1&#215;</option>
+    <option value="200">2&#215;</option>
+    <option value="100">4&#215;</option>
+  </select>
 </div>
 
 <script>
@@ -301,6 +285,7 @@ var PRESETS = {
 };
 
 var currentPreset = 'p1';
+var activeGraph = null;
 var simSteps = [];
 var nav;
 var gNodes = [];
@@ -309,15 +294,57 @@ var nodeById = {};
 
 var NODE_R = 20;
 
-function loadPreset(name) {
-  currentPreset = name;
-  ['p1','p2','p3'].forEach(function(p) {
-    document.getElementById('preset-' + p).classList.toggle('active', p === name);
-  });
+function loadPreset() {
+  var sel = document.getElementById('presetSel');
+  if (!sel.value) return;
+  currentPreset = sel.value;
+  activeGraph = PRESETS[currentPreset];
+  buildAndRun();
+}
+
+function randomExample() {
+  var n = 4 + Math.floor(Math.random() * 3); // 4-6 nodes
+  var cx = 150, cy = 138, r = 96;
+  var nodes = [];
+  for (var i = 0; i < n; i++) {
+    var ang = -Math.PI / 2 + (2 * Math.PI * i) / n;
+    nodes.push({
+      id: i + 1,
+      x: Math.round(cx + r * Math.cos(ang)),
+      y: Math.round(cy + r * Math.sin(ang)),
+      label: '' + (i + 1)
+    });
+  }
+  var seen = {};
+  var edges = [];
+  function key(a, b) { return Math.min(a, b) + '-' + Math.max(a, b); }
+  function add(a, b) {
+    if (a === b) return;
+    var k = key(a, b);
+    if (seen[k]) return;
+    seen[k] = true;
+    edges.push([a, b]);
+  }
+  // spanning cycle keeps graph connected
+  for (var i = 0; i < n; i++) add(i + 1, ((i + 1) % n) + 1);
+  // add 1-2 random chords
+  var chords = 1 + Math.floor(Math.random() * 2);
+  var tries = 0;
+  while (chords > 0 && tries < 40) {
+    tries++;
+    var a = 1 + Math.floor(Math.random() * n);
+    var b = 1 + Math.floor(Math.random() * n);
+    if (a === b || seen[key(a, b)]) continue;
+    add(a, b);
+    chords--;
+  }
+  activeGraph = { label: 'random', nodes: nodes, edges: edges };
+  document.getElementById('presetSel').value = '';
+  buildAndRun();
 }
 
 function buildAndRun() {
-  var preset = PRESETS[currentPreset];
+  var preset = activeGraph || PRESETS[currentPreset];
   gNodes = preset.nodes;
   gEdges = preset.edges;
   nodeById = {};
@@ -564,29 +591,53 @@ function buildCodePanel() {
   }).join('');
 }
 
+function updateStatus(snap, cur, total) {
+  document.getElementById('phase-badge').textContent = snap.phase || 'Step';
+  document.getElementById('step-counter').textContent = 'Step ' + cur + ' / ' + total;
+  document.getElementById('desc').textContent = snap.desc || '';
+}
+
 window.addEventListener('DOMContentLoaded', function() {
   buildCodePanel();
-  loadPreset('p1');
-  nav = VizNav({
-    btnPrev: document.getElementById('prevBtn'),
-    btnNext: document.getElementById('stepBtn'),
-    btnPlay: document.getElementById('playBtn'),
+  currentPreset = 'p1';
+  activeGraph = PRESETS.p1;
+  document.getElementById('presetSel').value = 'p1';
+
+  window.nav = nav = VizNav({
+    btnPrev:  document.getElementById('prevBtn'),
+    btnNext:  document.getElementById('stepBtn'),
+    btnPlay:  document.getElementById('playBtn'),
     speedSel: document.getElementById('speedSel'),
     render: function(snap, cur, total) {
       applyStep(snap);
-      document.getElementById('phase-label').textContent =
-        'Step ' + (cur + 1) + ' / ' + total + '  ·  ' + snap.phase;
-      document.getElementById('step-desc').textContent = snap.desc;
+      updateStatus(snap, cur, total);
     }
   });
-});
-</script>
 
-<script>
-  if (window.self !== window.top) {
-    var bl = document.querySelector('.back-link');
-    if (bl) bl.style.display = 'none';
-  }
+  document.getElementById('resetBtn').addEventListener('click', function() {
+    if (window.nav) window.nav.goTo(0);
+  });
+
+  buildAndRun();
+});
+
+(function() {
+  var h = document.getElementById('resize-handle'),
+      p = document.getElementById('code-panel'),
+      d = false, sx = 0, sw = 0;
+  h.addEventListener('mousedown', function(e) {
+    d = true; sx = e.clientX; sw = p.offsetWidth;
+    h.classList.add('dragging'); e.preventDefault();
+  });
+  document.addEventListener('mousemove', function(e) {
+    if (!d) return;
+    p.style.width = Math.min(560, Math.max(120, sw + (sx - e.clientX))) + 'px';
+  });
+  document.addEventListener('mouseup', function() {
+    if (!d) return;
+    d = false; h.classList.remove('dragging');
+  });
+})();
 </script>
 </body>
 </html>

@@ -8,266 +8,202 @@
   <script src="../shared/gsap.min.js"></script>
   <script src="../shared/viz.js"></script>
   <style>
-    body { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: "Fira Code","Cascadia Code",monospace; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+    #header { padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+    #phase-badge { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; padding: 3px 10px; border-radius: var(--radius-sm); background: #1e3a5f; color: var(--blue); border: 1px solid var(--blue); }
+    #step-counter { font-size: 12px; color: var(--text-muted); margin-left: auto; }
+    .viz-inputs { width: 100%; padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; flex-wrap: wrap; gap: 12px; align-items: center; flex-shrink: 0; }
+    #main { display: flex; flex: 1; overflow: hidden; }
+    #viz-area { flex: 1; display: flex; flex-direction: column; padding: 14px; gap: 14px; overflow-y: auto; }
+    #resize-handle { width: 5px; flex-shrink: 0; cursor: col-resize; background: transparent; border-left: 1px solid var(--border); transition: background .15s; }
+    #code-panel { width: 360px; min-width: 120px; max-width: 560px; flex-shrink: 0; background: #0d1117; border-right: 1px solid var(--border); overflow-y: auto; padding: 10px 12px; display: flex; flex-direction: column; }
+    .code-panel-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--text-dim); margin-bottom: 8px; }
+    #sidebar { width: 220px; flex-shrink: 0; background: var(--surface); border-left: 1px solid var(--border); overflow-y: auto; padding: 14px 12px; display: flex; flex-direction: column; gap: 12px; }
+    #nav-row { flex-shrink: 0; display: flex; align-items: center; gap: 8px; padding: 10px 16px; background: var(--surface); border-top: 1px solid var(--border); }
+    .btn-step { padding: 6px 14px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--surface); color: var(--text); font-family: inherit; font-size: 12px; cursor: pointer; }
+    .btn-play { padding: 6px 14px; border-radius: var(--radius-sm); background: var(--accent); border-color: var(--accent); color: #fff; font-family: inherit; font-size: 12px; cursor: pointer; }
+    #speedSel { background: var(--surface); border: 1px solid var(--border); color: var(--text); border-radius: var(--radius-sm); padding: 5px 8px; font-size: 12px; }
+    .vi-label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--text-dim); margin-bottom: 4px; display: block; }
+    .vi-btn { padding: 6px 14px; border-radius: var(--radius-sm); border: none; background: var(--accent); color: #fff; font-family: inherit; font-size: 12px; cursor: pointer; font-weight: 600; }
+    .vi-btn-sec { padding: 6px 14px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--surface); color: var(--text); font-family: inherit; font-size: 12px; cursor: pointer; }
 
-    .top-bar {
-      display: flex; align-items: center; gap: 12px;
-      padding: 12px 20px; border-bottom: 1px solid var(--border);
-      background: var(--bg); flex-shrink: 0; flex-wrap: wrap;
-    }
-    .top-bar label { font-size: 0.85rem; color: var(--text-dim); }
-    .top-bar input[type=number] {
-      width: 90px; padding: 5px 8px; border-radius: 6px;
-      border: 1px solid var(--border); background: var(--surface-dark);
-      color: var(--text-bright); font-size: 0.9rem; font-family: monospace;
-    }
-    .top-bar button {
-      padding: 6px 14px; border-radius: 6px; border: 1px solid var(--accent);
-      background: transparent; color: var(--accent); font-size: 0.85rem;
-      cursor: pointer; font-weight: 600;
-    }
-    .top-bar button:hover { background: rgba(var(--accent-ch), 0.1); }
-    .result-badge {
-      margin-left: auto; padding: 4px 14px; border-radius: 20px;
-      font-size: 0.82rem; font-weight: 700; font-family: monospace;
-      background: rgba(125,211,252,0.12); border: 1px solid rgba(125,211,252,0.35);
-      color: #7dd3fc; display: none;
-    }
-
-    /* ── viz-inputs ── */
-    .viz-inputs {
-      display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end;
-      padding: 10px 0 14px; width: 100%; max-width: 90%;
-    }
-    .viz-inputs .field {
-      display: flex; flex-direction: column; gap: 4px;
-    }
-    .viz-inputs label {
-      font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
-      letter-spacing: 0.08em; color: var(--text-dim);
-    }
-    .viz-inputs input[type="text"] {
-      background: var(--surface); border: 1px solid var(--border);
-      color: var(--text); border-radius: var(--radius-sm);
-      padding: 6px 10px; font-size: 0.85rem; width: 180px;
-    }
-    .viz-inputs input[type="number"] {
-      background: var(--surface); border: 1px solid var(--border);
-      color: var(--text); border-radius: var(--radius-sm);
-      padding: 6px 10px; font-size: 0.85rem; width: 80px;
-    }
-    .viz-inputs select {
-      background: var(--surface); border: 1px solid var(--border);
-      color: var(--text); border-radius: var(--radius-sm);
-      padding: 6px 10px; font-size: 0.85rem; cursor: pointer;
-    }
-
-    .middle {
-      flex: 1; display: grid; grid-template-columns: 1fr 1fr;
-      gap: 16px; padding: 16px; overflow: hidden;
-    }
-    @media (max-width: 680px) { .middle { grid-template-columns: 1fr; } }
-
-    .panel-box {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--radius-lg); padding: 16px;
-      display: flex; flex-direction: column; gap: 12px; overflow: hidden;
-    }
-    .panel-title {
-      font-size: 0.72rem; font-weight: 700; text-transform: uppercase;
-      letter-spacing: 0.08em; color: var(--text-dim); flex-shrink: 0;
-    }
-
-    /* ── state boxes ── */
-    .state-grid {
-      display: grid; grid-template-columns: repeat(3, 1fr);
-      gap: 10px; flex-shrink: 0;
-    }
-    .state-box {
-      background: var(--surface-dark); border: 1px solid var(--border-soft);
-      border-radius: var(--radius); padding: 10px 12px;
-      display: flex; flex-direction: column; gap: 4px;
-    }
+    .panel-box { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 14px; display: flex; flex-direction: column; gap: 10px; overflow: hidden; }
+    .panel-title { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--text-dim); flex-shrink: 0; }
+    .state-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; flex-shrink: 0; }
+    .state-box { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px 12px; display: flex; flex-direction: column; gap: 4px; }
     .state-box.highlight { border-color: var(--accent); }
-    .state-key {
-      font-size: 0.68rem; font-weight: 700; text-transform: uppercase;
-      letter-spacing: 0.07em; color: var(--text-ghost);
-    }
-    .state-val {
-      font-size: 1.05rem; font-weight: 700; font-family: monospace;
-      color: var(--text-bright);
-    }
-    .state-val.accent { color: var(--accent-pale); }
+    .state-key { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--text-dim); }
+    .state-val { font-size: 1.05rem; font-weight: 700; font-family: monospace; color: var(--text-bright); }
+    .state-val.accent { color: var(--accent-pale,#a9b1d6); }
     .state-val.green  { color: #86efac; }
     .state-val.yellow { color: #fde68a; }
-
-    /* ── bit strip ── */
-    .bit-area {
-      flex: 1; display: flex; flex-direction: column;
-      gap: 10px; overflow-y: auto;
-    }
-    .bit-row {
-      display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
-    }
-    .bit-label {
-      font-size: 0.7rem; font-weight: 700; color: var(--text-dim);
-      width: 52px; flex-shrink: 0;
-    }
+    .bit-area { display: flex; flex-direction: column; gap: 10px; }
+    .bit-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .bit-label { font-size: 0.7rem; font-weight: 700; color: var(--text-dim); width: 52px; flex-shrink: 0; }
     .bit-cells { display: flex; gap: 5px; flex-wrap: wrap; }
-    .bcel {
-      min-width: 32px; height: 32px; display: flex; align-items: center;
-      justify-content: center; border-radius: 6px; font-size: 0.88rem;
-      font-weight: 700; font-family: monospace; border: 2px solid var(--border);
-      background: #0f0f0f; color: var(--text-ghost); transition: all 0.22s;
-      padding: 0 4px;
-    }
-    .bcel.active   { border-color: var(--accent); color: var(--accent-pale); background: var(--surface-dark); }
-    .bcel.consumed { border-color: #2d3148; color: var(--text-ghost); background: #0a0a0f; opacity: 0.4; }
+    .bcel { min-width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 6px; font-size: 0.88rem; font-weight: 700; font-family: monospace; border: 2px solid var(--border); background: #0f0f0f; color: var(--text-ghost,#565f89); transition: all 0.22s; padding: 0 4px; }
+    .bcel.active   { border-color: var(--accent); color: var(--accent-pale,#a9b1d6); background: var(--surface); }
+    .bcel.consumed { border-color: #2d3148; color: var(--text-ghost,#565f89); background: #0a0a0f; opacity: 0.4; }
     .bcel.odd      { border-color: #f59e0b; color: #fde68a; background: rgba(245,158,11,0.1); }
-
-    /* ── op log ── */
-    .op-scroll { flex: 1; overflow-y: auto; }
-    .op-list   { display: flex; flex-direction: column; gap: 6px; }
-    .op-row {
-      background: var(--surface-dark); border: 1px solid var(--border-soft);
-      border-radius: var(--radius); padding: 8px 12px;
-      font-size: 0.82rem; font-family: monospace;
-      display: flex; flex-direction: column; gap: 3px; transition: border-color 0.2s;
-    }
+    .op-scroll { flex: 1; overflow-y: auto; max-height: 200px; }
+    .op-list { display: flex; flex-direction: column; gap: 6px; }
+    .op-row { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px 12px; font-size: 0.82rem; font-family: monospace; display: flex; flex-direction: column; gap: 3px; transition: border-color 0.2s; }
     .op-row.current { border-color: var(--accent); }
     .op-top { display: flex; gap: 10px; align-items: center; }
-    .op-iter   { font-size: 0.68rem; color: var(--text-ghost); min-width: 40px; }
+    .op-iter { font-size: 0.68rem; color: var(--text-ghost,#565f89); min-width: 40px; }
     .op-action { color: var(--text-bright); font-weight: 600; flex: 1; }
     .op-detail { color: var(--text-dim); font-size: 0.78rem; padding-left: 50px; }
+    .step-desc { font-size: 0.82rem; color: var(--text-muted); line-height: 1.45; }
+    .result-badge { padding: 4px 14px; border-radius: 20px; font-size: 0.82rem; font-weight: 700; font-family: monospace; background: rgba(125,211,252,0.12); border: 1px solid rgba(125,211,252,0.35); color: #7dd3fc; display: none; }
 
-    /* ── bottom ── */
-    .bottom-bar {
-      border-top: 1px solid var(--border); padding: 10px 20px;
-      background: var(--bg); flex-shrink: 0;
-      display: flex; flex-direction: column; gap: 6px;
-    }
-    .step-info { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-    .phase-label { font-size: 0.78rem; color: var(--text-dim); min-width: 90px; }
-    .step-desc   { font-size: 0.88rem; color: var(--text-bright); flex: 1; }
-    .nav-row { display: flex; align-items: center; gap: 8px; }
-    .nav-row button {
-      padding: 5px 14px; border-radius: 6px;
-      border: 1px solid var(--border); background: var(--surface);
-      color: var(--text-bright); cursor: pointer; font-size: 0.85rem;
-    }
-    .nav-row button:hover { border-color: var(--accent); color: var(--accent); }
-    #playBtn { border-color: var(--accent); color: var(--accent); font-weight: 600; }
-    #speedSel {
-      padding: 4px 8px; border-radius: 6px; border: 1px solid var(--border);
-      background: var(--surface-dark); color: var(--text-dim); font-size: 0.82rem;
-    }
+    .code-body { font-family: 'Fira Code','Cascadia Code',monospace; font-size: 0.75rem; line-height: 1.7; flex: 1; white-space: pre; color: var(--text-muted); }
+    .cl { display: block; padding: 0 4px; border-left: 3px solid transparent; }
+    .cl.hl { background: rgba(122,162,247,0.18); color: var(--text); border-left-color: var(--accent); }
+    .kw { color: var(--purple); } .fn { color: var(--blue); } .cm { color: var(--text-ghost,#565f89); } .nb { color: var(--green); }
   </style>
 </head>
 <body>
-
-<!-- VIZ INPUTS -->
-<div class="viz-inputs">
-  <div class="field">
-    <label>Preset</label>
-    <select id="presetSel" onchange="loadPreset()">
-      <option value="">— pick a preset —</option>
-      <option value='{"x":2,"n":10}'>2^10 (simple positive)</option>
-      <option value='{"x":2,"n":-3}'>2^-3 (negative exponent)</option>
-      <option value='{"x":0.5,"n":6}'>0.5^6 (fractional base)</option>
-      <option value='{"x":-2,"n":5}'>-2^5 (negative base, odd)</option>
-      <option value='{"x":3,"n":0}'>3^0 (zero exponent)</option>
-      <option value='{"x":0.1,"n":-2}'>0.1^-2 (fractional, negative)</option>
-    </select>
+  <div class="viz-inputs">
+    <div>
+      <label class="vi-label">Preset</label>
+      <select id="presetSel" onchange="loadPreset()" style="background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:var(--radius-sm);padding:5px 8px;font-size:0.82rem;">
+        <option value="">— pick a preset —</option>
+        <option value='{"x":2,"n":10}'>2^10 (simple positive)</option>
+        <option value='{"x":2,"n":-3}'>2^-3 (negative exponent)</option>
+        <option value='{"x":0.5,"n":6}'>0.5^6 (fractional base)</option>
+        <option value='{"x":-2,"n":5}'>-2^5 (negative base, odd)</option>
+        <option value='{"x":3,"n":0}'>3^0 (zero exponent)</option>
+        <option value='{"x":0.1,"n":-2}'>0.1^-2 (fractional, negative)</option>
+      </select>
+    </div>
+    <div>
+      <label class="vi-label">x</label>
+      <input type="number" id="x-input" value="2" step="0.1" style="width:80px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:var(--radius-sm);padding:5px 8px;font-size:0.82rem;" />
+    </div>
+    <div>
+      <label class="vi-label">n</label>
+      <input type="number" id="n-input" value="10" style="width:80px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:var(--radius-sm);padding:5px 8px;font-size:0.82rem;" />
+    </div>
+    <button class="vi-btn" onclick="buildAndRun()">Run</button>
+    <button class="vi-btn-sec" onclick="randomExample()">🎲 Random</button>
   </div>
-  <div class="field">
-    <label>x</label>
-    <input type="number" id="x-input" value="2" step="0.1" />
+  <div class="controls"></div>
+
+  <div id="header">
+    <span id="phase-badge">Setup</span>
+    <span style="font-size:13px;font-weight:700;">Pow(x, n) — Fast Exponentiation</span>
+    <span id="result-badge" class="result-badge"></span>
+    <span id="step-counter">Step 0 / 0</span>
   </div>
-  <div class="field">
-    <label>n</label>
-    <input type="number" id="n-input" value="10" />
-  </div>
-  <button onclick="buildAndRun()" style="padding:7px 18px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);font-weight:600;cursor:pointer;">Run</button>
-  <button onclick="randomExample()" style="padding:7px 14px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;">🎲 Random</button>
-</div>
 
-<!-- TOP -->
-<div class="top-bar">
-  <span class="result-badge" id="result-badge"></span>
-</div>
-
-<!-- MIDDLE -->
-<div class="middle">
-
-  <!-- LEFT: state + bit strip -->
-  <div class="panel-box">
-    <div class="panel-title">State</div>
-    <div class="state-grid">
-      <div class="state-box" id="box-x">
-        <span class="state-key">x</span>
-        <span class="state-val accent" id="val-x">—</span>
+  <div id="main">
+    <div id="viz-area">
+      <div class="panel-box">
+        <div class="panel-title">State</div>
+        <div class="state-grid">
+          <div class="state-box">
+            <span class="state-key">x</span>
+            <span class="state-val accent" id="val-x">—</span>
+          </div>
+          <div class="state-box">
+            <span class="state-key">n</span>
+            <span class="state-val yellow" id="val-n">—</span>
+          </div>
+          <div class="state-box">
+            <span class="state-key">result</span>
+            <span class="state-val green" id="val-result">—</span>
+          </div>
+        </div>
+        <div class="panel-title" style="margin-top:4px">n in Binary (LSB→MSB)</div>
+        <div class="bit-area">
+          <div class="bit-row">
+            <span class="bit-label">bits</span>
+            <div class="bit-cells" id="bit-cells"></div>
+          </div>
+        </div>
       </div>
-      <div class="state-box" id="box-n">
-        <span class="state-key">n</span>
-        <span class="state-val yellow" id="val-n">—</span>
+      <div class="panel-box">
+        <div class="panel-title">Step Description</div>
+        <div class="step-desc" id="step-desc">Press Run to start.</div>
       </div>
-      <div class="state-box" id="box-result">
-        <span class="state-key">result</span>
-        <span class="state-val green" id="val-result">—</span>
+      <div class="panel-box" style="flex:1;min-height:0">
+        <div class="panel-title">Operation Log</div>
+        <div class="op-scroll">
+          <div class="op-list" id="op-list"></div>
+        </div>
       </div>
     </div>
 
-    <div class="panel-title" style="margin-top:4px">n in Binary (LSB→MSB)</div>
-    <div class="bit-area">
-      <div class="bit-row">
-        <span class="bit-label">bits</span>
-        <div class="bit-cells" id="bit-cells"></div>
+    <div id="resize-handle"></div>
+
+    <div id="code-panel">
+      <div class="code-panel-title">Python Solution</div>
+      <pre class="code-body" id="code-body"></pre>
+    </div>
+
+    <div id="sidebar">
+      <div class="panel-box">
+        <div class="panel-title">Algorithm</div>
+        <div style="font-size:0.72rem;color:var(--text-muted);line-height:1.6">
+          <div>Binary exponentiation</div>
+          <div style="margin-top:6px;color:var(--text-dim)">If n is odd, multiply result by x</div>
+          <div style="color:var(--text-dim)">Square x each iteration</div>
+          <div style="color:var(--text-dim)">Halve n each iteration</div>
+          <div style="margin-top:6px;color:var(--green)">O(log n) time</div>
+          <div style="color:var(--text-dim)">O(1) space</div>
+        </div>
       </div>
     </div>
   </div>
 
-  <!-- RIGHT: op log -->
-  <div class="panel-box">
-    <div class="panel-title">Operation Log</div>
-    <div class="op-scroll">
-      <div class="op-list" id="op-list"></div>
-    </div>
-  </div>
-
-</div>
-
-<!-- BOTTOM -->
-<div class="bottom-bar">
-  <div class="step-info">
-    <span class="phase-label" id="phase-label">Step 0 / 0</span>
-    <span class="step-desc" id="step-desc">Press Run to start.</span>
-  </div>
-  <div class="nav-row">
-    <button id="prevBtn">&#8592; Prev</button>
-    <button id="playBtn">&#9654; Play</button>
-    <button id="stepBtn">Next &#8594;</button>
+  <div id="nav-row">
+    <button id="prevBtn" class="btn-step">&#8592; Prev</button>
+    <button id="stepBtn" class="btn-step">Step &#8594;</button>
+    <button id="playBtn" class="btn-play">Play</button>
+    <button id="resetBtn" class="btn-step">&#8635; Reset</button>
     <select id="speedSel">
-      <option value="1200">0.5×</option>
-      <option value="700" selected>1×</option>
-      <option value="350">2×</option>
-      <option value="150">4×</option>
+      <option value="800">0.5&#215;</option>
+      <option value="400" selected>1&#215;</option>
+      <option value="200">2&#215;</option>
+      <option value="100">4&#215;</option>
     </select>
   </div>
-</div>
 
 <script>
 'use strict';
+var nav = null, steps = [];
+var lastX, lastN;
 
-var nav = null;
-var steps = [];
+var CODE_LINES = [
+  { id: 1,  html: '<span class="kw">def</span> <span class="fn">myPow</span>(x, n):' },
+  { id: 2,  html: '    <span class="kw">if</span> n < 0:' },
+  { id: 3,  html: '        x, n = 1/x, -n' },
+  { id: 4,  html: '    result = 1' },
+  { id: 5,  html: '    <span class="kw">while</span> n > 0:' },
+  { id: 6,  html: '        <span class="kw">if</span> n & 1:  <span class="cm"># n is odd</span>' },
+  { id: 7,  html: '            result *= x' },
+  { id: 8,  html: '        x *= x   <span class="cm"># square x</span>' },
+  { id: 9,  html: '        n >>= 1  <span class="cm"># halve n</span>' },
+  { id: 10, html: '    <span class="kw">return</span> result' },
+];
 
-function fmt(v) {
-  // show up to 6 significant digits, strip trailing zeros
-  var s = parseFloat(v.toPrecision(10)).toString();
-  return s;
+function buildCodePanel() {
+  var body = document.getElementById('code-body');
+  body.innerHTML = CODE_LINES.map(function(l) {
+    return '<span class="cl" id="cl-' + l.id + '">' + l.html + '</span>';
+  }).join('\n');
 }
 
-// ── preset and random ────────────────────────────────────────────────────────
+function highlightLines(lines) {
+  CODE_LINES.forEach(function(l) {
+    var el = document.getElementById('cl-' + l.id);
+    if (!el) return;
+    if (lines.indexOf(l.id) >= 0) el.classList.add('hl'); else el.classList.remove('hl');
+  });
+}
+
+function fmt(v) { return parseFloat(v.toPrecision(10)).toString(); }
 
 function loadPreset() {
   var sel = document.getElementById('presetSel');
@@ -279,8 +215,7 @@ function loadPreset() {
 }
 
 function randomExample() {
-  var xMin = -5, xMax = 5;
-  var nMin = -15, nMax = 15;
+  var xMin = -5, xMax = 5, nMin = -15, nMax = 15;
   var x = Math.random() * (xMax - xMin) + xMin;
   var n = Math.floor(Math.random() * (nMax - nMin + 1)) + nMin;
   x = parseFloat(x.toFixed(2));
@@ -290,123 +225,57 @@ function randomExample() {
   buildAndRun();
 }
 
-// ── simulate ─────────────────────────────────────────────────────────────────
-
 function simulate(xOrig, nOrig) {
-  var out = [];
-  var ops = [];
-
-  // normalise negative exponent
-  var x = xOrig;
-  var n = nOrig;
+  var out = [], ops = [];
+  var x = xOrig, n = nOrig;
   var negExp = n < 0;
   if (negExp) { x = 1 / x; n = -n; }
-
-  // binary representation (LSB first)
   var bits = [];
   var tmp = n;
-  if (tmp === 0) { bits = [0]; }
-  else { while (tmp > 0) { bits.push(tmp & 1); tmp = Math.floor(tmp / 2); } }
+  if (tmp === 0) { bits = [0]; } else { while (tmp > 0) { bits.push(tmp & 1); tmp = Math.floor(tmp / 2); } }
 
-  out.push({
-    phase: 'Init',
-    desc: 'x = ' + xOrig + ', n = ' + nOrig + (negExp ? '. n < 0 → x = 1/x = ' + fmt(x) + ', n = ' + n : '') + '. result = 1. Iterate while n > 0.',
-    x: x,
-    n: n,
-    result: 1,
-    iterIdx: -1,
-    bits: bits.slice(),
-    consumedBits: 0,
-    ops: [],
-    opIdx: -1,
-    done: false,
-    finalResult: null
-  });
+  var initLines = [1];
+  if (negExp) initLines.push(2, 3);
+  initLines.push(4, 5);
 
-  var result = 1;
-  var iterIdx = 0;
+  out.push({ phase: 'Init', desc: 'x = ' + xOrig + ', n = ' + nOrig + (negExp ? '. n < 0 → x = 1/x = ' + fmt(x) + ', n = ' + n : '') + '. result = 1.', x: x, n: n, result: 1, iterIdx: -1, bits: bits.slice(), consumedBits: 0, ops: [], opIdx: -1, done: false, finalResult: null, lines: initLines });
 
+  var result = 1, iterIdx = 0;
   while (n > 0) {
     var isOdd = (n & 1) === 1;
-    var prevResult = result;
-    var prevX = x;
-    var prevN = n;
-
-    var actionParts = [];
-    var detailParts = [];
-
+    var prevResult = result, prevX = x, prevN = n;
+    var actionParts = [], detailParts = [];
+    var iterLines = [5, 6];
     if (isOdd) {
       result *= x;
       actionParts.push('n is ODD → result × x = ' + fmt(prevResult) + ' × ' + fmt(prevX) + ' = ' + fmt(result));
       detailParts.push('n & 1 == 1');
+      iterLines.push(7);
     } else {
       actionParts.push('n is EVEN → result unchanged = ' + fmt(result));
     }
-
     var xSq = x * x;
     n = Math.floor(n / 2);
     actionParts.push('x² = ' + fmt(prevX) + '² = ' + fmt(xSq) + ',  n >>= 1 → ' + n);
     x = xSq;
-
-    ops.push({
-      iter: iterIdx + 1,
-      action: actionParts.join('  |  '),
-      detail: detailParts.join(''),
-      isOdd: isOdd
-    });
-
-    out.push({
-      phase: 'Iter ' + (iterIdx + 1),
-      desc: (isOdd ? 'n is odd → multiply result by x. ' : 'n is even → skip multiply. ') + 'Square x, halve n.',
-      x: x,
-      n: n,
-      result: result,
-      iterIdx: iterIdx,
-      bits: bits.slice(),
-      consumedBits: iterIdx + 1,
-      ops: ops.slice(),
-      opIdx: ops.length - 1,
-      done: false,
-      finalResult: null
-    });
-
+    iterLines.push(8, 9);
+    ops.push({ iter: iterIdx+1, action: actionParts.join('  |  '), detail: detailParts.join(''), isOdd: isOdd });
+    out.push({ phase: 'Iter ' + (iterIdx+1), desc: (isOdd ? 'n is odd → multiply result by x. ' : 'n is even → skip multiply. ') + 'Square x, halve n.', x: x, n: n, result: result, iterIdx: iterIdx, bits: bits.slice(), consumedBits: iterIdx+1, ops: ops.slice(), opIdx: ops.length-1, done: false, finalResult: null, lines: iterLines });
     iterIdx++;
   }
-
-  out.push({
-    phase: 'Result',
-    desc: 'n = 0 → done. ' + xOrig + '^' + nOrig + ' = ' + fmt(result),
-    x: x,
-    n: 0,
-    result: result,
-    iterIdx: iterIdx,
-    bits: bits.slice(),
-    consumedBits: bits.length,
-    ops: ops.slice(),
-    opIdx: ops.length,
-    done: true,
-    finalResult: result
-  });
-
+  out.push({ phase: 'Result', desc: 'n = 0 → done. ' + xOrig + '^' + nOrig + ' = ' + fmt(result), x: x, n: 0, result: result, iterIdx: iterIdx, bits: bits.slice(), consumedBits: bits.length, ops: ops.slice(), opIdx: ops.length, done: true, finalResult: result, lines: [10] });
   return out;
 }
 
-// ── render ────────────────────────────────────────────────────────────────────
-
-function buildBitCells(bits, consumed, iterIdx) {
+function buildBitCells(bits, consumed) {
   var container = document.getElementById('bit-cells');
   container.innerHTML = '';
   bits.forEach(function(b, i) {
     var el = document.createElement('div');
-    var isActive = i === consumed;
-    var isOdd = b === 1;
-    if (i < consumed) {
-      el.className = 'bcel consumed';
-    } else if (isActive) {
-      el.className = 'bcel active' + (isOdd ? ' odd' : '');
-    } else {
-      el.className = 'bcel';
-    }
+    var isActive = i === consumed, isOdd = b === 1;
+    if (i < consumed) el.className = 'bcel consumed';
+    else if (isActive) el.className = 'bcel active' + (isOdd ? ' odd' : '');
+    else el.className = 'bcel';
     el.textContent = b;
     container.appendChild(el);
   });
@@ -418,33 +287,15 @@ function buildOpList(ops, currentOpIdx) {
   ops.forEach(function(op, i) {
     var row = document.createElement('div');
     row.className = 'op-row' + (i === currentOpIdx ? ' current' : '');
-
-    var top = document.createElement('div');
-    top.className = 'op-top';
-
-    var iter = document.createElement('span');
-    iter.className = 'op-iter';
-    iter.textContent = '#' + op.iter;
-
-    var action = document.createElement('span');
-    action.className = 'op-action';
+    var top = document.createElement('div'); top.className = 'op-top';
+    var iter = document.createElement('span'); iter.className = 'op-iter'; iter.textContent = '#' + op.iter;
+    var action = document.createElement('span'); action.className = 'op-action';
     if (op.isOdd) action.style.color = '#fde68a';
     action.textContent = op.action;
-
-    top.appendChild(iter);
-    top.appendChild(action);
-    row.appendChild(top);
-
-    if (op.detail) {
-      var detail = document.createElement('div');
-      detail.className = 'op-detail';
-      detail.textContent = op.detail;
-      row.appendChild(detail);
-    }
-
+    top.appendChild(iter); top.appendChild(action); row.appendChild(top);
+    if (op.detail) { var detail = document.createElement('div'); detail.className = 'op-detail'; detail.textContent = op.detail; row.appendChild(detail); }
     list.appendChild(row);
   });
-
   var cur = list.children[currentOpIdx];
   if (cur) cur.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
 }
@@ -453,31 +304,22 @@ function applyStep(snap) {
   document.getElementById('val-x').textContent = fmt(snap.x);
   document.getElementById('val-n').textContent = snap.n;
   document.getElementById('val-result').textContent = fmt(snap.result);
-
-  buildBitCells(snap.bits, snap.consumedBits, snap.iterIdx);
+  buildBitCells(snap.bits, snap.consumedBits);
   buildOpList(snap.ops, snap.opIdx);
-
   var badge = document.getElementById('result-badge');
-  if (snap.done && snap.finalResult !== null) {
-    badge.textContent = '= ' + fmt(snap.finalResult);
-    badge.style.display = '';
-  } else {
-    badge.style.display = 'none';
-  }
+  if (snap.done && snap.finalResult !== null) { badge.textContent = '= ' + fmt(snap.finalResult); badge.style.display = ''; }
+  else badge.style.display = 'none';
+  highlightLines(snap.lines || []);
 }
-
-// ── init ──────────────────────────────────────────────────────────────────────
 
 function buildAndRun() {
   var xVal = parseFloat(document.getElementById('x-input').value);
   var nVal = parseInt(document.getElementById('n-input').value, 10);
   if (isNaN(xVal) || isNaN(nVal)) return;
-
+  lastX = xVal; lastN = nVal;
   document.getElementById('result-badge').style.display = 'none';
   document.getElementById('op-list').innerHTML = '';
-
   steps = simulate(xVal, nVal);
-
   nav = VizNav({
     btnPrev:  document.getElementById('prevBtn'),
     btnNext:  document.getElementById('stepBtn'),
@@ -485,21 +327,31 @@ function buildAndRun() {
     speedSel: document.getElementById('speedSel'),
     render: function(snap, cur, total) {
       applyStep(snap);
-      document.getElementById('phase-label').textContent = 'Step ' + (cur + 1) + ' / ' + total + '  ·  ' + snap.phase;
+      document.getElementById('phase-badge').textContent = snap.phase;
+      document.getElementById('step-counter').textContent = 'Step ' + (cur+1) + ' / ' + total;
       var descEl = document.getElementById('step-desc');
       gsap.fromTo(descEl, { opacity: 0 }, { opacity: 1, duration: 0.15 });
       descEl.textContent = snap.desc;
     }
   });
-
   nav.load(steps);
 }
 
 document.addEventListener('DOMContentLoaded', function() {
+  buildCodePanel();
   document.getElementById('x-input').addEventListener('keydown', function(e) { if (e.key === 'Enter') buildAndRun(); });
   document.getElementById('n-input').addEventListener('keydown', function(e) { if (e.key === 'Enter') buildAndRun(); });
+  document.getElementById('resetBtn').addEventListener('click', function() { if (nav) nav.load(steps); });
   buildAndRun();
 });
+
+(function() {
+  var handle = document.getElementById('resize-handle'), panel = document.getElementById('code-panel');
+  var dragging = false, startX = 0, startW = 0;
+  handle.addEventListener('mousedown', function(e) { dragging = true; startX = e.clientX; startW = panel.offsetWidth; e.preventDefault(); });
+  document.addEventListener('mousemove', function(e) { if (!dragging) return; panel.style.width = Math.min(560, Math.max(120, startW + (startX - e.clientX))) + 'px'; });
+  document.addEventListener('mouseup', function() { dragging = false; });
+})();
 </script>
 </body>
 </html>

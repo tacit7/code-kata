@@ -8,398 +8,95 @@
   <script src="../shared/gsap.min.js"></script>
   <script src="../shared/viz.js"></script>
   <style>
-    .viz-area {
-      width: 100%;
-      max-width: 90%;
-      display: flex;
-      flex-direction: column;
-      gap: 14px;
-    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: "Fira Code","Cascadia Code",monospace; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+    #header { padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+    #phase-badge { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; padding: 3px 10px; border-radius: var(--radius-sm); background: #1e3a5f; color: var(--blue); border: 1px solid var(--blue); }
+    #step-counter { font-size: 12px; color: var(--text-muted); margin-left: auto; }
+    .viz-inputs { width: 100%; padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; flex-wrap: wrap; gap: 12px; align-items: center; flex-shrink: 0; }
+    #main { display: flex; flex: 1; overflow: hidden; }
+    #viz-area { flex: 1; display: flex; flex-direction: column; padding: 14px; gap: 14px; overflow-y: auto; }
+    #resize-handle { width: 5px; flex-shrink: 0; cursor: col-resize; background: transparent; border-left: 1px solid var(--border); transition: background .15s; }
+    #code-panel { width: 350px; min-width: 120px; max-width: 560px; flex-shrink: 0; background: #0d1117; border-right: 1px solid var(--border); overflow-y: auto; padding: 10px 12px; display: flex; flex-direction: column; }
+    .code-panel-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--text-dim); margin-bottom: 8px; }
+    #sidebar { width: 220px; flex-shrink: 0; background: var(--surface); border-left: 1px solid var(--border); overflow-y: auto; padding: 14px 12px; display: flex; flex-direction: column; gap: 12px; }
+    #nav-row { flex-shrink: 0; display: flex; align-items: center; gap: 8px; padding: 10px 16px; background: var(--surface); border-top: 1px solid var(--border); }
+    .btn-step { padding: 6px 14px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--surface); color: var(--text); font-family: inherit; font-size: 12px; cursor: pointer; }
+    .btn-play { padding: 6px 14px; border-radius: var(--radius-sm); background: var(--accent); border-color: var(--accent); color: #fff; font-family: inherit; font-size: 12px; cursor: pointer; }
+    #speedSel { background: var(--surface); border: 1px solid var(--border); color: var(--text); border-radius: var(--radius-sm); padding: 5px 8px; font-size: 12px; cursor: pointer; }
 
-    .main-row {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 14px;
-      align-items: start;
-    }
-
-    @media (max-width: 800px) {
-      .main-row { grid-template-columns: 1fr; }
-    }
-
-    /* Stack columns */
-    .stacks-panel {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-lg);
-      padding: 16px;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-    }
-
-    .stacks-row {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 16px;
-      align-items: end;
-    }
-
-    .stack-col {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-    }
-
-    .stack-label {
-      font-size: 0.65rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-      color: var(--text-dim);
-      margin-bottom: 4px;
-      text-align: center;
-    }
-
-    .stack-cells {
-      display: flex;
-      flex-direction: column-reverse;
-      gap: 4px;
-      min-height: 180px;
-      justify-content: flex-end;
-    }
-
-    .stack-cell {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      height: 42px;
-      border-radius: var(--radius-sm);
-      border: 2px solid var(--border);
-      background: #1a1e2e;
-      font-family: monospace;
-      font-size: 1rem;
-      font-weight: 700;
-      color: var(--text);
-      transition: background 0.25s, border-color 0.25s, box-shadow 0.25s;
-      position: relative;
-    }
-
-    .stack-cell.top-marker::after {
-      content: 'TOP';
-      position: absolute;
-      right: -38px;
-      font-size: 0.55rem;
-      font-weight: 700;
-      color: var(--text-dim);
-      letter-spacing: 0.07em;
-    }
-
-    .stack-cell.state-push {
-      background: rgba(224, 140, 50, 0.18);
-      border-color: var(--orange);
-      color: var(--orange);
-      box-shadow: 0 0 10px rgba(224, 140, 50, 0.3);
-    }
-
-    .stack-cell.state-pop {
-      background: rgba(247, 118, 142, 0.15);
-      border-color: var(--red);
-      color: var(--red);
-      box-shadow: 0 0 10px rgba(247, 118, 142, 0.3);
-    }
-
-    .stack-cell.state-min {
-      background: rgba(158, 206, 106, 0.15);
-      border-color: var(--green);
-      color: var(--green);
-      box-shadow: 0 0 10px rgba(158, 206, 106, 0.3);
-    }
-
-    .stack-cell.state-highlight {
-      background: rgba(122, 162, 247, 0.15);
-      border-color: var(--accent);
-      color: var(--accent);
-      box-shadow: 0 0 10px rgba(122, 162, 247, 0.3);
-    }
-
-    .stack-empty {
-      text-align: center;
-      color: var(--text-dim);
-      font-size: 0.75rem;
-      padding: 16px 0;
-      font-style: italic;
-    }
-
-    /* Operation + result panel */
-    .op-panel {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-lg);
-      padding: 14px 16px;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-
-    .op-label {
-      font-size: 0.65rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-      color: var(--text-dim);
-    }
-
-    .op-name {
-      font-size: 1.1rem;
-      font-weight: 700;
-      font-family: monospace;
-      color: var(--accent);
-    }
-
-    .op-result {
-      font-size: 0.9rem;
-      font-weight: 700;
-      color: var(--green);
-    }
-
+    .stacks-panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+    .stacks-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: end; }
+    .stack-col { display: flex; flex-direction: column; gap: 6px; }
+    .stack-label { font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-dim); margin-bottom: 4px; text-align: center; }
+    .stack-cells { display: flex; flex-direction: column-reverse; gap: 4px; min-height: 160px; justify-content: flex-end; }
+    .stack-cell { display: flex; align-items: center; justify-content: center; height: 40px; border-radius: var(--radius-sm); border: 2px solid var(--border); background: #1a1e2e; font-family: monospace; font-size: 1rem; font-weight: 700; color: var(--text); transition: background 0.25s, border-color 0.25s, box-shadow 0.25s; position: relative; }
+    .stack-cell.top-marker::after { content: 'TOP'; position: absolute; right: -38px; font-size: 0.55rem; font-weight: 700; color: var(--text-dim); letter-spacing: 0.07em; }
+    .stack-cell.state-push { background: rgba(224,140,50,0.18); border-color: var(--orange); color: var(--orange); box-shadow: 0 0 10px rgba(224,140,50,0.3); }
+    .stack-cell.state-pop { background: rgba(247,118,142,0.15); border-color: var(--red); color: var(--red); box-shadow: 0 0 10px rgba(247,118,142,0.3); }
+    .stack-cell.state-min { background: rgba(158,206,106,0.15); border-color: var(--green); color: var(--green); box-shadow: 0 0 10px rgba(158,206,106,0.3); }
+    .stack-cell.state-highlight { background: rgba(122,162,247,0.15); border-color: var(--accent); color: var(--accent); box-shadow: 0 0 10px rgba(122,162,247,0.3); }
+    .stack-empty { text-align: center; color: var(--text-dim); font-size: 0.75rem; padding: 16px 0; font-style: italic; }
+    .op-panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; }
+    .op-label { font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-dim); }
+    .op-name { font-size: 1.1rem; font-weight: 700; font-family: monospace; color: var(--accent); }
+    .op-result { font-size: 0.9rem; font-weight: 700; color: var(--green); }
     .op-result.hidden { display: none; }
-
-    .op-desc {
-      font-size: 0.85rem;
-      color: var(--text-muted);
-      line-height: 1.5;
-    }
-
-    /* Code panel */
-    .code-panel {
-      background: #0a0d14;
-      border: 1px solid var(--border);
-      border-radius: var(--radius-lg);
-      overflow: hidden;
-      display: flex;
-      flex-direction: column;
-    }
-
-    .code-header {
-      padding: 9px 14px;
-      background: var(--surface);
-      border-bottom: 1px solid var(--border);
-      font-size: 0.67rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.11em;
-      color: var(--text-dim);
-    }
-
-    .code-body {
-      padding: 10px 0;
-      font-family: 'JetBrains Mono', 'Fira Code', monospace;
-      font-size: 0.75rem;
-      line-height: 1.75;
-      overflow-x: auto;
-      flex: 1;
-    }
-
-    .code-line {
-      display: flex;
-      align-items: stretch;
-      border-left: 3px solid transparent;
-      padding: 0 14px 0 0;
-      white-space: pre;
-      transition: background 0.2s, border-color 0.2s;
-    }
-
-    .code-line.hl {
-      background: rgba(122, 162, 247, 0.12);
-      border-left-color: var(--accent);
-      padding-left: 6px;
-    }
-
-    .code-line .ln {
-      width: 28px;
-      min-width: 28px;
-      text-align: right;
-      color: #3d4468;
-      user-select: none;
-      padding-right: 14px;
-      font-size: 0.7rem;
-    }
-
+    .op-desc { font-size: 0.85rem; color: var(--text-muted); line-height: 1.5; }
+    .code-body { padding: 4px 0; font-family: 'JetBrains Mono','Fira Code',monospace; font-size: 0.72rem; line-height: 1.75; overflow-x: auto; flex: 1; }
+    .code-line { display: flex; align-items: stretch; border-left: 3px solid transparent; padding: 0 4px 0 0; white-space: pre; transition: background 0.2s, border-color 0.2s; }
+    .code-line.hl { background: rgba(122,162,247,0.12); border-left-color: var(--accent); padding-left: 6px; }
+    .code-line .ln { width: 24px; min-width: 24px; text-align: right; color: #3d4468; user-select: none; padding-right: 10px; font-size: 0.68rem; }
     .code-line .code { color: var(--text-muted); }
-    .kw { color: var(--purple); }
-    .fn { color: var(--blue); }
-    .nb { color: var(--green); }
-    .cm { color: #5c6370; font-style: italic; }
-    .st { color: var(--yellow); }
-
-    /* Sequence bar */
-    .sequence-bar {
-      display: flex;
-      gap: 6px;
-      flex-wrap: wrap;
-      align-items: center;
-    }
-
-    .seq-chip {
-      padding: 3px 8px;
-      border-radius: var(--radius-sm);
-      font-family: monospace;
-      font-size: 0.72rem;
-      font-weight: 600;
-      background: #1a1e2e;
-      border: 1px solid var(--border);
-      color: var(--text-dim);
-      transition: background 0.2s, border-color 0.2s, color 0.2s;
-    }
-
-    .seq-chip.active {
-      background: rgba(122, 162, 247, 0.2);
-      border-color: var(--accent);
-      color: var(--accent);
-    }
-
-    .seq-chip.done {
-      background: rgba(158, 206, 106, 0.1);
-      border-color: var(--green);
-      color: var(--green);
-    }
-
-    /* Controls */
-    .btn-step {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-sm);
-      color: var(--text);
-      cursor: pointer;
-      font-size: 0.9rem;
-      font-weight: 600;
-      padding: 7px 12px;
-      transition: background 0.2s, border-color 0.2s;
-    }
-
-    .btn-step:hover:not(:disabled) {
-      background: var(--accent);
-      color: #fff;
-      border-color: var(--accent);
-    }
-
-    .btn-step:disabled { opacity: 0.4; cursor: not-allowed; }
-
-    .btn-play {
-      background: #15803d;
-      border: none;
-      border-radius: var(--radius-sm);
-      color: #fff;
-      cursor: pointer;
-      font-size: 0.88rem;
-      font-weight: 600;
-      padding: 7px 16px;
-      transition: background 0.2s;
-    }
-
-    .btn-play:hover:not(:disabled) { background: #16a34a; }
-    .btn-play:disabled { opacity: 0.4; cursor: not-allowed; }
-
-    .nav-row {
-      display: flex;
-      gap: 8px;
-      align-items: center;
-      flex-wrap: wrap;
-    }
-
-    #speedSel {
-      background: var(--bg);
-      border: 1px solid var(--border);
-      color: var(--text);
-      border-radius: var(--radius-sm);
-      padding: 6px 10px;
-      font-size: 0.85rem;
-      cursor: pointer;
-    }
-
-    .step-counter {
-      font-size: 0.75rem;
-      color: var(--text-dim);
-      margin-left: 4px;
-    }
-
-    .page-sub {
-      color: var(--text-dim);
-      font-size: 0.85rem;
-    }
-
-    .legend-row {
-      display: flex;
-      gap: 12px;
-      flex-wrap: wrap;
-    }
-
-    .legend-item {
-      display: flex;
-      align-items: center;
-      gap: 5px;
-      font-size: 0.72rem;
-      color: var(--text-dim);
-    }
-
-    .legend-dot {
-      width: 10px;
-      height: 10px;
-      border-radius: 2px;
-      flex-shrink: 0;
-    }
+    .sequence-bar { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+    .seq-chip { padding: 3px 8px; border-radius: var(--radius-sm); font-family: monospace; font-size: 0.72rem; font-weight: 600; background: #1a1e2e; border: 1px solid var(--border); color: var(--text-dim); transition: background 0.2s, border-color 0.2s, color 0.2s; }
+    .seq-chip.active { background: rgba(122,162,247,0.2); border-color: var(--accent); color: var(--accent); }
+    .seq-chip.done { background: rgba(158,206,106,0.1); border-color: var(--green); color: var(--green); }
+    .legend-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 6px; }
+    .legend-item { display: flex; align-items: center; gap: 5px; font-size: 0.68rem; color: var(--text-dim); }
+    .legend-dot { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+    .sidebar-label { font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--text-dim); margin-bottom: 6px; }
+    .vi-btn { padding: 6px 14px; border-radius: var(--radius-sm); border: 1px solid var(--accent); background: var(--accent); color: #fff; font-family: inherit; font-size: 12px; cursor: pointer; font-weight: 600; }
+    .vi-btn-sec { padding: 6px 14px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--surface); color: var(--text); font-family: inherit; font-size: 12px; cursor: pointer; }
+    .vi-label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--text-dim); margin-bottom: 4px; display: block; }
   </style>
 </head>
-<body class="page">
-  <div class="page-header">
-    <a class="back-link" href="../index.html">← All Algorithms</a>
+<body>
+  <div class="viz-inputs">
     <div>
-      <div class="page-title">Min Stack</div>
-      <div class="page-sub">LeetCode #155 · stack · O(1) push/pop/top/getMin · O(n) space</div>
+      <label class="vi-label">Preset</label>
+      <select id="presetSel" onchange="loadPreset()" style="background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:var(--radius-sm);padding:5px 8px;font-size:0.82rem;">
+        <option value="">— pick a preset —</option>
+        <option value="classic">Classic (push+pop+getMin)</option>
+        <option value="bigstack">Big Stack</option>
+        <option value="alternating">Alternating</option>
+      </select>
     </div>
+    <button class="vi-btn" onclick="buildAndRun()">Run</button>
+    <button class="vi-btn-sec" onclick="randomExample()">🎲 Random</button>
+  </div>
+  <div class="controls"></div>
+
+  <div id="header">
+    <span id="phase-badge">Setup</span>
+    <span style="font-size:13px;font-weight:700;">Min Stack</span>
+    <span id="step-counter">Step 0 / 0</span>
   </div>
 
-  <div class="viz-area">
-    <!-- Nav controls -->
-    <div class="panel-box" style="flex:0 0 auto">
-      <div class="nav-row">
-        <button id="prevBtn" class="btn-step">← Prev</button>
-        <button id="stepBtn" class="btn-step">Step →</button>
-        <button id="playBtn" class="btn-play">Play</button>
-        <button id="resetBtn" class="btn-step">↺ Reset</button>
-        <select id="speedSel">
-          <option value="800">0.5×</option>
-          <option value="400" selected>1×</option>
-          <option value="200">2×</option>
-          <option value="100">4×</option>
-        </select>
-        <span class="step-counter" id="stepCounter">Step 0 / 0</span>
+  <div id="main">
+    <div id="viz-area">
+      <div class="op-panel">
+        <div class="op-label">Current Operation</div>
+        <div class="op-name" id="op-name">—</div>
+        <div class="op-desc" id="op-desc">Press Step or Play to begin.</div>
+        <div class="op-result hidden" id="op-result"></div>
+        <div class="legend-row">
+          <div class="legend-item"><div class="legend-dot" style="background:var(--orange)"></div> pushed</div>
+          <div class="legend-item"><div class="legend-dot" style="background:var(--red)"></div> popped</div>
+          <div class="legend-item"><div class="legend-dot" style="background:var(--green)"></div> minimum</div>
+          <div class="legend-item"><div class="legend-dot" style="background:var(--accent)"></div> highlighted</div>
+        </div>
       </div>
-    </div>
-
-    <!-- Operation sequence display -->
-    <div class="panel-box">
-      <div style="font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--text-dim);margin-bottom:8px">Operation Sequence</div>
-      <div class="sequence-bar" id="sequence-bar"></div>
-    </div>
-
-    <!-- Current operation + legend -->
-    <div class="op-panel">
-      <div class="op-label">Current Operation</div>
-      <div class="op-name" id="op-name">—</div>
-      <div class="op-desc" id="op-desc">Press Step or Play to begin.</div>
-      <div class="op-result hidden" id="op-result"></div>
-      <div class="legend-row" style="margin-top:6px">
-        <div class="legend-item"><div class="legend-dot" style="background:var(--orange)"></div> being pushed</div>
-        <div class="legend-item"><div class="legend-dot" style="background:var(--red)"></div> being popped</div>
-        <div class="legend-item"><div class="legend-dot" style="background:var(--green)"></div> current minimum</div>
-        <div class="legend-item"><div class="legend-dot" style="background:var(--accent)"></div> highlighted (top/getMin)</div>
-      </div>
-    </div>
-
-    <div class="main-row">
-      <!-- Left: the two stacks -->
       <div class="stacks-panel">
         <div style="font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--text-dim)">Stack State</div>
         <div class="stacks-row">
@@ -413,17 +110,96 @@
           </div>
         </div>
       </div>
-
-      <!-- Right: code panel -->
-      <div class="code-panel">
-        <div class="code-header">Python Solution</div>
-        <div class="code-body" id="code-body"></div>
-      </div>
     </div>
+
+    <div id="resize-handle"></div>
+
+    <div id="code-panel">
+      <div class="code-panel-title">Python Solution</div>
+      <div class="code-body" id="code-body"></div>
+    </div>
+
+    <div id="sidebar">
+      <div class="sidebar-label">Operation Sequence</div>
+      <div class="sequence-bar" id="sequence-bar"></div>
+    </div>
+  </div>
+
+  <div id="nav-row">
+    <button id="prevBtn" class="btn-step">&#8592; Prev</button>
+    <button id="stepBtn" class="btn-step">Step &#8594;</button>
+    <button id="playBtn" class="btn-play">Play</button>
+    <button id="resetBtn" class="btn-step">&#8635; Reset</button>
+    <select id="speedSel">
+      <option value="800">0.5&#215;</option>
+      <option value="400" selected>1&#215;</option>
+      <option value="200">2&#215;</option>
+      <option value="100">4&#215;</option>
+    </select>
   </div>
 
   <script>
     var nav;
+    var STEPS = [];
+
+    var PRESET_OPS = {
+      classic: [
+        { op: 'push', val: 5 }, { op: 'push', val: 3 }, { op: 'push', val: 7 },
+        { op: 'push', val: 2 }, { op: 'push', val: 8 }, { op: 'getMin' },
+        { op: 'pop' }, { op: 'getMin' }, { op: 'pop' }, { op: 'top' }
+      ],
+      bigstack: [
+        { op: 'push', val: 10 }, { op: 'push', val: 4 }, { op: 'push', val: 7 },
+        { op: 'push', val: 1 }, { op: 'push', val: 9 }, { op: 'push', val: 3 },
+        { op: 'getMin' }, { op: 'pop' }, { op: 'pop' }, { op: 'getMin' }
+      ],
+      alternating: [
+        { op: 'push', val: 6 }, { op: 'getMin' }, { op: 'push', val: 2 },
+        { op: 'getMin' }, { op: 'push', val: 8 }, { op: 'getMin' },
+        { op: 'pop' }, { op: 'getMin' }, { op: 'top' }
+      ]
+    };
+
+    var OPERATIONS = PRESET_OPS.classic;
+
+    function loadPreset() {
+      var sel = document.getElementById('presetSel');
+      if (!sel.value) return;
+      OPERATIONS = PRESET_OPS[sel.value];
+      buildAndRun();
+    }
+
+    function randomExample() {
+      var ops = [];
+      var stackSize = 0;
+      var values = [1,2,3,4,5,6,7,8,9,10];
+      var n = 5 + Math.floor(Math.random() * 5);
+      for (var i = 0; i < n; i++) {
+        var r = Math.random();
+        if (stackSize === 0 || r < 0.5) {
+          var v = values[Math.floor(Math.random() * values.length)];
+          ops.push({ op: 'push', val: v });
+          stackSize++;
+        } else if (r < 0.7 && stackSize > 0) {
+          ops.push({ op: 'pop' });
+          stackSize--;
+        } else if (r < 0.85 && stackSize > 0) {
+          ops.push({ op: 'getMin' });
+        } else if (stackSize > 0) {
+          ops.push({ op: 'top' });
+        }
+      }
+      if (stackSize === 0) ops.push({ op: 'push', val: 5 });
+      OPERATIONS = ops;
+      document.getElementById('presetSel').value = '';
+      buildAndRun();
+    }
+
+    function buildAndRun() {
+      STEPS = simulate();
+      buildSequenceBar();
+      nav.load(STEPS);
+    }
 
     var pythonCode = [
       'class MinStack:',
@@ -451,44 +227,19 @@
     function buildCodePanel() {
       var body = document.getElementById('code-body');
       body.innerHTML = pythonCode.map(function(line, idx) {
-        return '<div class="code-line" id="cl-' + idx + '">' +
-          '<span class="ln">' + (idx + 1) + '</span>' +
-          '<span class="code">' + escHtml(line) + '</span>' +
-          '</div>';
+        var d = document.createElement('div'); d.textContent = line;
+        return '<div class="code-line" id="cl-' + idx + '"><span class="ln">' + (idx+1) + '</span><span class="code">' + d.innerHTML + '</span></div>';
       }).join('');
-    }
-
-    function escHtml(s) {
-      var d = document.createElement('div');
-      d.textContent = s;
-      return d.innerHTML;
     }
 
     function setCodeLines(activeLines) {
       for (var i = 0; i < pythonCode.length; i++) {
         var el = document.getElementById('cl-' + i);
         if (!el) continue;
-        if (activeLines.indexOf(i) !== -1) {
-          el.classList.add('hl');
-        } else {
-          el.classList.remove('hl');
-        }
+        if (activeLines.indexOf(i) !== -1) el.classList.add('hl');
+        else el.classList.remove('hl');
       }
     }
-
-    // Hardcoded operation sequence
-    var OPERATIONS = [
-      { op: 'push', val: 5 },
-      { op: 'push', val: 3 },
-      { op: 'push', val: 7 },
-      { op: 'push', val: 2 },
-      { op: 'push', val: 8 },
-      { op: 'getMin' },
-      { op: 'pop' },
-      { op: 'getMin' },
-      { op: 'pop' },
-      { op: 'top' }
-    ];
 
     function opLabel(o) {
       if (o.op === 'push') return 'push(' + o.val + ')';
@@ -497,101 +248,33 @@
 
     function simulate() {
       var steps = [];
-      var stack = [];
-      var minStack = [];
+      var stack = [], minStack = [];
 
-      // Step 0: initial state (before any ops)
-      steps.push({
-        opIdx: -1,
-        op: null,
-        phase: 'init',
-        stack: [],
-        minStack: [],
-        highlight: { main: null, min: null },
-        returnVal: null,
-        lines: [0, 1, 2, 3],
-        desc: 'MinStack initialized. Both stacks are empty.'
-      });
+      steps.push({ opIdx: -1, op: null, phase: 'init', stack: [], minStack: [], highlight: { main: null, min: null }, returnVal: null, lines: [0,1,2,3], desc: 'MinStack initialized. Both stacks are empty.' });
 
       for (var i = 0; i < OPERATIONS.length; i++) {
         var o = OPERATIONS[i];
-
         if (o.op === 'push') {
           var val = o.val;
           stack.push(val);
-          var minVal = minStack.length > 0 ? Math.min(val, minStack[minStack.length - 1]) : val;
+          var minVal = minStack.length > 0 ? Math.min(val, minStack[minStack.length-1]) : val;
           minStack.push(minVal);
-          steps.push({
-            opIdx: i,
-            op: opLabel(o),
-            phase: 'push',
-            stack: stack.slice(),
-            minStack: minStack.slice(),
-            highlight: { main: stack.length - 1, min: minStack.length - 1, type: 'push' },
-            returnVal: null,
-            lines: [5, 6, 7, 8, 9],
-            desc: 'push(' + val + '): append ' + val + ' to stack. minVal = min(' + val + ', ' + (minStack.length > 1 ? minStack[minStack.length - 2] : val) + ') = ' + minVal + '. Append ' + minVal + ' to minStack.'
-          });
+          steps.push({ opIdx: i, op: opLabel(o), phase: 'push', stack: stack.slice(), minStack: minStack.slice(), highlight: { main: stack.length-1, min: minStack.length-1, type: 'push' }, returnVal: null, lines: [5,6,7,8,9], desc: 'push(' + val + '): append to stack. minVal = ' + minVal + '. Append to minStack.' });
         } else if (o.op === 'pop') {
-          var poppedMain = stack[stack.length - 1];
-          var poppedMin = minStack[minStack.length - 1];
-          steps.push({
-            opIdx: i,
-            op: opLabel(o),
-            phase: 'pop-before',
-            stack: stack.slice(),
-            minStack: minStack.slice(),
-            highlight: { main: stack.length - 1, min: minStack.length - 1, type: 'pop' },
-            returnVal: null,
-            lines: [11, 12, 13],
-            desc: 'pop(): remove top of stack (' + poppedMain + ') and top of minStack (' + poppedMin + ').'
-          });
-          stack.pop();
-          minStack.pop();
-          steps.push({
-            opIdx: i,
-            op: opLabel(o),
-            phase: 'pop-after',
-            stack: stack.slice(),
-            minStack: minStack.slice(),
-            highlight: { main: null, min: null },
-            returnVal: null,
-            lines: [11, 12, 13],
-            desc: 'pop() done. Stack size now ' + stack.length + '.'
-          });
+          var poppedMain = stack[stack.length-1], poppedMin = minStack[minStack.length-1];
+          steps.push({ opIdx: i, op: opLabel(o), phase: 'pop-before', stack: stack.slice(), minStack: minStack.slice(), highlight: { main: stack.length-1, min: minStack.length-1, type: 'pop' }, returnVal: null, lines: [11,12,13], desc: 'pop(): remove top (' + poppedMain + ') and top of minStack (' + poppedMin + ').' });
+          stack.pop(); minStack.pop();
+          steps.push({ opIdx: i, op: opLabel(o), phase: 'pop-after', stack: stack.slice(), minStack: minStack.slice(), highlight: { main: null, min: null }, returnVal: null, lines: [11,12,13], desc: 'pop() done. Stack size: ' + stack.length + '.' });
         } else if (o.op === 'top') {
-          var topVal = stack[stack.length - 1];
-          steps.push({
-            opIdx: i,
-            op: opLabel(o),
-            phase: 'top',
-            stack: stack.slice(),
-            minStack: minStack.slice(),
-            highlight: { main: stack.length - 1, min: null, type: 'highlight' },
-            returnVal: topVal,
-            lines: [15, 16],
-            desc: 'top(): return stack[-1] = ' + topVal + '.'
-          });
+          var topVal = stack[stack.length-1];
+          steps.push({ opIdx: i, op: opLabel(o), phase: 'top', stack: stack.slice(), minStack: minStack.slice(), highlight: { main: stack.length-1, min: null, type: 'highlight' }, returnVal: topVal, lines: [15,16], desc: 'top(): return stack[-1] = ' + topVal + '.' });
         } else if (o.op === 'getMin') {
-          var minVal2 = minStack[minStack.length - 1];
-          steps.push({
-            opIdx: i,
-            op: opLabel(o),
-            phase: 'getMin',
-            stack: stack.slice(),
-            minStack: minStack.slice(),
-            highlight: { main: null, min: minStack.length - 1, type: 'min' },
-            returnVal: minVal2,
-            lines: [18, 19],
-            desc: 'getMin(): return minStack[-1] = ' + minVal2 + '. This is the current minimum in O(1).'
-          });
+          var minVal2 = minStack[minStack.length-1];
+          steps.push({ opIdx: i, op: opLabel(o), phase: 'getMin', stack: stack.slice(), minStack: minStack.slice(), highlight: { main: null, min: minStack.length-1, type: 'min' }, returnVal: minVal2, lines: [18,19], desc: 'getMin(): return minStack[-1] = ' + minVal2 + '. O(1).' });
         }
       }
-
       return steps;
     }
-
-    var STEPS = [];
 
     function buildSequenceBar() {
       var bar = document.getElementById('sequence-bar');
@@ -613,68 +296,36 @@
     function renderStack(containerId, items, highlight) {
       var container = document.getElementById(containerId);
       container.innerHTML = '';
-
-      if (items.length === 0) {
-        container.innerHTML = '<div class="stack-empty">empty</div>';
-        return;
-      }
-
-      // Render bottom to top (index 0 at bottom, last at top)
+      if (items.length === 0) { container.innerHTML = '<div class="stack-empty">empty</div>'; return; }
       for (var i = 0; i < items.length; i++) {
         var cell = document.createElement('div');
         cell.className = 'stack-cell';
-
-        // Determine state
-        if (highlight && highlight.main !== null && containerId === 'main-stack' && i === highlight.main) {
-          cell.classList.add('state-' + highlight.type);
-        } else if (highlight && highlight.min !== null && containerId === 'min-stack' && i === highlight.min) {
-          cell.classList.add(highlight.type === 'min' ? 'state-min' : 'state-' + highlight.type);
-        }
-
-        // Mark top
-        if (i === items.length - 1) {
-          cell.classList.add('top-marker');
-        }
-
+        if (highlight && highlight.main !== null && containerId === 'main-stack' && i === highlight.main) cell.classList.add('state-' + highlight.type);
+        else if (highlight && highlight.min !== null && containerId === 'min-stack' && i === highlight.min) cell.classList.add(highlight.type === 'min' ? 'state-min' : 'state-' + highlight.type);
+        if (i === items.length - 1) cell.classList.add('top-marker');
         cell.textContent = items[i];
         container.appendChild(cell);
       }
     }
 
-    function updateStatus(snap, cur, total) {
-      document.getElementById('stepCounter').textContent = 'Step ' + cur + ' / ' + (total - 1);
-    }
-
-    function applyStep(snap, _animate) {
+    function applyStep(snap) {
       setCodeLines(snap.lines);
-
-      // Render stacks
       renderStack('main-stack', snap.stack, snap.highlight);
       renderStack('min-stack', snap.minStack, snap.highlight);
-
-      // Operation name
+      document.getElementById('phase-badge').textContent = snap.phase || 'init';
       document.getElementById('op-name').textContent = snap.op || 'MinStack()';
-
-      // Description
       document.getElementById('op-desc').textContent = snap.desc;
-
-      // Return value
       var resultEl = document.getElementById('op-result');
       if (snap.returnVal !== null && snap.returnVal !== undefined) {
         resultEl.className = 'op-result';
         resultEl.textContent = '→ returns ' + snap.returnVal;
-      } else {
-        resultEl.className = 'op-result hidden';
-      }
-
-      // Sequence bar
+      } else { resultEl.className = 'op-result hidden'; }
       updateSequenceBar(snap);
     }
 
     window.addEventListener('DOMContentLoaded', function() {
       buildCodePanel();
       buildSequenceBar();
-
       STEPS = simulate();
 
       nav = VizNav({
@@ -683,23 +334,23 @@
         btnPlay: document.getElementById('playBtn'),
         speedSel: document.getElementById('speedSel'),
         render: function(snap, cur, total) {
-          applyStep(snap, cur > 0);
-          updateStatus(snap, cur, total);
+          applyStep(snap);
+          document.getElementById('step-counter').textContent = 'Step ' + cur + ' / ' + (total - 1);
         }
       });
 
-      document.getElementById('resetBtn').addEventListener('click', function() {
-        nav.load(STEPS);
-      });
-
+      document.getElementById('resetBtn').addEventListener('click', function() { nav.load(STEPS); });
       nav.load(STEPS);
-
-      // Hide back-link in iframe
-      if (window.self !== window.top) {
-        var bl = document.querySelector('.back-link');
-        if (bl) bl.style.display = 'none';
-      }
     });
+
+    (function() {
+      var handle = document.getElementById('resize-handle');
+      var panel  = document.getElementById('code-panel');
+      var dragging = false, startX = 0, startW = 0;
+      handle.addEventListener('mousedown', function(e) { dragging = true; startX = e.clientX; startW = panel.offsetWidth; e.preventDefault(); });
+      document.addEventListener('mousemove', function(e) { if (!dragging) return; var delta = startX - e.clientX; panel.style.width = Math.min(560, Math.max(120, startW + delta)) + 'px'; });
+      document.addEventListener('mouseup', function() { dragging = false; });
+    })();
   </script>
 </body>
 </html>

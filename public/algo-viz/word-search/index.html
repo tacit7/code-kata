@@ -5,343 +5,183 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Word Search</title>
   <link rel="stylesheet" href="../shared/style.css" />
-  <script src="../shared/viz.js">
-// Preset loader
-function loadPreset() {
-  var sel = document.getElementById('presetSel');
-  if (!sel.value) return;
-  var d = JSON.parse(sel.value);
-  document.getElementById('inp-grid').value = d.grid;
-  document.getElementById('inp-word').value = d.word;
-  buildAndRun();
-}
-
-// Random example generator
-function randomExample() {
-  var sizes = [{rows: 3, cols: 3}, {rows: 3, cols: 4}, {rows: 4, cols: 4}];
-  var sz = sizes[Math.floor(Math.random() * sizes.length)];
-  var grid = [];
-  for (var i = 0; i < sz.rows; i++) {
-    var row = '';
-    for (var j = 0; j < sz.cols; j++) {
-      row += String.fromCharCode(65 + Math.floor(Math.random() * 26));
-    }
-    grid.push(row);
-  }
-  var words = ['HELLO', 'WORLD', 'MAZE', 'SEARCH', 'PATH', 'CAT', 'DOG', 'TREE', 'CODE', 'ALGO'];
-  var word = words[Math.floor(Math.random() * words.length)];
-  document.getElementById('inp-grid').value = grid.join(';');
-  document.getElementById('inp-word').value = word;
-  document.getElementById('presetSel').value = '';
-  buildAndRun();
-}
-
-</script>
+  <script src="../shared/viz.js"></script>
   <style>
-    .viz-area { width: 100%; max-width: 90%; }
-    .main-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
-    .left-col, .right-col { display: flex; flex-direction: column; gap: 12px; }
-    @media (max-width: 700px) { .main-row { grid-template-columns: 1fr; } }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: "Fira Code", "Cascadia Code", monospace; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+    #header { padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+    #phase-badge { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; padding: 3px 10px; border-radius: var(--radius-sm); background: #1e3a5f; color: var(--blue); border: 1px solid var(--blue); }
+    #step-counter { font-size: 12px; color: var(--text-muted); margin-left: auto; }
+    .viz-inputs { width: 100%; max-width: 100%; padding: 10px 16px; background: var(--surface); border: none; border-bottom: 1px solid var(--border); border-radius: 0; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; flex-shrink: 0; }
+    .viz-inputs label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); display: block; margin-bottom: 3px; }
+    .viz-inputs select, .viz-inputs input { background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 0 8px; height: 30px; font-size: 0.82rem; font-family: inherit; appearance: none; -webkit-appearance: none; }
+    .vi-btn-run { padding: 6px 14px; border-radius: 6px; font-size: 0.82rem; font-weight: 600; cursor: pointer; font-family: inherit; background: var(--accent); color: #fff; border: none; }
+    .vi-btn-rand { padding: 6px 14px; border-radius: 6px; font-size: 0.82rem; cursor: pointer; font-family: inherit; background: var(--bg); color: var(--text); border: 1px solid var(--border); }
+    #main { display: flex; flex: 1; overflow: hidden; }
+    #viz-area { flex: 1; display: flex; flex-direction: column; padding: 14px 16px; gap: 10px; overflow-y: auto; }
+    #desc { font-size: 12px; color: var(--text-muted); line-height: 1.4; }
+    #resize-handle { width: 5px; flex-shrink: 0; cursor: col-resize; background: transparent; border-left: 1px solid var(--border); transition: background .15s; z-index: 10; }
+    #resize-handle:hover, #resize-handle.dragging { background: var(--accent); }
+    #code-panel { width: 340px; min-width: 120px; max-width: 560px; flex-shrink: 0; background: var(--surface); border-right: 1px solid var(--border); overflow-y: auto; display: flex; flex-direction: column; }
+    .code-header { padding: 8px 14px; font-size: 0.72rem; font-weight: 600; color: var(--text-dim); border-bottom: 1px solid var(--border); background: var(--bg); flex-shrink: 0; }
+    .code-body { padding: 10px 0; font-size: 0.78rem; line-height: 1.75; white-space: pre; overflow-x: auto; }
+    .code-line { display: flex; align-items: center; padding: 0 14px; }
+    .code-line.hl { background: var(--border-soft); border-left: 2px solid var(--accent); }
+    .ln { min-width: 24px; color: var(--text-ghost); user-select: none; font-size: 0.7rem; }
+    #sidebar { width: 220px; flex-shrink: 0; background: var(--surface); border-left: 1px solid var(--border); overflow-y: auto; padding: 12px 10px; display: flex; flex-direction: column; gap: 10px; }
+    .sidebar-section { font-size: 11px; }
+    .sidebar-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--text-dim); margin-bottom: 6px; }
+    #nav-row { flex-shrink: 0; display: flex; align-items: center; gap: 8px; padding: 10px 16px; background: var(--surface); border-top: 1px solid var(--border); }
+    .btn-step, .btn-play { padding: 6px 14px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--surface); color: var(--text); font-family: inherit; font-size: 12px; cursor: pointer; transition: background .15s; }
+    .btn-step:hover { background: #334155; }
+    .btn-play { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .btn-play:hover { background: var(--accent-hover); }
+    select { padding: 5px 8px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: #1e293b; color: var(--text); font-size: 12px; font-family: inherit; cursor: pointer; }
 
-    .page-sub { font-size: 0.8rem; color: var(--text-dim); margin-left: auto; white-space: nowrap; }
-
-    .sect {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--radius-lg); padding: 14px 16px;
-      display: flex; flex-direction: column; gap: 8px;
-    }
-
-    /* Grid */
-    .grid-wrap {
-      display: flex; justify-content: center; margin-top: 6px;
-    }
-    .grid-table {
-      display: grid;
-      gap: 6px;
-    }
-    .grid-cell {
-      width: 52px; height: 52px;
-      display: flex; align-items: center; justify-content: center;
-      border: 2px solid var(--border); border-radius: 8px;
-      background: var(--bg);
-      font-size: 1.3rem; font-weight: 700; font-family: monospace;
-      color: var(--text-dim);
-      transition: border-color 0.12s, color 0.12s, background 0.12s;
-      position: relative;
-      user-select: none;
-    }
-    .grid-cell .cell-coord {
-      position: absolute; top: 2px; left: 4px;
-      font-size: 0.44rem; color: var(--text-ghost); font-family: monospace;
-    }
-    /* States */
+    /* Word Search unique CSS */
+    .sect { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; flex-shrink: 0; }
+    .panel-title { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); }
+    .panel-sub { font-size: 0.65rem; color: var(--text-ghost); font-weight: 400; text-transform: none; margin-left: 4px; }
+    .grid-wrap { display: flex; justify-content: center; }
+    .grid-table { display: grid; gap: 5px; }
+    .grid-cell { width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; border: 2px solid var(--border); border-radius: 7px; background: var(--bg); font-size: 1.1rem; font-weight: 700; font-family: monospace; color: var(--text-dim); transition: border-color 0.12s, color 0.12s, background 0.12s; position: relative; user-select: none; }
+    .grid-cell .cell-coord { position: absolute; top: 2px; left: 3px; font-size: 0.4rem; color: var(--text-ghost); font-family: monospace; }
     .grid-cell.current  { border-color: var(--yellow);  color: var(--yellow-light); background: #201700; }
     .grid-cell.on-path  { border-color: var(--accent);  color: var(--accent-pale);  background: #0d1a3e; }
     .grid-cell.match    { border-color: var(--green);   color: var(--green-light);  background: var(--green-bg); }
     .grid-cell.fail     { border-color: var(--red);     color: var(--red-light);    background: #280a10; }
     .grid-cell.visited  { border-color: var(--accent);  color: var(--accent-pale);  background: #0d1a3e; opacity: 0.6; }
-    .grid-cell.start    { border-color: var(--purple);  color: var(--purple);       background: #1a1030; }
-
-    /* Word progress */
-    .word-row {
-      display: flex; gap: 5px; flex-wrap: wrap; margin-top: 4px; align-items: center;
-    }
-    .word-char {
-      width: 36px; height: 36px;
-      display: flex; align-items: center; justify-content: center;
-      border: 2px solid var(--border); border-radius: 6px;
-      background: var(--bg);
-      font-size: 1rem; font-weight: 700; font-family: monospace;
-      color: var(--text-dim);
-      transition: border-color 0.12s, color 0.12s, background 0.12s;
-      position: relative;
-    }
-    .word-char .char-idx {
-      position: absolute; top: -9px; left: 50%;
-      transform: translateX(-50%);
-      font-size: 0.5rem; color: var(--text-ghost); font-family: monospace;
-    }
+    .word-row { display: flex; gap: 4px; flex-wrap: wrap; align-items: center; }
+    .word-char { width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; border: 2px solid var(--border); border-radius: 5px; background: var(--bg); font-size: 0.9rem; font-weight: 700; font-family: monospace; color: var(--text-dim); transition: border-color 0.12s, color 0.12s, background 0.12s; position: relative; }
+    .word-char .char-idx { position: absolute; top: -8px; left: 50%; transform: translateX(-50%); font-size: 0.45rem; color: var(--text-ghost); }
     .word-char.matched  { border-color: var(--green);  color: var(--green-light);  background: var(--green-bg); }
     .word-char.current  { border-color: var(--yellow); color: var(--yellow-light); background: #201700; }
     .word-char.failed   { border-color: var(--red);    color: var(--red);          background: #280a10; }
-
-    /* Call stack */
-    .stack-body {
-      font-family: monospace; font-size: 0.74rem;
-      max-height: 180px; overflow-y: auto; margin-top: 4px;
-    }
+    .path-row { display: flex; gap: 4px; flex-wrap: wrap; min-height: 28px; align-items: center; }
+    .path-chip { padding: 2px 6px; border: 1px solid var(--accent); border-radius: 3px; font-family: monospace; font-size: 0.7rem; color: var(--accent-pale); background: #0d1a3e; }
+    .path-chip.won { border-color: var(--green); color: var(--green); background: var(--green-bg); }
+    .path-empty { color: var(--text-ghost); font-size: 0.78rem; font-style: italic; }
+    .stack-body { font-family: monospace; font-size: 0.72rem; max-height: 120px; overflow-y: auto; }
     .stack-frame { padding: 1px 0; color: var(--text-muted); white-space: nowrap; }
     .stack-frame.top { color: var(--accent-pale); font-weight: 700; }
     .stack-frame.win { color: var(--green); font-weight: 700; }
-
-    /* Code */
-    .code-panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
-    .code-header { padding: 8px 14px; font-size: 0.72rem; font-weight: 600; color: var(--text-dim); border-bottom: 1px solid var(--border); background: var(--bg); }
-    .code-body { padding: 10px 0; font-size: 0.78rem; line-height: 1.75; white-space: pre; }
-    .code-line { display: flex; align-items: center; padding: 0 14px; }
-    .code-line.hl { background: var(--border-soft); border-left: 2px solid var(--accent); }
-    .ln { min-width: 24px; color: var(--text-ghost); user-select: none; font-size: 0.7rem; }
-
-    /* Nav */
-    .btn-play {
-      background: #15803d; border: none; border-radius: var(--radius-sm);
-      color: #fff; cursor: pointer; font-size: 0.88rem; font-weight: 600;
-      padding: 9px 16px; transition: background 0.2s;
-    }
-    .btn-play:hover { background: #166534; }
-    .btn-play.playing { background: #c2410c; }
-    .btn-play.playing:hover { background: #9a3412; }
-    .btn-play:disabled { opacity: 0.4; cursor: not-allowed; }
-    .speed-select {
-      background: var(--bg); border: 1px solid var(--border);
-      border-radius: var(--radius-sm); color: var(--text);
-      font-size: 0.85rem; padding: 8px 10px; outline: none; width: 80px;
-    }
-    .nav-row { display: flex; gap: 8px; align-items: center; }
-
-    /* Var grid */
-    .var-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
-    .var-box {
-      padding: 10px 8px; background: var(--bg); border: 1px solid var(--border);
-      border-radius: var(--radius-sm); display: flex; flex-direction: column;
-      align-items: center; gap: 3px;
-    }
+    .var-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+    .var-box { padding: 6px; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm); display: flex; flex-direction: column; align-items: center; gap: 2px; }
     .var-box.ab { border-color: var(--accent); }
     .var-box.ob { border-color: #b45309; }
     .var-box.gb { border-color: var(--green-border); }
-    .var-label { font-size: 0.62rem; font-family: monospace; color: var(--text-faint); text-align: center; }
-    .var-val   { font-size: 1.05rem; font-weight: 700; color: var(--text-bright); font-family: monospace; }
-
-    /* Result badge */
-    .result-badge {
-      display: inline-flex; align-items: center; gap: 6px;
-      padding: 8px 14px; border-radius: var(--radius-sm);
-      font-size: 0.88rem; font-weight: 700; font-family: monospace;
-      border: 1px solid var(--border); color: var(--text-dim);
-    }
+    .var-label { font-size: 0.6rem; font-family: monospace; color: var(--text-faint); text-align: center; }
+    .var-val   { font-size: 0.95rem; font-weight: 700; color: var(--text-bright); font-family: monospace; }
+    .result-badge { display: inline-flex; align-items: center; gap: 5px; padding: 5px 10px; border-radius: var(--radius-sm); font-size: 0.8rem; font-weight: 700; font-family: monospace; border: 1px solid var(--border); color: var(--text-dim); }
     .result-badge.found { border-color: var(--green); color: var(--green); background: var(--green-bg); }
     .result-badge.not-found { border-color: var(--red); color: var(--red); background: #200a0a; }
-
-    /* Path display */
-    .path-row {
-      display: flex; gap: 5px; flex-wrap: wrap; margin-top: 4px; min-height: 36px; align-items: center;
-    }
-    .path-chip {
-      padding: 3px 8px; border: 1px solid var(--accent); border-radius: 4px;
-      font-family: monospace; font-size: 0.75rem; color: var(--accent-pale);
-      background: #0d1a3e;
-    }
-    .path-chip.won { border-color: var(--green); color: var(--green); background: var(--green-bg); }
-    .path-empty { color: var(--text-ghost); font-size: 0.82rem; font-style: italic; }
-
-    .kw { color: var(--purple); }
-    .fn { color: var(--blue); }
-    .bi { color: var(--orange); }
-    .nb { color: var(--green); }
-    .cm { color: var(--text-ghost); }
-    .st { color: var(--yellow-light); }
-  
-    /* Viz inputs */
-    .viz-inputs {
-      display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end;
-      padding: 10px 0 14px; width: 100%; max-width: 90%;
-    }
-    .viz-inputs .field {
-      display: flex; flex-direction: column; gap: 4px;
-    }
-    .viz-inputs label {
-      font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
-      letter-spacing: 0.08em; color: var(--text-dim);
-    }
-    .viz-inputs select {
-      background: var(--surface); border: 1px solid var(--border);
-      color: var(--text); border-radius: var(--radius-sm);
-      padding: 6px 10px; font-size: 0.85rem; cursor: pointer;
-    }
-    .btn-primary {
-      padding: 7px 18px; background: var(--accent); color: #fff;
-      border: none; border-radius: var(--radius-sm); font-weight: 600;
-      cursor: pointer; font-size: 0.88rem;
-    }
-    .btn-primary:hover { opacity: 0.9; }
-    .btn-random {
-      padding: 7px 14px; background: var(--surface);
-      color: var(--text); border: 1px solid var(--border);
-      border-radius: var(--radius-sm); cursor: pointer; font-size: 0.88rem;
-    }
-    .btn-random:hover { background: var(--bg); }
-
+    .kw { color: var(--purple); } .fn { color: var(--blue); } .bi { color: var(--orange); }
+    .nb { color: var(--green); }  .cm { color: var(--text-ghost); } .st { color: var(--yellow-light); }
   </style>
 </head>
-<body class="page">
-
-<div class="page-header">
-  <a class="back-link" href="../index.html">&larr; All Algorithms</a>
-  <div class="page-title">Word Search</div>
-  <div class="page-sub">LeetCode 79 &middot; Backtracking &middot; DFS from every cell</div>
-</div>
+<body>
 
 <div class="viz-inputs">
-  <div class="field">
+  <div>
     <label>Preset</label>
-    <select id="presetSel" onchange="loadPreset()">
+    <select id="presetSel" onchange="loadPreset()" style="height:30px;width:auto">
       <option value="">— pick a preset —</option>
       <option value='{"grid":"ABCE;SFCS;ADEE","word":"ABCCED"}'>Simple search (found)</option>
       <option value='{"grid":"ABCE;SFCS;ADEE","word":"ABCB"}'>Two-letter word</option>
       <option value='{"grid":"ABCE;SFCS;ADEE","word":"SEE"}'>Backtracking (found)</option>
       <option value='{"grid":"AAA;AAA;AAA","word":"AAAA"}'>All same letter</option>
-      <option value='{"grid":"ABCE;SFCS;ADEE","word":"XXYZ"}'>Not found (exhaustive)</option>
-      <option value='{"grid":"A;B;C","word":"ABC"}'>Single column (1×3)</option>
+      <option value='{"grid":"ABCE;SFCS;ADEE","word":"XXYZ"}'>Not found</option>
+      <option value='{"grid":"A;B;C","word":"ABC"}'>Single column</option>
     </select>
   </div>
-  <div class="field">
-    <label>Grid rows (semicolon-separated)</label>
-    <input id="inp-grid" type="text" value="ABCE;SFCS;ADEE" style="width:200px;font-family:monospace;font-size:0.9rem" />
+  <div>
+    <label>Grid rows (semicolons)</label>
+    <input id="inp-grid" type="text" value="ABCE;SFCS;ADEE" style="width:180px" />
   </div>
-  <div class="field">
+  <div>
     <label>Word</label>
-    <input id="inp-word" type="text" value="ABCCED" style="width:120px;font-family:monospace;font-size:0.9rem" />
+    <input id="inp-word" type="text" value="ABCCED" style="width:100px" />
   </div>
-  <button class="btn-primary" onclick="buildAndRun()">Run</button>
-  <button class="btn-random" onclick="randomExample()">🎲 Random</button>
+  <button class="vi-btn-run" onclick="buildAndRun()">Run</button>
+  <button class="vi-btn-rand" onclick="randomExample()">&#127922; Random</button>
+</div>
+<div class="controls"></div>
+
+<div id="header">
+  <span id="phase-badge">Setup</span>
+  <span style="font-size:13px;font-weight:700;">Word Search</span>
+  <span id="step-counter">Step 0 / 0</span>
 </div>
 
-<div class="viz-area">
-  <div class="main-row">
-
-    <!-- ── Left ── -->
-    <div class="left-col">
-
-      <!-- Grid -->
-      <div class="sect">
-        <div class="panel-title">Grid <span class="panel-sub" id="grid-sub"></span></div>
-        <div class="grid-wrap">
-          <div class="grid-table" id="grid-table">
-            <span style="color:var(--text-ghost);font-size:0.82rem">Click Build.</span>
-          </div>
+<div id="main">
+  <div id="viz-area">
+    <div class="sect">
+      <div class="panel-title">Grid <span class="panel-sub" id="grid-sub"></span></div>
+      <div class="grid-wrap">
+        <div class="grid-table" id="grid-table">
+          <span style="color:var(--text-ghost);font-size:0.82rem">Click Run.</span>
         </div>
       </div>
-
-      <!-- Word progress -->
-      <div class="sect">
-        <div class="panel-title">Word Progress <span class="panel-sub" id="word-sub"></span></div>
-        <div class="word-row" id="word-row">
-          <span class="path-empty">—</span>
-        </div>
-      </div>
-
-      <!-- Current path (cells visited so far in this DFS branch) -->
-      <div class="sect">
-        <div class="panel-title">Path so far</div>
-        <div class="path-row" id="path-row">
-          <span class="path-empty">none</span>
-        </div>
-      </div>
-
     </div>
-
-    <!-- ── Right ── -->
-    <div class="right-col">
-
-      <!-- Variables -->
-      <div class="sect">
-        <div class="panel-title">Variables</div>
-        <div class="var-grid">
-          <div class="var-box ab">
-            <div class="var-label">start cell</div>
-            <div class="var-val" id="vv-start">—</div>
-          </div>
-          <div class="var-box ob">
-            <div class="var-label">word[idx]</div>
-            <div class="var-val" id="vv-target">—</div>
-          </div>
-          <div class="var-box gb">
-            <div class="var-label">result</div>
-            <div class="var-val" id="vv-result">—</div>
-          </div>
-        </div>
-        <div id="result-badge-wrap" style="margin-top:6px"></div>
-      </div>
-
-      <!-- Call stack -->
-      <div class="sect">
-        <div class="panel-title">Call Stack <span class="panel-sub" id="stack-sub"></span></div>
-        <div class="stack-body" id="stack-body">
-          <span style="color:var(--text-ghost);font-size:0.82rem">—</span>
-        </div>
-      </div>
-
-      <!-- Code -->
-      <div class="code-panel">
-        <div class="code-header">Python &middot; DFS backtracking</div>
-        <div class="code-body" id="code-body"></div>
-      </div>
-
+    <div class="sect">
+      <div class="panel-title">Word Progress <span class="panel-sub" id="word-sub"></span></div>
+      <div class="word-row" id="word-row"><span class="path-empty">—</span></div>
     </div>
+    <div class="sect">
+      <div class="panel-title">Path so far</div>
+      <div class="path-row" id="path-row"><span class="path-empty">none</span></div>
+    </div>
+    <div id="desc"></div>
+  </div>
 
+  <div id="resize-handle"></div>
+
+  <div id="code-panel">
+    <div class="code-header">Python &middot; DFS backtracking</div>
+    <div class="code-body" id="code-body"></div>
+  </div>
+
+  <div id="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-title">Variables</div>
+      <div class="var-grid">
+        <div class="var-box ab">
+          <div class="var-label">start cell</div>
+          <div class="var-val" id="vv-start">—</div>
+        </div>
+        <div class="var-box ob">
+          <div class="var-label">word[idx]</div>
+          <div class="var-val" id="vv-target">—</div>
+        </div>
+        <div class="var-box gb" style="grid-column:span 2">
+          <div class="var-label">result</div>
+          <div class="var-val" id="vv-result">—</div>
+        </div>
+      </div>
+      <div id="result-badge-wrap" style="margin-top:6px"></div>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-title">Call Stack <span class="panel-sub" id="stack-sub"></span></div>
+      <div class="stack-body" id="stack-body"><span style="color:var(--text-ghost);font-size:0.78rem">—</span></div>
+    </div>
   </div>
 </div>
 
-<!-- Bottom nav -->
-<div class="nav-bar">
-  <div class="nav-row">
-    <button class="btn-secondary" id="prevBtn">&larr; Prev</button>
-    <button class="playBtn" id="playBtn">Play</button>
-    <button class="btn-secondary" id="stepBtn">Next &rarr;</button>
-    <select class="speedSel" id="speedSel">
-      <option value="800">0.8s</option>
-      <option value="500" selected>0.5s</option>
-      <option value="300">0.3s</option>
-      <option value="150">0.15s</option>
-      <option value="80">0.08s</option>
-    </select>
-  </div>
-  <div class="step-counter" id="step-counter">—</div>
-  <div class="step-desc" id="step-desc">Click Build to start.</div>
+<div id="nav-row">
+  <button class="btn-step" id="prevBtn">&#8592; Prev</button>
+  <button class="btn-step" id="stepBtn">Step &#8594;</button>
+  <button class="btn-play" id="playBtn">Play</button>
+  <button class="btn-step" id="resetBtn">&#8635; Reset</button>
+  <select id="speedSel">
+    <option value="800">0.5&#215;</option>
+    <option value="500" selected>1&#215;</option>
+    <option value="300">1.5&#215;</option>
+    <option value="150">2&#215;</option>
+    <option value="80">4&#215;</option>
+  </select>
 </div>
 
 <script>
-// ── Code lines ───────────────────────────────────────────────────────────────
 var CODE = [
   { t: '<span class="kw">def</span> <span class="fn">exist</span>(board, word):' },
   { t: '  rows, cols = len(board), len(board[0])' },
@@ -374,128 +214,75 @@ function renderCode(hlLines) {
   document.getElementById('code-body').innerHTML = html;
 }
 
-// ── Step builder ─────────────────────────────────────────────────────────────
 var GRID = [], WORD = '', ROWS = 0, COLS = 0;
 
 function buildSteps() {
   var steps = [];
-  var board = GRID.map(function(r) { return r.slice(); }); // mutable copy
+  var board = GRID.map(function(r) { return r.slice(); });
 
-  // DFS with step recording
   function dfs(r, c, idx, pathSoFar, callStack) {
     var frame = 'dfs(' + r + ',' + c + ',' + idx + ')';
     var stack = callStack.concat([frame]);
-
-    // bounds / char check
     if (r < 0 || r >= ROWS || c < 0 || c >= COLS || board[r][c] !== WORD[idx]) {
-      steps.push({
-        type: 'fail',
-        r: r, c: c, idx: idx,
-        path: pathSoFar.slice(),
-        stack: stack.slice(),
-        desc: (r < 0 || r >= ROWS || c < 0 || c >= COLS)
-          ? 'Out of bounds — backtrack.'
+      steps.push({ type: 'fail', r: r, c: c, idx: idx, path: pathSoFar.slice(), stack: stack.slice(),
+        desc: (r < 0 || r >= ROWS || c < 0 || c >= COLS) ? 'Out of bounds — backtrack.'
           : 'board[' + r + '][' + c + '] = "' + (board[r][c] || '?') + '" ≠ word[' + idx + '] = "' + WORD[idx] + '" — backtrack.',
-        codeHl: [7, 8, 9],
-      });
+        codeHl: [7, 8, 9] });
       return false;
     }
-
-    // match
     var tmp = board[r][c];
-    board[r][c] = '#'; // mark visited
+    board[r][c] = '#';
     var newPath = pathSoFar.concat([[r, c]]);
-
-    // base case: word fully matched
     if (idx === WORD.length - 1) {
-      steps.push({
-        type: 'found',
-        r: r, c: c, idx: idx,
-        path: newPath.slice(),
-        stack: stack.slice(),
+      steps.push({ type: 'found', r: r, c: c, idx: idx, path: newPath.slice(), stack: stack.slice(),
         desc: 'Matched word[' + idx + '] = "' + WORD[idx] + '" at (' + r + ',' + c + '). All ' + WORD.length + ' chars matched — FOUND!',
-        codeHl: [5],
-      });
+        codeHl: [5] });
       board[r][c] = tmp;
       return true;
     }
-
-    // enter cell
-    steps.push({
-      type: 'enter',
-      r: r, c: c, idx: idx,
-      path: newPath.slice(),
-      stack: stack.slice(),
+    steps.push({ type: 'enter', r: r, c: c, idx: idx, path: newPath.slice(), stack: stack.slice(),
       desc: 'board[' + r + '][' + c + '] = "' + tmp + '" matches word[' + idx + '] = "' + WORD[idx] + '". Mark visited, recurse.',
-      codeHl: [10, 11, 12],
-    });
-
+      codeHl: [10, 11, 12] });
     var dirs = [[1,0],[-1,0],[0,1],[0,-1]];
     var found = false;
     for (var d = 0; d < dirs.length; d++) {
       var nr = r + dirs[d][0], nc = c + dirs[d][1];
-      if (dfs(nr, nc, idx + 1, newPath, stack)) {
-        found = true;
-        break;
-      }
+      if (dfs(nr, nc, idx + 1, newPath, stack)) { found = true; break; }
     }
-
-    board[r][c] = tmp; // unmark
+    board[r][c] = tmp;
     if (!found) {
-      steps.push({
-        type: 'backtrack',
-        r: r, c: c, idx: idx,
-        path: pathSoFar.slice(),
-        stack: callStack.slice(),
+      steps.push({ type: 'backtrack', r: r, c: c, idx: idx, path: pathSoFar.slice(), stack: callStack.slice(),
         desc: 'No neighbor matched word[' + (idx+1) + '] = "' + WORD[idx+1] + '" — backtrack from (' + r + ',' + c + ').',
-        codeHl: [13, 14],
-      });
+        codeHl: [13, 14] });
     }
     return found;
   }
 
-  // outer loop
   var found = false;
-  outer:
   for (var r = 0; r < ROWS && !found; r++) {
     for (var c = 0; c < COLS && !found; c++) {
-      steps.push({
-        type: 'try-start',
-        r: r, c: c, idx: 0,
-        path: [],
-        stack: ['exist()'],
+      steps.push({ type: 'try-start', r: r, c: c, idx: 0, path: [], stack: ['exist()'],
         desc: 'Try starting DFS at (' + r + ',' + c + ') for word[0] = "' + WORD[0] + '".',
-        codeHl: [16, 17, 18],
-      });
-      if (dfs(r, c, 0, [], ['exist()'])) {
-        found = true;
-      }
+        codeHl: [16, 17, 18] });
+      if (dfs(r, c, 0, [], ['exist()'])) found = true;
     }
   }
-
   if (!found) {
-    steps.push({
-      type: 'done-false',
-      r: -1, c: -1, idx: -1,
-      path: [],
-      stack: [],
+    steps.push({ type: 'done-false', r: -1, c: -1, idx: -1, path: [], stack: [],
       desc: 'Exhausted all starting cells — word "' + WORD + '" not found.',
-      codeHl: [19],
-    });
+      codeHl: [19] });
   }
-
   return steps;
 }
 
-// ── Render ───────────────────────────────────────────────────────────────────
 var STEPS = [], GRID_CELLS = [];
 
 function renderSnap(snap, cursor, total) {
-  // Step counter + desc
   document.getElementById('step-counter').textContent = 'Step ' + (cursor + 1) + ' / ' + total;
-  document.getElementById('step-desc').textContent = snap.desc;
+  document.getElementById('phase-badge').textContent = snap.type || '';
+  var descEl = document.getElementById('desc');
+  if (descEl) descEl.textContent = snap.desc;
 
-  // Grid cells
   var pathSet = {};
   (snap.path || []).forEach(function(p) { pathSet[p[0] + ',' + p[1]] = true; });
 
@@ -503,55 +290,40 @@ function renderSnap(snap, cursor, total) {
     row.forEach(function(el, c) {
       var key = r + ',' + c;
       var cls = '';
-      if (snap.type === 'found' && pathSet[key]) {
-        cls = 'match';
-      } else if (snap.r === r && snap.c === c) {
+      if (snap.type === 'found' && pathSet[key]) cls = 'match';
+      else if (snap.r === r && snap.c === c) {
         if (snap.type === 'fail') cls = 'fail';
         else if (snap.type === 'backtrack') cls = 'visited';
         else cls = 'current';
-      } else if (pathSet[key]) {
-        cls = 'on-path';
-      }
+      } else if (pathSet[key]) cls = 'on-path';
       el.className = 'grid-cell' + (cls ? ' ' + cls : '');
     });
   });
 
-  // Word progress
   var wordRow = document.getElementById('word-row');
   var wordHtml = '';
   for (var i = 0; i < WORD.length; i++) {
     var wCls = '';
-    if (snap.type === 'found' && i <= snap.idx) {
-      wCls = 'matched';
-    } else if (snap.type === 'fail' && i === snap.idx) {
-      wCls = 'failed';
-    } else if (i < snap.idx) {
-      wCls = 'matched';
-    } else if (i === snap.idx && snap.type !== 'fail' && snap.type !== 'backtrack' && snap.type !== 'done-false') {
-      wCls = 'current';
-    }
+    if (snap.type === 'found' && i <= snap.idx) wCls = 'matched';
+    else if (snap.type === 'fail' && i === snap.idx) wCls = 'failed';
+    else if (i < snap.idx) wCls = 'matched';
+    else if (i === snap.idx && snap.type !== 'fail' && snap.type !== 'backtrack' && snap.type !== 'done-false') wCls = 'current';
     wordHtml += '<div class="word-char' + (wCls ? ' ' + wCls : '') + '"><span class="char-idx">' + i + '</span>' + WORD[i] + '</div>';
   }
   wordRow.innerHTML = wordHtml;
   document.getElementById('word-sub').textContent = '(' + snap.idx + '/' + WORD.length + ')';
 
-  // Path chips
   var pathRow = document.getElementById('path-row');
   var pathHtml = '';
   var won = snap.type === 'found';
   if (snap.path && snap.path.length > 0) {
     snap.path.forEach(function(p, pi) {
       pathHtml += '<div class="path-chip' + (won ? ' won' : '') + '">(' + p[0] + ',' + p[1] + ')</div>';
-      if (pi < snap.path.length - 1) {
-        pathHtml += '<span style="color:var(--text-ghost);font-size:0.75rem">→</span>';
-      }
+      if (pi < snap.path.length - 1) pathHtml += '<span style="color:var(--text-ghost);font-size:0.7rem">→</span>';
     });
-  } else {
-    pathHtml = '<span class="path-empty">none</span>';
-  }
+  } else { pathHtml = '<span class="path-empty">none</span>'; }
   pathRow.innerHTML = pathHtml;
 
-  // Variables
   document.getElementById('vv-start').textContent =
     snap.path && snap.path.length > 0 ? '(' + snap.path[0][0] + ',' + snap.path[0][1] + ')' : '—';
   document.getElementById('vv-target').textContent =
@@ -560,59 +332,41 @@ function renderSnap(snap, cursor, total) {
   var resBadge = document.getElementById('result-badge-wrap');
   var resVal = document.getElementById('vv-result');
   if (snap.type === 'found') {
-    resVal.textContent = 'True';
-    resVal.style.color = 'var(--green)';
-    resBadge.innerHTML = '<div class="result-badge found">✓ FOUND</div>';
+    resVal.textContent = 'True'; resVal.style.color = 'var(--green)';
+    resBadge.innerHTML = '<div class="result-badge found">&#10003; FOUND</div>';
   } else if (snap.type === 'done-false') {
-    resVal.textContent = 'False';
-    resVal.style.color = 'var(--red)';
-    resBadge.innerHTML = '<div class="result-badge not-found">✗ NOT FOUND</div>';
-  } else {
-    resVal.textContent = '…';
-    resVal.style.color = '';
-    resBadge.innerHTML = '';
-  }
+    resVal.textContent = 'False'; resVal.style.color = 'var(--red)';
+    resBadge.innerHTML = '<div class="result-badge not-found">&#10007; NOT FOUND</div>';
+  } else { resVal.textContent = '…'; resVal.style.color = ''; resBadge.innerHTML = ''; }
 
-  // Call stack
   var stackBody = document.getElementById('stack-body');
   var stackHtml = '';
   if (snap.stack && snap.stack.length > 0) {
     var frames = snap.stack.slice().reverse();
     frames.forEach(function(f, fi) {
-      var cls = fi === 0
-        ? (snap.type === 'found' ? 'win' : 'top')
-        : '';
+      var cls = fi === 0 ? (snap.type === 'found' ? 'win' : 'top') : '';
       stackHtml += '<div class="stack-frame' + (cls ? ' ' + cls : '') + '">' + f + '</div>';
     });
     document.getElementById('stack-sub').textContent = '(depth ' + snap.stack.length + ')';
-  } else {
-    stackHtml = '<span style="color:var(--text-ghost);font-size:0.82rem">—</span>';
-    document.getElementById('stack-sub').textContent = '';
-  }
+  } else { stackHtml = '<span style="color:var(--text-ghost);font-size:0.78rem">—</span>'; document.getElementById('stack-sub').textContent = ''; }
   stackBody.innerHTML = stackHtml;
 
-  // Code
   renderCode(snap.codeHl);
 }
 
-// ── Build & run ──────────────────────────────────────────────────────────────
 var nav;
 
 function buildAndRun() {
   var rawGrid = document.getElementById('inp-grid').value.trim();
   var rawWord = document.getElementById('inp-word').value.trim().toUpperCase();
   if (!rawGrid || !rawWord) return;
-
-  GRID = rawGrid.toUpperCase().split(';').map(function(row) {
-    return row.trim().split('');
-  });
+  GRID = rawGrid.toUpperCase().split(';').map(function(row) { return row.trim().split(''); });
   WORD = rawWord;
   ROWS = GRID.length;
   COLS = GRID[0].length;
 
-  // Build DOM grid
   var table = document.getElementById('grid-table');
-  table.style.gridTemplateColumns = 'repeat(' + COLS + ', 52px)';
+  table.style.gridTemplateColumns = 'repeat(' + COLS + ', 44px)';
   table.innerHTML = '';
   GRID_CELLS = [];
   GRID.forEach(function(row, r) {
@@ -625,11 +379,9 @@ function buildAndRun() {
       GRID_CELLS[r].push(el);
     });
   });
-
   document.getElementById('grid-sub').textContent = '(' + ROWS + '×' + COLS + ')';
 
   STEPS = buildSteps();
-
   if (!nav) {
     nav = VizNav({
       btnPrev:  document.getElementById('prevBtn'),
@@ -638,16 +390,11 @@ function buildAndRun() {
       speedSel: document.getElementById('speedSel'),
       render:   renderSnap,
     });
+    document.getElementById('resetBtn').addEventListener('click', function() { buildAndRun(); });
   }
   nav.load(STEPS);
 }
 
-// Render code skeleton on load
-renderCode([]);
-
-// Auto-run default
-
-// Preset loader
 function loadPreset() {
   var sel = document.getElementById('presetSel');
   if (!sel.value) return;
@@ -657,16 +404,13 @@ function loadPreset() {
   buildAndRun();
 }
 
-// Random example generator
 function randomExample() {
   var sizes = [{rows: 3, cols: 3}, {rows: 3, cols: 4}, {rows: 4, cols: 4}];
   var sz = sizes[Math.floor(Math.random() * sizes.length)];
   var grid = [];
   for (var i = 0; i < sz.rows; i++) {
     var row = '';
-    for (var j = 0; j < sz.cols; j++) {
-      row += String.fromCharCode(65 + Math.floor(Math.random() * 26));
-    }
+    for (var j = 0; j < sz.cols; j++) row += String.fromCharCode(65 + Math.floor(Math.random() * 26));
     grid.push(row);
   }
   var words = ['HELLO', 'WORLD', 'MAZE', 'SEARCH', 'PATH', 'CAT', 'DOG', 'TREE', 'CODE', 'ALGO'];
@@ -677,7 +421,29 @@ function randomExample() {
   buildAndRun();
 }
 
+renderCode([]);
 window.addEventListener('DOMContentLoaded', buildAndRun);
+</script>
+
+<script>
+(function() {
+  var handle = document.getElementById('resize-handle');
+  var panel  = document.getElementById('code-panel');
+  var dragging = false, startX = 0, startW = 0;
+  handle.addEventListener('mousedown', function(e) {
+    dragging = true; startX = e.clientX; startW = panel.offsetWidth;
+    handle.classList.add('dragging'); e.preventDefault();
+  });
+  document.addEventListener('mousemove', function(e) {
+    if (!dragging) return;
+    var delta = startX - e.clientX;
+    panel.style.width = Math.min(560, Math.max(120, startW + delta)) + 'px';
+  });
+  document.addEventListener('mouseup', function() {
+    if (!dragging) return;
+    dragging = false; handle.classList.remove('dragging');
+  });
+})();
 </script>
 </body>
 </html>

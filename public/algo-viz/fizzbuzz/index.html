@@ -1,419 +1,414 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>FizzBuzz</title>
-  <link rel="stylesheet" href="../shared/style.css" />
-  <script src="../shared/gsap.min.js"></script>
-  <script src="../shared/viz.js"></script>
-  <style>
-    .viz-inputs {
-      display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end;
-      padding: 10px 0 14px; width: 100%; max-width: 90%;
-    }
-    .viz-inputs .field { display: flex; flex-direction: column; gap: 4px; }
-    .viz-inputs label {
-      font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
-      letter-spacing: 0.08em; color: var(--text-dim);
-    }
-    .viz-inputs input[type="number"] {
-      background: var(--surface); border: 1px solid var(--border);
-      color: var(--text); border-radius: var(--radius-sm);
-      padding: 6px 10px; font-size: 0.85rem; width: 80px;
-    }
-    .viz-inputs select {
-      background: var(--surface); border: 1px solid var(--border);
-      color: var(--text); border-radius: var(--radius-sm);
-      padding: 6px 10px; font-size: 0.85rem; cursor: pointer;
-    }
-    .viz-area {
-      width: 100%; max-width: 90%;
-      display: flex; flex-direction: column; gap: 14px;
-    }
-    .btn-step {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--radius-sm); color: var(--text);
-      cursor: pointer; font-size: 0.9rem; font-weight: 700;
-      padding: 8px 16px; transition: all 0.15s;
-    }
-    .btn-step:hover:not(:disabled) { background: var(--border); border-color: var(--accent); }
-    .btn-step:disabled { opacity: 0.35; cursor: not-allowed; }
-    .btn-play {
-      background: var(--accent); border: none;
-      border-radius: var(--radius-sm); color: #fff;
-      cursor: pointer; font-size: 0.9rem; font-weight: 700;
-      padding: 8px 18px; transition: background 0.15s;
-    }
-    .btn-play:hover:not(:disabled) { filter: brightness(1.1); }
-    .btn-play:disabled { opacity: 0.35; cursor: not-allowed; }
-    #speedSel {
-      background: var(--bg, #0f1117); border: 1px solid var(--border);
-      color: var(--text); border-radius: var(--radius-sm);
-      padding: 6px 10px; font-size: 0.85rem; cursor: pointer;
-    }
-    /* Counters */
-    .counters {
-      display: flex; gap: 18px; align-items: center; flex-wrap: wrap;
-      padding: 10px 14px; background: var(--surface);
-      border: 1px solid var(--border); border-radius: var(--radius-sm);
-    }
-    .counter-item { display: flex; flex-direction: column; align-items: center; gap: 2px; }
-    .counter-label { font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; }
-    .counter-val { font-size: 1.3rem; font-weight: 800; }
-    .counter-fizz .counter-label, .counter-fizz .counter-val { color: #5b9cf6; }
-    .counter-buzz .counter-label, .counter-buzz .counter-val { color: #f5a623; }
-    .counter-fb   .counter-label, .counter-fb   .counter-val { color: #a855f7; }
-    .counter-num  .counter-label { color: var(--text-dim); }
-    .counter-num  .counter-val   { color: var(--text); }
-    /* Grid */
-    .fb-grid { display: flex; flex-wrap: wrap; gap: 8px; }
-    .fb-cell {
-      width: 62px; height: 52px;
-      display: flex; flex-direction: column; align-items: center; justify-content: center;
-      border: 2px solid var(--border); border-radius: 8px;
-      background: var(--surface); position: relative; overflow: hidden;
-      transition: border-color 0.2s, background 0.2s;
-    }
-    .fb-cell .cell-num {
-      font-size: 0.6rem; font-weight: 600; color: var(--text-dim);
-      position: absolute; top: 4px; left: 6px;
-    }
-    .fb-cell .cell-val { font-size: 0.9rem; font-weight: 800; color: var(--text); margin-top: 6px; }
-    .fb-cell.active   { border-color: var(--accent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 30%, transparent); }
-    .fb-cell.done-fizz { border-color: #5b9cf6; background: #5b9cf610; }
-    .fb-cell.done-buzz { border-color: #f5a623; background: #f5a62310; }
-    .fb-cell.done-fb   { border-color: #a855f7; background: #a855f710; }
-    .fb-cell.done-num  { border-color: var(--border); }
-    .cell-val.val-fizz { color: #5b9cf6 !important; }
-    .cell-val.val-buzz { color: #f5a623 !important; }
-    .cell-val.val-fb   { color: #a855f7 !important; }
-    /* Layout */
-    .main-layout {
-      display: flex; gap: 18px; align-items: flex-start; width: 100%; max-width: 90%;
-    }
-    .left-col { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 12px; }
-    .right-col { flex: 0 0 220px; }
-    /* Code panel */
-    #code-panel {
-      background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); overflow: hidden;
-    }
-    .code-title {
-      font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
-      letter-spacing: 0.08em; color: var(--text-dim);
-      padding: 8px 12px; border-bottom: 1px solid var(--border);
-    }
-    #code-body { margin: 0; padding: 10px 0; font-family: monospace; font-size: 0.8rem; line-height: 1.7; }
-    .cl { padding: 0 14px; color: var(--text-dim); white-space: pre; }
-    .cl.hl {
-      background: color-mix(in srgb, var(--accent) 15%, transparent);
-      color: var(--text); border-left: 3px solid var(--accent); padding-left: 11px;
-    }
-    .step-info { font-size: 0.85rem; color: var(--text-dim); min-height: 1.4em; }
-    .step-info span { color: var(--text); font-weight: 700; }
-    .nav-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>FizzBuzz</title>
+<link rel="stylesheet" href="../shared/style.css" />
+<script src="../shared/gsap.min.js"></script>
+<script src="../shared/viz.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: "Fira Code", "Cascadia Code", monospace; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+  #header { padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+  #phase-badge { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; padding: 3px 10px; border-radius: var(--radius-sm); background: #1e3a5f; color: var(--blue); border: 1px solid var(--blue); }
+  #step-counter { font-size: 12px; color: var(--text-muted); margin-left: auto; }
+  .viz-inputs { width: 100%; padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; flex-wrap: wrap; gap: 12px; align-items: center; flex-shrink: 0; }
+  .viz-inputs label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); display: block; margin-bottom: 3px; }
+  .viz-inputs select, .viz-inputs input { background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 0 8px; height: 30px; font-size: 0.82rem; font-family: inherit; }
+  .vi-btn-run { padding: 6px 14px; border-radius: 6px; font-size: 0.82rem; font-weight: 600; cursor: pointer; font-family: inherit; background: var(--accent); color: #fff; border: none; }
+  .vi-btn-rand { padding: 6px 14px; border-radius: 6px; font-size: 0.82rem; cursor: pointer; font-family: inherit; background: var(--bg); color: var(--text); border: 1px solid var(--border); }
+  #main { display: flex; flex: 1; overflow: hidden; }
+  #viz-area { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding: 16px; gap: 14px; overflow-y: auto; }
+  #desc { font-size: 13px; color: var(--text-muted); text-align: center; max-width: 560px; min-height: 36px; line-height: 1.5; }
+  .panel-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--text-dim); margin-bottom: 8px; }
+  #resize-handle { width: 5px; flex-shrink: 0; cursor: col-resize; background: transparent; border-left: 1px solid var(--border); transition: background .15s; z-index: 10; }
+  #resize-handle:hover, #resize-handle.dragging { background: var(--accent); }
+  #code-panel { width: 320px; min-width: 120px; max-width: 560px; flex-shrink: 0; background: #0d1117; border-right: 1px solid var(--border); overflow-y: auto; overflow-x: auto; padding: 10px 12px; display: flex; flex-direction: column; }
+  .code-panel-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--text-dim); margin-bottom: 8px; }
+  .cl { display: flex; align-items: stretch; padding: 2px 0; white-space: pre; border-left: 2px solid transparent; padding-left: 6px; color: var(--text-muted); font-family: 'Fira Code','Cascadia Code',monospace; font-size: 0.75rem; line-height: 1.8; }
+  .cl.hl { background: rgba(122,162,247,0.12); border-left-color: var(--accent); color: var(--text); }
+  .ln { display: inline-block; width: 20px; text-align: right; color: var(--text-dim); user-select: none; margin-right: 10px; font-size: 0.7rem; }
+  #sidebar { width: 200px; flex-shrink: 0; background: var(--surface); border-left: 1px solid var(--border); overflow-y: auto; padding: 14px 12px; display: flex; flex-direction: column; gap: 10px; }
+  .sidebar-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--text-dim); margin-bottom: 6px; }
+  .var-item { font-size: 11px; font-family: monospace; color: var(--text-muted); padding: 4px 0; border-bottom: 1px solid var(--border-soft); }
+  .var-item:last-child { border-bottom: none; }
+  #nav-row { flex-shrink: 0; display: flex; align-items: center; gap: 8px; padding: 10px 16px; background: var(--surface); border-top: 1px solid var(--border); }
+  .btn-step { padding: 6px 14px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--surface); color: var(--text); font-family: inherit; font-size: 12px; cursor: pointer; }
+  .btn-step:hover { background: #334155; }
+  .btn-step:disabled { opacity: 0.35; cursor: not-allowed; }
+  .btn-play { padding: 6px 14px; border-radius: var(--radius-sm); background: var(--accent); border: none; color: #fff; font-family: inherit; font-size: 12px; cursor: pointer; font-weight: 600; }
+  #nav-row select { padding: 5px 8px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: #1e293b; color: var(--text); font-size: 12px; font-family: inherit; cursor: pointer; }
+  /* PAGE-SPECIFIC */
+  .counters { display: flex; gap: 18px; align-items: center; flex-wrap: wrap; padding: 10px 14px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); width: 100%; }
+  .counter-item { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+  .counter-label { font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; }
+  .counter-val { font-size: 1.3rem; font-weight: 800; }
+  .counter-fizz .counter-label, .counter-fizz .counter-val { color: #5b9cf6; }
+  .counter-buzz .counter-label, .counter-buzz .counter-val { color: #f5a623; }
+  .counter-fb   .counter-label, .counter-fb   .counter-val { color: #a855f7; }
+  .counter-num  .counter-label { color: var(--text-dim); }
+  .counter-num  .counter-val   { color: var(--text); }
+  .fb-grid { display: flex; flex-wrap: wrap; gap: 8px; width: 100%; }
+  .fb-cell { width: 62px; height: 52px; display: flex; flex-direction: column; align-items: center; justify-content: center; border: 2px solid var(--border); border-radius: 8px; background: var(--surface); position: relative; overflow: hidden; transition: border-color 0.2s, background 0.2s; }
+  .fb-cell .cell-num { font-size: 0.6rem; font-weight: 600; color: var(--text-dim); position: absolute; top: 4px; left: 6px; }
+  .fb-cell .cell-val { font-size: 0.9rem; font-weight: 800; color: var(--text); margin-top: 6px; }
+  .fb-cell.active   { border-color: var(--accent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 30%, transparent); }
+  .fb-cell.done-fizz { border-color: #5b9cf6; background: #5b9cf610; }
+  .fb-cell.done-buzz { border-color: #f5a623; background: #f5a62310; }
+  .fb-cell.done-fb   { border-color: #a855f7; background: #a855f710; }
+  .fb-cell.done-num  { border-color: var(--border); }
+  .cell-val.val-fizz { color: #5b9cf6 !important; }
+  .cell-val.val-buzz { color: #f5a623 !important; }
+  .cell-val.val-fb   { color: #a855f7 !important; }
+</style>
 </head>
 <body>
-  <!-- .viz-inputs: visible user controls (not hidden by bridge) -->
-  <div class="viz-inputs">
-    <div class="field">
-      <label>Preset</label>
-      <select id="presetSel" onchange="loadPreset()">
-        <option value="">— pick a preset —</option>
-        <option value="5">N = 5 (tiny)</option>
-        <option value="15">N = 15 (classic)</option>
-        <option value="20">N = 20 (default)</option>
-        <option value="30">N = 30 (extended)</option>
-        <option value="50">N = 50 (large)</option>
-        <option value="100">N = 100 (full)</option>
-      </select>
-    </div>
-    <div class="field">
-      <label>N</label>
-      <input type="number" id="inputN" value="20" min="1" max="200" />
-    </div>
-    <button onclick="buildAndRun()" style="padding:7px 18px;background:var(--accent);color:#fff;border:none;border-radius:6px;font-weight:600;cursor:pointer;">Run</button>
-    <button onclick="randomExample()" style="padding:7px 14px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:6px;cursor:pointer;">🎲 Random</button>
+
+<div class="viz-inputs">
+  <div>
+    <label>Preset</label>
+    <select id="presetSel" onchange="loadPreset()">
+      <option value="">— pick a preset —</option>
+      <option value="5">N = 5 (tiny)</option>
+      <option value="15">N = 15 (classic)</option>
+      <option value="20">N = 20 (default)</option>
+      <option value="30">N = 30 (extended)</option>
+      <option value="50">N = 50 (large)</option>
+      <option value="100">N = 100 (full)</option>
+    </select>
   </div>
+  <div>
+    <label>N</label>
+    <input type="number" id="inputN" value="20" min="1" max="200" style="width:80px" />
+  </div>
+  <button class="vi-btn-run" onclick="buildAndRun()">Run</button>
+  <button class="vi-btn-rand" onclick="randomExample()">&#127922; Random</button>
+</div>
+<div class="controls"></div>
 
-  <div id="viz-root">
-    <div class="viz-area">
-      <div class="counters">
-        <div class="counter-item counter-fizz">
-          <span class="counter-label">Fizz</span>
-          <span class="counter-val" id="cnt-fizz">0</span>
-        </div>
-        <div class="counter-item counter-buzz">
-          <span class="counter-label">Buzz</span>
-          <span class="counter-val" id="cnt-buzz">0</span>
-        </div>
-        <div class="counter-item counter-fb">
-          <span class="counter-label">FizzBuzz</span>
-          <span class="counter-val" id="cnt-fb">0</span>
-        </div>
-        <div class="counter-item counter-num" style="margin-left:auto;">
-          <span class="counter-label">Numbers</span>
-          <span class="counter-val" id="cnt-num">0</span>
-        </div>
+<div id="header">
+  <span id="phase-badge">Setup</span>
+  <span style="font-size:13px;font-weight:700;">FizzBuzz</span>
+  <span id="step-counter">Step 0 / 0</span>
+</div>
+
+<div id="main">
+  <div id="viz-area">
+    <div id="desc">Click Run to start.</div>
+
+    <div class="counters">
+      <div class="counter-item counter-fizz">
+        <span class="counter-label">Fizz</span>
+        <span class="counter-val" id="cnt-fizz">0</span>
       </div>
-
-      <div class="main-layout">
-        <div class="left-col">
-          <div class="step-info" id="step-info">Press Run to start.</div>
-          <div class="fb-grid" id="fb-grid"></div>
-          <div class="nav-row">
-            <button class="btn-step" id="prevBtn" onclick="goPrev()" disabled>&#9664; Prev</button>
-            <button class="btn-step" id="stepBtn" onclick="goStep()" disabled>Step &#9654;</button>
-            <button class="btn-play" id="playBtn" onclick="togglePlay()" disabled>Play</button>
-            <button class="btn-step" id="resetBtn" onclick="resetViz()">Reset</button>
-            <select id="speedSel" onchange="onSpeedChange()">
-              <option value="1">1x</option>
-              <option value="2" selected>2x</option>
-              <option value="4">4x</option>
-            </select>
-          </div>
-        </div>
-        <div class="right-col">
-          <div id="code-panel">
-            <div class="code-title">Pseudocode</div>
-            <pre id="code-body"><div id="cl1" class="cl">for i in 1..N:</div><div id="cl2" class="cl">  if i % 15 == 0:</div><div id="cl3" class="cl">    print("FizzBuzz")</div><div id="cl4" class="cl">  elif i % 3 == 0:</div><div id="cl5" class="cl">    print("Fizz")</div><div id="cl6" class="cl">  elif i % 5 == 0:</div><div id="cl7" class="cl">    print("Buzz")</div><div id="cl8" class="cl">  else:</div><div id="cl9" class="cl">    print(i)</div></pre>
-          </div>
-        </div>
+      <div class="counter-item counter-buzz">
+        <span class="counter-label">Buzz</span>
+        <span class="counter-val" id="cnt-buzz">0</span>
+      </div>
+      <div class="counter-item counter-fb">
+        <span class="counter-label">FizzBuzz</span>
+        <span class="counter-val" id="cnt-fb">0</span>
+      </div>
+      <div class="counter-item counter-num" style="margin-left:auto;">
+        <span class="counter-label">Numbers</span>
+        <span class="counter-val" id="cnt-num">0</span>
       </div>
     </div>
+
+    <div class="fb-grid" id="fb-grid"></div>
   </div>
 
-  <div class="controls"></div>
+  <div id="resize-handle"></div>
 
-  <script>
-    // ── State ────────────────────────────────────────────────────────
-    let steps = [];
-    let currentIdx = -1;
-    let playing = false;
-    let playTimer = null;
-    let speedMultiplier = 2;
+  <div id="code-panel">
+    <div class="code-panel-title">Pseudocode</div>
+    <div id="code-body">
+      <div id="cl1" class="cl"><span class="ln">1</span>for i in 1..N:</div>
+      <div id="cl2" class="cl"><span class="ln">2</span>  if i % 15 == 0:</div>
+      <div id="cl3" class="cl"><span class="ln">3</span>    print("FizzBuzz")</div>
+      <div id="cl4" class="cl"><span class="ln">4</span>  elif i % 3 == 0:</div>
+      <div id="cl5" class="cl"><span class="ln">5</span>    print("Fizz")</div>
+      <div id="cl6" class="cl"><span class="ln">6</span>  elif i % 5 == 0:</div>
+      <div id="cl7" class="cl"><span class="ln">7</span>    print("Buzz")</div>
+      <div id="cl8" class="cl"><span class="ln">8</span>  else:</div>
+      <div id="cl9" class="cl"><span class="ln">9</span>    print(i)</div>
+    </div>
+  </div>
 
-    // ── Preset / Random ──────────────────────────────────────────────
-    function loadPreset() {
-      const sel = document.getElementById('presetSel');
-      if (!sel.value) return;
-      document.getElementById('inputN').value = sel.value;
-      sel.value = '';
-      buildAndRun();
-    }
+  <div id="sidebar">
+    <div class="sidebar-title">Variables</div>
+    <div id="vars-items"><span style="color:var(--text-dim);">—</span></div>
+  </div>
+</div>
 
-    function randomExample() {
-      const opts = [10, 15, 20, 25, 30, 50];
-      const n = opts[Math.floor(Math.random() * opts.length)];
-      document.getElementById('inputN').value = n;
-      buildAndRun();
-    }
+<div id="nav-row">
+  <button id="prevBtn" class="btn-step" onclick="goPrev()" disabled>&#8592; Prev</button>
+  <button id="stepBtn" class="btn-step" onclick="goStep()" disabled>Step &#8594;</button>
+  <button id="playBtn" class="btn-play" onclick="togglePlay()" disabled>Play</button>
+  <button id="resetBtn" class="btn-step" onclick="resetViz()">&#8635; Reset</button>
+  <select id="speedSel" onchange="onSpeedChange()">
+    <option value="800">0.5&#215;</option>
+    <option value="400" selected>1&#215;</option>
+    <option value="200">2&#215;</option>
+    <option value="100">4&#215;</option>
+  </select>
+</div>
 
-    // ── Build steps ──────────────────────────────────────────────────
-    function buildAndRun() {
-      stopPlay();
-      let N = parseInt(document.getElementById('inputN').value) || 20;
-      N = Math.max(1, Math.min(200, N));
+<script>
+  // ── State ────────────────────────────────────────────────────────
+  let steps = [];
+  let currentIdx = -1;
+  let playing = false;
+  let playTimer = null;
+  let speedMs = 400;
 
-      // Build grid cells
-      const grid = document.getElementById('fb-grid');
-      grid.innerHTML = '';
-      for (let i = 1; i <= N; i++) {
-        const cell = document.createElement('div');
-        cell.className = 'fb-cell';
-        cell.id = 'cell-' + i;
-        cell.innerHTML = '<span class="cell-num">' + i + '</span><span class="cell-val" id="val-' + i + '">' + i + '</span>';
-        grid.appendChild(cell);
-      }
-
-      // Build steps
-      steps = [];
-      for (let i = 1; i <= N; i++) {
-        let result, type, codeLines;
-        if (i % 15 === 0) {
-          result = 'FizzBuzz'; type = 'fb';   codeLines = [1, 2, 3];
-        } else if (i % 3 === 0) {
-          result = 'Fizz';     type = 'fizz'; codeLines = [1, 2, 4, 5];
-        } else if (i % 5 === 0) {
-          result = 'Buzz';     type = 'buzz'; codeLines = [1, 2, 4, 6, 7];
-        } else {
-          result = String(i);  type = 'num';  codeLines = [1, 2, 4, 6, 8, 9];
-        }
-        steps.push({ i, result, type, codeLines });
-      }
-
-      resetCounters();
-      currentIdx = -1;
-      clearHighlights();
-      setInfo('Press Step or Play.');
-      document.getElementById('prevBtn').disabled = true;
-      document.getElementById('stepBtn').disabled = false;
-      document.getElementById('playBtn').disabled = false;
-    }
-
-    // ── Render step ──────────────────────────────────────────────────
-    function render(idx) {
-      if (idx < 0 || idx >= steps.length) return;
-      const step = steps[idx];
-
-      // Apply all done cells up to idx, clear after
-      for (let s = 0; s < steps.length; s++) {
-        const done = s <= idx;
-        const active = s === idx;
-        if (done) {
-          applyDone(steps[s], active);
-        } else {
-          const cell = document.getElementById('cell-' + steps[s].i);
-          const val  = document.getElementById('val-'  + steps[s].i);
-          if (cell) cell.className = 'fb-cell';
-          if (val)  { val.textContent = steps[s].i; val.className = 'cell-val'; }
-        }
-      }
-
-      // Update counters
-      let fizz = 0, buzz = 0, fb = 0, num = 0;
-      for (let s = 0; s <= idx; s++) {
-        const t = steps[s].type;
-        if (t === 'fizz') fizz++;
-        else if (t === 'buzz') buzz++;
-        else if (t === 'fb') fb++;
-        else num++;
-      }
-      document.getElementById('cnt-fizz').textContent = fizz;
-      document.getElementById('cnt-buzz').textContent = buzz;
-      document.getElementById('cnt-fb').textContent   = fb;
-      document.getElementById('cnt-num').textContent  = num;
-
-      // Code highlights
-      clearHighlights();
-      step.codeLines.forEach(function(n) {
-        const el = document.getElementById('cl' + n);
-        if (el) el.classList.add('hl');
-      });
-
-      // Step info
-      const labels = { fizz: 'Fizz', buzz: 'Buzz', fb: 'FizzBuzz', num: 'number' };
-      setInfo('i = <span>' + step.i + '</span> → <span>' + step.result + '</span> (' + labels[step.type] + ')');
-
-      // Animate active cell
-      const activeCell = document.getElementById('cell-' + step.i);
-      if (activeCell && typeof gsap !== 'undefined') {
-        gsap.fromTo(activeCell, { scale: 1.18 }, { scale: 1, duration: 0.28, ease: 'back.out(2)' });
-      }
-
-      document.getElementById('prevBtn').disabled = idx <= 0;
-      document.getElementById('stepBtn').disabled = idx >= steps.length - 1;
-    }
-
-    function applyDone(step, isActive) {
-      const cell = document.getElementById('cell-' + step.i);
-      const val  = document.getElementById('val-'  + step.i);
-      if (!cell || !val) return;
-
-      val.textContent = step.result;
-      const vcls = { fizz: 'val-fizz', buzz: 'val-buzz', fb: 'val-fb', num: '' }[step.type];
-      val.className = 'cell-val' + (vcls ? ' ' + vcls : '');
-
-      const dcls = { fizz: 'done-fizz', buzz: 'done-buzz', fb: 'done-fb', num: 'done-num' }[step.type];
-      cell.className = 'fb-cell ' + dcls + (isActive ? ' active' : '');
-    }
-
-    // ── Navigation ───────────────────────────────────────────────────
-    function goPrev() {
-      if (currentIdx > 0) { currentIdx--; render(currentIdx); }
-    }
-
-    function goStep() {
-      if (currentIdx < steps.length - 1) { currentIdx++; render(currentIdx); }
-    }
-
-    function togglePlay() {
-      if (playing) { stopPlay(); } else { startPlay(); }
-    }
-
-    function startPlay() {
-      if (steps.length === 0) return;
-      if (currentIdx >= steps.length - 1) { currentIdx = -1; resetVisuals(); }
-      playing = true;
-      document.getElementById('playBtn').textContent = 'Pause';
-      scheduleNext();
-    }
-
-    function stopPlay() {
-      playing = false;
-      clearTimeout(playTimer);
-      const btn = document.getElementById('playBtn');
-      if (btn) btn.textContent = 'Play';
-    }
-
-    function scheduleNext() {
-      if (!playing) return;
-      const delay = Math.round(600 / speedMultiplier);
-      playTimer = setTimeout(function() {
-        if (currentIdx < steps.length - 1) {
-          currentIdx++;
-          render(currentIdx);
-          scheduleNext();
-        } else {
-          stopPlay();
-          setInfo('Done! (' + steps.length + ' numbers processed)');
-        }
-      }, delay);
-    }
-
-    function onSpeedChange() {
-      speedMultiplier = parseFloat(document.getElementById('speedSel').value) || 2;
-    }
-
-    function resetViz() {
-      stopPlay();
-      if (steps.length === 0) return;
-      currentIdx = -1;
-      resetCounters();
-      resetVisuals();
-      clearHighlights();
-      setInfo('Press Step or Play.');
-      document.getElementById('prevBtn').disabled = true;
-      document.getElementById('stepBtn').disabled = false;
-    }
-
-    function resetVisuals() {
-      steps.forEach(function(s) {
-        const cell = document.getElementById('cell-' + s.i);
-        const val  = document.getElementById('val-'  + s.i);
-        if (cell) cell.className = 'fb-cell';
-        if (val)  { val.textContent = s.i; val.className = 'cell-val'; }
-      });
-    }
-
-    function resetCounters() {
-      ['cnt-fizz','cnt-buzz','cnt-fb','cnt-num'].forEach(function(id) {
-        document.getElementById(id).textContent = '0';
-      });
-    }
-
-    function clearHighlights() {
-      document.querySelectorAll('.cl.hl').forEach(function(el) { el.classList.remove('hl'); });
-    }
-
-    function setInfo(html) {
-      document.getElementById('step-info').innerHTML = html;
-    }
-
-    // ── VizNav bridge hooks ──────────────────────────────────────────
-    window._vizPrev  = goPrev;
-    window._vizStep  = goStep;
-    window._vizPlay  = togglePlay;
-    window._vizReset = resetViz;
-    window._vizSpeed = function(v) {
-      speedMultiplier = parseFloat(v) || 2;
-      const sel = document.getElementById('speedSel');
-      if (sel) sel.value = String(speedMultiplier);
-    };
-
-    // ── Init ─────────────────────────────────────────────────────────
+  // ── Preset / Random ──────────────────────────────────────────────
+  function loadPreset() {
+    const sel = document.getElementById('presetSel');
+    if (!sel.value) return;
+    document.getElementById('inputN').value = sel.value;
+    sel.value = '';
     buildAndRun();
-  </script>
+  }
+
+  function randomExample() {
+    const opts = [10, 15, 20, 25, 30, 50];
+    const n = opts[Math.floor(Math.random() * opts.length)];
+    document.getElementById('inputN').value = n;
+    buildAndRun();
+  }
+
+  // ── Build steps ──────────────────────────────────────────────────
+  function buildAndRun() {
+    stopPlay();
+    let N = parseInt(document.getElementById('inputN').value) || 20;
+    N = Math.max(1, Math.min(200, N));
+
+    const grid = document.getElementById('fb-grid');
+    grid.innerHTML = '';
+    for (let i = 1; i <= N; i++) {
+      const cell = document.createElement('div');
+      cell.className = 'fb-cell';
+      cell.id = 'cell-' + i;
+      cell.innerHTML = '<span class="cell-num">' + i + '</span><span class="cell-val" id="val-' + i + '">' + i + '</span>';
+      grid.appendChild(cell);
+    }
+
+    steps = [];
+    for (let i = 1; i <= N; i++) {
+      let result, type, codeLines;
+      if (i % 15 === 0) {
+        result = 'FizzBuzz'; type = 'fb';   codeLines = [1, 2, 3];
+      } else if (i % 3 === 0) {
+        result = 'Fizz';     type = 'fizz'; codeLines = [1, 2, 4, 5];
+      } else if (i % 5 === 0) {
+        result = 'Buzz';     type = 'buzz'; codeLines = [1, 2, 4, 6, 7];
+      } else {
+        result = String(i);  type = 'num';  codeLines = [1, 2, 4, 6, 8, 9];
+      }
+      steps.push({ i, result, type, codeLines });
+    }
+
+    resetCounters();
+    currentIdx = -1;
+    clearHighlights();
+    setDesc('Press Step or Play.');
+    document.getElementById('phase-badge').textContent = 'Ready';
+    document.getElementById('step-counter').textContent = 'Step 0 / ' + steps.length;
+    document.getElementById('prevBtn').disabled = true;
+    document.getElementById('stepBtn').disabled = false;
+    document.getElementById('playBtn').disabled = false;
+  }
+
+  // ── Render step ──────────────────────────────────────────────────
+  function render(idx) {
+    if (idx < 0 || idx >= steps.length) return;
+    const step = steps[idx];
+
+    for (let s = 0; s < steps.length; s++) {
+      const done = s <= idx;
+      const active = s === idx;
+      if (done) {
+        applyDone(steps[s], active);
+      } else {
+        const cell = document.getElementById('cell-' + steps[s].i);
+        const val  = document.getElementById('val-'  + steps[s].i);
+        if (cell) cell.className = 'fb-cell';
+        if (val)  { val.textContent = steps[s].i; val.className = 'cell-val'; }
+      }
+    }
+
+    let fizz = 0, buzz = 0, fb = 0, num = 0;
+    for (let s = 0; s <= idx; s++) {
+      const t = steps[s].type;
+      if (t === 'fizz') fizz++;
+      else if (t === 'buzz') buzz++;
+      else if (t === 'fb') fb++;
+      else num++;
+    }
+    document.getElementById('cnt-fizz').textContent = fizz;
+    document.getElementById('cnt-buzz').textContent = buzz;
+    document.getElementById('cnt-fb').textContent   = fb;
+    document.getElementById('cnt-num').textContent  = num;
+
+    clearHighlights();
+    step.codeLines.forEach(function(n) {
+      const el = document.getElementById('cl' + n);
+      if (el) el.classList.add('hl');
+    });
+
+    const labels = { fizz: 'Fizz', buzz: 'Buzz', fb: 'FizzBuzz', num: 'number' };
+    setDesc('i = ' + step.i + ' → ' + step.result + ' (' + labels[step.type] + ')');
+
+    const phaseLabels = { fizz: 'Fizz', buzz: 'Buzz', fb: 'FizzBuzz', num: 'Number' };
+    document.getElementById('phase-badge').textContent = phaseLabels[step.type];
+    document.getElementById('step-counter').textContent = 'Step ' + (idx + 1) + ' / ' + steps.length;
+
+    // Update sidebar vars
+    document.getElementById('vars-items').innerHTML =
+      '<div class="var-item"><span style="color:var(--text-dim)">i</span> = ' + step.i + '</div>' +
+      '<div class="var-item"><span style="color:var(--text-dim)">result</span> = ' + step.result + '</div>' +
+      '<div class="var-item"><span style="color:var(--text-dim)">fizz</span> = ' + fizz + '</div>' +
+      '<div class="var-item"><span style="color:var(--text-dim)">buzz</span> = ' + buzz + '</div>' +
+      '<div class="var-item"><span style="color:var(--text-dim)">fb</span> = ' + fb + '</div>';
+
+    const activeCell = document.getElementById('cell-' + step.i);
+    if (activeCell && typeof gsap !== 'undefined') {
+      gsap.fromTo(activeCell, { scale: 1.18 }, { scale: 1, duration: 0.28, ease: 'back.out(2)' });
+    }
+
+    document.getElementById('prevBtn').disabled = idx <= 0;
+    document.getElementById('stepBtn').disabled = idx >= steps.length - 1;
+  }
+
+  function applyDone(step, isActive) {
+    const cell = document.getElementById('cell-' + step.i);
+    const val  = document.getElementById('val-'  + step.i);
+    if (!cell || !val) return;
+    val.textContent = step.result;
+    const vcls = { fizz: 'val-fizz', buzz: 'val-buzz', fb: 'val-fb', num: '' }[step.type];
+    val.className = 'cell-val' + (vcls ? ' ' + vcls : '');
+    const dcls = { fizz: 'done-fizz', buzz: 'done-buzz', fb: 'done-fb', num: 'done-num' }[step.type];
+    cell.className = 'fb-cell ' + dcls + (isActive ? ' active' : '');
+  }
+
+  // ── Navigation ───────────────────────────────────────────────────
+  function goPrev() {
+    if (currentIdx > 0) { currentIdx--; render(currentIdx); }
+  }
+
+  function goStep() {
+    if (currentIdx < steps.length - 1) { currentIdx++; render(currentIdx); }
+  }
+
+  function togglePlay() {
+    if (playing) { stopPlay(); } else { startPlay(); }
+  }
+
+  function startPlay() {
+    if (steps.length === 0) return;
+    if (currentIdx >= steps.length - 1) { currentIdx = -1; resetVisuals(); }
+    playing = true;
+    document.getElementById('playBtn').textContent = 'Pause';
+    scheduleNext();
+  }
+
+  function stopPlay() {
+    playing = false;
+    clearTimeout(playTimer);
+    const btn = document.getElementById('playBtn');
+    if (btn) btn.textContent = 'Play';
+  }
+
+  function scheduleNext() {
+    if (!playing) return;
+    playTimer = setTimeout(function() {
+      if (currentIdx < steps.length - 1) {
+        currentIdx++;
+        render(currentIdx);
+        scheduleNext();
+      } else {
+        stopPlay();
+        setDesc('Done! (' + steps.length + ' numbers processed)');
+        document.getElementById('phase-badge').textContent = 'Done';
+      }
+    }, speedMs);
+  }
+
+  function onSpeedChange() {
+    speedMs = parseInt(document.getElementById('speedSel').value) || 400;
+  }
+
+  function resetViz() {
+    stopPlay();
+    if (steps.length === 0) return;
+    currentIdx = -1;
+    resetCounters();
+    resetVisuals();
+    clearHighlights();
+    setDesc('Press Step or Play.');
+    document.getElementById('phase-badge').textContent = 'Ready';
+    document.getElementById('step-counter').textContent = 'Step 0 / ' + steps.length;
+    document.getElementById('prevBtn').disabled = true;
+    document.getElementById('stepBtn').disabled = false;
+    document.getElementById('vars-items').innerHTML = '<span style="color:var(--text-dim);">—</span>';
+  }
+
+  function resetVisuals() {
+    steps.forEach(function(s) {
+      const cell = document.getElementById('cell-' + s.i);
+      const val  = document.getElementById('val-'  + s.i);
+      if (cell) cell.className = 'fb-cell';
+      if (val)  { val.textContent = s.i; val.className = 'cell-val'; }
+    });
+  }
+
+  function resetCounters() {
+    ['cnt-fizz','cnt-buzz','cnt-fb','cnt-num'].forEach(function(id) {
+      document.getElementById(id).textContent = '0';
+    });
+  }
+
+  function clearHighlights() {
+    document.querySelectorAll('.cl.hl').forEach(function(el) { el.classList.remove('hl'); });
+  }
+
+  function setDesc(html) {
+    document.getElementById('desc').innerHTML = html;
+  }
+
+  // ── VizNav bridge hooks ──────────────────────────────────────────
+  window._vizPrev  = goPrev;
+  window._vizStep  = goStep;
+  window._vizPlay  = togglePlay;
+  window._vizReset = resetViz;
+  window._vizSpeed = function(v) {
+    speedMs = parseInt(v) || 400;
+    const sel = document.getElementById('speedSel');
+    if (sel) sel.value = String(v);
+  };
+
+  buildAndRun();
+
+  // ── Resize handle ────────────────────────────────────────────────
+  (function() {
+    var handle = document.getElementById('resize-handle');
+    var panel  = document.getElementById('code-panel');
+    var dragging = false, startX = 0, startW = 0;
+    handle.addEventListener('mousedown', function(e) {
+      dragging = true; startX = e.clientX; startW = panel.offsetWidth;
+      handle.classList.add('dragging'); e.preventDefault();
+    });
+    document.addEventListener('mousemove', function(e) {
+      if (!dragging) return;
+      var delta = startX - e.clientX;
+      panel.style.width = Math.min(560, Math.max(120, startW + delta)) + 'px';
+    });
+    document.addEventListener('mouseup', function() {
+      if (dragging) { dragging = false; handle.classList.remove('dragging'); }
+    });
+  })();
+</script>
 </body>
 </html>

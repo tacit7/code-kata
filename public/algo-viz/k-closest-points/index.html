@@ -1,269 +1,171 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>K Closest Points to Origin</title>
-  <link rel="stylesheet" href="../shared/style.css" />
-  <script src="../shared/gsap.min.js"></script>
-  <script src="../shared/viz.js"></script>
-  <style>
-    body { display:flex; flex-direction:column; height:100vh; overflow:hidden; }
-
-    .top-area { flex: 0 0 auto; }
-    .mid-area  { flex:1; display:grid; grid-template-columns:1fr 1fr; gap:16px; padding:0 16px 8px; overflow:hidden; min-height:0; }
-    .bot-area  { flex: 0 0 auto; padding:0 16px 10px; }
-
-    /* ── panels ── */
-    .panel {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--radius-lg); padding: 14px 16px;
-      display: flex; flex-direction: column; gap: 10px;
-      overflow: hidden; min-height: 0;
-    }
-    .panel-title {
-      font-size: 0.72rem; font-weight: 700;
-      text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim);
-      flex-shrink: 0;
-    }
-
-    /* ── 2D canvas panel ── */
-    #plot-canvas {
-      flex: 1; width: 100%; min-height: 0;
-      border-radius: 6px;
-      background: #0a0a0f;
-    }
-
-    /* ── heap panel (right) ── */
-    .heap-meta {
-      display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;
-    }
-    #heap-badge {
-      font-size: 0.72rem; font-weight: 700; font-family: monospace;
-      padding: 2px 10px; border-radius: 20px;
-      background: var(--bg); border: 1px solid var(--border);
-      color: var(--text-dim);
-    }
-    #heap-svg { display:block; width:100%; flex:1; min-height:0; }
-    #heap-empty { color:var(--text-ghost); font-size:0.82rem; text-align:center; padding:24px 0; flex:1; }
-
-    /* heap list rows */
-    .heap-rows { display:flex; flex-direction:column; gap:4px; overflow-y:auto; flex:1; }
-    .heap-row {
-      display:flex; align-items:center; gap:10px;
-      padding:7px 10px; border-radius:6px;
-      background: var(--bg); border: 1px solid var(--border);
-      font-family: monospace; font-size: 0.82rem;
-      transition: border-color 0.2s, background 0.2s;
-    }
-    .heap-row.is-max  { border-color: #b45309; background: #1c1200; }
-    .heap-row.is-new  { border-color: var(--accent); background: #1e1a3a; }
-    .heap-row.is-kept { border-color: #16a34a; background: #052e16; }
-    .heap-rank  { width: 18px; color: var(--text-ghost); font-size: 0.7rem; text-align:right; }
-    .heap-pt    { color: var(--text-bright); flex:1; }
-    .heap-dist  { color: var(--text-dim); }
-
-    /* ── bottom nav row ── */
-    .nav-strip {
-      display:flex; gap:10px; align-items:center;
-    }
-    .step-info {
-      flex:1; min-width:0;
-      display:flex; flex-direction:column; gap:2px;
-    }
-    #phase-label { font-size:0.72rem; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:var(--text-dim); }
-    #step-desc   { font-size:0.82rem; color:var(--text-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-
-    .btn-play {
-      background:#15803d; border:none; border-radius:var(--radius-sm);
-      color:#fff; cursor:pointer; font-size:0.88rem; font-weight:600;
-      padding:9px 16px; transition:background 0.2s; white-space:nowrap;
-    }
-    .btn-play:hover { background:#166534; }
-    .btn-play.playing { background:#c2410c; }
-    .btn-play.playing:hover { background:#9a3412; }
-    .btn-play:disabled { opacity:0.4; cursor:not-allowed; }
-    .speed-select {
-      background:var(--bg); border:1px solid var(--border);
-      border-radius:var(--radius-sm); color:var(--text);
-      font-size:0.85rem; padding:8px 10px; outline:none; width:80px;
-    }
-
-    /* ── legend ── */
-    .legend {
-      display:flex; gap:14px; flex-wrap:wrap; font-size:0.73rem; color:var(--text-dim);
-      padding: 4px 0; flex-shrink: 0;
-    }
-    .legend-item { display:flex; align-items:center; gap:5px; }
-    .dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
-
-    /* ── viz-inputs ── */
-    .viz-inputs {
-      display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end;
-      padding: 10px 0 14px; width: 100%; max-width: 90%;
-      background: var(--bg); border: 1px solid var(--border);
-      border-radius: var(--radius-sm); padding: 12px 16px;
-      margin-bottom: 10px;
-    }
-    .viz-inputs .field {
-      display: flex; flex-direction: column; gap: 4px;
-    }
-    .viz-inputs label {
-      font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
-      letter-spacing: 0.08em; color: var(--text-dim);
-    }
-    .viz-inputs textarea,
-    .viz-inputs input[type="text"],
-    .viz-inputs input[type="number"] {
-      background: var(--surface); border: 1px solid var(--border);
-      color: var(--text); border-radius: var(--radius-sm);
-      padding: 6px 10px; font-size: 0.85rem;
-    }
-    .viz-inputs textarea {
-      width: 180px; font-family: monospace;
-    }
-    .viz-inputs input[type="number"] {
-      width: 80px;
-    }
-    .viz-inputs select {
-      background: var(--surface); border: 1px solid var(--border);
-      color: var(--text); border-radius: var(--radius-sm);
-      padding: 6px 10px; font-size: 0.85rem; cursor: pointer;
-    }
-    .viz-inputs .btn-primary,
-    .viz-inputs button {
-      padding: 7px 18px;
-      background: var(--accent);
-      color: #fff;
-      border: none;
-      border-radius: var(--radius-sm);
-      font-weight: 600;
-      cursor: pointer;
-      font-size: 0.85rem;
-      white-space: nowrap;
-    }
-    .viz-inputs button:nth-of-type(n+2) {
-      background: var(--surface);
-      color: var(--text);
-      border: 1px solid var(--border);
-    }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>K Closest Points to Origin</title>
+<link rel="stylesheet" href="../shared/style.css" />
+<script src="../shared/gsap.min.js"></script>
+<script src="../shared/viz.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: "Fira Code", "Cascadia Code", monospace; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+  #header { padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+  #phase-badge { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; padding: 3px 10px; border-radius: var(--radius-sm); background: #1e3a5f; color: var(--blue); border: 1px solid var(--blue); }
+  #step-counter { font-size: 12px; color: var(--text-muted); margin-left: auto; }
+  .viz-inputs { width: 100%; padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; flex-wrap: wrap; gap: 12px; align-items: center; flex-shrink: 0; }
+  .viz-inputs label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); display: block; margin-bottom: 3px; }
+  .viz-inputs select, .viz-inputs input, .viz-inputs textarea { background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 4px 8px; font-size: 0.82rem; font-family: inherit; }
+  .vi-btn-run { padding: 6px 14px; border-radius: 6px; font-size: 0.82rem; font-weight: 600; cursor: pointer; font-family: inherit; background: var(--accent); color: #fff; border: none; }
+  .vi-btn-rand { padding: 6px 14px; border-radius: 6px; font-size: 0.82rem; cursor: pointer; font-family: inherit; background: var(--bg); color: var(--text); border: 1px solid var(--border); }
+  #main { display: flex; flex: 1; overflow: hidden; }
+  #viz-area { flex: 1; display: flex; flex-direction: column; padding: 12px 16px; gap: 12px; overflow: hidden; min-height: 0; }
+  #desc { font-size: 13px; color: var(--text-muted); min-height: 32px; line-height: 1.5; flex-shrink: 0; }
+  #resize-handle { width: 5px; flex-shrink: 0; cursor: col-resize; background: transparent; border-left: 1px solid var(--border); transition: background .15s; z-index: 10; }
+  #resize-handle:hover, #resize-handle.dragging { background: var(--accent); }
+  #code-panel { width: 260px; min-width: 120px; max-width: 560px; flex-shrink: 0; background: #0d1117; border-right: 1px solid var(--border); overflow-y: auto; overflow-x: auto; padding: 10px 12px; display: flex; flex-direction: column; }
+  .code-panel-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--text-dim); margin-bottom: 8px; }
+  #sidebar { width: 200px; flex-shrink: 0; background: var(--surface); border-left: 1px solid var(--border); overflow-y: auto; padding: 14px 12px; display: flex; flex-direction: column; gap: 10px; }
+  .sidebar-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--text-dim); margin-bottom: 6px; }
+  #nav-row { flex-shrink: 0; display: flex; align-items: center; gap: 8px; padding: 10px 16px; background: var(--surface); border-top: 1px solid var(--border); }
+  .btn-step { padding: 6px 14px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--surface); color: var(--text); font-family: inherit; font-size: 12px; cursor: pointer; }
+  .btn-step:hover { background: #334155; }
+  .btn-play { padding: 6px 14px; border-radius: var(--radius-sm); background: var(--accent); border: none; color: #fff; font-family: inherit; font-size: 12px; cursor: pointer; font-weight: 600; }
+  #nav-row select { padding: 5px 8px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: #1e293b; color: var(--text); font-size: 12px; font-family: inherit; cursor: pointer; }
+  /* PAGE-SPECIFIC */
+  .mid-panels { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; flex: 1; min-height: 0; overflow: hidden; }
+  .panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; overflow: hidden; min-height: 0; }
+  .panel-title { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); flex-shrink: 0; }
+  #plot-canvas { flex: 1; width: 100%; min-height: 0; border-radius: 6px; background: #0a0a0f; }
+  .heap-meta { display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+  #heap-badge { font-size: 0.72rem; font-weight: 700; font-family: monospace; padding: 2px 10px; border-radius: 20px; background: var(--bg); border: 1px solid var(--border); color: var(--text-dim); }
+  .heap-rows { display: flex; flex-direction: column; gap: 4px; overflow-y: auto; flex: 1; }
+  .heap-row { display: flex; align-items: center; gap: 10px; padding: 7px 10px; border-radius: 6px; background: var(--bg); border: 1px solid var(--border); font-family: monospace; font-size: 0.82rem; transition: border-color 0.2s, background 0.2s; }
+  .heap-row.is-max  { border-color: #b45309; background: #1c1200; }
+  .heap-row.is-new  { border-color: var(--accent); background: #1e1a3a; }
+  .heap-row.is-kept { border-color: #16a34a; background: #052e16; }
+  .heap-rank { width: 18px; color: var(--text-ghost); font-size: 0.7rem; text-align: right; }
+  .heap-pt   { color: var(--text-bright); flex: 1; }
+  .heap-dist { color: var(--text-dim); }
+  .legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 0.73rem; color: var(--text-dim); flex-shrink: 0; }
+  .legend-item { display: flex; align-items: center; gap: 5px; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+</style>
 </head>
-<body class="page">
+<body>
 
-<div class="page-header top-area">
-  <a class="back-link" href="../index.html">&larr; All Algorithms</a>
-  <div class="page-title">K Closest Points to Origin</div>
-  <div class="page-sub">LeetCode 973 &middot; Max-heap of size k &middot; O(n log k) time &middot; O(k) space</div>
-</div>
-
-<div class="viz-inputs top-area">
-  <div class="field">
+<div class="viz-inputs">
+  <div>
     <label>Points (one per line: x,y)</label>
-    <textarea id="inp-pts" rows="3" style="font-family:monospace;font-size:0.82rem;">1,3
+    <textarea id="inp-pts" rows="3" style="width:140px;font-family:monospace;font-size:0.82rem;">1,3
 -2,2
 5,8
 0,1
 -1,-1</textarea>
   </div>
-  <div class="field">
+  <div>
     <label>k</label>
-    <input id="inp-k" type="number" value="2" min="1" max="20" />
+    <input id="inp-k" type="number" value="2" min="1" max="20" style="width:60px" />
   </div>
-  <div class="field">
+  <div>
     <label>Preset</label>
-    <select id="presetSel" onchange="loadPreset()" style="width:auto;">
+    <select id="presetSel" onchange="loadPreset()">
       <option value="">— pick a preset —</option>
       <option value='{"pts":[[1,3],[-2,2],[5,8],[0,1],[-1,-1]],"k":2}'>Default (5 pts, k=2)</option>
       <option value='{"pts":[[1,1],[2,2],[3,3],[-1,1],[0,2],[4,0]],"k":3}'>Tight cluster (k=3)</option>
       <option value='{"pts":[[1,0],[-1,0],[0,1],[0,-1]],"k":2}'>All same dist</option>
       <option value='{"pts":[[0,0],[1,1],[2,2],[3,3]],"k":2}'>Diagonal line (k=2)</option>
       <option value='{"pts":[[5,5],[-5,-5],[0,0],[3,4],[-3,-4],[6,8]],"k":3}'>Mixed (k=3)</option>
-      <option value='{"pts":[[10,10],[1,1],[0,0],[9,12],[-5,-5]],"k":2}'>Spread (k=2)</option>
     </select>
   </div>
-  <button onclick="buildAndRun()" class="btn-primary">Run</button>
-  <button onclick="randomExample()">🎲 Random</button>
+  <button class="vi-btn-run" onclick="buildAndRun()">Run</button>
+  <button class="vi-btn-rand" onclick="randomExample()">&#127922; Random</button>
+</div>
+<div class="controls"></div>
+
+<div id="header">
+  <span id="phase-badge">Setup</span>
+  <span style="font-size:13px;font-weight:700;">K Closest Points to Origin</span>
+  <span id="step-counter">Step 0 / 0</span>
 </div>
 
-<div class="controls top-area">
-</div>
-
-<!-- ── middle: two panels ── -->
-<div class="mid-area">
-
-  <div class="panel" id="plot-panel">
-    <div style="display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
-      <div class="panel-title">2D Coordinate Plane</div>
-      <div class="legend">
-        <span class="legend-item"><span class="dot" style="background:#16a34a"></span>Kept</span>
-        <span class="legend-item"><span class="dot" style="background:#b45309"></span>Current</span>
-        <span class="legend-item"><span class="dot" style="background:#4f4f5a"></span>Rejected / pending</span>
+<div id="main">
+  <div id="viz-area">
+    <div id="desc">Enter points &amp; k, then click Run.</div>
+    <div class="mid-panels">
+      <div class="panel" id="plot-panel">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
+          <div class="panel-title">2D Coordinate Plane</div>
+          <div class="legend">
+            <span class="legend-item"><span class="dot" style="background:#16a34a"></span>Kept</span>
+            <span class="legend-item"><span class="dot" style="background:#b45309"></span>Current</span>
+            <span class="legend-item"><span class="dot" style="background:#4f4f5a"></span>Pending</span>
+          </div>
+        </div>
+        <canvas id="plot-canvas"></canvas>
+      </div>
+      <div class="panel">
+        <div class="heap-meta">
+          <div class="panel-title">Max-Heap (size k)</div>
+          <span id="heap-badge">size: 0 / k: &mdash;</span>
+        </div>
+        <div class="heap-rows" id="heap-rows">
+          <div id="heap-empty" style="color:var(--text-ghost);font-size:0.82rem;text-align:center;padding:24px 0;">Heap is empty</div>
+        </div>
       </div>
     </div>
-    <canvas id="plot-canvas"></canvas>
   </div>
 
-  <div class="panel">
-    <div class="heap-meta">
-      <div class="panel-title">Max-Heap (size k)</div>
-      <span id="heap-badge">size: 0 / k: —</span>
-    </div>
-    <div class="heap-rows" id="heap-rows">
-      <div id="heap-empty">Heap is empty</div>
+  <div id="resize-handle"></div>
+
+  <div id="code-panel">
+    <div class="code-panel-title">Code</div>
+    <div id="code-body" style="font-size:0.75rem;line-height:1.7;color:var(--text-muted);">
+      <div style="white-space:pre;padding:4px 0;border-left:2px solid transparent;padding-left:6px;"><span style="color:#bb9af7">def</span> <span style="color:#7aa2f7">kClosest</span>(points, k):</div>
+      <div style="white-space:pre;padding:4px 0;border-left:2px solid transparent;padding-left:6px;">    heap = []</div>
+      <div style="white-space:pre;padding:4px 0;border-left:2px solid transparent;padding-left:6px;">    <span style="color:#bb9af7">for</span> p <span style="color:#bb9af7">in</span> points:</div>
+      <div style="white-space:pre;padding:4px 0;border-left:2px solid transparent;padding-left:6px;">        d2 = p[0]**2 + p[1]**2</div>
+      <div style="white-space:pre;padding:4px 0;border-left:2px solid transparent;padding-left:6px;">        heappush(heap, (-d2, p))</div>
+      <div style="white-space:pre;padding:4px 0;border-left:2px solid transparent;padding-left:6px;">        <span style="color:#bb9af7">if</span> len(heap) &gt; k:</div>
+      <div style="white-space:pre;padding:4px 0;border-left:2px solid transparent;padding-left:6px;">            heappop(heap)</div>
+      <div style="white-space:pre;padding:4px 0;border-left:2px solid transparent;padding-left:6px;">    <span style="color:#bb9af7">return</span> [p <span style="color:#bb9af7">for</span> _, p <span style="color:#bb9af7">in</span> heap]</div>
     </div>
   </div>
 
+  <div id="sidebar">
+    <div class="sidebar-title">Variables</div>
+    <div id="vars-items"><span style="color:var(--text-dim);">—</span></div>
+  </div>
 </div>
 
-<!-- ── bottom nav ── -->
-<div class="bot-area">
-  <div class="nav-strip">
-    <button class="stepBtn" id="prevBtn" disabled>&larr;</button>
-    <button class="stepBtn" id="stepBtn" disabled>&rarr;</button>
-    <button class="playBtn" id="playBtn" disabled>&#9654; Play</button>
-    <select class="speedSel" id="speedSel">
-      <option value="900">Slow</option>
-      <option value="450" selected>Medium</option>
-      <option value="140">Fast</option>
-    </select>
-    <div class="step-info">
-      <div id="phase-label">&mdash;</div>
-      <div id="step-desc">Enter points &amp; k, then click Run.</div>
-    </div>
-  </div>
+<div id="nav-row">
+  <button id="prevBtn" class="btn-step" disabled>&#8592; Prev</button>
+  <button id="stepBtn" class="btn-step" disabled>Step &#8594;</button>
+  <button id="playBtn" class="btn-play" disabled>Play</button>
+  <button id="resetBtn" class="btn-step">&#8635; Reset</button>
+  <select id="speedSel">
+    <option value="800">0.5&#215;</option>
+    <option value="400" selected>1&#215;</option>
+    <option value="200">2&#215;</option>
+    <option value="100">4&#215;</option>
+  </select>
 </div>
 
 <script>
 var simSteps = [], nav;
 var currentPts = [], currentK = 0;
-var prevHeapLen = -1;
 
-var PRESETS = [
-  null,
-  { pts: [[1,3],[-2,2],[5,8],[0,1],[-1,-1]], k: 2 },
-  { pts: [[1,1],[2,2],[3,3],[-1,1],[0,2],[4,0]], k: 3 },
-  { pts: [[1,0],[-1,0],[0,1],[0,-1]], k: 2 },
-];
-
-// ── helpers ──────────────────────────────────────────────────────────────────
 function dist2(p) { return p[0]*p[0] + p[1]*p[1]; }
 function fmtPt(p) { return '(' + p[0] + ',' + p[1] + ')'; }
-function fmtD(d)  { return 'd²=' + d; }
+function fmtD(d)  { return 'd\xB2=' + d; }
 
-// ── max-heap ops (on array of {d2,pt} objects) ───────────────────────────────
 function heapPush(heap, item) {
   heap.push(item);
   var i = heap.length - 1;
-  while (i > 0) {
-    var pi = (i - 1) >> 1;
-    if (heap[i].d2 > heap[pi].d2) { var t=heap[i]; heap[i]=heap[pi]; heap[pi]=t; i=pi; }
-    else break;
-  }
+  while (i > 0) { var pi = (i - 1) >> 1; if (heap[i].d2 > heap[pi].d2) { var t=heap[i]; heap[i]=heap[pi]; heap[pi]=t; i=pi; } else break; }
 }
 function heapPop(heap) {
-  var top = heap[0];
-  var last = heap.pop();
+  var top = heap[0], last = heap.pop();
   if (heap.length > 0) {
     heap[0] = last;
     var i = 0;
@@ -271,77 +173,50 @@ function heapPop(heap) {
       var l=2*i+1, r=2*i+2, biggest=i;
       if (l<heap.length && heap[l].d2>heap[biggest].d2) biggest=l;
       if (r<heap.length && heap[r].d2>heap[biggest].d2) biggest=r;
-      if (biggest!==i) { var t=heap[i]; heap[i]=heap[biggest]; heap[biggest]=t; i=biggest; }
-      else break;
+      if (biggest!==i) { var t=heap[i]; heap[i]=heap[biggest]; heap[biggest]=t; i=biggest; } else break;
     }
   }
   return top;
 }
 
-// ── simulation ────────────────────────────────────────────────────────────────
 function simulate(pts, k) {
-  var steps = [];
-  var heap = [];  // array of {d2, pt, idx}
-
+  var steps = [], heap = [];
   function snap(phase, desc, ptIdx, heapSnap, activeHeapIdx, keptSet) {
-    steps.push({
-      phase:         phase,
-      desc:          desc,
-      ptIdx:         (ptIdx !== null && ptIdx !== undefined) ? ptIdx : -1,
-      heap:          heapSnap.map(function(h) { return {d2:h.d2, pt:h.pt.slice(), idx:h.idx}; }),
-      activeHeapIdx: (activeHeapIdx !== null && activeHeapIdx !== undefined) ? activeHeapIdx : -1,
-      keptSet:       keptSet ? keptSet.slice() : [],
-    });
+    steps.push({ phase: phase, desc: desc, ptIdx: (ptIdx !== null && ptIdx !== undefined) ? ptIdx : -1, heap: heapSnap.map(function(h) { return {d2:h.d2, pt:h.pt.slice(), idx:h.idx}; }), activeHeapIdx: (activeHeapIdx !== null && activeHeapIdx !== undefined) ? activeHeapIdx : -1, keptSet: keptSet ? keptSet.slice() : [] });
   }
-
-  function keptIndices() {
-    return heap.map(function(h) { return h.idx; });
-  }
-
-  snap('Init', 'Initialize empty max-heap. We keep at most k=' + k + ' points — the root is always the farthest of the k closest seen so far.', null, heap, -1, []);
-
+  function keptIndices() { return heap.map(function(h) { return h.idx; }); }
+  snap('Init', 'Initialize empty max-heap. We keep at most k=' + k + ' points.', null, heap, -1, []);
   for (var i = 0; i < pts.length; i++) {
-    var pt = pts[i];
-    var d2 = dist2(pt);
-
-    snap('Consider', 'Point ' + fmtPt(pt) + ': compute distance squared → ' + fmtD(d2) + '.', i, heap, -1, keptIndices());
-
+    var pt = pts[i], d2 = dist2(pt);
+    snap('Consider', 'Point ' + fmtPt(pt) + ': compute distance squared \u2192 ' + fmtD(d2) + '.', i, heap, -1, keptIndices());
     if (heap.length < k) {
-      // Just push
       heapPush(heap, {d2:d2, pt:pt, idx:i});
-      snap('Push', 'Heap size ' + heap.length + ' ≤ k=' + k + ' → push ' + fmtPt(pt) + ' unconditionally. Max-heap root = ' + fmtD(heap[0].d2) + '.', i, heap, 0, keptIndices());
+      snap('Push', 'Heap size ' + heap.length + ' \u2264 k=' + k + ' \u2192 push ' + fmtPt(pt) + ' unconditionally.', i, heap, 0, keptIndices());
     } else {
-      // Compare to heap root (max dist²)
       var maxD2 = heap[0].d2;
       if (d2 < maxD2) {
-        snap('Compare', fmtD(d2) + ' < heap max ' + fmtD(maxD2) + ' → ' + fmtPt(pt) + ' is closer than the farthest kept point. Evict root and push.', i, heap, 0, keptIndices());
+        snap('Compare', fmtD(d2) + ' < heap max ' + fmtD(maxD2) + ' \u2192 ' + fmtPt(pt) + ' is closer. Evict root and push.', i, heap, 0, keptIndices());
         var evicted = heap[0];
         heapPop(heap);
         snap('Evict', 'Popped root ' + fmtPt(evicted.pt) + ' (' + fmtD(evicted.d2) + '). Now push ' + fmtPt(pt) + '.', i, heap, -1, keptIndices());
         heapPush(heap, {d2:d2, pt:pt, idx:i});
         snap('Push', 'Pushed ' + fmtPt(pt) + '. New heap max = ' + fmtD(heap[0].d2) + '.', i, heap, 0, keptIndices());
       } else {
-        snap('Compare', fmtD(d2) + ' ≥ heap max ' + fmtD(maxD2) + ' → ' + fmtPt(pt) + ' is farther — skip it.', i, heap, 0, keptIndices());
+        snap('Compare', fmtD(d2) + ' \u2265 heap max ' + fmtD(maxD2) + ' \u2192 ' + fmtPt(pt) + ' is farther \u2014 skip.', i, heap, 0, keptIndices());
       }
     }
   }
-
   var resultPts = heap.map(function(h) { return fmtPt(h.pt); }).join(', ');
   snap('Done', 'All ' + pts.length + ' points processed. The ' + k + ' closest: ' + resultPts + '.', null, heap, -1, keptIndices());
   return steps;
 }
 
-// ── canvas drawing ─────────────────────────────────────────────────────────
 var PLOT_MARGIN = 36;
-
 function getPlotBounds(pts) {
   var xs = pts.map(function(p){return p[0];}), ys = pts.map(function(p){return p[1];});
-  var mx = Math.max.apply(null, xs.map(Math.abs).concat([1]));
-  var my = Math.max.apply(null, ys.map(Math.abs).concat([1]));
-  var r = Math.max(mx, my) * 1.25;
-  return r;
+  var mx = Math.max.apply(null, xs.map(Math.abs).concat([1])), my = Math.max.apply(null, ys.map(Math.abs).concat([1]));
+  return Math.max(mx, my) * 1.25;
 }
-
 function worldToCanvas(wx, wy, range, cw, ch) {
   var cx = PLOT_MARGIN + (wx + range) / (2 * range) * (cw - 2 * PLOT_MARGIN);
   var cy = PLOT_MARGIN + (range - wy) / (2 * range) * (ch - 2 * PLOT_MARGIN);
@@ -351,168 +226,83 @@ function worldToCanvas(wx, wy, range, cw, ch) {
 function drawPlot(canvas, pts, s) {
   var dpr = window.devicePixelRatio || 1;
   var rect = canvas.parentElement.getBoundingClientRect();
-  var cw = rect.width - 32;   // panel padding
-  var ch = rect.height - 32 - 24 - 24;  // title + legend
+  var cw = rect.width - 32, ch = rect.height - 32 - 24 - 24;
   if (cw < 40 || ch < 40) return;
-
-  canvas.width  = cw * dpr;
-  canvas.height = ch * dpr;
-  canvas.style.width  = cw + 'px';
-  canvas.style.height = ch + 'px';
-
+  canvas.width = cw * dpr; canvas.height = ch * dpr;
+  canvas.style.width = cw + 'px'; canvas.style.height = ch + 'px';
   var ctx = canvas.getContext('2d');
   ctx.scale(dpr, dpr);
-
   var range = getPlotBounds(pts);
-
-  // background
-  ctx.fillStyle = '#0a0a0f';
-  ctx.fillRect(0, 0, cw, ch);
-
-  // grid
-  ctx.strokeStyle = '#1a1a2a';
-  ctx.lineWidth = 1;
+  ctx.fillStyle = '#0a0a0f'; ctx.fillRect(0, 0, cw, ch);
+  ctx.strokeStyle = '#1a1a2a'; ctx.lineWidth = 1;
   var step = Math.ceil(range / 3);
   for (var gv = -Math.ceil(range); gv <= Math.ceil(range); gv += step) {
-    var gc = worldToCanvas(gv, 0, range, cw, ch);
-    var gc2 = worldToCanvas(0, gv, range, cw, ch);
+    var gc = worldToCanvas(gv, 0, range, cw, ch), gc2 = worldToCanvas(0, gv, range, cw, ch);
     ctx.beginPath(); ctx.moveTo(gc[0], PLOT_MARGIN); ctx.lineTo(gc[0], ch - PLOT_MARGIN); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(PLOT_MARGIN, gc2[1]); ctx.lineTo(cw - PLOT_MARGIN, gc2[1]); ctx.stroke();
   }
-
-  // axes
   var ox = worldToCanvas(0, 0, range, cw, ch);
-  ctx.strokeStyle = '#2d3148';
-  ctx.lineWidth = 1.5;
+  ctx.strokeStyle = '#2d3148'; ctx.lineWidth = 1.5;
   ctx.beginPath(); ctx.moveTo(PLOT_MARGIN, ox[1]); ctx.lineTo(cw - PLOT_MARGIN, ox[1]); ctx.stroke();
   ctx.beginPath(); ctx.moveTo(ox[0], PLOT_MARGIN); ctx.lineTo(ox[0], ch - PLOT_MARGIN); ctx.stroke();
-
-  // distance circle for current point
   if (s.ptIdx >= 0) {
-    var curPt = pts[s.ptIdx];
-    var curD2 = dist2(curPt);
-    var radiusW = Math.sqrt(curD2);
-    var p0 = worldToCanvas(0, 0, range, cw, ch);
-    var p1 = worldToCanvas(radiusW, 0, range, cw, ch);
-    var radiusPx = Math.abs(p1[0] - p0[0]);
-    ctx.beginPath();
-    ctx.arc(ox[0], ox[1], radiusPx, 0, Math.PI * 2);
-    ctx.strokeStyle = 'rgba(180,83,9,0.3)';
-    ctx.lineWidth = 1;
-    ctx.setLineDash([4, 4]);
-    ctx.stroke();
-    ctx.setLineDash([]);
+    var curPt = pts[s.ptIdx], curD2 = dist2(curPt), radiusW = Math.sqrt(curD2);
+    var p0 = worldToCanvas(0, 0, range, cw, ch), p1 = worldToCanvas(radiusW, 0, range, cw, ch);
+    ctx.beginPath(); ctx.arc(ox[0], ox[1], Math.abs(p1[0] - p0[0]), 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(180,83,9,0.3)'; ctx.lineWidth = 1; ctx.setLineDash([4, 4]); ctx.stroke(); ctx.setLineDash([]);
   }
-
-  // heap-max circle
   if (s.heap.length > 0) {
-    var maxD2 = s.heap[0].d2;
-    var maxR = Math.sqrt(maxD2);
-    var p0 = worldToCanvas(0, 0, range, cw, ch);
-    var p1 = worldToCanvas(maxR, 0, range, cw, ch);
-    var rPx = Math.abs(p1[0] - p0[0]);
-    ctx.beginPath();
-    ctx.arc(ox[0], ox[1], rPx, 0, Math.PI * 2);
-    ctx.strokeStyle = 'rgba(99,102,241,0.3)';
-    ctx.lineWidth = 1;
-    ctx.setLineDash([6, 3]);
-    ctx.stroke();
-    ctx.setLineDash([]);
+    var maxD2 = s.heap[0].d2, maxR = Math.sqrt(maxD2);
+    var p0b = worldToCanvas(0, 0, range, cw, ch), p1b = worldToCanvas(maxR, 0, range, cw, ch);
+    ctx.beginPath(); ctx.arc(ox[0], ox[1], Math.abs(p1b[0] - p0b[0]), 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(99,102,241,0.3)'; ctx.lineWidth = 1; ctx.setLineDash([6, 3]); ctx.stroke(); ctx.setLineDash([]);
   }
-
-  // points
   var keptSet = {};
   for (var ki = 0; ki < s.keptSet.length; ki++) keptSet[s.keptSet[ki]] = true;
-
   for (var i = 0; i < pts.length; i++) {
     var p = worldToCanvas(pts[i][0], pts[i][1], range, cw, ch);
-    var isCurrent = (i === s.ptIdx);
-    var isKept    = keptSet[i];
-
+    var isCurrent = (i === s.ptIdx), isKept = keptSet[i];
     var fill, stroke, r;
     if (isCurrent) { fill = '#1c1200'; stroke = '#f59e0b'; r = 9; }
     else if (isKept) { fill = '#052e16'; stroke = '#16a34a'; r = 8; }
     else { fill = '#12121e'; stroke = '#4f4f5a'; r = 7; }
-
-    ctx.beginPath();
-    ctx.arc(p[0], p[1], r, 0, Math.PI * 2);
-    ctx.fillStyle = fill;
-    ctx.fill();
-    ctx.strokeStyle = stroke;
-    ctx.lineWidth = 2;
-    ctx.stroke();
-
-    // label
+    ctx.beginPath(); ctx.arc(p[0], p[1], r, 0, Math.PI * 2);
+    ctx.fillStyle = fill; ctx.fill(); ctx.strokeStyle = stroke; ctx.lineWidth = 2; ctx.stroke();
     ctx.fillStyle = isCurrent ? '#f59e0b' : (isKept ? '#4ade80' : '#5a5a6a');
-    ctx.font = 'bold 9px monospace';
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'bottom';
+    ctx.font = 'bold 9px monospace'; ctx.textAlign = 'left'; ctx.textBaseline = 'bottom';
     ctx.fillText(fmtPt(pts[i]), p[0] + 10, p[1] - 4);
   }
-
-  // origin dot
-  ctx.beginPath();
-  ctx.arc(ox[0], ox[1], 4, 0, Math.PI * 2);
-  ctx.fillStyle = '#2d3148';
-  ctx.fill();
-  ctx.strokeStyle = '#6366f1';
-  ctx.lineWidth = 1.5;
-  ctx.stroke();
-
-  // origin label
-  ctx.fillStyle = '#6366f1';
-  ctx.font = '10px monospace';
-  ctx.textAlign = 'left';
-  ctx.textBaseline = 'top';
+  ctx.beginPath(); ctx.arc(ox[0], ox[1], 4, 0, Math.PI * 2);
+  ctx.fillStyle = '#2d3148'; ctx.fill(); ctx.strokeStyle = '#6366f1'; ctx.lineWidth = 1.5; ctx.stroke();
+  ctx.fillStyle = '#6366f1'; ctx.font = '10px monospace'; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
   ctx.fillText('O', ox[0] + 5, ox[1] + 3);
 }
 
-// ── heap list render ──────────────────────────────────────────────────────────
 function renderHeapList(s) {
   var container = document.getElementById('heap-rows');
-  var badge     = document.getElementById('heap-badge');
-  var heap      = s.heap;
-
-  badge.textContent = 'size: ' + heap.length + ' / k: ' + currentK;
-
-  if (heap.length === 0) {
-    container.innerHTML = '<div id="heap-empty">Heap is empty</div>';
-    return;
-  }
-
-  // Sort display by d2 descending (root first = max)
-  var display = heap.slice().sort(function(a,b){return b.d2 - a.d2;});
-
+  var badge = document.getElementById('heap-badge');
+  badge.textContent = 'size: ' + s.heap.length + ' / k: ' + currentK;
+  if (s.heap.length === 0) { container.innerHTML = '<div id="heap-empty" style="color:var(--text-ghost);font-size:0.82rem;text-align:center;padding:24px 0;">Heap is empty</div>'; return; }
+  var display = s.heap.slice().sort(function(a,b){return b.d2 - a.d2;});
   container.innerHTML = display.map(function(item, rank) {
-    var isMax = (rank === 0);
-    var isActive = (s.activeHeapIdx === 0 && isMax);
-    var isNew = (item.idx === s.ptIdx && s.phase === 'Push');
-    var cls = 'heap-row' + (isActive || isMax && s.phase==='Compare' ? ' is-max' : '') + (isNew ? ' is-new' : '');
-    if (!isMax && !isNew) cls = 'heap-row' + (heap.length === currentK ? ' is-kept' : '');
-    return '<div class="' + cls + '">'
-      + '<span class="heap-rank">' + (rank + 1) + '</span>'
-      + '<span class="heap-pt">' + fmtPt(item.pt) + '</span>'
-      + '<span class="heap-dist">' + fmtD(item.d2) + '</span>'
-      + '</div>';
+    var isMax = (rank === 0), isNew = (item.idx === s.ptIdx && s.phase === 'Push');
+    var cls = 'heap-row' + (isMax && (s.activeHeapIdx === 0 || s.phase === 'Compare') ? ' is-max' : '') + (isNew ? ' is-new' : '');
+    if (!isMax && !isNew) cls = 'heap-row' + (s.heap.length === currentK ? ' is-kept' : '');
+    return '<div class="' + cls + '"><span class="heap-rank">' + (rank + 1) + '</span><span class="heap-pt">' + fmtPt(item.pt) + '</span><span class="heap-dist">' + fmtD(item.d2) + '</span></div>';
   }).join('');
 }
 
-// ── apply step ────────────────────────────────────────────────────────────────
 function applyStep(s, animate) {
   var canvas = document.getElementById('plot-canvas');
   drawPlot(canvas, currentPts, s);
   renderHeapList(s);
-
-  var phaseEl = document.getElementById('phase-label');
-  var descEl  = document.getElementById('step-desc');
-  if (phaseEl) phaseEl.textContent = s.phase;
-  if (descEl) {
-    if (animate) gsap.fromTo(descEl, {opacity:0}, {opacity:1, duration:0.15});
-    descEl.textContent = s.desc;
-  }
+  document.getElementById('phase-badge').textContent = s.phase || 'Step';
+  if (s.desc) { var d = document.getElementById('desc'); d.textContent = s.desc; if (animate) gsap.fromTo(d, {opacity:0}, {opacity:1, duration:0.15}); }
+  document.getElementById('vars-items').innerHTML =
+    '<div style="font-size:11px;font-family:monospace;color:var(--text-muted);padding:4px 0;border-bottom:1px solid var(--border-soft)"><span style="color:var(--text-dim)">heap size</span> = ' + s.heap.length + '</div>' +
+    '<div style="font-size:11px;font-family:monospace;color:var(--text-muted);padding:4px 0"><span style="color:var(--text-dim)">k</span> = ' + currentK + '</div>';
 }
 
-// ── setup ─────────────────────────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', function() {
   nav = VizNav({
     btnPrev:  document.getElementById('prevBtn'),
@@ -521,16 +311,14 @@ window.addEventListener('DOMContentLoaded', function() {
     speedSel: document.getElementById('speedSel'),
     render: function(snap, cur, total) {
       applyStep(snap, cur > 0);
-      var phaseEl = document.getElementById('phase-label');
-      if (phaseEl) phaseEl.textContent = 'Step ' + (cur+1) + ' / ' + total + '  ·  ' + snap.phase;
+      document.getElementById('step-counter').textContent = 'Step ' + (cur + 1) + ' / ' + total;
     }
   });
+  document.getElementById('resetBtn').addEventListener('click', buildAndRun);
   buildAndRun();
-
   window.addEventListener('resize', function() {
     if (!simSteps.length) return;
-    var cur = nav.current ? nav.current() : 0;
-    if (simSteps[cur]) applyStep(simSteps[cur], false);
+    applyStep(simSteps[Math.max(0, nav.current ? nav.current() : 0)] || simSteps[0], false);
   });
 });
 
@@ -544,14 +332,10 @@ function loadPreset() {
 }
 
 function randomExample() {
-  var numPts = Math.floor(Math.random() * 5) + 4;  // 4-8 points
+  var numPts = Math.floor(Math.random() * 5) + 4;
   var pts = [];
-  for (var i = 0; i < numPts; i++) {
-    var x = Math.floor(Math.random() * 20) - 10;  // -10 to 10
-    var y = Math.floor(Math.random() * 20) - 10;
-    pts.push(x + ',' + y);
-  }
-  var k = Math.floor(Math.random() * (numPts - 1)) + 1;  // 1 to numPts-1
+  for (var i = 0; i < numPts; i++) pts.push((Math.floor(Math.random() * 20) - 10) + ',' + (Math.floor(Math.random() * 20) - 10));
+  var k = Math.floor(Math.random() * (numPts - 1)) + 1;
   document.getElementById('inp-pts').value = pts.join('\n');
   document.getElementById('inp-k').value = k;
   document.getElementById('presetSel').value = '';
@@ -569,23 +353,23 @@ function parsePts(raw) {
 
 function buildAndRun() {
   var raw = document.getElementById('inp-pts').value;
-  var k   = parseInt(document.getElementById('inp-k').value, 10);
+  var k = parseInt(document.getElementById('inp-k').value, 10);
   if (isNaN(k) || k < 1) return;
   var pts = parsePts(raw);
   if (!pts.length || k > pts.length) return;
-
-  currentPts = pts;
-  currentK   = k;
-
+  currentPts = pts; currentK = k;
   simSteps = simulate(pts, k);
   nav.load(simSteps);
 }
-</script>
-<script>
-  if (window.self !== window.top) {
-    var bl = document.querySelector('.back-link');
-    if (bl) bl.style.display = 'none';
-  }
+
+(function() {
+  var handle = document.getElementById('resize-handle');
+  var panel  = document.getElementById('code-panel');
+  var dragging = false, startX = 0, startW = 0;
+  handle.addEventListener('mousedown', function(e) { dragging = true; startX = e.clientX; startW = panel.offsetWidth; handle.classList.add('dragging'); e.preventDefault(); });
+  document.addEventListener('mousemove', function(e) { if (!dragging) return; var delta = startX - e.clientX; panel.style.width = Math.min(560, Math.max(120, startW + delta)) + 'px'; });
+  document.addEventListener('mouseup', function() { if (dragging) { dragging = false; handle.classList.remove('dragging'); } });
+})();
 </script>
 </body>
 </html>

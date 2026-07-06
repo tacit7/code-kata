@@ -1,157 +1,65 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Max Depth of Binary Tree</title>
-  <link rel="stylesheet" href="../shared/style.css" />
-  <script src="../shared/gsap.min.js"></script>
-  <script src="../shared/viz.js"></script>
-  <style>
-    .viz-area {
-      width: 100%; max-width: 90%;
-      display: flex; flex-direction: column; gap: 12px;
-    }
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Max Depth of Binary Tree</title>
+<link rel="stylesheet" href="../shared/style.css" />
+<script src="../shared/gsap.min.js"></script>
+<script src="../shared/viz.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: "Fira Code", "Cascadia Code", monospace; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+  #header { padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+  #phase-badge { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; padding: 3px 10px; border-radius: var(--radius-sm); background: #1e3a5f; color: var(--blue); border: 1px solid var(--blue); }
+  #step-counter { font-size: 12px; color: var(--text-muted); margin-left: auto; }
+  .viz-inputs { width: 100%; max-width: 100%; padding: 10px 16px; background: var(--surface); border: none; border-bottom: 1px solid var(--border); border-radius: 0; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; flex-shrink: 0; }
+  .viz-inputs label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); display: block; margin-bottom: 3px; }
+  .viz-inputs select, .viz-inputs input { background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 0 8px; height: 30px; font-size: 0.82rem; font-family: inherit; appearance: none; -webkit-appearance: none; }
+  .vi-btn-run { padding: 6px 14px; border-radius: 6px; font-size: 0.82rem; font-weight: 600; cursor: pointer; font-family: inherit; background: var(--accent); color: #fff; border: none; }
+  .vi-btn-rand { padding: 6px 14px; border-radius: 6px; font-size: 0.82rem; cursor: pointer; font-family: inherit; background: var(--bg); color: var(--text); border: 1px solid var(--border); }
+  #main { display: flex; flex: 1; overflow: hidden; }
+  #viz-area { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding: 16px; gap: 12px; overflow-y: auto; }
+  #desc { font-size: 13px; color: var(--text-muted); text-align: center; max-width: 560px; min-height: 36px; line-height: 1.5; }
+  #resize-handle { width: 5px; flex-shrink: 0; cursor: col-resize; background: transparent; border-left: 1px solid var(--border); transition: background .15s; z-index: 10; }
+  #resize-handle:hover, #resize-handle.dragging { background: var(--accent); }
+  #code-panel { width: 350px; min-width: 120px; max-width: 560px; flex-shrink: 0; background: #0d1117; border-right: 1px solid var(--border); overflow-y: auto; overflow-x: auto; padding: 10px 12px; display: flex; flex-direction: column; }
+  .cl { display: flex; align-items: stretch; border-left: 3px solid transparent; padding: 0 14px 0 0; white-space: pre; color: var(--text-muted); transition: all 0.2s; font-family: 'Fira Code', 'Cascadia Code', monospace; font-size: 0.75rem; line-height: 1.8; }
+  .cl .ln { width: 28px; min-width: 28px; text-align: right; color: #3d4468; user-select: none; padding-right: 14px; font-size: 0.72rem; line-height: 1.7; }
+  .cl .code { color: var(--text-muted); }
+  .kw { color: var(--purple); } .nb { color: var(--green); } .cm { color: var(--text-dim); font-style: italic; }
+  #sidebar { width: 240px; flex-shrink: 0; background: var(--surface); border-left: 1px solid var(--border); overflow-y: auto; padding: 14px 12px; display: flex; flex-direction: column; gap: 10px; }
+  #nav-row { flex-shrink: 0; display: flex; align-items: center; gap: 8px; padding: 10px 16px; background: var(--surface); border-top: 1px solid var(--border); }
+  .btn-step, .btn-play { padding: 6px 14px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--surface); color: var(--text); font-family: inherit; font-size: 12px; cursor: pointer; transition: background .15s; }
+  .btn-step:hover { background: #334155; }
+  .btn-play { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn-play:hover { background: var(--accent-hover); }
+  #nav-row select { padding: 5px 8px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: #1e293b; color: var(--text); font-size: 12px; font-family: inherit; cursor: pointer; }
 
-    .viz-inputs {
-      display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end;
-      padding: 10px 0 14px; width: 100%; max-width: 90%;
-    }
-    .viz-inputs .field {
-      display: flex; flex-direction: column; gap: 4px;
-    }
-    .viz-inputs label {
-      font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
-      letter-spacing: 0.08em; color: var(--text-dim);
-    }
-    .viz-inputs input[type="text"] {
-      background: var(--surface); border: 1px solid var(--border);
-      color: var(--text); border-radius: var(--radius-sm);
-      padding: 6px 10px; font-size: 0.85rem; width: 280px;
-    }
-    .viz-inputs select {
-      background: var(--surface); border: 1px solid var(--border);
-      color: var(--text); border-radius: var(--radius-sm);
-      padding: 6px 10px; font-size: 0.85rem; cursor: pointer;
-    }
-
-    .tree-wrap {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-md);
-      overflow: hidden;
-    }
-    #tree-svg { display: block; width: 100%; }
-
-    .bottom-row {
-      display: grid;
-      grid-template-columns: 50% 1fr;
-      gap: 12px;
-      align-items: start;
-    }
-    .right-col { display: flex; flex-direction: column; gap: 12px; }
-    @media (max-width: 680px) { .bottom-row { grid-template-columns: 1fr; } }
-
-    .code-panel {
-      background: #0a0d14;
-      border: 1px solid var(--border);
-      border-radius: var(--radius-md);
-      overflow: hidden;
-      display: flex; flex-direction: column;
-    }
-    .code-header {
-      padding: 9px 14px;
-      background: var(--surface);
-      border-bottom: 1px solid var(--border);
-      font-size: 0.67rem; font-weight: 700;
-      text-transform: uppercase; letter-spacing: 0.11em;
-      color: var(--text-dim);
-    }
-    .code-body {
-      padding: 10px 0;
-      flex: 1;
-      font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
-      font-size: 0.78rem;
-      line-height: 1.7;
-      overflow-x: auto;
-    }
-    .cl {
-      display: flex; align-items: stretch;
-      border-left: 3px solid transparent;
-      padding: 0 14px 0 0;
-      transition: background-color 0.01s;
-      white-space: pre;
-    }
-    .cl .ln {
-      width: 28px; min-width: 28px;
-      text-align: right; color: #3d4468;
-      user-select: none; padding-right: 14px;
-      font-size: 0.72rem; line-height: 1.7;
-    }
-    .cl .code { color: var(--text-muted); }
-
-    .kw  { color: var(--purple); }
-    .fn  { color: var(--blue); }
-    .bi  { color: var(--orange); }
-    .str { color: var(--green); }
-    .cm  { color: #3d4468; font-style: italic; }
-    .op  { color: var(--text); }
-
-    .panel-box {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-md);
-      padding: 13px 18px;
-    }
-    .panel-title {
-      font-size: 0.67rem; font-weight: 700;
-      text-transform: uppercase; letter-spacing: 0.11em;
-      color: var(--text-dim); margin-bottom: 10px;
-      display: flex; align-items: center; gap: 8px;
-    }
-
-    #call-stack {
-      display: flex; flex-direction: column-reverse; gap: 5px;
-      min-height: 40px;
-    }
-    .cs-frame {
-      background: #1e1a3a; color: var(--accent-pale);
-      border: 1px solid var(--accent); border-radius: 6px;
-      padding: 5px 11px; font-size: 0.84rem; font-weight: 600;
-      font-family: 'JetBrains Mono', monospace;
-    }
-    .cs-frame.top {
-      background: #4338ca; color: #fff;
-    }
-    .cs-empty { color: var(--text-faint); font-size: 0.82rem; font-style: italic; }
-
-    .depth-row {
-      display: flex; gap: 10px;
-    }
-    .depth-slot {
-      flex: 1;
-      background: #0a0d14;
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 8px 12px;
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 0.82rem;
-    }
-    .depth-slot .ds-label { color: var(--text-dim); font-size: 0.7rem; margin-bottom: 4px; }
-    .depth-slot .ds-val { color: var(--text-bright); font-size: 1.1rem; font-weight: 700; }
-    .depth-slot.active-slot { border-color: var(--accent); }
-    .depth-slot .ds-val.unknown { color: var(--text-faint); }
-  </style>
+  /* UNIQUE VIZ CSS */
+  .tree-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); overflow: hidden; width: 100%; }
+  #tree-svg { display: block; width: 100%; }
+  .fn { color: var(--blue); } .bi { color: var(--orange); } .op { color: var(--text); }
+  .panel-box { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 12px 14px; }
+  .panel-title { font-size: 0.67rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.11em; color: var(--text-dim); margin-bottom: 8px; }
+  .depth-row { display: flex; gap: 8px; }
+  .depth-slot { flex: 1; background: #0a0d14; border: 1px solid var(--border); border-radius: 6px; padding: 7px 10px; font-family: 'JetBrains Mono', monospace; font-size: 0.82rem; }
+  .depth-slot .ds-label { color: var(--text-dim); font-size: 0.65rem; margin-bottom: 3px; }
+  .depth-slot .ds-val { color: var(--text-bright); font-size: 1rem; font-weight: 700; }
+  .depth-slot.active-slot { border-color: var(--accent); }
+  .depth-slot .ds-val.unknown { color: var(--text-faint); }
+  #call-stack { display: flex; flex-direction: column-reverse; gap: 5px; min-height: 40px; }
+  .cs-frame { background: #1e1a3a; color: var(--accent-pale); border: 1px solid var(--accent); border-radius: 6px; padding: 5px 11px; font-size: 0.84rem; font-weight: 600; font-family: monospace; }
+  .cs-frame.top { background: #4338ca; color: #fff; }
+  .cs-empty { color: var(--text-faint); font-size: 0.82rem; font-style: italic; }
+  .legend { display: flex; flex-wrap: wrap; gap: 10px; padding: 0; font-size: 0.78rem; color: var(--text-muted); }
+  .leg-item { display: flex; align-items: center; gap: 6px; }
+</style>
 </head>
-<body class="page">
-
-<div class="page-header">
-  <a class="back-link" href="../index.html">← All Algorithms</a>
-  <h1 class="page-title">Max Depth of Binary Tree</h1>
-</div>
+<body>
 
 <div class="viz-inputs">
-  <div class="field">
+  <div style="display:flex;flex-direction:column;gap:3px">
     <label>Preset</label>
     <select id="presetSel" onchange="loadPreset()">
       <option value="">— pick a preset —</option>
@@ -163,82 +71,72 @@
       <option value='{"tree":"5,4,8,11,null,13,4,7,2,null,1"}'>Complex</option>
     </select>
   </div>
-  <div class="field">
+  <div style="display:flex;flex-direction:column;gap:3px">
     <label>Level-order (use null for empty)</label>
-    <input id="inp-tree" type="text" value="3,9,20,null,null,15,7" />
+    <input id="inp-tree" type="text" value="3,9,20,null,null,15,7" style="width:240px" />
   </div>
-  <button class="btn-primary" onclick="buildAndRun()" style="padding:7px 18px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);font-weight:600;cursor:pointer;">Run</button>
-  <button onclick="randomExample()" style="padding:7px 14px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;">🎲 Random</button>
+  <button class="vi-btn-run" onclick="buildAndRun()">Run</button>
+  <button class="vi-btn-rand" onclick="randomExample()">🎲 Random</button>
 </div>
-
 <div class="controls"></div>
 
-<div class="viz-area">
+<div id="header">
+  <span id="phase-badge">Setup</span>
+  <span style="font-size:13px;font-weight:700;">Max Depth of Binary Tree</span>
+  <span id="step-counter">Step 0 / 0</span>
+</div>
 
-  <div class="tree-wrap">
-    <svg id="tree-svg" viewBox="0 0 800 320"
-         preserveAspectRatio="xMidYMid meet"></svg>
-  </div>
-
-  <div class="status-bar" style="max-width:100%">
-    <span class="phase-label" id="phase-label">—</span>
-    <span class="step-desc"   id="step-desc">Click Run to start.</span>
-  </div>
-
-  <div class="bottom-row">
-
-    <div class="code-panel">
-      <div class="code-header">Python</div>
-      <div class="code-body" id="code-body"></div>
+<div id="main">
+  <div id="viz-area">
+    <div id="desc">Click Run to start.</div>
+    <div class="tree-wrap">
+      <svg id="tree-svg" viewBox="0 0 800 320" preserveAspectRatio="xMidYMid meet"></svg>
     </div>
+    <div class="legend">
+      <div class="leg-item"><svg width="14" height="14"><circle cx="7" cy="7" r="6" fill="#1e2130" stroke="#2d3148" stroke-width="2"/></svg> Unvisited</div>
+      <div class="leg-item"><svg width="14" height="14"><circle cx="7" cy="7" r="6" fill="#4338ca" stroke="var(--accent)" stroke-width="2"/></svg> Active</div>
+      <div class="leg-item"><svg width="14" height="14"><circle cx="7" cy="7" r="6" fill="#052e16" stroke="#16a34a" stroke-width="2"/></svg> Computed</div>
+    </div>
+  </div>
 
-    <div class="right-col">
-      <div class="panel-box">
-        <div class="panel-title">Active Frame — Depths</div>
-        <div class="depth-row">
-          <div class="depth-slot" id="slot-left">
-            <div class="ds-label">left_depth</div>
-            <div class="ds-val unknown" id="ds-left">—</div>
-          </div>
-          <div class="depth-slot" id="slot-right">
-            <div class="ds-label">right_depth</div>
-            <div class="ds-val unknown" id="ds-right">—</div>
-          </div>
+  <div id="resize-handle"></div>
+
+  <div id="code-panel">
+    <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--text-dim);margin-bottom:8px;">Python</div>
+    <div id="code-body"></div>
+  </div>
+
+  <div id="sidebar">
+    <div class="panel-box">
+      <div class="panel-title">Active Frame — Depths</div>
+      <div class="depth-row">
+        <div class="depth-slot" id="slot-left">
+          <div class="ds-label">left_depth</div>
+          <div class="ds-val unknown" id="ds-left">—</div>
+        </div>
+        <div class="depth-slot" id="slot-right">
+          <div class="ds-label">right_depth</div>
+          <div class="ds-val unknown" id="ds-right">—</div>
         </div>
       </div>
-      <div class="panel-box">
-        <div class="panel-title">Call Stack <span style="font-size:0.65rem;font-weight:400;color:var(--text-faint)">(top = active)</span></div>
-        <div id="call-stack"><span class="cs-empty">empty</span></div>
-      </div>
     </div>
-
-  </div>
-
-</div>
-
-<div class="legend">
-  <div class="leg-item">
-    <svg width="14" height="14"><circle cx="7" cy="7" r="6" fill="#1e2130" stroke="#2d3148" stroke-width="2"/></svg>
-    Unvisited
-  </div>
-  <div class="leg-item">
-    <svg width="14" height="14"><circle cx="7" cy="7" r="6" fill="#4338ca" stroke="var(--accent)" stroke-width="2"/></svg>
-    Active
-  </div>
-  <div class="leg-item">
-    <svg width="14" height="14"><circle cx="7" cy="7" r="6" fill="#052e16" stroke="#16a34a" stroke-width="2"/></svg>
-    Computed
+    <div class="panel-box">
+      <div class="panel-title">Call Stack <span style="font-size:0.65rem;font-weight:400;color:var(--text-faint)">(top = active)</span></div>
+      <div id="call-stack"><span class="cs-empty">empty</span></div>
+    </div>
   </div>
 </div>
 
-<div class="step-nav">
-  <button class="stepBtn" id="prevBtn" disabled>← Back</button>
-  <button class="stepBtn" id="stepBtn" disabled>Next →</button>
-  <button id="playBtn" style="background:#15803d;color:#fff;border:none;border-radius:4px;padding:6px 14px;font-weight:600;cursor:pointer">&#9654; Play</button>
-  <select id="speedSel" style="background:var(--bg);border:1px solid var(--border);color:var(--text);border-radius:4px;padding:6px 8px;font-size:0.85rem">
-    <option value="700">Slow</option>
-    <option value="350" selected>Medium</option>
-    <option value="120">Fast</option>
+<div id="nav-row">
+  <button id="prevBtn" class="btn-step">&#8592; Prev</button>
+  <button id="stepBtn" class="btn-step">Step &#8594;</button>
+  <button id="playBtn" class="btn-play">Play</button>
+  <button id="resetBtn" class="btn-step">&#8635; Reset</button>
+  <select id="speedSel">
+    <option value="800">0.5&#215;</option>
+    <option value="400" selected>1&#215;</option>
+    <option value="200">2&#215;</option>
+    <option value="100">4&#215;</option>
   </select>
 </div>
 
@@ -332,16 +230,16 @@ function layout(root) {
   const ySpace = 70;
   const padX = 40, padY = 30;
   VW = padX * 2 + (count - 1) * xSpace;
-  VH = padY * 2 + maxD * ySpace + R * 2 + 24; // extra room for depth badges above nodes
+  VH = padY * 2 + maxD * ySpace + R * 2 + 24;
   if (VW < 400) VW = 400;
   for (const id in nodeMap) {
     const n = nodeMap[id];
     n.x = padX + n._inIdx * xSpace;
-    n.y = padY + 22 + n.depth * ySpace + R; // +22 for badge space above root
+    n.y = padY + 22 + n.depth * ySpace + R;
   }
 }
 
-// ─── SVG render ───────────────────────────────────────────────────────────────
+// ─── SVG helpers ──────────────────────────────────────────────────────────────
 function svgEl(tag, attrs) {
   const el = document.createElementNS('http://www.w3.org/2000/svg', tag);
   Object.entries(attrs).forEach(([k, v]) => el.setAttribute(k, v));
@@ -364,7 +262,6 @@ function renderSVG(root) {
   svg.appendChild(edgeG);
   svg.appendChild(nodeG);
 
-  // edges
   (function drawEdges(n) {
     if (!n) return;
     [n.left, n.right].forEach(c => {
@@ -378,12 +275,10 @@ function renderSVG(root) {
     drawEdges(n.left); drawEdges(n.right);
   })(root);
 
-  // nodes
   for (const id in nodeMap) {
     const n = nodeMap[id];
     const g = svgG(`node-g-${n.id}`);
 
-    // depth badge (hidden initially)
     const badge = svgEl('text', {
       id: `nb-${n.id}`,
       x: n.x, y: n.y - R - 6,
@@ -415,7 +310,7 @@ function renderSVG(root) {
 // ─── Simulation ───────────────────────────────────────────────────────────────
 function simulate(root) {
   const stateMap = {};
-  const depthMap = {}; // id -> computed depth (null if not yet)
+  const depthMap = {};
   for (const id in nodeMap) { stateMap[id] = 'idle'; depthMap[id] = null; }
   const callStack = [];
   const out = [];
@@ -442,11 +337,9 @@ function simulate(root) {
     stateMap[node.id] = 'active';
     snap('Visit', `Enter maxDepth(${node.val}).`, [1, 2], null, null);
 
-    // recurse left
     snap('Left', `Call maxDepth(root.left) from node ${node.val}.`, [5], null, null);
     const leftD = dfs(node.left);
 
-    // recurse right
     snap('Right', `Call maxDepth(root.right) from node ${node.val}. left_depth = ${leftD}.`, [6], leftD, null);
     const rightD = dfs(node.right);
 
@@ -469,10 +362,8 @@ function simulate(root) {
 let prevLines = [];
 
 function applyStep(s, animate) {
-  // node colors
   Object.entries(s.stateMap).forEach(([id, st]) => setNodeColor(+id, st, animate));
 
-  // depth badges
   for (const id in s.depthMap) {
     const badge = document.getElementById(`nb-${id}`);
     if (!badge) continue;
@@ -490,7 +381,6 @@ function applyStep(s, animate) {
     }
   }
 
-  // depth slots
   const slotL = document.getElementById('slot-left');
   const slotR = document.getElementById('slot-right');
   const dsL   = document.getElementById('ds-left');
@@ -515,10 +405,7 @@ function applyStep(s, animate) {
     slotR.className = 'depth-slot';
   }
 
-  // call stack
   renderCallStack(s.callStack, animate);
-
-  // code lines
   setCodeLines(prevLines, s.lines, animate);
   prevLines = s.lines || [];
 }
@@ -559,7 +446,7 @@ function setCodeLines(oldLines, newLines, animate) {
   }
 }
 
-// ─── Node color ──────────────────────────────────────────────────────────────
+// ─── Node color ───────────────────────────────────────────────────────────────
 function setNodeColor(id, state, animate, dur) {
   dur = dur || 0.3;
   const c  = COLORS[state] || COLORS.idle;
@@ -575,7 +462,7 @@ function setNodeColor(id, state, animate, dur) {
   }
 }
 
-// ─── Call stack ──────────────────────────────────────────────────────────────
+// ─── Call stack ───────────────────────────────────────────────────────────────
 function renderCallStack(stack, animate) {
   const c = document.getElementById('call-stack');
   c.innerHTML = '';
@@ -602,7 +489,7 @@ function build() {
   const root = buildTree(vals);
   if (!root) {
     document.getElementById('tree-svg').innerHTML = '';
-    document.getElementById('step-desc').textContent = 'Empty tree.';
+    document.getElementById('desc').textContent = 'Empty tree.';
     return;
   }
   layout(root);
@@ -646,20 +533,37 @@ var nav = VizNav({
   speedSel: document.getElementById('speedSel'),
   render: function(snap, cur, total) {
     applyStep(snap, cur > 0);
-    var el = document.getElementById('phase-label');
-    if (el) el.textContent = 'Step ' + (cur + 1) + ' / ' + total + '  ·  ' + snap.phase;
-    var d = document.getElementById('step-desc');
-    if (d) d.textContent = snap.desc;
+    document.getElementById('phase-badge').textContent = snap.phase || '';
+    document.getElementById('step-counter').textContent = 'Step ' + (cur + 1) + ' / ' + total;
+    var desc = document.getElementById('desc');
+    if (desc) desc.textContent = snap.desc || '';
   }
 });
 
+document.getElementById('resetBtn').addEventListener('click', function() { buildAndRun(); });
+
 build();
 </script>
+
 <script>
-  if (window.self !== window.top) {
-    var bl = document.querySelector('.back-link');
-    if (bl) bl.style.display = 'none';
-  }
+(function() {
+  var handle = document.getElementById('resize-handle');
+  var panel  = document.getElementById('code-panel');
+  var dragging = false, startX = 0, startW = 0;
+  handle.addEventListener('mousedown', function(e) {
+    dragging = true; startX = e.clientX; startW = panel.offsetWidth;
+    handle.classList.add('dragging'); e.preventDefault();
+  });
+  document.addEventListener('mousemove', function(e) {
+    if (!dragging) return;
+    var delta = startX - e.clientX;
+    panel.style.width = Math.min(560, Math.max(120, startW + delta)) + 'px';
+  });
+  document.addEventListener('mouseup', function() {
+    if (!dragging) return;
+    dragging = false; handle.classList.remove('dragging');
+  });
+})();
 </script>
 </body>
 </html>

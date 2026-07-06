@@ -1,208 +1,154 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Alien Dictionary</title>
-  <link rel="stylesheet" href="../shared/style.css" />
-  <script src="../shared/viz.js"></script>
-  <style>
-    .viz-area { width: 100%; max-width: 95%; }
-    .main-row { display: grid; grid-template-columns: 1fr 380px; gap: 20px; align-items: start; }
-    @media (max-width: 800px) { .main-row { grid-template-columns: 1fr; } }
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Alien Dictionary</title>
+<link rel="stylesheet" href="../shared/style.css" />
+<script src="../shared/gsap.min.js"></script>
+<script src="../shared/viz.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: "Fira Code", "Cascadia Code", monospace; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
 
-    .graph-panel {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--radius-lg); padding: 16px;
-      display: flex; flex-direction: column; gap: 12px;
-    }
+  #header { padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+  #phase-badge { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; padding: 3px 10px; border-radius: var(--radius-sm); background: #1e3a5f; color: var(--blue); border: 1px solid var(--blue); }
+  #step-counter { font-size: 12px; color: var(--text-muted); margin-left: auto; }
 
-    /* Word comparison table */
-    .words-table {
-      display: flex; flex-direction: column; gap: 4px;
-    }
-    .word-row {
-      display: flex; align-items: center; gap: 6px;
-    }
-    .word-idx {
-      color: var(--text-ghost); font-size: 0.72rem; min-width: 20px;
-      text-align: right; font-family: monospace;
-    }
-    .word-chars {
-      display: flex; gap: 3px;
-    }
-    .char-box {
-      width: 28px; height: 28px; border-radius: 4px;
-      display: flex; align-items: center; justify-content: center;
-      font-family: monospace; font-weight: 700; font-size: 0.9rem;
-      border: 1.5px solid var(--border); color: var(--text);
-      background: var(--bg); transition: background 0.25s, border-color 0.25s, color 0.25s;
-    }
-    .char-box.match  { background: #1a2a1a; border-color: #9ece6a; color: #9ece6a; }
-    .char-box.differ { background: #3d2a10; border-color: #e0af68; color: #e0af68; }
-    .char-box.faded  { opacity: 0.3; }
-    .word-arrow {
-      font-size: 0.72rem; color: var(--text-ghost); min-width: 30px; text-align: center;
-    }
-    .word-edge-label {
-      font-family: monospace; font-size: 0.8rem; color: #e0af68; font-weight: 700;
-    }
+  .viz-inputs { width: 100%; max-width: 100%; padding: 10px 16px; background: var(--surface); border: none; border-bottom: 1px solid var(--border); border-radius: 0; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; flex-shrink: 0; }
+  .viz-inputs label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); display: block; margin-bottom: 3px; }
+  .viz-inputs select, .viz-inputs input { background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 0 8px; height: 30px; font-size: 0.82rem; font-family: inherit; appearance: none; -webkit-appearance: none; }
+  .vi-btn-run { padding: 6px 14px; border-radius: 6px; font-size: 0.82rem; font-weight: 600; cursor: pointer; font-family: inherit; background: var(--accent); color: #fff; border: none; }
+  .vi-btn-rand { padding: 6px 14px; border-radius: 6px; font-size: 0.82rem; cursor: pointer; font-family: inherit; background: var(--bg); color: var(--text); border: 1px solid var(--border); }
 
-    /* Graph SVG */
-    .graph-svg-wrap {
-      width: 100%; aspect-ratio: 1.5;
-      background: var(--bg); border-radius: var(--radius-sm);
-      overflow: hidden;
-    }
-    #graph-svg { width: 100%; height: 100%; }
+  #main { display: flex; flex: 1; overflow: hidden; }
 
-    .node-circle {
-      stroke-width: 2.5;
-      transition: fill 0.3s, stroke 0.3s;
-    }
-    .node-circle.state-white  { fill: #1a1b2e; stroke: #7aa2f7; }
-    .node-circle.state-gray   { fill: #3d3524; stroke: #e0af68; }
-    .node-circle.state-black  { fill: #1a2a1a; stroke: #9ece6a; }
-    .node-circle.state-cycle  { fill: #3d1515; stroke: #f7768e; }
+  #viz-area { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding: 20px; gap: 16px; overflow-y: auto; }
 
-    .node-label {
-      fill: var(--text-bright); font-size: 14px; font-weight: 700;
-      font-family: monospace; text-anchor: middle; dominant-baseline: central;
-      pointer-events: none;
-    }
-    .edge-line {
-      stroke-width: 2; fill: none;
-      stroke: #3b4261; transition: stroke 0.3s;
-    }
-    .edge-line.active  { stroke: #e0af68; }
-    .edge-line.cycle   { stroke: #f7768e; }
-    .edge-line.done    { stroke: #9ece6a; }
+  #resize-handle { width: 5px; flex-shrink: 0; cursor: col-resize; background: transparent; border-left: 1px solid var(--border); transition: background .15s; z-index: 10; }
+  #resize-handle:hover, #resize-handle.dragging { background: var(--accent); }
 
-    .edge-arrow { fill: #3b4261; transition: fill 0.3s; }
+  #code-panel { width: 350px; min-width: 120px; max-width: 560px; flex-shrink: 0; background: #0d1117; border-right: 1px solid var(--border); overflow-y: auto; overflow-x: auto; padding: 10px 12px; display: flex; flex-direction: column; }
+  .code-panel-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--text-dim); margin-bottom: 8px; }
 
-    /* right column */
-    .right-col { display: flex; flex-direction: column; gap: 12px; }
+  .cl { display: flex; align-items: stretch; padding: 2px 0; white-space: pre; border-left: 2px solid transparent; padding-left: 6px; color: var(--text-muted); transition: all 0.2s; font-family: 'Fira Code', 'Cascadia Code', monospace; font-size: 0.75rem; line-height: 1.8; }
+  .cl.hl { background: rgba(122,162,247,0.12); border-left-color: var(--accent); color: var(--text); }
+  .ln { display: inline-block; width: 20px; text-align: right; color: var(--text-dim); user-select: none; margin-right: 10px; font-size: 0.7rem; }
 
-    .panel-box {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--radius-lg); padding: 14px 16px;
-      display: flex; flex-direction: column; gap: 8px;
-    }
-    .panel-title {
-      font-size: 0.72rem; font-weight: 700;
-      text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim);
-    }
+  #sidebar { width: 220px; flex-shrink: 0; background: var(--surface); border-left: 1px solid var(--border); overflow-y: auto; padding: 14px 12px; display: flex; flex-direction: column; gap: 12px; }
+  .sidebar-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--text-dim); margin-bottom: 6px; }
 
-    .nav-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-    .btn-play {
-      background: #15803d; border: none; border-radius: var(--radius-sm);
-      color: #fff; cursor: pointer; font-size: 0.88rem; font-weight: 600;
-      padding: 9px 16px; transition: background 0.2s;
-    }
-    .btn-play:hover { background: #166534; }
-    .btn-play.playing { background: #c2410c; }
-    .btn-play.playing:hover { background: #9a3412; }
-    .btn-play:disabled { opacity: 0.4; cursor: not-allowed; }
-    .speed-select {
-      background: var(--bg); border: 1px solid var(--border);
-      border-radius: var(--radius-sm); color: var(--text);
-      font-size: 0.85rem; padding: 8px 10px; outline: none; width: 80px;
-    }
+  #nav-row { flex-shrink: 0; display: flex; align-items: center; gap: 8px; padding: 10px 16px; background: var(--surface); border-top: 1px solid var(--border); }
+  .btn-step { padding: 6px 14px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--surface); color: var(--text); font-family: inherit; font-size: 12px; cursor: pointer; transition: background .15s; }
+  .btn-step:hover { background: #334155; }
+  .btn-play { padding: 6px 14px; border-radius: var(--radius-sm); background: var(--accent); border: 1px solid var(--accent); color: #fff; font-family: inherit; font-size: 12px; cursor: pointer; }
+  .btn-play:hover { background: var(--accent-hover); }
+  #nav-row select { padding: 5px 8px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: #1e293b; color: var(--text); font-size: 12px; font-family: inherit; cursor: pointer; }
 
-    .result-badge {
-      font-size: 0.88rem; font-weight: 700;
-      padding: 6px 14px; border-radius: 6px; letter-spacing: 0.05em;
-      display: none; width: fit-content; font-family: monospace;
-    }
-    .result-badge.valid   { background: #1a2a1a; color: #9ece6a; border: 1px solid #9ece6a; display: block; }
-    .result-badge.invalid { background: #3d1515; color: #f7768e; border: 1px solid #f7768e; display: block; }
+  /* PAGE-SPECIFIC */
+  .graph-panel {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius-lg); padding: 16px;
+    display: flex; flex-direction: column; gap: 12px;
+    width: 100%;
+  }
 
-    /* topo order chips */
-    .order-list {
-      display: flex; gap: 6px; flex-wrap: wrap; min-height: 28px; align-items: center;
-    }
-    .order-chip {
-      padding: 3px 10px; border-radius: 4px;
-      font-size: 0.8rem; font-family: monospace; font-weight: 700;
-      background: #1a2a1a; border: 1px solid #9ece6a; color: #9ece6a;
-    }
-    .stack-chip {
-      padding: 3px 10px; border-radius: 4px;
-      font-size: 0.8rem; font-family: monospace; font-weight: 700;
-      background: #3d3524; border: 1px solid #e0af68; color: #e0af68;
-    }
+  .words-table { display: flex; flex-direction: column; gap: 4px; }
+  .word-row { display: flex; align-items: center; gap: 6px; }
+  .word-idx { color: var(--text-ghost); font-size: 0.72rem; min-width: 20px; text-align: right; font-family: monospace; }
+  .word-chars { display: flex; gap: 3px; }
+  .char-box {
+    width: 28px; height: 28px; border-radius: 4px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: monospace; font-weight: 700; font-size: 0.9rem;
+    border: 1.5px solid var(--border); color: var(--text);
+    background: var(--bg); transition: background 0.25s, border-color 0.25s, color 0.25s;
+  }
+  .char-box.match  { background: #1a2a1a; border-color: #9ece6a; color: #9ece6a; }
+  .char-box.differ { background: #3d2a10; border-color: #e0af68; color: #e0af68; }
+  .char-box.faded  { opacity: 0.3; }
+  .word-arrow { font-size: 0.72rem; color: var(--text-ghost); min-width: 30px; text-align: center; }
+  .word-edge-label { font-family: monospace; font-size: 0.8rem; color: #e0af68; font-weight: 700; }
 
-    /* legend */
-    .legend-row { display: flex; align-items: center; gap: 8px; font-size: 0.78rem; color: var(--text-muted); }
-    .legend-dot {
-      width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; border: 2px solid;
-    }
+  .graph-svg-wrap { width: 100%; aspect-ratio: 1.5; background: var(--bg); border-radius: var(--radius-sm); overflow: hidden; }
+  #graph-svg { width: 100%; height: 100%; }
 
-    /* code panel */
-    .code-panel {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--radius-lg); overflow: hidden;
-    }
-    .code-header {
-      padding: 8px 14px; font-size: 0.72rem; font-weight: 600;
-      color: var(--text-dim); border-bottom: 1px solid var(--border); background: var(--bg);
-    }
-    .code-body { padding: 10px 0; font-size: 0.78rem; line-height: 1.75; white-space: pre; }
-    .code-line { display: flex; align-items: center; padding: 0 14px; }
-    .code-line.hl { background: var(--border-soft); border-left: 2px solid var(--accent); }
-    .ln { min-width: 24px; color: var(--text-ghost); user-select: none; font-size: 0.7rem; }
-    .kw { color: var(--purple); }
-    .fn { color: var(--blue); }
-    .bi { color: var(--orange); }
-    .cm { color: var(--text-ghost); }
-    .nb { color: var(--green); }
-    .st { color: #e0af68; }
+  .node-circle { stroke-width: 2.5; transition: fill 0.3s, stroke 0.3s; }
+  .node-circle.state-white  { fill: #1a1b2e; stroke: #7aa2f7; }
+  .node-circle.state-gray   { fill: #3d3524; stroke: #e0af68; }
+  .node-circle.state-black  { fill: #1a2a1a; stroke: #9ece6a; }
+  .node-circle.state-cycle  { fill: #3d1515; stroke: #f7768e; }
 
-    /* preset buttons */
-    .preset-row { display: flex; gap: 8px; flex-wrap: wrap; }
-    .btn-preset {
-      padding: 6px 12px; border-radius: var(--radius-sm);
-      background: var(--bg); border: 1px solid var(--border);
-      color: var(--text-dim); font-size: 0.8rem; cursor: pointer;
-      transition: border-color 0.15s, color 0.15s;
-    }
-    .btn-preset:hover, .btn-preset.active { border-color: var(--accent); color: var(--accent-pale); }
+  .node-label { fill: var(--text-bright); font-size: 14px; font-weight: 700; font-family: monospace; text-anchor: middle; dominant-baseline: central; pointer-events: none; }
+  .edge-line { stroke-width: 2; fill: none; stroke: #3b4261; transition: stroke 0.3s; }
+  .edge-line.active  { stroke: #e0af68; }
+  .edge-line.cycle   { stroke: #f7768e; }
+  .edge-line.done    { stroke: #9ece6a; }
+  .edge-arrow { fill: #3b4261; transition: fill 0.3s; }
 
-    .section-label {
-      font-size: 0.72rem; font-weight: 700; text-transform: uppercase;
-      letter-spacing: 0.08em; color: var(--text-dim); margin-bottom: 4px;
-    }
-  </style>
+  .section-label { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); margin-bottom: 4px; }
+
+  .result-badge {
+    font-size: 0.82rem; font-weight: 700;
+    padding: 5px 12px; border-radius: 6px; letter-spacing: 0.05em;
+    display: none; width: fit-content; font-family: monospace;
+    margin-top: 4px;
+  }
+  .result-badge.valid   { background: #1a2a1a; color: #9ece6a; border: 1px solid #9ece6a; display: block; }
+  .result-badge.invalid { background: #3d1515; color: #f7768e; border: 1px solid #f7768e; display: block; }
+
+  .order-list { display: flex; gap: 6px; flex-wrap: wrap; min-height: 24px; align-items: center; margin-top: 4px; }
+  .order-chip { padding: 3px 8px; border-radius: 4px; font-size: 0.75rem; font-family: monospace; font-weight: 700; background: #1a2a1a; border: 1px solid #9ece6a; color: #9ece6a; }
+  .stack-chip { padding: 3px 8px; border-radius: 4px; font-size: 0.75rem; font-family: monospace; font-weight: 700; background: #3d3524; border: 1px solid #e0af68; color: #e0af68; }
+
+  .legend-row { display: flex; align-items: center; gap: 8px; font-size: 0.75rem; color: var(--text-muted); margin-bottom: 5px; }
+  .legend-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; border: 2px solid; }
+
+  .kw { color: var(--purple); }
+  .fn { color: var(--blue); }
+  .bi { color: var(--orange); }
+  .cm { color: var(--text-ghost); }
+  .nb { color: var(--green); }
+  .st { color: #e0af68; }
+
+  .preset-row { display: flex; gap: 8px; flex-wrap: wrap; }
+  .btn-preset {
+    padding: 5px 10px; border-radius: var(--radius-sm);
+    background: var(--bg); border: 1px solid var(--border);
+    color: var(--text-dim); font-size: 0.8rem; cursor: pointer;
+    transition: border-color 0.15s, color 0.15s;
+  }
+  .btn-preset:hover, .btn-preset.active { border-color: var(--accent); color: var(--accent-pale); }
+</style>
 </head>
-<body class="page">
+<body>
 
-<div class="page-header">
-  <a class="back-link" href="../index.html">&larr; All Algorithms</a>
-  <div class="page-title">Alien Dictionary</div>
-  <div class="page-sub">LeetCode 269 &middot; Topological sort from adjacent-word character ordering &middot; DFS WHITE/GRAY/BLACK &middot; O(N·M + U + E)</div>
-</div>
-
-<div class="controls">
-  <div class="field">
+<div class="viz-inputs">
+  <div>
     <label>Preset</label>
     <div class="preset-row">
-      <button class="btn-preset active" id="preset-default" onclick="loadPreset('default')">Default (wrt…)</button>
+      <button class="btn-preset active" id="preset-default" onclick="loadPreset('default')">Default (wrt&hellip;)</button>
       <button class="btn-preset" id="preset-two" onclick="loadPreset('two')">Two words</button>
       <button class="btn-preset" id="preset-cycle" onclick="loadPreset('cycle')">Cycle (invalid)</button>
     </div>
   </div>
-  <button class="btn-primary" onclick="buildAndRun()">Build &amp; Run</button>
+  <button class="vi-btn-run" onclick="buildAndRun()">Build &amp; Run</button>
+  <button class="vi-btn-rand" onclick="randomExample()">&#127922; Random</button>
+</div>
+<div class="controls"></div>
+
+<div id="header">
+  <span id="phase-badge">Setup</span>
+  <span style="font-size:13px;font-weight:700;">Alien Dictionary</span>
+  <span id="step-counter">Step 0 / 0</span>
 </div>
 
-<div class="viz-area">
-  <div class="main-row">
-
-    <!-- Left: word table + graph -->
+<div id="main">
+  <div id="viz-area">
     <div class="graph-panel">
       <div class="section-label">Word List (adjacent pairs yield ordering edges)</div>
       <div class="words-table" id="words-table"></div>
-
-      <div class="section-label" style="margin-top:6px">Constraint Graph (char → char)</div>
+      <div class="section-label" style="margin-top:6px">Constraint Graph (char &rarr; char)</div>
       <div class="graph-svg-wrap">
         <svg id="graph-svg" viewBox="0 0 560 320" preserveAspectRatio="xMidYMid meet">
           <defs>
@@ -224,72 +170,54 @@
         </svg>
       </div>
     </div>
+    <div id="desc" style="font-size:13px;color:var(--text-muted);text-align:center;max-width:560px;min-height:36px;line-height:1.5;">Select a preset and click Build &amp; Run.</div>
+  </div>
 
-    <!-- Right panel -->
-    <div class="right-col">
+  <div id="resize-handle"></div>
 
-      <div class="panel-box">
-        <div class="nav-row">
-          <button class="stepBtn" id="prevBtn" disabled>&larr;</button>
-          <button class="stepBtn" id="stepBtn" disabled>&rarr;</button>
-          <button class="playBtn" id="playBtn" disabled>&#9654; Play</button>
-          <select class="speedSel" id="speedSel">
-            <option value="800">Slow</option>
-            <option value="400" selected>Medium</option>
-            <option value="120">Fast</option>
-          </select>
-        </div>
+  <div id="code-panel">
+    <div class="code-panel-title">Code</div>
+    <div id="code-body"></div>
+  </div>
+
+  <div id="sidebar">
+    <div>
+      <div class="sidebar-title">Result</div>
+      <div class="result-badge" id="result-badge"></div>
+    </div>
+    <div>
+      <div class="sidebar-title">DFS Stack (GRAY)</div>
+      <div class="order-list" id="stack-list">
+        <span style="color:var(--text-ghost);font-size:0.75rem">empty</span>
       </div>
-
-      <div class="panel-box">
-        <div class="panel-title" id="phase-label">&mdash;</div>
-        <div style="font-size:0.82rem;color:var(--text-muted);margin-top:2px;min-height:40px" id="step-desc">Select a preset and click Build &amp; Run.</div>
-        <div class="result-badge" id="result-badge"></div>
+    </div>
+    <div>
+      <div class="sidebar-title">Topo Order</div>
+      <div class="order-list" id="order-list">
+        <span style="color:var(--text-ghost);font-size:0.75rem">none yet</span>
       </div>
-
-      <div class="panel-box">
-        <div class="panel-title">DFS Stack (GRAY chars)</div>
-        <div class="order-list" id="stack-list">
-          <span style="color:var(--text-ghost);font-size:0.78rem">empty</span>
-        </div>
-      </div>
-
-      <div class="panel-box">
-        <div class="panel-title">Topo Order (reverse post-order)</div>
-        <div class="order-list" id="order-list">
-          <span style="color:var(--text-ghost);font-size:0.78rem">none yet</span>
-        </div>
-      </div>
-
-      <div class="panel-box">
-        <div class="panel-title">Legend</div>
-        <div style="display:flex;flex-direction:column;gap:6px">
-          <div class="legend-row">
-            <div class="legend-dot" style="background:#1a1b2e;border-color:#7aa2f7"></div>
-            <span>WHITE — unvisited</span>
-          </div>
-          <div class="legend-row">
-            <div class="legend-dot" style="background:#3d3524;border-color:#e0af68"></div>
-            <span>GRAY — in current DFS path</span>
-          </div>
-          <div class="legend-row">
-            <div class="legend-dot" style="background:#1a2a1a;border-color:#9ece6a"></div>
-            <span>BLACK — done, appended to order</span>
-          </div>
-          <div class="legend-row">
-            <div class="legend-dot" style="background:#3d1515;border-color:#f7768e"></div>
-            <span>CYCLE — back edge detected (invalid)</span>
-          </div>
-        </div>
-      </div>
-
-      <div class="code-panel">
-        <div class="code-header">Python</div>
-        <div class="code-body" id="code-body"></div>
-      </div>
-
+    </div>
+    <div>
+      <div class="sidebar-title">Legend</div>
+      <div class="legend-row"><div class="legend-dot" style="background:#1a1b2e;border-color:#7aa2f7"></div><span>WHITE</span></div>
+      <div class="legend-row"><div class="legend-dot" style="background:#3d3524;border-color:#e0af68"></div><span>GRAY</span></div>
+      <div class="legend-row"><div class="legend-dot" style="background:#1a2a1a;border-color:#9ece6a"></div><span>BLACK</span></div>
+      <div class="legend-row"><div class="legend-dot" style="background:#3d1515;border-color:#f7768e"></div><span>CYCLE</span></div>
     </div>
   </div>
+</div>
+
+<div id="nav-row">
+  <button id="prevBtn" class="btn-step">&larr; Prev</button>
+  <button id="stepBtn" class="btn-step">Step &rarr;</button>
+  <button id="playBtn" class="btn-play">Play</button>
+  <button id="resetBtn" class="btn-step">&#8635; Reset</button>
+  <select id="speedSel">
+    <option value="800">0.5&times;</option>
+    <option value="400" selected>1&times;</option>
+    <option value="200">2&times;</option>
+    <option value="100">4&times;</option>
+  </select>
 </div>
 
 <script>
@@ -324,25 +252,16 @@ var CODE = [
 ];
 
 var PRESETS = {
-  default: {
-    words: ['wrt','wrf','er','ett','rftt'],
-    label: "['wrt','wrf','er','ett','rftt'] → 'wertf'"
-  },
-  two: {
-    words: ['abc','ab'],
-    label: "['abc','ab'] → '' (invalid prefix)"
-  },
-  cycle: {
-    words: ['ab','ba'],
-    label: "['ab','ba'] → '' (cycle: a→b→a)"
-  }
+  default: { words: ['wrt','wrf','er','ett','rftt'], label: "['wrt','wrf','er','ett','rftt'] → 'wertf'" },
+  two:     { words: ['abc','ab'],   label: "['abc','ab'] → '' (invalid prefix)" },
+  cycle:   { words: ['ab','ba'],    label: "['ab','ba'] → '' (cycle: a→b→a)" }
 };
 
 var currentPreset = 'default';
 var simSteps = [];
 var nav;
-var gNodes = [];   // {id, char, x, y}
-var gEdges = [];   // {from, to} char pairs
+var gNodes = [];
+var gEdges = [];
 var gWords = [];
 
 function loadPreset(name) {
@@ -352,7 +271,13 @@ function loadPreset(name) {
   });
 }
 
-// ---- Layout helpers ----
+function randomExample() {
+  var keys = Object.keys(PRESETS);
+  var k = keys[Math.floor(Math.random() * keys.length)];
+  loadPreset(k);
+  buildAndRun();
+}
+
 function layoutNodes(chars) {
   var list = Array.from(chars).sort();
   var n = list.length;
@@ -363,7 +288,6 @@ function layoutNodes(chars) {
   });
 }
 
-// ---- Graph SVG ----
 var NODE_R = 20;
 
 function charNode(c) {
@@ -430,17 +354,14 @@ function renderGraph(snap) {
   });
 }
 
-// ---- Word comparison table ----
 function renderWordTable(snap) {
   var el = document.getElementById('words-table');
   var hl = snap ? (snap.highlightPair || -1) : -1;
-  var hlJ = snap ? (snap.highlightJ || -1) : -1;
 
   el.innerHTML = gWords.map(function(w, i) {
     var chars = w.split('').map(function(c, j) {
       var cls = 'char-box';
       if (hl === i || hl === i + 1) {
-        // show matching / differing chars when comparing pair (hl, hl+1)
         if (hl === i && snap && snap.compareJ !== undefined) {
           if (j < snap.compareJ) cls += ' match';
           else if (j === snap.compareJ) cls += ' differ';
@@ -463,16 +384,12 @@ function renderWordTable(snap) {
   }).join('');
 }
 
-// ---- Simulation ----
 function simulate(words) {
   var steps = [];
-
-  // Collect all chars
   var charSet = {};
   words.forEach(function(w) { w.split('').forEach(function(c) { charSet[c] = true; }); });
   var chars = Object.keys(charSet).sort();
 
-  // Build adjacency from word pairs
   var adj = {};
   chars.forEach(function(c) { adj[c] = []; });
   var edgeList = [];
@@ -503,39 +420,36 @@ function simulate(words) {
 
   snap('Init', 'Collect all unique characters from every word. Initialize graph with one node per char.', [2], {});
 
-  // Build edges from adjacent word pairs
   for (var i = 0; i < words.length - 1; i++) {
     var w1 = words[i], w2 = words[i+1];
     var minLen = Math.min(w1.length, w2.length);
 
     snap('Compare', 'Compare word[' + i + ']="' + w1 + '" vs word[' + (i+1) + ']="' + w2 + '" — scan char by char until they differ.', [3,4,5], {highlightPair: i, compareJ: -1});
 
-    // Check invalid prefix
     if (w1.length > w2.length && w1.slice(0, minLen) === w2.slice(0, minLen)) {
       invalidPrefix = true;
-      snap('InvalidPrefix', 'word[' + i + ']="' + w1 + '" is longer and is a prefix of word[' + (i+1) + ']="' + w2 + '" — this is an impossible ordering. Return "".', [6,7], {highlightPair: i, compareJ: minLen - 1});
+      snap('InvalidPrefix', 'word[' + i + ']="' + w1 + '" is longer and is a prefix of word[' + (i+1) + ']="' + w2 + '" — impossible ordering. Return "".', [6,7], {highlightPair: i, compareJ: minLen - 1});
       break;
     }
 
     var foundDiff = false;
     for (var j = 0; j < minLen; j++) {
-      snap('ScanChars', 'Position ' + j + ': "' + w1[j] + '" vs "' + w2[j] + '"' + (w1[j] === w2[j] ? ' — same, continue.' : ' — DIFFERENT! Edge ' + w1[j] + '→' + w2[j] + ' ('+w1[j]+' comes before '+w2[j]+').'), [8,9], {highlightPair: i, compareJ: j});
+      snap('ScanChars', 'Position ' + j + ': "' + w1[j] + '" vs "' + w2[j] + '"' + (w1[j] === w2[j] ? ' — same, continue.' : ' — DIFFERENT! Edge ' + w1[j] + '→' + w2[j] + '.'), [8,9], {highlightPair: i, compareJ: j});
       if (w1[j] !== w2[j]) {
         if (adj[w1[j]].indexOf(w2[j]) === -1) {
           adj[w1[j]].push(w2[j]);
           edgeList.push({from: w1[j], to: w2[j]});
         }
-        snap('AddEdge', 'First difference: "' + w1[j] + '" < "' + w2[j] + '" in alien order. Add edge ' + w1[j] + '→' + w2[j] + ' to constraint graph.', [10,11], {highlightPair: i, compareJ: j, wordEdge: {wordIdx: i, from: w1[j], to: w2[j]}});
+        snap('AddEdge', 'First difference: "' + w1[j] + '" < "' + w2[j] + '" in alien order. Add edge ' + w1[j] + '→' + w2[j] + '.', [10,11], {highlightPair: i, compareJ: j, wordEdge: {wordIdx: i, from: w1[j], to: w2[j]}});
         foundDiff = true;
         break;
       }
     }
     if (!foundDiff && !invalidPrefix) {
-      snap('NoDiff', 'Words "' + w1 + '" and "' + w2 + '" share a common prefix up to their shorter length — no ordering edge extracted from this pair.', [8,9,11], {highlightPair: i, compareJ: minLen});
+      snap('NoDiff', 'Words "' + w1 + '" and "' + w2 + '" share common prefix up to shorter length — no edge extracted.', [8,9,11], {highlightPair: i, compareJ: minLen});
     }
   }
 
-  // Update gEdges for graph rendering
   gEdges = edgeList;
 
   if (invalidPrefix) {
@@ -543,7 +457,7 @@ function simulate(words) {
     return steps;
   }
 
-  snap('StartDFS', 'Graph built. Now run DFS topo sort: visit each char, mark GRAY on entry, BLACK on exit, append to result.', [12,13,14,24,25,26]);
+  snap('StartDFS', 'Graph built. Run DFS topo sort: visit each char, mark GRAY on entry, BLACK on exit, append to result.', [12,13,14,24,25,26]);
 
   function dfs(c) {
     if (foundCycle) return;
@@ -563,7 +477,7 @@ function simulate(words) {
         var cycleColors = Object.assign({}, colors);
         cycleColors[nei] = 'cycle';
         cycleColors[c] = 'cycle';
-        snap('Cycle', 'Edge "' + c + '"→"' + nei + '": "' + nei + '" is GRAY (on stack). Back edge! Cycle detected — no valid ordering exists. Return "".', [18], {colors: cycleColors});
+        snap('Cycle', 'Edge "' + c + '"→"' + nei + '": "' + nei + '" is GRAY. Back edge! Cycle detected — return "".', [18], {colors: cycleColors});
         activeEdges = [];
         return;
       }
@@ -576,7 +490,6 @@ function simulate(words) {
         doneEdges.push([c, nei]);
         activeEdges = [];
       } else {
-        // black — already processed
         doneEdges.push([c, nei]);
         snap('SkipBlack', 'Edge "' + c + '"→"' + nei + '": "' + nei + '" is BLACK (done) — safe, skip.', [17,19], {});
         activeEdges = [];
@@ -588,7 +501,7 @@ function simulate(words) {
       stack.pop();
       finished.push(c);
       result.push(c);
-      snap('Exit', 'Exit "' + c + '" → mark BLACK, append to result (reverse post-order = topo order).', [21,22,23], {});
+      snap('Exit', 'Exit "' + c + '" → mark BLACK, append to result.', [21,22,23], {});
     }
   }
 
@@ -603,13 +516,12 @@ function simulate(words) {
 
   if (!foundCycle) {
     var order = result.slice().reverse().join('');
-    snap('Done', 'DFS complete. Reverse of post-order gives the alien alphabet order: "' + order + '".', [27], {});
+    snap('Done', 'DFS complete. Reverse post-order = alien alphabet: "' + order + '".', [27], {});
   }
 
   return steps;
 }
 
-// ---- Apply step ----
 function applyStep(snap) {
   renderGraph(snap);
   renderWordTable(snap);
@@ -629,7 +541,7 @@ function applyStep(snap) {
   } else if (snap.phase === 'Cycle' || snap.foundCycle) {
     if (snap.phase === 'Cycle' || snap.phase === 'Done') {
       badge.className = 'result-badge invalid';
-      badge.textContent = '"" — cycle detected';
+      badge.textContent = '"" — cycle';
     }
   } else if (snap.invalidPrefix) {
     badge.className = 'result-badge invalid';
@@ -640,7 +552,7 @@ function applyStep(snap) {
 function updateChips(elId, items, cls) {
   var el = document.getElementById(elId);
   if (!items || items.length === 0) {
-    el.innerHTML = '<span style="color:var(--text-ghost);font-size:0.78rem">empty</span>';
+    el.innerHTML = '<span style="color:var(--text-ghost);font-size:0.75rem">empty</span>';
     return;
   }
   el.innerHTML = items.map(function(c) {
@@ -659,7 +571,7 @@ function setCodeLines(lines) {
 function buildCodePanel() {
   var body = document.getElementById('code-body');
   body.innerHTML = CODE.map(function(e) {
-    return '<div class="code-line" id="cl-' + e[0] + '"><span class="ln">' + e[0] + '</span><span>' + e[1] + '</span></div>';
+    return '<div class="cl" id="cl-' + e[0] + '"><span class="ln">' + e[0] + '</span><span>' + e[1] + '</span></div>';
   }).join('');
 }
 
@@ -667,21 +579,16 @@ function buildAndRun() {
   var preset = PRESETS[currentPreset];
   gWords = preset.words;
 
-  // Collect chars + layout nodes
   var charSet = {};
   gWords.forEach(function(w) { w.split('').forEach(function(c) { charSet[c] = true; }); });
   gNodes = layoutNodes(Object.keys(charSet));
   gEdges = [];
 
-  // Reset word table + graph
   renderWordTable(null);
   renderGraph(null);
 
   simSteps = simulate(gWords);
-
-  // Update gEdges from simulation (built during simulate)
-  renderGraph(null);  // re-render with edges
-
+  renderGraph(null);
   nav.load(simSteps);
 }
 
@@ -695,18 +602,35 @@ window.addEventListener('DOMContentLoaded', function() {
     speedSel: document.getElementById('speedSel'),
     render: function(snap, cur, total) {
       applyStep(snap);
-      document.getElementById('phase-label').textContent = 'Step ' + (cur+1) + ' / ' + total + '  ·  ' + snap.phase;
-      document.getElementById('step-desc').textContent = snap.desc;
+      document.getElementById('phase-badge').textContent = snap.phase;
+      document.getElementById('step-counter').textContent = 'Step ' + (cur+1) + ' / ' + total;
+      document.getElementById('desc').textContent = snap.desc;
     }
   });
+  document.getElementById('resetBtn').addEventListener('click', function() { buildAndRun(); });
 });
 </script>
 
 <script>
-  if (window.self !== window.top) {
-    var bl = document.querySelector('.back-link');
-    if (bl) bl.style.display = 'none';
-  }
+(function() {
+  var handle = document.getElementById('resize-handle');
+  var panel  = document.getElementById('code-panel');
+  var dragging = false, startX = 0, startW = 0;
+  handle.addEventListener('mousedown', function(e) {
+    dragging = true; startX = e.clientX; startW = panel.offsetWidth;
+    handle.classList.add('dragging');
+    e.preventDefault();
+  });
+  document.addEventListener('mousemove', function(e) {
+    if (!dragging) return;
+    var delta = startX - e.clientX;
+    panel.style.width = Math.min(560, Math.max(120, startW + delta)) + 'px';
+  });
+  document.addEventListener('mouseup', function() {
+    if (!dragging) return;
+    dragging = false; handle.classList.remove('dragging');
+  });
+})();
 </script>
 </body>
 </html>

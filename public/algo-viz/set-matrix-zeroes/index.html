@@ -8,269 +8,187 @@
   <script src="../shared/gsap.min.js"></script>
   <script src="../shared/viz.js"></script>
   <style>
-    .viz-area { width: 100%; max-width: 90%; }
-    .main-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
-    .left-col, .right-col { display: flex; flex-direction: column; gap: 12px; }
-    @media (max-width: 700px) { .main-row { grid-template-columns: 1fr; } }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: "Fira Code", "Cascadia Code", monospace; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+    #header { padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+    #phase-badge { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; padding: 3px 10px; border-radius: var(--radius-sm); background: #1e3a5f; color: var(--blue); border: 1px solid var(--blue); }
+    #step-counter { font-size: 12px; color: var(--text-muted); margin-left: auto; }
+    .viz-inputs { width: 100%; padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; flex-wrap: wrap; gap: 12px; align-items: center; flex-shrink: 0; }
+    .viz-inputs label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); display: block; margin-bottom: 3px; }
+    .viz-inputs select, .viz-inputs input { background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 0 8px; height: 30px; font-size: 0.82rem; font-family: inherit; }
+    .vi-btn-run { padding: 6px 14px; border-radius: 6px; font-size: 0.82rem; font-weight: 600; cursor: pointer; font-family: inherit; background: var(--accent); color: #fff; border: none; }
+    .vi-btn-rand { padding: 6px 14px; border-radius: 6px; font-size: 0.82rem; cursor: pointer; font-family: inherit; background: var(--bg); color: var(--text); border: 1px solid var(--border); }
+    #main { display: flex; flex: 1; overflow: hidden; }
+    #viz-area { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding: 20px; gap: 20px; overflow-y: auto; }
+    #resize-handle { width: 5px; flex-shrink: 0; cursor: col-resize; background: transparent; border-left: 1px solid var(--border); transition: background .15s; }
+    #resize-handle:hover, #resize-handle.dragging { background: var(--accent); }
+    #code-panel { width: 350px; min-width: 120px; max-width: 560px; flex-shrink: 0; background: #0d1117; border-right: 1px solid var(--border); overflow-y: auto; padding: 10px 12px; display: flex; flex-direction: column; }
+    .code-panel-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--text-dim); margin-bottom: 8px; }
+    .cl { display: flex; align-items: stretch; padding: 2px 0; white-space: pre; border-left: 2px solid transparent; padding-left: 6px; color: var(--text-muted); font-size: 0.75rem; line-height: 1.8; }
+    .cl.hl { background: rgba(122,162,247,0.12); border-left-color: var(--accent); color: var(--text); }
+    .ln { display: inline-block; width: 20px; text-align: right; color: var(--text-dim); user-select: none; margin-right: 10px; font-size: 0.7rem; }
+    .kw { color: var(--purple); }
+    .nb { color: var(--green); }
+    .cm { color: var(--text-dim); font-style: italic; }
+    #sidebar { width: 220px; flex-shrink: 0; background: var(--surface); border-left: 1px solid var(--border); overflow-y: auto; padding: 14px 12px; display: flex; flex-direction: column; gap: 12px; }
+    .sidebar-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--text-dim); margin-bottom: 6px; }
+    .var-item { font-size: 11px; font-family: monospace; color: var(--text-muted); padding: 4px 0; border-bottom: 1px solid var(--border-soft); }
+    .var-key { color: var(--text-dim); }
+    .var-val-span { color: var(--accent); font-weight: 700; }
+    #nav-row { flex-shrink: 0; display: flex; align-items: center; gap: 8px; padding: 10px 16px; background: var(--surface); border-top: 1px solid var(--border); }
+    .btn-step { padding: 6px 14px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--surface); color: var(--text); font-family: inherit; font-size: 12px; cursor: pointer; }
+    .btn-play { padding: 6px 14px; border-radius: var(--radius-sm); background: var(--accent); border-color: var(--accent); color: #fff; font-family: inherit; font-size: 12px; cursor: pointer; }
 
-    .matrix-section {
-      padding: 20px;
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--radius-lg);
-      display: flex; flex-direction: column; gap: 14px;
-    }
+    /* viz-specific */
+    .matrix-section { padding: 20px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); display: flex; flex-direction: column; gap: 14px; }
     .matrix-wrap { display: flex; justify-content: center; }
     .matrix-grid { display: grid; gap: 5px; }
-
-    .cell {
-      width: 56px; height: 56px;
-      display: flex; align-items: center; justify-content: center;
-      border: 2px solid var(--border);
-      border-radius: 6px;
-      background: #0f0f0f;
-      font-size: 1rem; font-weight: 700; font-family: monospace;
-      color: var(--text-dim);
-      transition: border-color 0.15s, color 0.15s, background 0.15s;
-    }
-    /* scanning current cell */
-    .cell[data-state="scan"] {
-      border-color: var(--accent); color: var(--accent-pale);
-      background: var(--surface-dark);
-    }
-    /* cell is a zero found during scan */
-    .cell[data-state="zero-found"] {
-      border-color: #c2410c; color: var(--orange);
-      background: #1c1200;
-    }
-    /* marker cells: first row / first col */
-    .cell[data-state="marker"] {
-      border-color: #7c3aed; color: #c4b5fd;
-      background: #1a1030;
-    }
-    /* cell being zeroed out in step 2 */
-    .cell[data-state="zeroing"] {
-      border-color: #0891b2; color: #67e8f9;
-      background: #041f2a;
-    }
-    /* cell that has been set to 0 */
-    .cell[data-state="zeroed"] {
-      border-color: var(--green-border); color: var(--green);
-      background: var(--green-bg);
-    }
-    /* done — all zeros applied */
-    .cell[data-state="done"] {
-      border-color: var(--green-border); color: var(--green);
-      background: var(--green-bg);
-    }
-
-    /* phase tag */
-    .phase-tag {
-      font-size: 0.72rem; font-weight: 700;
-      text-transform: uppercase; letter-spacing: 0.08em;
-      padding: 3px 10px; border-radius: 4px;
-      display: inline-block; width: fit-content;
-    }
+    .cell { width: 56px; height: 56px; display: flex; align-items: center; justify-content: center; border: 2px solid var(--border); border-radius: 6px; background: #0f0f0f; font-size: 1rem; font-weight: 700; font-family: monospace; color: var(--text-dim); transition: border-color 0.15s, color 0.15s, background 0.15s; }
+    .cell[data-state="scan"] { border-color: var(--accent); color: var(--accent-pale); background: var(--surface-dark); }
+    .cell[data-state="zero-found"] { border-color: #c2410c; color: var(--orange); background: #1c1200; }
+    .cell[data-state="marker"] { border-color: #7c3aed; color: #c4b5fd; background: #1a1030; }
+    .cell[data-state="zeroing"] { border-color: #0891b2; color: #67e8f9; background: #041f2a; }
+    .cell[data-state="zeroed"] { border-color: var(--green-border); color: var(--green); background: var(--green-bg); }
+    .cell[data-state="done"] { border-color: var(--green-border); color: var(--green); background: var(--green-bg); }
+    .phase-tag { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; padding: 3px 10px; border-radius: 4px; display: inline-block; width: fit-content; }
     .phase-tag.scan    { background: #1a1a3e; color: var(--accent-pale); border: 1px solid var(--accent); }
     .phase-tag.mark    { background: #1a1030; color: #c4b5fd;           border: 1px solid #7c3aed; }
     .phase-tag.zero    { background: #041f2a; color: #67e8f9;           border: 1px solid #0891b2; }
     .phase-tag.handle  { background: #1c1200; color: var(--orange);     border: 1px solid #b45309; }
     .phase-tag.done    { background: var(--green-bg); color: var(--green); border: 1px solid var(--green-border); }
     .phase-tag.init    { background: var(--surface); color: var(--text-dim); border: 1px solid var(--border); }
-
-    .panel-box {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--radius-lg); padding: 14px 16px;
-      display: flex; flex-direction: column; gap: 8px;
-    }
-    .panel-title {
-      font-size: 0.72rem; font-weight: 700;
-      text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim);
-    }
-
     .var-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-    .var-box {
-      padding: 10px 8px;
-      background: var(--bg); border: 1px solid var(--border);
-      border-radius: var(--radius-sm);
-      display: flex; flex-direction: column; align-items: center; gap: 3px;
-    }
+    .var-box { padding: 10px 8px; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm); display: flex; flex-direction: column; align-items: center; gap: 3px; }
     .var-box.purple-border { border-color: #7c3aed; }
     .var-box.cyan-border   { border-color: #0891b2; }
     .var-label { font-size: 0.65rem; font-family: monospace; color: var(--text-faint); text-align: center; }
-    .var-val   { font-size: 0.95rem; font-weight: 700; color: var(--text-bright); font-family: monospace; }
-
-    .code-panel {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--radius-lg); overflow: hidden;
-    }
-    .code-header {
-      padding: 8px 14px; font-size: 0.72rem; font-weight: 600;
-      color: var(--text-dim); border-bottom: 1px solid var(--border); background: var(--bg);
-    }
-    .code-body { padding: 10px 0; font-size: 0.78rem; line-height: 1.75; white-space: pre; }
-    .code-line { display: flex; align-items: center; padding: 0 14px; }
-    .code-line.hl { background: var(--border-soft); border-left: 2px solid var(--accent); }
-    .ln { min-width: 24px; color: var(--text-ghost); user-select: none; font-size: 0.7rem; }
-
-    .btn-play {
-      background: #15803d; border: none; border-radius: var(--radius-sm);
-      color: #fff; cursor: pointer; font-size: 0.88rem; font-weight: 600;
-      padding: 9px 16px; transition: background 0.2s;
-    }
-    .btn-play:hover { background: #166534; }
-    .btn-play.playing { background: #c2410c; }
-    .btn-play.playing:hover { background: #9a3412; }
-    .btn-play:disabled { opacity: 0.4; cursor: not-allowed; }
-    .speed-select {
-      background: var(--bg); border: 1px solid var(--border);
-      border-radius: var(--radius-sm); color: var(--text);
-      font-size: 0.85rem; padding: 8px 10px; outline: none; width: 80px;
-    }
-    .nav-row { display: flex; gap: 8px; align-items: center; }
-
-    .flag-row {
-      display: flex; gap: 10px; flex-wrap: wrap;
-    }
-    .flag-box {
-      padding: 7px 12px;
-      background: var(--bg); border: 1px solid var(--border);
-      border-radius: var(--radius-sm);
-      display: flex; flex-direction: column; align-items: center; gap: 2px;
-      min-width: 90px;
-    }
+    .var-val { font-size: 0.95rem; font-weight: 700; color: var(--text-bright); font-family: monospace; }
+    .flag-row { display: flex; gap: 10px; flex-wrap: wrap; }
+    .flag-box { padding: 7px 12px; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm); display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 90px; }
     .flag-label { font-size: 0.62rem; font-family: monospace; color: var(--text-faint); }
     .flag-val   { font-size: 0.9rem; font-weight: 700; font-family: monospace; color: var(--text-bright); }
     .flag-box.active { border-color: #c2410c; }
     .flag-box.active .flag-val { color: var(--orange); }
-
-    .kw { color: var(--purple); }
     .fn { color: var(--blue); }
-    .cm { color: var(--text-ghost); }
-    .nb { color: var(--green); }
     .op { color: var(--text); }
     .st { color: var(--orange); }
+    #step-desc { font-size: 0.78rem; color: var(--text-muted); line-height: 1.5; }
   </style>
 </head>
-<body class="page">
+<body>
 
-<div class="page-header">
-  <a class="back-link" href="../index.html">&larr; All Algorithms</a>
-  <div class="page-title">Set Matrix Zeroes</div>
-  <div class="page-sub">LeetCode 73 &middot; Use first row &amp; col as markers &middot; O(m&middot;n) time &middot; O(1) space</div>
-</div>
-
-<div class="controls">
-  <div class="field">
+<div class="viz-inputs">
+  <div>
     <label>Preset</label>
-    <select id="inp-preset">
+    <select id="presetSel" onchange="loadPreset()">
       <option value="0">[[1,1,1],[1,0,1],[1,1,1]]</option>
       <option value="1">[[0,1,2,0],[3,4,5,2],[1,3,1,5]]</option>
       <option value="2">[[1,2,3],[4,5,6],[7,8,0]]</option>
     </select>
   </div>
-  <button class="btn-primary" onclick="buildAndRun()">Build &amp; Run</button>
+  <button class="vi-btn-run" onclick="buildAndRun()">Run</button>
+  <button class="vi-btn-rand" onclick="randomExample()">&#127922; Random</button>
+</div>
+<div class="controls"></div>
+
+<div id="header">
+  <span id="phase-badge">&#8212;</span>
+  <span>Set Matrix Zeroes</span>
+  <span id="step-counter">&#8212;</span>
 </div>
 
-<div class="viz-area">
-  <div class="main-row">
-    <div class="left-col">
-      <div class="matrix-section" id="matrix-section">
-        <span style="color:var(--text-dim);font-size:0.82rem">Select a preset and click Build &amp; Run.</span>
-      </div>
-      <div class="code-panel">
-        <div class="code-header">Python</div>
-        <div class="code-body" id="code-body"></div>
+<div id="main">
+  <div id="viz-area">
+    <div class="matrix-section" id="matrix-section">
+      <span style="color:var(--text-dim);font-size:0.82rem">Select a preset and click Run.</span>
+    </div>
+  </div>
+
+  <div id="resize-handle"></div>
+
+  <div id="code-panel">
+    <div class="code-panel-title">Python</div>
+    <div id="code-body"></div>
+  </div>
+
+  <div id="sidebar">
+    <div>
+      <div class="sidebar-title">Phase</div>
+      <div id="phase-tag-wrap"><span class="phase-tag init">&#8212;</span></div>
+    </div>
+    <div id="step-desc">Select a preset and click Run.</div>
+    <div>
+      <div class="sidebar-title">Flags</div>
+      <div class="flag-row" id="flag-row">
+        <div class="flag-box" id="flag-row0">
+          <div class="flag-label">firstRowZero</div>
+          <div class="flag-val" id="fv-row0">False</div>
+        </div>
+        <div class="flag-box" id="flag-col0">
+          <div class="flag-label">firstColZero</div>
+          <div class="flag-val" id="fv-col0">False</div>
+        </div>
       </div>
     </div>
-
-    <div class="right-col">
-      <div style="display:flex;gap:12px">
-        <div class="panel-box" style="flex:0 0 auto">
-          <div class="nav-row">
-            <button class="stepBtn" id="prevBtn" disabled>&larr;</button>
-            <button class="stepBtn" id="stepBtn" disabled>&rarr;</button>
-            <button class="playBtn" id="playBtn" disabled>&#9654; Play</button>
-            <select class="speedSel" id="speedSel">
-              <option value="700">Slow</option>
-              <option value="350" selected>Medium</option>
-              <option value="100">Fast</option>
-            </select>
-          </div>
+    <div>
+      <div class="sidebar-title">Current Cell</div>
+      <div class="var-grid">
+        <div class="var-box purple-border">
+          <div class="var-label">row</div>
+          <div class="var-val" id="vv-row">&#8212;</div>
         </div>
-        <div class="panel-box" style="flex:1;min-width:0">
-          <div class="panel-title" id="step-counter">&mdash;</div>
-          <div style="font-size:0.82rem;color:var(--text-muted);margin-top:2px" id="step-desc">Select a preset and click Build &amp; Run.</div>
+        <div class="var-box purple-border">
+          <div class="var-label">col</div>
+          <div class="var-val" id="vv-col">&#8212;</div>
         </div>
-      </div>
-
-      <div class="panel-box">
-        <div class="panel-title">Phase</div>
-        <div id="phase-tag-wrap"><span class="phase-tag init">—</span></div>
-      </div>
-
-      <div class="panel-box">
-        <div class="panel-title">Flags (first row / col had original zeros)</div>
-        <div class="flag-row" id="flag-row">
-          <div class="flag-box" id="flag-row0">
-            <div class="flag-label">firstRowZero</div>
-            <div class="flag-val" id="fv-row0">False</div>
-          </div>
-          <div class="flag-box" id="flag-col0">
-            <div class="flag-label">firstColZero</div>
-            <div class="flag-val" id="fv-col0">False</div>
-          </div>
+        <div class="var-box cyan-border">
+          <div class="var-label">value</div>
+          <div class="var-val" id="vv-val">&#8212;</div>
+        </div>
+        <div class="var-box cyan-border">
+          <div class="var-label">action</div>
+          <div class="var-val" id="vv-action">&#8212;</div>
         </div>
       </div>
-
-      <div class="panel-box">
-        <div class="panel-title">Current Cell</div>
-        <div class="var-grid">
-          <div class="var-box purple-border">
-            <div class="var-label">row</div>
-            <div class="var-val" id="vv-row">&mdash;</div>
-          </div>
-          <div class="var-box purple-border">
-            <div class="var-label">col</div>
-            <div class="var-val" id="vv-col">&mdash;</div>
-          </div>
-          <div class="var-box cyan-border">
-            <div class="var-label">value</div>
-            <div class="var-val" id="vv-val">&mdash;</div>
-          </div>
-          <div class="var-box cyan-border">
-            <div class="var-label">action</div>
-            <div class="var-val" id="vv-action">&mdash;</div>
-          </div>
+    </div>
+    <div>
+      <div class="sidebar-title">Legend</div>
+      <div style="display:flex;flex-direction:column;gap:6px;font-size:0.78rem;color:var(--text-muted)">
+        <div style="display:flex;align-items:center;gap:8px">
+          <div style="width:14px;height:14px;border-radius:3px;border:2px solid var(--accent);background:var(--surface-dark)"></div>
+          <span>Scanning</span>
         </div>
-      </div>
-
-      <div class="panel-box">
-        <div class="panel-title">Legend</div>
-        <div style="display:flex;flex-direction:column;gap:6px;font-size:0.78rem;color:var(--text-muted)">
-          <div style="display:flex;align-items:center;gap:8px">
-            <div style="width:16px;height:16px;border-radius:3px;border:2px solid var(--accent);background:var(--surface-dark)"></div>
-            <span>Scanning — current cell being examined</span>
-          </div>
-          <div style="display:flex;align-items:center;gap:8px">
-            <div style="width:16px;height:16px;border-radius:3px;border:2px solid #c2410c;background:#1c1200"></div>
-            <span>Zero found — will mark its row/col headers</span>
-          </div>
-          <div style="display:flex;align-items:center;gap:8px">
-            <div style="width:16px;height:16px;border-radius:3px;border:2px solid #7c3aed;background:#1a1030"></div>
-            <span>Marker written to row 0 / col 0</span>
-          </div>
-          <div style="display:flex;align-items:center;gap:8px">
-            <div style="width:16px;height:16px;border-radius:3px;border:2px solid #0891b2;background:#041f2a"></div>
-            <span>Cell being zeroed by marker</span>
-          </div>
-          <div style="display:flex;align-items:center;gap:8px">
-            <div style="width:16px;height:16px;border-radius:3px;border:2px solid var(--green-border);background:var(--green-bg)"></div>
-            <span>Confirmed zero</span>
-          </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div style="width:14px;height:14px;border-radius:3px;border:2px solid #c2410c;background:#1c1200"></div>
+          <span>Zero found</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div style="width:14px;height:14px;border-radius:3px;border:2px solid #7c3aed;background:#1a1030"></div>
+          <span>Marker (row 0 / col 0)</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div style="width:14px;height:14px;border-radius:3px;border:2px solid #0891b2;background:#041f2a"></div>
+          <span>Being zeroed</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div style="width:14px;height:14px;border-radius:3px;border:2px solid var(--green-border);background:var(--green-bg)"></div>
+          <span>Confirmed zero</span>
         </div>
       </div>
     </div>
   </div>
+</div>
+
+<div id="nav-row">
+  <button class="btn-step" id="prevBtn" disabled>&#8592; Prev</button>
+  <button class="btn-step" id="stepBtn" disabled>Next &#8594;</button>
+  <button class="btn-play" id="playBtn" disabled>&#9654; Play</button>
+  <button class="btn-step" id="resetBtn" onclick="buildAndRun()">&#8635; Reset</button>
+  <select id="speedSel" style="background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:12px;padding:4px 8px;">
+    <option value="700">Slow</option>
+    <option value="350" selected>Medium</option>
+    <option value="100">Fast</option>
+  </select>
 </div>
 
 <script>
@@ -315,6 +233,11 @@ window.addEventListener('DOMContentLoaded', function() {
     speedSel: document.getElementById('speedSel'),
     render: function(snap, cur, total) {
       applyStep(snap, cur > 0);
+      var phaseBadge = document.getElementById('phase-badge');
+      if (phaseBadge) {
+        var phaseLabels = { init: 'Initial', scan: 'Scan', mark: 'Mark', zero: 'Zero', handle: 'Handle', done: 'Done' };
+        phaseBadge.textContent = phaseLabels[snap.phase] || snap.phase || '—';
+      }
       document.getElementById('step-counter').textContent = 'Step ' + (cur + 1) + ' / ' + total;
       var descEl = document.getElementById('step-desc');
       if (descEl) {
@@ -329,12 +252,37 @@ window.addEventListener('DOMContentLoaded', function() {
 function buildCodePanel() {
   var body = document.getElementById('code-body');
   body.innerHTML = CODE.map(function(e) {
-    return '<div class="code-line" id="cl-' + e[0] + '"><span class="ln">' + e[0] + '</span><span>' + e[1] + '</span></div>';
+    return '<div class="cl" id="cl-' + e[0] + '"><span class="ln">' + e[0] + '</span><span>' + e[1] + '</span></div>';
   }).join('');
 }
 
+function loadPreset() {
+  buildAndRun();
+}
+
+function randomExample() {
+  var rows = 2 + Math.floor(Math.random() * 2);
+  var cols = 3 + Math.floor(Math.random() * 2);
+  var mat = [];
+  for (var r = 0; r < rows; r++) {
+    var row = [];
+    for (var c = 0; c < cols; c++) {
+      row.push(Math.random() < 0.25 ? 0 : Math.floor(Math.random() * 9) + 1);
+    }
+    mat.push(row);
+  }
+  PRESETS.push(mat);
+  document.getElementById('presetSel').value = '';
+  currentRows = rows; currentCols = cols;
+  buildMatrixSection(rows, cols);
+  simSteps = simulate(mat);
+  nav.load(simSteps);
+}
+
 function buildAndRun() {
-  var idx = parseInt(document.getElementById('inp-preset').value, 10);
+  var selEl = document.getElementById('presetSel');
+  var idx = parseInt(selEl.value, 10);
+  if (isNaN(idx) || idx < 0 || idx >= PRESETS.length) idx = 0;
   var preset = PRESETS[idx];
   currentRows = preset.length;
   currentCols = preset[0].length;
@@ -363,15 +311,6 @@ function simulate(initMat) {
 
   function snapMat() { return mat.map(function(r) { return r.slice(); }); }
 
-  // cell-state map: r,c -> state string
-  function snapStates(extra) {
-    var m = {};
-    if (extra) {
-      Object.keys(extra).forEach(function(k) { m[k] = extra[k]; });
-    }
-    return m;
-  }
-
   function push(phase, desc, lines, cellRow, cellCol, action, cellStates, firstRowZero, firstColZero) {
     steps.push({
       phase: phase,
@@ -387,7 +326,6 @@ function simulate(initMat) {
     });
   }
 
-  // detect flags
   var firstRowZero = mat[0].indexOf(0) >= 0;
   var firstColZero = false;
   for (var r = 0; r < rows; r++) { if (mat[r][0] === 0) { firstColZero = true; break; } }
@@ -400,13 +338,11 @@ function simulate(initMat) {
     'firstRowZero=' + firstRowZero + ', firstColZero=' + firstColZero + '. These flags tell us whether to zero out row 0 / col 0 at the very end.',
     [3, 4, 5], null, null, '', {}, firstRowZero, firstColZero);
 
-  // Step 1: scan interior, write markers
   var markerStates = {};
   for (var ri = 1; ri < rows; ri++) {
     for (var ci = 1; ci < cols; ci++) {
       var val = mat[ri][ci];
       var curStates = {};
-      // keep existing markers visible
       Object.keys(markerStates).forEach(function(k) { curStates[k] = markerStates[k]; });
       curStates[ri + ',' + ci] = 'scan';
 
@@ -419,11 +355,9 @@ function simulate(initMat) {
 
       if (val === 0) {
         curStates[ri + ',' + ci] = 'zero-found';
-        // mark row marker: mat[ri][0]
         mat[ri][0] = 0;
         curStates[ri + ',0'] = 'marker';
         markerStates[ri + ',0'] = 'marker';
-        // mark col marker: mat[0][ci]
         mat[0][ci] = 0;
         curStates['0,' + ci] = 'marker';
         markerStates['0,' + ci] = 'marker';
@@ -445,7 +379,6 @@ function simulate(initMat) {
     Object.assign({}, markerStates),
     firstRowZero, firstColZero);
 
-  // Step 2: zero interior by markers
   for (var ri2 = 1; ri2 < rows; ri2++) {
     for (var ci2 = 1; ci2 < cols; ci2++) {
       var rowMarker = mat[ri2][0] === 0;
@@ -472,7 +405,6 @@ function simulate(initMat) {
     }
   }
 
-  // Step 3a: handle first row
   push('handle',
     firstRowZero
       ? 'firstRowZero=True — zero the entire first row now.'
@@ -497,7 +429,6 @@ function simulate(initMat) {
     markerStates = s3a;
   }
 
-  // Step 3b: handle first col
   push('handle',
     firstColZero
       ? 'firstColZero=True — zero the entire first column now.'
@@ -522,7 +453,6 @@ function simulate(initMat) {
     markerStates = s3b;
   }
 
-  // final done
   var doneStates = {};
   for (var dr = 0; dr < rows; dr++) {
     for (var dc = 0; dc < cols; dc++) {
@@ -605,10 +535,23 @@ function applyStep(s, animate) {
 }
 </script>
 <script>
-  if (window.self !== window.top) {
-    var bl = document.querySelector('.back-link');
-    if (bl) bl.style.display = 'none';
-  }
+(function() {
+  var handle = document.getElementById('resize-handle');
+  var panel  = document.getElementById('code-panel');
+  var dragging = false, startX = 0, startW = 0;
+  handle.addEventListener('mousedown', function(e) {
+    dragging = true; startX = e.clientX; startW = panel.offsetWidth;
+    handle.classList.add('dragging'); e.preventDefault();
+  });
+  document.addEventListener('mousemove', function(e) {
+    if (!dragging) return;
+    var delta = startX - e.clientX;
+    panel.style.width = Math.min(560, Math.max(120, startW + delta)) + 'px';
+  });
+  document.addEventListener('mouseup', function() {
+    if (!dragging) return; dragging = false; handle.classList.remove('dragging');
+  });
+})();
 </script>
 </body>
 </html>

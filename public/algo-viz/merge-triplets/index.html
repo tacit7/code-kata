@@ -8,261 +8,151 @@
   <script src="../shared/gsap.min.js"></script>
   <script src="../shared/viz.js"></script>
   <style>
-    .viz-area { width: 100%; max-width: 92%; }
-    .main-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
-    @media (max-width: 700px) { .main-row { grid-template-columns: 1fr; } }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: "Fira Code", "Cascadia Code", monospace; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+    #header { padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+    #phase-badge { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; padding: 3px 10px; border-radius: var(--radius-sm); background: #1e3a5f; color: var(--blue); border: 1px solid var(--blue); }
+    #step-counter { font-size: 12px; color: var(--text-muted); margin-left: auto; }
+    .viz-inputs { width: 100%; padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; flex-wrap: wrap; gap: 12px; align-items: center; flex-shrink: 0; }
+    .viz-inputs label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); display: block; margin-bottom: 3px; }
+    .viz-inputs select, .viz-inputs input { background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 0 8px; height: 30px; font-size: 0.82rem; font-family: inherit; }
+    .vi-btn-run { padding: 6px 14px; border-radius: 6px; font-size: 0.82rem; font-weight: 600; cursor: pointer; font-family: inherit; background: var(--accent); color: #fff; border: none; }
+    .vi-btn-rand { padding: 6px 14px; border-radius: 6px; font-size: 0.82rem; cursor: pointer; font-family: inherit; background: var(--bg); color: var(--text); border: 1px solid var(--border); }
+    #main { display: flex; flex: 1; overflow: hidden; }
+    #viz-area { flex: 1; display: flex; flex-direction: column; align-items: stretch; padding: 16px; gap: 14px; overflow-y: auto; }
+    #resize-handle { width: 5px; flex-shrink: 0; cursor: col-resize; background: transparent; border-left: 1px solid var(--border); transition: background .15s; }
+    #resize-handle:hover, #resize-handle.dragging { background: var(--accent); }
+    #code-panel { width: 350px; min-width: 120px; max-width: 560px; flex-shrink: 0; background: #0d1117; border-right: 1px solid var(--border); overflow-y: auto; padding: 10px 12px; display: flex; flex-direction: column; }
+    .code-panel-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--text-dim); margin-bottom: 8px; }
+    .cl { display: flex; align-items: stretch; padding: 2px 0; white-space: pre; border-left: 2px solid transparent; padding-left: 6px; color: var(--text-muted); font-size: 0.75rem; line-height: 1.8; }
+    .cl.hl { background: rgba(122,162,247,0.12); border-left-color: var(--accent); color: var(--text); }
+    #sidebar { width: 260px; flex-shrink: 0; background: var(--surface); border-left: 1px solid var(--border); overflow-y: auto; padding: 14px 12px; display: flex; flex-direction: column; gap: 14px; }
+    .sidebar-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--text-dim); margin-bottom: 6px; }
+    #nav-row { flex-shrink: 0; display: flex; align-items: center; gap: 8px; padding: 10px 16px; background: var(--surface); border-top: 1px solid var(--border); }
+    .btn-step { padding: 6px 14px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--surface); color: var(--text); font-family: inherit; font-size: 12px; cursor: pointer; }
+    .btn-play { padding: 6px 14px; border-radius: var(--radius-sm); background: var(--accent); border-color: var(--accent); color: #fff; font-family: inherit; font-size: 12px; cursor: pointer; }
 
-    /* Triplet table */
-    .triplet-table {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--radius-lg); padding: 14px 16px;
-      display: flex; flex-direction: column; gap: 10px;
-      overflow-x: auto;
-    }
-    .section-title {
-      font-size: 0.72rem; font-weight: 700;
-      text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim);
-    }
-    .table-header {
-      display: grid; grid-template-columns: 40px 1fr 1fr 1fr 100px;
-      gap: 6px; align-items: center;
-      font-size: 0.68rem; color: var(--text-ghost); font-family: monospace;
-      padding: 0 4px;
-    }
-    .triplet-row {
-      display: grid; grid-template-columns: 40px 1fr 1fr 1fr 100px;
-      gap: 6px; align-items: center; padding: 0 4px;
-    }
-    .row-idx {
-      font-size: 0.68rem; color: var(--text-ghost); font-family: monospace;
-      text-align: center;
-    }
-    .tri-cell {
-      height: 44px; display: flex; align-items: center; justify-content: center;
-      border: 2px solid var(--border-soft); border-radius: 6px;
-      background: #0f0f0f;
-      font-size: 1.05rem; font-weight: 700; font-family: monospace;
-      color: var(--text-ghost);
-      transition: background 0.2s, border-color 0.2s, color 0.2s;
-    }
+    .triplet-table { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; overflow-x: auto; }
+    .section-title { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); }
+    .table-header { display: grid; grid-template-columns: 40px 1fr 1fr 1fr 100px; gap: 6px; align-items: center; font-size: 0.68rem; color: var(--text-ghost); font-family: monospace; padding: 0 4px; }
+    .triplet-row { display: grid; grid-template-columns: 40px 1fr 1fr 1fr 100px; gap: 6px; align-items: center; padding: 0 4px; }
+    .row-idx { font-size: 0.68rem; color: var(--text-ghost); font-family: monospace; text-align: center; }
+    .tri-cell { height: 44px; display: flex; align-items: center; justify-content: center; border: 2px solid var(--border-soft); border-radius: 6px; background: #0f0f0f; font-size: 1.05rem; font-weight: 700; font-family: monospace; color: var(--text-ghost); transition: background 0.2s, border-color 0.2s, color 0.2s; }
     .tri-cell[data-state="idle"]    { color: var(--text-ghost); border-color: var(--border-soft); background: #0f0f0f; }
     .tri-cell[data-state="skip"]    { color: var(--red); border-color: #7f1d1d; background: #2d0b0b; }
     .tri-cell[data-state="merge"]   { color: #86efac; border-color: #15803d; background: #052e16; }
     .tri-cell[data-state="current"] { color: var(--accent-pale); border-color: var(--accent); background: var(--surface-dark); }
     .tri-cell[data-state="done"]    { color: var(--text-muted); border-color: var(--border-soft); background: var(--surface-dark); }
-
-    .row-status {
-      font-size: 0.72rem; font-family: monospace;
-      color: var(--text-ghost); text-align: center;
-    }
+    .row-status { font-size: 0.72rem; font-family: monospace; color: var(--text-ghost); text-align: center; }
     .row-status.skip-label  { color: var(--red); }
     .row-status.merge-label { color: #86efac; }
 
-    /* Target + result boxes */
-    .panel-box {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--radius-lg); padding: 14px 16px;
-      display: flex; flex-direction: column; gap: 8px;
-    }
-    .panel-title {
-      font-size: 0.72rem; font-weight: 700;
-      text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim);
-    }
-
-    .triplet-display {
-      display: flex; gap: 8px; align-items: stretch;
-    }
-    .td-bracket {
-      font-size: 2rem; color: var(--text-dim); line-height: 1;
-      display: flex; align-items: center;
-    }
-    .td-cell {
-      flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px;
-    }
-    .td-label { font-size: 0.6rem; font-family: monospace; color: var(--text-ghost); }
-    .td-val {
-      height: 52px; width: 100%; min-width: 52px;
-      display: flex; align-items: center; justify-content: center;
-      border: 2px solid var(--border); border-radius: 6px;
-      background: var(--bg);
-      font-size: 1.3rem; font-weight: 700; font-family: monospace;
-      color: var(--text-muted);
-      transition: background 0.2s, border-color 0.2s, color 0.2s;
-    }
-    .td-val.match  { border-color: #15803d; background: #052e16; color: #86efac; }
-    .td-val.active { border-color: var(--accent); background: var(--surface-dark); color: var(--accent-pale); }
-
-    .result-card {
-      padding: 10px 12px;
-      background: var(--bg); border: 1px solid var(--border);
-      border-radius: var(--radius-sm);
-      font-size: 0.88rem; font-family: monospace; color: var(--text-muted);
-      min-height: 40px; display: flex; align-items: center;
-    }
-    .result-card.success { border-color: #15803d; background: #052e16; color: #86efac; }
-    .result-card.fail    { border-color: #b91c1c; background: #450a0a; color: #fecaca; }
-    .result-card strong  { color: var(--text-bright); }
-
-    /* Code panel */
-    .code-panel {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--radius-lg); overflow: hidden;
-    }
-    .code-header {
-      padding: 8px 14px; font-size: 0.72rem; font-weight: 600;
-      color: var(--text-dim); border-bottom: 1px solid var(--border); background: var(--bg);
-    }
-    .code-body { padding: 10px 0; font-size: 0.78rem; line-height: 1.75; white-space: pre; }
-    .code-line { display: flex; align-items: center; padding: 0 14px; }
-    .code-line.hl { background: var(--border-soft); border-left: 2px solid var(--accent); }
-    .ln { min-width: 24px; color: var(--text-ghost); user-select: none; font-size: 0.7rem; }
+    .code-body { padding: 6px 0; font-size: 0.78rem; line-height: 1.75; white-space: pre; }
+    .code-line { display: flex; align-items: center; padding: 0 8px; border-left: 2px solid transparent; }
+    .code-line.hl { background: rgba(122,162,247,0.12); border-left-color: var(--accent); }
+    .ln { min-width: 24px; color: var(--text-ghost); user-select: none; font-size: 0.7rem; margin-right: 6px; }
     .kw { color: var(--purple); }
     .fn { color: var(--blue); }
     .op { color: var(--text); }
     .nb { color: var(--green); }
     .cm { color: var(--text-ghost); font-style: italic; }
 
-    /* Controls */
-    .nav-row { display: flex; gap: 8px; align-items: center; }
-    .btn-play {
-      background: #15803d; border: none; border-radius: var(--radius-sm);
-      color: #fff; cursor: pointer; font-size: 0.88rem; font-weight: 600;
-      padding: 9px 16px; transition: background 0.2s;
-    }
-    .btn-play:hover { background: #166534; }
-    .btn-play.playing { background: #c2410c; }
-    .btn-play.playing:hover { background: #9a3412; }
-    .btn-play:disabled { opacity: 0.4; cursor: not-allowed; }
-    .speed-select {
-      background: var(--bg); border: 1px solid var(--border);
-      border-radius: var(--radius-sm); color: var(--text);
-      font-size: 0.85rem; padding: 8px 10px; outline: none; width: 80px;
-    }
-
-    .inputs-group { display: flex; flex-direction: column; gap: 6px; }
-    .input-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-    .input-row label { font-size: 0.8rem; color: var(--text-dim); white-space: nowrap; min-width: 90px; }
-    .input-row input { flex: 1; min-width: 200px; }
-
-    .legend-row { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 4px; }
-    .legend-item { display: flex; align-items: center; gap: 5px; font-size: 0.68rem; color: var(--text-faint); }
+    .triplet-display { display: flex; gap: 4px; align-items: stretch; margin-top: 6px; }
+    .td-bracket { font-size: 1.6rem; color: var(--text-dim); line-height: 1; display: flex; align-items: center; }
+    .td-cell { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; }
+    .td-label { font-size: 0.55rem; font-family: monospace; color: var(--text-ghost); }
+    .td-val { height: 42px; width: 100%; min-width: 42px; display: flex; align-items: center; justify-content: center; border: 2px solid var(--border); border-radius: 6px; background: var(--bg); font-size: 1.1rem; font-weight: 700; font-family: monospace; color: var(--text-muted); transition: background 0.2s, border-color 0.2s, color 0.2s; }
+    .td-val.match  { border-color: #15803d; background: #052e16; color: #86efac; }
+    .td-val.active { border-color: var(--accent); background: var(--surface-dark); color: var(--accent-pale); }
+    .result-card { padding: 8px 10px; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 0.82rem; font-family: monospace; color: var(--text-muted); min-height: 36px; display: flex; align-items: center; }
+    .result-card.success { border-color: #15803d; background: #052e16; color: #86efac; }
+    .result-card.fail    { border-color: #b91c1c; background: #450a0a; color: #fecaca; }
+    .result-card strong  { color: var(--text-bright); }
+    .legend-item { display: flex; align-items: center; gap: 5px; font-size: 0.62rem; color: var(--text-faint); margin-bottom: 5px; }
     .legend-dot { width: 10px; height: 10px; border-radius: 2px; border: 1px solid var(--border-soft); }
+    #step-desc { font-size: 0.78rem; color: var(--text-muted); padding: 4px 0; }
   </style>
 </head>
-<body class="page">
-
-<div class="page-header">
-  <a class="back-link" href="../index.html">&larr; All Algorithms</a>
-  <div class="page-title">Merge Triplets to Form Target Triplet</div>
-  <div class="page-sub">LeetCode 1899 &middot; Greedy &middot; O(n) time &middot; O(1) space</div>
-</div>
+<body>
 
 <div class="viz-inputs">
-  <div class="inputs-group">
-    <div class="input-row">
-      <label>triplets</label>
-      <input id="inp-triplets" type="text" value="[2,5,3],[1,8,4],[1,7,5]" />
+  <div style="display:flex;flex-direction:column;gap:6px">
+    <div style="display:flex;gap:8px;align-items:center">
+      <label style="min-width:70px">triplets</label>
+      <input id="inp-triplets" type="text" value="[2,5,3],[1,8,4],[1,7,5]" style="min-width:180px" />
     </div>
-    <div class="input-row">
-      <label>target</label>
-      <input id="inp-target" type="text" value="2,7,5" />
+    <div style="display:flex;gap:8px;align-items:center">
+      <label style="min-width:70px">target</label>
+      <input id="inp-target" type="text" value="2,7,5" style="min-width:120px" />
     </div>
   </div>
-  <button class="btn-primary" onclick="buildAndRun()">Build &amp; Run</button>
-  <button class="btn-primary" onclick="loadPreset('default')"  style="background:var(--surface)">Default</button>
-  <button class="btn-primary" onclick="loadPreset('false')"    style="background:var(--surface)">False Case</button>
-  <button class="btn-primary" onclick="loadPreset('all-skip')" style="background:var(--surface)">All Skip</button>
+  <button class="vi-btn-run" onclick="buildAndRun()">Run</button>
+  <button class="vi-btn-rand" onclick="randomExample()">&#127922; Random</button>
+</div>
+<div class="controls"></div>
+
+<div id="header">
+  <span id="phase-badge">&mdash;</span>
+  Merge Triplets to Form Target Triplet
+  <span id="step-counter"></span>
 </div>
 
-<div class="viz-area">
-  <div class="main-row">
-    <!-- LEFT: triplets table + code -->
-    <div style="display:flex;flex-direction:column;gap:12px">
-      <div class="triplet-table" id="triplet-table">
-        <span style="color:var(--text-dim);font-size:0.82rem">Enter triplets and target, then click Build &amp; Run.</span>
-      </div>
-      <div class="code-panel">
-        <div class="code-header">Python</div>
-        <div class="code-body" id="code-body"></div>
+<div id="main">
+  <div id="viz-area">
+    <div id="triplet-table">
+      <span style="color:var(--text-dim);font-size:0.82rem">Enter triplets and target, then click Run.</span>
+    </div>
+    <div id="step-desc">Enter data and click Run.</div>
+  </div>
+  <div id="resize-handle"></div>
+  <div id="code-panel">
+    <div class="code-panel-title">Python</div>
+    <div class="code-body" id="code-body"></div>
+  </div>
+  <div id="sidebar">
+    <div>
+      <div class="sidebar-title">Target</div>
+      <div class="triplet-display">
+        <div class="td-bracket">[</div>
+        <div class="td-cell"><div class="td-label">a</div><div class="td-val" id="tgt-0">&mdash;</div></div>
+        <div class="td-cell"><div class="td-label">b</div><div class="td-val" id="tgt-1">&mdash;</div></div>
+        <div class="td-cell"><div class="td-label">c</div><div class="td-val" id="tgt-2">&mdash;</div></div>
+        <div class="td-bracket">]</div>
       </div>
     </div>
-
-    <!-- RIGHT: controls + state panels -->
-    <div style="display:flex;flex-direction:column;gap:12px">
-      <!-- nav + phase -->
-      <div style="display:flex;gap:12px">
-        <div class="panel-box" style="flex:0 0 auto">
-          <div class="nav-row">
-            <button class="stepBtn" id="prevBtn" disabled>&larr;</button>
-            <button class="stepBtn" id="stepBtn" disabled>&rarr;</button>
-            <button class="playBtn" id="playBtn" disabled>&#9654; Play</button>
-            <select class="speedSel" id="speedSel">
-              <option value="700">Slow</option>
-              <option value="350" selected>Medium</option>
-              <option value="120">Fast</option>
-            </select>
-          </div>
-        </div>
-        <div class="panel-box" style="flex:1;min-width:0">
-          <div class="panel-title" id="phase-label">&mdash;</div>
-          <div style="font-size:0.82rem;color:var(--text-muted);margin-top:2px" id="step-desc">Enter data and click Build &amp; Run.</div>
-        </div>
+    <div>
+      <div class="sidebar-title">Result (running max)</div>
+      <div class="triplet-display">
+        <div class="td-bracket">[</div>
+        <div class="td-cell"><div class="td-label">res[0]</div><div class="td-val" id="res-0">0</div></div>
+        <div class="td-cell"><div class="td-label">res[1]</div><div class="td-val" id="res-1">0</div></div>
+        <div class="td-cell"><div class="td-label">res[2]</div><div class="td-val" id="res-2">0</div></div>
+        <div class="td-bracket">]</div>
       </div>
-
-      <!-- Target -->
-      <div class="panel-box">
-        <div class="panel-title">Target</div>
-        <div class="triplet-display">
-          <div class="td-bracket">[</div>
-          <div class="td-cell">
-            <div class="td-label">a</div>
-            <div class="td-val" id="tgt-0">&mdash;</div>
-          </div>
-          <div class="td-cell">
-            <div class="td-label">b</div>
-            <div class="td-val" id="tgt-1">&mdash;</div>
-          </div>
-          <div class="td-cell">
-            <div class="td-label">c</div>
-            <div class="td-val" id="tgt-2">&mdash;</div>
-          </div>
-          <div class="td-bracket">]</div>
-        </div>
-      </div>
-
-      <!-- Current result accumulator -->
-      <div class="panel-box">
-        <div class="panel-title">Result (running max)</div>
-        <div class="triplet-display">
-          <div class="td-bracket">[</div>
-          <div class="td-cell">
-            <div class="td-label">res[0]</div>
-            <div class="td-val" id="res-0">0</div>
-          </div>
-          <div class="td-cell">
-            <div class="td-label">res[1]</div>
-            <div class="td-val" id="res-1">0</div>
-          </div>
-          <div class="td-cell">
-            <div class="td-label">res[2]</div>
-            <div class="td-val" id="res-2">0</div>
-          </div>
-          <div class="td-bracket">]</div>
-        </div>
-      </div>
-
-      <!-- Final answer -->
-      <div class="panel-box">
-        <div class="panel-title">Answer</div>
-        <div class="result-card" id="result-card">&mdash;</div>
-        <div class="legend-row">
-          <div class="legend-item"><div class="legend-dot" style="background:#052e16;border-color:#15803d"></div>merged (valid)</div>
-          <div class="legend-item"><div class="legend-dot" style="background:#2d0b0b;border-color:#7f1d1d"></div>skipped (exceeds target)</div>
-          <div class="legend-item"><div class="legend-dot" style="background:var(--surface-dark);border-color:var(--accent)"></div>current</div>
-        </div>
-      </div>
+    </div>
+    <div>
+      <div class="sidebar-title">Answer</div>
+      <div class="result-card" id="result-card">&mdash;</div>
+    </div>
+    <div>
+      <div class="sidebar-title">Legend</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#052e16;border-color:#15803d"></div>merged (valid)</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#2d0b0b;border-color:#7f1d1d"></div>skipped (exceeds)</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--surface-dark);border-color:var(--accent)"></div>current</div>
     </div>
   </div>
+</div>
+
+<div id="nav-row">
+  <button class="btn-step" id="prevBtn" disabled>&larr; Prev</button>
+  <button class="btn-step" id="stepBtn" disabled>Step &rarr;</button>
+  <button class="btn-play" id="playBtn" disabled>&#9654; Play</button>
+  <button class="btn-step" id="resetBtn" onclick="buildAndRun()">&#8635; Reset</button>
+  <select id="speedSel">
+    <option value="700">Slow</option>
+    <option value="350" selected>Medium</option>
+    <option value="120">Fast</option>
+  </select>
 </div>
 
 <script>
@@ -282,7 +172,7 @@ var CODE = [
   [0,  ''],
   [4,  '    <span class="kw">for</span> t <span class="kw">in</span> triplets<span class="op">:</span>'],
   [5,  '        <span class="kw">if</span> t<span class="op">[</span><span class="nb">0</span><span class="op">]</span> <span class="op">&gt;</span> target<span class="op">[</span><span class="nb">0</span><span class="op">]</span> <span class="kw">or</span> t<span class="op">[</span><span class="nb">1</span><span class="op">]</span> <span class="op">&gt;</span> target<span class="op">[</span><span class="nb">1</span><span class="op">]</span> <span class="kw">or</span> t<span class="op">[</span><span class="nb">2</span><span class="op">]</span> <span class="op">&gt;</span> target<span class="op">[</span><span class="nb">2</span><span class="op">]</span><span class="op">:</span>'],
-  [6,  '            <span class="kw">continue</span>  <span class="cm"># would push a component past target</span>'],
+  [6,  '            <span class="kw">continue</span>  <span class="cm"># skip: exceeds target component</span>'],
   [8,  '        res <span class="op">=</span> <span class="op">[</span><span class="fn">max</span><span class="op">(</span>res<span class="op">[</span><span class="nb">0</span><span class="op">]</span>, t<span class="op">[</span><span class="nb">0</span><span class="op">]</span><span class="op">)</span>,'],
   [9,  '               <span class="fn">max</span><span class="op">(</span>res<span class="op">[</span><span class="nb">1</span><span class="op">]</span>, t<span class="op">[</span><span class="nb">1</span><span class="op">]</span><span class="op">)</span>,'],
   [10, '               <span class="fn">max</span><span class="op">(</span>res<span class="op">[</span><span class="nb">2</span><span class="op">]</span>, t<span class="op">[</span><span class="nb">2</span><span class="op">]</span><span class="op">)</span><span class="op">]</span>'],
@@ -299,9 +189,11 @@ window.addEventListener('DOMContentLoaded', function() {
     speedSel: document.getElementById('speedSel'),
     render: function(snap, cur, total) {
       applyStep(snap, cur > 0);
-      var phaseEl = document.getElementById('phase-label');
+      var phBadge = document.getElementById('phase-badge');
+      var stepCtr = document.getElementById('step-counter');
       var descEl  = document.getElementById('step-desc');
-      if (phaseEl) phaseEl.textContent = 'Step ' + (cur + 1) + ' / ' + total + '  ·  ' + snap.phase;
+      if (phBadge) phBadge.textContent = snap.phase;
+      if (stepCtr) stepCtr.textContent = 'Step ' + (cur + 1) + ' / ' + total;
       if (descEl)  descEl.textContent  = snap.desc;
     }
   });
@@ -322,6 +214,11 @@ function loadPreset(key) {
   document.getElementById('inp-triplets').value = p.triplets;
   document.getElementById('inp-target').value   = p.target;
   buildAndRun();
+}
+
+function randomExample() {
+  var keys = Object.keys(PRESETS);
+  loadPreset(keys[Math.floor(Math.random() * keys.length)]);
 }
 
 function parseTriplets(id) {
@@ -346,10 +243,8 @@ function buildAndRun() {
   var triplets = parseTriplets('inp-triplets');
   var target   = parseTarget('inp-target');
   if (triplets.length < 1 || target.length !== 3) return;
-
   currentTarget = target;
   tripletCount  = triplets.length;
-
   buildTargetDisplay(target);
   buildTripletTable(triplets, target);
   simSteps = simulate(triplets, target);
@@ -366,10 +261,7 @@ function buildTargetDisplay(target) {
 function buildTripletTable(triplets, target) {
   var n = triplets.length;
   var html = '<div class="section-title">Triplets (' + n + ')</div>';
-  html += '<div class="table-header">';
-  html += '<span style="text-align:center">idx</span><span style="text-align:center">a</span><span style="text-align:center">b</span><span style="text-align:center">c</span><span style="text-align:center">action</span>';
-  html += '</div>';
-
+  html += '<div class="table-header"><span style="text-align:center">idx</span><span style="text-align:center">a</span><span style="text-align:center">b</span><span style="text-align:center">c</span><span style="text-align:center">action</span></div>';
   for (var i = 0; i < n; i++) {
     html += '<div class="triplet-row" id="tr-row-' + i + '">';
     html += '<div class="row-idx">' + i + '</div>';
@@ -379,7 +271,6 @@ function buildTripletTable(triplets, target) {
     html += '<div class="row-status" id="ts-' + i + '">&mdash;</div>';
     html += '</div>';
   }
-
   document.getElementById('triplet-table').innerHTML = html;
 }
 
@@ -387,31 +278,13 @@ function simulate(triplets, target) {
   var steps = [];
   var res = [0, 0, 0];
   var rowStates = triplets.map(function() { return 'idle'; });
-  var rowLabels = triplets.map(function() { return '—'; });
+  var rowLabels = triplets.map(function() { return '\u2014'; });
 
   function snap(phase, desc, lines, curI) {
-    steps.push({
-      phase: phase,
-      desc: desc,
-      lines: lines,
-      rowStates: rowStates.slice(),
-      rowLabels: rowLabels.slice(),
-      res: res.slice(),
-      curI: curI,
-      result: null,
-    });
+    steps.push({ phase: phase, desc: desc, lines: lines, rowStates: rowStates.slice(), rowLabels: rowLabels.slice(), res: res.slice(), curI: curI, result: null });
   }
   function snapFinal(phase, desc, lines, result) {
-    steps.push({
-      phase: phase,
-      desc: desc,
-      lines: lines,
-      rowStates: rowStates.slice(),
-      rowLabels: rowLabels.slice(),
-      res: res.slice(),
-      curI: -1,
-      result: result,
-    });
+    steps.push({ phase: phase, desc: desc, lines: lines, rowStates: rowStates.slice(), rowLabels: rowLabels.slice(), res: res.slice(), curI: -1, result: result });
   }
 
   snap('Init', 'res = [0, 0, 0]. Scan every triplet — skip if any component exceeds target, otherwise merge via max.', [2], -1);
@@ -420,39 +293,28 @@ function simulate(triplets, target) {
     var t = triplets[i];
     rowStates[i] = 'current';
     snap('Check', 'Triplet ' + i + ': [' + t[0] + ',' + t[1] + ',' + t[2] + ']. Does any component exceed target [' + target[0] + ',' + target[1] + ',' + target[2] + ']?', [4, 5], i);
-
     var shouldSkip = t[0] > target[0] || t[1] > target[1] || t[2] > target[2];
-
     if (shouldSkip) {
       var overIdx = [];
       if (t[0] > target[0]) overIdx.push('a=' + t[0] + ' > ' + target[0]);
       if (t[1] > target[1]) overIdx.push('b=' + t[1] + ' > ' + target[1]);
       if (t[2] > target[2]) overIdx.push('c=' + t[2] + ' > ' + target[2]);
-      rowStates[i] = 'skip';
-      rowLabels[i] = 'skip';
-      snap('Skip', 'Skip triplet ' + i + ': ' + overIdx.join(', ') + '. Merging would push a component past target.', [5, 6], i);
+      rowStates[i] = 'skip'; rowLabels[i] = 'skip';
+      snap('Skip', 'Skip triplet ' + i + ': ' + overIdx.join(', ') + '.', [5, 6], i);
     } else {
       var before = res.slice();
       res = [Math.max(res[0], t[0]), Math.max(res[1], t[1]), Math.max(res[2], t[2])];
-      rowStates[i] = 'merge';
-      rowLabels[i] = 'merge';
+      rowStates[i] = 'merge'; rowLabels[i] = 'merge';
       var changes = [];
       for (var k = 0; k < 3; k++) {
-        var lbl = ['a','b','c'][k];
-        if (res[k] !== before[k]) changes.push(lbl + ': ' + before[k] + '→' + res[k]);
+        if (res[k] !== before[k]) changes.push(['a','b','c'][k] + ': ' + before[k] + '\u2192' + res[k]);
       }
-      var changeStr = changes.length ? ' Updated: ' + changes.join(', ') + '.' : ' res unchanged.';
-      snap('Merge', 'Triplet ' + i + ' is valid. res = max(res, t) = [' + res.join(',') + '].' + changeStr, [8, 9, 10], i);
+      snap('Merge', 'Triplet ' + i + ' valid. res = [' + res.join(',') + ']. ' + (changes.length ? 'Updated: ' + changes.join(', ') + '.' : 'res unchanged.'), [8, 9, 10], i);
     }
   }
 
   var ok = res[0] === target[0] && res[1] === target[1] && res[2] === target[2];
-  snapFinal('Done',
-    ok
-      ? 'res = [' + res.join(',') + '] == target [' + target.join(',') + ']. Return True.'
-      : 'res = [' + res.join(',') + '] ≠ target [' + target.join(',') + ']. Return False.',
-    [12], ok);
-
+  snapFinal('Done', ok ? 'res == target. Return True.' : 'res \u2260 target. Return False.', [12], ok);
   return steps;
 }
 
@@ -471,22 +333,16 @@ function applyTripletTable(s, animate) {
       var prev = el.dataset.state;
       el.dataset.state = state;
       if (animate && state !== prev) {
-        if (state === 'current') {
-          gsap.fromTo(el, { scale: 0.82 }, { scale: 1, duration: 0.22, ease: 'back.out(2)' });
-        } else if (state === 'merge') {
-          gsap.fromTo(el, { scale: 1.18 }, { scale: 1, duration: 0.32, ease: 'back.out(1.8)' });
-        } else if (state === 'skip') {
-          gsap.fromTo(el, { x: -5 }, { x: 0, duration: 0.3, ease: 'elastic.out(1, 0.5)' });
-        }
+        if (state === 'current') gsap.fromTo(el, { scale: 0.82 }, { scale: 1, duration: 0.22, ease: 'back.out(2)' });
+        else if (state === 'merge') gsap.fromTo(el, { scale: 1.18 }, { scale: 1, duration: 0.32, ease: 'back.out(1.8)' });
+        else if (state === 'skip') gsap.fromTo(el, { x: -5 }, { x: 0, duration: 0.3, ease: 'elastic.out(1, 0.5)' });
       }
     }
     var statusEl = document.getElementById('ts-' + i);
     if (statusEl) {
-      var lbl = s.rowLabels[i] || '—';
+      var lbl = s.rowLabels[i] || '\u2014';
       statusEl.textContent = lbl;
-      statusEl.className = 'row-status' +
-        (lbl === 'skip'  ? ' skip-label'  : '') +
-        (lbl === 'merge' ? ' merge-label' : '');
+      statusEl.className = 'row-status' + (lbl === 'skip' ? ' skip-label' : '') + (lbl === 'merge' ? ' merge-label' : '');
     }
   }
 }
@@ -500,24 +356,19 @@ function applyResult(res, finalResult, animate) {
       gsap.fromTo(el, { scale: 0.8, opacity: 0.4 }, { scale: 1, opacity: 1, duration: 0.25, ease: 'back.out(1.7)' });
     }
     el.textContent = newVal;
-    if (finalResult !== null && res[k] === currentTarget[k]) {
-      el.classList.add('match');
-    } else {
-      el.classList.remove('match');
-    }
+    if (finalResult !== null && res[k] === currentTarget[k]) el.classList.add('match');
+    else el.classList.remove('match');
   }
-
   var card = document.getElementById('result-card');
   if (!card) return;
   if (finalResult === null || finalResult === undefined) {
-    card.className = 'result-card';
-    card.textContent = '—';
+    card.className = 'result-card'; card.textContent = '\u2014';
   } else if (finalResult === true) {
     card.className = 'result-card success';
-    card.innerHTML = '<strong>True</strong> &mdash; [' + res.join(',') + '] == target, valid triplets found';
+    card.innerHTML = '<strong>True</strong> &mdash; [' + res.join(',') + '] == target';
   } else {
     card.className = 'result-card fail';
-    card.innerHTML = '<strong>False</strong> &mdash; [' + res.join(',') + '] ≠ target, cannot form it';
+    card.innerHTML = '<strong>False</strong> &mdash; [' + res.join(',') + '] \u2260 target';
   }
 }
 
@@ -530,12 +381,24 @@ function setCodeLines(lines) {
     else el.classList.remove('hl');
   });
 }
-</script>
-<script>
-  if (window.self !== window.top) {
-    var bl = document.querySelector('.back-link');
-    if (bl) bl.style.display = 'none';
-  }
+
+(function() {
+  var handle = document.getElementById('resize-handle');
+  var panel  = document.getElementById('code-panel');
+  var dragging = false, startX = 0, startW = 0;
+  handle.addEventListener('mousedown', function(e) {
+    dragging = true; startX = e.clientX; startW = panel.offsetWidth;
+    handle.classList.add('dragging'); e.preventDefault();
+  });
+  document.addEventListener('mousemove', function(e) {
+    if (!dragging) return;
+    var delta = startX - e.clientX;
+    panel.style.width = Math.min(560, Math.max(120, startW + delta)) + 'px';
+  });
+  document.addEventListener('mouseup', function() {
+    if (!dragging) return; dragging = false; handle.classList.remove('dragging');
+  });
+})();
 </script>
 </body>
 </html>

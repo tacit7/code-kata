@@ -5,191 +5,102 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Graph Valid Tree</title>
   <link rel="stylesheet" href="../shared/style.css" />
+  <script src="../shared/gsap.min.js"></script>
   <script src="../shared/viz.js"></script>
   <style>
-    .main-row {
-      display: grid;
-      grid-template-columns: 1fr 320px;
-      gap: 16px;
-      align-items: start;
-      flex: 1;
-      min-height: 0;
-    }
-    @media (max-width: 900px) { .main-row { grid-template-columns: 1fr; } }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: "Fira Code", "Cascadia Code", monospace; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
 
-    .graph-panel {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-lg);
-      padding: 14px;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-    .graph-svg-wrap {
-      width: 100%;
-      aspect-ratio: 1.4;
-      background: var(--bg);
-      border-radius: var(--radius-sm);
-      overflow: hidden;
-    }
+    #header { padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+    #phase-badge { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; padding: 3px 10px; border-radius: var(--radius-sm); background: #1e3a5f; color: var(--blue); border: 1px solid var(--blue); }
+    #step-counter { font-size: 12px; color: var(--text-muted); margin-left: auto; }
+
+    .viz-inputs { width: 100%; max-width: 100%; padding: 10px 16px; background: var(--surface); border: none; border-bottom: 1px solid var(--border); border-radius: 0; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; flex-shrink: 0; }
+    .viz-inputs label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); display: block; margin-bottom: 3px; }
+    .viz-inputs select, .viz-inputs input[type="text"], .viz-inputs input[type="number"] { background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 0 8px; height: 30px; font-size: 0.82rem; font-family: inherit; }
+    .vi-btn-run { padding: 6px 14px; border-radius: 6px; font-size: 0.82rem; font-weight: 600; cursor: pointer; font-family: inherit; background: var(--accent); color: #fff; border: none; }
+    .vi-btn-rand { padding: 6px 14px; border-radius: 6px; font-size: 0.82rem; cursor: pointer; font-family: inherit; background: var(--bg); color: var(--text); border: 1px solid var(--border); }
+
+    #main { display: flex; flex: 1; overflow: hidden; }
+    #viz-area { flex: 1; display: flex; flex-direction: column; align-items: flex-start; padding: 16px; gap: 12px; overflow-y: auto; }
+
+    #resize-handle { width: 5px; flex-shrink: 0; cursor: col-resize; background: transparent; border-left: 1px solid var(--border); transition: background .15s; z-index: 10; }
+    #resize-handle:hover, #resize-handle.dragging { background: var(--accent); }
+
+    #code-panel { width: 350px; min-width: 120px; max-width: 560px; flex-shrink: 0; background: #0d1117; border-right: 1px solid var(--border); overflow-y: auto; overflow-x: auto; padding: 10px 12px; display: flex; flex-direction: column; }
+    .code-panel-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--text-dim); margin-bottom: 6px; }
+
+    #sidebar { width: 240px; flex-shrink: 0; background: var(--surface); border-left: 1px solid var(--border); overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+    .sidebar-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--text-dim); margin-bottom: 6px; }
+
+    #nav-row { flex-shrink: 0; display: flex; align-items: center; gap: 8px; padding: 10px 16px; background: var(--surface); border-top: 1px solid var(--border); }
+    .btn-step { padding: 6px 14px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--surface); color: var(--text); font-family: inherit; font-size: 12px; cursor: pointer; transition: background .15s; }
+    .btn-step:hover:not(:disabled) { background: #334155; }
+    .btn-step:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-play { padding: 6px 14px; border-radius: var(--radius-sm); border: 1px solid var(--accent); background: var(--accent); color: #fff; font-family: inherit; font-size: 12px; cursor: pointer; font-weight: 600; }
+    .btn-play:disabled { opacity: 0.4; cursor: not-allowed; }
+    #speedSel { padding: 5px 8px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: #1e293b; color: var(--text); font-size: 12px; font-family: inherit; cursor: pointer; }
+
+    /* Graph */
+    .graph-panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 14px; display: flex; flex-direction: column; gap: 8px; width: 100%; }
+    .graph-svg-wrap { width: 100%; aspect-ratio: 1.6; background: var(--bg); border-radius: var(--radius-sm); overflow: hidden; }
     .graph-svg-wrap svg { width: 100%; height: 100%; }
 
-    /* node states */
     .nc-default { fill: #1a1b2e; stroke: #3b4261; }
     .nc-active  { fill: #2d1a3d; stroke: #bb9af7; stroke-width: 3; }
     .nc-merged  { fill: #1a2035; stroke: #7aa2f7; }
     .nc-cycle   { fill: #3d1a1a; stroke: #f7768e; stroke-width: 3; }
     .nc-done    { fill: #1a2a1a; stroke: #9ece6a; }
-
     .node-circle { stroke-width: 2.5; transition: fill 0.25s, stroke 0.25s; }
-    .node-label {
-      fill: var(--text-bright); font-size: 13px; font-weight: 700;
-      font-family: monospace; text-anchor: middle; dominant-baseline: central;
-      pointer-events: none;
-    }
-
+    .node-label { fill: var(--text-bright); font-size: 13px; font-weight: 700; font-family: monospace; text-anchor: middle; dominant-baseline: central; pointer-events: none; }
     .edge-line   { stroke: #3b4261; stroke-width: 2; }
     .edge-active { stroke: #bb9af7; stroke-width: 3; }
     .edge-merged { stroke: #7aa2f7; stroke-width: 2.5; }
     .edge-cycle  { stroke: #f7768e; stroke-width: 3; stroke-dasharray: 6 3; }
     .edge-done   { stroke: #9ece6a; stroke-width: 2; }
 
-    /* right column */
-    .right-col { display: flex; flex-direction: column; gap: 12px; }
+    /* Step description in viz-area */
+    #desc { font-size: 0.82rem; color: var(--text-muted); line-height: 1.5; padding: 8px 12px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); width: 100%; min-height: 40px; }
 
-    .panel-box {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-lg);
-      padding: 14px 16px;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-    .panel-title {
-      font-size: 0.72rem; font-weight: 700;
-      text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim);
-    }
+    /* Code */
+    .code-body { padding: 10px 0; font-size: 0.75rem; line-height: 1.75; white-space: pre; }
+    .code-line { display: flex; align-items: center; padding: 0 14px; }
+    .code-line.hl { background: var(--border-soft); border-left: 2px solid var(--accent); }
+    .ln { min-width: 22px; color: var(--text-ghost); user-select: none; font-size: 0.68rem; }
+    .kw { color: var(--purple); } .fn { color: var(--blue); } .bi { color: var(--orange); }
+    .cm { color: var(--text-ghost); } .nb { color: var(--green); }
 
-    .nav-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-    .speed-select {
-      background: var(--bg); border: 1px solid var(--border);
-      border-radius: var(--radius-sm); color: var(--text);
-      font-size: 0.85rem; padding: 8px 10px; outline: none; width: 80px;
-    }
-
-    /* Union-Find state display */
+    /* UF state */
     .uf-grid { display: flex; flex-direction: column; gap: 6px; }
-    .uf-row {
-      display: flex; gap: 4px; align-items: center;
-      font-size: 0.75rem; font-family: monospace;
-    }
+    .uf-row { display: flex; gap: 4px; align-items: center; font-size: 0.75rem; font-family: monospace; }
     .uf-label { color: var(--text-dim); width: 52px; flex-shrink: 0; font-weight: 600; }
     .uf-cells { display: flex; gap: 4px; flex-wrap: wrap; }
     .uf-cell { display: flex; flex-direction: column; align-items: center; gap: 2px; }
-    .uf-val {
-      width: 32px; height: 28px;
-      display: flex; align-items: center; justify-content: center;
-      border-radius: 4px; font-weight: 700; font-size: 0.82rem;
-      border: 1px solid var(--border); background: var(--bg); color: var(--text);
-      transition: background 0.2s, border-color 0.2s, color 0.2s;
-    }
-    .uf-val.is-root    { background: #1a2a1a; border-color: #9ece6a; color: #9ece6a; }
-    .uf-val.is-active  { background: #2d1a3d; border-color: #bb9af7; color: #bb9af7; }
-    .uf-val.changed    { background: #1a2035; border-color: #7aa2f7; color: #7aa2f7; }
-    .uf-val.is-cycle   { background: #3d1a1a; border-color: #f7768e; color: #f7768e; }
+    .uf-val { width: 32px; height: 28px; display: flex; align-items: center; justify-content: center; border-radius: 4px; font-weight: 700; font-size: 0.82rem; border: 1px solid var(--border); background: var(--bg); color: var(--text); transition: background 0.2s, border-color 0.2s, color 0.2s; }
+    .uf-val.is-root   { background: #1a2a1a; border-color: #9ece6a; color: #9ece6a; }
+    .uf-val.is-active { background: #2d1a3d; border-color: #bb9af7; color: #bb9af7; }
+    .uf-val.changed   { background: #1a2035; border-color: #7aa2f7; color: #7aa2f7; }
+    .uf-val.is-cycle  { background: #3d1a1a; border-color: #f7768e; color: #f7768e; }
 
-    .result-badge {
-      font-size: 1.6rem; font-weight: 800; text-align: center; padding: 6px 0 2px;
-    }
+    /* Result badge */
+    .result-badge { font-size: 1.6rem; font-weight: 800; text-align: center; padding: 6px 0 2px; }
     .result-badge.true  { color: var(--green); }
     .result-badge.false { color: var(--red); }
     .result-badge.pending { color: var(--text-dim); }
     .result-label { font-size: 0.75rem; color: var(--text-dim); text-align: center; }
 
-    .legend-row { display: flex; align-items: center; gap: 8px; font-size: 0.75rem; color: var(--text-muted); }
-    .legend-dot { width: 13px; height: 13px; border-radius: 50%; flex-shrink: 0; border: 2px solid; }
-
-    .code-panel {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--radius-lg); overflow: hidden;
-    }
-    .code-header {
-      padding: 8px 14px; font-size: 0.72rem; font-weight: 600;
-      color: var(--text-dim); border-bottom: 1px solid var(--border); background: var(--bg);
-    }
-    .code-body { padding: 10px 0; font-size: 0.75rem; line-height: 1.75; white-space: pre; }
-    .code-line { display: flex; align-items: center; padding: 0 14px; }
-    .code-line.hl { background: var(--border-soft); border-left: 2px solid var(--accent); }
-    .ln { min-width: 22px; color: var(--text-ghost); user-select: none; font-size: 0.68rem; }
-    .kw { color: var(--purple); }
-    .fn { color: var(--blue); }
-    .bi { color: var(--orange); }
-    .cm { color: var(--text-ghost); }
-    .nb { color: var(--green); }
-
-    .input-row { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
-    .input-field { display: flex; flex-direction: column; gap: 4px; }
-    .input-field label { font-size: 0.72rem; color: var(--text-dim); font-weight: 600; }
-    .input-field input {
-      background: var(--bg); border: 1px solid var(--border);
-      border-radius: var(--radius-sm); color: var(--text);
-      font-size: 0.85rem; padding: 8px 10px; outline: none; width: 60px;
-    }
-    .input-field input.wide { width: 220px; }
-    .input-field input:focus { border-color: var(--accent); }
-
-    .viz-inputs {
-      display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end;
-      padding: 10px 0 14px; width: 100%; max-width: 90%;
-    }
-    .viz-inputs .field {
-      display: flex; flex-direction: column; gap: 4px;
-    }
-    .viz-inputs label {
-      font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
-      letter-spacing: 0.08em; color: var(--text-dim);
-    }
-    .viz-inputs input[type="text"] {
-      background: var(--surface); border: 1px solid var(--border);
-      color: var(--text); border-radius: var(--radius-sm);
-      padding: 6px 10px; font-size: 0.85rem; width: 180px;
-    }
-    .viz-inputs input[type="number"] {
-      background: var(--surface); border: 1px solid var(--border);
-      color: var(--text); border-radius: var(--radius-sm);
-      padding: 6px 10px; font-size: 0.85rem; width: 80px;
-    }
-    .viz-inputs select {
-      background: var(--surface); border: 1px solid var(--border);
-      color: var(--text); border-radius: var(--radius-sm);
-      padding: 6px 10px; font-size: 0.85rem; cursor: pointer;
-    }
-    .viz-inputs button {
-      padding: 7px 18px; background: var(--accent); color: #fff;
-      border: none; border-radius: var(--radius-sm); font-weight: 600; cursor: pointer;
-    }
-    .viz-inputs button:hover { opacity: 0.9; }
-    .viz-inputs .random-btn {
-      padding: 7px 14px; background: var(--surface); color: var(--text);
-      border: 1px solid var(--border);
-    }
+    /* Legend */
+    .legend-row { display: flex; align-items: center; gap: 8px; font-size: 0.73rem; color: var(--text-muted); }
+    .legend-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; border: 2px solid; }
   </style>
 </head>
-<body class="page">
-
-<div class="page-header">
-  <a class="back-link" href="../index.html">&larr; All Algorithms</a>
-  <div class="page-title">Graph Valid Tree</div>
-  <div class="page-sub">LeetCode 261 &middot; Union-Find: no cycles + single component &middot; O(E &middot; &alpha;(N))</div>
-</div>
+<body>
 
 <div class="viz-inputs">
-  <div class="field">
+  <div style="display:flex;flex-direction:column;gap:3px">
     <label>Preset</label>
     <select id="presetSel" onchange="loadPreset()">
-      <option value="">— pick a preset —</option>
+      <option value="">&#8212; pick a preset &#8212;</option>
       <option value='{"n":"5","edges":"0,1;0,2;0,3;1,4"}'>Valid Tree (5 nodes)</option>
       <option value='{"n":"3","edges":"0,1;1,2"}'>Valid Tree (3 nodes)</option>
       <option value='{"n":"4","edges":"0,1;0,2;1,3"}'>Valid Tree (4 nodes)</option>
@@ -198,37 +109,32 @@
       <option value='{"n":"4","edges":"0,1;2,3"}'>Disconnected (2 components)</option>
     </select>
   </div>
-  <div class="field">
+  <div style="display:flex;flex-direction:column;gap:3px">
     <label>Nodes (n)</label>
-    <input type="number" id="input-n" value="5" min="1" max="10" />
+    <input type="number" id="input-n" value="5" min="1" max="10" style="width:70px" />
   </div>
-  <div class="field">
+  <div style="display:flex;flex-direction:column;gap:3px">
     <label>Edges</label>
-    <input type="text" id="input-edges" value="0,1;0,2;0,3;1,4" />
+    <input type="text" id="input-edges" value="0,1;0,2;0,3;1,4" style="width:180px" />
   </div>
-  <button onclick="buildAndRun()">Run</button>
-  <button class="random-btn" onclick="randomExample()">🎲 Random</button>
+  <button class="vi-btn-run" onclick="buildAndRun()">Run</button>
+  <button class="vi-btn-rand" onclick="randomExample()">&#127922; Random</button>
 </div>
 
-<div class="controls">
-  <div class="nav-row">
-    <button class="stepBtn" id="prevBtn" disabled>&larr;</button>
-    <button class="stepBtn" id="stepBtn" disabled>&rarr;</button>
-    <button class="playBtn" id="playBtn" disabled>&#9654; Play</button>
-    <select class="speedSel" id="speedSel">
-      <option value="900">Slow</option>
-      <option value="450" selected>Medium</option>
-      <option value="140">Fast</option>
-    </select>
-  </div>
+<div class="controls"></div>
+
+<div id="header">
+  <span id="phase-badge">&#8212;</span>
+  <span style="font-size:13px;font-weight:600;color:var(--text)">Graph Valid Tree</span>
+  <span style="font-size:11px;color:var(--text-dim)">LC 261 &middot; Union-Find &middot; O(E&middot;&alpha;(N))</span>
+  <span id="step-counter"></span>
 </div>
 
-<div class="viz-area" style="display:flex;flex-direction:column;flex:1;min-height:0;">
-  <div class="main-row">
-
-    <!-- Graph -->
+<div id="main">
+  <div id="viz-area">
+    <div id="desc" style="display:none">Enter n and edges, then click Run.</div>
     <div class="graph-panel">
-      <div class="panel-title">Graph</div>
+      <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-dim)">Graph</div>
       <div class="graph-svg-wrap">
         <svg id="graph-svg" viewBox="0 0 460 320" preserveAspectRatio="xMidYMid meet">
           <g id="edges-g"></g>
@@ -236,73 +142,50 @@
         </svg>
       </div>
     </div>
+    <div id="desc" style="font-size:0.82rem;color:var(--text-muted);padding:8px 12px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);width:100%;min-height:40px">Enter n and edges, then click Run.</div>
+  </div>
 
-    <!-- Right column -->
-    <div class="right-col">
+  <div id="resize-handle"></div>
 
-      <div class="panel-box">
-        <div class="nav-row">
-          <button class="stepBtn" id="prevBtn" disabled>&larr;</button>
-          <button class="stepBtn" id="stepBtn" disabled>&rarr;</button>
-          <button class="playBtn" id="playBtn" disabled>&#9654; Play</button>
-          <select class="speedSel" id="speedSel">
-            <option value="900">Slow</option>
-            <option value="450" selected>Medium</option>
-            <option value="140">Fast</option>
-          </select>
-        </div>
+  <div id="code-panel">
+    <div class="code-panel-title">Python</div>
+    <div class="code-body" id="code-body"></div>
+  </div>
+
+  <div id="sidebar">
+    <div>
+      <div class="sidebar-title">Union-Find State</div>
+      <div class="uf-grid" id="uf-grid">
+        <span style="color:var(--text-ghost);font-size:0.78rem">not built</span>
       </div>
-
-      <div class="panel-box">
-        <div class="panel-title" id="phase-label">&mdash;</div>
-        <div style="font-size:0.82rem;color:var(--text-muted);min-height:36px" id="step-desc">Enter n and edges, then click Run.</div>
+    </div>
+    <div style="text-align:center;padding:8px 0">
+      <div class="result-badge pending" id="result-badge">&#8212;</div>
+      <div class="result-label" id="result-label">valid tree</div>
+    </div>
+    <div>
+      <div class="sidebar-title">Legend</div>
+      <div style="display:flex;flex-direction:column;gap:5px">
+        <div class="legend-row"><div class="legend-dot" style="background:#1a1b2e;border-color:#3b4261"></div><span>Untouched</span></div>
+        <div class="legend-row"><div class="legend-dot" style="background:#2d1a3d;border-color:#bb9af7"></div><span>Active edge</span></div>
+        <div class="legend-row"><div class="legend-dot" style="background:#3d1a1a;border-color:#f7768e"></div><span>Cycle detected!</span></div>
+        <div class="legend-row"><div class="legend-dot" style="background:#1a2035;border-color:#7aa2f7"></div><span>Merged</span></div>
+        <div class="legend-row"><div class="legend-dot" style="background:#1a2a1a;border-color:#9ece6a"></div><span>Root / processed</span></div>
       </div>
-
-      <div class="panel-box">
-        <div class="panel-title">Union-Find State</div>
-        <div class="uf-grid" id="uf-grid">
-          <span style="color:var(--text-ghost);font-size:0.78rem">not built</span>
-        </div>
-      </div>
-
-      <div class="panel-box">
-        <div class="result-badge pending" id="result-badge">&mdash;</div>
-        <div class="result-label" id="result-label">valid tree</div>
-      </div>
-
-      <div class="panel-box">
-        <div class="panel-title">Legend</div>
-        <div style="display:flex;flex-direction:column;gap:5px">
-          <div class="legend-row">
-            <div class="legend-dot" style="background:#1a1b2e;border-color:#3b4261"></div>
-            <span>Untouched</span>
-          </div>
-          <div class="legend-row">
-            <div class="legend-dot" style="background:#2d1a3d;border-color:#bb9af7"></div>
-            <span>Active edge endpoints</span>
-          </div>
-          <div class="legend-row">
-            <div class="legend-dot" style="background:#3d1a1a;border-color:#f7768e"></div>
-            <span>Cycle detected!</span>
-          </div>
-          <div class="legend-row">
-            <div class="legend-dot" style="background:#1a2035;border-color:#7aa2f7"></div>
-            <span>Just merged</span>
-          </div>
-          <div class="legend-row">
-            <div class="legend-dot" style="background:#1a2a1a;border-color:#9ece6a"></div>
-            <span>Processed / root</span>
-          </div>
-        </div>
-      </div>
-
-      <div class="code-panel">
-        <div class="code-header">Python</div>
-        <div class="code-body" id="code-body"></div>
-      </div>
-
     </div>
   </div>
+</div>
+
+<div id="nav-row">
+  <button class="btn-step" id="prevBtn" disabled>&#8592; Prev</button>
+  <button class="btn-step" id="stepBtn" disabled>Step &#8594;</button>
+  <button class="btn-play" id="playBtn" disabled>&#9654; Play</button>
+  <button class="btn-step" id="resetBtn">&#8635; Reset</button>
+  <select id="speedSel">
+    <option value="900">Slow</option>
+    <option value="450" selected>Medium</option>
+    <option value="140">Fast</option>
+  </select>
 </div>
 
 <script>
@@ -357,7 +240,7 @@ function computePositions(n) {
 function buildAndRun() {
   var nVal = parseInt(document.getElementById('input-n').value);
   var eStr = document.getElementById('input-edges').value;
-  if (isNaN(nVal) || nVal < 1 || nVal > 10) { alert('n must be 1–10'); return; }
+  if (isNaN(nVal) || nVal < 1 || nVal > 10) { alert('n must be 1\u201310'); return; }
   gN = nVal;
   gEdges = parseEdges(eStr);
   gPositions = computePositions(gN);
@@ -378,26 +261,21 @@ function randomExample() {
   var n = Math.floor(Math.random() * 5) + 3;
   var hasEdges = Math.random() > 0.3;
   var edges = [];
-  
   if (hasEdges && n > 1) {
     var maxEdges = n - 1;
     var numEdges = Math.floor(Math.random() * (maxEdges + 2));
     for (var i = 0; i < numEdges; i++) {
       var u = Math.floor(Math.random() * n);
       var v = Math.floor(Math.random() * n);
-      if (u !== v) {
-        edges.push(u + ',' + v);
-      }
+      if (u !== v) { edges.push(u + ',' + v); }
     }
   }
-  
   document.getElementById('input-n').value = n;
   document.getElementById('input-edges').value = edges.join(';');
   document.getElementById('presetSel').value = '';
   buildAndRun();
 }
 
-// ---- Simulation ----
 function simulate(n, edges) {
   var steps = [];
   var par = [];
@@ -417,11 +295,8 @@ function simulate(n, edges) {
   function snap(phase, desc, lines, opts) {
     opts = opts || {};
     steps.push({
-      phase: phase,
-      desc: desc,
-      lines: lines,
-      par: par.slice(),
-      rnk: rnk.slice(),
+      phase: phase, desc: desc, lines: lines,
+      par: par.slice(), rnk: rnk.slice(),
       edgeState: edgeState.slice(),
       activeNodes: opts.activeNodes || [],
       cycleNodes: opts.cycleNodes || [],
@@ -432,26 +307,16 @@ function simulate(n, edges) {
     });
   }
 
-  snap('Initialize',
-    'parent[i] = i for all nodes — each node is its own component. rank[i] = 0.',
-    [2, 3],
-    {}
-  );
+  snap('Initialize', 'parent[i] = i for all nodes \u2014 each node is its own component. rank[i] = 0.', [2, 3], {});
 
   for (var ei = 0; ei < edges.length; ei++) {
     var u = edges[ei][0], v = edges[ei][1];
     edgeState[ei] = 'active';
-
-    snap('Process Edge',
-      'Edge (' + u + ', ' + v + '): calling find(' + u + ') and find(' + v + ') to get their roots.',
-      [11, 12],
-      { activeNodes: [u, v], activeEdge: ei }
-    );
+    snap('Process Edge', 'Edge (' + u + ', ' + v + '): calling find(' + u + ') and find(' + v + ') to get their roots.', [11, 12], { activeNodes: [u, v], activeEdge: ei });
 
     var ru = findRoot(u, par);
     var rv = findRoot(v, par);
 
-    // apply path-halving compression
     var a = u;
     while (par[a] !== a) { var nxt = par[par[a]]; par[a] = nxt; a = nxt; }
     var b = v;
@@ -460,77 +325,50 @@ function simulate(n, edges) {
     if (ru === rv) {
       edgeState[ei] = 'cycle';
       cycleDetected = true;
-      snap('Cycle Detected!',
-        'find(' + u + ')=' + ru + ' == find(' + v + ')=' + rv + ' — same root means a cycle exists. Return False immediately.',
-        [13, 14],
-        { cycleNodes: [u, v], activeEdge: ei, result: false }
-      );
+      snap('Cycle Detected!', 'find(' + u + ')=' + ru + ' == find(' + v + ')=' + rv + ' \u2014 same root means a cycle. Return False.', [13, 14], { cycleNodes: [u, v], activeEdge: ei, result: false });
       finalResult = false;
       break;
     } else {
       var changedIdx = -1;
       if (rnk[ru] < rnk[rv]) {
-        par[ru] = rv;
-        changedIdx = ru;
-        snap('Union',
-          'find(' + u + ')=' + ru + ', find(' + v + ')=' + rv + ' — different roots. rank[' + ru + ']<rank[' + rv + ']: par[' + ru + ']=' + rv + '.',
-          [15, 16],
-          { mergedNodes: [u, v, ru, rv], activeEdge: ei, changedParent: changedIdx }
-        );
+        par[ru] = rv; changedIdx = ru;
+        snap('Union', 'find(' + u + ')=' + ru + ', find(' + v + ')=' + rv + ' \u2014 different roots. rank[' + ru + ']<rank[' + rv + ']: par[' + ru + ']=' + rv + '.', [15, 16], { mergedNodes: [u, v, ru, rv], activeEdge: ei, changedParent: changedIdx });
       } else if (rnk[ru] > rnk[rv]) {
-        par[rv] = ru;
-        changedIdx = rv;
-        snap('Union',
-          'find(' + u + ')=' + ru + ', find(' + v + ')=' + rv + ' — different roots. rank[' + ru + ']>rank[' + rv + ']: par[' + rv + ']=' + ru + '.',
-          [17, 18],
-          { mergedNodes: [u, v, ru, rv], activeEdge: ei, changedParent: changedIdx }
-        );
+        par[rv] = ru; changedIdx = rv;
+        snap('Union', 'find(' + u + ')=' + ru + ', find(' + v + ')=' + rv + ' \u2014 different roots. rank[' + ru + ']>rank[' + rv + ']: par[' + rv + ']=' + ru + '.', [17, 18], { mergedNodes: [u, v, ru, rv], activeEdge: ei, changedParent: changedIdx });
       } else {
-        par[rv] = ru;
-        rnk[ru] += 1;
-        changedIdx = rv;
-        snap('Union',
-          'find(' + u + ')=' + ru + ', find(' + v + ')=' + rv + ' — equal ranks. par[' + rv + ']=' + ru + ', rank[' + ru + '] → ' + rnk[ru] + '.',
-          [19, 20],
-          { mergedNodes: [u, v, ru, rv], activeEdge: ei, changedParent: changedIdx }
-        );
+        par[rv] = ru; rnk[ru] += 1; changedIdx = rv;
+        snap('Union', 'find(' + u + ')=' + ru + ', find(' + v + ')=' + rv + ' \u2014 equal ranks. par[' + rv + ']=' + ru + ', rank[' + ru + '] \u2192 ' + rnk[ru] + '.', [19, 20], { mergedNodes: [u, v, ru, rv], activeEdge: ei, changedParent: changedIdx });
       }
       edgeState[ei] = 'merged';
     }
   }
 
   if (!cycleDetected) {
-    // Count distinct roots
     var roots = {};
     for (var i = 0; i < n; i++) { roots[findRoot(i, par)] = true; }
     var numComponents = Object.keys(roots).length;
     finalResult = numComponents === 1;
     snap('Check Connectivity',
-      'No cycles found. Counting distinct roots: ' + numComponents + ' component(s). ' +
-      (finalResult ? 'Exactly 1 — valid tree! Return True.' : numComponents + ' components — graph is disconnected. Return False.'),
-      [21],
-      { result: finalResult, activeNodes: [] }
-    );
+      'No cycles. Distinct roots: ' + numComponents + ' component(s). ' +
+      (finalResult ? 'Exactly 1 \u2014 valid tree! Return True.' : numComponents + ' components \u2014 disconnected. Return False.'),
+      [21], { result: finalResult });
   }
 
   return steps;
 }
 
-// ---- Render ----
 function renderGraph(snap) {
   var edgesG = document.getElementById('edges-g');
   var nodesG = document.getElementById('nodes-g');
   edgesG.innerHTML = '';
   nodesG.innerHTML = '';
 
-  var activeSet = {};
-  var cycleSet = {};
-  var mergedSet = {};
+  var activeSet = {}, cycleSet = {}, mergedSet = {};
   (snap.activeNodes || []).forEach(function(i) { activeSet[i] = true; });
   (snap.cycleNodes || []).forEach(function(i) { cycleSet[i] = true; });
   (snap.mergedNodes || []).forEach(function(i) { mergedSet[i] = true; });
 
-  // Edges
   gEdges.forEach(function(e, ei) {
     var u = e[0], v = e[1];
     if (u >= gPositions.length || v >= gPositions.length) return;
@@ -542,75 +380,51 @@ function renderGraph(snap) {
     var cls = 'edge-line';
     if (ei === snap.activeEdge) {
       cls = (es === 'cycle') ? 'edge-cycle' : (es === 'merged' ? 'edge-merged' : 'edge-active');
-    } else if (es === 'cycle') {
-      cls = 'edge-cycle';
-    } else if (es === 'merged') {
-      cls = 'edge-merged';
-    } else if (es === 'done') {
-      cls = 'edge-done';
-    }
+    } else if (es === 'cycle') { cls = 'edge-cycle'; }
+    else if (es === 'merged') { cls = 'edge-merged'; }
+    else if (es === 'done') { cls = 'edge-done'; }
     line.setAttribute('class', cls);
     edgesG.appendChild(line);
   });
 
-  // Nodes
   for (var i = 0; i < gN; i++) {
     var pos = gPositions[i];
     var g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
     var circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-    circle.setAttribute('cx', pos.x);
-    circle.setAttribute('cy', pos.y);
-    circle.setAttribute('r', 22);
-
+    circle.setAttribute('cx', pos.x); circle.setAttribute('cy', pos.y); circle.setAttribute('r', 22);
     var cls = 'node-circle nc-default';
     if (cycleSet[i]) cls = 'node-circle nc-cycle';
     else if (activeSet[i]) cls = 'node-circle nc-active';
     else if (mergedSet[i]) cls = 'node-circle nc-merged';
     circle.setAttribute('class', cls);
-
     var text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-    text.setAttribute('x', pos.x);
-    text.setAttribute('y', pos.y);
-    text.setAttribute('class', 'node-label');
-    text.textContent = i;
-
-    g.appendChild(circle);
-    g.appendChild(text);
+    text.setAttribute('x', pos.x); text.setAttribute('y', pos.y);
+    text.setAttribute('class', 'node-label'); text.textContent = i;
+    g.appendChild(circle); g.appendChild(text);
     nodesG.appendChild(g);
   }
 }
 
 function renderUF(snap) {
   var el = document.getElementById('uf-grid');
-  var par = snap.par;
-  var rnk = snap.rnk;
-  var n = par.length;
+  var par = snap.par, rnk = snap.rnk, n = par.length;
   var changed = snap.changedParent;
-  var cycleSet = {};
+  var cycleSet = {}, activeSet = {};
   (snap.cycleNodes || []).forEach(function(i) { cycleSet[i] = true; });
-  var activeSet = {};
   (snap.activeNodes || []).forEach(function(i) { activeSet[i] = true; });
 
-  var idxHtml = '';
-  var parHtml = '';
-  var rnkHtml = '';
-
+  var idxHtml = '', parHtml = '', rnkHtml = '';
   for (var i = 0; i < n; i++) {
-    var isRoot = par[i] === i;
-    var isChanged = i === changed;
-    var isCycle = cycleSet[i];
-    var isActive = activeSet[i];
+    var isRoot = par[i] === i, isChanged = i === changed, isCycle = cycleSet[i], isActive = activeSet[i];
     var parCls = 'uf-val';
-    if (isCycle)      parCls += ' is-cycle';
-    else if (isRoot)  parCls += ' is-root';
-    if (isChanged)    parCls += ' changed';
+    if (isCycle) parCls += ' is-cycle';
+    else if (isRoot) parCls += ' is-root';
+    if (isChanged) parCls += ' changed';
     else if (isActive && !isCycle) parCls += ' is-active';
-
     idxHtml += '<div class="uf-cell"><div class="uf-val" style="background:transparent;border:none;color:var(--text-ghost)">' + i + '</div></div>';
     parHtml += '<div class="uf-cell"><div class="' + parCls + '">' + par[i] + '</div></div>';
     rnkHtml += '<div class="uf-cell"><div class="uf-val">' + rnk[i] + '</div></div>';
   }
-
   el.innerHTML =
     '<div class="uf-row"><div class="uf-label">index</div><div class="uf-cells">' + idxHtml + '</div></div>' +
     '<div class="uf-row"><div class="uf-label">parent[]</div><div class="uf-cells">' + parHtml + '</div></div>' +
@@ -621,17 +435,11 @@ function renderResult(snap) {
   var badge = document.getElementById('result-badge');
   var label = document.getElementById('result-label');
   if (snap.result === null) {
-    badge.textContent = '—';
-    badge.className = 'result-badge pending';
-    label.textContent = 'valid tree';
+    badge.textContent = '\u2014'; badge.className = 'result-badge pending'; label.textContent = 'valid tree';
   } else if (snap.result === true) {
-    badge.textContent = 'True';
-    badge.className = 'result-badge true';
-    label.textContent = 'valid tree ✓';
+    badge.textContent = 'True'; badge.className = 'result-badge true'; label.textContent = 'valid tree \u2713';
   } else {
-    badge.textContent = 'False';
-    badge.className = 'result-badge false';
-    label.textContent = 'not a valid tree';
+    badge.textContent = 'False'; badge.className = 'result-badge false'; label.textContent = 'not a valid tree';
   }
 }
 
@@ -667,20 +475,44 @@ window.addEventListener('DOMContentLoaded', function() {
     speedSel: document.getElementById('speedSel'),
     render: function(snap, cur, total) {
       applyStep(snap);
-      document.getElementById('phase-label').textContent =
-        'Step ' + (cur + 1) + ' / ' + total + '  ·  ' + snap.phase;
-      document.getElementById('step-desc').textContent = snap.desc;
+      var badge = document.getElementById('phase-badge');
+      var desc  = document.getElementById('desc');
+      var ctr   = document.getElementById('step-counter');
+      if (badge) badge.textContent = snap.phase;
+      if (desc)  desc.textContent  = snap.desc;
+      if (ctr)   ctr.textContent   = 'Step ' + (cur + 1) + ' / ' + total;
     }
   });
+
+  document.getElementById('resetBtn').addEventListener('click', function() {
+    nav.stopPlay();
+    buildAndRun();
+  });
+
   buildAndRun();
 });
 </script>
 
 <script>
-  if (window.self !== window.top) {
-    var bl = document.querySelector('.back-link');
-    if (bl) bl.style.display = 'none';
-  }
+(function() {
+  var handle = document.getElementById('resize-handle');
+  var panel  = document.getElementById('code-panel');
+  var dragging = false, startX = 0, startW = 0;
+  handle.addEventListener('mousedown', function(e) {
+    dragging = true; startX = e.clientX; startW = panel.offsetWidth;
+    handle.classList.add('dragging');
+    e.preventDefault();
+  });
+  document.addEventListener('mousemove', function(e) {
+    if (!dragging) return;
+    var delta = startX - e.clientX;
+    panel.style.width = Math.min(560, Math.max(120, startW + delta)) + 'px';
+  });
+  document.addEventListener('mouseup', function() {
+    if (!dragging) return;
+    dragging = false; handle.classList.remove('dragging');
+  });
+})();
 </script>
 </body>
 </html>

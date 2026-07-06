@@ -8,136 +8,65 @@
   <script src="../shared/gsap.min.js"></script>
   <script src="../shared/viz.js"></script>
   <style>
-    .viz-area {
-      width: 100%; max-width: 90%;
-      display: flex; flex-direction: column; gap: 12px;
-    }
+    body { background: var(--bg); color: var(--text); font-family: "Fira Code", monospace; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+    .viz-inputs { width: 100%; padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; flex-wrap: wrap; gap: 12px; align-items: center; flex-shrink: 0; }
+    #header { padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+    #phase-badge { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; padding: 3px 10px; border-radius: var(--radius-sm); background: #1e3a5f; color: var(--blue); border: 1px solid var(--blue); }
+    #step-counter { font-size: 12px; color: var(--text-muted); margin-left: auto; }
+    #main { display: flex; flex: 1; overflow: hidden; }
+    #viz-area { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding: 20px; gap: 20px; overflow-y: auto; }
+    #resize-handle { width: 5px; flex-shrink: 0; cursor: col-resize; background: transparent; border-left: 1px solid var(--border); transition: background .15s; z-index: 10; }
+    #resize-handle:hover, #resize-handle.dragging { background: var(--accent); }
+    #code-panel { width: 350px; min-width: 120px; max-width: 560px; flex-shrink: 0; background: #0d1117; border-right: 1px solid var(--border); overflow-y: auto; overflow-x: auto; padding: 10px 12px; display: flex; flex-direction: column; }
+    #sidebar { width: 240px; flex-shrink: 0; background: var(--surface); border-left: 1px solid var(--border); overflow-y: auto; padding: 14px 12px; display: flex; flex-direction: column; gap: 12px; }
+    #nav-row { flex-shrink: 0; display: flex; align-items: center; gap: 8px; padding: 10px 16px; background: var(--surface); border-top: 1px solid var(--border); }
+    .btn-step { background: var(--surface); border: 1px solid var(--border); color: var(--text); border-radius: var(--radius-sm); padding: 6px 14px; cursor: pointer; font-size: 0.82rem; }
+    .btn-play { background: #15803d; border: none; color: #fff; border-radius: var(--radius-sm); padding: 6px 14px; cursor: pointer; font-size: 0.82rem; font-weight: 600; }
+    .code-panel-title { font-size: 0.67rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-dim); margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
 
-    .tree-wrap {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-md);
-      overflow: hidden;
-    }
+    .viz-inputs .field { display: flex; flex-direction: column; gap: 4px; }
+    .viz-inputs label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); }
+    .viz-inputs input[type="text"] { background: var(--surface); border: 1px solid var(--border); color: var(--text); border-radius: var(--radius-sm); padding: 6px 10px; font-size: 0.85rem; }
+    .viz-inputs select { background: var(--surface); border: 1px solid var(--border); color: var(--text); border-radius: var(--radius-sm); padding: 6px 10px; font-size: 0.85rem; cursor: pointer; }
+
+    .tree-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); overflow: hidden; width: 100%; }
     #tree-svg { display: block; width: 100%; }
 
-    .bottom-row {
-      display: grid;
-      grid-template-columns: 50% 1fr;
-      gap: 12px;
-      align-items: start;
-    }
-    .right-col { display: flex; flex-direction: column; gap: 10px; }
-    @media (max-width: 700px) { .bottom-row { grid-template-columns: 1fr; } }
+    #step-desc { font-size: 0.8rem; color: var(--text-muted); line-height: 1.5; }
 
-    .code-panel {
-      background: #0a0d14;
-      border: 1px solid var(--border);
-      border-radius: var(--radius-md);
-      overflow: hidden;
-    }
-    .code-header {
-      padding: 9px 14px;
-      background: var(--surface);
-      border-bottom: 1px solid var(--border);
-      font-size: 0.67rem; font-weight: 700;
-      text-transform: uppercase; letter-spacing: 0.11em;
-      color: var(--text-dim);
-    }
-    .code-body {
-      padding: 10px 0;
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 0.78rem;
-      line-height: 1.75;
-      overflow-x: auto;
-    }
-    .cl {
-      display: flex; align-items: stretch;
-      border-left: 3px solid transparent;
-      padding: 0 14px 0 0;
-      white-space: pre;
-    }
-    .cl .ln {
-      width: 28px; min-width: 28px;
-      text-align: right; color: #3d4468;
-      user-select: none; padding-right: 14px;
-      font-size: 0.72rem; line-height: 1.75;
-    }
-    .cl .code { color: var(--text-muted); }
+    .panel-box { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 13px 16px; display: flex; flex-direction: column; gap: 8px; }
+    .panel-title { font-size: 0.67rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.11em; color: var(--text-dim); }
 
-    .panel-box {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-md);
-      padding: 13px 16px;
-    }
-    .panel-title {
-      font-size: 0.67rem; font-weight: 700;
-      text-transform: uppercase; letter-spacing: 0.11em;
-      color: var(--text-dim); margin-bottom: 10px;
-    }
-
-    /* Range constraint panel */
-    .range-row {
-      display: flex; align-items: center; gap: 6px;
-    }
-    .range-slot {
-      flex: 1;
-      background: #0a0d14;
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 8px 8px;
-      font-family: 'JetBrains Mono', monospace;
-      text-align: center;
-    }
+    .range-row { display: flex; align-items: center; gap: 6px; }
+    .range-slot { flex: 1; background: #0a0d14; border: 1px solid var(--border); border-radius: 6px; padding: 8px 8px; font-family: 'JetBrains Mono', monospace; text-align: center; }
     .range-slot.node-slot { border-color: #4f46e5; }
     .rs-label { color: var(--text-dim); font-size: 0.65rem; margin-bottom: 4px; white-space: nowrap; }
     .rs-val { color: var(--text-bright); font-size: 1.05rem; font-weight: 700; }
     .rs-val.faint { color: var(--text-faint); }
     .range-op { color: var(--text-dim); font-size: 1.1rem; font-weight: 700; flex-shrink: 0; }
 
-    .check-badge {
-      margin-top: 9px;
-      font-size: 0.82rem; font-weight: 700;
-      padding: 5px 12px; border-radius: 6px;
-      display: none;
-    }
-    .check-badge.pass {
-      display: block;
-      background: #052e16; color: #4ade80; border: 1px solid #16a34a;
-    }
-    .check-badge.fail {
-      display: block;
-      background: #450a0a; color: #fca5a5; border: 1px solid #dc2626;
-    }
+    .check-badge { margin-top: 9px; font-size: 0.82rem; font-weight: 700; padding: 5px 12px; border-radius: 6px; display: none; }
+    .check-badge.pass { display: block; background: #052e16; color: #4ade80; border: 1px solid #16a34a; }
+    .check-badge.fail { display: block; background: #450a0a; color: #fca5a5; border: 1px solid #dc2626; }
 
-    /* Call stack */
-    #call-stack {
-      display: flex; flex-direction: column-reverse; gap: 4px;
-      min-height: 36px; max-height: 180px; overflow-y: auto;
-    }
-    .cs-frame {
-      background: #1e1a3a; color: #a5b4fc;
-      border: 1px solid #4f46e5; border-radius: 5px;
-      padding: 4px 10px; font-size: 0.76rem; font-weight: 600;
-      font-family: 'JetBrains Mono', monospace;
-      display: flex; justify-content: space-between; align-items: center; gap: 8px;
-    }
+    #call-stack { display: flex; flex-direction: column-reverse; gap: 4px; min-height: 36px; max-height: 180px; overflow-y: auto; }
+    .cs-frame { background: #1e1a3a; color: #a5b4fc; border: 1px solid #4f46e5; border-radius: 5px; padding: 4px 10px; font-size: 0.76rem; font-weight: 600; font-family: 'JetBrains Mono', monospace; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
     .cs-frame.top { background: #312e81; color: #e0e7ff; }
     .cs-range { color: #6366f1; font-size: 0.7rem; font-weight: 400; white-space: nowrap; }
     .cs-frame.top .cs-range { color: #a5b4fc; }
     .cs-empty { color: var(--text-faint); font-size: 0.82rem; font-style: italic; }
 
-    /* Result badge */
-    .result-badge {
-      font-size: 0.95rem; font-weight: 700;
-      padding: 10px 16px; border-radius: 8px;
-      text-align: center;
-    }
-    .result-badge.bst-valid   { background: #052e16; color: #4ade80; border: 1px solid #16a34a; }
-    .result-badge.bst-invalid { background: #450a0a; color: #fca5a5; border: 1px solid #dc2626; }
+    .result-badge { font-size: 0.95rem; font-weight: 700; padding: 10px 16px; border-radius: 8px; text-align: center; display: none; }
+    .result-badge.bst-valid   { background: #052e16; color: #4ade80; border: 1px solid #16a34a; display: block; }
+    .result-badge.bst-invalid { background: #450a0a; color: #fca5a5; border: 1px solid #dc2626; display: block; }
 
-    /* Syntax highlighting */
+    .code-body { padding: 10px 0; font-family: 'JetBrains Mono', monospace; font-size: 0.78rem; line-height: 1.75; overflow-x: auto; }
+    .cl { display: flex; align-items: stretch; border-left: 3px solid transparent; padding: 0 14px 0 0; white-space: pre; }
+    .cl .ln { width: 28px; min-width: 28px; text-align: right; color: #3d4468; user-select: none; padding-right: 14px; font-size: 0.72rem; line-height: 1.75; }
+    .cl .code { color: var(--text-muted); }
+
+    .leg-item { display: flex; align-items: center; gap: 6px; font-size: 0.76rem; color: var(--text-muted); }
+
     .kw { color: var(--purple); }
     .fn { color: var(--blue); }
     .bi { color: var(--orange); }
@@ -145,13 +74,7 @@
     .op { color: var(--text); }
   </style>
 </head>
-<body class="page">
-
-<div class="page-header">
-  <a class="back-link" href="../index.html">&larr; All Visualizations</a>
-  <h1 class="page-title">Validate BST</h1>
-  <div class="page-sub">LeetCode 98 &middot; DFS with narrowing range [lo, hi] at each node &middot; O(n) time &middot; O(h) space</div>
-</div>
+<body>
 
 <div class="viz-inputs">
   <div class="field">
@@ -166,96 +89,80 @@
     <input id="inp-tree" type="text" value="5,3,7,2,4,6,8" style="width:260px" />
   </div>
   <button class="btn-primary" onclick="build()">Build &amp; Run</button>
-  <button onclick="randomExample()" style="padding:7px 14px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;font-size:0.85rem">🎲 Random</button>
+  <button onclick="randomExample()" style="padding:7px 14px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;font-size:0.85rem">&#127922; Random</button>
+</div>
+<div class="controls"></div>
+
+<div id="header">
+  <span id="phase-badge">&#8212;</span>
+  <span style="font-size:13px;font-weight:700;">Validate BST</span>
+  <span id="step-counter">Step 0 / 0</span>
 </div>
 
-<div class="viz-area">
-
-  <div class="tree-wrap">
-    <svg id="tree-svg" viewBox="0 0 800 300" preserveAspectRatio="xMidYMid meet"></svg>
-  </div>
-
-  <div class="status-bar" style="max-width:100%">
-    <span class="phase-label" id="phase-label">&mdash;</span>
-    <span class="step-desc" id="step-desc">Choose a preset and click Build &amp; Run.</span>
-  </div>
-
-  <div class="bottom-row">
-
-    <div class="code-panel">
-      <div class="code-header">Python</div>
-      <div class="code-body" id="code-body"></div>
+<div id="main">
+  <div id="viz-area">
+    <div class="tree-wrap">
+      <svg id="tree-svg" viewBox="0 0 800 300" preserveAspectRatio="xMidYMid meet"></svg>
     </div>
-
-    <div class="right-col">
-
-      <div class="panel-box">
-        <div class="panel-title">Range Constraint</div>
-        <div class="range-row">
-          <div class="range-slot">
-            <div class="rs-label">lo (excl. lower)</div>
-            <div class="rs-val faint" id="rv-lo">&mdash;</div>
-          </div>
-          <div class="range-op">&lt;</div>
-          <div class="range-slot node-slot">
-            <div class="rs-label">node.val</div>
-            <div class="rs-val" id="rv-val">&mdash;</div>
-          </div>
-          <div class="range-op">&lt;</div>
-          <div class="range-slot">
-            <div class="rs-label">hi (excl. upper)</div>
-            <div class="rs-val faint" id="rv-hi">&mdash;</div>
-          </div>
+    <div id="step-desc">Choose a preset and click Build &amp; Run.</div>
+  </div>
+  <div id="resize-handle"></div>
+  <div id="code-panel">
+    <div class="code-panel-title">Python</div>
+    <div class="code-body" id="code-body"></div>
+  </div>
+  <div id="sidebar">
+    <div class="panel-box">
+      <div class="panel-title">Range Constraint</div>
+      <div class="range-row">
+        <div class="range-slot">
+          <div class="rs-label">lo (excl. lower)</div>
+          <div class="rs-val faint" id="rv-lo">&#8212;</div>
         </div>
-        <div class="check-badge" id="check-badge"></div>
-      </div>
-
-      <div class="panel-box">
-        <div class="panel-title">
-          Call Stack
-          <span style="font-size:0.65rem;font-weight:400;color:var(--text-faint);margin-left:6px">(top = active)</span>
+        <div class="range-op">&lt;</div>
+        <div class="range-slot node-slot">
+          <div class="rs-label">node.val</div>
+          <div class="rs-val" id="rv-val">&#8212;</div>
         </div>
-        <div id="call-stack"><span class="cs-empty">empty</span></div>
+        <div class="range-op">&lt;</div>
+        <div class="range-slot">
+          <div class="rs-label">hi (excl. upper)</div>
+          <div class="rs-val faint" id="rv-hi">&#8212;</div>
+        </div>
       </div>
-
-      <div class="result-badge" id="result-badge" style="display:none"></div>
-
+      <div class="check-badge" id="check-badge"></div>
+    </div>
+    <div class="panel-box">
+      <div class="panel-title">
+        Call Stack
+        <span style="font-size:0.65rem;font-weight:400;color:var(--text-faint);margin-left:6px">(top = active)</span>
+      </div>
+      <div id="call-stack"><span class="cs-empty">empty</span></div>
+    </div>
+    <div class="result-badge" id="result-badge"></div>
+    <div class="panel-box">
+      <div class="panel-title">Legend</div>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <div class="leg-item"><svg width="14" height="14"><circle cx="7" cy="7" r="6" fill="#1e2130" stroke="#2d3148" stroke-width="2"/></svg>Unvisited</div>
+        <div class="leg-item"><svg width="14" height="14"><circle cx="7" cy="7" r="6" fill="#312e81" stroke="#818cf8" stroke-width="3"/></svg>Active (checking now)</div>
+        <div class="leg-item"><svg width="14" height="14"><circle cx="7" cy="7" r="6" fill="#1e1a3a" stroke="#4f46e5" stroke-width="2"/></svg>On call stack</div>
+        <div class="leg-item"><svg width="14" height="14"><circle cx="7" cy="7" r="6" fill="#052e16" stroke="#16a34a" stroke-width="2"/></svg>Valid</div>
+        <div class="leg-item"><svg width="14" height="14"><circle cx="7" cy="7" r="6" fill="#450a0a" stroke="#dc2626" stroke-width="2"/></svg>Invalid</div>
+      </div>
     </div>
   </div>
-
 </div>
 
-<div class="legend">
-  <div class="leg-item">
-    <svg width="14" height="14"><circle cx="7" cy="7" r="6" fill="#1e2130" stroke="#2d3148" stroke-width="2"/></svg>
-    Unvisited
-  </div>
-  <div class="leg-item">
-    <svg width="14" height="14"><circle cx="7" cy="7" r="6" fill="#312e81" stroke="#818cf8" stroke-width="3"/></svg>
-    Active (checking now)
-  </div>
-  <div class="leg-item">
-    <svg width="14" height="14"><circle cx="7" cy="7" r="6" fill="#1e1a3a" stroke="#4f46e5" stroke-width="2"/></svg>
-    On call stack
-  </div>
-  <div class="leg-item">
-    <svg width="14" height="14"><circle cx="7" cy="7" r="6" fill="#052e16" stroke="#16a34a" stroke-width="2"/></svg>
-    Valid
-  </div>
-  <div class="leg-item">
-    <svg width="14" height="14"><circle cx="7" cy="7" r="6" fill="#450a0a" stroke="#dc2626" stroke-width="2"/></svg>
-    Invalid
-  </div>
-</div>
-
-<div class="step-nav">
-  <button class="stepBtn" id="prevBtn" disabled>&larr; Back</button>
-  <button class="stepBtn" id="stepBtn" disabled>Next &rarr;</button>
-  <button id="playBtn" style="background:#15803d;color:#fff;border:none;border-radius:4px;padding:6px 14px;font-weight:600;cursor:pointer">&#9654; Play</button>
-  <select id="speedSel" style="background:var(--bg);border:1px solid var(--border);color:var(--text);border-radius:4px;padding:6px 8px;font-size:0.85rem">
-    <option value="700">Slow</option>
-    <option value="350" selected>Medium</option>
-    <option value="120">Fast</option>
+<div id="nav-row">
+  <button id="prevBtn" class="btn-step">&#8592; Prev</button>
+  <button id="stepBtn" class="btn-step">Step &#8594;</button>
+  <button id="playBtn" class="btn-play">Play</button>
+  <button id="resetBtn" class="btn-step">&#8635; Reset</button>
+  <select id="speedSel">
+    <option value="800">0.5&#215;</option>
+    <option value="400" selected>1&#215;</option>
+    <option value="200">2&#215;</option>
+    <option value="100">4&#215;</option>
   </select>
 </div>
 
@@ -339,7 +246,7 @@ function layout(root) {
   const ySpace = 76;
   const padX = 50, padY = 36;
   VW = Math.max(480, padX * 2 + (count - 1) * xSpace);
-  VH = padY * 2 + maxD * ySpace + R * 2 + 52; // extra for range annotation
+  VH = padY * 2 + maxD * ySpace + R * 2 + 52;
   for (const id in nodeMap) {
     const n = nodeMap[id];
     n.x = padX + n._inIdx * xSpace;
@@ -403,7 +310,6 @@ function renderSVG(root) {
     t.textContent = n.val;
     g.appendChild(t);
 
-    // Range annotation shown below the active node
     const rt = svgEl('text', {
       id: `nr-${n.id}`, x: n.x, y: n.y + R + 14,
       'text-anchor': 'middle', 'dominant-baseline': 'hanging',
@@ -565,13 +471,11 @@ function renderCallStack(stack, animate) {
 
 // ─── Apply step ───────────────────────────────────────────────────────────────
 function applyStep(s, animate) {
-  // Node colors
   Object.entries(s.stateMap).forEach(([id, state]) => {
     const colorKey = (state === 'active' && +id === s.activeId) ? 'active_top' : state;
     setNodeColor(+id, colorKey, animate);
   });
 
-  // Range annotation on active node
   for (const id in nodeMap) {
     const rt = document.getElementById('nr-' + id);
     if (!rt) continue;
@@ -587,7 +491,6 @@ function applyStep(s, animate) {
     }
   }
 
-  // Range constraint panel
   const setRV = function(id, val, faint) {
     const el = document.getElementById(id);
     if (!el) return;
@@ -608,7 +511,6 @@ function applyStep(s, animate) {
     setRV('rv-hi',  '—', true);
   }
 
-  // Check badge
   const badge = document.getElementById('check-badge');
   if (badge) {
     badge.className = 'check-badge';
@@ -622,24 +524,21 @@ function applyStep(s, animate) {
     }
   }
 
-  // Call stack
   renderCallStack(s.callStack, animate);
 
-  // Result badge
   const rb = document.getElementById('result-badge');
   if (rb) {
     if (s.phase === 'Done') {
-      rb.style.display = 'block';
       const isValid = s.desc.startsWith('✓');
       rb.className = 'result-badge ' + (isValid ? 'bst-valid' : 'bst-invalid');
       rb.textContent = isValid ? '✓ Valid BST' : '✗ Invalid BST';
       if (animate) gsap.from(rb, { opacity: 0, scale: 0.9, duration: 0.35, ease: 'back.out(1.7)' });
     } else {
       rb.style.display = 'none';
+      rb.className = 'result-badge';
     }
   }
 
-  // Code lines
   setCodeLines(prevLines, s.lines, animate);
   prevLines = s.lines || [];
 }
@@ -663,19 +562,18 @@ function applyPreset() {
   document.getElementById('inp-tree').value = sel.value;
 }
 
-// ─── Build & Run ──────────────────────────────────────────────────────────────
 // ─── Random Example ───────────────────────────────────────────────────────
 function randomExample() {
   const examples = [
-    '5,3,7,2,4,6,8',           // Valid balanced BST
-    '5,3,7,2,6',               // Invalid (6 violates right subtree constraint)
-    '10,5,15,2,7,12,20',       // Valid larger BST
-    '1,null,2',                // Valid right-only
-    '2,1,3',                   // Valid simple
-    '5,5,5',                   // Invalid (duplicate violates strict inequality)
-    '3,1,5,null,null,4,6',     // Valid
-    '1,2,3',                   // Invalid (left is greater than parent)
-    '10,5,15,null,null,6',     // Invalid (6 in right subtree less than parent 10)
+    '5,3,7,2,4,6,8',
+    '5,3,7,2,6',
+    '10,5,15,2,7,12,20',
+    '1,null,2',
+    '2,1,3',
+    '5,5,5',
+    '3,1,5,null,null,4,6',
+    '1,2,3',
+    '10,5,15,null,null,6',
   ];
   const randomIdx = Math.floor(Math.random() * examples.length);
   document.getElementById('inp-tree').value = examples[randomIdx];
@@ -683,7 +581,7 @@ function randomExample() {
   build();
 }
 
-
+// ─── Build & Run ──────────────────────────────────────────────────────────────
 function build() {
   const txt = document.getElementById('inp-tree').value.trim();
   const vals = parseLevelOrder(txt);
@@ -698,7 +596,9 @@ function build() {
   renderSVG(root);
   prevLines = [];
   document.getElementById('check-badge').className = 'check-badge';
-  document.getElementById('result-badge').style.display = 'none';
+  const rb = document.getElementById('result-badge');
+  rb.style.display = 'none';
+  rb.className = 'result-badge';
   nav.load(simulate(root));
 }
 
@@ -710,8 +610,10 @@ var nav = VizNav({
   speedSel: document.getElementById('speedSel'),
   render: function(snap, cur, total) {
     applyStep(snap, cur > 0);
-    var pl = document.getElementById('phase-label');
-    if (pl) pl.textContent = 'Step ' + (cur + 1) + ' / ' + total + '  ·  ' + snap.phase;
+    var pb = document.getElementById('phase-badge');
+    if (pb) pb.textContent = snap.phase;
+    var sc = document.getElementById('step-counter');
+    if (sc) sc.textContent = 'Step ' + (cur + 1) + ' / ' + total;
     var sd = document.getElementById('step-desc');
     if (sd) {
       if (cur > 0) gsap.fromTo(sd, { opacity: 0.5 }, { opacity: 1, duration: 0.15 });
@@ -721,6 +623,26 @@ var nav = VizNav({
 });
 
 build();
+</script>
+<script>
+(function() {
+  var handle = document.getElementById('resize-handle');
+  var panel  = document.getElementById('code-panel');
+  var dragging = false, startX = 0, startW = 0;
+  handle.addEventListener('mousedown', function(e) {
+    dragging = true; startX = e.clientX; startW = panel.offsetWidth;
+    handle.classList.add('dragging'); e.preventDefault();
+  });
+  document.addEventListener('mousemove', function(e) {
+    if (!dragging) return;
+    var delta = startX - e.clientX;
+    panel.style.width = Math.min(560, Math.max(120, startW + delta)) + 'px';
+  });
+  document.addEventListener('mouseup', function() {
+    if (!dragging) return;
+    dragging = false; handle.classList.remove('dragging');
+  });
+})();
 </script>
 <script>
   if (window.self !== window.top) {

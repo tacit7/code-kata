@@ -1,288 +1,190 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Combination Sum II</title>
-  <link rel="stylesheet" href="../shared/style.css" />
-  <script src="../shared/gsap.min.js"></script>
-  <script src="../shared/viz.js"></script>
-  <style>
-    .viz-area { width: 100%; max-width: 90%; }
-    .main-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
-    .left-col, .right-col { display: flex; flex-direction: column; gap: 12px; }
-    @media (max-width: 700px) { .main-row { grid-template-columns: 1fr; } }
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Combination Sum II</title>
+<link rel="stylesheet" href="../shared/style.css" />
+<script src="../shared/gsap.min.js"></script>
+<script src="../shared/viz.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: "Fira Code", "Cascadia Code", monospace; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+  #header { padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+  #phase-badge { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; padding: 3px 10px; border-radius: var(--radius-sm); background: #1e3a5f; color: var(--blue); border: 1px solid var(--blue); }
+  #step-counter { font-size: 12px; color: var(--text-muted); margin-left: auto; }
+  .viz-inputs { width: 100%; padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; flex-wrap: wrap; gap: 12px; align-items: center; flex-shrink: 0; }
+  .viz-inputs label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); display: block; margin-bottom: 3px; }
+  .viz-inputs select, .viz-inputs input { background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 0 8px; height: 30px; font-size: 0.82rem; font-family: inherit; }
+  .vi-btn-run { padding: 6px 14px; border-radius: 6px; font-size: 0.82rem; font-weight: 600; cursor: pointer; font-family: inherit; background: var(--accent); color: #fff; border: none; }
+  .vi-btn-rand { padding: 6px 14px; border-radius: 6px; font-size: 0.82rem; cursor: pointer; font-family: inherit; background: var(--bg); color: var(--text); border: 1px solid var(--border); }
+  #main { display: flex; flex: 1; overflow: hidden; }
+  #viz-area { flex: 1; display: flex; flex-direction: column; align-items: flex-start; justify-content: flex-start; padding: 16px; gap: 12px; overflow-y: auto; }
+  #desc { font-size: 13px; color: var(--text-muted); max-width: 560px; min-height: 32px; line-height: 1.5; }
+  #resize-handle { width: 5px; flex-shrink: 0; cursor: col-resize; background: transparent; border-left: 1px solid var(--border); transition: background .15s; z-index: 10; }
+  #resize-handle:hover, #resize-handle.dragging { background: var(--accent); }
+  #code-panel { width: 320px; min-width: 120px; max-width: 560px; flex-shrink: 0; background: #0d1117; border-right: 1px solid var(--border); overflow-y: auto; overflow-x: auto; padding: 10px 12px; display: flex; flex-direction: column; }
+  .code-panel-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--text-dim); margin-bottom: 8px; }
+  .cl { display: flex; align-items: stretch; padding: 2px 0; white-space: pre; border-left: 2px solid transparent; padding-left: 6px; color: var(--text-muted); font-family: 'Fira Code','Cascadia Code',monospace; font-size: 0.75rem; line-height: 1.8; }
+  .cl.hl { background: rgba(122,162,247,0.12); border-left-color: var(--accent); color: var(--text); }
+  .ln { display: inline-block; width: 20px; text-align: right; color: var(--text-dim); user-select: none; margin-right: 10px; font-size: 0.7rem; }
+  .kw { color: var(--purple); } .nb { color: var(--green); } .fn { color: var(--blue); } .bi { color: var(--orange); } .cm { color: var(--text-ghost); }
+  #sidebar { width: 220px; flex-shrink: 0; background: var(--surface); border-left: 1px solid var(--border); overflow-y: auto; padding: 14px 12px; display: flex; flex-direction: column; gap: 12px; }
+  .sidebar-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--text-dim); margin-bottom: 6px; }
+  #nav-row { flex-shrink: 0; display: flex; align-items: center; gap: 8px; padding: 10px 16px; background: var(--surface); border-top: 1px solid var(--border); }
+  .btn-step { padding: 6px 14px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--surface); color: var(--text); font-family: inherit; font-size: 12px; cursor: pointer; }
+  .btn-step:hover { background: #334155; }
+  .btn-play { padding: 6px 14px; border-radius: var(--radius-sm); background: var(--accent); border: none; color: #fff; font-family: inherit; font-size: 12px; cursor: pointer; font-weight: 600; }
+  #nav-row select { padding: 5px 8px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: #1e293b; color: var(--text); font-size: 12px; font-family: inherit; cursor: pointer; }
 
-    .page-sub { font-size: 0.8rem; color: var(--text-dim); margin-left: auto; white-space: nowrap; }
-
-    .sect {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--radius-lg); padding: 14px 16px;
-      display: flex; flex-direction: column; gap: 8px;
-    }
-
-    /* Candidates */
-    .cands-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 4px; }
-    .cand-chip {
-      width: 44px; height: 44px;
-      display: flex; align-items: center; justify-content: center;
-      border: 2px solid var(--border); border-radius: 8px;
-      background: var(--bg);
-      font-size: 1rem; font-weight: 700; font-family: monospace;
-      color: var(--text-dim);
-      transition: border-color 0.15s, color 0.15s, background 0.15s, opacity 0.15s;
-      position: relative;
-    }
-    .cand-chip .cand-idx {
-      position: absolute; top: -9px; left: 50%;
-      transform: translateX(-50%);
-      font-size: 0.55rem; color: var(--text-ghost); font-family: monospace;
-      pointer-events: none;
-    }
-    .cand-chip.active      { border-color: var(--yellow); color: var(--yellow-light); background: #1e1600; }
-    .cand-chip.pruned      { border-color: var(--red);    color: var(--red);          background: #200a0a; opacity: 0.65; }
-    .cand-chip.skipped-dup { border-color: #6e4c7e; color: #9d72ae; background: #1a0e20; opacity: 0.75; }
-    .cand-chip.skipped     { opacity: 0.3; }
-    .dup-badge {
-      position: absolute; bottom: -9px; left: 50%;
-      transform: translateX(-50%);
-      font-size: 0.48rem; color: #9d72ae; font-family: monospace; white-space: nowrap;
-      pointer-events: none;
-    }
-
-    /* Path */
-    .path-row {
-      display: flex; align-items: center; gap: 6px;
-      flex-wrap: wrap; min-height: 42px; margin-top: 4px;
-    }
-    .path-item {
-      width: 38px; height: 38px;
-      display: flex; align-items: center; justify-content: center;
-      border: 2px solid var(--accent); border-radius: 6px;
-      background: var(--surface-dark);
-      font-size: 0.95rem; font-weight: 700; font-family: monospace;
-      color: var(--accent-pale);
-    }
-    .path-item.found { border-color: var(--green); color: var(--green-light); background: var(--green-bg); }
-    .path-sum  { font-size: 0.88rem; color: var(--text-muted); font-family: monospace; margin-left: 4px; }
-    .path-tag  { font-size: 0.78rem; font-weight: 700; }
-    .path-tag.found { color: var(--green); }
-    .path-tag.prune { color: var(--red); }
-    .path-tag.skip  { color: #9d72ae; }
-    .path-empty { color: var(--text-ghost); font-size: 0.82rem; font-style: italic; }
-
-    /* Call stack */
-    .stack-body {
-      font-family: monospace; font-size: 0.74rem;
-      max-height: 190px; overflow-y: auto; margin-top: 4px;
-    }
-    .stack-frame     { padding: 1px 0; color: var(--text-muted); white-space: nowrap; }
-    .stack-frame.top { color: var(--accent-pale); font-weight: 700; }
-    .stack-frame.win { color: var(--green); font-weight: 700; }
-
-    /* Code */
-    .code-panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
-    .code-header { padding: 8px 14px; font-size: 0.72rem; font-weight: 600; color: var(--text-dim); border-bottom: 1px solid var(--border); background: var(--bg); }
-    .code-body { padding: 10px 0; font-size: 0.78rem; line-height: 1.75; white-space: pre; }
-    .code-line { display: flex; align-items: center; padding: 0 14px; }
-    .code-line.hl      { background: var(--border-soft); border-left: 2px solid var(--accent); }
-    .code-line.hl-skip { background: #1a0e20; border-left: 2px solid #6e4c7e; }
-    .ln { min-width: 24px; color: var(--text-ghost); user-select: none; font-size: 0.7rem; }
-
-    /* Nav */
-    .btn-play {
-      background: #15803d; border: none; border-radius: var(--radius-sm);
-      color: #fff; cursor: pointer; font-size: 0.88rem; font-weight: 600;
-      padding: 9px 16px; transition: background 0.2s;
-    }
-    .btn-play:hover         { background: #166534; }
-    .btn-play.playing       { background: #c2410c; }
-    .btn-play.playing:hover { background: #9a3412; }
-    .btn-play:disabled      { opacity: 0.4; cursor: not-allowed; }
-    .speed-select {
-      background: var(--bg); border: 1px solid var(--border);
-      border-radius: var(--radius-sm); color: var(--text);
-      font-size: 0.85rem; padding: 8px 10px; outline: none; width: 80px;
-    }
-    .nav-row { display: flex; gap: 8px; align-items: center; }
-
-    /* Variables */
-    .var-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
-    .var-box {
-      padding: 10px 8px; background: var(--bg); border: 1px solid var(--border);
-      border-radius: var(--radius-sm); display: flex; flex-direction: column;
-      align-items: center; gap: 3px;
-    }
-    .var-box.ab { border-color: var(--accent); }
-    .var-box.ob { border-color: #b45309; }
-    .var-box.gb { border-color: var(--green-border); }
-    .var-label { font-size: 0.62rem; font-family: monospace; color: var(--text-faint); text-align: center; }
-    .var-val   { font-size: 1.2rem; font-weight: 700; color: var(--text-bright); font-family: monospace; }
-
-    /* Results */
-    .results-list { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; min-height: 38px; }
-    .result-combo {
-      display: flex; align-items: center; gap: 6px;
-      padding: 6px 10px;
-      background: var(--green-bg); border: 1px solid var(--green-border);
-      border-radius: 6px; font-family: monospace; font-size: 0.82rem; color: var(--green);
-    }
-    .result-empty { color: var(--text-ghost); font-size: 0.82rem; font-style: italic; }
-
-    .kw { color: var(--purple); }
-    .fn { color: var(--blue); }
-    .bi { color: var(--orange); }
-    .nb { color: var(--green); }
-    .cm { color: var(--text-ghost); }
-  </style>
+  /* PAGE-SPECIFIC */
+  .sect { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; width: 100%; }
+  .panel-title { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); }
+  .panel-sub { font-size: 0.65rem; font-weight: 400; color: var(--text-faint); }
+  .cands-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 4px; }
+  .cand-chip { width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; border: 2px solid var(--border); border-radius: 8px; background: var(--bg); font-size: 1rem; font-weight: 700; font-family: monospace; color: var(--text-dim); transition: border-color 0.15s, color 0.15s, background 0.15s, opacity 0.15s; position: relative; }
+  .cand-chip .cand-idx { position: absolute; top: -9px; left: 50%; transform: translateX(-50%); font-size: 0.55rem; color: var(--text-ghost); font-family: monospace; pointer-events: none; }
+  .cand-chip.active      { border-color: var(--yellow); color: var(--yellow-light); background: #1e1600; }
+  .cand-chip.pruned      { border-color: var(--red);    color: var(--red);          background: #200a0a; opacity: 0.65; }
+  .cand-chip.skipped-dup { border-color: #6e4c7e; color: #9d72ae; background: #1a0e20; opacity: 0.75; }
+  .cand-chip.skipped     { opacity: 0.3; }
+  .dup-badge { position: absolute; bottom: -9px; left: 50%; transform: translateX(-50%); font-size: 0.48rem; color: #9d72ae; font-family: monospace; white-space: nowrap; pointer-events: none; }
+  .path-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; min-height: 42px; margin-top: 4px; }
+  .path-item { width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; border: 2px solid var(--accent); border-radius: 6px; background: var(--surface-dark); font-size: 0.95rem; font-weight: 700; font-family: monospace; color: var(--accent-pale); }
+  .path-item.found { border-color: var(--green); color: var(--green-light); background: var(--green-bg); }
+  .path-sum  { font-size: 0.88rem; color: var(--text-muted); font-family: monospace; margin-left: 4px; }
+  .path-tag  { font-size: 0.78rem; font-weight: 700; }
+  .path-tag.found { color: var(--green); }
+  .path-tag.prune { color: var(--red); }
+  .path-tag.skip  { color: #9d72ae; }
+  .path-empty { color: var(--text-ghost); font-size: 0.82rem; font-style: italic; }
+  .stack-body { font-family: monospace; font-size: 0.74rem; max-height: 160px; overflow-y: auto; margin-top: 4px; }
+  .stack-frame     { padding: 1px 0; color: var(--text-muted); white-space: nowrap; }
+  .stack-frame.top { color: var(--accent-pale); font-weight: 700; }
+  .stack-frame.win { color: var(--green); font-weight: 700; }
+  /* code panel */
+  .code-body { padding: 10px 0; font-size: 0.78rem; line-height: 1.75; white-space: pre; }
+  .code-line { display: flex; align-items: center; padding: 0 14px; }
+  .code-line.hl      { background: var(--border-soft); border-left: 2px solid var(--accent); }
+  .code-line.hl-skip { background: #1a0e20; border-left: 2px solid #6e4c7e; }
+  /* sidebar */
+  .var-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .var-box { padding: 8px 6px; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm); display: flex; flex-direction: column; align-items: center; gap: 2px; }
+  .var-box.ab { border-color: var(--accent); }
+  .var-box.ob { border-color: #b45309; }
+  .var-box.gb { border-color: var(--green-border); }
+  .var-label { font-size: 0.6rem; font-family: monospace; color: var(--text-faint); text-align: center; }
+  .var-val   { font-size: 1.1rem; font-weight: 700; color: var(--text-bright); font-family: monospace; }
+  .results-list { display: flex; flex-direction: column; gap: 5px; min-height: 30px; }
+  .result-combo { display: flex; align-items: center; gap: 6px; padding: 5px 8px; background: var(--green-bg); border: 1px solid var(--green-border); border-radius: 6px; font-family: monospace; font-size: 0.78rem; color: var(--green); }
+  .result-empty { color: var(--text-ghost); font-size: 0.78rem; font-style: italic; }
+</style>
 </head>
-<body class="page">
-
-<div class="page-header">
-  <a class="back-link" href="../index.html">&larr; All Algorithms</a>
-  <div class="page-title">Combination Sum II</div>
-  <div class="page-sub">LeetCode 40 &middot; Backtracking &middot; each candidate used once &middot; skip duplicates at same depth</div>
-</div>
+<body>
 
 <div class="viz-inputs">
-  <div class="field">
+  <div>
     <label>Candidates (comma-sep)</label>
-    <input id="inp-cands" type="text" value="10,1,2,7,6,1,5" style="width:180px" />
+    <input id="inp-cands" type="text" value="10,1,2,7,6,1,5" style="width:160px" />
   </div>
-  <div class="field">
+  <div>
     <label>Target</label>
-    <input id="inp-target" type="number" value="8" min="1" max="40" style="width:80px" />
+    <input id="inp-target" type="number" value="8" min="1" max="40" style="width:70px" />
   </div>
-  <div class="field">
+  <div>
     <label>Preset</label>
-    <select id="preset-sel" onchange="loadPreset(this.value)" style="width:200px">
+    <select id="preset-sel" onchange="loadPreset(this.value)" style="width:190px">
       <option value="0">[10,1,2,7,6,1,5] target=8</option>
       <option value="1">[2,5,2,1,2] target=5</option>
       <option value="2">[1,1,1,2] target=3</option>
     </select>
   </div>
-  <button class="btn-primary" onclick="buildAndRun()">Build &amp; Run</button>
+  <button class="vi-btn-run" onclick="buildAndRun()">Run</button>
+  <button class="vi-btn-rand" onclick="randomExample()">&#127922; Random</button>
+</div>
+<div class="controls"></div>
+
+<div id="header">
+  <span id="phase-badge">Setup</span>
+  <span style="font-size:13px;font-weight:700;">Combination Sum II</span>
+  <span id="step-counter">Step 0 / 0</span>
 </div>
 
-<div class="viz-area">
-  <div class="main-row">
-
-    <!-- ── Left column ── -->
-    <div class="left-col">
-
-      <!-- Candidates -->
-      <div class="sect">
-        <div class="panel-title">Sorted Candidates <span class="panel-sub" id="target-sub"></span></div>
-        <div class="cands-row" id="cands-row">
-          <span style="color:var(--text-ghost);font-size:0.82rem">Click Build &amp; Run.</span>
-        </div>
+<div id="main">
+  <div id="viz-area">
+    <div id="desc">Set candidates &amp; target, then click Run.</div>
+    <div class="sect">
+      <div class="panel-title">Sorted Candidates <span class="panel-sub" id="target-sub"></span></div>
+      <div class="cands-row" id="cands-row">
+        <span style="color:var(--text-ghost);font-size:0.82rem">Click Run.</span>
       </div>
-
-      <!-- Path -->
-      <div class="sect">
-        <div class="panel-title">Current Path</div>
-        <div class="path-row" id="path-row">
-          <span class="path-empty">empty</span>
-        </div>
-      </div>
-
-      <!-- Call stack -->
-      <div class="sect" style="gap:4px">
-        <div class="panel-title">Call Stack <span class="panel-sub">(deepest = active frame)</span></div>
-        <div class="stack-body" id="stack-body">
-          <div style="color:var(--text-ghost);font-size:0.78rem">No active recursion.</div>
-        </div>
-      </div>
-
-      <!-- Code -->
-      <div class="code-panel">
-        <div class="code-header">Python</div>
-        <div class="code-body" id="code-body"></div>
-      </div>
-
     </div>
-
-    <!-- ── Right column ── -->
-    <div class="right-col">
-
-      <!-- Nav + description -->
-      <div style="display:flex;gap:12px">
-        <div class="panel-box" style="flex:0 0 auto;display:flex;flex-direction:column;gap:8px">
-          <div class="nav-row">
-            <button class="stepBtn" id="prevBtn" disabled>&larr;</button>
-            <button class="stepBtn" id="stepBtn" disabled>&rarr;</button>
-            <button class="playBtn" id="playBtn" disabled>&#9654; Play</button>
-            <select class="speedSel" id="speedSel">
-              <option value="900">Slow</option>
-              <option value="450" selected>Medium</option>
-              <option value="150">Fast</option>
-            </select>
-          </div>
-        </div>
-        <div class="panel-box" style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px">
-          <div class="panel-title" id="phase-label">&mdash;</div>
-          <div style="font-size:0.82rem;color:var(--text-muted)" id="step-desc">
-            Set candidates &amp; target, then click Build &amp; Run.
-          </div>
-        </div>
+    <div class="sect">
+      <div class="panel-title">Current Path</div>
+      <div class="path-row" id="path-row">
+        <span class="path-empty">empty</span>
       </div>
-
-      <!-- Variables -->
-      <div class="panel-box" style="display:flex;flex-direction:column;gap:8px">
-        <div class="panel-title">Variables</div>
-        <div class="var-grid">
-          <div class="var-box ab">
-            <div class="var-label">start</div>
-            <div class="var-val" id="vv-start">&mdash;</div>
-          </div>
-          <div class="var-box ob">
-            <div class="var-label">sum</div>
-            <div class="var-val" id="vv-sum">&mdash;</div>
-          </div>
-          <div class="var-box gb">
-            <div class="var-label">remaining</div>
-            <div class="var-val" id="vv-rem">&mdash;</div>
-          </div>
-        </div>
+    </div>
+    <div class="sect" style="gap:4px">
+      <div class="panel-title">Call Stack <span class="panel-sub">(deepest = active frame)</span></div>
+      <div class="stack-body" id="stack-body">
+        <div style="color:var(--text-ghost);font-size:0.78rem">No active recursion.</div>
       </div>
-
-      <!-- Results -->
-      <div class="sect">
-        <div class="panel-title">Results <span class="panel-sub" id="result-count"></span></div>
-        <div class="results-list" id="results-list">
-          <span class="result-empty">No combinations found yet.</span>
-        </div>
-      </div>
-
-      <!-- Legend -->
-      <div class="panel-box" style="display:flex;flex-direction:column;gap:8px">
-        <div class="panel-title">Legend</div>
-        <div style="display:flex;flex-direction:column;gap:7px;font-size:0.78rem;color:var(--text-muted)">
-          <div style="display:flex;align-items:center;gap:8px">
-            <div style="width:16px;height:16px;border-radius:3px;border:2px solid var(--yellow);background:#1e1600"></div>
-            <span>Candidate currently being tried</span>
-          </div>
-          <div style="display:flex;align-items:center;gap:8px">
-            <div style="width:16px;height:16px;border-radius:3px;border:2px solid #6e4c7e;background:#1a0e20"></div>
-            <span>Duplicate skipped at same depth</span>
-          </div>
-          <div style="display:flex;align-items:center;gap:8px">
-            <div style="width:16px;height:16px;border-radius:3px;border:2px solid var(--red);background:#200a0a"></div>
-            <span>Pruned (sum would exceed target)</span>
-          </div>
-          <div style="display:flex;align-items:center;gap:8px">
-            <div style="width:16px;height:16px;border-radius:3px;border:2px solid var(--accent);background:var(--surface-dark)"></div>
-            <span>Element in current path</span>
-          </div>
-          <div style="display:flex;align-items:center;gap:8px">
-            <div style="width:16px;height:16px;border-radius:3px;background:var(--green-bg);border:1px solid var(--green-border)"></div>
-            <span>Valid combination found</span>
-          </div>
-        </div>
-      </div>
-
     </div>
   </div>
+  <div id="resize-handle"></div>
+  <div id="code-panel">
+    <div class="code-panel-title">Python</div>
+    <div id="code-body"></div>
+  </div>
+  <div id="sidebar">
+    <div>
+      <div class="sidebar-title">Variables</div>
+      <div class="var-grid">
+        <div class="var-box ab" style="grid-column:span 1">
+          <div class="var-label">start</div>
+          <div class="var-val" id="vv-start">&mdash;</div>
+        </div>
+        <div class="var-box ob">
+          <div class="var-label">sum</div>
+          <div class="var-val" id="vv-sum">&mdash;</div>
+        </div>
+        <div class="var-box gb" style="grid-column:span 2">
+          <div class="var-label">remaining</div>
+          <div class="var-val" id="vv-rem">&mdash;</div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="sidebar-title">Results <span class="panel-sub" id="result-count"></span></div>
+      <div class="results-list" id="results-list">
+        <span class="result-empty">None yet.</span>
+      </div>
+    </div>
+    <div>
+      <div class="sidebar-title">Legend</div>
+      <div style="display:flex;flex-direction:column;gap:5px;font-size:0.72rem;color:var(--text-muted)">
+        <div style="display:flex;align-items:center;gap:6px"><div style="width:14px;height:14px;border-radius:3px;border:2px solid var(--yellow);background:#1e1600;flex-shrink:0"></div><span>Candidate tried</span></div>
+        <div style="display:flex;align-items:center;gap:6px"><div style="width:14px;height:14px;border-radius:3px;border:2px solid #6e4c7e;background:#1a0e20;flex-shrink:0"></div><span>Duplicate skipped</span></div>
+        <div style="display:flex;align-items:center;gap:6px"><div style="width:14px;height:14px;border-radius:3px;border:2px solid var(--red);background:#200a0a;flex-shrink:0"></div><span>Pruned (exceed)</span></div>
+        <div style="display:flex;align-items:center;gap:6px"><div style="width:14px;height:14px;border-radius:3px;border:2px solid var(--accent);background:var(--surface-dark);flex-shrink:0"></div><span>In current path</span></div>
+        <div style="display:flex;align-items:center;gap:6px"><div style="width:14px;height:14px;border-radius:3px;background:var(--green-bg);border:1px solid var(--green-border);flex-shrink:0"></div><span>Valid combination</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="nav-row">
+  <button id="prevBtn" class="btn-step">&#8592; Prev</button>
+  <button id="stepBtn" class="btn-step">Step &#8594;</button>
+  <button id="playBtn" class="btn-play">Play</button>
+  <button id="resetBtn" class="btn-step">&#8635; Reset</button>
+  <select id="speedSel">
+    <option value="800">0.5&#215;</option>
+    <option value="400" selected>1&#215;</option>
+    <option value="200">2&#215;</option>
+    <option value="100">4&#215;</option>
+  </select>
 </div>
 
 <script>
@@ -333,6 +235,17 @@ function loadPreset(idx) {
   buildAndRun();
 }
 
+function randomExample() {
+  var pool = [1,1,2,3,4,5,6,7,8,10];
+  var len = Math.floor(Math.random() * 4) + 3;
+  var cands = [];
+  for (var i = 0; i < len; i++) cands.push(pool[Math.floor(Math.random() * pool.length)]);
+  var target = Math.floor(Math.random() * 8) + 4;
+  document.getElementById('inp-cands').value = cands.join(',');
+  document.getElementById('inp-target').value = target;
+  buildAndRun();
+}
+
 function simulate(cands, target) {
   var steps = [], results = [], callStack = [];
 
@@ -355,7 +268,6 @@ function simulate(cands, target) {
 
   function backtrack(start, path, sum) {
     callStack.push({ start: start, sum: sum, path: path.slice() });
-
     snap('enter', -1, -1,
       'backtrack(start=' + start + ', sum=' + sum + '). ' +
       (path.length ? 'path=[' + path.join(', ') + ']. ' : 'path empty. ') +
@@ -374,49 +286,37 @@ function simulate(cands, target) {
 
     for (var i = start; i < cands.length; i++) {
       var c = cands[i];
-
       if (i > start && cands[i] === cands[i - 1]) {
         snap('skip-dup', -1, i,
           'i=' + i + ' > start=' + start + ' and candidates[' + i + ']=' + c +
           ' == candidates[' + (i-1) + ']=' + cands[i-1] +
-          '. Duplicate at this depth — skip to avoid repeat combinations.',
+          '. Duplicate at this depth \u2014 skip.',
           path);
         continue;
       }
-
       if (sum + c > target) {
         snap('prune', i, -1,
-          'sum + ' + c + ' = ' + (sum + c) + ' > ' + target + '. ' +
-          'Sorted — all remaining exceed target. Break.',
+          'sum + ' + c + ' = ' + (sum + c) + ' > ' + target + '. Sorted \u2014 break.',
           path);
         break;
       }
-
       snap('try', i, -1,
-        'Try candidates[' + i + ']=' + c + '. ' +
-        'sum + ' + c + ' = ' + (sum + c) + ' ≤ ' + target + '. Safe to add.',
+        'Try candidates[' + i + ']=' + c + '. sum + ' + c + ' = ' + (sum + c) + ' \u2264 ' + target + '. Safe.',
         path);
-
       path.push(c);
       snap('add', i, -1,
-        'Appended ' + c + ' → path=[' + path.join(', ') + '], sum=' + (sum + c) + '. ' +
-        'Recurse with i+1=' + (i+1) + ' (each candidate used once).',
+        'Appended ' + c + ' \u2192 path=[' + path.join(', ') + '], sum=' + (sum + c) + '. Recurse with i+1=' + (i+1) + '.',
         path);
-
       backtrack(i + 1, path, sum + c);
-
       path.pop();
       snap('remove', i, -1,
-        'Back from recursion. Pop ' + c + ' → path=[' + path.join(', ') + '], sum=' + sum + '. ' +
-        'Try next candidate at same depth.',
+        'Back from recursion. Pop ' + c + ' \u2192 path=[' + path.join(', ') + '], sum=' + sum + '.',
         path);
     }
-
     callStack.pop();
   }
 
   backtrack(0, [], 0);
-
   var summary = results.length
     ? results.map(function(r) { return '[' + r.join(',') + ']'; }).join(', ')
     : 'none';
@@ -424,7 +324,6 @@ function simulate(cands, target) {
     'All branches explored. ' + results.length + ' unique combination' +
     (results.length === 1 ? '' : 's') + ' found: ' + summary + '.',
     []);
-
   return steps;
 }
 
@@ -435,7 +334,9 @@ window.addEventListener('DOMContentLoaded', function() {
     btnNext:  document.getElementById('stepBtn'),
     btnPlay:  document.getElementById('playBtn'),
     speedSel: document.getElementById('speedSel'),
-    render: function(s, cur, total) { renderStep(s, cur > 0, cur, total); },
+    render: function(s, cur, total) {
+      renderStep(s, cur > 0, cur, total);
+    },
   });
   buildAndRun();
 });
@@ -451,17 +352,14 @@ function buildAndRun() {
   var raw    = document.getElementById('inp-cands').value;
   var target = parseInt(document.getElementById('inp-target').value, 10);
   if (isNaN(target) || target < 1 || target > 40) return;
-
   var cands = raw.split(',')
     .map(function(s) { return parseInt(s.trim(), 10); })
     .filter(function(n) { return !isNaN(n) && n > 0; });
   if (cands.length === 0) return;
-
   cands.sort(function(a, b) { return a - b; });
   currentCands  = cands;
   currentTarget = target;
-
-  document.getElementById('target-sub').textContent = '— target = ' + target;
+  document.getElementById('target-sub').textContent = '\u2014 target = ' + target;
   var row = document.getElementById('cands-row');
   row.innerHTML = cands.map(function(c, idx) {
     var dupMark = (idx > 0 && cands[idx] === cands[idx - 1])
@@ -469,21 +367,18 @@ function buildAndRun() {
     return '<div class="cand-chip" id="cand-' + idx + '">' +
            '<span class="cand-idx">' + idx + '</span>' + c + dupMark + '</div>';
   }).join('');
-
   simSteps = simulate(cands, target);
   nav.load(simSteps);
 }
 
 function renderStep(s, animate, cur, total) {
-  var phaseEl = document.getElementById('phase-label');
-  if (phaseEl) phaseEl.textContent = 'Step ' + (cur + 1) + ' / ' + total + '  \xb7  ' + s.phase;
-
-  var descEl = document.getElementById('step-desc');
+  document.getElementById('phase-badge').textContent = s.phase || 'Step';
+  document.getElementById('step-counter').textContent = 'Step ' + (cur + 1) + ' / ' + total;
+  var descEl = document.getElementById('desc');
   if (descEl) {
     if (animate) gsap.fromTo(descEl, { opacity: 0 }, { opacity: 1, duration: 0.15 });
     descEl.textContent = s.desc;
   }
-
   renderCands(s, animate);
   renderPath(s, animate);
   renderStack(s, animate);
@@ -497,22 +392,18 @@ function renderCands(s, animate) {
     var el = document.getElementById('cand-' + idx);
     if (!el) return;
     el.className = 'cand-chip';
-
-    // Re-attach dup badge if stripped by className reset
     if (idx > 0 && currentCands[idx] === currentCands[idx - 1] && !el.querySelector('.dup-badge')) {
       var badge = document.createElement('span');
       badge.className = 'dup-badge';
       badge.textContent = 'dup';
       el.appendChild(badge);
     }
-
     if (idx === s.skipIdx) {
       el.classList.add('skipped-dup');
       if (animate) gsap.fromTo(el, { scale: 1 }, { scale: 0.92, duration: 0.12, yoyo: true, repeat: 1 });
     } else if (idx === s.candIdx) {
-      if (s.phase === 'prune') {
-        el.classList.add('pruned');
-      } else {
+      if (s.phase === 'prune') el.classList.add('pruned');
+      else {
         el.classList.add('active');
         if (animate) gsap.fromTo(el, { scale: 1 }, { scale: 1.18, duration: 0.1, yoyo: true, repeat: 1 });
       }
@@ -526,31 +417,20 @@ function renderCands(s, animate) {
 function renderPath(s, animate) {
   var row = document.getElementById('path-row');
   if (!row) return;
-
-  if (s.path.length === 0) {
-    row.innerHTML = '<span class="path-empty">empty</span>';
-    return;
-  }
-
+  if (s.path.length === 0) { row.innerHTML = '<span class="path-empty">empty</span>'; return; }
   var isFound = s.phase === 'found';
   var isPrune = s.phase === 'prune';
   var isSkip  = s.phase === 'skip-dup';
-  var cls     = 'path-item' + (isFound ? ' found' : '');
-
-  var html = s.path.map(function(v) {
-    return '<div class="' + cls + '">' + v + '</div>';
-  }).join('');
+  var cls = 'path-item' + (isFound ? ' found' : '');
+  var html = s.path.map(function(v) { return '<div class="' + cls + '">' + v + '</div>'; }).join('');
   html += '<span class="path-sum">= ' + s.sum + '</span>';
-
-  if (isFound) html += '<span class="path-tag found">&nbsp;✓ found!</span>';
-  else if (isPrune) html += '<span class="path-tag prune">&nbsp;✗ pruned</span>';
-  else if (isSkip)  html += '<span class="path-tag skip">&nbsp;↷ skip dup</span>';
-
+  if (isFound) html += '<span class="path-tag found">&nbsp;\u2713 found!</span>';
+  else if (isPrune) html += '<span class="path-tag prune">&nbsp;\u2717 pruned</span>';
+  else if (isSkip)  html += '<span class="path-tag skip">&nbsp;\u21b7 skip dup</span>';
   row.innerHTML = html;
-
   if (animate && s.phase === 'add') {
     var items = row.querySelectorAll('.path-item');
-    var last  = items[items.length - 1];
+    var last = items[items.length - 1];
     if (last) gsap.fromTo(last, { scale: 0, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.22, ease: 'back.out(2)' });
   }
   if (animate && isFound) gsap.fromTo(row, { backgroundColor: 'rgba(158,206,106,0.12)' }, { backgroundColor: 'transparent', duration: 0.6 });
@@ -560,22 +440,15 @@ function renderPath(s, animate) {
 function renderStack(s, animate) {
   var body = document.getElementById('stack-body');
   if (!body) return;
-
-  if (s.stack.length === 0) {
-    body.innerHTML = '<div style="color:var(--text-ghost);font-size:0.78rem">No active recursion.</div>';
-    return;
-  }
-
+  if (s.stack.length === 0) { body.innerHTML = '<div style="color:var(--text-ghost);font-size:0.78rem">No active recursion.</div>'; return; }
   var isWin = s.phase === 'found';
   body.innerHTML = s.stack.map(function(f, depth) {
     var isTop = depth === s.stack.length - 1;
-    var cls   = isTop ? (isWin ? 'stack-frame win' : 'stack-frame top') : 'stack-frame';
+    var cls = isTop ? (isWin ? 'stack-frame win' : 'stack-frame top') : 'stack-frame';
     var indent = '  '.repeat(depth * 2);
     var pathStr = f.path.length ? '[' + f.path.join(', ') + ']' : '[]';
-    return '<div class="' + cls + '">' + indent +
-           '► backtrack(start=' + f.start + ', sum=' + f.sum + ', path=' + pathStr + ')</div>';
+    return '<div class="' + cls + '">' + indent + '\u25ba backtrack(start=' + f.start + ', sum=' + f.sum + ', path=' + pathStr + ')</div>';
   }).join('');
-
   body.scrollTop = body.scrollHeight;
 }
 
@@ -583,7 +456,7 @@ function renderVars(s, animate) {
   function setVal(id, val) {
     var el = document.getElementById(id);
     if (!el) return;
-    var text = (val === null || val === undefined) ? '—' : String(val);
+    var text = (val === null || val === undefined) ? '\u2014' : String(val);
     if (animate && el.textContent !== text) {
       gsap.fromTo(el, { scale: 0.8, opacity: 0.4 }, { scale: 1, opacity: 1, duration: 0.22, ease: 'back.out(1.7)' });
     }
@@ -599,19 +472,12 @@ function renderResults(s, animate) {
   var list    = document.getElementById('results-list');
   var countEl = document.getElementById('result-count');
   if (!list) return;
-
   if (countEl) countEl.textContent = s.results.length ? '(' + s.results.length + ' found)' : '';
-
-  if (s.results.length === 0) {
-    list.innerHTML = '<span class="result-empty">No combinations found yet.</span>';
-    return;
-  }
-
+  if (s.results.length === 0) { list.innerHTML = '<span class="result-empty">None yet.</span>'; return; }
   list.innerHTML = s.results.map(function(combo) {
     var total = combo.reduce(function(a, b) { return a + b; }, 0);
     return '<div class="result-combo">[' + combo.join(', ') + ']&nbsp;= ' + total + '</div>';
   }).join('');
-
   if (animate && s.phase === 'found') {
     var last = list.querySelector('.result-combo:last-child');
     if (last) gsap.fromTo(last, { x: -8, opacity: 0 }, { x: 0, opacity: 1, duration: 0.28, ease: 'power2.out' });
@@ -628,12 +494,24 @@ function setCodeLines(lines, isSkip) {
   });
 }
 </script>
-
 <script>
-  if (window.self !== window.top) {
-    var bl = document.querySelector('.back-link');
-    if (bl) bl.style.display = 'none';
-  }
+(function() {
+  var handle = document.getElementById('resize-handle');
+  var panel  = document.getElementById('code-panel');
+  var dragging = false, startX = 0, startW = 0;
+  handle.addEventListener('mousedown', function(e) {
+    dragging = true; startX = e.clientX; startW = panel.offsetWidth;
+    handle.classList.add('dragging'); e.preventDefault();
+  });
+  document.addEventListener('mousemove', function(e) {
+    if (!dragging) return;
+    var delta = startX - e.clientX;
+    panel.style.width = Math.min(560, Math.max(120, startW + delta)) + 'px';
+  });
+  document.addEventListener('mouseup', function() {
+    if (dragging) { dragging = false; handle.classList.remove('dragging'); }
+  });
+})();
 </script>
 </body>
 </html>

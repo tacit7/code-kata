@@ -8,117 +8,70 @@
   <script src="../shared/gsap.min.js"></script>
   <script src="../shared/viz.js"></script>
   <style>
-    .viz-area { width: 100%; max-width: 90%; }
-    .main-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
-    .left-col, .right-col { display: flex; flex-direction: column; gap: 12px; }
-    @media (max-width: 700px) { .main-row { grid-template-columns: 1fr; } }
-
-    .timeline-panel {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--radius-lg); padding: 16px;
-      display: flex; flex-direction: column; gap: 10px;
-    }
-    .panel-title {
-      font-size: 0.72rem; font-weight: 700;
-      text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim);
-    }
-    #timeline-svg { width: 100%; display: block; overflow: visible; }
-
-    .panel-box {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--radius-lg); padding: 14px 16px;
-      display: flex; flex-direction: column; gap: 8px;
-    }
-
-    .var-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-    .var-box {
-      padding: 10px 8px; background: var(--bg); border: 1px solid var(--border);
-      border-radius: var(--radius-sm);
-      display: flex; flex-direction: column; align-items: center; gap: 3px;
-    }
-    .var-box.accent-border { border-color: var(--accent); }
-    .var-box.yellow-border { border-color: var(--yellow); }
-    .var-label { font-size: 0.65rem; font-family: monospace; color: var(--text-faint); text-align: center; }
-    .var-val   { font-size: 1.1rem; font-weight: 700; color: var(--text-bright); font-family: monospace; }
-
-    .cmp-box {
-      background: var(--bg); border: 1px solid var(--border-soft);
-      border-radius: var(--radius-sm); padding: 10px 12px;
-      display: flex; flex-direction: column; gap: 6px;
-    }
-    .cmp-row { display: flex; align-items: center; gap: 8px; font-family: monospace; font-size: 0.85rem; }
-    .cmp-side { color: var(--text-dim); }
-    .cmp-op { color: var(--yellow); font-weight: 700; }
-    .cmp-badge {
-      padding: 3px 10px; border-radius: 5px; font-size: 0.8rem; font-weight: 700;
-      display: none; font-family: monospace;
-    }
-    .cmp-badge.overlap { display: inline-block; background: #1a2b14; color: #9ece6a; border: 1px solid #4d7a23; }
-    .cmp-badge.gap     { display: inline-block; background: #2b1420; color: #f7768e; border: 1px solid #8b3a4a; }
-
-    .result-badge {
-      font-size: 0.82rem; font-weight: 600; padding: 5px 12px; border-radius: 6px;
-      font-family: monospace; display: none;
-    }
-    .result-badge.show { display: block; background: #1a2b14; color: #9ece6a; border: 1px solid #4d7a23; }
-
-    .code-panel {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--radius-lg); overflow: hidden;
-    }
-    .code-header { padding: 8px 14px; font-size: 0.72rem; font-weight: 600; color: var(--text-dim); border-bottom: 1px solid var(--border); background: var(--bg); }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: "Fira Code", "Cascadia Code", monospace; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+    #header { padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+    #phase-badge { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; padding: 3px 10px; border-radius: var(--radius-sm); background: #1e3a5f; color: var(--blue); border: 1px solid var(--blue); }
+    #step-counter { font-size: 12px; color: var(--text-muted); margin-left: auto; }
+    .viz-inputs { width: 100%; max-width: 100%; padding: 10px 16px; background: var(--surface); border: none; border-bottom: 1px solid var(--border); border-radius: 0; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; flex-shrink: 0; }
+    .viz-inputs label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); display: block; margin-bottom: 3px; }
+    .viz-inputs select, .viz-inputs input { background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 0 8px; height: 30px; font-size: 0.82rem; font-family: inherit; appearance: none; -webkit-appearance: none; }
+    .vi-btn-run { padding: 6px 14px; border-radius: 6px; font-size: 0.82rem; font-weight: 600; cursor: pointer; font-family: inherit; background: var(--accent); color: #fff; border: none; }
+    .vi-btn-rand { padding: 6px 14px; border-radius: 6px; font-size: 0.82rem; cursor: pointer; font-family: inherit; background: var(--bg); color: var(--text); border: 1px solid var(--border); }
+    #main { display: flex; flex: 1; overflow: hidden; }
+    #viz-area { flex: 1; display: flex; flex-direction: column; padding: 12px 16px; gap: 8px; overflow-y: auto; }
+    #desc { font-size: 12px; color: var(--text-muted); line-height: 1.4; }
+    #resize-handle { width: 5px; flex-shrink: 0; cursor: col-resize; background: transparent; border-left: 1px solid var(--border); transition: background .15s; z-index: 10; }
+    #resize-handle:hover, #resize-handle.dragging { background: var(--accent); }
+    #code-panel { width: 300px; min-width: 120px; max-width: 560px; flex-shrink: 0; background: var(--surface); border-right: 1px solid var(--border); overflow-y: auto; display: flex; flex-direction: column; }
+    .code-header { padding: 8px 14px; font-size: 0.72rem; font-weight: 600; color: var(--text-dim); border-bottom: 1px solid var(--border); background: var(--bg); flex-shrink: 0; }
     .code-body { padding: 10px 0; font-size: 0.78rem; line-height: 1.75; white-space: pre; }
     .code-line { display: flex; align-items: center; padding: 0 14px; }
     .code-line.hl { background: var(--border-soft); border-left: 2px solid var(--accent); }
     .ln { min-width: 24px; color: var(--text-ghost); user-select: none; font-size: 0.7rem; }
+    #sidebar { width: 220px; flex-shrink: 0; background: var(--surface); border-left: 1px solid var(--border); overflow-y: auto; padding: 12px 10px; display: flex; flex-direction: column; gap: 10px; }
+    .sidebar-section { font-size: 11px; }
+    .sidebar-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--text-dim); margin-bottom: 6px; }
+    #nav-row { flex-shrink: 0; display: flex; align-items: center; gap: 8px; padding: 10px 16px; background: var(--surface); border-top: 1px solid var(--border); }
+    .btn-step, .btn-play { padding: 6px 14px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--surface); color: var(--text); font-family: inherit; font-size: 12px; cursor: pointer; transition: background .15s; }
+    .btn-step:hover { background: #334155; }
+    .btn-play { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .btn-play:hover { background: var(--accent-hover); }
+    select { padding: 5px 8px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: #1e293b; color: var(--text); font-size: 12px; font-family: inherit; cursor: pointer; }
 
-    .btn-play {
-      background: #15803d; border: none; border-radius: var(--radius-sm);
-      color: #fff; cursor: pointer; font-size: 0.88rem; font-weight: 600;
-      padding: 9px 16px; transition: background 0.2s;
-    }
-    .btn-play:hover { background: #166534; }
-    .btn-play.playing { background: #c2410c; }
-    .btn-play.playing:hover { background: #9a3412; }
-    .btn-play:disabled { opacity: 0.4; cursor: not-allowed; }
-    .speed-select {
-      background: var(--bg); border: 1px solid var(--border);
-      border-radius: var(--radius-sm); color: var(--text);
-      font-size: 0.85rem; padding: 8px 10px; outline: none; width: 80px;
-    }
-    .nav-row { display: flex; gap: 8px; align-items: center; }
-
-    .preset-row { display: flex; gap: 8px; flex-wrap: wrap; }
-    .btn-preset {
-      background: var(--bg); border: 1px solid var(--border);
-      border-radius: var(--radius-sm); color: var(--text-dim);
-      font-size: 0.78rem; padding: 5px 10px; cursor: pointer;
-      transition: border-color 0.15s, color 0.15s;
-    }
+    /* Merge Intervals unique CSS */
+    .timeline-panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 12px; display: flex; flex-direction: column; gap: 6px; flex-shrink: 0; }
+    #timeline-svg { width: 100%; display: block; overflow: visible; }
+    .result-bar { font-size: 0.8rem; font-weight: 600; padding: 5px 10px; border-radius: 5px; font-family: monospace; display: none; }
+    .result-bar.show { display: block; background: #1a2b14; color: #9ece6a; border: 1px solid #4d7a23; }
+    .var-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+    .var-box { padding: 7px 6px; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm); display: flex; flex-direction: column; align-items: center; gap: 2px; }
+    .var-box.accent-border { border-color: var(--accent); }
+    .var-box.yellow-border { border-color: var(--yellow); }
+    .var-label { font-size: 0.6rem; font-family: monospace; color: var(--text-faint); text-align: center; }
+    .var-val   { font-size: 0.95rem; font-weight: 700; color: var(--text-bright); font-family: monospace; }
+    .cmp-box { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 7px 9px; display: flex; flex-direction: column; gap: 5px; }
+    .cmp-row { display: flex; align-items: center; gap: 6px; font-family: monospace; font-size: 0.82rem; }
+    .cmp-side { color: var(--text-dim); }
+    .cmp-op { color: var(--yellow); font-weight: 700; }
+    .cmp-badge { padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 700; display: none; font-family: monospace; }
+    .cmp-badge.overlap { display: inline-block; background: #1a2b14; color: #9ece6a; border: 1px solid #4d7a23; }
+    .cmp-badge.gap     { display: inline-block; background: #2b1420; color: #f7768e; border: 1px solid #8b3a4a; }
+    .preset-row { display: flex; gap: 6px; flex-wrap: wrap; }
+    .btn-preset { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text-dim); font-size: 0.75rem; padding: 4px 9px; cursor: pointer; transition: border-color 0.15s; }
     .btn-preset:hover { border-color: var(--accent); color: var(--accent-pale); }
-    .btn-preset.active { border-color: var(--accent); color: var(--accent-pale); background: var(--surface-dark); }
-
-    .legend-row { display: flex; align-items: center; gap: 8px; font-size: 0.78rem; color: var(--text-muted); }
-    .legend-swatch { width: 28px; height: 14px; border-radius: 3px; flex-shrink: 0; }
-
-    .kw { color: #bb9af7; }
-    .fn { color: #7dcfff; }
-    .bi { color: #ff9e64; }
-    .op { color: #c0caf5; }
-    .nb { color: #9ece6a; }
-    .cm { color: #3b4261; }
+    .btn-preset.active { border-color: var(--accent); color: var(--accent-pale); background: #1e293b; }
+    .legend-col { display: flex; flex-direction: column; gap: 5px; }
+    .legend-row { display: flex; align-items: center; gap: 6px; font-size: 0.7rem; color: var(--text-muted); }
+    .legend-swatch { width: 22px; height: 12px; border-radius: 2px; flex-shrink: 0; }
+    .kw { color: #bb9af7; } .fn { color: #7dcfff; } .bi { color: #ff9e64; }
+    .op { color: #c0caf5; } .nb { color: #9ece6a; } .cm { color: #3b4261; }
   </style>
 </head>
-<body class="page">
-
-<div class="page-header">
-  <a class="back-link" href="../index.html">&larr; All Algorithms</a>
-  <div class="page-title">Merge Intervals</div>
-  <div class="page-sub">LeetCode 56 &middot; Sort by start, sweep left&ndash;to&ndash;right, extend or close the merge window &middot; O(n log n) time &middot; O(n) space</div>
-</div>
+<body>
 
 <div class="viz-inputs">
-  <div class="field">
+  <div>
     <label>Preset</label>
     <div class="preset-row" id="preset-row">
       <button class="btn-preset active" onclick="loadPreset(0,this)">Classic</button>
@@ -126,112 +79,99 @@
       <button class="btn-preset" onclick="loadPreset(2,this)">Nested</button>
     </div>
   </div>
-  <div class="field">
+  <div>
     <label>Intervals (flat pairs: s,e,s,e,...)</label>
-    <input id="inp-intervals" type="text" value="1,3,2,6,8,10,15,18" style="width:240px" />
+    <input id="inp-intervals" type="text" value="1,3,2,6,8,10,15,18" style="width:210px" />
   </div>
-  <button class="btn-primary" onclick="buildAndRun()">Build &amp; Run</button>
+  <button class="vi-btn-run" onclick="buildAndRun()">Build &amp; Run</button>
+  <button class="vi-btn-rand" onclick="randomExample()">&#127922; Random</button>
+</div>
+<div class="controls"></div>
+
+<div id="header">
+  <span id="phase-badge">Setup</span>
+  <span style="font-size:13px;font-weight:700;">Merge Intervals</span>
+  <span id="step-counter">Step 0 / 0</span>
 </div>
 
-<div class="viz-area">
-  <div class="main-row">
-    <div class="left-col">
-      <div class="timeline-panel">
-        <div class="panel-title">Timeline</div>
-        <svg id="timeline-svg" viewBox="0 0 700 100" preserveAspectRatio="xMidYMid meet">
-          <text x="350" y="55" text-anchor="middle" fill="#3b4261" font-size="13" font-family="monospace">Run simulation to see timeline</text>
-        </svg>
-      </div>
-      <div class="code-panel">
-        <div class="code-header">Python</div>
-        <div class="code-body" id="code-body"></div>
+<div id="main">
+  <div id="viz-area">
+    <div class="timeline-panel">
+      <div class="sidebar-title">Timeline</div>
+      <svg id="timeline-svg" viewBox="0 0 700 100" preserveAspectRatio="xMidYMid meet">
+        <text x="350" y="55" text-anchor="middle" fill="#3b4261" font-size="13" font-family="monospace">Run simulation to see timeline</text>
+      </svg>
+    </div>
+    <div id="desc" style="font-size:12px;color:var(--text-muted)">Choose a preset and click Build &amp; Run.</div>
+    <div class="result-bar" id="result-badge"></div>
+  </div>
+
+  <div id="resize-handle"></div>
+
+  <div id="code-panel">
+    <div class="code-header">Python</div>
+    <div class="code-body" id="code-body"></div>
+  </div>
+
+  <div id="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-title">Variables</div>
+      <div class="var-grid">
+        <div class="var-box yellow-border">
+          <div class="var-label">current interval</div>
+          <div class="var-val" id="vv-curr">&mdash;</div>
+        </div>
+        <div class="var-box accent-border">
+          <div class="var-label">merge window</div>
+          <div class="var-val" id="vv-win">&mdash;</div>
+        </div>
       </div>
     </div>
-
-    <div class="right-col">
-      <div style="display:flex;gap:12px">
-        <div class="panel-box" style="flex:0 0 auto">
-          <div class="nav-row">
-            <button class="stepBtn" id="prevBtn" disabled>&larr;</button>
-            <button class="stepBtn" id="stepBtn" disabled>&rarr;</button>
-            <button class="playBtn" id="playBtn" disabled>&#9654; Play</button>
-            <select class="speedSel" id="speedSel">
-              <option value="900">Slow</option>
-              <option value="450" selected>Medium</option>
-              <option value="150">Fast</option>
-            </select>
-          </div>
-        </div>
-        <div class="panel-box" style="flex:1;min-width:0">
-          <div class="panel-title" id="phase-label">&mdash;</div>
-          <div style="font-size:0.82rem;color:var(--text-muted);margin-top:2px" id="step-desc">Choose a preset and click Build &amp; Run.</div>
-          <div class="result-badge" id="result-badge"></div>
+    <div class="sidebar-section">
+      <div class="sidebar-title">Overlap Check</div>
+      <div class="cmp-box">
+        <div class="cmp-row">
+          <span class="cmp-side" id="cmp-lhs">current.start</span>
+          <span class="cmp-op">&le;</span>
+          <span class="cmp-side" id="cmp-rhs">last.end</span>
+          <span class="cmp-badge" id="cmp-badge"></span>
         </div>
       </div>
-
-      <div class="panel-box">
-        <div class="panel-title">Variables</div>
-        <div class="var-grid">
-          <div class="var-box yellow-border">
-            <div class="var-label">current interval</div>
-            <div class="var-val" id="vv-curr">&mdash;</div>
-          </div>
-          <div class="var-box accent-border">
-            <div class="var-label">merge window (last)</div>
-            <div class="var-val" id="vv-win">&mdash;</div>
-          </div>
-        </div>
-        <div class="cmp-box">
-          <div class="panel-title" style="margin-bottom:2px">Overlap Check</div>
-          <div class="cmp-row">
-            <span class="cmp-side" id="cmp-lhs">current.start</span>
-            <span class="cmp-op">&le;</span>
-            <span class="cmp-side" id="cmp-rhs">last.end</span>
-            <span class="cmp-badge" id="cmp-badge"></span>
-          </div>
-        </div>
-      </div>
-
-      <div class="panel-box">
-        <div class="panel-title">Legend</div>
-        <div style="display:flex;flex-direction:column;gap:7px">
-          <div class="legend-row">
-            <div class="legend-swatch" style="background:#2a2007;border:1.5px solid #e0af68"></div>
-            <span>Current interval (being compared)</span>
-          </div>
-          <div class="legend-row">
-            <div class="legend-swatch" style="background:#0d1a35;border:1.5px solid #7aa2f7"></div>
-            <span>Active merge window</span>
-          </div>
-          <div class="legend-row">
-            <div class="legend-swatch" style="background:#1a2b14;border:1.5px solid #4d7a23"></div>
-            <span>Completed merged interval</span>
-          </div>
-          <div class="legend-row">
-            <div class="legend-swatch" style="background:#1a1b26;border:1.5px solid #414868"></div>
-            <span>Pending / not yet processed</span>
-          </div>
-          <div class="legend-row">
-            <div class="legend-swatch" style="background:#1e1e2e;border:1.5px solid #2d3148;opacity:0.6"></div>
-            <span>Already processed (input row)</span>
-          </div>
-        </div>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-title">Legend</div>
+      <div class="legend-col">
+        <div class="legend-row"><div class="legend-swatch" style="background:#2a2007;border:1.5px solid #e0af68"></div><span>Current interval</span></div>
+        <div class="legend-row"><div class="legend-swatch" style="background:#0d1a35;border:1.5px solid #7aa2f7"></div><span>Merge window</span></div>
+        <div class="legend-row"><div class="legend-swatch" style="background:#1a2b14;border:1.5px solid #4d7a23"></div><span>Completed merge</span></div>
+        <div class="legend-row"><div class="legend-swatch" style="background:#1a1b26;border:1.5px solid #414868"></div><span>Pending</span></div>
       </div>
     </div>
   </div>
+</div>
+
+<div id="nav-row">
+  <button class="btn-step" id="prevBtn" disabled>&#8592; Prev</button>
+  <button class="btn-step" id="stepBtn" disabled>Step &#8594;</button>
+  <button class="btn-play" id="playBtn" disabled>Play</button>
+  <button class="btn-step" id="resetBtn">&#8635; Reset</button>
+  <select id="speedSel">
+    <option value="900">0.5&#215;</option>
+    <option value="450" selected>1&#215;</option>
+    <option value="150">2&#215;</option>
+    <option value="80">4&#215;</option>
+  </select>
 </div>
 
 <script>
 var PRESETS = [
-  { label: 'Classic',    raw: '1,3,2,6,8,10,15,18' },
+  { label: 'Classic',     raw: '1,3,2,6,8,10,15,18' },
   { label: 'Chain merge', raw: '1,4,4,5,3,7,6,8' },
-  { label: 'Nested',     raw: '1,10,2,5,3,6,7,9' },
+  { label: 'Nested',      raw: '1,10,2,5,3,6,7,9' },
 ];
 
 var simSteps = [], nav;
-var activePresetIdx = 0;
 
-// ── Code panel ──────────────────────────────────────────────────────────────
 var CODE = [
   [1,  '<span class="kw">def</span> <span class="fn">merge</span><span class="op">(</span>intervals<span class="op">):</span>'],
   [2,  '    intervals<span class="op">.</span><span class="bi">sort</span><span class="op">(</span><span class="kw">key</span><span class="op">=</span><span class="kw">lambda</span> x<span class="op">:</span> x<span class="op">[</span><span class="nb">0</span><span class="op">])</span>'],
@@ -245,6 +185,197 @@ var CODE = [
   [10, '    <span class="kw">return</span> merged'],
 ];
 
+function buildCodePanel() {
+  var body = document.getElementById('code-body');
+  body.innerHTML = CODE.map(function(e) {
+    return '<div class="code-line" id="cl-' + e[0] + '"><span class="ln">' + e[0] + '</span><span>' + e[1] + '</span></div>';
+  }).join('');
+}
+
+function fmtIv(iv) { return '[' + iv[0] + ',' + iv[1] + ']'; }
+
+function parseIntervals(raw) {
+  var nums = raw.split(',').map(function(s) { return parseInt(s.trim(), 10); }).filter(function(n) { return !isNaN(n); });
+  var result = [];
+  for (var i = 0; i + 1 < nums.length; i += 2) {
+    if (nums[i] <= nums[i + 1]) result.push([nums[i], nums[i + 1]]);
+  }
+  return result;
+}
+
+function loadPreset(idx, btn) {
+  document.querySelectorAll('.btn-preset').forEach(function(b) { b.classList.remove('active'); });
+  if (btn) btn.classList.add('active');
+  document.getElementById('inp-intervals').value = PRESETS[idx].raw;
+}
+
+function randomExample() {
+  var count = Math.floor(Math.random() * 4) + 3;
+  var pairs = [];
+  for (var i = 0; i < count; i++) {
+    var start = Math.floor(Math.random() * 20) + 1;
+    var end   = start + Math.floor(Math.random() * 8) + 1;
+    pairs.push(start, end);
+  }
+  document.getElementById('inp-intervals').value = pairs.join(',');
+  document.querySelectorAll('.btn-preset').forEach(function(b) { b.classList.remove('active'); });
+  buildAndRun();
+}
+
+function buildAndRun() {
+  var raw = document.getElementById('inp-intervals').value;
+  var intervals = parseIntervals(raw);
+  if (intervals.length < 2) { alert('Need at least 2 intervals.'); return; }
+  simSteps = simulate(intervals);
+  nav.load(simSteps);
+}
+
+function simulate(intervals) {
+  var steps = [];
+  function snap(phase, desc, lines, opts) {
+    opts = opts || {};
+    steps.push({ phase: phase, desc: desc, lines: lines,
+      sorted:     opts.sorted     || intervals.slice(),
+      isSorted:   !!opts.isSorted,
+      currentIdx: opts.currentIdx !== undefined ? opts.currentIdx : -1,
+      mergeWindow: opts.mergeWindow ? opts.mergeWindow.slice() : null,
+      completed:  (opts.completed || []).map(function(x) { return x.slice(); }),
+      overlap:    opts.overlap !== undefined ? opts.overlap : null });
+  }
+
+  snap('Input', 'Input: ' + intervals.length + ' intervals. Merge all overlapping ones.', [1], { sorted: intervals.slice(), isSorted: false, completed: [] });
+
+  var sorted = intervals.slice().sort(function(a, b) { return a[0] - b[0]; });
+  snap('Sort', 'Sort by start time: ' + sorted.map(fmtIv).join(' → ') + '. Sweep left to right.', [2], { sorted: sorted.slice(), isSorted: true, completed: [] });
+
+  var merged = [sorted[0].slice()];
+  snap('Init', 'Seed merge window with first interval ' + fmtIv(sorted[0]) + '.', [3], { sorted: sorted, isSorted: true, currentIdx: 0, mergeWindow: merged[0].slice(), completed: [] });
+
+  for (var i = 1; i < sorted.length; i++) {
+    var cur = sorted[i];
+    var last = merged[merged.length - 1];
+    snap('Compare', 'Current ' + fmtIv(cur) + ' vs window end ' + last[1] + '. Is ' + cur[0] + ' ≤ ' + last[1] + '?', [4, 5, 6], { sorted: sorted, isSorted: true, currentIdx: i, mergeWindow: last.slice(), completed: merged.slice(0, merged.length - 1).map(function(x) { return x.slice(); }), overlap: null });
+    if (cur[0] <= last[1]) {
+      var oldEnd = last[1];
+      last[1] = Math.max(last[1], cur[1]);
+      snap('Extend', cur[0] + ' ≤ ' + oldEnd + ' → overlap. Extend window end: max(' + oldEnd + ', ' + cur[1] + ') = ' + last[1] + '.', [6, 7], { sorted: sorted, isSorted: true, currentIdx: i, mergeWindow: last.slice(), completed: merged.slice(0, merged.length - 1).map(function(x) { return x.slice(); }), overlap: true });
+    } else {
+      snap('Close', cur[0] + ' > ' + last[1] + ' → gap. Close ' + fmtIv(last) + ', start new window ' + fmtIv(cur) + '.', [8, 9], { sorted: sorted, isSorted: true, currentIdx: i, mergeWindow: cur.slice(), completed: merged.slice().map(function(x) { return x.slice(); }), overlap: false });
+      merged.push(cur.slice());
+    }
+  }
+
+  snap('Done', 'All intervals processed. Merged result: ' + merged.map(fmtIv).join(', ') + '.', [10], { sorted: sorted, isSorted: true, currentIdx: -1, mergeWindow: null, completed: merged.slice().map(function(x) { return x.slice(); }), overlap: null });
+  return steps;
+}
+
+var C = {
+  pending:   { fill: '#1a1b26', stroke: '#414868', text: '#565f89' },
+  processed: { fill: '#1e1e2e', stroke: '#292e42', text: '#3b4261' },
+  current:   { fill: '#2a2007', stroke: '#e0af68', text: '#e0af68' },
+  window:    { fill: '#0d1a35', stroke: '#7aa2f7', text: '#7aa2f7' },
+  completed: { fill: '#1a2b14', stroke: '#4d7a23', text: '#9ece6a' },
+  axis: '#414868', axisText: '#565f89', label: '#3b4261', divider: '#292e42',
+};
+
+function renderSVG(snap, animate) {
+  var svg = document.getElementById('timeline-svg');
+  if (!snap.sorted || snap.sorted.length === 0) return;
+  var n = snap.sorted.length;
+  var W = 700, PAD_L = 58, PAD_R = 24, CW = W - PAD_L - PAD_R;
+  var BAR_H = 20, ROW_H = 28;
+  var allVals = [];
+  snap.sorted.forEach(function(iv) { allVals.push(iv[0], iv[1]); });
+  if (snap.mergeWindow) allVals.push(snap.mergeWindow[0], snap.mergeWindow[1]);
+  snap.completed.forEach(function(iv) { allVals.push(iv[0], iv[1]); });
+  var minV = Math.min.apply(null, allVals), maxV = Math.max.apply(null, allVals);
+  var span = maxV - minV || 1;
+  var vPad = span * 0.08, vMin = minV - vPad, vMax = maxV + vPad;
+  function xS(v) { return PAD_L + (v - vMin) / (vMax - vMin) * CW; }
+  var AXIS_Y = 22, INPUT_Y0 = 42;
+  var DIV1_Y = INPUT_Y0 + n * ROW_H + 8;
+  var WIN_Y0  = DIV1_Y + 22;
+  var DIV2_Y  = WIN_Y0 + ROW_H + 6;
+  var RES_Y0  = DIV2_Y + 22;
+  var TOTAL_H = RES_Y0 + ROW_H + 12;
+  svg.setAttribute('viewBox', '0 0 ' + W + ' ' + TOTAL_H);
+  var parts = [];
+  var rawStep = span / 5, step = Math.max(1, Math.round(rawStep));
+  var tickStart = Math.ceil(minV / step) * step;
+  parts.push('<line x1="' + PAD_L + '" y1="' + AXIS_Y + '" x2="' + (W - PAD_R) + '" y2="' + AXIS_Y + '" stroke="' + C.axis + '" stroke-width="1"/>');
+  for (var tv = tickStart; tv <= maxV; tv += step) {
+    var tx = xS(tv);
+    parts.push('<line x1="' + tx + '" y1="' + (AXIS_Y - 4) + '" x2="' + tx + '" y2="' + (AXIS_Y + 4) + '" stroke="' + C.axis + '" stroke-width="1"/>');
+    parts.push('<text x="' + tx + '" y="' + (AXIS_Y + 16) + '" text-anchor="middle" fill="' + C.axisText + '" font-size="10" font-family="monospace">' + tv + '</text>');
+  }
+  parts.push('<text x="' + (PAD_L - 4) + '" y="' + (INPUT_Y0 - 6) + '" text-anchor="end" fill="' + C.label + '" font-size="10" font-weight="600" letter-spacing="0.05em">INPUTS</text>');
+  snap.sorted.forEach(function(iv, idx) {
+    var barY = INPUT_Y0 + idx * ROW_H, barCy = barY + BAR_H / 2;
+    var x1 = xS(iv[0]), x2 = xS(iv[1]), bw = Math.max(x2 - x1, 2);
+    var style = idx === snap.currentIdx ? C.current : (snap.currentIdx >= 0 && idx < snap.currentIdx ? C.processed : C.pending);
+    parts.push('<text x="' + (PAD_L - 5) + '" y="' + (barCy + 4) + '" text-anchor="end" fill="' + style.text + '" font-size="10" font-family="monospace">' + fmtIv(iv) + '</text>');
+    parts.push('<rect x="' + x1 + '" y="' + barY + '" width="' + bw + '" height="' + BAR_H + '" rx="4" fill="' + style.fill + '" stroke="' + style.stroke + '" stroke-width="1.5"/>');
+    if (bw > 30) parts.push('<text x="' + (x1 + bw / 2) + '" y="' + (barCy + 4) + '" text-anchor="middle" fill="' + style.text + '" font-size="9.5" font-family="monospace" font-weight="600">' + fmtIv(iv) + '</text>');
+  });
+  parts.push('<line x1="' + (PAD_L - 10) + '" y1="' + DIV1_Y + '" x2="' + (W - PAD_R) + '" y2="' + DIV1_Y + '" stroke="' + C.divider + '" stroke-dasharray="4,4"/>');
+  parts.push('<text x="' + (PAD_L - 4) + '" y="' + (WIN_Y0 - 5) + '" text-anchor="end" fill="' + C.label + '" font-size="10" font-weight="600" letter-spacing="0.05em">WINDOW</text>');
+  if (snap.mergeWindow) {
+    var wiv = snap.mergeWindow, wx1 = xS(wiv[0]), wx2 = xS(wiv[1]), wbw = Math.max(wx2 - wx1, 2), wcy = WIN_Y0 + BAR_H / 2;
+    parts.push('<rect x="' + wx1 + '" y="' + WIN_Y0 + '" width="' + wbw + '" height="' + BAR_H + '" rx="4" fill="' + C.window.fill + '" stroke="' + C.window.stroke + '" stroke-width="2"/>');
+    if (wbw > 28) parts.push('<text x="' + (wx1 + wbw / 2) + '" y="' + (wcy + 4) + '" text-anchor="middle" fill="' + C.window.text + '" font-size="9.5" font-family="monospace" font-weight="700">' + fmtIv(wiv) + '</text>');
+  } else { parts.push('<text x="' + (PAD_L + 10) + '" y="' + (WIN_Y0 + 13) + '" fill="' + C.label + '" font-size="10" font-family="monospace">—</text>'); }
+  parts.push('<line x1="' + (PAD_L - 10) + '" y1="' + DIV2_Y + '" x2="' + (W - PAD_R) + '" y2="' + DIV2_Y + '" stroke="' + C.divider + '" stroke-dasharray="4,4"/>');
+  parts.push('<text x="' + (PAD_L - 4) + '" y="' + (RES_Y0 - 5) + '" text-anchor="end" fill="' + C.label + '" font-size="10" font-weight="600" letter-spacing="0.05em">RESULT</text>');
+  if (snap.completed.length > 0) {
+    snap.completed.forEach(function(iv) {
+      var rx1 = xS(iv[0]), rx2 = xS(iv[1]), rbw = Math.max(rx2 - rx1, 2), rcy = RES_Y0 + BAR_H / 2;
+      parts.push('<rect x="' + rx1 + '" y="' + RES_Y0 + '" width="' + rbw + '" height="' + BAR_H + '" rx="4" fill="' + C.completed.fill + '" stroke="' + C.completed.stroke + '" stroke-width="1.5"/>');
+      if (rbw > 28) parts.push('<text x="' + (rx1 + rbw / 2) + '" y="' + (rcy + 4) + '" text-anchor="middle" fill="' + C.completed.text + '" font-size="9.5" font-family="monospace" font-weight="600">' + fmtIv(iv) + '</text>');
+    });
+  } else { parts.push('<text x="' + (PAD_L + 10) + '" y="' + (RES_Y0 + 13) + '" fill="' + C.label + '" font-size="10" font-family="monospace">building…</text>'); }
+  if (snap.currentIdx >= 0 && snap.overlap === null && snap.mergeWindow) {
+    var cur = snap.sorted[snap.currentIdx];
+    var csx = xS(cur[0]), lastEndX = xS(snap.mergeWindow[1]);
+    parts.push('<line x1="' + csx + '" y1="' + (INPUT_Y0 + snap.currentIdx * ROW_H) + '" x2="' + csx + '" y2="' + (WIN_Y0 + BAR_H) + '" stroke="#e0af68" stroke-width="1" stroke-dasharray="3,3" opacity="0.5"/>');
+    parts.push('<line x1="' + lastEndX + '" y1="' + WIN_Y0 + '" x2="' + lastEndX + '" y2="' + (WIN_Y0 + BAR_H) + '" stroke="#7aa2f7" stroke-width="1.5" stroke-dasharray="3,3" opacity="0.6"/>');
+  }
+  svg.innerHTML = parts.join('');
+}
+
+function renderVars(snap, animate) {
+  function setVal(id, val) {
+    var el = document.getElementById(id); if (!el) return;
+    var text = (val === null || val === undefined) ? '—' : val;
+    if (animate && el.textContent !== text) gsap.fromTo(el, { scale: 0.85, opacity: 0.4 }, { scale: 1, opacity: 1, duration: 0.2, ease: 'back.out(1.7)' });
+    el.textContent = text;
+  }
+  var cur = snap.currentIdx >= 0 ? snap.sorted[snap.currentIdx] : null;
+  setVal('vv-curr', cur ? fmtIv(cur) : null);
+  setVal('vv-win',  snap.mergeWindow ? fmtIv(snap.mergeWindow) : null);
+  var lhsEl = document.getElementById('cmp-lhs'), rhsEl = document.getElementById('cmp-rhs'), badgeEl = document.getElementById('cmp-badge');
+  if (cur && snap.mergeWindow) {
+    lhsEl.textContent = cur[0]; rhsEl.textContent = snap.mergeWindow[1];
+    badgeEl.className = 'cmp-badge';
+    if (snap.overlap === true) { badgeEl.className = 'cmp-badge overlap'; badgeEl.textContent = 'overlap → extend'; }
+    else if (snap.overlap === false) { badgeEl.className = 'cmp-badge gap'; badgeEl.textContent = 'gap → close'; }
+    else { badgeEl.textContent = ''; }
+  } else { lhsEl.textContent = 'current.start'; rhsEl.textContent = 'last.end'; badgeEl.className = 'cmp-badge'; badgeEl.textContent = ''; }
+}
+
+function renderCode(lines) {
+  CODE.forEach(function(e) {
+    var el = document.getElementById('cl-' + e[0]); if (!el) return;
+    if (lines.indexOf(e[0]) >= 0) el.classList.add('hl');
+    else el.classList.remove('hl');
+  });
+}
+
+function renderStep(snap, animate) {
+  renderSVG(snap, animate);
+  renderVars(snap, animate);
+  renderCode(snap.lines);
+}
+
 window.addEventListener('DOMContentLoaded', function() {
   buildCodePanel();
   loadPreset(0, document.querySelector('.btn-preset'));
@@ -256,371 +387,42 @@ window.addEventListener('DOMContentLoaded', function() {
     speedSel: document.getElementById('speedSel'),
     render: function(snap, cur, total) {
       renderStep(snap, cur > 0);
-      var phaseEl = document.getElementById('phase-label');
-      var descEl  = document.getElementById('step-desc');
-      if (phaseEl) phaseEl.textContent = 'Step ' + (cur + 1) + ' / ' + total + '  ·  ' + snap.phase;
-      if (descEl) {
-        gsap.fromTo(descEl, { opacity: 0 }, { opacity: 1, duration: 0.15 });
-        descEl.textContent = snap.desc;
-      }
+      document.getElementById('phase-badge').textContent = snap.phase || '';
+      document.getElementById('step-counter').textContent = 'Step ' + (cur + 1) + ' / ' + total;
+      var descEl = document.getElementById('desc');
+      if (descEl) { gsap.fromTo(descEl, { opacity: 0 }, { opacity: 1, duration: 0.15 }); descEl.textContent = snap.desc; }
       var badge = document.getElementById('result-badge');
       if (badge) {
-        badge.className = 'result-badge';
+        badge.className = 'result-bar';
         badge.textContent = '';
-        if (snap.phase === 'Done') {
-          badge.className = 'result-badge show';
-          badge.textContent = 'Result: ' + snap.completed.map(fmtIv).join(', ');
-        }
+        if (snap.phase === 'Done') { badge.className = 'result-bar show'; badge.textContent = 'Result: ' + snap.completed.map(fmtIv).join(', '); }
       }
     }
   });
+
+  document.getElementById('resetBtn').addEventListener('click', function() { buildAndRun(); });
 });
-
-function buildCodePanel() {
-  var body = document.getElementById('code-body');
-  body.innerHTML = CODE.map(function(e) {
-    return '<div class="code-line" id="cl-' + e[0] + '"><span class="ln">' + e[0] + '</span><span>' + e[1] + '</span></div>';
-  }).join('');
-}
-
-function loadPreset(idx, btn) {
-  activePresetIdx = idx;
-  document.querySelectorAll('.btn-preset').forEach(function(b) { b.classList.remove('active'); });
-  if (btn) btn.classList.add('active');
-  document.getElementById('inp-intervals').value = PRESETS[idx].raw;
-}
-
-function parseIntervals(raw) {
-  var nums = raw.split(',').map(function(s) { return parseInt(s.trim(), 10); }).filter(function(n) { return !isNaN(n); });
-  var result = [];
-  for (var i = 0; i + 1 < nums.length; i += 2) {
-    if (nums[i] <= nums[i + 1]) result.push([nums[i], nums[i + 1]]);
-  }
-  return result;
-}
-
-function buildAndRun() {
-  var raw = document.getElementById('inp-intervals').value;
-  var intervals = parseIntervals(raw);
-  if (intervals.length < 2) {
-    alert('Need at least 2 intervals.');
-    return;
-  }
-  simSteps = simulate(intervals);
-  nav.load(simSteps);
-}
-
-// ── Simulation ───────────────────────────────────────────────────────────────
-function fmtIv(iv) { return '[' + iv[0] + ',' + iv[1] + ']'; }
-
-function simulate(intervals) {
-  var steps = [];
-
-  function snap(phase, desc, lines, opts) {
-    opts = opts || {};
-    steps.push({
-      phase: phase,
-      desc: desc,
-      lines: lines,
-      sorted:     opts.sorted     || intervals.slice(),
-      isSorted:   !!opts.isSorted,
-      currentIdx: opts.currentIdx !== undefined ? opts.currentIdx : -1,
-      mergeWindow: opts.mergeWindow ? opts.mergeWindow.slice() : null,
-      completed:  (opts.completed || []).map(function(x) { return x.slice(); }),
-      overlap:    opts.overlap !== undefined ? opts.overlap : null,
-    });
-  }
-
-  // Step 1: Input
-  snap('Input', 'Input: ' + intervals.length + ' intervals. We need to merge all overlapping ones.', [1], {
-    sorted: intervals.slice(),
-    isSorted: false,
-    completed: [],
-  });
-
-  // Step 2: Sort
-  var sorted = intervals.slice().sort(function(a, b) { return a[0] - b[0]; });
-  snap('Sort', 'Sort by start time: ' + sorted.map(fmtIv).join(' → ') + '. Now sweep left to right.', [2], {
-    sorted: sorted.slice(),
-    isSorted: true,
-    completed: [],
-  });
-
-  // Step 3: Init with first interval
-  var merged = [sorted[0].slice()];
-  snap('Init', 'Seed merge window with first interval ' + fmtIv(sorted[0]) + '.', [3], {
-    sorted: sorted,
-    isSorted: true,
-    currentIdx: 0,
-    mergeWindow: merged[0].slice(),
-    completed: [],
-  });
-
-  // Step 4: Process remaining
-  for (var i = 1; i < sorted.length; i++) {
-    var cur = sorted[i];
-    var last = merged[merged.length - 1];
-
-    // Compare
-    snap('Compare', 'Current ' + fmtIv(cur) + ' vs window end ' + last[1] + '. Is ' + cur[0] + ' ≤ ' + last[1] + '?', [4, 5, 6], {
-      sorted: sorted,
-      isSorted: true,
-      currentIdx: i,
-      mergeWindow: last.slice(),
-      completed: merged.slice(0, merged.length - 1).map(function(x) { return x.slice(); }),
-      overlap: null,
-    });
-
-    if (cur[0] <= last[1]) {
-      var oldEnd = last[1];
-      last[1] = Math.max(last[1], cur[1]);
-      snap('Extend', cur[0] + ' ≤ ' + oldEnd + ' → overlap. Extend window end: max(' + oldEnd + ', ' + cur[1] + ') = ' + last[1] + '.', [6, 7], {
-        sorted: sorted,
-        isSorted: true,
-        currentIdx: i,
-        mergeWindow: last.slice(),
-        completed: merged.slice(0, merged.length - 1).map(function(x) { return x.slice(); }),
-        overlap: true,
-      });
-    } else {
-      snap('Close', cur[0] + ' > ' + last[1] + ' → gap. Close ' + fmtIv(last) + ', start new window ' + fmtIv(cur) + '.', [8, 9], {
-        sorted: sorted,
-        isSorted: true,
-        currentIdx: i,
-        mergeWindow: cur.slice(),
-        completed: merged.slice().map(function(x) { return x.slice(); }),
-        overlap: false,
-      });
-      merged.push(cur.slice());
-    }
-  }
-
-  // Done: push final window into completed
-  snap('Done', 'All intervals processed. Merged result: ' + merged.map(fmtIv).join(', ') + '.', [10], {
-    sorted: sorted,
-    isSorted: true,
-    currentIdx: -1,
-    mergeWindow: null,
-    completed: merged.slice().map(function(x) { return x.slice(); }),
-    overlap: null,
-  });
-
-  return steps;
-}
-
-// ── Render ───────────────────────────────────────────────────────────────────
-function renderStep(snap, animate) {
-  renderSVG(snap, animate);
-  renderVars(snap, animate);
-  renderCode(snap.lines);
-}
-
-// SVG color constants
-var C = {
-  pending:   { fill: '#1a1b26', stroke: '#414868', text: '#565f89' },
-  processed: { fill: '#1e1e2e', stroke: '#292e42', text: '#3b4261' },
-  current:   { fill: '#2a2007', stroke: '#e0af68', text: '#e0af68' },
-  window:    { fill: '#0d1a35', stroke: '#7aa2f7', text: '#7aa2f7' },
-  completed: { fill: '#1a2b14', stroke: '#4d7a23', text: '#9ece6a' },
-  axis:      '#414868',
-  axisText:  '#565f89',
-  label:     '#3b4261',
-  divider:   '#292e42',
-};
-
-function renderSVG(snap, animate) {
-  var svg = document.getElementById('timeline-svg');
-  if (!snap.sorted || snap.sorted.length === 0) return;
-
-  var n = snap.sorted.length;
-  var W = 700;
-  var PAD_L = 58;
-  var PAD_R = 24;
-  var CW = W - PAD_L - PAD_R;
-  var BAR_H = 20;
-  var ROW_H = 28;
-
-  // Compute value range
-  var allVals = [];
-  snap.sorted.forEach(function(iv) { allVals.push(iv[0], iv[1]); });
-  if (snap.mergeWindow) allVals.push(snap.mergeWindow[0], snap.mergeWindow[1]);
-  snap.completed.forEach(function(iv) { allVals.push(iv[0], iv[1]); });
-  var minV = Math.min.apply(null, allVals);
-  var maxV = Math.max.apply(null, allVals);
-  var span = maxV - minV || 1;
-  var vPad = span * 0.08;
-  var vMin = minV - vPad;
-  var vMax = maxV + vPad;
-
-  function xS(v) { return PAD_L + (v - vMin) / (vMax - vMin) * CW; }
-
-  // Layout Y positions
-  var AXIS_Y   = 22;
-  var INPUT_Y0 = 42;  // top of first input bar
-  var DIV1_Y   = INPUT_Y0 + n * ROW_H + 8;
-  var WIN_Y0   = DIV1_Y + 22;
-  var DIV2_Y   = WIN_Y0 + ROW_H + 6;
-  var RES_Y0   = DIV2_Y + 22;
-  var TOTAL_H  = RES_Y0 + ROW_H + 12;
-
-  svg.setAttribute('viewBox', '0 0 ' + W + ' ' + TOTAL_H);
-
-  var parts = [];
-
-  // ── Axis ──
-  // Compute tick step: aim for ~6 ticks
-  var rawStep = span / 5;
-  var step = Math.max(1, Math.round(rawStep));
-  var tickStart = Math.ceil(minV / step) * step;
-  parts.push('<line x1="' + PAD_L + '" y1="' + AXIS_Y + '" x2="' + (W - PAD_R) + '" y2="' + AXIS_Y + '" stroke="' + C.axis + '" stroke-width="1"/>');
-  for (var tv = tickStart; tv <= maxV; tv += step) {
-    var tx = xS(tv);
-    parts.push('<line x1="' + tx + '" y1="' + (AXIS_Y - 4) + '" x2="' + tx + '" y2="' + (AXIS_Y + 4) + '" stroke="' + C.axis + '" stroke-width="1"/>');
-    parts.push('<text x="' + tx + '" y="' + (AXIS_Y + 16) + '" text-anchor="middle" fill="' + C.axisText + '" font-size="10" font-family="monospace">' + tv + '</text>');
-  }
-
-  // ── Section label: Inputs ──
-  parts.push('<text x="' + (PAD_L - 4) + '" y="' + (INPUT_Y0 - 6) + '" text-anchor="end" fill="' + C.label + '" font-size="10" font-weight="600" letter-spacing="0.05em">INPUTS</text>');
-
-  // ── Input rows ──
-  snap.sorted.forEach(function(iv, idx) {
-    var barY = INPUT_Y0 + idx * ROW_H;
-    var barCy = barY + BAR_H / 2;
-    var x1 = xS(iv[0]);
-    var x2 = xS(iv[1]);
-    var bw = Math.max(x2 - x1, 2);
-
-    // Determine state
-    var style;
-    if (idx === snap.currentIdx) {
-      style = C.current;
-    } else if (snap.currentIdx >= 0 && idx < snap.currentIdx) {
-      style = C.processed;
-    } else {
-      style = C.pending;
-    }
-
-    // Row index label on left
-    parts.push('<text x="' + (PAD_L - 5) + '" y="' + (barCy + 4) + '" text-anchor="end" fill="' + style.text + '" font-size="10" font-family="monospace">' + fmtIv(iv) + '</text>');
-
-    // Bar
-    parts.push('<rect x="' + x1 + '" y="' + barY + '" width="' + bw + '" height="' + BAR_H + '" rx="4" fill="' + style.fill + '" stroke="' + style.stroke + '" stroke-width="1.5"/>');
-
-    // Label inside bar if wide enough
-    if (bw > 30) {
-      parts.push('<text x="' + (x1 + bw / 2) + '" y="' + (barCy + 4) + '" text-anchor="middle" fill="' + style.text + '" font-size="9.5" font-family="monospace" font-weight="600">' + fmtIv(iv) + '</text>');
-    }
-  });
-
-  // ── Divider 1 ──
-  parts.push('<line x1="' + (PAD_L - 10) + '" y1="' + DIV1_Y + '" x2="' + (W - PAD_R) + '" y2="' + DIV1_Y + '" stroke="' + C.divider + '" stroke-dasharray="4,4"/>');
-
-  // ── Merge Window row ──
-  parts.push('<text x="' + (PAD_L - 4) + '" y="' + (WIN_Y0 - 5) + '" text-anchor="end" fill="' + C.label + '" font-size="10" font-weight="600" letter-spacing="0.05em">WINDOW</text>');
-
-  if (snap.mergeWindow) {
-    var wiv = snap.mergeWindow;
-    var wx1 = xS(wiv[0]);
-    var wx2 = xS(wiv[1]);
-    var wbw = Math.max(wx2 - wx1, 2);
-    var wcy = WIN_Y0 + BAR_H / 2;
-    parts.push('<rect x="' + wx1 + '" y="' + WIN_Y0 + '" width="' + wbw + '" height="' + BAR_H + '" rx="4" fill="' + C.window.fill + '" stroke="' + C.window.stroke + '" stroke-width="2"/>');
-    if (wbw > 28) {
-      parts.push('<text x="' + (wx1 + wbw / 2) + '" y="' + (wcy + 4) + '" text-anchor="middle" fill="' + C.window.text + '" font-size="9.5" font-family="monospace" font-weight="700">' + fmtIv(wiv) + '</text>');
-    }
-  } else {
-    parts.push('<text x="' + (PAD_L + 10) + '" y="' + (WIN_Y0 + 13) + '" fill="' + C.label + '" font-size="10" font-family="monospace">—</text>');
-  }
-
-  // ── Divider 2 ──
-  parts.push('<line x1="' + (PAD_L - 10) + '" y1="' + DIV2_Y + '" x2="' + (W - PAD_R) + '" y2="' + DIV2_Y + '" stroke="' + C.divider + '" stroke-dasharray="4,4"/>');
-
-  // ── Result row ──
-  parts.push('<text x="' + (PAD_L - 4) + '" y="' + (RES_Y0 - 5) + '" text-anchor="end" fill="' + C.label + '" font-size="10" font-weight="600" letter-spacing="0.05em">RESULT</text>');
-
-  if (snap.completed.length > 0) {
-    snap.completed.forEach(function(iv) {
-      var rx1 = xS(iv[0]);
-      var rx2 = xS(iv[1]);
-      var rbw = Math.max(rx2 - rx1, 2);
-      var rcy = RES_Y0 + BAR_H / 2;
-      parts.push('<rect x="' + rx1 + '" y="' + RES_Y0 + '" width="' + rbw + '" height="' + BAR_H + '" rx="4" fill="' + C.completed.fill + '" stroke="' + C.completed.stroke + '" stroke-width="1.5"/>');
-      if (rbw > 28) {
-        parts.push('<text x="' + (rx1 + rbw / 2) + '" y="' + (rcy + 4) + '" text-anchor="middle" fill="' + C.completed.text + '" font-size="9.5" font-family="monospace" font-weight="600">' + fmtIv(iv) + '</text>');
-      }
-    });
-  } else {
-    parts.push('<text x="' + (PAD_L + 10) + '" y="' + (RES_Y0 + 13) + '" fill="' + C.label + '" font-size="10" font-family="monospace">building…</text>');
-  }
-
-  // ── Overlap indicator: vertical line at current.start ──
-  if (snap.currentIdx >= 0 && snap.overlap === null && snap.mergeWindow) {
-    var cur = snap.sorted[snap.currentIdx];
-    var csx = xS(cur[0]);
-    var lastEndX = xS(snap.mergeWindow[1]);
-    // dotted vertical at current.start and last.end
-    parts.push('<line x1="' + csx + '" y1="' + (INPUT_Y0 + snap.currentIdx * ROW_H) + '" x2="' + csx + '" y2="' + (WIN_Y0 + BAR_H) + '" stroke="#e0af68" stroke-width="1" stroke-dasharray="3,3" opacity="0.5"/>');
-    parts.push('<line x1="' + lastEndX + '" y1="' + WIN_Y0 + '" x2="' + lastEndX + '" y2="' + (WIN_Y0 + BAR_H) + '" stroke="#7aa2f7" stroke-width="1.5" stroke-dasharray="3,3" opacity="0.6"/>');
-  }
-
-  svg.innerHTML = parts.join('');
-}
-
-function renderVars(snap, animate) {
-  function setVal(id, val) {
-    var el = document.getElementById(id);
-    if (!el) return;
-    var text = (val === null || val === undefined) ? '—' : val;
-    if (animate && el.textContent !== text) {
-      gsap.fromTo(el, { scale: 0.85, opacity: 0.4 }, { scale: 1, opacity: 1, duration: 0.2, ease: 'back.out(1.7)' });
-    }
-    el.textContent = text;
-  }
-
-  var cur = snap.currentIdx >= 0 ? snap.sorted[snap.currentIdx] : null;
-  setVal('vv-curr', cur ? fmtIv(cur) : null);
-  setVal('vv-win',  snap.mergeWindow ? fmtIv(snap.mergeWindow) : null);
-
-  // Comparison zone
-  var lhsEl    = document.getElementById('cmp-lhs');
-  var rhsEl    = document.getElementById('cmp-rhs');
-  var badgeEl  = document.getElementById('cmp-badge');
-
-  if (cur && snap.mergeWindow) {
-    lhsEl.textContent = cur[0];
-    rhsEl.textContent = snap.mergeWindow[1];
-    badgeEl.className = 'cmp-badge';
-    if (snap.overlap === true) {
-      badgeEl.className = 'cmp-badge overlap';
-      badgeEl.textContent = 'overlap → extend';
-    } else if (snap.overlap === false) {
-      badgeEl.className = 'cmp-badge gap';
-      badgeEl.textContent = 'gap → close';
-    } else {
-      badgeEl.textContent = '';
-    }
-  } else {
-    lhsEl.textContent = 'current.start';
-    rhsEl.textContent = 'last.end';
-    badgeEl.className = 'cmp-badge';
-    badgeEl.textContent = '';
-  }
-}
-
-function renderCode(lines) {
-  CODE.forEach(function(e) {
-    var el = document.getElementById('cl-' + e[0]);
-    if (!el) return;
-    if (lines.indexOf(e[0]) >= 0) el.classList.add('hl');
-    else el.classList.remove('hl');
-  });
-}
 </script>
+
 <script>
-  if (window.self !== window.top) {
-    var bl = document.querySelector('.back-link');
-    if (bl) bl.style.display = 'none';
-  }
+(function() {
+  var handle = document.getElementById('resize-handle');
+  var panel  = document.getElementById('code-panel');
+  var dragging = false, startX = 0, startW = 0;
+  handle.addEventListener('mousedown', function(e) {
+    dragging = true; startX = e.clientX; startW = panel.offsetWidth;
+    handle.classList.add('dragging'); e.preventDefault();
+  });
+  document.addEventListener('mousemove', function(e) {
+    if (!dragging) return;
+    var delta = startX - e.clientX;
+    panel.style.width = Math.min(560, Math.max(120, startW + delta)) + 'px';
+  });
+  document.addEventListener('mouseup', function() {
+    if (!dragging) return;
+    dragging = false; handle.classList.remove('dragging');
+  });
+})();
 </script>
 </body>
 </html>

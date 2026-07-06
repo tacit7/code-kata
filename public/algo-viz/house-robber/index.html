@@ -3,21 +3,29 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>House Robber — DP Visualization</title>
+  <title>House Robber &#8212; DP Visualization</title>
   <link rel="stylesheet" href="../shared/style.css" />
   <script src="../shared/gsap.min.js"></script>
   <script src="../shared/viz.js"></script>
   <style>
-    .viz-area { width: 100%; max-width: 90%; }
-    .main-row {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 20px;
-      align-items: start;
-    }
-    .left-col, .right-col { display: flex; flex-direction: column; gap: 12px; }
-    @media (max-width: 700px) { .main-row { grid-template-columns: 1fr; } }
+    /* ── Canonical layout ── */
+    body { background: var(--bg); color: var(--text); font-family: "Fira Code", monospace; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+    .viz-inputs { width: 100%; padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; flex-wrap: wrap; gap: 12px; align-items: center; flex-shrink: 0; }
+    #header { padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+    #phase-label { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; padding: 3px 10px; border-radius: var(--radius-sm); background: #1e3a5f; color: var(--blue); border: 1px solid var(--blue); }
+    #step-counter { font-size: 12px; color: var(--text-muted); margin-left: auto; }
+    #main { display: flex; flex: 1; overflow: hidden; }
+    #viz-area { flex: 1; display: flex; flex-direction: column; align-items: stretch; justify-content: flex-start; padding: 20px; gap: 20px; overflow-y: auto; }
+    #resize-handle { width: 5px; flex-shrink: 0; cursor: col-resize; background: transparent; border-left: 1px solid var(--border); transition: background .15s; z-index: 10; }
+    #resize-handle:hover, #resize-handle.dragging { background: var(--accent); }
+    #code-panel { width: 350px; min-width: 120px; max-width: 560px; flex-shrink: 0; background: var(--surface); border-right: 1px solid var(--border); overflow-y: auto; overflow-x: auto; padding: 10px 12px; display: flex; flex-direction: column; }
+    #sidebar { width: 240px; flex-shrink: 0; background: var(--surface); border-left: 1px solid var(--border); overflow-y: auto; padding: 14px 12px; display: flex; flex-direction: column; gap: 12px; }
+    #nav-row { flex-shrink: 0; display: flex; align-items: center; gap: 8px; padding: 10px 16px; background: var(--surface); border-top: 1px solid var(--border); }
+    .btn-step { background: var(--surface); border: 1px solid var(--border); color: var(--text); border-radius: var(--radius-sm); padding: 6px 14px; cursor: pointer; font-size: 0.82rem; }
+    .btn-play { background: #15803d; border: none; color: #fff; border-radius: var(--radius-sm); padding: 6px 14px; cursor: pointer; font-size: 0.82rem; font-weight: 600; }
+    .code-panel-title { font-size: 0.67rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-dim); margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
 
+    /* ── Original house-robber CSS ── */
     .houses-wrap {
       display: flex; gap: 10px; flex-wrap: wrap;
       padding: 16px;
@@ -39,10 +47,10 @@
     .house-idx { font-size: 0.65rem; color: var(--text-faint); font-family: monospace; }
 
     .panel-box {
-      background: var(--surface);
+      background: var(--bg);
       border: 1px solid var(--border);
       border-radius: var(--radius-lg);
-      padding: 14px 16px;
+      padding: 10px 12px;
       display: flex; flex-direction: column; gap: 8px;
     }
     .panel-title {
@@ -51,21 +59,21 @@
       color: var(--text-dim);
     }
 
-    .dp-boxes { display: flex; gap: 10px; }
+    .dp-boxes { display: flex; gap: 8px; }
     .dp-box {
       flex: 1; display: flex; flex-direction: column;
-      align-items: center; gap: 3px; padding: 10px 6px;
-      background: var(--bg); border: 1px solid var(--border);
+      align-items: center; gap: 3px; padding: 8px 4px;
+      background: var(--surface); border: 1px solid var(--border);
       border-radius: var(--radius-sm);
     }
     .dp-box.accent { border-color: var(--accent); }
-    .dp-box-label { font-size: 0.68rem; font-family: monospace; color: var(--text-faint); }
-    .dp-box-val { font-size: 1.4rem; font-weight: 700; color: var(--text-bright); }
+    .dp-box-label { font-size: 0.6rem; font-family: monospace; color: var(--text-faint); text-align: center; }
+    .dp-box-val { font-size: 1.2rem; font-weight: 700; color: var(--text-bright); }
 
-    .dec-row { display: flex; gap: 10px; }
+    .dec-row { display: flex; gap: 8px; }
     .dec-card {
-      flex: 1; padding: 10px 12px;
-      background: var(--bg); border: 1px solid var(--border);
+      flex: 1; padding: 8px 10px;
+      background: var(--surface); border: 1px solid var(--border);
       border-radius: var(--radius-sm);
       display: flex; flex-direction: column; gap: 4px;
       opacity: 0.25;
@@ -73,58 +81,28 @@
     .dec-card.visible { opacity: 1; }
     .dec-card.winner { border-color: #15803d; background: #052e16; opacity: 1; }
     .dec-card.loser  { opacity: 0.3; }
-    .dec-label { font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-faint); }
-    .dec-formula { font-size: 0.73rem; font-family: monospace; color: var(--text-dim); min-height: 16px; }
-    .dec-val { font-size: 1.2rem; font-weight: 700; color: var(--text-bright); }
+    .dec-label { font-size: 0.62rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-faint); }
+    .dec-formula { font-size: 0.68rem; font-family: monospace; color: var(--text-dim); min-height: 14px; }
+    .dec-val { font-size: 1.1rem; font-weight: 700; color: var(--text-bright); }
     .dec-result {
-      font-size: 0.8rem; font-family: monospace; color: var(--text-muted);
+      font-size: 0.75rem; font-family: monospace; color: var(--text-muted);
       padding-top: 6px; border-top: 1px solid var(--border);
-      min-height: 20px;
+      min-height: 18px;
     }
     .dec-result strong { color: var(--text-bright); }
 
-    .code-panel {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--radius-lg); overflow: hidden;
-    }
-    .code-header {
-      padding: 8px 14px; font-size: 0.72rem; font-weight: 600;
-      color: var(--text-dim); border-bottom: 1px solid var(--border);
-      background: var(--bg);
-    }
-    .code-body { padding: 10px 0; font-size: 0.82rem; line-height: 1.8; flex: 1; white-space: pre; }
-    .code-line { display: flex; align-items: center; padding: 0 14px; }
+    .code-body { padding: 4px 0; font-size: 0.82rem; line-height: 1.8; flex: 1; white-space: pre; }
+    .code-line { display: flex; align-items: center; padding: 0 8px; }
     .code-line.hl { background: var(--border-soft); border-left: 2px solid var(--accent); }
     .ln { min-width: 24px; color: var(--text-ghost); user-select: none; font-size: 0.72rem; }
 
-    .btn-play {
-      background: #15803d; border: none; border-radius: var(--radius-sm);
-      color: #fff; cursor: pointer; font-size: 0.88rem; font-weight: 600;
-      padding: 9px 16px; transition: background 0.2s;
-    }
-    .btn-play:hover { background: #166534; }
-    .btn-play.playing { background: #c2410c; }
-    .btn-play.playing:hover { background: #9a3412; }
-    .btn-play:disabled { opacity: 0.4; cursor: not-allowed; }
-    .speed-select {
-      background: var(--bg); border: 1px solid var(--border);
-      border-radius: var(--radius-sm); color: var(--text);
-      font-size: 0.85rem; padding: 8px 10px; outline: none; width: 80px;
-    }
-    .nav-row { display: flex; gap: 8px; align-items: center; }
     .kw { color: var(--purple); }
     .fn { color: var(--blue); }
     .bi { color: var(--orange); }
     .op { color: var(--text); }
     .nb { color: var(--green); }
 
-    .viz-inputs {
-      display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end;
-      padding: 10px 0 14px; width: 100%; max-width: 90%;
-    }
-    .viz-inputs .field {
-      display: flex; flex-direction: column; gap: 4px;
-    }
+    .viz-inputs .field { display: flex; flex-direction: column; gap: 4px; }
     .viz-inputs label {
       font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
       letter-spacing: 0.08em; color: var(--text-dim);
@@ -139,35 +117,15 @@
       color: var(--text); border-radius: var(--radius-sm);
       padding: 6px 10px; font-size: 0.85rem; cursor: pointer;
     }
-    .viz-inputs button {
-      padding: 7px 18px; background: var(--accent); color: #fff;
-      border: none; border-radius: var(--radius-sm); font-weight: 600;
-      cursor: pointer; font-size: 0.85rem; transition: background 0.2s;
-    }
-    .viz-inputs button:hover {
-      background: var(--accent-bright);
-    }
-    .viz-inputs .btn-random {
-      background: var(--surface); color: var(--text); border: 1px solid var(--border);
-    }
-    .viz-inputs .btn-random:hover {
-      background: var(--bg-hover);
-    }
   </style>
 </head>
 <body class="page">
-
-<div class="page-header">
-  <a class="back-link" href="../index.html">&larr; All Algorithms</a>
-  <div class="page-title">House Robber</div>
-  <div class="page-sub">LeetCode 198 &middot; Space-Optimized DP &middot; O(n) time &middot; O(1) space</div>
-</div>
 
 <div class="viz-inputs">
   <div class="field">
     <label>Preset</label>
     <select id="presetSel" onchange="loadPreset()">
-      <option value="">— pick a preset —</option>
+      <option value="">&#8212; pick a preset &#8212;</option>
       <option value='{"nums":"1, 2, 3, 4, 5"}'>Ascending</option>
       <option value='{"nums":"1, 5, 1, 3, 9"}'>Mixed with Gap</option>
       <option value='{"nums":"5, 3, 4, 11, 2"}'>Large Numbers</option>
@@ -180,81 +138,78 @@
     <label>nums</label>
     <input id="inp-nums" type="text" value="2, 7, 9, 3, 1" />
   </div>
-  <button onclick="buildAndRun()">Run</button>
-  <button class="btn-random" onclick="randomExample()">🎲 Random</button>
+  <button onclick="buildAndRun()" style="padding:7px 18px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);font-weight:600;cursor:pointer;">Run</button>
+  <button onclick="randomExample()" style="padding:7px 14px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;">&#127922; Random</button>
 </div>
 
-<div class="controls">
+<div class="controls"></div>
+
+<div id="header">
+  <span id="phase-label">&#8212;</span>
+  <span style="font-size:13px;font-weight:700;">House Robber</span>
+  <span id="step-counter" style="margin-left:auto;font-size:12px;color:var(--text-muted)">Step 0 / 0</span>
 </div>
 
-<div class="viz-area">
-  <div class="main-row">
-    <div class="left-col">
-      <div class="houses-wrap" id="houses-row">
-        <span style="color:var(--text-dim);font-size:0.82rem">Enter nums and click Run.</span>
-      </div>
-      <div class="code-panel">
-        <div class="code-header">Python</div>
-        <div class="code-body" id="code-body"></div>
-      </div>
-    </div>
-
-    <div class="right-col">
-      <div style="display:flex;gap:12px">
-        <div class="panel-box" style="flex:0 0 auto">
-          <div class="nav-row">
-            <button class="stepBtn" id="prevBtn" disabled>&larr;</button>
-            <button class="stepBtn" id="stepBtn" disabled>&rarr;</button>
-            <button class="playBtn" id="playBtn" disabled>&#9654; Play</button>
-            <select class="speedSel" id="speedSel">
-              <option value="700">Slow</option>
-              <option value="250" selected>Medium</option>
-              <option value="80">Fast</option>
-            </select>
-          </div>
-        </div>
-        <div class="panel-box" style="flex:1;min-width:0">
-          <div class="panel-title" id="phase-label">&mdash;</div>
-          <div style="font-size:0.82rem;color:var(--text-muted);margin-top:2px" id="step-desc">Enter nums and click Run.</div>
-        </div>
-      </div>
-
-      <div class="panel-box">
-        <div class="panel-title">DP Variables</div>
-        <div class="dp-boxes">
-          <div class="dp-box" id="dp-pt">
-            <div class="dp-box-label">prev_two</div>
-            <div class="dp-box-val" id="dp-pt-val">&mdash;</div>
-          </div>
-          <div class="dp-box" id="dp-po">
-            <div class="dp-box-label">prev_one</div>
-            <div class="dp-box-val" id="dp-po-val">&mdash;</div>
-          </div>
-          <div class="dp-box accent">
-            <div class="dp-box-label">current</div>
-            <div class="dp-box-val" id="dp-cur-val">&mdash;</div>
-          </div>
-        </div>
-      </div>
-
-      <div class="panel-box">
-        <div class="panel-title">Decision</div>
-        <div class="dec-row">
-          <div class="dec-card" id="dec-skip">
-            <div class="dec-label">A &middot; Skip</div>
-            <div class="dec-formula" id="dec-skip-f">prev_one</div>
-            <div class="dec-val" id="dec-skip-v">&mdash;</div>
-          </div>
-          <div class="dec-card" id="dec-rob">
-            <div class="dec-label">B &middot; Rob</div>
-            <div class="dec-formula" id="dec-rob-f">prev_two + money</div>
-            <div class="dec-val" id="dec-rob-v">&mdash;</div>
-          </div>
-        </div>
-        <div class="dec-result" id="dec-result"></div>
-      </div>
+<div id="main">
+  <div id="viz-area">
+    <div class="houses-wrap" id="houses-row">
+      <span style="color:var(--text-dim);font-size:0.82rem">Enter nums and click Run.</span>
     </div>
   </div>
+  <div id="resize-handle"></div>
+  <div id="code-panel">
+    <div class="code-panel-title">Python</div>
+    <div class="code-body" id="code-body"></div>
+  </div>
+  <div id="sidebar">
+    <div style="font-size:0.82rem;color:var(--text-muted)" id="step-desc">Enter nums and click Run.</div>
+    <div class="panel-box">
+      <div class="panel-title">DP Variables</div>
+      <div class="dp-boxes">
+        <div class="dp-box" id="dp-pt">
+          <div class="dp-box-label">prev_two</div>
+          <div class="dp-box-val" id="dp-pt-val">&#8212;</div>
+        </div>
+        <div class="dp-box" id="dp-po">
+          <div class="dp-box-label">prev_one</div>
+          <div class="dp-box-val" id="dp-po-val">&#8212;</div>
+        </div>
+        <div class="dp-box accent">
+          <div class="dp-box-label">current</div>
+          <div class="dp-box-val" id="dp-cur-val">&#8212;</div>
+        </div>
+      </div>
+    </div>
+    <div class="panel-box">
+      <div class="panel-title">Decision</div>
+      <div class="dec-row">
+        <div class="dec-card" id="dec-skip">
+          <div class="dec-label">A &#183; Skip</div>
+          <div class="dec-formula" id="dec-skip-f">prev_one</div>
+          <div class="dec-val" id="dec-skip-v">&#8212;</div>
+        </div>
+        <div class="dec-card" id="dec-rob">
+          <div class="dec-label">B &#183; Rob</div>
+          <div class="dec-formula" id="dec-rob-f">prev_two + money</div>
+          <div class="dec-val" id="dec-rob-v">&#8212;</div>
+        </div>
+      </div>
+      <div class="dec-result" id="dec-result"></div>
+    </div>
+  </div>
+</div>
+
+<div id="nav-row">
+  <button id="prevBtn" class="btn-step">&#8592; Prev</button>
+  <button id="stepBtn" class="btn-step">Step &#8594;</button>
+  <button id="playBtn" class="btn-play">Play</button>
+  <button id="resetBtn" class="btn-step">&#8635; Reset</button>
+  <select id="speedSel">
+    <option value="800">0.5&#215;</option>
+    <option value="400" selected>1&#215;</option>
+    <option value="200">2&#215;</option>
+    <option value="100">4&#215;</option>
+  </select>
 </div>
 
 <script>
@@ -285,7 +240,7 @@ window.addEventListener('DOMContentLoaded', function() {
       applyStep(snap, cur > 0);
       var phaseEl = document.getElementById('phase-label');
       var descEl  = document.getElementById('step-desc');
-      if (phaseEl) phaseEl.textContent = 'Step ' + (cur + 1) + ' / ' + total + '  ·  ' + snap.phase;
+      if (phaseEl) phaseEl.textContent = 'Step ' + (cur + 1) + ' / ' + total + '  \u00b7  ' + snap.phase;
       if (descEl)  descEl.textContent  = snap.desc;
     }
   });
@@ -342,12 +297,12 @@ function simulate(nums) {
     var skipVal = po;
     var robVal  = pt + money;
 
-    snap('Loop', 'Option A — skip: keep prev_one = ' + skipVal + '.', [6], {
+    snap('Loop', 'Option A \u2014 skip: keep prev_one = ' + skipVal + '.', [6], {
       dp: { pt: pt, po: po, cur: null },
       dec: { skipVal: skipVal, robVal: null, robCalc: null, cur: null, winner: null }
     });
 
-    snap('Loop', 'Option B — rob: prev_two + money = ' + pt + ' + ' + money + ' = ' + robVal + '.', [6], {
+    snap('Loop', 'Option B \u2014 rob: prev_two + money = ' + pt + ' + ' + money + ' = ' + robVal + '.', [6], {
       dp: { pt: pt, po: po, cur: null },
       dec: { skipVal: skipVal, robVal: robVal, robCalc: pt + ' + ' + money + ' = ' + robVal, cur: null, winner: null }
     });
@@ -363,7 +318,7 @@ function simulate(nums) {
     pt = po; po = cur;
     hs[i] = 'done';
 
-    snap('Loop', 'Slide: prev_two ← ' + pt + ',  prev_one ← ' + po + '.', [8, 9], { dp: { pt: pt, po: po, cur: null }, dec: null });
+    snap('Loop', 'Slide: prev_two \u2190 ' + pt + ',  prev_one \u2190 ' + po + '.', [8, 9], { dp: { pt: pt, po: po, cur: null }, dec: null });
   }
 
   snap('Done', 'return prev_one = ' + po + '.  Maximum amount: $' + po + '.', [11], { dp: { pt: pt, po: po, cur: null }, dec: null });
@@ -424,8 +379,8 @@ function applyDecision(dec) {
   robCard.className  = 'dec-card';
   skipF.textContent  = 'prev_one';
   robF.textContent   = 'prev_two + money';
-  skipV.textContent  = '—';
-  robV.textContent   = '—';
+  skipV.textContent  = '\u2014';
+  robV.textContent   = '\u2014';
   result.innerHTML   = '';
 
   if (!dec) return;
@@ -484,12 +439,25 @@ function randomExample() {
   buildAndRun();
 }
 </script>
-  <script>
-    // Hide back-link when embedded in an iframe
-    if (window.self !== window.top) {
-      var bl = document.querySelector('.back-link');
-      if (bl) bl.style.display = 'none';
-    }
-  </script>
+<script>
+(function() {
+  var handle = document.getElementById('resize-handle');
+  var panel  = document.getElementById('code-panel');
+  var dragging = false, startX = 0, startW = 0;
+  handle.addEventListener('mousedown', function(e) {
+    dragging = true; startX = e.clientX; startW = panel.offsetWidth;
+    handle.classList.add('dragging'); e.preventDefault();
+  });
+  document.addEventListener('mousemove', function(e) {
+    if (!dragging) return;
+    var delta = startX - e.clientX;
+    panel.style.width = Math.min(560, Math.max(120, startW + delta)) + 'px';
+  });
+  document.addEventListener('mouseup', function() {
+    if (!dragging) return;
+    dragging = false; handle.classList.remove('dragging');
+  });
+})();
+</script>
 </body>
 </html>

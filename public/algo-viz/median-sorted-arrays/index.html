@@ -8,28 +8,40 @@
   <script src="../shared/gsap.min.js"></script>
   <script src="../shared/viz.js"></script>
   <style>
-    body { display:flex; flex-direction:column; height:100vh; overflow:hidden; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: "Fira Code", "Cascadia Code", monospace; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+    #header { padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+    #phase-badge { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; padding: 3px 10px; border-radius: var(--radius-sm); background: #1e3a5f; color: var(--blue); border: 1px solid var(--blue); }
+    #step-counter { font-size: 12px; color: var(--text-muted); margin-left: auto; }
+    .viz-inputs { width: 100%; max-width: 100%; padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; flex-wrap: wrap; gap: 12px; align-items: center; flex-shrink: 0; }
+    .viz-inputs label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); display: block; margin-bottom: 3px; }
+    .viz-inputs select, .viz-inputs input { background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 0 8px; height: 30px; font-size: 0.82rem; font-family: inherit; }
+    .vi-btn-run { padding: 6px 14px; border-radius: 6px; font-size: 0.82rem; font-weight: 600; cursor: pointer; font-family: inherit; background: var(--accent); color: #fff; border: none; }
+    .vi-btn-rand { padding: 6px 14px; border-radius: 6px; font-size: 0.82rem; cursor: pointer; font-family: inherit; background: var(--bg); color: var(--text); border: 1px solid var(--border); }
+    #main { display: flex; flex: 1; overflow: hidden; }
+    #viz-area { flex: 1; display: flex; flex-direction: column; align-items: stretch; justify-content: flex-start; padding: 16px; gap: 14px; overflow-y: auto; }
+    #resize-handle { width: 5px; flex-shrink: 0; cursor: col-resize; background: transparent; border-left: 1px solid var(--border); transition: background .15s; }
+    #resize-handle:hover, #resize-handle.dragging { background: var(--accent); }
+    #code-panel { width: 350px; min-width: 120px; max-width: 560px; flex-shrink: 0; background: #0d1117; border-right: 1px solid var(--border); overflow-y: auto; overflow-x: auto; padding: 10px 12px; display: flex; flex-direction: column; }
+    .code-panel-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--text-dim); margin-bottom: 8px; }
+    .cl { display: flex; align-items: stretch; padding: 2px 0; white-space: pre; border-left: 2px solid transparent; padding-left: 6px; color: var(--text-muted); font-size: 0.75rem; line-height: 1.8; }
+    .cl.hl { background: rgba(122,162,247,0.12); border-left-color: var(--accent); color: var(--text); }
+    .ln { display: inline-block; width: 20px; text-align: right; color: var(--text-dim); user-select: none; margin-right: 10px; font-size: 0.7rem; }
+    #sidebar { width: 260px; flex-shrink: 0; background: var(--surface); border-left: 1px solid var(--border); overflow-y: auto; padding: 14px 12px; display: flex; flex-direction: column; gap: 10px; }
+    .sidebar-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--text-dim); margin-bottom: 6px; }
+    #nav-row { flex-shrink: 0; display: flex; align-items: center; gap: 8px; padding: 10px 16px; background: var(--surface); border-top: 1px solid var(--border); }
+    .btn-step { padding: 6px 14px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--surface); color: var(--text); font-family: inherit; font-size: 12px; cursor: pointer; }
+    .btn-play { padding: 6px 14px; border-radius: var(--radius-sm); background: var(--accent); border-color: var(--accent); color: #fff; font-family: inherit; font-size: 12px; cursor: pointer; }
 
-    .page-title {
-      font-size:1rem; font-weight:700; color:var(--text-bright);
-      padding:12px 16px 0; letter-spacing:0.01em; flex-shrink:0;
-    }
+    /* page-specific */
+    .panel-box { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 12px 14px; }
+    .panel-title { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); margin-bottom: 8px; }
+    .panel-sub { font-size: 0.62rem; font-weight: 400; color: var(--text-ghost); margin-left: 8px; text-transform: none; letter-spacing: 0; }
 
-    .viz-root {
-      display:flex; flex:1; gap:16px;
-      padding:12px 16px 16px; min-height:0;
-    }
-
-    .left-col, .right-col {
-      display:flex; flex-direction:column; gap:12px; flex:1; min-width:0;
-    }
-
-    /* ── Array section ── */
     .arr-section { display:flex; flex-direction:column; gap:10px; }
     .arr-wrap    { display:flex; align-items:center; gap:10px; }
     .arr-lbl     { font-size:0.75rem; font-weight:700; color:var(--accent); width:14px; flex-shrink:0; }
     .arr-row     { display:flex; gap:3px; align-items:center; flex-wrap:nowrap; overflow-x:auto; }
-
     .arr-cell {
       width:42px; height:42px; border-radius:7px;
       display:flex; align-items:center; justify-content:center;
@@ -43,144 +55,98 @@
     .arr-cell.virtual    { width:32px; font-size:0.7rem; color:var(--text-ghost); background:transparent; }
     .arr-cell.virtual.left-side  { color:var(--text-faint); }
     .arr-cell.virtual.right-side { color:var(--text-faint); }
-
-    /* Boundary highlights */
     .arr-cell.bnd-max         { border-color:var(--accent); background:rgba(var(--accent-ch),0.28); color:var(--accent-pale); }
     .arr-cell.bnd-min         { border-color:var(--blue); background:rgba(var(--blue-ch),0.18); color:var(--blue-light); }
     .arr-cell.virtual.bnd-max { border-color:var(--accent); background:rgba(var(--accent-ch),0.15); color:var(--accent-dim); }
     .arr-cell.virtual.bnd-min { border-color:var(--blue); background:rgba(var(--blue-ch),0.10); color:var(--blue); }
-
-    /* Partition divider */
-    .part-div {
-      width:3px; min-height:46px; background:var(--accent);
-      border-radius:2px; flex-shrink:0; align-self:stretch;
-    }
-
-    .bs-info { font-size:0.64rem; color:var(--text-faint); margin-bottom:4px; font-style:italic; }
-
-    /* Legend */
-    .legend-row { display:flex; gap:10px; flex-wrap:wrap; margin-top:8px; }
+    .part-div { width:3px; min-height:46px; background:var(--accent); border-radius:2px; flex-shrink:0; align-self:stretch; }
+    .legend-row { display:flex; gap:10px; flex-wrap:wrap; }
     .legend-item { display:flex; align-items:center; gap:5px; font-size:0.62rem; color:var(--text-dim); }
     .legend-dot  { width:10px; height:10px; border-radius:3px; border:2px solid transparent; flex-shrink:0; }
 
-    /* ── Code panel ── */
-    .code-panel { flex:1; min-height:0; overflow:auto; display:flex; flex-direction:column; }
-    .code-body  {
-      font-family:'Fira Code','Cascadia Code',monospace;
-      font-size:0.78rem; line-height:1.65; color:var(--text-muted);
-      flex:1; white-space:pre;
-    }
-    .code-line { display:block; padding:0 4px; border-radius:3px; }
+    .code-body  { font-family:'Fira Code','Cascadia Code',monospace; font-size:0.78rem; line-height:1.65; color:var(--text-muted); flex:1; white-space:pre; }
+    .code-line  { display:block; padding:0 4px; border-radius:3px; }
     .code-line.active { background:rgba(var(--accent-ch),0.18); color:var(--text); }
-    .kw { color:var(--purple); }
-    .fn { color:var(--blue); }
-    .bi { color:var(--orange); }
-    .nb { color:var(--green); }
+    .kw { color:var(--purple); } .fn { color:var(--blue); } .bi { color:var(--orange); } .nb { color:var(--green); }
 
-    /* ── Controls ── */
-    .ctrl-row { display:flex; align-items:center; gap:6px; }
-    .btn {
-      background:var(--surface); border:1px solid var(--border);
-      color:var(--text); border-radius:6px; padding:5px 10px;
-      cursor:pointer; font-size:0.78rem;
-    }
-    .btn:hover { border-color:var(--accent); }
-    .btn.primary { background:var(--accent); border-color:var(--accent); color:#fff; }
-    .speed-select, .preset-select {
-      background:var(--surface); border:1px solid var(--border);
-      color:var(--text); border-radius:6px; padding:5px 6px; font-size:0.75rem;
-    }
-    .speed-select  { width:78px; }
-    .preset-select { width:100%; margin-top:6px; }
-    .counter       { font-size:0.68rem; color:var(--text-dim); margin-top:4px; }
-
-    /* ── Status ── */
-    .phase-badge {
-      font-size:0.6rem; font-weight:700; text-transform:uppercase; letter-spacing:0.1em;
-      color:var(--accent); background:#6366f115; border:1px solid #6366f130;
-      border-radius:4px; padding:2px 7px; display:inline-block;
-    }
-    .status-desc { font-size:0.76rem; color:var(--text-muted); margin-top:6px; line-height:1.45; }
-
-    /* ── Variables ── */
-    .vars-row { display:flex; gap:5px; }
-    .var-box {
-      background:var(--surface-dark); border:1px solid var(--border);
-      border-radius:8px; padding:7px 6px; text-align:center; flex:1;
-    }
+    .vars-row { display:flex; gap:5px; flex-wrap:wrap; }
+    .var-box { background:var(--surface-dark); border:1px solid var(--border); border-radius:8px; padding:6px 5px; text-align:center; flex:1; min-width:40px; }
     .var-box.accent { border-color:var(--accent); }
     .var-box.sky    { border-color:var(--blue); }
-    .var-box.dim    { opacity:0.45; }
-    .var-label { font-size:0.56rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.07em; }
-    .var-value { font-size:1rem; font-weight:700; color:var(--text-bright); margin-top:2px; }
-    .j-note {
-      font-size:0.64rem; color:var(--text-faint); text-align:center;
-      margin-top:6px; padding:5px 10px;
-      background:var(--surface-dark); border-radius:6px; border:1px solid var(--border-soft);
-    }
+    .var-label { font-size:0.54rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.07em; }
+    .var-value { font-size:0.9rem; font-weight:700; color:var(--text-bright); margin-top:2px; }
+    .j-note { font-size:0.62rem; color:var(--text-faint); margin-top:6px; padding:4px 8px; background:var(--surface-dark); border-radius:6px; border:1px solid var(--border-soft); }
     .j-note span { color:var(--accent-dim); font-weight:600; }
 
-    /* ── Boundary values ── */
-    .bnd-grid { display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:5px; }
-    .bnd-box {
-      background:var(--surface-dark); border:1px solid var(--border);
-      border-radius:8px; padding:8px 5px; text-align:center;
-    }
+    .bnd-grid { display:grid; grid-template-columns:1fr 1fr; gap:5px; }
+    .bnd-box { background:var(--surface-dark); border:1px solid var(--border); border-radius:8px; padding:7px 5px; text-align:center; }
     .bnd-box.max { border-color:#6366f130; }
     .bnd-box.min { border-color:#60a5fa30; }
     .bnd-box.max.live { border-color:var(--accent); }
     .bnd-box.min.live { border-color:var(--blue); }
-    .bnd-label { font-size:0.57rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.06em; }
-    .bnd-sub   { font-size:0.56rem; color:var(--text-ghost); margin-top:1px; }
-    .bnd-value { font-size:1rem; font-weight:700; color:var(--text-bright); margin-top:4px; }
-    .bnd-value.inf { color:var(--text-ghost); font-size:0.82rem; }
+    .bnd-label { font-size:0.52rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.06em; }
+    .bnd-sub   { font-size:0.52rem; color:var(--text-ghost); margin-top:1px; }
+    .bnd-value { font-size:0.9rem; font-weight:700; color:var(--text-bright); margin-top:3px; }
+    .bnd-value.inf { color:var(--text-ghost); font-size:0.8rem; }
 
-    /* ── Check cards ── */
     .check-cards { display:flex; flex-direction:column; gap:5px; }
-    .check-card {
-      display:flex; gap:8px; align-items:flex-start;
-      padding:8px 10px; border-radius:8px;
-      border:1px solid var(--border); opacity:0.38;
-    }
+    .check-card { display:flex; gap:8px; align-items:flex-start; padding:7px 9px; border-radius:8px; border:1px solid var(--border); opacity:0.38; }
     .check-card.active  { opacity:1; }
     .check-card.pass    { border-color:var(--green); opacity:1; background:rgba(var(--green-ch),0.05); }
     .check-card.fail    { border-color:var(--red); opacity:1; background:rgba(var(--red-ch),0.05); }
-    .check-icon  { font-size:0.95rem; flex-shrink:0; margin-top:1px; line-height:1; }
-    .check-title { font-size:0.7rem; font-weight:600; color:var(--text-dim); }
-    .check-card.active .check-title,
-    .check-card.pass   .check-title,
-    .check-card.fail   .check-title { color:var(--text); }
-    .check-expr  { font-size:0.63rem; color:var(--text-ghost); margin-top:2px; }
+    .check-icon  { font-size:0.85rem; flex-shrink:0; margin-top:1px; line-height:1; }
+    .check-title { font-size:0.64rem; font-weight:600; color:var(--text-dim); }
+    .check-card.active .check-title, .check-card.pass .check-title, .check-card.fail .check-title { color:var(--text); }
+    .check-expr  { font-size:0.58rem; color:var(--text-ghost); margin-top:2px; }
     .check-card.active .check-expr { color:var(--text-dim); }
-    .check-vals  { font-size:0.72rem; color:var(--text-muted); margin-top:3px; font-weight:600; }
+    .check-vals  { font-size:0.68rem; color:var(--text-muted); margin-top:3px; font-weight:600; }
     .check-card.pass .check-vals { color:var(--green); }
     .check-card.fail .check-vals { color:var(--red); }
 
-    /* ── Decision / result ── */
-    .decision-box {
-      margin-top:7px; padding:9px 12px; border-radius:8px;
-      font-size:0.72rem; text-align:center; color:var(--text-faint);
-      background:var(--surface-dark); border:1px solid var(--border);
-      line-height:1.5;
-    }
+    .decision-box { margin-top:5px; padding:8px 10px; border-radius:8px; font-size:0.68rem; text-align:center; color:var(--text-faint); background:var(--surface-dark); border:1px solid var(--border); line-height:1.5; }
     .decision-box.valid { border-color:var(--green); color:var(--green-light); }
     .decision-box.left  { border-color:var(--red); color:var(--red-light); }
     .decision-box.right { border-color:var(--orange-light); color:var(--orange-pale); }
-    .decision-box.done  {
-      border-color:var(--green); background:rgba(var(--green-ch),0.07);
-      color:var(--green); font-size:1rem; font-weight:700; padding:14px;
-    }
+    .decision-box.done  { border-color:var(--green); background:rgba(var(--green-ch),0.07); color:var(--green); font-size:0.9rem; font-weight:700; padding:12px; }
+
+    .status-desc { font-size: 0.72rem; color: var(--text-muted); line-height: 1.45; }
   </style>
 </head>
 <body>
 
-<div class="page-title">Median of Two Sorted Arrays &mdash; Binary Search on Partition</div>
+<div class="viz-inputs">
+  <div>
+    <label>Preset</label>
+    <select id="presetSel" onchange="loadPreset()">
+      <option value="">— pick a preset —</option>
+      <option value='{"n1":[1,3,8],"n2":[7,9,10,11]}'>[1,3,8] / [7,9,10,11] — shows adjustment</option>
+      <option value='{"n1":[1,2],"n2":[3,4]}'>[1,2] / [3,4] — even total</option>
+      <option value='{"n1":[1,3],"n2":[2]}'>[1,3] / [2] — odd, swap</option>
+      <option value='{"n1":[],"n2":[1]}'>[] / [1] — empty array</option>
+      <option value='{"n1":[1,2,3],"n2":[4,5,6]}'>[1,2,3] / [4,5,6] — no interleave</option>
+    </select>
+  </div>
+  <div>
+    <label>nums1 (sorted)</label>
+    <input id="inp-n1" type="text" value="1,3,8" style="width:130px;font-family:monospace" />
+  </div>
+  <div>
+    <label>nums2 (sorted)</label>
+    <input id="inp-n2" type="text" value="7,9,10,11" style="width:130px;font-family:monospace" />
+  </div>
+  <button class="vi-btn-run" onclick="buildAndRun()">Build &amp; Run</button>
+  <button class="vi-btn-rand" onclick="randomExample()">&#127922; Random</button>
+</div>
+<div class="controls"></div>
 
-<div class="viz-root">
+<div id="header">
+  <span id="phase-badge">Median of Two Sorted Arrays</span>
+  <span style="font-size:12px;color:var(--text-muted)">LeetCode 4 &middot; Binary Search on Partition &middot; O(log min(m,n))</span>
+  <span id="step-counter"></span>
+</div>
 
-  <!-- LEFT COLUMN -->
-  <div class="left-col">
-
+<div id="main">
+  <div id="viz-area">
     <div class="panel-box">
       <div class="panel-title">
         Partition
@@ -196,62 +162,29 @@
           <div class="arr-row" id="arr-b"></div>
         </div>
       </div>
-      <div class="legend-row">
-        <div class="legend-item">
-          <div class="legend-dot" style="background:rgba(var(--accent-ch),0.28);border-color:var(--accent)"></div>maxLeft (boundary)
-        </div>
-        <div class="legend-item">
-          <div class="legend-dot" style="background:rgba(var(--blue-ch),0.18);border-color:var(--blue)"></div>minRight (boundary)
-        </div>
-        <div class="legend-item">
-          <div class="legend-dot" style="background:rgba(var(--accent-ch),0.12)"></div>left half
-        </div>
-        <div class="legend-item">
-          <div class="legend-dot" style="background:var(--surface)"></div>right half
-        </div>
+      <div class="legend-row" style="margin-top:10px">
+        <div class="legend-item"><div class="legend-dot" style="background:rgba(var(--accent-ch),0.28);border-color:var(--accent)"></div>maxLeft (boundary)</div>
+        <div class="legend-item"><div class="legend-dot" style="background:rgba(var(--blue-ch),0.18);border-color:var(--blue)"></div>minRight (boundary)</div>
+        <div class="legend-item"><div class="legend-dot" style="background:rgba(var(--accent-ch),0.12)"></div>left half</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--surface)"></div>right half</div>
       </div>
     </div>
-
-    <div class="panel-box code-panel">
-      <div class="panel-title">Code</div>
-      <pre class="code-body" id="code-body"></pre>
-    </div>
-
   </div>
 
-  <!-- RIGHT COLUMN -->
-  <div class="right-col">
+  <div id="resize-handle"></div>
 
-    <!-- Controls + Status -->
-    <div style="display:flex;gap:10px">
-      <div class="panel-box" style="flex:0 0 auto">
-        <div class="ctrl-row">
-          <button class="btn" id="prevBtn">&larr;</button>
-          <button class="btn" id="stepBtn">&rarr;</button>
-          <button class="btn primary" id="playBtn">Play</button>
-          <select class="speedSel" id="speedSel">
-            <option value="1400">Slow</option>
-            <option value="800" selected>Normal</option>
-            <option value="380">Fast</option>
-          </select>
-        </div>
-        <div class="counter" id="counter">Step 0 / 0</div>
-        <select class="preset-select" id="preset-select">
-          <option value="0">[1,3,8] / [7,9,10,11] &mdash; shows adjustment</option>
-          <option value="1">[1,2] / [3,4] &mdash; even total</option>
-          <option value="2">[1,3] / [2] &mdash; odd, swap</option>
-          <option value="3">[] / [1] &mdash; empty array</option>
-        </select>
-      </div>
-      <div class="panel-box" style="flex:1">
-        <span class="phase-badge" id="phase-badge">&mdash;</span>
-        <div class="status-desc" id="status-desc">Press Play or step forward to begin.</div>
-      </div>
+  <div id="code-panel">
+    <div class="code-panel-title">Python</div>
+    <pre class="code-body" id="code-body"></pre>
+  </div>
+
+  <div id="sidebar">
+    <div>
+      <div class="sidebar-title">Status</div>
+      <div class="status-desc" id="status-desc">Press Play or step forward to begin.</div>
     </div>
-
-    <!-- Variables -->
-    <div class="panel-box">
-      <div class="panel-title">Variables</div>
+    <div>
+      <div class="sidebar-title">Variables</div>
       <div class="vars-row">
         <div class="var-box">
           <div class="var-label">low</div>
@@ -276,37 +209,33 @@
       </div>
       <div class="j-note">Binary search finds <span>sm_cut</span>. Then <span>lg_cut = lp_size &minus; sm_cut</span> is forced.</div>
     </div>
-
-    <!-- Boundary values -->
-    <div class="panel-box">
-      <div class="panel-title">Partition Boundary Values</div>
+    <div>
+      <div class="sidebar-title">Boundary Values</div>
       <div class="bnd-grid">
         <div class="bnd-box max" id="bnd-mla">
           <div class="bnd-label">max_left_sm</div>
-          <div class="bnd-sub">sm[sm_cut&minus;1]</div>
+          <div class="bnd-sub">sm[cut-1]</div>
           <div class="bnd-value" id="bv-mla">&mdash;</div>
         </div>
         <div class="bnd-box min" id="bnd-mra">
           <div class="bnd-label">min_right_sm</div>
-          <div class="bnd-sub">sm[sm_cut]</div>
+          <div class="bnd-sub">sm[cut]</div>
           <div class="bnd-value" id="bv-mra">&mdash;</div>
         </div>
         <div class="bnd-box max" id="bnd-mlb">
           <div class="bnd-label">max_left_lg</div>
-          <div class="bnd-sub">lg[lg_cut&minus;1]</div>
+          <div class="bnd-sub">lg[cut-1]</div>
           <div class="bnd-value" id="bv-mlb">&mdash;</div>
         </div>
         <div class="bnd-box min" id="bnd-mrb">
           <div class="bnd-label">min_right_lg</div>
-          <div class="bnd-sub">lg[lg_cut]</div>
+          <div class="bnd-sub">lg[cut]</div>
           <div class="bnd-value" id="bv-mrb">&mdash;</div>
         </div>
       </div>
     </div>
-
-    <!-- Checks + Decision -->
-    <div class="panel-box">
-      <div class="panel-title">Partition Checks</div>
+    <div>
+      <div class="sidebar-title">Partition Checks</div>
       <div class="check-cards">
         <div class="check-card" id="check1">
           <div class="check-icon" id="ci1">&nbsp;</div>
@@ -327,13 +256,23 @@
       </div>
       <div class="decision-box" id="decision-box">&mdash;</div>
     </div>
-
   </div>
 </div>
 
+<div id="nav-row">
+  <button class="btn-step" id="prevBtn">&larr;</button>
+  <button class="btn-step" id="stepBtn">&rarr;</button>
+  <button class="btn-play" id="playBtn">Play</button>
+  <button class="btn-step" id="resetBtn">&#8635; Reset</button>
+  <select id="speedSel">
+    <option value="1400">Slow</option>
+    <option value="800" selected>Normal</option>
+    <option value="380">Fast</option>
+  </select>
+</div>
+
 <script>
-// ── Code HTML ──────────────────────────────────────────────────────────
-const CODE_HTML = [
+var CODE_HTML = [
   '<span class="code-line" data-lines="1"><span class="kw">def</span> <span class="fn">findMedianSortedArrays</span>(nums1, nums2):</span>',
   '<span class="code-line" data-lines="2">    smaller, larger = nums1, nums2</span>',
   '<span class="code-line" data-lines="3">    <span class="kw">if</span> <span class="bi">len</span>(smaller) &gt; <span class="bi">len</span>(larger):</span>',
@@ -364,22 +303,12 @@ const CODE_HTML = [
   '<span class="code-line" data-lines="28">            low = smaller_cut + <span class="nb">1</span></span>',
 ].join('');
 
-// ── Presets ────────────────────────────────────────────────────────────
-const PRESETS = [
-  { n1: [1,3,8],  n2: [7,9,10,11] },
-  { n1: [1,2],    n2: [3,4]       },
-  { n1: [1,3],    n2: [2]         },
-  { n1: [],       n2: [1]         },
-];
-
-// ── Helpers ────────────────────────────────────────────────────────────
 function fmtV(v) {
-  if (v === -Infinity) return '−∞';   // −∞
-  if (v ===  Infinity) return '+∞';         // +∞
+  if (v === -Infinity) return '−∞';
+  if (v ===  Infinity) return '+∞';
   return '' + v;
 }
 
-// ── Step generation ────────────────────────────────────────────────────
 function buildSteps(nums1, nums2) {
   var A = nums1.slice(), B = nums2.slice();
   var swapped = false;
@@ -404,13 +333,11 @@ function buildSteps(nums1, nums2) {
     return base;
   }
 
-  // Init: swap
   var swapMsg = swapped
     ? 'nums2 is shorter — swapped. smaller=[' + A + '], larger=[' + B + ']. Binary search will run on smaller.'
     : 'smaller=[' + A + '], larger=[' + B + ']. smaller is already the shorter array.';
   steps.push(snap('Init', swapMsg, [2,3,4]));
 
-  // Init: half + bounds
   steps.push(snap('Init',
     'left_partition_size = (' + m + '+' + n + '+1)//2 = ' + half + '. Left partition needs exactly ' + half + ' elements. low=0, high=' + m + '.',
     [5,6,7,9,10]));
@@ -469,13 +396,12 @@ function buildSteps(nums1, nums2) {
     } else if (!c1) {
       steps.push(snap('Adjust',
         "max_left_sm (" + fmtV(maxLeftA) + ") > min_right_lg (" + fmtV(minRightB) + "). smaller_cut too far right. high = smaller_cut−1 = " + (i-1) + ".",
-        [25,26], { i: i, j: j, maxLeftA: maxLeftA, minRightA: minRightA, maxLeftB: maxLeftB, minRightB: minRightB, check1: c1, check2: c2, direction: 'left' }))
+        [25,26], { i: i, j: j, maxLeftA: maxLeftA, minRightA: minRightA, maxLeftB: maxLeftB, minRightB: minRightB, check1: c1, check2: c2, direction: 'left' }));
       hi = i - 1;
-
     } else {
       steps.push(snap('Adjust',
-        "max_left_lg (" + fmtV(maxLeftB) + ") > min_right_sm (" + fmtV(minRightA) + "). larger_cut too far right. low = smaller_cut+1 = " + (i+1) + ". (larger_cut decreases.)",
-        [27,28], { i: i, j: j, maxLeftA: maxLeftA, minRightA: minRightA, maxLeftB: maxLeftB, minRightB: minRightB, check1: c1, check2: c2, direction: 'right' }))
+        "max_left_lg (" + fmtV(maxLeftB) + ") > min_right_sm (" + fmtV(minRightA) + "). larger_cut too far right. low = smaller_cut+1 = " + (i+1) + ".",
+        [27,28], { i: i, j: j, maxLeftA: maxLeftA, minRightA: minRightA, maxLeftB: maxLeftB, minRightB: minRightB, check1: c1, check2: c2, direction: 'right' }));
       lo = i + 1;
     }
   }
@@ -483,7 +409,6 @@ function buildSteps(nums1, nums2) {
   return steps;
 }
 
-// ── Render array row with partition divider ────────────────────────────
 function renderArrRow(container, arr, partIdx) {
   container.innerHTML = '';
   var m = arr.length;
@@ -500,7 +425,6 @@ function renderArrRow(container, arr, partIdx) {
     return el;
   }
 
-  // No partition yet
   if (partIdx < 0) {
     container.appendChild(cell('−∞', 'virtual neutral'));
     arr.forEach(function(v) { container.appendChild(cell(v, 'neutral')); });
@@ -508,7 +432,6 @@ function renderArrRow(container, arr, partIdx) {
     return;
   }
 
-  // Virtual -∞
   var leftVirtCls = 'virtual left-side' + (partIdx === 0 ? ' bnd-max' : '');
   container.appendChild(cell('−∞', leftVirtCls));
   if (partIdx === 0) container.appendChild(pdiv());
@@ -524,56 +447,39 @@ function renderArrRow(container, arr, partIdx) {
 
   if (partIdx === m && m > 0) container.appendChild(pdiv());
 
-  // Virtual +∞
   var rightVirtCls = 'virtual right-side' + (partIdx === m ? ' bnd-min' : '');
   container.appendChild(cell('+∞', rightVirtCls));
 }
 
-// ── DOM refs ───────────────────────────────────────────────────────────
 var arrA      = document.getElementById('arr-a');
 var arrB      = document.getElementById('arr-b');
 var codeBody  = document.getElementById('code-body');
 var phBadge   = document.getElementById('phase-badge');
 var statusDesc = document.getElementById('status-desc');
-var counter   = document.getElementById('counter');
+var counter   = document.getElementById('step-counter');
 var bsInfo    = document.getElementById('bs-info');
-var btnPrev   = document.getElementById('prevBtn');
-var btnNext   = document.getElementById('stepBtn');
-var btnPlay   = document.getElementById('playBtn');
-var speedSel  = document.getElementById('speedSel');
-var presetSel = document.getElementById('preset-select');
 
-var valLo = document.getElementById('val-lo');
-var valI  = document.getElementById('val-i');
-var valHi = document.getElementById('val-hi');
-var valJ  = document.getElementById('val-j');
+var valLo   = document.getElementById('val-lo');
+var valI    = document.getElementById('val-i');
+var valHi   = document.getElementById('val-hi');
+var valJ    = document.getElementById('val-j');
 var valHalf = document.getElementById('val-half');
 
-var bvMla = document.getElementById('bv-mla');
-var bvMra = document.getElementById('bv-mra');
-var bvMlb = document.getElementById('bv-mlb');
-var bvMrb = document.getElementById('bv-mrb');
-var bndMla = document.getElementById('bnd-mla');
-var bndMra = document.getElementById('bnd-mra');
-var bndMlb = document.getElementById('bnd-mlb');
-var bndMrb = document.getElementById('bnd-mrb');
+var bvMla = document.getElementById('bv-mla'); var bndMla = document.getElementById('bnd-mla');
+var bvMra = document.getElementById('bv-mra'); var bndMra = document.getElementById('bnd-mra');
+var bvMlb = document.getElementById('bv-mlb'); var bndMlb = document.getElementById('bnd-mlb');
+var bvMrb = document.getElementById('bv-mrb'); var bndMrb = document.getElementById('bnd-mrb');
 
 var check1El = document.getElementById('check1');
 var check2El = document.getElementById('check2');
-var ci1 = document.getElementById('ci1');
-var ci2 = document.getElementById('ci2');
-var cv1 = document.getElementById('cv1');
-var cv2 = document.getElementById('cv2');
+var ci1 = document.getElementById('ci1'); var ci2 = document.getElementById('ci2');
+var cv1 = document.getElementById('cv1'); var cv2 = document.getElementById('cv2');
 var decisionBox = document.getElementById('decision-box');
 
-
-// ── Render ─────────────────────────────────────────────────────────────
 function render(snap, cursor, total) {
-  // Arrays
   renderArrRow(arrA, snap.A, snap.i);
   renderArrRow(arrB, snap.B, snap.j);
 
-  // Binary search info
   if (snap.lo >= 0 && snap.hi >= 0) {
     bsInfo.textContent = 'Binary search on smaller  ·  low=' + snap.lo + '  high=' + snap.hi +
       (snap.i >= 0 ? '  sm_cut=' + snap.i : '');
@@ -581,19 +487,15 @@ function render(snap, cursor, total) {
     bsInfo.textContent = '';
   }
 
-  // Variables
   valLo.textContent   = snap.lo >= 0 ? snap.lo : '—';
   valI.textContent    = snap.i  >= 0 ? snap.i  : '—';
   valHi.textContent   = snap.hi >= 0 ? snap.hi : '—';
   valJ.textContent    = snap.j  >= 0 ? snap.j  : '—';
   valHalf.textContent = snap.half >= 0 ? snap.half : '—';
 
-  // Boundary values
   function setBndBox(boxEl, valEl, v) {
     if (v === null) {
-      valEl.textContent = '—';
-      valEl.className = 'bnd-value';
-      boxEl.classList.remove('live');
+      valEl.textContent = '—'; valEl.className = 'bnd-value'; boxEl.classList.remove('live');
     } else {
       var isInf = v === -Infinity || v === Infinity;
       valEl.textContent = fmtV(v);
@@ -606,8 +508,7 @@ function render(snap, cursor, total) {
   setBndBox(bndMlb, bvMlb, snap.maxLeftB);
   setBndBox(bndMrb, bvMrb, snap.minRightB);
 
-  // Check cards
-  function setCheck(cardEl, iconEl, valEl, result, mlaV, mraV, isFirst) {
+  function setCheck(cardEl, iconEl, valEl, result, isFirst) {
     iconEl.textContent = result === null ? '' : (result ? '✓' : '✗');
     var vStr = '—';
     if (result !== null) {
@@ -622,52 +523,96 @@ function render(snap, cursor, total) {
       cardEl.className = 'check-card ' + (result ? 'pass' : 'fail');
     }
   }
-  setCheck(check1El, ci1, cv1, snap.check1, null, null, true);
-  setCheck(check2El, ci2, cv2, snap.check2, null, null, false);
+  setCheck(check1El, ci1, cv1, snap.check1, true);
+  setCheck(check2El, ci2, cv2, snap.check2, false);
 
-  // Decision box
   var dec = decisionBox;
   if (snap.phase === 'Done') {
-    dec.className = 'decision-box done';
-    dec.textContent = 'Median = ' + snap.answer;
+    dec.className = 'decision-box done'; dec.textContent = 'Median = ' + snap.answer;
   } else if (snap.phase === 'Valid') {
-    dec.className = 'decision-box valid';
-    dec.textContent = 'Valid partition. Compute median.';
+    dec.className = 'decision-box valid'; dec.textContent = 'Valid partition. Compute median.';
   } else if (snap.direction === 'left') {
-    dec.className = 'decision-box left';
-    dec.textContent = "A’s cut too far right. hi = i − 1.";
+    dec.className = 'decision-box left'; dec.textContent = "A's cut too far right. hi = i − 1.";
   } else if (snap.direction === 'right') {
-    dec.className = 'decision-box right';
-    dec.textContent = "B’s cut too far right. lo = i + 1. (j = half − i decreases.)";
+    dec.className = 'decision-box right'; dec.textContent = "B's cut too far right. lo = i + 1.";
   } else {
-    dec.className = 'decision-box';
-    dec.textContent = '—';
+    dec.className = 'decision-box'; dec.textContent = '—';
   }
 
-  // Status
   phBadge.textContent    = snap.phase;
   statusDesc.textContent = snap.desc;
   counter.textContent    = 'Step ' + (cursor + 1) + ' / ' + total;
 
-  // Code highlight
   codeBody.querySelectorAll('.code-line').forEach(function(line) {
     var nums = (line.dataset.lines || '').split(',').map(Number);
     line.classList.toggle('active', snap.lines.some(function(l){ return nums.indexOf(l) >= 0; }));
   });
 }
 
-// ── Load ───────────────────────────────────────────────────────────────
-function loadPreset(idx) {
-  var p = PRESETS[idx];
-  codeBody.innerHTML = CODE_HTML;
-  nav.load(buildSteps(p.n1, p.n2));
+function parseArr(raw) {
+  if (!raw || !raw.trim()) return [];
+  return raw.split(',').map(function(x) { return parseInt(x.trim(), 10); }).filter(function(n) { return !isNaN(n); });
 }
 
-// ── Navigation ─────────────────────────────────────────────────────────
-var nav = VizNav({ btnPrev: btnPrev, btnNext: btnNext, btnPlay: btnPlay, speedSel: speedSel, render: render });
-presetSel.addEventListener('change', function() { loadPreset(parseInt(presetSel.value)); });
+function loadPreset() {
+  var sel = document.getElementById('presetSel');
+  if (!sel.value) return;
+  var d = JSON.parse(sel.value);
+  document.getElementById('inp-n1').value = d.n1.join(',');
+  document.getElementById('inp-n2').value = d.n2.join(',');
+  buildAndRun();
+}
 
-loadPreset(0);
+function randomExample() {
+  var examples = [
+    {n1:[1,3,8], n2:[7,9,10,11]},
+    {n1:[1,2], n2:[3,4]},
+    {n1:[1,3], n2:[2]},
+    {n1:[], n2:[1]},
+    {n1:[2,3,4], n2:[1]},
+    {n1:[1,2,3,4], n2:[5,6]},
+    {n1:[1,5,9], n2:[2,4,6,8]},
+  ];
+  var pick = examples[Math.floor(Math.random() * examples.length)];
+  document.getElementById('inp-n1').value = pick.n1.join(',');
+  document.getElementById('inp-n2').value = pick.n2.join(',');
+  document.getElementById('presetSel').value = '';
+  buildAndRun();
+}
+
+function buildAndRun() {
+  var n1 = parseArr(document.getElementById('inp-n1').value);
+  var n2 = parseArr(document.getElementById('inp-n2').value);
+  codeBody.innerHTML = CODE_HTML;
+  nav.load(buildSteps(n1, n2));
+}
+
+var nav = VizNav({ btnPrev: document.getElementById('prevBtn'), btnNext: document.getElementById('stepBtn'), btnPlay: document.getElementById('playBtn'), speedSel: document.getElementById('speedSel'), render: render });
+
+document.getElementById('resetBtn').addEventListener('click', function() { buildAndRun(); });
+
+window.addEventListener('DOMContentLoaded', function() {
+  buildAndRun();
+});
+</script>
+<script>
+(function() {
+  var handle = document.getElementById('resize-handle');
+  var panel  = document.getElementById('code-panel');
+  var dragging = false, startX = 0, startW = 0;
+  handle.addEventListener('mousedown', function(e) {
+    dragging = true; startX = e.clientX; startW = panel.offsetWidth;
+    handle.classList.add('dragging'); e.preventDefault();
+  });
+  document.addEventListener('mousemove', function(e) {
+    if (!dragging) return;
+    var delta = startX - e.clientX;
+    panel.style.width = Math.min(560, Math.max(120, startW + delta)) + 'px';
+  });
+  document.addEventListener('mouseup', function() {
+    if (!dragging) return; dragging = false; handle.classList.remove('dragging');
+  });
+})();
 </script>
 </body>
 </html>

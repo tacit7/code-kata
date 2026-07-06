@@ -5,18 +5,52 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Valid Palindrome - Algorithm Visualization</title>
   <link rel="stylesheet" href="../shared/style.css" />
+  <script src="../shared/gsap.min.js"></script>
+  <script src="../shared/viz.js"></script>
   <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: "Fira Code", "Cascadia Code", monospace; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+    #header { padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+    #phase-badge { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; padding: 3px 10px; border-radius: var(--radius-sm); background: #1e3a5f; color: var(--blue); border: 1px solid var(--blue); }
+    #step-counter { font-size: 12px; color: var(--text-muted); margin-left: auto; }
+    .viz-inputs { width: 100%; padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; flex-wrap: wrap; gap: 12px; align-items: center; flex-shrink: 0; }
+    .viz-inputs label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); display: block; margin-bottom: 3px; }
+    .viz-inputs select, .viz-inputs input { background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 0 8px; height: 30px; font-size: 0.82rem; font-family: inherit; }
+    .vi-btn-run { padding: 6px 14px; border-radius: 6px; font-size: 0.82rem; font-weight: 600; cursor: pointer; font-family: inherit; background: var(--accent); color: #fff; border: none; }
+    .vi-btn-rand { padding: 6px 14px; border-radius: 6px; font-size: 0.82rem; cursor: pointer; font-family: inherit; background: var(--bg); color: var(--text); border: 1px solid var(--border); }
+    #main { display: flex; flex: 1; overflow: hidden; }
+    #viz-area { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding: 20px; gap: 20px; overflow-y: auto; }
+    #resize-handle { width: 5px; flex-shrink: 0; cursor: col-resize; background: transparent; border-left: 1px solid var(--border); transition: background .15s; }
+    #resize-handle:hover, #resize-handle.dragging { background: var(--accent); }
+    #code-panel { width: 350px; min-width: 120px; max-width: 560px; flex-shrink: 0; background: #0d1117; border-right: 1px solid var(--border); overflow-y: auto; padding: 10px 12px; display: flex; flex-direction: column; }
+    .code-panel-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--text-dim); margin-bottom: 8px; }
+    .cl { display: flex; align-items: stretch; padding: 2px 0; white-space: pre; border-left: 2px solid transparent; padding-left: 6px; color: var(--text-muted); font-size: 0.75rem; line-height: 1.8; }
+    .cl.hl { background: rgba(122,162,247,0.12); border-left-color: var(--accent); color: var(--text); }
+    .ln { display: inline-block; width: 20px; text-align: right; color: var(--text-dim); user-select: none; margin-right: 10px; font-size: 0.7rem; }
+    .kw { color: var(--purple); }
+    .nb { color: var(--green); }
+    .cm { color: var(--text-dim); font-style: italic; }
+    #sidebar { width: 220px; flex-shrink: 0; background: var(--surface); border-left: 1px solid var(--border); overflow-y: auto; padding: 14px 12px; display: flex; flex-direction: column; gap: 12px; }
+    .sidebar-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--text-dim); margin-bottom: 6px; }
+    .var-item { font-size: 11px; font-family: monospace; color: var(--text-muted); padding: 4px 0; border-bottom: 1px solid var(--border-soft); }
+    .var-key { color: var(--text-dim); }
+    .var-val { color: var(--accent); font-weight: 700; }
+    #nav-row { flex-shrink: 0; display: flex; align-items: center; gap: 8px; padding: 10px 16px; background: var(--surface); border-top: 1px solid var(--border); }
+    .btn-step { padding: 6px 14px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--surface); color: var(--text); font-family: inherit; font-size: 12px; cursor: pointer; }
+    .btn-play { padding: 6px 14px; border-radius: var(--radius-sm); background: var(--accent); border-color: var(--accent); color: #fff; font-family: inherit; font-size: 12px; cursor: pointer; }
+
+    /* char grid */
     .char-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(24px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(24px, 1fr));
       gap: 4px;
-      margin-bottom: 20px;
       padding: 12px;
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: 8px;
       font-family: monospace;
       font-size: 0.85rem;
+      width: 100%;
     }
     .char-cell {
       display: flex;
@@ -53,17 +87,13 @@
       background: rgba(239, 68, 68, 0.15);
       border-color: var(--red);
     }
-    .var-panel {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-      gap: 12px;
-      margin-bottom: 20px;
-    }
+
+    /* var-box for sidebar */
     .var-box {
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: 8px;
-      padding: 10px;
+      padding: 8px 10px;
       font-size: 0.8rem;
     }
     .var-label {
@@ -80,115 +110,33 @@
       color: var(--text);
       font-weight: 600;
     }
-    .viz-inputs {
+    .var-panel {
       display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      align-items: flex-end;
-      padding: 10px 0 14px;
-      width: 100%;
-      max-width: 90%;
+      flex-direction: column;
+      gap: 6px;
     }
+
+    /* step description */
+    .step-desc-text {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    /* viz-inputs field */
     .viz-inputs .field {
       display: flex;
       flex-direction: column;
       gap: 4px;
     }
-    .viz-inputs label {
-      font-size: 0.7rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      color: var(--text-dim);
-    }
-    .viz-inputs select {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      color: var(--text);
-      border-radius: 6px;
-      padding: 6px 10px;
-      font-size: 0.85rem;
-      cursor: pointer;
-    }
     .viz-inputs input[type="text"] {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      color: var(--text);
-      border-radius: 6px;
-      padding: 6px 10px;
-      font-size: 0.85rem;
       width: 200px;
     }
-    .viz-inputs .btn-run {
-      padding: 7px 18px;
-      background: var(--accent);
-      color: #fff;
-      border: none;
-      border-radius: 6px;
-      font-weight: 600;
-      cursor: pointer;
-    }
-    .viz-inputs .btn-random {
-      padding: 7px 14px;
-      background: var(--surface);
-      color: var(--text);
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      cursor: pointer;
-    }
-    .controls {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 16px;
-      margin-bottom: 20px;
-    }
-    .control-row {
-      display: flex;
-      gap: 12px;
-      align-items: center;
-      margin-bottom: 12px;
-    }
-    .control-row:last-child {
-      margin-bottom: 0;
-    }
-    .control-label {
-      font-size: 0.85rem;
-      font-weight: 600;
-      color: var(--text);
-      min-width: 80px;
-    }
-    .control-input {
-      flex: 1;
-      background: var(--bg);
-      border: 1px solid var(--border);
-      color: var(--text);
-      padding: 8px 10px;
-      border-radius: 6px;
-      font-size: 0.85rem;
-      font-family: monospace;
-    }
-    .btn-build {
-      background: var(--accent);
-      color: white;
-      border: none;
-      padding: 8px 16px;
-      border-radius: 6px;
-      font-size: 0.85rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: opacity 0.2s;
-    }
-    .btn-build:hover {
-      opacity: 0.9;
-    }
-    .btn-build:active {
-      opacity: 0.8;
-    }
+
+    /* error message */
     .error-message {
       color: var(--red);
       font-size: 0.8rem;
-      margin-top: 8px;
       display: none;
     }
     .error-message.show {
@@ -196,93 +144,63 @@
     }
   </style>
 </head>
-<body class="page">
-  <div class="page-header">
-    <a class="back-link" href="../index.html">← All Algorithms</a>
-    <div class="page-title">Valid Palindrome</div>
-    <div class="page-sub">LeetCode #125 · Two-Pointer · O(n) time · O(1) space</div>
+<body>
+
+<div class="viz-inputs">
+  <div class="field">
+    <label>Preset</label>
+    <select id="presetSel" onchange="loadPreset()">
+      <option value="">— pick a preset —</option>
+      <option value='{"s":"A man, a plan, a canal: Panama"}'>Classic Palindrome</option>
+      <option value='{"s":"race a car"}'>Not Palindrome</option>
+      <option value='{"s":"0P"}'>Short Mixed</option>
+      <option value='{"s":".,;: "}'>Only Punctuation</option>
+      <option value='{"s":"12321"}'>Numeric Palindrome</option>
+      <option value='{"s":"a."}'>Letter &amp; Punct</option>
+    </select>
   </div>
-
-  <div class="viz-inputs">
-    <div class="field">
-      <label>Preset</label>
-      <select id="presetSel" onchange="loadPreset()">
-        <option value="">— pick a preset —</option>
-        <option value='{"s":"A man, a plan, a canal: Panama"}'>Classic Palindrome</option>
-        <option value='{"s":"race a car"}'>Not Palindrome</option>
-        <option value='{"s":"0P"}'>Short Mixed</option>
-        <option value='{"s":".,;: "}'>Only Punctuation</option>
-        <option value='{"s":"12321"}'>Numeric Palindrome</option>
-        <option value='{"s":"a."}'>Letter &amp; Punct</option>
-      </select>
-    </div>
-    <div class="field">
-      <label>Input string:</label>
-      <input type="text" id="input-string" value="A man, a plan, a canal: Panama" />
-    </div>
-    <button class="btn-run" onclick="buildAndRun()">Run</button>
-    <button class="btn-random" onclick="randomExample()">🎲 Random</button>
-    <div class="error-message" id="error-msg"></div>
+  <div class="field">
+    <label>Input string:</label>
+    <input type="text" id="input-string" value="A man, a plan, a canal: Panama" />
   </div>
+  <button class="vi-btn-run" onclick="buildAndRun()">Run</button>
+  <button class="vi-btn-rand" onclick="randomExample()">&#127922; Random</button>
+  <div class="error-message" id="error-msg"></div>
+</div>
 
-  <div class="viz-area" style="width: 100%; max-width: 90%; margin: 0 auto;">
-    <div style="display: flex; gap: 12px; margin-bottom: 14px;">
-      <div class="panel-box" style="flex: 0 0 auto;">
-        <div style="display: flex; gap: 8px; align-items: center;">
-          <button class="btn-step" id="prevBtn" disabled>&#8592;</button>
-          <button class="btn-step" id="stepBtn" disabled>&#8594;</button>
-          <button class="btn-play" id="playBtn" disabled>&#9654; Play</button>
-          <select
-            id="speedSel"
-            style="
-              background: var(--bg);
-              border: 1px solid var(--border);
-              color: var(--text);
-              border-radius: 8px;
-              padding: 6px 10px;
-              font-size: 0.85rem;
-            "
-          >
-            <option value="700">Slow</option>
-            <option value="250" selected>Medium</option>
-            <option value="80">Fast</option>
-          </select>
-        </div>
-      </div>
-      <div class="panel-box" style="flex: 1; min-width: 0;">
-        <div
-          style="
-            font-size: 0.68rem;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.1em;
-            color: var(--text-dim);
-          "
-          id="phase-label"
-        >
-          —
-        </div>
-        <div style="font-size: 0.88rem; color: var(--text-muted); margin-top: 3px;" id="step-desc">
-          Click Run to start.
-        </div>
-      </div>
-    </div>
+<div class="controls"></div>
 
-    <div class="panel-box" style="margin-bottom: 20px;">
-      <div
-        style="font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-dim); margin-bottom: 12px;"
-      >
-        String
-      </div>
+<div id="header">
+  <span id="phase-badge">&mdash;</span>
+  <span>Valid Palindrome</span>
+  <span id="step-counter">Step 0 / 0</span>
+</div>
+
+<div id="main">
+
+  <div id="viz-area">
+    <div class="panel-box" style="width:100%;">
+      <div style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--text-dim);margin-bottom:12px;">String</div>
       <div class="char-grid" id="char-grid"></div>
     </div>
+  </div>
 
-    <div class="panel-box" style="margin-bottom: 20px;">
-      <div
-        style="font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-dim); margin-bottom: 12px;"
-      >
-        Variables
-      </div>
+  <div id="resize-handle"></div>
+
+  <div id="code-panel">
+    <div class="code-panel-title">Python Solution</div>
+    <div id="code-body"></div>
+  </div>
+
+  <div id="sidebar">
+
+    <div>
+      <div class="sidebar-title">Step</div>
+      <div class="step-desc-text" id="step-desc">Click Run to start.</div>
+    </div>
+
+    <div>
+      <div class="sidebar-title">Variables</div>
       <div class="var-panel">
         <div class="var-box">
           <div class="var-label">l (left index)</div>
@@ -294,50 +212,43 @@
         </div>
         <div class="var-box">
           <div class="var-label">s[l]</div>
-          <div class="var-value" id="var-sl">—</div>
+          <div class="var-value" id="var-sl">&mdash;</div>
         </div>
         <div class="var-box">
           <div class="var-label">s[r]</div>
-          <div class="var-value" id="var-sr">—</div>
+          <div class="var-value" id="var-sr">&mdash;</div>
         </div>
         <div class="var-box">
           <div class="var-label">Comparison</div>
-          <div class="var-value" id="var-cmp">—</div>
+          <div class="var-value" id="var-cmp">&mdash;</div>
         </div>
         <div class="var-box">
           <div class="var-label">Result</div>
-          <div class="var-value" id="var-result">—</div>
+          <div class="var-value" id="var-result">&mdash;</div>
         </div>
       </div>
     </div>
 
-    <div class="panel-box" style="font-family: monospace; font-size: 0.78rem; line-height: 1.75;">
-      <div
-        style="
-          font-size: 0.68rem;
-          font-weight: 700;
-          text-transform: uppercase;
-          letter-spacing: 0.1em;
-          color: var(--text-dim);
-          margin-bottom: 8px;
-        "
-      >
-        Python Solution
-      </div>
-      <div id="code-body"></div>
-    </div>
   </div>
+</div>
 
-  <script src="../shared/gsap.min.js"></script>
-  <script src="../shared/viz.js"></script>
+<div id="nav-row">
+  <button class="btn-step" id="prevBtn" disabled>&#8592;</button>
+  <button class="btn-step" id="stepBtn" disabled>&#8594;</button>
+  <button class="btn-play" id="playBtn" disabled>&#9654; Play</button>
+  <button class="btn-step" id="resetBtn" onclick="buildAndRun()">Reset</button>
+  <select id="speedSel" style="background:var(--bg);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:6px 10px;font-size:0.85rem;">
+    <option value="700">Slow</option>
+    <option value="250" selected>Medium</option>
+    <option value="80">Fast</option>
+  </select>
+</div>
 
-  <script>
-    var nav;
-    var currentState = {};
-    var cleanedString = '';
-    var allSteps = [];
+<script>
+  var nav;
+  var allSteps = [];
 
-    const pythonCode = `def is_palindrome(s):
+  const pythonCode = `def is_palindrome(s):
     l, r = 0, len(s) - 1
     while l < r:
         while l < r and not s[l].isalnum():
@@ -350,301 +261,307 @@
         r -= 1
     return True`;
 
-    function setCodeLines(activeLines) {
-      const codeBody = document.getElementById('code-body');
-      if (!codeBody.childNodes.length) {
-        const lines = pythonCode.split('\n');
-        lines.forEach((line, idx) => {
-          const lineEl = document.createElement('div');
-          lineEl.id = 'cl-' + idx;
-          lineEl.textContent = line;
-          codeBody.appendChild(lineEl);
+  function setCodeLines(activeLines) {
+    const codeBody = document.getElementById('code-body');
+    if (!codeBody.childNodes.length) {
+      const lines = pythonCode.split('\n');
+      lines.forEach((line, idx) => {
+        const lineEl = document.createElement('div');
+        lineEl.className = 'cl';
+        lineEl.id = 'cl-' + idx;
+        lineEl.textContent = line;
+        codeBody.appendChild(lineEl);
+      });
+    }
+
+    document.querySelectorAll('#code-body > div').forEach((el) => {
+      el.classList.remove('hl');
+    });
+
+    activeLines.forEach((lineNum) => {
+      const el = document.getElementById('cl-' + lineNum);
+      if (el) el.classList.add('hl');
+    });
+  }
+
+  function initializeCodeLines() {
+    setCodeLines([1]);
+  }
+
+  function simulate(inputString) {
+    const steps = [];
+
+    function isAlnum(ch) {
+      return /[a-z0-9]/i.test(ch);
+    }
+
+    const s = inputString;
+    let l = 0;
+    let r = s.length - 1;
+
+    steps.push({
+      phase: 'Initialize',
+      desc: 'Set left pointer l=0, right pointer r=len(s)-1',
+      l: l,
+      r: r,
+      s: s,
+      lines: [1, 2],
+      action: 'init',
+      result: null,
+    });
+
+    while (l < r) {
+      while (l < r && !isAlnum(s[l])) {
+        steps.push({
+          phase: 'Skip left',
+          desc: `Skip non-alnum at l=${l} ('${s[l]}'), move to l=${l + 1}`,
+          l: l,
+          r: r,
+          s: s,
+          lines: [3, 4, 5],
+          action: 'skip_left',
+          result: null,
+        });
+        l += 1;
+      }
+
+      while (l < r && !isAlnum(s[r])) {
+        steps.push({
+          phase: 'Skip right',
+          desc: `Skip non-alnum at r=${r} ('${s[r]}'), move to r=${r - 1}`,
+          l: l,
+          r: r,
+          s: s,
+          lines: [3, 6, 7],
+          action: 'skip_right',
+          result: null,
+        });
+        r -= 1;
+      }
+
+      if (l >= r) break;
+
+      const leftChar = s[l].toLowerCase();
+      const rightChar = s[r].toLowerCase();
+      const match = leftChar === rightChar;
+
+      if (match) {
+        steps.push({
+          phase: 'Compare',
+          desc: `Compare s[${l}]='${s[l]}' and s[${r}]='${s[r]}' (case-insensitive): MATCH`,
+          l: l,
+          r: r,
+          s: s,
+          lines: [3, 8, 9],
+          action: 'compare_match',
+          result: null,
+        });
+      } else {
+        steps.push({
+          phase: 'Compare',
+          desc: `Compare s[${l}]='${s[l]}' and s[${r}]='${s[r]}' (case-insensitive): MISMATCH`,
+          l: l,
+          r: r,
+          s: s,
+          lines: [3, 8, 9],
+          action: 'compare_mismatch',
+          result: null,
+        });
+        steps.push({
+          phase: 'Result',
+          desc: 'Characters do not match. Return False.',
+          l: l,
+          r: r,
+          s: s,
+          lines: [9, 10],
+          action: 'return_false',
+          result: false,
+        });
+        return steps;
+      }
+
+      l += 1;
+      r -= 1;
+
+      if (l < r) {
+        steps.push({
+          phase: 'Advance',
+          desc: `Increment l to ${l}, decrement r to ${r}`,
+          l: l,
+          r: r,
+          s: s,
+          lines: [11, 12],
+          action: 'advance',
+          result: null,
         });
       }
-
-      document.querySelectorAll('#code-body > div').forEach((el) => {
-        el.classList.remove('hl');
-      });
-
-      activeLines.forEach((lineNum) => {
-        const el = document.getElementById('cl-' + lineNum);
-        if (el) el.classList.add('hl');
-      });
     }
 
-    function initializeCodeLines() {
-      setCodeLines([1]);
-    }
-
-    function simulate(inputString) {
-      const steps = [];
-
-      function isAlnum(ch) {
-        return /[a-z0-9]/i.test(ch);
-      }
-
-      const s = inputString;
-      let l = 0;
-      let r = s.length - 1;
-
-      // Step 1: Initialize
-      steps.push({
-        phase: 'Initialize',
-        desc: 'Set left pointer l=0, right pointer r=len(s)-1',
-        l: l,
-        r: r,
-        s: s,
-        lines: [1, 2],
-        action: 'init',
-        result: null,
-      });
-
-      while (l < r) {
-        // Step: Skip non-alphanumeric on left
-        while (l < r && !isAlnum(s[l])) {
-          steps.push({
-            phase: 'Skip left',
-            desc: `Skip non-alnum at l=${l} ('${s[l]}'), move to l=${l + 1}`,
-            l: l,
-            r: r,
-            s: s,
-            lines: [3, 4, 5],
-            action: 'skip_left',
-            result: null,
-          });
-          l += 1;
-        }
-
-        // Step: Skip non-alphanumeric on right
-        while (l < r && !isAlnum(s[r])) {
-          steps.push({
-            phase: 'Skip right',
-            desc: `Skip non-alnum at r=${r} ('${s[r]}'), move to r=${r - 1}`,
-            l: l,
-            r: r,
-            s: s,
-            lines: [3, 6, 7],
-            action: 'skip_right',
-            result: null,
-          });
-          r -= 1;
-        }
-
-        if (l >= r) break;
-
-        // Step: Compare characters
-        const leftChar = s[l].toLowerCase();
-        const rightChar = s[r].toLowerCase();
-        const match = leftChar === rightChar;
-
-        if (match) {
-          steps.push({
-            phase: 'Compare',
-            desc: `Compare s[${l}]='${s[l]}' and s[${r}]='${s[r]}' (case-insensitive): MATCH`,
-            l: l,
-            r: r,
-            s: s,
-            lines: [3, 8, 9],
-            action: 'compare_match',
-            result: null,
-          });
-        } else {
-          steps.push({
-            phase: 'Compare',
-            desc: `Compare s[${l}]='${s[l]}' and s[${r}]='${s[r]}' (case-insensitive): MISMATCH`,
-            l: l,
-            r: r,
-            s: s,
-            lines: [3, 8, 9],
-            action: 'compare_mismatch',
-            result: null,
-          });
-          steps.push({
-            phase: 'Result',
-            desc: 'Characters do not match. Return False.',
-            l: l,
-            r: r,
-            s: s,
-            lines: [9, 10],
-            action: 'return_false',
-            result: false,
-          });
-          return steps;
-        }
-
-        l += 1;
-        r -= 1;
-
-        if (l < r) {
-          steps.push({
-            phase: 'Advance',
-            desc: `Increment l to ${l}, decrement r to ${r}`,
-            l: l,
-            r: r,
-            s: s,
-            lines: [11, 12],
-            action: 'advance',
-            result: null,
-          });
-        }
-      }
-
-      steps.push({
-        phase: 'Result',
-        desc: 'Loop complete (l >= r). All characters match. Return True.',
-        l: l,
-        r: r,
-        s: s,
-        lines: [13],
-        action: 'return_true',
-        result: true,
-      });
-
-      return steps;
-    }
-
-    function applyStep(snap, animate) {
-      const s = snap.s;
-      const l = snap.l;
-      const r = snap.r;
-
-      // Update char grid
-      const charGrid = document.getElementById('char-grid');
-      charGrid.innerHTML = '';
-
-      for (let i = 0; i < s.length; i++) {
-        const cell = document.createElement('div');
-        cell.className = 'char-cell';
-        cell.textContent = s[i];
-
-        const isAlnum = /[a-z0-9]/i.test(s[i]);
-        if (!isAlnum) {
-          cell.classList.add('dimmed');
-        }
-
-        if (i === l && i === r) {
-          cell.classList.add('l-pointer', 'r-pointer');
-        } else if (i === l) {
-          cell.classList.add('l-pointer');
-        } else if (i === r) {
-          cell.classList.add('r-pointer');
-        }
-
-        if (snap.action === 'compare_match' && (i === l || i === r)) {
-          cell.classList.add('match');
-        }
-        if (snap.action === 'compare_mismatch' && (i === l || i === r)) {
-          cell.classList.add('mismatch');
-        }
-
-        charGrid.appendChild(cell);
-      }
-
-      // Update variables
-      document.getElementById('var-l').textContent = l;
-      document.getElementById('var-r').textContent = r;
-
-      const isAlnum = /[a-z0-9]/i.test(s[l]);
-      document.getElementById('var-sl').textContent = isAlnum ? `'${s[l]}'` : `'${s[l]}' (skip)`;
-
-      const isRAlnum = /[a-z0-9]/i.test(s[r]);
-      document.getElementById('var-sr').textContent = isRAlnum ? `'${s[r]}'` : `'${s[r]}' (skip)`;
-
-      if (snap.action === 'compare_match') {
-        document.getElementById('var-cmp').textContent = `'${s[l]}' = '${s[r]}' ✓`;
-      } else if (snap.action === 'compare_mismatch') {
-        document.getElementById('var-cmp').textContent = `'${s[l]}' ≠ '${s[r]}' ✗`;
-      } else {
-        document.getElementById('var-cmp').textContent = '—';
-      }
-
-      if (snap.result === true) {
-        document.getElementById('var-result').textContent = 'True';
-      } else if (snap.result === false) {
-        document.getElementById('var-result').textContent = 'False';
-      } else {
-        document.getElementById('var-result').textContent = '—';
-      }
-
-      // Update code lines
-      setCodeLines(snap.lines);
-
-      // Update phase and description
-      document.getElementById('phase-label').textContent = snap.phase;
-      document.getElementById('step-desc').textContent = snap.desc;
-    }
-
-    function buildAndRun() {
-      const inputStr = document.getElementById('input-string').value;
-      const errorMsg = document.getElementById('error-msg');
-      errorMsg.classList.remove('show');
-
-      if (!inputStr || inputStr.trim().length === 0) {
-        errorMsg.textContent = 'Please enter a string.';
-        errorMsg.classList.add('show');
-        return;
-      }
-
-      allSteps = simulate(inputStr);
-      if (allSteps.length === 0) {
-        errorMsg.textContent = 'No steps generated.';
-        errorMsg.classList.add('show');
-        return;
-      }
-
-      nav.load(allSteps);
-    }
-
-    function loadPreset() {
-      var sel = document.getElementById('presetSel');
-      if (!sel.value) return;
-      var d = JSON.parse(sel.value);
-      document.getElementById('input-string').value = d.s;
-      buildAndRun();
-    }
-
-    function randomExample() {
-      const examples = [
-        'A man, a plan, a canal: Panama',
-        'race a car',
-        '0P',
-        '.,; ',
-        '12321',
-        'a.',
-        'Was it a car or a cat I saw?',
-        'Madam, I'm Adam',
-        'hello',
-        'racecar',
-      ];
-      const idx = Math.floor(Math.random() * examples.length);
-      document.getElementById('input-string').value = examples[idx];
-      document.getElementById('presetSel').value = '';
-      buildAndRun();
-    }
-
-    window.addEventListener('DOMContentLoaded', function () {
-      initializeCodeLines();
-
-      nav = VizNav({
-        btnPrev: document.getElementById('prevBtn'),
-        btnNext: document.getElementById('stepBtn'),
-        btnPlay: document.getElementById('playBtn'),
-        speedSel: document.getElementById('speedSel'),
-        render: function (snap, cur, total) {
-          applyStep(snap, cur > 0);
-        },
-      });
-
-      // Auto-run default example
-      buildAndRun();
+    steps.push({
+      phase: 'Result',
+      desc: 'Loop complete (l >= r). All characters match. Return True.',
+      l: l,
+      r: r,
+      s: s,
+      lines: [13],
+      action: 'return_true',
+      result: true,
     });
-  </script>
 
-  <script>
-    if (window.self !== window.top) {
-      var bl = document.querySelector('.back-link');
-      if (bl) bl.style.display = 'none';
+    return steps;
+  }
+
+  function applyStep(snap, animate) {
+    const s = snap.s;
+    const l = snap.l;
+    const r = snap.r;
+
+    const charGrid = document.getElementById('char-grid');
+    charGrid.innerHTML = '';
+
+    for (let i = 0; i < s.length; i++) {
+      const cell = document.createElement('div');
+      cell.className = 'char-cell';
+      cell.textContent = s[i];
+
+      const isAlnum = /[a-z0-9]/i.test(s[i]);
+      if (!isAlnum) {
+        cell.classList.add('dimmed');
+      }
+
+      if (i === l && i === r) {
+        cell.classList.add('l-pointer', 'r-pointer');
+      } else if (i === l) {
+        cell.classList.add('l-pointer');
+      } else if (i === r) {
+        cell.classList.add('r-pointer');
+      }
+
+      if (snap.action === 'compare_match' && (i === l || i === r)) {
+        cell.classList.add('match');
+      }
+      if (snap.action === 'compare_mismatch' && (i === l || i === r)) {
+        cell.classList.add('mismatch');
+      }
+
+      charGrid.appendChild(cell);
     }
-  </script>
+
+    document.getElementById('var-l').textContent = l;
+    document.getElementById('var-r').textContent = r;
+
+    const isAlnum = /[a-z0-9]/i.test(s[l]);
+    document.getElementById('var-sl').textContent = isAlnum ? `'${s[l]}'` : `'${s[l]}' (skip)`;
+
+    const isRAlnum = /[a-z0-9]/i.test(s[r]);
+    document.getElementById('var-sr').textContent = isRAlnum ? `'${s[r]}'` : `'${s[r]}' (skip)`;
+
+    if (snap.action === 'compare_match') {
+      document.getElementById('var-cmp').textContent = `'${s[l]}' = '${s[r]}' ✓`;
+    } else if (snap.action === 'compare_mismatch') {
+      document.getElementById('var-cmp').textContent = `'${s[l]}' ≠ '${s[r]}' ✗`;
+    } else {
+      document.getElementById('var-cmp').textContent = '—';
+    }
+
+    if (snap.result === true) {
+      document.getElementById('var-result').textContent = 'True';
+    } else if (snap.result === false) {
+      document.getElementById('var-result').textContent = 'False';
+    } else {
+      document.getElementById('var-result').textContent = '—';
+    }
+
+    setCodeLines(snap.lines);
+
+    document.getElementById('phase-badge').textContent = snap.phase;
+    document.getElementById('step-desc').textContent = snap.desc;
+  }
+
+  function buildAndRun() {
+    const inputStr = document.getElementById('input-string').value;
+    const errorMsg = document.getElementById('error-msg');
+    errorMsg.classList.remove('show');
+
+    if (!inputStr || inputStr.trim().length === 0) {
+      errorMsg.textContent = 'Please enter a string.';
+      errorMsg.classList.add('show');
+      return;
+    }
+
+    allSteps = simulate(inputStr);
+    if (allSteps.length === 0) {
+      errorMsg.textContent = 'No steps generated.';
+      errorMsg.classList.add('show');
+      return;
+    }
+
+    nav.load(allSteps);
+  }
+
+  function loadPreset() {
+    var sel = document.getElementById('presetSel');
+    if (!sel.value) return;
+    var d = JSON.parse(sel.value);
+    document.getElementById('input-string').value = d.s;
+    buildAndRun();
+  }
+
+  function randomExample() {
+    const examples = [
+      'A man, a plan, a canal: Panama',
+      'race a car',
+      '0P',
+      '.,; ',
+      '12321',
+      'a.',
+      'Was it a car or a cat I saw?',
+      'Madam, I’m Adam',
+      'hello',
+      'racecar',
+    ];
+    const idx = Math.floor(Math.random() * examples.length);
+    document.getElementById('input-string').value = examples[idx];
+    document.getElementById('presetSel').value = '';
+    buildAndRun();
+  }
+
+  window.addEventListener('DOMContentLoaded', function () {
+    initializeCodeLines();
+
+    nav = VizNav({
+      btnPrev: document.getElementById('prevBtn'),
+      btnNext: document.getElementById('stepBtn'),
+      btnPlay: document.getElementById('playBtn'),
+      speedSel: document.getElementById('speedSel'),
+      render: function (snap, cur, total) {
+        applyStep(snap, cur > 0);
+        document.getElementById('step-counter').textContent = 'Step ' + (cur + 1) + ' / ' + total;
+      },
+    });
+
+    buildAndRun();
+  });
+</script>
+
+<script>
+(function() {
+  var handle = document.getElementById('resize-handle');
+  var panel  = document.getElementById('code-panel');
+  var dragging = false, startX = 0, startW = 0;
+  handle.addEventListener('mousedown', function(e) {
+    dragging = true; startX = e.clientX; startW = panel.offsetWidth;
+    handle.classList.add('dragging'); e.preventDefault();
+  });
+  document.addEventListener('mousemove', function(e) {
+    if (!dragging) return;
+    var delta = startX - e.clientX;
+    panel.style.width = Math.min(560, Math.max(120, startW + delta)) + 'px';
+  });
+  document.addEventListener('mouseup', function() {
+    if (!dragging) return; dragging = false; handle.classList.remove('dragging');
+  });
+})();
+</script>
 </body>
 </html>

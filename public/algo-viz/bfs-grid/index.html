@@ -3,16 +3,11 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>BFS — Grid / Matrix</title>
+  <title>BFS &#8212; Grid / Matrix</title>
   <link rel="stylesheet" href="../shared/style.css" />
   <script src="../shared/gsap.min.js"></script>
   <script src="../shared/viz.js"></script>
   <style>
-    .viz-area {
-      width: 100%; max-width: 90%;
-      display: flex; flex-direction: column; gap: 12px;
-    }
-
     .grid-wrap {
       background: var(--surface);
       border: 1px solid var(--border);
@@ -21,6 +16,7 @@
       display: flex;
       justify-content: center;
       align-items: center;
+      width: 100%;
     }
 
     #grid {
@@ -44,34 +40,6 @@
     .cell[data-state="visited"] { background: #065f46; }
     .cell[data-state="path"]    { background: #a16207; border: 1px solid var(--yellow); }
 
-    .bottom-row {
-      display: grid;
-      grid-template-columns: 50% 1fr;
-      gap: 12px;
-      align-items: start;
-    }
-    .right-col { display: flex; flex-direction: column; gap: 12px; }
-
-    @media (max-width: 680px) { .bottom-row { grid-template-columns: 1fr; } }
-
-    .code-panel {
-      background: #0a0d14;
-      border: 1px solid var(--border);
-      border-radius: var(--radius-md);
-      overflow: hidden;
-      display: flex;
-      flex-direction: column;
-    }
-    .code-header {
-      padding: 9px 14px;
-      background: var(--surface);
-      border-bottom: 1px solid var(--border);
-      font-size: 0.67rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.11em;
-      color: var(--text-dim);
-    }
     .code-body {
       padding: 10px 0;
       flex: 1;
@@ -118,7 +86,6 @@
       color: var(--text-dim);
       margin-bottom: 10px;
     }
-
     .panel-sub {
       font-size: 0.75rem; font-weight: 400;
       text-transform: none; letter-spacing: 0; color: var(--text-faint);
@@ -151,96 +118,50 @@
       font-family: monospace; white-space: nowrap;
     }
 
-    .btn-play {
-      background: #15803d;
-      border: none;
-      border-radius: var(--radius-sm);
-      color: #fff;
-      cursor: pointer;
-      font-size: 0.88rem;
-      font-weight: 600;
-      padding: 9px 20px;
-      transition: background 0.2s;
-    }
-    .btn-play:hover { background: #166534; }
-    .btn-play.playing { background: #c2410c; }
-    .btn-play.playing:hover { background: #9a3412; }
-    .btn-play:disabled { opacity: 0.4; cursor: not-allowed; }
+    .leg-row { display: flex; flex-direction: column; gap: 5px; margin-top: 4px; }
+    .leg-item { display: flex; align-items: center; gap: 8px; font-size: 0.73rem; color: var(--text-muted); }
+    .leg-swatch { width: 14px; height: 14px; border-radius: 3px; flex-shrink: 0; }
 
-    .speed-select {
-      background: var(--bg);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-sm);
-      color: var(--text);
-      font-size: 0.85rem;
-      padding: 8px 10px;
-      outline: none;
-    }
-
-    .nav-row {
-      display: flex;
-      gap: 12px;
-      align-items: center;
-      flex-wrap: wrap;
-      width: 100%;
-      max-width: 90%;
-    }
-
-    .viz-inputs {
-      display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end;
-      padding: 10px 0 14px; width: 100%; max-width: 90%;
-    }
-    .viz-inputs .field {
-      display: flex; flex-direction: column; gap: 4px;
-    }
-    .viz-inputs label {
-      font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
-      letter-spacing: 0.08em; color: var(--text-dim);
-    }
+    /* ─── Canonical layout ─────────────────────────────── */
+    body { background:var(--bg); color:var(--text); font-family:"Fira Code",monospace; height:100vh; display:flex; flex-direction:column; overflow:hidden; }
+    .viz-inputs { width:100%; padding:10px 16px; background:var(--surface); border-bottom:1px solid var(--border); display:flex; flex-wrap:wrap; gap:12px; align-items:center; flex-shrink:0; }
+    .viz-inputs .field { display:flex; flex-direction:column; gap:4px; }
+    .viz-inputs label { font-size:0.7rem; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:var(--text-dim); }
     .viz-inputs input[type="text"],
-    .viz-inputs input[type="number"] {
-      background: var(--surface); border: 1px solid var(--border);
-      color: var(--text); border-radius: var(--radius-sm);
-      padding: 6px 10px; font-size: 0.85rem;
-    }
-    .viz-inputs input[type="number"] {
-      width: 80px;
-    }
-    .viz-inputs select {
-      background: var(--surface); border: 1px solid var(--border);
-      color: var(--text); border-radius: var(--radius-sm);
-      padding: 6px 10px; font-size: 0.85rem; cursor: pointer;
-    }
-    .viz-inputs button {
-      padding: 7px 18px; background: var(--accent); color: #fff;
-      border: none; border-radius: var(--radius-sm); font-weight: 600;
-      cursor: pointer; font-size: 0.85rem;
-    }
-    .viz-inputs button:hover { opacity: 0.9; }
-    .viz-inputs .btn-secondary {
-      background: var(--surface); color: var(--text);
-      border: 1px solid var(--border);
-    }
+    .viz-inputs input[type="number"] { background:var(--surface); border:1px solid var(--border); color:var(--text); border-radius:var(--radius-sm); padding:6px 10px; font-size:0.85rem; }
+    .viz-inputs input[type="number"] { width:80px; }
+    .viz-inputs select { background:var(--surface); border:1px solid var(--border); color:var(--text); border-radius:var(--radius-sm); padding:6px 10px; font-size:0.85rem; cursor:pointer; }
+    .viz-inputs button { padding:7px 18px; background:var(--accent); color:#fff; border:none; border-radius:var(--radius-sm); font-weight:600; cursor:pointer; font-size:0.85rem; }
+    .viz-inputs button:hover { opacity:0.9; }
+    .viz-inputs .btn-secondary { background:var(--surface); color:var(--text); border:1px solid var(--border); }
+    #header { padding:10px 16px; background:var(--surface); border-bottom:1px solid var(--border); display:flex; align-items:center; gap:12px; flex-shrink:0; }
+    #phase-badge { font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; padding:3px 10px; border-radius:var(--radius-sm); background:#1e3a5f; color:var(--blue); border:1px solid var(--blue); }
+    #step-counter { font-size:12px; color:var(--text-muted); margin-left:auto; }
+    #main { display:flex; flex:1; overflow:hidden; }
+    #viz-area { flex:1; display:flex; flex-direction:column; align-items:stretch; justify-content:flex-start; padding:16px; gap:12px; overflow-y:auto; }
+    #resize-handle { width:5px; flex-shrink:0; cursor:col-resize; background:transparent; border-left:1px solid var(--border); transition:background .15s; z-index:10; }
+    #resize-handle:hover, #resize-handle.dragging { background:var(--accent); }
+    #code-panel { width:350px; min-width:120px; max-width:560px; flex-shrink:0; background:#0d1117; border-right:1px solid var(--border); overflow-y:auto; overflow-x:auto; padding:10px 12px; display:flex; flex-direction:column; }
+    #sidebar { width:240px; flex-shrink:0; background:var(--surface); border-left:1px solid var(--border); overflow-y:auto; padding:14px 12px; display:flex; flex-direction:column; gap:12px; }
+    #nav-row { flex-shrink:0; display:flex; align-items:center; gap:8px; padding:10px 16px; background:var(--surface); border-top:1px solid var(--border); }
+    .btn-step { background:var(--surface); border:1px solid var(--border); color:var(--text); border-radius:var(--radius-sm); padding:6px 14px; cursor:pointer; font-size:0.82rem; }
+    .btn-play { background:#15803d; border:none; color:#fff; border-radius:var(--radius-sm); padding:6px 14px; cursor:pointer; font-size:0.82rem; font-weight:600; }
+    .code-panel-title { font-size:0.67rem; font-weight:700; text-transform:uppercase; letter-spacing:0.1em; color:var(--text-dim); margin-bottom:8px; padding-bottom:6px; border-bottom:1px solid var(--border); }
   </style>
 </head>
 <body class="page">
-
-<div class="page-header">
-  <a class="back-link" href="../index.html">&larr; All Algorithms</a>
-  <h1 class="page-title">BFS &mdash; Grid / Matrix</h1>
-</div>
 
 <div class="viz-inputs">
   <div class="field">
     <label>Preset</label>
     <select id="presetSel" onchange="loadPreset()">
-      <option value="">— pick a preset —</option>
-      <option value='{"rows":"4","cols":"4","walls":"0"}'>Small Open (4×4)</option>
-      <option value='{"rows":"8","cols":"8","walls":"20"}'>Medium Grid (8×8)</option>
-      <option value='{"rows":"10","cols":"10","walls":"25"}'>Default (10×10)</option>
-      <option value='{"rows":"12","cols":"12","walls":"40"}'>Maze-like (12×12)</option>
-      <option value='{"rows":"15","cols":"15","walls":"10"}'>Large Sparse (15×15)</option>
-      <option value='{"rows":"20","cols":"20","walls":"45"}'>Tight Maze (20×20)</option>
+      <option value="">&#8212; pick a preset &#8212;</option>
+      <option value='{"rows":"4","cols":"4","walls":"0"}'>Small Open (4&#215;4)</option>
+      <option value='{"rows":"8","cols":"8","walls":"20"}'>Medium Grid (8&#215;8)</option>
+      <option value='{"rows":"10","cols":"10","walls":"25"}'>Default (10&#215;10)</option>
+      <option value='{"rows":"12","cols":"12","walls":"40"}'>Maze-like (12&#215;12)</option>
+      <option value='{"rows":"15","cols":"15","walls":"10"}'>Large Sparse (15&#215;15)</option>
+      <option value='{"rows":"20","cols":"20","walls":"45"}'>Tight Maze (20&#215;20)</option>
     </select>
   </div>
   <div class="field">
@@ -258,66 +179,75 @@
   <button onclick="buildGrid()">Randomize</button>
   <button class="btn-secondary" onclick="clearWalls()">Clear Walls</button>
   <button onclick="runBFS()">Run BFS</button>
-  <button class="btn-secondary" onclick="randomExample()">🎲 Random</button>
+  <button class="btn-secondary" onclick="randomExample()">&#127922; Random</button>
 </div>
-
 <div class="controls"></div>
 
-<div class="viz-area">
-  <div class="grid-wrap">
-    <div id="grid"></div>
+<div id="header">
+  <span id="phase-badge">&#8212;</span>
+  <span style="font-size:13px;font-weight:700;">BFS &#8212; Grid / Matrix</span>
+  <span id="step-counter">Step 0 / 0</span>
+</div>
+
+<div id="main">
+  <div id="viz-area">
+    <div class="grid-wrap">
+      <div id="grid"></div>
+    </div>
+    <div class="status-bar" style="max-width:100%">
+      <span class="phase-label" id="phase-label">&#8212;</span>
+      <span class="step-desc" id="step-desc">Click or drag cells to toggle walls, then click Run BFS.</span>
+    </div>
   </div>
 
-  <div class="status-bar" style="max-width:100%">
-    <span class="phase-label" id="phase-label">&mdash;</span>
-    <span class="step-desc" id="step-desc">Click or drag cells to toggle walls, then click Run BFS.</span>
+  <div id="resize-handle"></div>
+
+  <div id="code-panel">
+    <div class="code-panel-title">Python</div>
+    <div class="code-body" id="code-body"></div>
   </div>
 
-  <div class="bottom-row">
-    <div class="code-panel">
-      <div class="code-header">Python</div>
-      <div class="code-body" id="code-body"></div>
+  <div id="sidebar">
+    <div class="panel-box">
+      <div class="panel-title">Queue <span class="panel-sub">(front &#8594; back)</span></div>
+      <div class="queue-row">
+        <span class="q-hint">&#8592; dequeue</span>
+        <div id="queue-items"><span class="q-empty">not started</span></div>
+        <span class="q-hint">enqueue &#8594;</span>
+      </div>
     </div>
 
-    <div class="right-col">
-      <div class="panel-box">
-        <div class="panel-title">Queue <span class="panel-sub">(front &rarr; back)</span></div>
-        <div class="queue-row">
-          <span class="q-hint">&larr; dequeue</span>
-          <div id="queue-items"><span class="q-empty">not started</span></div>
-          <span class="q-hint">enqueue &rarr;</span>
-        </div>
-      </div>
+    <div class="panel-box">
+      <div class="panel-title">Visited <span class="panel-sub" id="visited-count"></span></div>
+      <div id="visited-items"><span class="v-empty">none yet</span></div>
+    </div>
 
-      <div class="panel-box">
-        <div class="panel-title">Visited <span class="panel-sub" id="visited-count"></span></div>
-        <div id="visited-items"><span class="v-empty">none yet</span></div>
+    <div class="panel-box">
+      <div class="panel-title">Legend</div>
+      <div class="leg-row">
+        <div class="leg-item"><div class="leg-swatch" style="background:#15803d;border:1px solid var(--green)"></div>Start</div>
+        <div class="leg-item"><div class="leg-swatch" style="background:#7f1d1d;border:1px solid var(--red)"></div>End</div>
+        <div class="leg-item"><div class="leg-swatch" style="background:#1e2130;border:1px solid #2d3148"></div>Empty</div>
+        <div class="leg-item"><div class="leg-swatch" style="background:#080a10"></div>Wall</div>
+        <div class="leg-item"><div class="leg-swatch" style="background:#4338ca"></div>In queue</div>
+        <div class="leg-item"><div class="leg-swatch" style="background:#c2410c"></div>Current</div>
+        <div class="leg-item"><div class="leg-swatch" style="background:#065f46"></div>Visited</div>
+        <div class="leg-item"><div class="leg-swatch" style="background:#a16207;border:1px solid var(--yellow)"></div>Path</div>
       </div>
     </div>
   </div>
 </div>
 
-<div class="legend">
-  <div class="leg-item"><div class="leg-swatch" style="background:#15803d;border:1px solid var(--green)"></div>Start</div>
-  <div class="leg-item"><div class="leg-swatch" style="background:#7f1d1d;border:1px solid var(--red)"></div>End</div>
-  <div class="leg-item"><div class="leg-swatch" style="background:#1e2130;border:1px solid #2d3148"></div>Empty</div>
-  <div class="leg-item"><div class="leg-swatch" style="background:#080a10"></div>Wall</div>
-  <div class="leg-item"><div class="leg-swatch" style="background:#4338ca"></div>In queue</div>
-  <div class="leg-item"><div class="leg-swatch" style="background:#c2410c"></div>Current</div>
-  <div class="leg-item"><div class="leg-swatch" style="background:#065f46"></div>Visited</div>
-  <div class="leg-item"><div class="leg-swatch" style="background:#a16207;border:1px solid var(--yellow)"></div>Path</div>
-</div>
-
-<div class="nav-row">
-  <div class="step-nav">
-    <button class="stepBtn" id="prevBtn" disabled>&larr; Back</button>
-    <button class="stepBtn" id="stepBtn" disabled>Next &rarr;</button>
-  </div>
-  <button class="playBtn" id="playBtn" disabled>&#9654; Play</button>
-  <select class="speedSel" id="speedSel">
-    <option value="400">Slow</option>
-    <option value="100" selected>Medium</option>
-    <option value="25">Fast</option>
+<div id="nav-row">
+  <button id="prevBtn" class="btn-step" disabled>&#8592; Prev</button>
+  <button id="stepBtn" class="btn-step" disabled>Step &#8594;</button>
+  <button id="playBtn" class="btn-play" disabled>Play</button>
+  <button id="resetBtn" class="btn-step">&#8635; Reset</button>
+  <select id="speedSel">
+    <option value="800">0.5&#215;</option>
+    <option value="400" selected>1&#215;</option>
+    <option value="200">2&#215;</option>
+    <option value="100">4&#215;</option>
   </select>
 </div>
 
@@ -729,12 +659,32 @@ var nav = VizNav({
 buildCodePanel();
 buildGrid();
 </script>
-  <script>
-    // Hide back-link when embedded in an iframe
-    if (window.self !== window.top) {
-      var bl = document.querySelector('.back-link');
-      if (bl) bl.style.display = 'none';
-    }
-  </script>
+<script>
+  // Hide back-link when embedded in an iframe
+  if (window.self !== window.top) {
+    var bl = document.querySelector('.back-link');
+    if (bl) bl.style.display = 'none';
+  }
+</script>
+<script>
+(function() {
+  var handle = document.getElementById('resize-handle');
+  var panel  = document.getElementById('code-panel');
+  var dragging = false, startX = 0, startW = 0;
+  handle.addEventListener('mousedown', function(e) {
+    dragging = true; startX = e.clientX; startW = panel.offsetWidth;
+    handle.classList.add('dragging'); e.preventDefault();
+  });
+  document.addEventListener('mousemove', function(e) {
+    if (!dragging) return;
+    var delta = startX - e.clientX;
+    panel.style.width = Math.min(560, Math.max(120, startW + delta)) + 'px';
+  });
+  document.addEventListener('mouseup', function() {
+    if (!dragging) return;
+    dragging = false; handle.classList.remove('dragging');
+  });
+})();
+</script>
 </body>
 </html>
