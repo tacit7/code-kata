@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router";
 import { useKataStore } from "../stores/kata-store";
+import { reseedKatas } from "../lib/database";
 import { useSettingsStore, type PracticeConfig } from "../stores/settings-store";
 import { useSessionStore, fetchKataStats, fetchAttemptHistory } from "../stores/session-store";
 import { computeSrState, formatDue, type SrState } from "../lib/sr";
@@ -180,6 +181,19 @@ export function PracticeQueuePage() {
   const [historyMap, setHistoryMap] = useState<Map<number, { passed: number; started_at: string }[]>>(new Map());
 
   const [launching, setLaunching] = useState(false);
+  const [reseeding, setReseeding] = useState(false);
+
+  const language = useSettingsStore((s) => s.language);
+
+  const handleReseed = async () => {
+    setReseeding(true);
+    try {
+      await reseedKatas();
+      await useKataStore.getState().loadKatas(language);
+    } finally {
+      setReseeding(false);
+    }
+  };
 
   useEffect(() => {
     if (katas.length === 0) return;
@@ -547,8 +561,17 @@ export function PracticeQueuePage() {
         {/* Queue list */}
         <div className="flex-1 overflow-y-auto px-3 py-2">
           {queueItems.length === 0 ? (
-            <div className="flex items-center justify-center h-full text-base-content/30 text-sm">
-              No katas match this filter
+            <div className="flex flex-col items-center justify-center h-full gap-3">
+              <p className="text-base-content/30 text-sm">No katas match this filter</p>
+              {katas.length === 0 && (
+                <button
+                  onClick={handleReseed}
+                  disabled={reseeding}
+                  className="btn btn-sm btn-ghost text-base-content/40 hover:text-base-content/70"
+                >
+                  {reseeding ? "Reseeding…" : "Reload problem statements"}
+                </button>
+              )}
             </div>
           ) : (
             <>

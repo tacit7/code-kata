@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { useKataStore } from "../stores/kata-store";
 import type { LibrarySortMode } from "../stores/kata-store";
 import { useSettingsStore } from "../stores/settings-store";
 import { CATEGORY_LEVEL } from "../lib/levels";
+import { reseedKatas } from "../lib/database";
 
 // Module-level so the list position survives navigating to a kata and back
 // (resets only on full app reload).
@@ -123,6 +124,19 @@ export function PracticePage() {
     if (d === "medium") return "badge-warning";
     if (d === "hard") return "badge-error";
     return "badge-ghost";
+  };
+
+  const language = useSettingsStore((s) => s.language);
+  const [reseeding, setReseeding] = useState(false);
+
+  const handleReseed = async () => {
+    setReseeding(true);
+    try {
+      await reseedKatas();
+      await useKataStore.getState().loadKatas(language);
+    } finally {
+      setReseeding(false);
+    }
   };
 
   const listRef = useRef<HTMLDivElement>(null);
@@ -309,8 +323,15 @@ export function PracticePage() {
             ))}
             {searchedKatas.length === 0 && (
               <tr>
-                <td colSpan={9} className="py-12 text-center text-base-content/25 text-sm">
-                  No katas found
+                <td colSpan={9} className="py-12 text-center text-sm">
+                  <p className="text-base-content/25 mb-3">No katas found</p>
+                  <button
+                    onClick={handleReseed}
+                    disabled={reseeding}
+                    className="btn btn-sm btn-ghost text-base-content/40 hover:text-base-content/70"
+                  >
+                    {reseeding ? "Reseeding…" : "Reload problem statements"}
+                  </button>
                 </td>
               </tr>
             )}
