@@ -2167,7 +2167,7 @@ end`,
     difficulty: "hard",
     description: `Min Heap
 
-Implement a min heap data structure from scratch. Do not use Python's heapq module.
+Implement a min heap data structure from scratch. Do not use a built-in priority queue or heap library.
 
 Your MinHeap class should support the following operations:
 - insert(val): Add a value to the heap and maintain the heap property by bubbling up.
@@ -3040,7 +3040,7 @@ end`,
     difficulty: "medium",
     description: `Queue from Two Stacks
 
-Implement a first-in-first-out (FIFO) queue using only two stacks (Python lists). The implemented queue should support the following operations: enqueue, dequeue, peek, and is_empty.
+Implement a first-in-first-out (FIFO) queue using only two stacks (Ruby arrays). The implemented queue should support the following operations: enqueue, dequeue, peek, and is_empty.
 
 Implement the Queue class:
 - Queue() initializes the queue object.

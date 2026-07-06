@@ -11,7 +11,7 @@ export function extractTestNames(testCode: string): string[] {
 
 // Helpers loaded BEFORE user code. Expected-first, matching Minitest.
 // Assertion failures carry structured data via an __ASSERT__ JSON payload,
-// mirroring the JS/Python workers' protocol.
+// mirroring the JS test worker's protocol.
 export function buildPrelude(): string {
   return `
 require "json"

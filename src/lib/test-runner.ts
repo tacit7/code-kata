@@ -1,5 +1,4 @@
 import type { TestResult } from "../types/editor";
-import { runPythonTests } from "./python-runner";
 import { runRubyTests } from "./ruby-runner";
 
 const WATCHDOG_MS = 5000;
@@ -45,9 +44,6 @@ export async function runTests(
   testCode: string,
   language: string,
 ): Promise<TestResult[]> {
-  if (language === "python") {
-    return runPythonTests(userCode, testCode);
-  }
   if (language === "ruby") {
     return runRubyTests(userCode, testCode);
   }
