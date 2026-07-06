@@ -53,7 +53,71 @@ function extractUsefulTraceback(msg: string): string {
   return meaningful.slice(start).join("\n");
 }
 
-self.onmessage = async (e: MessageEvent<{ userCode: string; testCode: string }>) => {
+// ── REPL support ─────────────────────────────────────────────────────────
+// One persistent namespace per session so state survives across inputs.
+// Statements exec, expressions eval — mirroring the real Python REPL.
+// The runner discards the whole worker to reset, so no reset message.
+const REPL_HELPER = `
+import json as __repl_json, io as __repl_io, contextlib as __repl_ctx
+
+__repl_ns = {}
+
+def __repl_eval(__code):
+    __buf = __repl_io.StringIO()
+    try:
+        with __repl_ctx.redirect_stdout(__buf):
+            try:
+                __val = eval(compile(__code, "<repl>", "eval"), __repl_ns)
+            except SyntaxError:
+                exec(compile(__code, "<repl>", "exec"), __repl_ns)
+                __val = None
+        return __repl_json.dumps({"ok": True, "value": repr(__val)[:8192], "output": __buf.getvalue()[:262144]})
+    except BaseException as __e:
+        return __repl_json.dumps({"ok": False, "error": (type(__e).__name__ + ": " + str(__e))[:8192], "output": __buf.getvalue()[:262144]})
+`;
+
+let replInitialized = false;
+
+async function handleReplMessage(msg: { type: string; code?: string }) {
+  try {
+    const py = await getPyodide();
+    if (!replInitialized) {
+      py.runPython(REPL_HELPER);
+      replInitialized = true;
+    }
+    if (msg.type === "repl_init") {
+      self.postMessage({ type: "ready" });
+      return;
+    }
+    const json = py.runPython(`__repl_eval(${JSON.stringify(msg.code ?? "")})`) as string;
+    const raw = JSON.parse(json) as { ok: boolean; value?: string; error?: string; output?: string };
+    self.postMessage({
+      type: "repl_result",
+      ok: raw.ok,
+      value: raw.value,
+      error: raw.error,
+      output: raw.output && raw.output.trim() ? raw.output.trim().slice(0, 8192) : undefined,
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    if (msg.type === "repl_init") {
+      self.postMessage({ type: "init_error", error: `Pyodide failed to start: ${message}` });
+    } else {
+      self.postMessage({ type: "repl_result", ok: false, error: `REPL session crashed: ${message}` });
+    }
+  }
+}
+
+type WorkerMessage =
+  | { userCode: string; testCode: string; type?: undefined }
+  | { type: "repl_init" }
+  | { type: "repl_eval"; code: string };
+
+self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
+  if (e.data.type === "repl_init" || e.data.type === "repl_eval") {
+    await handleReplMessage(e.data);
+    return;
+  }
   const { userCode, testCode } = e.data;
   const py = await getPyodide();
 
