@@ -3,6 +3,7 @@ import { useNavigate } from "react-router";
 import { useSettingsStore, DEFAULT_SHORTCUTS } from "../stores/settings-store";
 import type { ShortcutAction } from "../stores/settings-store";
 import { reseedKatas } from "../lib/database";
+import { EDITOR_THEMES } from "../lib/editor-themes";
 import { useKataStore } from "../stores/kata-store";
 
 type Tab = "editor" | "practice" | "shortcuts";
@@ -66,6 +67,12 @@ function EditorTab() {
   const tabSize = useSettingsStore((s) => s.tabSize);
   const language = useSettingsStore((s) => s.language);
   const setSetting = useSettingsStore((s) => s.setSetting);
+  const editorTheme = useSettingsStore((s) => s.editorTheme);
+  const editorAutocomplete = useSettingsStore((s) => s.editorAutocomplete);
+  const lineNumbersMode = useSettingsStore((s) => s.lineNumbersMode);
+  const wordWrap = useSettingsStore((s) => s.wordWrap);
+  const autoClosingBrackets = useSettingsStore((s) => s.autoClosingBrackets);
+  const fontLigatures = useSettingsStore((s) => s.fontLigatures);
 
   return (
     <div className="flex flex-col gap-6">
@@ -103,6 +110,19 @@ function EditorTab() {
             Light
           </button>
         </div>
+      </div>
+
+      <div>
+        <SectionLabel>Editor Theme</SectionLabel>
+        <select
+          value={editorTheme}
+          onChange={(e) => setSetting("editorTheme", e.target.value)}
+          className="select select-bordered select-sm bg-base-100"
+        >
+          {EDITOR_THEMES.map((t) => (
+            <option key={t.id} value={t.id}>{t.label}</option>
+          ))}
+        </select>
       </div>
 
       <div>
@@ -167,6 +187,64 @@ function EditorTab() {
             4
           </button>
         </div>
+      </div>
+
+      <div>
+        <SectionLabel>Line Numbers</SectionLabel>
+        <div className="join">
+          {(["on", "off", "relative"] as const).map((mode) => (
+            <button
+              key={mode}
+              onClick={() => setSetting("lineNumbersMode", mode)}
+              className={`btn btn-sm join-item ${lineNumbersMode === mode ? "btn-primary" : "btn-ghost"}`}
+            >
+              {mode === "relative" ? "Relative (vim)" : mode === "on" ? "On" : "Off"}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div>
+        <SectionLabel>Autocomplete</SectionLabel>
+        <button
+          onClick={() => setSetting("editorAutocomplete", !editorAutocomplete)}
+          className={`btn btn-sm ${editorAutocomplete ? "btn-success" : "btn-ghost"}`}
+        >
+          {editorAutocomplete ? "On" : "Off"}
+        </button>
+        <p className="text-[11px] text-base-content/40 mt-1.5">
+          Turn off to practice API recall without suggestions.
+        </p>
+      </div>
+
+      <div>
+        <SectionLabel>Word Wrap</SectionLabel>
+        <button
+          onClick={() => setSetting("wordWrap", !wordWrap)}
+          className={`btn btn-sm ${wordWrap ? "btn-success" : "btn-ghost"}`}
+        >
+          {wordWrap ? "On" : "Off"}
+        </button>
+      </div>
+
+      <div>
+        <SectionLabel>Auto-Closing Brackets</SectionLabel>
+        <button
+          onClick={() => setSetting("autoClosingBrackets", !autoClosingBrackets)}
+          className={`btn btn-sm ${autoClosingBrackets ? "btn-success" : "btn-ghost"}`}
+        >
+          {autoClosingBrackets ? "On" : "Off"}
+        </button>
+      </div>
+
+      <div>
+        <SectionLabel>Font Ligatures</SectionLabel>
+        <button
+          onClick={() => setSetting("fontLigatures", !fontLigatures)}
+          className={`btn btn-sm ${fontLigatures ? "btn-success" : "btn-ghost"}`}
+        >
+          {fontLigatures ? "On" : "Off"}
+        </button>
       </div>
     </div>
   );
