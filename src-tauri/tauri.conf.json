@@ -1,6 +1,6 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "Code Kata",
+  "productName": "Code Kata Python",
   "version": "0.1.0",
   "identifier": "com.code-kata.app",
   "build": {
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "Code Kata",
+        "title": "Code Kata Python",
         "width": 1280,
         "height": 800,
         "resizable": true,
