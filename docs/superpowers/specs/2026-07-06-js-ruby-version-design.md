@@ -1,8 +1,8 @@
 # js-ruby-version — Design Spec
 
-**Date:** 2026-07-06 (revised same day after Codex review)
+**Date:** 2026-07-06 (revised twice same day after Codex reviews)
 **Branch:** `js-ruby-version`
-**Status:** Revised — pending re-review
+**Status:** Approved for compatibility spike and Phase 1 implementation
 
 ## Goal
 
@@ -64,9 +64,14 @@ packages):**
 
 **Timeouts (two, not one):**
 
-- `initTimeoutMs = 15_000` — cold worker startup + WASM compile + VM boot.
-- `executionTimeoutMs = 5_000` — user code + tests (matches the JS runner).
-- Warm runs only pay the execution timeout.
+- `initTimeoutMs = 15_000` — cold worker startup + WASM fetch/compile.
+- `executionTimeoutMs = 5_000` — initially includes per-run VM/WASI instance
+  creation, helper loading, user code, test code, and runner execution.
+- Warm runs reuse the live worker and cached compiled `WebAssembly.Module`,
+  avoiding fetch/compile cost — but they still create a fresh VM per run, so
+  they are not "basically free"; VM instantiation is inside the execution
+  budget. If the compatibility spike shows VM setup alone makes 5s too
+  tight, split out a `vmSetupTimeoutMs` before porting begins.
 
 **Output capture:**
 
@@ -75,7 +80,8 @@ packages):**
   parser consumes captured stdout after execution; stderr is attached to
   failed results as truncated diagnostic output.
 - Captured output is capped at **256 KB per run**; exceeding the cap fails
-  the run with an output-limit error.
+  the run with an output-limit error. Diagnostics surfaced in the UI are
+  further truncated to 8 KB.
 
 **Failure recovery:**
 
@@ -96,6 +102,8 @@ Before porting katas at scale, a small spike must prove the stack end to end:
 2. Verify in **both** `pnpm tauri dev` and a **packaged Tauri build**,
    offline.
 3. Confirm timeout/recovery behavior (worker dies, next run recovers cold).
+4. Run 50 repeated warm runs and record approximate memory behavior —
+   unbounded growth across fresh-VM runs is a blocker.
 
 Porting does not start until the spike passes.
 
@@ -105,6 +113,16 @@ The runner ships with tests covering: syntax error in user code, exception
 before test definitions, exception inside a test, missing expected method,
 user redefining `assert_equal`, user calling `exit`, infinite loop, huge
 output (cap trigger), and non-ASCII strings.
+
+Defined behaviors:
+
+- Syntax/load errors before any test runs produce one synthetic failed
+  result named `load_error` (not a crash).
+- No discovered `test_*` methods produces one synthetic failed result named
+  `runner_error`.
+- `exit`/`SystemExit`/`abort` fails the current run with a runner-level
+  error; if the WASM embedding cannot contain the exit, the worker is
+  discarded and recreated on the next run.
 
 ### 2. WASM asset packaging (Vite + Tauri)
 
@@ -143,11 +161,35 @@ output (cap trigger), and non-ASCII strings.
   calling `assert_equal(expected, actual, "msg")` (expected first, matching
   both the existing helpers and Minitest convention).
 - `language: "ruby"` on every ported kata.
+- **Kata code constraints (explicit, for porting agents):** katas must avoid
+  time, randomness, file IO, networking, threads, and external gems. Ruby
+  ports use core language and core collection/string APIs only.
 - **Automated verification:** `scripts/verify-ruby-katas.ts` runs every Ruby
   kata's `solution` against its `testCode` through the same WASM runner the
-  app uses and emits a machine-readable report (total / passed / failed with
-  kata ids and Ruby version). A kata counts as ported only when it passes in
-  this report — no manual "it passes" claims.
+  app uses. It must exercise the same worker-based runner path — preferably
+  by driving a headless browser environment that calls the app-facing
+  `runRubyTests` with the same worker bundle and WASM asset loading. A
+  Node-only verifier is acceptable only if it imports the same runner core
+  with the same WASM package, init options, output capture, timeouts, and
+  result parser. A kata counts as ported only when it passes in this
+  report — no manual "it passes" claims.
+- **Report schema (minimum):**
+
+  ```json
+  {
+    "rubyVersion": "3.3.x",
+    "runner": "ruby-wasm",
+    "total": 181,
+    "passed": 181,
+    "failed": 0,
+    "failures": [
+      { "kataId": "...", "error": "...", "stderr": "...", "durationMs": 0 }
+    ]
+  }
+  ```
+
+- **Placement:** the verifier must pass locally before merge, and in CI if
+  CI can host the worker/WASM environment (headless browser otherwise).
 - Porting is mechanical and parallelizable (agent fan-out at implementation
   time); verification is per-kata and non-negotiable.
 
