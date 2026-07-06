@@ -66,6 +66,12 @@ function getWorker(): { worker: Worker; ready: Promise<void> } {
   return { worker, ready };
 }
 
+// Eagerly create the worker — the expensive ruby.wasm compile starts at the
+// worker's module top level, so creation alone warms the runtime.
+export function prewarmRuby(): void {
+  getWorker();
+}
+
 export async function runRubyTests(
   userCode: string,
   testCode: string,
