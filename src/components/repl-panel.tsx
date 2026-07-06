@@ -82,7 +82,7 @@ export function ReplPanel({ language, getEditorCode }: ReplPanelProps) {
       <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto px-3 py-2 flex flex-col gap-1">
         {entries.length === 0 && (
           <span className="text-base-content/25">
-            {language === "ruby" ? "irb-style" : "js"} session — scoped to this kata. Load code to call your solution.
+            {language} session — scoped to this kata. Load code to call your solution.
           </span>
         )}
         {entries.map((entry, i) => (
