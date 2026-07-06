@@ -21,7 +21,7 @@ export function ReplPanel({ language, getEditorCode }: ReplPanelProps) {
   const [history, setHistory] = useState<string[]>([]);
   const [histIdx, setHistIdx] = useState(-1);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => resetRepl, []);
 
@@ -53,17 +53,24 @@ export function ReplPanel({ language, getEditorCode }: ReplPanelProps) {
     void submit(code, "(editor code loaded)");
   }
 
-  function onKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
-    if (e.key === "Enter") {
+  function onKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+    const el = e.currentTarget;
+    if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       onSubmit();
-    } else if (e.key === "ArrowUp") {
+      return;
+    }
+    // History recall must not fight multiline editing: Up only fires with
+    // the caret on the first line, Down only on the last.
+    if (e.key === "ArrowUp") {
+      if (el.value.slice(0, el.selectionStart).includes("\n")) return;
       e.preventDefault();
       if (history.length === 0) return;
       const idx = histIdx === -1 ? history.length - 1 : Math.max(0, histIdx - 1);
       setHistIdx(idx);
       setInput(history[idx]);
     } else if (e.key === "ArrowDown") {
+      if (el.value.slice(el.selectionEnd).includes("\n")) return;
       e.preventDefault();
       if (histIdx === -1) return;
       const idx = histIdx + 1;
@@ -88,7 +95,7 @@ export function ReplPanel({ language, getEditorCode }: ReplPanelProps) {
         {entries.map((entry, i) => (
           <div key={i}>
             {entry.input != null && (
-              <div className="text-base-content/50">
+              <div className="whitespace-pre-wrap text-base-content/50">
                 <span className="text-primary/60 select-none">&gt; </span>
                 {entry.input}
               </div>
@@ -110,16 +117,17 @@ export function ReplPanel({ language, getEditorCode }: ReplPanelProps) {
         ))}
         {busy && <span className="loading loading-dots loading-xs text-primary/60" />}
       </div>
-      <div className="flex items-center gap-2 px-3 py-1.5 border-t border-base-300/60 shrink-0">
+      <div className="flex items-start gap-2 px-3 py-1.5 border-t border-base-300/60 shrink-0">
         <span className="text-primary/60 select-none">&gt;</span>
-        <input
+        <textarea
           ref={inputRef}
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={onKeyDown}
           disabled={busy}
-          placeholder={busy ? "evaluating..." : "expression"}
-          className="flex-1 bg-transparent outline-none text-base-content/80 placeholder:text-base-content/20"
+          rows={Math.min(input.split("\n").length, 8)}
+          placeholder={busy ? "evaluating..." : "expression — shift+enter for newline"}
+          className="flex-1 bg-transparent outline-none resize-none text-base-content/80 placeholder:text-base-content/20 leading-relaxed"
           spellCheck={false}
         />
         <button
