@@ -1,5 +1,6 @@
 import { useEffect, useCallback } from "react";
 import { Routes, Route, Navigate, useNavigate } from "react-router";
+import { listen } from "@tauri-apps/api/event";
 import { useSettingsStore } from "./stores/settings-store";
 import { useKataStore } from "./stores/kata-store";
 import { useKeyboardShortcuts } from "./hooks/use-keyboard-shortcuts";
@@ -27,6 +28,18 @@ function App() {
   useKeyboardShortcuts({
     openSettings: handleOpenSettings,
   });
+
+  useEffect(() => {
+    let unlisten: (() => void) | undefined;
+    listen("menu:open-settings", () => {
+      navigate("/settings");
+    }).then((fn) => {
+      unlisten = fn;
+    });
+    return () => {
+      unlisten?.();
+    };
+  }, [navigate]);
 
   useEffect(() => {
     loadSettings();
