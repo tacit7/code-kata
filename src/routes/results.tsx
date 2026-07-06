@@ -48,9 +48,11 @@ export function ResultsPage() {
   const loadDashboard = useDashboardStore((s) => s.loadDashboard);
   const loading = useDashboardStore((s) => s.loading);
 
+  // Always refresh on mount — the cache goes stale when a session finishes
+  // (dashboard.tsx does the same).
   useEffect(() => {
-    if (sessionHistory.length === 0) loadDashboard();
-  }, []);
+    loadDashboard();
+  }, [loadDashboard]);
 
   const handleRowClick = (sessionId: number) => {
     if (selectedSessionId === sessionId) {
