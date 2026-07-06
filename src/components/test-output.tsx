@@ -3,9 +3,11 @@ import type { TestResult } from "../types/editor";
 interface TestOutputProps {
   results: TestResult[];
   ranAt?: string;
+  /** When provided, failed tests get a button that loads them into the REPL. */
+  onSendToRepl?: (testName: string) => void;
 }
 
-export function TestOutput({ results, ranAt }: TestOutputProps) {
+export function TestOutput({ results, ranAt, onSendToRepl }: TestOutputProps) {
   const passed = results.filter((r) => r.passed).length;
   const total = results.length;
 
@@ -27,6 +29,15 @@ export function TestOutput({ results, ranAt }: TestOutputProps) {
                 {r.passed ? "✓" : "✗"}
               </span>
               <span className="text-base-content/70">{r.name.replace(/^test_/, "").replaceAll("_", " ")}</span>
+              {!r.passed && onSendToRepl && r.name.startsWith("test_") && (
+                <button
+                  onClick={() => onSendToRepl(r.name)}
+                  title="Load this test's call into the REPL"
+                  className="btn btn-ghost btn-xs h-5 min-h-0 px-1.5 text-[10px] text-base-content/35 hover:text-base-content/70"
+                >
+                  → repl
+                </button>
+              )}
             </div>
 
             {!r.passed && (r.expected !== undefined || r.got !== undefined) && (
