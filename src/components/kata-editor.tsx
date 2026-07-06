@@ -4,6 +4,7 @@ import type { editor } from "monaco-editor";
 import { initVimMode, type VimAdapterInstance } from "monaco-vim";
 import { open } from "@tauri-apps/plugin-shell";
 import { useSettingsStore } from "../stores/settings-store";
+import { resolveMonacoTheme } from "../lib/editor-themes";
 import { useTimerStore } from "../stores/timer-store";
 import { useSessionStore } from "../stores/session-store";
 import { useKeyboardShortcuts } from "../hooks/use-keyboard-shortcuts";
@@ -488,7 +489,7 @@ interface KataEditorProps {
 }
 
 export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataEditorProps) {
-  const { theme, vimMode, toggleVimMode, toggleTheme, fontSize, fontFamily, tabSize, hideDescriptionInSession, setSetting } = useSettingsStore();
+  const { theme, vimMode, toggleVimMode, toggleTheme, fontSize, fontFamily, tabSize, hideDescriptionInSession, setSetting, editorTheme, editorAutocomplete, lineNumbersMode, wordWrap, autoClosingBrackets, fontLigatures } = useSettingsStore();
   const sessionMaxTestRuns = useSessionStore((s) => s.activeSession?.maxTestRuns ?? null);
   // Attempt limits only apply inside a practice session, never in the standalone editor
   const maxTestRuns = isSession ? sessionMaxTestRuns : null;
@@ -518,7 +519,24 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
   const [notesSaved, setNotesSaved] = useState(true);
   const notesAutosaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const monacoTheme = theme === "dark" ? "vs-dark" : "vs";
+  const monacoTheme = resolveMonacoTheme(editorTheme, theme);
+  const sharedEditorOptions = {
+    fontSize,
+    fontFamily,
+    tabSize,
+    detectIndentation: false,
+    minimap: { enabled: false },
+    automaticLayout: true,
+    scrollBeyondLastLine: false,
+    lineNumbers: lineNumbersMode,
+    wordWrap: wordWrap ? ("on" as const) : ("off" as const),
+    autoClosingBrackets: autoClosingBrackets ? ("languageDefined" as const) : ("never" as const),
+    autoClosingQuotes: autoClosingBrackets ? ("languageDefined" as const) : ("never" as const),
+    fontLigatures,
+    quickSuggestions: editorAutocomplete,
+    suggestOnTriggerCharacters: editorAutocomplete,
+    wordBasedSuggestions: editorAutocomplete ? ("currentDocument" as const) : ("off" as const),
+  };
 
   // Load saved user code and notes on mount; clean up autosave timers on unmount
   useEffect(() => {
@@ -897,13 +915,7 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
                   language={kata.language}
                   theme={monacoTheme}
                   options={{
-                    fontSize,
-                    fontFamily,
-                    tabSize,
-                    detectIndentation: false,
-                    minimap: { enabled: false },
-                    automaticLayout: true,
-                    scrollBeyondLastLine: false,
+                    ...sharedEditorOptions,
                     readOnly: true,
                     lineNumbers: "off",
                   }}
@@ -951,15 +963,7 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
               defaultValue={initialCode}
               language={kata.language}
               theme={monacoTheme}
-              options={{
-                fontSize,
-                fontFamily,
-                tabSize,
-                detectIndentation: false,
-                minimap: { enabled: false },
-                automaticLayout: true,
-                scrollBeyondLastLine: false,
-              }}
+              options={sharedEditorOptions}
               onMount={handleEditorMount}
               onChange={() => {
                 setSaved(false);
