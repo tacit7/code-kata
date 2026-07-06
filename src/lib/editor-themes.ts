@@ -6,6 +6,8 @@ import monokai from "./themes/monokai.json";
 import githubDark from "./themes/github-dark.json";
 import nightOwl from "./themes/night-owl.json";
 import nord from "./themes/nord.json";
+import githubLight from "./themes/github-light.json";
+import solarizedLight from "./themes/solarized-light.json";
 
 // One theme drives BOTH the app chrome (daisyUI data-theme, defined in
 // index.css with base-100 matching each Monaco editor.background) and the
@@ -18,6 +20,8 @@ export const APP_THEMES = [
   { id: "github-dark", label: "GitHub Dark", monaco: "github-dark" },
   { id: "night-owl", label: "Night Owl", monaco: "night-owl" },
   { id: "nord", label: "Nord", monaco: "nord" },
+  { id: "github-light", label: "GitHub Light", monaco: "github-light" },
+  { id: "solarized-light", label: "Solarized Light", monaco: "solarized-light" },
 ] as const;
 
 export type AppThemeId = (typeof APP_THEMES)[number]["id"];
@@ -28,6 +32,8 @@ const THEME_DATA: Record<string, unknown> = {
   "github-dark": githubDark,
   "night-owl": nightOwl,
   nord,
+  "github-light": githubLight,
+  "solarized-light": solarizedLight,
 };
 
 export function isAppThemeId(v: unknown): v is AppThemeId {
