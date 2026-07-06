@@ -1,9 +1,13 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { useNavigate } from "react-router";
 import { useKataStore } from "../stores/kata-store";
 import type { LibrarySortMode } from "../stores/kata-store";
 import { useSettingsStore } from "../stores/settings-store";
 import { CATEGORY_LEVEL } from "../lib/levels";
+
+// Module-level so the list position survives navigating to a kata and back
+// (resets only on full app reload).
+let savedScrollTop = 0;
 
 export function PracticePage() {
   const katas = useKataStore((s) => s.katas);
@@ -121,6 +125,15 @@ export function PracticePage() {
     return "badge-ghost";
   };
 
+  const listRef = useRef<HTMLDivElement>(null);
+  const restoredScroll = useRef(false);
+  useEffect(() => {
+    if (!restoredScroll.current && listRef.current && searchedKatas.length > 0) {
+      listRef.current.scrollTop = savedScrollTop;
+      restoredScroll.current = true;
+    }
+  }, [searchedKatas.length]);
+
   return (
     <div className="flex flex-col h-full p-5 gap-4 animate-fade-in">
       {/* Header */}
@@ -166,7 +179,11 @@ export function PracticePage() {
       </div>
 
       {/* Kata table */}
-      <div className="flex-1 min-h-0 overflow-y-auto scrollbar-hidden bg-base-100 rounded-lg border border-base-300/50">
+      <div
+        ref={listRef}
+        onScroll={(e) => { savedScrollTop = e.currentTarget.scrollTop; }}
+        className="flex-1 min-h-0 overflow-y-auto scrollbar-hidden bg-base-100 rounded-lg border border-base-300/50"
+      >
         <table className="table table-sm">
           <thead>
             <tr className="text-left text-[11px] text-base-content/35 uppercase tracking-wider">
