@@ -24,6 +24,12 @@ describe("buildRunnerScript", () => {
     expect(script).toContain(":test_a");
     expect(script).toContain(":test_b");
   });
+
+  it("fails a test whose captured output exceeds the byte cap instead of silently truncating", () => {
+    const script = buildRunnerScript(["test_a"]);
+    expect(script).toContain("__kata_buf.string.bytesize >");
+    expect(script).toContain("Output limit exceeded (256 KB)");
+  });
 });
 
 describe("parseRunResults", () => {

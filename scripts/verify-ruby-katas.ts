@@ -83,6 +83,8 @@ async function main() {
       failures.push({
         kataId: kata.name,
         error: err instanceof Error ? err.message : String(err),
+        // Always "" — stderr is not captured by the runner (ruby.wasm runs
+        // in-VM, no subprocess); the `error` field above carries the failure text.
         stderr: "",
         durationMs: Date.now() - start,
       });

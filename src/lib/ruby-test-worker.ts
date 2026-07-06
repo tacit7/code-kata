@@ -29,8 +29,15 @@ self.onmessage = async (e: MessageEvent<{ userCode: string; testCode: string }>)
     return;
   }
 
-  const module = await modulePromise;
-  const { vm } = await DefaultRubyVM(module);
+  let vm;
+  try {
+    const module = await modulePromise;
+    ({ vm } = await DefaultRubyVM(module));
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    self.postMessage({ type: "results", results: loadErrorResult(`Ruby VM failed to start: ${message}`) });
+    return;
+  }
 
   // Load order: helpers → user code → test code → runner (spec §1).
   // A raise in user/test code before the runner is a load_error.

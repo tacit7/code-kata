@@ -54,9 +54,17 @@ __kata_results = []
   $stdout = __kata_buf
   begin
     send(__kata_name)
-    __kata_results << { "name" => __kata_name.to_s, "passed" => true, "output" => __kata_buf.string[0, ${OUTPUT_CAP_BYTES}] }
+    if __kata_buf.string.bytesize > ${OUTPUT_CAP_BYTES}
+      __kata_results << { "name" => __kata_name.to_s, "passed" => false, "output" => __kata_buf.string[0, ${OUTPUT_CAP_BYTES}], "error" => "Output limit exceeded (256 KB)" }
+    else
+      __kata_results << { "name" => __kata_name.to_s, "passed" => true, "output" => __kata_buf.string[0, ${OUTPUT_CAP_BYTES}] }
+    end
   rescue Exception => __kata_e
     __kata_entry = { "name" => __kata_name.to_s, "passed" => false, "output" => __kata_buf.string[0, ${OUTPUT_CAP_BYTES}] }
+    if __kata_buf.string.bytesize > ${OUTPUT_CAP_BYTES}
+      __kata_entry["error"] = "Output limit exceeded (256 KB)"
+      __kata_results << __kata_entry
+    else
     __kata_msg = __kata_e.message.to_s
     __kata_idx = __kata_msg.index("__ASSERT__")
     if __kata_idx
@@ -72,6 +80,7 @@ __kata_results = []
       __kata_entry["error"] = "#{__kata_e.class}: #{__kata_msg}"
     end
     __kata_results << __kata_entry
+    end
   ensure
     $stdout = __kata_orig
   end

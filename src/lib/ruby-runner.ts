@@ -7,6 +7,11 @@ import { INIT_TIMEOUT_MS, EXEC_TIMEOUT_MS } from "./ruby-exec-core";
 let workerInstance: Worker | null = null;
 let readyPromise: Promise<void> | null = null;
 
+// Single-flight queue: overlapping runRubyTests calls must not both listen
+// for the same worker "results" message. Each call awaits the previous
+// call's completion before posting its own message.
+let inFlight: Promise<unknown> = Promise.resolve();
+
 function timeoutResult(seconds: number): TestResult[] {
   return [
     {
@@ -46,6 +51,15 @@ function getWorker(): { worker: Worker; ready: Promise<void> } {
       }
     };
     worker.addEventListener("message", onMessage);
+
+    // If the worker script itself fails to load/parse, neither "ready" nor
+    // "init_error" will ever arrive — fail fast instead of waiting out the
+    // full init timeout.
+    worker.onerror = (e) => {
+      clearTimeout(initTimer);
+      worker.removeEventListener("message", onMessage);
+      reject(new Error(`Worker failed to load: ${e.message}`));
+    };
   });
   workerInstance = worker;
   readyPromise = ready;
@@ -53,6 +67,24 @@ function getWorker(): { worker: Worker; ready: Promise<void> } {
 }
 
 export async function runRubyTests(
+  userCode: string,
+  testCode: string,
+): Promise<TestResult[]> {
+  // Serialize overlapping calls: the worker's "results" listener is keyed
+  // only on message type, so two concurrent runs would both resolve from
+  // whichever "results" message arrives first. Chain onto the previous run.
+  const previous = inFlight;
+  let release: () => void;
+  inFlight = new Promise<void>((r) => (release = r));
+  await previous.catch(() => undefined);
+  try {
+    return await runRubyTestsExclusive(userCode, testCode);
+  } finally {
+    release!();
+  }
+}
+
+async function runRubyTestsExclusive(
   userCode: string,
   testCode: string,
 ): Promise<TestResult[]> {

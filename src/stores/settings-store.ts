@@ -146,13 +146,14 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       fontFamily: (patch.fontFamily as string) ?? DEFAULTS.fontFamily,
       tabSize: (patch.tabSize as number) ?? DEFAULTS.tabSize,
       // Persisted settings can outlive this variant's language set — old installs
-      // may still carry "python".
+      // may still carry "python", or garbage from a corrupted/foreign value.
+      // Only known-good languages pass through; everything else falls back.
       language:
-        patch.language === "ruby"
-          ? "ruby"
+        patch.language === "javascript" || patch.language === "ruby"
+          ? patch.language
           : patch.language === "python"
           ? "ruby"
-          : (patch.language as KataLanguage) ?? DEFAULTS.language,
+          : DEFAULTS.language,
       defaultSessionSize:
         (patch.defaultSessionSize as number) ?? DEFAULTS.defaultSessionSize,
       targetTimeMs: (patch.targetTimeMs as number) ?? DEFAULTS.targetTimeMs,
