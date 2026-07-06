@@ -489,7 +489,7 @@ interface KataEditorProps {
 }
 
 export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataEditorProps) {
-  const { theme, vimMode, toggleVimMode, toggleTheme, fontSize, fontFamily, tabSize, hideDescriptionInSession, setSetting, editorTheme, editorAutocomplete, lineNumbersMode, wordWrap, autoClosingBrackets, fontLigatures } = useSettingsStore();
+  const { theme, vimMode, toggleVimMode, toggleTheme, fontSize, fontFamily, tabSize, hideDescriptionInSession, setSetting, editorAutocomplete, lineNumbersMode, wordWrap, autoClosingBrackets, fontLigatures } = useSettingsStore();
   const sessionMaxTestRuns = useSessionStore((s) => s.activeSession?.maxTestRuns ?? null);
   // Attempt limits only apply inside a practice session, never in the standalone editor
   const maxTestRuns = isSession ? sessionMaxTestRuns : null;
@@ -519,7 +519,7 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
   const [notesSaved, setNotesSaved] = useState(true);
   const notesAutosaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const monacoTheme = resolveMonacoTheme(editorTheme, theme);
+  const monacoTheme = resolveMonacoTheme(theme);
   const sharedEditorOptions = {
     fontSize,
     fontFamily,
