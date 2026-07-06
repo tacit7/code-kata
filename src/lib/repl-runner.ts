@@ -1,28 +1,23 @@
-import {
-  INIT_TIMEOUT_MS,
-  EXEC_TIMEOUT_MS,
-  type ReplResult,
-} from "./ruby-exec-core";
+import { replBackends } from "./repl-backends";
 
 // REPL sessions get their own workers, separate from the test runners, so a
 // test-run timeout never destroys REPL state and vice versa. One session at
-// a time (per-kata scope); resetRepl() tears everything down.
+// a time (per-kata scope); resetRepl() tears everything down. JavaScript is
+// handled here; other languages come from the variant's repl-backends.
 
-export interface ReplEvalResult extends ReplResult {
+export const REPL_EXEC_TIMEOUT_MS = 5_000;
+
+export interface ReplEvalResult {
+  ok: boolean;
+  value?: string;
+  error?: string;
+  output?: string;
   /** True when the session was lost (timeout/crash) and restarted fresh. */
   reset?: boolean;
 }
 
-let rubyWorker: Worker | null = null;
-let rubyReady: Promise<void> | null = null;
 let jsWorker: Worker | null = null;
 let inFlight: Promise<unknown> = Promise.resolve();
-
-function discardRuby() {
-  rubyWorker?.terminate();
-  rubyWorker = null;
-  rubyReady = null;
-}
 
 function discardJs() {
   jsWorker?.terminate();
@@ -30,39 +25,8 @@ function discardJs() {
 }
 
 export function resetRepl(): void {
-  discardRuby();
   discardJs();
-}
-
-function getRubyWorker(): { worker: Worker; ready: Promise<void> } {
-  if (rubyWorker && rubyReady) return { worker: rubyWorker, ready: rubyReady };
-  const worker = new Worker(new URL("./ruby-test-worker.ts", import.meta.url), {
-    type: "module",
-  });
-  const ready = new Promise<void>((resolve, reject) => {
-    const initTimer = setTimeout(() => {
-      reject(new Error(`ruby.wasm init exceeded ${INIT_TIMEOUT_MS / 1000}s`));
-    }, INIT_TIMEOUT_MS);
-    const onMessage = (e: MessageEvent<{ type: string; error?: string }>) => {
-      if (e.data.type === "ready") {
-        clearTimeout(initTimer);
-        worker.removeEventListener("message", onMessage);
-        resolve();
-      } else if (e.data.type === "init_error") {
-        clearTimeout(initTimer);
-        worker.removeEventListener("message", onMessage);
-        reject(new Error(e.data.error));
-      }
-    };
-    worker.addEventListener("message", onMessage);
-    worker.addEventListener("error", (e) => {
-      clearTimeout(initTimer);
-      reject(new Error(`REPL worker failed to load: ${e.message}`));
-    });
-  });
-  rubyWorker = worker;
-  rubyReady = ready;
-  return { worker, ready };
+  for (const backend of Object.values(replBackends)) backend.discard();
 }
 
 function getJsWorker(): Worker {
@@ -83,12 +47,12 @@ function evalInWorker(
       onTimeout();
       resolve({
         ok: false,
-        error: `Evaluation exceeded ${EXEC_TIMEOUT_MS / 1000}s — session reset`,
+        error: `Evaluation exceeded ${REPL_EXEC_TIMEOUT_MS / 1000}s — session reset`,
         reset: true,
       });
-    }, EXEC_TIMEOUT_MS);
+    }, REPL_EXEC_TIMEOUT_MS);
 
-    const onMessage = (e: MessageEvent<{ type: string } & ReplResult>) => {
+    const onMessage = (e: MessageEvent<{ type: string } & ReplEvalResult>) => {
       if (e.data.type !== "repl_result") return;
       clearTimeout(timer);
       worker.removeEventListener("message", onMessage);
@@ -101,15 +65,16 @@ function evalInWorker(
 }
 
 async function replEvalInner(language: string, code: string): Promise<ReplEvalResult> {
-  if (language === "ruby") {
-    const { worker, ready } = getRubyWorker();
+  const backend = replBackends[language];
+  if (backend) {
+    const { worker, ready } = backend.get();
     try {
       await ready;
     } catch (err) {
-      discardRuby();
+      backend.discard();
       return { ok: false, error: err instanceof Error ? err.message : String(err), reset: true };
     }
-    return evalInWorker(worker, code, discardRuby);
+    return evalInWorker(worker, code, () => backend.discard());
   }
   return evalInWorker(getJsWorker(), code, discardJs);
 }
