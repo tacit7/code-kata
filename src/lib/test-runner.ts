@@ -1,5 +1,5 @@
 import type { TestResult } from "../types/editor";
-import { runPythonTests } from "./python-runner";
+import { runPythonTests, prewarmPython } from "./python-runner";
 import { runRubyTests } from "./ruby-runner";
 
 const WATCHDOG_MS = 5000;
@@ -54,9 +54,8 @@ export async function runTests(
   return runJsTests(userCode, testCode);
 }
 
-// No-op on app-core — language runners don't expose a warm-up entry point
-// that is reachable without touching their files. Variant branches override
-// this to eagerly spin up their language worker (e.g. Pyodide on main).
-export function prewarmRunner(_language: string): void {
-  // intentional no-op
+// Eagerly boots the language runtime so the first "run" doesn't pay the
+// WASM startup cost. JS needs no warm-up.
+export function prewarmRunner(language: string): void {
+  if (language === "python") prewarmPython();
 }

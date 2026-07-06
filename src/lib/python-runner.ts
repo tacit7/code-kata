@@ -16,6 +16,12 @@ function getPythonWorker(): Worker {
   return workerInstance;
 }
 
+// Eagerly create the worker AND boot Pyodide inside it (repl_init loads the
+// runtime and replies "ready", which nothing listens for here — harmless).
+export function prewarmPython(): void {
+  getPythonWorker().postMessage({ type: "repl_init" });
+}
+
 export function runPythonTests(
   userCode: string,
   testCode: string,
