@@ -7,7 +7,7 @@ const host = process.env.TAURI_DEV_HOST;
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   optimizeDeps: {
-    exclude: ["pyodide"],
+    exclude: ["pyodide", "@ruby/wasm-wasi"],
   },
   worker: {
     format: "es",

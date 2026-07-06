@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "test": "vitest run"
   },
   "packageManager": "pnpm@10.29.1",
   "devDependencies": {
@@ -19,10 +20,13 @@
     "daisyui": "^5.5.18",
     "tailwindcss": "^4.1.18",
     "typescript": "^5.9.3",
-    "vite": "^7.3.1"
+    "vite": "^7.3.1",
+    "vitest": "^4.1.10"
   },
   "dependencies": {
     "@monaco-editor/react": "^4.7.0",
+    "@ruby/3.3-wasm-wasi": "2.9.3-2.9.4",
+    "@ruby/wasm-wasi": "2.9.3-2.9.4",
     "@tauri-apps/api": "^2.10.1",
     "@tauri-apps/plugin-fs": "^2.4.5",
     "@tauri-apps/plugin-shell": "^2.3.5",
