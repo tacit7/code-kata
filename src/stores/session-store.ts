@@ -138,6 +138,28 @@ export async function fetchKataStats(kataIds: number[]): Promise<Map<number, Kat
   return new Map(rows.map((r) => [r.kata_id, r]));
 }
 
+// Full pass/fail history per kata, oldest first — feeds SM-2-lite scheduling.
+export async function fetchAttemptHistory(
+  kataIds: number[],
+): Promise<Map<number, { passed: number; started_at: string }[]>> {
+  if (kataIds.length === 0) return new Map();
+  const db = await getDb();
+  const placeholders = kataIds.map((_, i) => `$${i + 1}`).join(", ");
+  const rows = await db.select<{ kata_id: number; passed: number; started_at: string }[]>(
+    `SELECT kata_id, passed, started_at FROM attempts
+     WHERE kata_id IN (${placeholders})
+     ORDER BY started_at ASC`,
+    kataIds,
+  );
+  const map = new Map<number, { passed: number; started_at: string }[]>();
+  for (const r of rows) {
+    const list = map.get(r.kata_id) ?? [];
+    list.push({ passed: r.passed, started_at: r.started_at });
+    map.set(r.kata_id, list);
+  }
+  return map;
+}
+
 export function medianTime(statsMap: Map<number, KataStats>): number {
   const times: number[] = [];
   for (const r of statsMap.values()) {
