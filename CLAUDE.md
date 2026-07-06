@@ -60,10 +60,10 @@ no single releasable trunk; each variant branch is its own app.
 
 ### Gotchas
 
-- All variants share one app identifier, so they share
-  `~/Library/Application Support/com.code-kata.app/kata.db`. Switching which
-  variant you run requires Settings → Practice → "Reload Problem Statements"
-  (reseed) and re-selecting the language.
+- Each variant has its own app identifier and therefore its own database:
+  `main` uses `com.code-kata.app`, `js-ruby-version` uses `com.code-kata.ruby`
+  (`~/Library/Application Support/<identifier>/kata.db`). Progress does not
+  transfer between variants.
 - Worktrees for cross-branch work live in `.claude/worktrees/` (`app-core`,
   `main-variant`).
 
