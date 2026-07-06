@@ -16,7 +16,7 @@ export function KataFormPage() {
 
   const [name, setName] = useState("");
   const [category, setCategory] = useState("arrays");
-  const [language, setLanguage] = useState<"javascript" | "python" | "ruby">("javascript");
+  const [language, setLanguage] = useState<"javascript" | "ruby">("javascript");
   const [difficulty, setDifficulty] = useState<"easy" | "medium" | "hard">("easy");
   const [description, setDescription] = useState("");
   const [code, setCode] = useState("");
@@ -35,7 +35,7 @@ export function KataFormPage() {
     }
     setName(kata.name);
     setCategory(kata.category);
-    setLanguage(kata.language as "javascript" | "python");
+    setLanguage(kata.language as "javascript" | "ruby");
     setDifficulty((kata.difficulty as "easy" | "medium" | "hard") ?? "easy");
     setDescription(kata.description ?? "");
     setCode(kata.code);
@@ -88,7 +88,7 @@ export function KataFormPage() {
     navigate("/problems");
   };
 
-  const monacoLang = language === "python" ? "python" : language === "ruby" ? "ruby" : "javascript";
+  const monacoLang = language === "ruby" ? "ruby" : "javascript";
   const monacoTheme = theme === "dark" ? "vs-dark" : "vs";
   const editorOptions = { minimap: { enabled: false }, fontSize: 13, lineNumbers: "on" as const, scrollBeyondLastLine: false };
 
@@ -143,9 +143,8 @@ export function KataFormPage() {
         </div>
         <div>
           <label className="label text-[11px] font-semibold text-base-content/35 uppercase tracking-wider">Language</label>
-          <select value={language} onChange={(e) => setLanguage(e.target.value as "javascript" | "python" | "ruby")} className="select select-bordered select-sm w-full bg-base-100">
+          <select value={language} onChange={(e) => setLanguage(e.target.value as "javascript" | "ruby")} className="select select-bordered select-sm w-full bg-base-100">
             <option value="javascript">JavaScript</option>
-            <option value="python">Python</option>
             <option value="ruby">Ruby</option>
           </select>
         </div>

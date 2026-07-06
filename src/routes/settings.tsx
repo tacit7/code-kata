@@ -79,10 +79,10 @@ function EditorTab() {
             JavaScript
           </button>
           <button
-            onClick={() => setSetting("language", "python")}
-            className={`btn btn-sm join-item ${language === "python" ? "btn-primary" : "btn-ghost"}`}
+            onClick={() => setSetting("language", "ruby")}
+            className={`btn btn-sm join-item ${language === "ruby" ? "btn-primary" : "btn-ghost"}`}
           >
-            Python
+            Ruby
           </button>
         </div>
       </div>

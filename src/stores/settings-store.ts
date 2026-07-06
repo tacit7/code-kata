@@ -19,7 +19,7 @@ export const DEFAULT_SHORTCUTS: Record<ShortcutAction, string> = {
   closePanel: "Escape",
 };
 
-export type KataLanguage = "javascript" | "python";
+export type KataLanguage = "javascript" | "ruby";
 
 export type PracticeMode = "sr" | "daily" | "weak" | "speed" | "level";
 
@@ -145,7 +145,14 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       fontSize: (patch.fontSize as number) ?? DEFAULTS.fontSize,
       fontFamily: (patch.fontFamily as string) ?? DEFAULTS.fontFamily,
       tabSize: (patch.tabSize as number) ?? DEFAULTS.tabSize,
-      language: (patch.language as KataLanguage) ?? DEFAULTS.language,
+      // Persisted settings can outlive this variant's language set — old installs
+      // may still carry "python".
+      language:
+        patch.language === "ruby"
+          ? "ruby"
+          : patch.language === "python"
+          ? "ruby"
+          : (patch.language as KataLanguage) ?? DEFAULTS.language,
       defaultSessionSize:
         (patch.defaultSessionSize as number) ?? DEFAULTS.defaultSessionSize,
       targetTimeMs: (patch.targetTimeMs as number) ?? DEFAULTS.targetTimeMs,
