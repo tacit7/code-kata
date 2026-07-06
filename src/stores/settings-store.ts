@@ -169,7 +169,16 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       wordWrap: (patch.wordWrap as boolean) ?? DEFAULTS.wordWrap,
       autoClosingBrackets: (patch.autoClosingBrackets as boolean) ?? DEFAULTS.autoClosingBrackets,
       fontLigatures: (patch.fontLigatures as boolean) ?? DEFAULTS.fontLigatures,
-      language: (patch.language as KataLanguage) ?? DEFAULTS.language,
+      // Persisted settings can outlive this variant's language set — a foreign
+      // variant may have written "ruby", or the value may be corrupted. Only
+      // known-good languages pass through; ruby (the other algo variant) maps
+      // to python; everything else falls back to the default.
+      language:
+        patch.language === "javascript" || patch.language === "python"
+          ? patch.language
+          : patch.language === "ruby"
+          ? "python"
+          : DEFAULTS.language,
       defaultSessionSize:
         (patch.defaultSessionSize as number) ?? DEFAULTS.defaultSessionSize,
       targetTimeMs: (patch.targetTimeMs as number) ?? DEFAULTS.targetTimeMs,
