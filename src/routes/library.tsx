@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { useKataStore } from "../stores/kata-store";
-import type { LibrarySortMode } from "../stores/kata-store";
+import type { LibrarySortField, SortDirection } from "../stores/kata-store";
+import { SortMenu, type SortOption } from "../components/sort-menu";
 import { useSettingsStore } from "../stores/settings-store";
 import { CATEGORY_LEVEL } from "../lib/levels";
 import { reseedKatas } from "../lib/database";
@@ -21,18 +22,29 @@ export function PracticePage() {
   const navigate = useNavigate();
 
   const librarySearch = useKataStore((s) => s.librarySearch);
-  const libraryDiffSort = useKataStore((s) => s.libraryDiffSort);
-  const librarySortMode = useKataStore((s) => s.librarySortMode);
+  const librarySortField = useKataStore((s) => s.librarySortField);
+  const librarySortDir = useKataStore((s) => s.librarySortDir);
   const setLibraryUI = useKataStore((s) => s.setLibraryUI);
 
   const search = librarySearch;
   const setSearch = (v: string) => setLibraryUI({ librarySearch: v });
-  const diffSort = libraryDiffSort;
-  const setDiffSort = (v: "asc" | "desc" | null) => setLibraryUI({ libraryDiffSort: v });
-  const sortMode = librarySortMode;
-  const setSortMode = (v: LibrarySortMode) => setLibraryUI({ librarySortMode: v });
+  const sortField = librarySortField;
+  const sortDir = librarySortDir;
+  const setSort = (field: LibrarySortField, dir: SortDirection) =>
+    setLibraryUI({ librarySortField: field, librarySortDir: dir });
 
   const diffRank: Record<string, number> = { easy: 0, medium: 1, hard: 2 };
+
+  const SORT_OPTIONS: SortOption[] = [
+    { field: "default", label: "Default", toggle: false },
+    { field: "starred", label: "Starred first", toggle: false },
+    { field: "level-difficulty", label: "Level + Difficulty", toggle: false },
+    { field: "level", label: "Level", toggle: true },
+    { field: "category", label: "Category", toggle: true },
+    { field: "difficulty", label: "Difficulty", toggle: true },
+    { field: "best-time", label: "Best time", toggle: true },
+    { field: "streak", label: "Streak", toggle: true },
+  ];
 
   const searchedKatas = useMemo(() => {
     const q = search.toLowerCase().trim();
@@ -47,25 +59,14 @@ export function PracticePage() {
         k.tags.some((t) => t.toLowerCase().includes(q))
       );
     });
-    if (diffSort) {
-      return [...filtered].sort((a, b) => {
-        const ra = diffRank[a.difficulty ?? ""] ?? 3;
-        const rb = diffRank[b.difficulty ?? ""] ?? 3;
-        return diffSort === "asc" ? ra - rb : rb - ra;
-      });
-    }
-    if (sortMode === "default") return filtered;
+    if (sortField === "default") return filtered;
+    const sign = sortDir === "asc" ? 1 : -1;
     return [...filtered].sort((a, b) => {
-      switch (sortMode) {
+      switch (sortField) {
         case "starred": {
           const aS = dailyKataIds.includes(a.id) ? 0 : 1;
           const bS = dailyKataIds.includes(b.id) ? 0 : 1;
           return aS - bS;
-        }
-        case "level": {
-          const aL = CATEGORY_LEVEL[a.category] ?? 99;
-          const bL = CATEGORY_LEVEL[b.category] ?? 99;
-          return aL - bL;
         }
         case "level-difficulty": {
           const aL = CATEGORY_LEVEL[a.category] ?? 99;
@@ -75,33 +76,33 @@ export function PracticePage() {
           const rb = diffRank[b.difficulty ?? ""] ?? 3;
           return ra - rb;
         }
+        case "level": {
+          const aL = CATEGORY_LEVEL[a.category] ?? 99;
+          const bL = CATEGORY_LEVEL[b.category] ?? 99;
+          return sign * (aL - bL);
+        }
         case "category":
-          return a.category.localeCompare(b.category);
+          return sign * a.category.localeCompare(b.category);
+        case "difficulty": {
+          const ra = diffRank[a.difficulty ?? ""] ?? 3;
+          const rb = diffRank[b.difficulty ?? ""] ?? 3;
+          return sign * (ra - rb);
+        }
         case "best-time": {
           const aT = bestTimes[a.id] ?? Infinity;
           const bT = bestTimes[b.id] ?? Infinity;
-          return aT - bT;
+          return sign * (aT - bT);
         }
         case "streak": {
           const aSt = streaks[a.id] ?? 0;
           const bSt = streaks[b.id] ?? 0;
-          return bSt - aSt;
-        }
-        case "difficulty-asc": {
-          const ra = diffRank[a.difficulty ?? ""] ?? 3;
-          const rb = diffRank[b.difficulty ?? ""] ?? 3;
-          return ra - rb;
-        }
-        case "difficulty-desc": {
-          const ra = diffRank[a.difficulty ?? ""] ?? 3;
-          const rb = diffRank[b.difficulty ?? ""] ?? 3;
-          return rb - ra;
+          return sign * (aSt - bSt);
         }
         default:
           return 0;
       }
     });
-  }, [katas, search, diffSort, sortMode, dailyKataIds, bestTimes, streaks]);
+  }, [katas, search, sortField, sortDir, dailyKataIds, bestTimes, streaks]);
 
   const toggleDaily = (id: number, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -170,26 +171,7 @@ export function PracticePage() {
             </button>
           )}
         </div>
-        <select
-          value={diffSort ? `difficulty-${diffSort}` : sortMode}
-          onChange={(e) => {
-            const v = e.target.value as LibrarySortMode | "difficulty-asc" | "difficulty-desc";
-            if (v === "difficulty-asc") { setSortMode("default"); setDiffSort("asc"); }
-            else if (v === "difficulty-desc") { setSortMode("default"); setDiffSort("desc"); }
-            else { setDiffSort(null); setSortMode(v as LibrarySortMode); }
-          }}
-          className="select select-bordered select-sm bg-base-100 text-xs"
-        >
-          <option value="default">Sort: Default</option>
-          <option value="starred">Sort: Starred first</option>
-          <option value="level">Sort: Level</option>
-          <option value="level-difficulty">Sort: Level + Difficulty</option>
-          <option value="category">Sort: Category A→Z</option>
-          <option value="best-time">Sort: Best time</option>
-          <option value="streak">Sort: Streak</option>
-          <option value="difficulty-asc">Sort: Difficulty ↑</option>
-          <option value="difficulty-desc">Sort: Difficulty ↓</option>
-        </select>
+        <SortMenu options={SORT_OPTIONS} field={sortField} dir={sortDir} onChange={setSort} />
       </div>
 
       {/* Kata table */}
@@ -207,9 +189,9 @@ export function PracticePage() {
               <th className="font-semibold">Category</th>
               <th
                 className="font-semibold cursor-pointer select-none hover:text-base-content/60 transition-colors"
-                onClick={() => setDiffSort(diffSort === null ? "asc" : diffSort === "asc" ? "desc" : null)}
+                onClick={() => setSort("difficulty", sortField === "difficulty" && sortDir === "asc" ? "desc" : "asc")}
               >
-                Difficulty {diffSort === "asc" ? "▲" : diffSort === "desc" ? "▼" : ""}
+                Difficulty {sortField === "difficulty" ? (sortDir === "asc" ? "▲" : "▼") : ""}
               </th>
               <th className="font-semibold">Tags</th>
               <th className="font-semibold text-right">Best</th>
