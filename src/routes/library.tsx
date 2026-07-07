@@ -19,6 +19,8 @@ export function PracticePage() {
   const doneKataIds = useSettingsStore((s) => s.doneKataIds);
   const setSetting = useSettingsStore((s) => s.setSetting);
   const navigate = useNavigate();
+  const [expandedTagRows, setExpandedTagRows] = useState<Set<number>>(new Set());
+  const TAG_PREVIEW_COUNT = 3;
 
   const librarySearch = useKataStore((s) => s.librarySearch);
   const libraryDiffSort = useKataStore((s) => s.libraryDiffSort);
@@ -148,6 +150,34 @@ export function PracticePage() {
     }
   }, [searchedKatas.length]);
 
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  useEffect(() => {
+    setSelectedIndex(0);
+  }, [search, sortMode, diffSort]);
+
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        setSelectedIndex((i) => Math.min(i + 1, searchedKatas.length - 1));
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        setSelectedIndex((i) => Math.max(i - 1, 0));
+      } else if (e.key === "Enter") {
+        const kata = searchedKatas[selectedIndex];
+        if (kata) navigate(`/editor/${kata.id}`);
+      }
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [searchedKatas, selectedIndex, navigate]);
+
+  useEffect(() => {
+    const kata = searchedKatas[selectedIndex];
+    if (!kata) return;
+    document.getElementById(`kata-row-${kata.id}`)?.scrollIntoView({ block: "nearest" });
+  }, [selectedIndex, searchedKatas]);
+
   return (
     <div className="flex flex-col h-full p-5 gap-4 animate-fade-in">
       {/* Header */}
@@ -178,7 +208,7 @@ export function PracticePage() {
             else if (v === "difficulty-desc") { setSortMode("default"); setDiffSort("desc"); }
             else { setDiffSort(null); setSortMode(v as LibrarySortMode); }
           }}
-          className="select select-bordered select-sm bg-base-100 text-xs"
+          className="select select-bordered select-sm bg-base-100 text-xs w-52 shrink-0"
         >
           <option value="default">Sort: Default</option>
           <option value="starred">Sort: Starred first</option>
@@ -218,11 +248,15 @@ export function PracticePage() {
             </tr>
           </thead>
           <tbody>
-            {searchedKatas.map((kata) => (
+            {searchedKatas.map((kata, idx) => (
               <tr
                 key={kata.id}
-                onClick={() => navigate(`/editor/${kata.id}`)}
-                className="hover:bg-base-300/20 cursor-pointer transition-colors border-base-300/30"
+                id={`kata-row-${kata.id}`}
+                onClick={() => { setSelectedIndex(idx); navigate(`/editor/${kata.id}`); }}
+                onMouseEnter={() => setSelectedIndex(idx)}
+                className={`cursor-pointer transition-colors border-base-300/30 ${
+                  idx === selectedIndex ? "bg-primary/10 border-l-2 border-l-primary" : "hover:bg-base-300/20"
+                }`}
               >
                 <td className="w-8">
                   <button
@@ -276,16 +310,28 @@ export function PracticePage() {
                   </span>
                 </td>
                 <td>
-                  <div className="flex flex-wrap gap-1">
-                    {kata.tags.map((tag) => (
+                  <div className="flex flex-wrap items-center gap-1">
+                    {(expandedTagRows.has(kata.id) ? kata.tags : kata.tags.slice(0, TAG_PREVIEW_COUNT)).map((tag) => (
                       <button
                         key={tag}
                         onClick={(e) => { e.stopPropagation(); setSearch(tag); }}
-                        className="badge badge-xs bg-primary/10 text-primary border-primary/20 cursor-pointer hover:bg-primary/25 transition-colors"
+                        className="badge badge-xs bg-primary/10 text-primary/70 border-primary/10 cursor-pointer hover:bg-primary/25 hover:text-primary transition-colors"
                       >
                         {tag}
                       </button>
                     ))}
+                    {!expandedTagRows.has(kata.id) && kata.tags.length > TAG_PREVIEW_COUNT && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setExpandedTagRows((prev) => new Set(prev).add(kata.id));
+                        }}
+                        className="badge badge-xs bg-base-300/40 text-base-content/40 border-transparent cursor-pointer hover:bg-base-300/70 hover:text-base-content/70 transition-colors"
+                        title="Show all tags"
+                      >
+                        +{kata.tags.length - TAG_PREVIEW_COUNT}
+                      </button>
+                    )}
                   </div>
                 </td>
                 <td className="text-right text-base-content/45 tabular-nums text-sm">
