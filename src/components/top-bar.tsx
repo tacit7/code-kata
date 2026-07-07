@@ -55,8 +55,8 @@ export function TopBar() {
   }, [dailyKataIds, dailyCount, launching, katas, resetKataTimer, startSessionTimer, startSession, navigate]);
 
   return (
-    <header className="flex items-center h-11 px-4 border-b border-base-300/60 bg-base-100 shrink-0">
-      {/* Brand */}
+    <header className="titlebar-drag flex items-center h-11 pl-20 pr-4 border-b border-base-300/60 bg-base-100 shrink-0">
+      {/* Brand — pl-20 on the header clears the macOS traffic-light overlay */}
       <div className="flex items-center gap-2.5 mr-8 select-none">
         <img
           src={theme === "dark" ? "/logo-dark.png" : "/logo-light.png"}
