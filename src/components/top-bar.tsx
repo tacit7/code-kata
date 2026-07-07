@@ -2,6 +2,7 @@ import { useState, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useSettingsStore } from "../stores/settings-store";
+import { isDarkScheme } from "../lib/editor-themes";
 import { useKataStore } from "../stores/kata-store";
 import { useSessionStore } from "../stores/session-store";
 import { useTimerStore } from "../stores/timer-store";
@@ -16,6 +17,7 @@ const NAV_ITEMS = [
 
 export function TopBar() {
   const theme = useSettingsStore((s) => s.theme);
+  const language = useSettingsStore((s) => s.language);
   const dailyKataIds = useSettingsStore((s) => s.dailyKataIds);
   const katas = useKataStore((s) => s.katas);
   const startSession = useSessionStore((s) => s.startSession);
@@ -74,13 +76,16 @@ export function TopBar() {
       {/* Brand — pl-20 on the header clears the macOS traffic-light overlay */}
       <div className="flex items-center gap-2.5 mr-8 select-none">
         <img
-          src={theme === "dark" ? "/logo-dark.png" : "/logo-light.png"}
+          src={isDarkScheme(theme) ? "/logo-dark.png" : "/logo-light.png"}
           alt="CK"
           className="w-5 h-5"
         />
-        <span className="text-sm font-semibold tracking-tight text-base-content/80">
-          Code Kata
-        </span>
+        <img
+          src={`/devicons/${language}.svg`}
+          alt={language}
+          title={language}
+          className="w-5 h-5"
+        />
       </div>
 
       {/* Navigation */}

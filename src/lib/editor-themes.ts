@@ -13,18 +13,22 @@ import solarizedLight from "./themes/solarized-light.json";
 // index.css with base-100 matching each Monaco editor.background) and the
 // Monaco editor. "dark"/"light" are the built-in app themes.
 export const APP_THEMES = [
-  { id: "dark", label: "Dark", monaco: "vs-dark" },
-  { id: "light", label: "Light", monaco: "vs" },
-  { id: "dracula", label: "Dracula", monaco: "dracula" },
-  { id: "monokai", label: "Monokai", monaco: "monokai" },
-  { id: "github-dark", label: "GitHub Dark", monaco: "github-dark" },
-  { id: "night-owl", label: "Night Owl", monaco: "night-owl" },
-  { id: "nord", label: "Nord", monaco: "nord" },
-  { id: "github-light", label: "GitHub Light", monaco: "github-light" },
-  { id: "solarized-light", label: "Solarized Light", monaco: "solarized-light" },
+  { id: "dark", label: "Dark", monaco: "vs-dark", scheme: "dark" },
+  { id: "light", label: "Light", monaco: "vs", scheme: "light" },
+  { id: "dracula", label: "Dracula", monaco: "dracula", scheme: "dark" },
+  { id: "monokai", label: "Monokai", monaco: "monokai", scheme: "dark" },
+  { id: "github-dark", label: "GitHub Dark", monaco: "github-dark", scheme: "dark" },
+  { id: "night-owl", label: "Night Owl", monaco: "night-owl", scheme: "dark" },
+  { id: "nord", label: "Nord", monaco: "nord", scheme: "dark" },
+  { id: "github-light", label: "GitHub Light", monaco: "github-light", scheme: "light" },
+  { id: "solarized-light", label: "Solarized Light", monaco: "solarized-light", scheme: "light" },
 ] as const;
 
 export type AppThemeId = (typeof APP_THEMES)[number]["id"];
+
+export function isDarkScheme(theme: AppThemeId): boolean {
+  return APP_THEMES.find((t) => t.id === theme)?.scheme === "dark";
+}
 
 const THEME_DATA: Record<string, unknown> = {
   dracula,
