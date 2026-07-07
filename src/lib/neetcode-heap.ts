@@ -124,9 +124,21 @@ end
 def test_k_closest_origin
   assert_equal([[0, 0]], k_closest([[0, 0], [1, 1]], 1))
 end`,
-    solution: `def k_closest(points, k)
-  points.sort_by { |x, y| x * x + y * y }.first(k)
-end`,
+    solution: `# Classic: compute distances explicitly, then sort
+def k_closest(points, k)
+  distances = points.map do |point|
+    x, y = point
+    [x * x + y * y, point]
+  end
+
+  distances.sort! { |a, b| a[0] <=> b[0] }
+  distances.first(k).map { |_, point| point }
+end
+
+# Idiomatic Ruby one-liner:
+# def k_closest(points, k)
+#   points.sort_by { |x, y| x * x + y * y }.first(k)
+# end`,
     usage: null,
     tags: ["heap", "sort", "neetcode"],
   },

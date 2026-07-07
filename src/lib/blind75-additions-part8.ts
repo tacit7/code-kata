@@ -29,10 +29,29 @@ def test_top_k_frequent_negatives
   result = top_k_frequent([4, 1, -1, 2, -1, 2, 3], 2)
   assert_equal([-1, 2], result.sort)
 end`,
-    solution: `def top_k_frequent(nums, k)
-  count = nums.tally
-  count.keys.sort_by { |x| -count[x] }.first(k)
-end`,
+    solution: `# Classic: counting sort by frequency (O(n), the expected interview answer)
+def top_k_frequent(nums, k)
+  counts = Hash.new(0)
+  nums.each { |n| counts[n] += 1 }
+
+  buckets = Array.new(nums.length + 1) { [] }
+  counts.each { |num, freq| buckets[freq] << num }
+
+  result = []
+  (buckets.length - 1).downto(0) do |freq|
+    buckets[freq].each do |num|
+      result << num
+      return result if result.length == k
+    end
+  end
+  result
+end
+
+# Idiomatic Ruby (O(n log n), shorter but hides the algorithm):
+# def top_k_frequent(nums, k)
+#   count = nums.tally
+#   count.keys.sort_by { |x| -count[x] }.first(k)
+# end`,
     usage: null,
     tags: ["heap", "hash-map", "blind75", "neetcode", "arrays-hashing"],
   },

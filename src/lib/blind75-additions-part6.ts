@@ -211,9 +211,20 @@ end
 def test_two_chars
   assert_equal(true, is_anagram("ab", "ba"))
 end`,
-    solution: `def is_anagram(s, t)
-  s.each_char.tally == t.each_char.tally
-end`,
+    solution: `# Classic: explicit character counts
+def is_anagram(s, t)
+  return false if s.length != t.length
+
+  counts = Hash.new(0)
+  s.each_char { |ch| counts[ch] += 1 }
+  t.each_char { |ch| counts[ch] -= 1 }
+  counts.values.all?(&:zero?)
+end
+
+# Idiomatic Ruby one-liner:
+# def is_anagram(s, t)
+#   s.each_char.tally == t.each_char.tally
+# end`,
     usage: null,
     tags: ["string", "hash-map", "blind75", "neetcode", "arrays-hashing"],
   },
