@@ -1,6 +1,8 @@
 import { useState, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useSettingsStore } from "../stores/settings-store";
+import { isDarkScheme } from "../lib/editor-themes";
 import { useKataStore } from "../stores/kata-store";
 import { useSessionStore } from "../stores/session-store";
 import { useTimerStore } from "../stores/timer-store";
@@ -15,6 +17,7 @@ const NAV_ITEMS = [
 
 export function TopBar() {
   const theme = useSettingsStore((s) => s.theme);
+  const language = useSettingsStore((s) => s.language);
   const dailyKataIds = useSettingsStore((s) => s.dailyKataIds);
   const katas = useKataStore((s) => s.katas);
   const startSession = useSessionStore((s) => s.startSession);
@@ -54,18 +57,35 @@ export function TopBar() {
     setLaunching(false);
   }, [dailyKataIds, dailyCount, launching, katas, resetKataTimer, startSessionTimer, startSession, navigate]);
 
+  // -webkit-app-region: drag alone isn't reliable here — it operates below
+  // Tauri's window layer, so we drive dragging explicitly via the window
+  // API instead. Interactive elements opt out so clicks still work.
+  const handleHeaderMouseDown = (e: React.MouseEvent<HTMLElement>) => {
+    if (e.button !== 0) return;
+    const target = e.target as HTMLElement;
+    if (target.closest("button, input, select, a, [role='button']")) return;
+    e.preventDefault(); // otherwise the drag gesture selects header text
+    void getCurrentWindow().startDragging();
+  };
+
   return (
-    <header className="flex items-center h-11 px-4 border-b border-base-300/60 bg-base-100 shrink-0">
-      {/* Brand */}
+    <header
+      onMouseDown={handleHeaderMouseDown}
+      className="flex items-center h-11 pl-20 pr-4 border-b border-base-300/60 bg-base-100 shrink-0"
+    >
+      {/* Brand — pl-20 on the header clears the macOS traffic-light overlay */}
       <div className="flex items-center gap-2.5 mr-8 select-none">
         <img
-          src={theme === "dark" ? "/logo-dark.png" : "/logo-light.png"}
+          src={isDarkScheme(theme) ? "/logo-dark.png" : "/logo-light.png"}
           alt="CK"
           className="w-5 h-5"
         />
-        <span className="text-sm font-semibold tracking-tight text-base-content/80">
-          Code Kata
-        </span>
+        <img
+          src={`/devicons/${language}.svg`}
+          alt={language}
+          title={language}
+          className="w-5 h-5"
+        />
       </div>
 
       {/* Navigation */}
