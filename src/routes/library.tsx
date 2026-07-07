@@ -19,6 +19,8 @@ export function PracticePage() {
   const doneKataIds = useSettingsStore((s) => s.doneKataIds);
   const setSetting = useSettingsStore((s) => s.setSetting);
   const navigate = useNavigate();
+  const [expandedTagRows, setExpandedTagRows] = useState<Set<number>>(new Set());
+  const TAG_PREVIEW_COUNT = 3;
 
   const librarySearch = useKataStore((s) => s.librarySearch);
   const libraryDiffSort = useKataStore((s) => s.libraryDiffSort);
@@ -276,16 +278,28 @@ export function PracticePage() {
                   </span>
                 </td>
                 <td>
-                  <div className="flex flex-wrap gap-1">
-                    {kata.tags.map((tag) => (
+                  <div className="flex flex-wrap items-center gap-1">
+                    {(expandedTagRows.has(kata.id) ? kata.tags : kata.tags.slice(0, TAG_PREVIEW_COUNT)).map((tag) => (
                       <button
                         key={tag}
                         onClick={(e) => { e.stopPropagation(); setSearch(tag); }}
-                        className="badge badge-xs bg-primary/10 text-primary border-primary/20 cursor-pointer hover:bg-primary/25 transition-colors"
+                        className="badge badge-xs bg-primary/10 text-primary/70 border-primary/10 cursor-pointer hover:bg-primary/25 hover:text-primary transition-colors"
                       >
                         {tag}
                       </button>
                     ))}
+                    {!expandedTagRows.has(kata.id) && kata.tags.length > TAG_PREVIEW_COUNT && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setExpandedTagRows((prev) => new Set(prev).add(kata.id));
+                        }}
+                        className="badge badge-xs bg-base-300/40 text-base-content/40 border-transparent cursor-pointer hover:bg-base-300/70 hover:text-base-content/70 transition-colors"
+                        title="Show all tags"
+                      >
+                        +{kata.tags.length - TAG_PREVIEW_COUNT}
+                      </button>
+                    )}
                   </div>
                 </td>
                 <td className="text-right text-base-content/45 tabular-nums text-sm">
