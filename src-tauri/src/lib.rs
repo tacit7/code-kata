@@ -25,6 +25,7 @@ pub fn run() {
         .plugin(tauri_plugin_sql::Builder::default().build())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_window_state::Builder::default().build())
+        .plugin(tauri_plugin_os::init())
         .manage(HeartbeatState(Mutex::new(Instant::now())))
         .invoke_handler(tauri::generate_handler![heartbeat])
         .setup(|app| {
