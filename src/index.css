@@ -85,20 +85,6 @@ html, body, #root {
   letter-spacing: -0.01em;
 }
 
-/* ── Native titlebar integration ── */
-/* TopBar sits in the macOS overlay title bar area (see tauri.conf.json
-   titleBarStyle: Overlay) instead of stacking as a second bar below it. */
-.titlebar-drag {
-  -webkit-app-region: drag;
-}
-.titlebar-drag button,
-.titlebar-drag input,
-.titlebar-drag select,
-.titlebar-drag a,
-.titlebar-drag [role="button"] {
-  -webkit-app-region: no-drag;
-}
-
 /* ── Scrollbar ── */
 .scrollbar-hidden {
   scrollbar-width: none;
