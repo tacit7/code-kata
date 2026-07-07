@@ -150,6 +150,34 @@ export function PracticePage() {
     }
   }, [searchedKatas.length]);
 
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  useEffect(() => {
+    setSelectedIndex(0);
+  }, [search, sortMode, diffSort]);
+
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        setSelectedIndex((i) => Math.min(i + 1, searchedKatas.length - 1));
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        setSelectedIndex((i) => Math.max(i - 1, 0));
+      } else if (e.key === "Enter") {
+        const kata = searchedKatas[selectedIndex];
+        if (kata) navigate(`/editor/${kata.id}`);
+      }
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [searchedKatas, selectedIndex, navigate]);
+
+  useEffect(() => {
+    const kata = searchedKatas[selectedIndex];
+    if (!kata) return;
+    document.getElementById(`kata-row-${kata.id}`)?.scrollIntoView({ block: "nearest" });
+  }, [selectedIndex, searchedKatas]);
+
   return (
     <div className="flex flex-col h-full p-5 gap-4 animate-fade-in">
       {/* Header */}
@@ -220,11 +248,15 @@ export function PracticePage() {
             </tr>
           </thead>
           <tbody>
-            {searchedKatas.map((kata) => (
+            {searchedKatas.map((kata, idx) => (
               <tr
                 key={kata.id}
-                onClick={() => navigate(`/editor/${kata.id}`)}
-                className="hover:bg-base-300/20 cursor-pointer transition-colors border-base-300/30"
+                id={`kata-row-${kata.id}`}
+                onClick={() => { setSelectedIndex(idx); navigate(`/editor/${kata.id}`); }}
+                onMouseEnter={() => setSelectedIndex(idx)}
+                className={`cursor-pointer transition-colors border-base-300/30 ${
+                  idx === selectedIndex ? "bg-primary/10 border-l-2 border-l-primary" : "hover:bg-base-300/20"
+                }`}
               >
                 <td className="w-8">
                   <button
