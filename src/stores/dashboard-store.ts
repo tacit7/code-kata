@@ -1,8 +1,6 @@
 import { create } from "zustand";
 import { getDb } from "../lib/database";
-import { fetchAttemptHistory } from "./session-store";
-import { computeSrState } from "../lib/sr";
-import { updateDockBadge } from "../lib/dock-badge";
+import { refreshDockBadge } from "../lib/dock-badge";
 
 interface TodayStats {
   sessionCount: number;
@@ -237,21 +235,7 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
       selectedSessionId: null,
     });
 
-    // Best-effort: update dock badge with SR due count.
-    try {
-      const kataIds = leaderboardRows.map((r) => r.kata_id);
-      if (kataIds.length > 0) {
-        const historyMap = await fetchAttemptHistory(kataIds);
-        let dueCount = 0;
-        for (const id of kataIds) {
-          const state = computeSrState(historyMap.get(id));
-          if (state.status !== "scheduled") dueCount++;
-        }
-        await updateDockBadge(dueCount);
-      }
-    } catch {
-      // badge is best-effort; never break loadDashboard
-    }
+    void refreshDockBadge();
   },
 
   loadMoreSessions: async () => {

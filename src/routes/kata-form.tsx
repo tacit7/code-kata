@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router";
 import Editor from "@monaco-editor/react";
+import { monacoReady } from "../lib/monaco-setup";
 import { useKataStore } from "../stores/kata-store";
 import { useSettingsStore } from "../stores/settings-store";
 
@@ -17,6 +18,10 @@ export function KataFormPage() {
   const [name, setName] = useState("");
   const [category, setCategory] = useState("arrays");
   const [language, setLanguage] = useState<"javascript" | "ruby">("javascript");
+  const [monacoUp, setMonacoUp] = useState(false);
+  useEffect(() => {
+    void monacoReady.then(() => setMonacoUp(true));
+  }, []);
   const [difficulty, setDifficulty] = useState<"easy" | "medium" | "hard">("easy");
   const [description, setDescription] = useState("");
   const [code, setCode] = useState("");
@@ -91,6 +96,8 @@ export function KataFormPage() {
   const monacoLang = language === "ruby" ? "ruby" : "javascript";
   const monacoTheme = theme === "dark" ? "vs-dark" : "vs";
   const editorOptions = { minimap: { enabled: false }, fontSize: 13, lineNumbers: "on" as const, scrollBeyondLastLine: false };
+
+  if (!monacoUp) return null;
 
   return (
     <div className="flex flex-col h-full p-5 gap-4 overflow-y-auto animate-fade-in">

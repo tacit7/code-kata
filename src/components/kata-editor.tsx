@@ -13,6 +13,7 @@ import { saveUserCode, loadUserCode, deleteUserCode, saveKataNotes, loadKataNote
 import { TestOutput } from "./test-output";
 import { ReplPanel, type ReplSeed } from "./repl-panel";
 import { extractTestCall } from "../lib/repl-seed";
+import { monacoReady } from "../lib/monaco-setup";
 import { toast } from "../stores/toast-store";
 import type { Kata, TestResult } from "../types/editor";
 
@@ -490,7 +491,7 @@ interface KataEditorProps {
 }
 
 export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataEditorProps) {
-  const { theme, vimMode, toggleVimMode, fontSize, fontFamily, tabSize, hideDescriptionInSession, setSetting, editorAutocomplete, lineNumbersMode, wordWrap, autoClosingBrackets, fontLigatures } = useSettingsStore();
+  const { theme, vimMode, toggleVimMode, shortcuts, fontSize, fontFamily, tabSize, hideDescriptionInSession, setSetting, editorAutocomplete, lineNumbersMode, wordWrap, autoClosingBrackets, fontLigatures } = useSettingsStore();
   const sessionMaxTestRuns = useSessionStore((s) => s.activeSession?.maxTestRuns ?? null);
   // Attempt limits only apply inside a practice session, never in the standalone editor
   const maxTestRuns = isSession ? sessionMaxTestRuns : null;
@@ -513,6 +514,10 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
   const [saved, setSaved] = useState(true);
   const [showConfig, setShowConfig] = useState(false);
   const [showRepl, setShowRepl] = useState(false);
+  const [monacoUp, setMonacoUp] = useState(false);
+  useEffect(() => {
+    void monacoReady.then(() => setMonacoUp(true));
+  }, []);
   const [replSeed, setReplSeed] = useState<ReplSeed | null>(null);
   const [savedCode, setSavedCode] = useState<string | null>(null);
   const [codeLoaded, setCodeLoaded] = useState(false);
@@ -522,6 +527,8 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
   const notesAutosaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const monacoTheme = resolveMonacoTheme(theme);
+  const fmtCombo = (combo: string) =>
+    combo.replace("Meta", "⌘").replace("Shift", "⇧").replace("Alt", "⌥").replace("Ctrl", "⌃").replace("Enter", "↩").replace("+", "").replace("+", "");
   const sharedEditorOptions = {
     fontSize,
     fontFamily,
@@ -751,6 +758,7 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
           onClick={() => toggleMode
             ? setShowPanel((v) => v === "solution" ? null : "solution")
             : setShowPanel("solution")}
+          title={`Toggle solution (${fmtCombo(shortcuts.toggleSolution)})`}
           className={tabClass("solution")}
         >
           Solution
@@ -867,6 +875,7 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
         </button>
         <button
           onClick={toggleVimMode}
+          title="Toggle vim keybindings"
           className={`btn btn-xs ${vimMode ? "btn-success" : "btn-ghost text-base-content/40"}`}
         >
           VIM
@@ -874,6 +883,7 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
         <button
           onClick={handleRun}
           disabled={running || (maxTestRuns !== null && runCount >= maxTestRuns && !kataPassed)}
+          title={`Run tests (${fmtCombo(shortcuts.runTests)})`}
           className="btn btn-xs btn-primary"
         >
           {running ? "..." : "▷ run"}
@@ -883,7 +893,7 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
     </div>
   );
 
-  if (!codeLoaded) return null;
+  if (!codeLoaded || !monacoUp) return null;
 
   const initialCode = isSession ? kata.code : (savedCode ?? kata.code);
 

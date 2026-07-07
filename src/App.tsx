@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from "react";
+import { useEffect, useCallback, lazy, Suspense } from "react";
 import { Routes, Route, Navigate, useNavigate } from "react-router";
 import { listen } from "@tauri-apps/api/event";
 import { useSettingsStore } from "./stores/settings-store";
@@ -6,14 +6,9 @@ import { useKataStore } from "./stores/kata-store";
 import { useKeyboardShortcuts } from "./hooks/use-keyboard-shortcuts";
 import { TopBar } from "./components/top-bar";
 import { Toaster } from "./components/toaster";
-import { EditorPage } from "./routes/editor";
 import { PracticePage } from "./routes/library";
 import { PracticeQueuePage } from "./routes/practice";
-import { SessionPage } from "./routes/session";
-import { SessionResultsPage } from "./routes/session-results";
-import { DashboardPage } from "./routes/dashboard";
 import { SettingsPage } from "./routes/settings";
-import { KataFormPage } from "./routes/kata-form";
 import { ResultsPage } from "./routes/results";
 
 if (import.meta.env.DEV) {
@@ -21,6 +16,14 @@ if (import.meta.env.DEV) {
     (window as unknown as { __rubyStress: typeof m.rubyStress }).__rubyStress = m.rubyStress;
   });
 }
+
+// Heavy routes load lazily: Monaco rides with the editor chunks, Recharts
+// with the dashboard — keeps the startup bundle small.
+const EditorPage = lazy(() => import("./routes/editor").then((m) => ({ default: m.EditorPage })));
+const SessionPage = lazy(() => import("./routes/session").then((m) => ({ default: m.SessionPage })));
+const SessionResultsPage = lazy(() => import("./routes/session-results").then((m) => ({ default: m.SessionResultsPage })));
+const DashboardPage = lazy(() => import("./routes/dashboard").then((m) => ({ default: m.DashboardPage })));
+const KataFormPage = lazy(() => import("./routes/kata-form").then((m) => ({ default: m.KataFormPage })));
 
 function App() {
   const theme = useSettingsStore((s) => s.theme);
@@ -92,6 +95,7 @@ function App() {
       <div className="flex flex-col h-full bg-base-200 text-base-content">
         <TopBar />
         <main className="flex-1 min-h-0">
+          <Suspense fallback={<div className="flex items-center justify-center h-full"><span className="loading loading-spinner loading-sm text-primary" /></div>}>
           <Routes>
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="/dashboard" element={<DashboardPage />} />
@@ -105,6 +109,7 @@ function App() {
             <Route path="/results" element={<ResultsPage />} />
             <Route path="/settings" element={<SettingsPage />} />
           </Routes>
+          </Suspense>
         </main>
       </div>
       <Toaster />
