@@ -208,7 +208,7 @@ export function PracticePage() {
             else if (v === "difficulty-desc") { setSortMode("default"); setDiffSort("desc"); }
             else { setDiffSort(null); setSortMode(v as LibrarySortMode); }
           }}
-          className="select select-bordered select-sm bg-base-100 text-xs"
+          className="select select-bordered select-sm bg-base-100 text-xs w-52 shrink-0"
         >
           <option value="default">Sort: Default</option>
           <option value="starred">Sort: Starred first</option>
