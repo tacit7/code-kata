@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Climbing Stairs (Recursive)</title>
+<link rel="stylesheet" href="../shared/style.css" />
+<script src="../shared/gsap.min.js"></script>
+<script src="../shared/viz.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: "Fira Code", "Cascadia Code", monospace; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+  #header { padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+  #phase-badge { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; padding: 3px 10px; border-radius: var(--radius-sm); background: #1e3a5f; color: var(--blue); border: 1px solid var(--blue); }
+  #step-counter { font-size: 12px; color: var(--text-muted); margin-left: auto; }
+  .viz-inputs { width: 100%; max-width: 100%; padding: 10px 16px; background: var(--surface); border: none; border-bottom: 1px solid var(--border); border-radius: 0; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; flex-shrink: 0; }
+  .viz-inputs label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); display: block; margin-bottom: 3px; }
+  .viz-inputs select, .viz-inputs input { background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 0 8px; height: 30px; font-size: 0.82rem; font-family: inherit; appearance: none; -webkit-appearance: none; }
+  .vi-btn-run { padding: 6px 14px; border-radius: 6px; font-size: 0.82rem; font-weight: 600; cursor: pointer; font-family: inherit; background: var(--accent); color: #fff; border: none; }
+  .vi-btn-rand { padding: 6px 14px; border-radius: 6px; font-size: 0.82rem; cursor: pointer; font-family: inherit; background: var(--bg); color: var(--text); border: 1px solid var(--border); }
+  #main { display: flex; flex: 1; overflow: hidden; }
+  #viz-area { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding: 16px; gap: 14px; overflow-y: auto; }
+  #desc { font-size: 13px; color: var(--text-muted); text-align: center; max-width: 560px; min-height: 36px; line-height: 1.5; }
+  #resize-handle { width: 5px; flex-shrink: 0; cursor: col-resize; background: transparent; border-left: 1px solid var(--border); transition: background .15s; z-index: 10; }
+  #resize-handle:hover, #resize-handle.dragging { background: var(--accent); }
+  #code-panel { width: 340px; min-width: 120px; max-width: 560px; flex-shrink: 0; background: #0d1117; border-right: 1px solid var(--border); overflow-y: auto; overflow-x: auto; padding: 10px 12px; display: flex; flex-direction: column; }
+  .cl { display: flex; align-items: stretch; padding: 2px 0; white-space: pre; border-left: 2px solid transparent; padding-left: 6px; color: var(--text-muted); transition: all 0.2s; font-family: "Fira Code","Cascadia Code",monospace; font-size: 0.75rem; line-height: 1.8; }
+  .ln { display: inline-block; width: 20px; text-align: right; color: var(--text-dim); user-select: none; margin-right: 10px; font-size: 0.7rem; }
+  .kw { color: var(--purple); } .nb { color: var(--green); } .cm { color: var(--text-dim); font-style: italic; } .fn { color: var(--blue); } .bi { color: var(--orange); } .op { color: var(--text); }
+  #sidebar { width: 230px; flex-shrink: 0; background: var(--surface); border-left: 1px solid var(--border); overflow-y: auto; padding: 14px 12px; display: flex; flex-direction: column; gap: 12px; }
+  .sidebar-section { font-size: 11px; }
+  .sidebar-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--text-dim); margin-bottom: 6px; }
+  #nav-row { flex-shrink: 0; display: flex; align-items: center; gap: 8px; padding: 10px 16px; background: var(--surface); border-top: 1px solid var(--border); }
+  .btn-step, .btn-play { padding: 6px 14px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--surface); color: var(--text); font-family: inherit; font-size: 12px; cursor: pointer; transition: background .15s; }
+  .btn-step:hover { background: #334155; }
+  .btn-play { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn-play:hover { background: var(--accent-hover); }
+  select { padding: 5px 8px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: #1e293b; color: var(--text); font-size: 12px; font-family: inherit; cursor: pointer; }
+  /* UNIQUE VIZ CSS */
+  .tree-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; width: 100%; }
+  #tree-svg { display: block; width: 100%; }
+  .var-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .var-box { padding: 10px 8px; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm); display: flex; flex-direction: column; align-items: center; gap: 3px; }
+  .var-box.accent-border { border-color: var(--accent); }
+  .var-label { font-size: 0.62rem; font-family: monospace; color: var(--text-faint); text-align: center; }
+  .var-val { font-size: 1.1rem; font-weight: 700; color: var(--text-bright); font-family: monospace; }
+  .leg-row { display: flex; flex-direction: column; gap: 6px; font-size: 0.78rem; color: var(--text-muted); }
+  .leg-item { display: flex; align-items: center; gap: 8px; }
+  .leg-swatch { width: 16px; height: 16px; border-radius: 50%; flex-shrink: 0; }
+  .memo-track { display: flex; gap: 5px; flex-wrap: wrap; }
+  .memo-cell { width: 34px; height: 34px; display: flex; flex-direction: column; align-items: center; justify-content: center; border: 2px solid var(--border); border-radius: 6px; background: #0f0f0f; font-family: monospace; position: relative; transition: border-color .18s, background .18s; }
+  .memo-cell[data-state="empty"] { border-style: dashed; opacity: .45; }
+  .memo-cell[data-state="cached"] { border-color: #16a34a; background: #052e16; }
+  .memo-idx { font-size: 0.5rem; color: var(--text-ghost); position: absolute; top: 2px; left: 0; right: 0; text-align: center; }
+  .memo-val { font-size: 0.8rem; font-weight: 700; color: var(--green); margin-top: 6px; }
+  .stat-counts { display: flex; gap: 10px; font-size: 0.75rem; color: var(--text-muted); }
+  .stat-counts b { color: var(--text-bright); }
+</style>
+</head>
+<body>
+
+<div class="viz-inputs">
+  <div><label>Preset</label><select id="presetSel" onchange="loadPreset()">
+    <option value="">— pick a preset —</option>
+    <option value="1">n = 1</option>
+    <option value="3">n = 3</option>
+    <option value="5" selected>n = 5</option>
+    <option value="7">n = 7</option>
+    <option value="9">n = 9</option>
+    <option value="12">n = 12</option>
+  </select></div>
+  <div><label>n</label><input id="inp-n" type="number" value="5" min="1" max="12" style="width:70px" /></div>
+  <button onclick="buildAndRun()" class="vi-btn-run">Run</button>
+  <button onclick="randomExample()" class="vi-btn-rand">&#127922; Random</button>
+</div>
+<div class="controls"></div>
+
+<div id="header">
+  <span id="phase-badge">Setup</span>
+  <span style="font-size:13px;font-weight:700;">Climbing Stairs (Recursive)</span>
+  <span id="step-counter">Step 0 / 0</span>
+</div>
+
+<div id="main">
+  <div id="viz-area">
+    <div id="desc">Enter n and click Run.</div>
+    <div class="tree-wrap">
+      <svg id="tree-svg" viewBox="0 0 800 400" preserveAspectRatio="xMidYMid meet"></svg>
+    </div>
+  </div>
+  <div id="resize-handle"></div>
+  <div id="code-panel">
+    <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--text-dim);margin-bottom:8px;">Ruby</div>
+    <div id="code-body"></div>
+  </div>
+  <div id="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-title">Current Call</div>
+      <div class="var-grid">
+        <div class="var-box accent-border"><div class="var-label">n</div><div class="var-val" id="vv-n">&mdash;</div></div>
+        <div class="var-box"><div class="var-label">returns</div><div class="var-val" id="vv-ret">&mdash;</div></div>
+      </div>
+      <div class="stat-counts" style="margin-top:8px">
+        <span>calls: <b id="vv-calls">0</b></span>
+        <span>memo hits: <b id="vv-hits">0</b></span>
+      </div>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-title">Memo Table</div>
+      <div class="memo-track" id="memo-track"></div>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-title">Legend</div>
+      <div class="leg-row">
+        <div class="leg-item"><div class="leg-swatch" style="background:#1e2130;border:2px solid #2d3148"></div>Idle</div>
+        <div class="leg-item"><div class="leg-swatch" style="background:#4338ca;border:2px solid var(--accent)"></div>Active call</div>
+        <div class="leg-item"><div class="leg-swatch" style="background:#052e16;border:2px solid #16a34a"></div>Base case (n&le;1)</div>
+        <div class="leg-item"><div class="leg-swatch" style="background:#3b0764;border:2px solid #a855f7"></div>Memo hit (cached)</div>
+        <div class="leg-item"><div class="leg-swatch" style="background:#1c0d00;border:2px solid #b45309"></div>Returned</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="nav-row">
+  <button id="prevBtn" class="btn-step">&#8592; Prev</button>
+  <button id="stepBtn" class="btn-step">Step &#8594;</button>
+  <button id="playBtn" class="btn-play">Play</button>
+  <button id="resetBtn" class="btn-step">&#8635; Reset</button>
+  <select id="speedSel">
+    <option value="800">0.5&#215;</option>
+    <option value="400" selected>1&#215;</option>
+    <option value="200">2&#215;</option>
+    <option value="100">4&#215;</option>
+  </select>
+</div>
+
+<script>
+var nav, simSteps = [], currentN = 5;
+
+var CODE_LINES = [
+  [1,  '<span class="kw">def</span> <span class="fn">climb_stairs</span><span class="op">(</span>n<span class="op">,</span> memo <span class="op">=</span> <span class="op">{})</span>'],
+  [2,  '  <span class="kw">return</span> <span class="nb">1</span> <span class="kw">if</span> n <span class="op">&lt;=</span> <span class="nb">1</span>'],
+  [3,  '  <span class="kw">return</span> memo<span class="op">[</span>n<span class="op">]</span> <span class="kw">if</span> memo<span class="op">.</span><span class="fn">key?</span><span class="op">(</span>n<span class="op">)</span>'],
+  [0,  ''],
+  [5,  '  memo<span class="op">[</span>n<span class="op">]</span> <span class="op">=</span> <span class="fn">climb_stairs</span><span class="op">(</span>n <span class="op">-</span> <span class="nb">1</span><span class="op">,</span> memo<span class="op">)</span> <span class="op">+</span>'],
+  [6,  '             <span class="fn">climb_stairs</span><span class="op">(</span>n <span class="op">-</span> <span class="nb">2</span><span class="op">,</span> memo<span class="op">)</span>'],
+  [0,  ''],
+  [8,  '<span class="kw">end</span>'],
+];
+
+function svgEl(tag, attrs) {
+  var el = document.createElementNS('http://www.w3.org/2000/svg', tag);
+  Object.keys(attrs).forEach(function(k) { el.setAttribute(k, attrs[k]); });
+  return el;
+}
+
+var nodeMap = {};
+
+function layoutTree(nodes) {
+  var inIdx = 0;
+  function inorder(nodeId) {
+    var node = nodeMap[nodeId];
+    if (!node) return;
+    if (node.leftChildId) inorder(node.leftChildId);
+    node._inIdx = inIdx++;
+    if (node.rightChildId) inorder(node.rightChildId);
+  }
+  var root = nodes.find(function(n) { return n.parentId === null; });
+  if (!root) return;
+  inorder(root.id);
+  var count = nodes.length;
+  var maxDepth = 0;
+  nodes.forEach(function(n) { if (n.depth > maxDepth) maxDepth = n.depth; });
+  var xSpace = Math.max(46, Math.min(84, 760 / Math.max(1, count)));
+  var ySpace = 70;
+  var padX = 34, padY = 34;
+  var VW = padX * 2 + (count - 1) * xSpace;
+  var VH = padY * 2 + maxDepth * ySpace + 44;
+  if (VW < 500) VW = 500;
+  var svg = document.getElementById('tree-svg');
+  svg.setAttribute('viewBox', '0 0 ' + VW + ' ' + VH);
+  var R = VW > 700 ? 20 : 16;
+  nodes.forEach(function(n) {
+    n.x = padX + n._inIdx * xSpace;
+    n.y = padY + n.depth * ySpace + R;
+    n.R = R;
+  });
+  return { VW: VW, VH: VH, R: R };
+}
+
+var COLORS = {
+  idle:    { fill: '#1e2130', stroke: '#2d3148', text: 'var(--text-muted)' },
+  active:  { fill: '#4338ca', stroke: 'var(--accent)', text: '#fff' },
+  base:    { fill: '#052e16', stroke: '#16a34a', text: 'var(--green)' },
+  memoHit: { fill: '#3b0764', stroke: '#a855f7', text: '#e9d5ff' },
+  done:    { fill: '#1c0d00', stroke: '#b45309', text: '#d97706' },
+};
+
+function simulate(n) {
+  var steps = [];
+  var allNodes = [];
+  var idCounter = 0;
+  var memo = {};
+  var memoOrder = [];
+  var callCount = 0, hitCount = 0;
+  nodeMap = {};
+
+  function makeNode(parentId, n, edgeLabel) {
+    var id = idCounter++;
+    var parent = parentId !== null ? nodeMap[parentId] : null;
+    var depth = parent ? parent.depth + 1 : 0;
+    var node = { id: id, parentId: parentId, n: n, val: null, edgeLabel: edgeLabel || '', depth: depth, state: 'idle', leftChildId: null, rightChildId: null, _inIdx: 0, x: 0, y: 0, R: 20 };
+    nodeMap[id] = node;
+    allNodes.push(node);
+    if (parent) {
+      if (parent.leftChildId === null) parent.leftChildId = id;
+      else parent.rightChildId = id;
+    }
+    return node;
+  }
+
+  function snap(phase, desc, lines, activeId) {
+    var sm = {}, vm = {};
+    allNodes.forEach(function(nd) { sm[nd.id] = nd.state; vm[nd.id] = nd.val; });
+    steps.push({
+      phase: phase, desc: desc, lines: lines, activeId: activeId !== null ? activeId : -1,
+      stateMap: JSON.parse(JSON.stringify(sm)), valMap: JSON.parse(JSON.stringify(vm)),
+      memo: JSON.parse(JSON.stringify(memo)), memoOrder: memoOrder.slice(),
+      callCount: callCount, hitCount: hitCount,
+      nodesSnapshot: allNodes.map(function(nd) {
+        return { id: nd.id, x: nd.x, y: nd.y, R: nd.R, n: nd.n, val: nd.val, parentId: nd.parentId, edgeLabel: nd.edgeLabel, depth: nd.depth, leftChildId: nd.leftChildId, rightChildId: nd.rightChildId, _inIdx: nd._inIdx };
+      })
+    });
+  }
+
+  function climb(parentId, k, edgeLabel) {
+    var node = makeNode(parentId, k, edgeLabel);
+    callCount++;
+    layoutTree(allNodes);
+    node.state = 'active';
+    snap('Call', 'climb_stairs(' + k + ') called.', [1], node.id);
+
+    if (k <= 1) {
+      node.val = 1;
+      node.state = 'base';
+      snap('Base', 'n = ' + k + ' ≤ 1 → base case. Return 1.', [2], node.id);
+      return 1;
+    }
+    if (Object.prototype.hasOwnProperty.call(memo, k)) {
+      node.val = memo[k];
+      node.state = 'memoHit';
+      hitCount++;
+      snap('Memo hit', 'memo[' + k + '] already cached → return ' + memo[k] + ' instantly. No recursion.', [3], node.id);
+      return memo[k];
+    }
+
+    snap('Branch', 'No cache for n=' + k + '. Recurse into climb_stairs(' + (k-1) + ') first.', [5], node.id);
+    var left = climb(node.id, k - 1, 'n-1');
+    node.state = 'active';
+    layoutTree(allNodes);
+    snap('Branch', 'climb_stairs(' + (k-1) + ') = ' + left + '. Now recurse into climb_stairs(' + (k-2) + ').', [6], node.id);
+    var right = climb(node.id, k - 2, 'n-2');
+    node.state = 'active';
+    layoutTree(allNodes);
+
+    node.val = left + right;
+    memo[k] = node.val;
+    memoOrder.push(k);
+    node.state = 'done';
+    snap('Return', 'memo[' + k + '] = ' + left + ' + ' + right + ' = ' + node.val + '. Cache and return.', [5, 6], node.id);
+    return node.val;
+  }
+
+  var finalVal = climb(null, n, '');
+  var finalSnap = JSON.parse(JSON.stringify(steps[steps.length - 1]));
+  finalSnap.phase = 'Done';
+  finalSnap.desc = 'Complete. climb_stairs(' + n + ') = ' + finalVal + '. ' + callCount + ' calls made, ' + hitCount + ' short-circuited by memo.';
+  finalSnap.lines = [8];
+  steps.push(finalSnap);
+  return steps;
+}
+
+var prevLines = [];
+
+function applyStep(s, animate) {
+  var nodes = s.nodesSnapshot;
+  var svg = document.getElementById('tree-svg');
+  var existingNodes = svg.querySelectorAll('circle[id^="nc-"]');
+  if (existingNodes.length !== nodes.length) {
+    var maxDepth = 0, count = nodes.length;
+    nodes.forEach(function(n) { if (n.depth > maxDepth) maxDepth = n.depth; });
+    var xSpace = Math.max(46, Math.min(84, 760 / Math.max(1, count)));
+    var padX = 34, padY = 34, ySpace = 70;
+    var VW = padX * 2 + (count - 1) * xSpace;
+    if (VW < 500) VW = 500;
+    var R = VW > 700 ? 20 : 16;
+    var VH = padY * 2 + maxDepth * ySpace + R + 44;
+    renderSVGFromSnapshot(nodes, VW, VH, R);
+  }
+  nodes.forEach(function(n) {
+    var state = s.stateMap[n.id] || 'idle';
+    var val = s.valMap[n.id];
+    setNodeColor(n.id, n.n, state, val, animate);
+  });
+  if (s.activeId >= 0) {
+    var activeNode = nodes.find(function(n) { return n.id === s.activeId; });
+    if (activeNode) updateVars(activeNode, s, animate);
+  }
+  updateMemoTrack(s.memo, s.memoOrder, animate);
+  document.getElementById('vv-calls').textContent = s.callCount;
+  document.getElementById('vv-hits').textContent = s.hitCount;
+  setCodeLines(prevLines, s.lines, animate);
+  prevLines = s.lines || [];
+}
+
+function renderSVGFromSnapshot(nodes, VW, VH, R) {
+  var svg = document.getElementById('tree-svg');
+  svg.innerHTML = '';
+  svg.setAttribute('viewBox', '0 0 ' + VW + ' ' + VH);
+  var edgeG = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  var nodeG = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  svg.appendChild(edgeG);
+  svg.appendChild(nodeG);
+  var nm = {};
+  nodes.forEach(function(n) { nm[n.id] = n; });
+  nodes.forEach(function(n) {
+    if (n.parentId === null) return;
+    var parent = nm[n.parentId];
+    if (!parent) return;
+    edgeG.appendChild(svgEl('line', { id: 'edge-' + parent.id + '-' + n.id, x1: parent.x, y1: parent.y, x2: n.x, y2: n.y, stroke: '#2d3148', 'stroke-width': 1.5, 'stroke-linecap': 'round' }));
+    var mx = (parent.x + n.x) / 2, my = (parent.y + n.y) / 2;
+    var lbl = svgEl('text', { id: 'elbl-' + parent.id + '-' + n.id, x: mx + (n.x < parent.x ? -9 : 9), y: my, 'text-anchor': 'middle', 'dominant-baseline': 'middle', fill: '#6272a4', 'font-size': 11, 'font-weight': '700', 'font-family': 'monospace' });
+    lbl.textContent = n.edgeLabel;
+    edgeG.appendChild(lbl);
+  });
+  nodes.forEach(function(n) {
+    var g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    g.id = 'node-g-' + n.id;
+    g.appendChild(svgEl('circle', { id: 'nc-' + n.id, cx: n.x, cy: n.y, r: R, fill: COLORS.idle.fill, stroke: COLORS.idle.stroke, 'stroke-width': 2 }));
+    var t = svgEl('text', { id: 'nt-' + n.id, x: n.x, y: n.y, 'text-anchor': 'middle', 'dominant-baseline': 'middle', fill: COLORS.idle.text, 'font-size': Math.max(8, Math.round(R * 0.55)), 'font-weight': 'bold', 'font-family': 'monospace' });
+    t.textContent = n.n;
+    g.appendChild(t);
+    nodeG.appendChild(g);
+  });
+}
+
+function setNodeColor(id, n, state, val, animate) {
+  var c = COLORS[state] || COLORS.idle;
+  var nc = document.getElementById('nc-' + id);
+  var nt = document.getElementById('nt-' + id);
+  if (!nc) return;
+  if (animate) {
+    gsap.to(nc, { duration: 0.25, attr: { fill: c.fill, stroke: c.stroke } });
+    if (nt) gsap.to(nt, { duration: 0.25, attr: { fill: c.text } });
+  } else {
+    nc.setAttribute('fill', c.fill); nc.setAttribute('stroke', c.stroke);
+    if (nt) nt.setAttribute('fill', c.text);
+  }
+  if (nt) {
+    var showVal = val !== null && val !== undefined && (state === 'base' || state === 'memoHit' || state === 'done');
+    nt.textContent = showVal ? (n + ':' + val) : String(n);
+  }
+}
+
+function updateVars(node, s, animate) {
+  function setV(id, val) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    if (animate && el.textContent !== String(val)) {
+      gsap.fromTo(el, { scale: 0.8, opacity: 0.4 }, { scale: 1, opacity: 1, duration: 0.2, ease: 'back.out(1.7)' });
+    }
+    el.textContent = val;
+  }
+  setV('vv-n', node.n);
+  setV('vv-ret', node.val === null || node.val === undefined ? '—' : node.val);
+}
+
+function updateMemoTrack(memo, memoOrder, animate) {
+  var track = document.getElementById('memo-track');
+  var keys = Object.keys(memo).map(Number).sort(function(a, b) { return a - b; });
+  var maxKey = Math.max(currentN, keys.length ? Math.max.apply(null, keys) : 0);
+  var html = '';
+  for (var i = 0; i <= maxKey; i++) {
+    var has = Object.prototype.hasOwnProperty.call(memo, i);
+    html += '<div class="memo-cell" data-state="' + (has ? 'cached' : 'empty') + '">' +
+      '<span class="memo-idx">' + i + '</span>' +
+      '<span class="memo-val">' + (has ? memo[i] : '?') + '</span>' +
+      '</div>';
+  }
+  track.innerHTML = html;
+}
+
+var HL_BG = 'rgba(99,102,241,0.12)';
+var HL_NONE = 'rgba(99,102,241,0)';
+var HL_BORD = 'var(--accent)';
+var NO_BORD = 'transparent';
+
+function setCodeLines(oldLines, newLines, animate) {
+  var DUR = 0.2;
+  (oldLines || []).filter(function(n) { return !(newLines || []).includes(n); }).forEach(function(n) {
+    var el = document.getElementById('cl-' + n);
+    if (!el) return;
+    if (animate) gsap.to(el, { backgroundColor: HL_NONE, borderLeftColor: NO_BORD, duration: DUR });
+    else { el.style.backgroundColor = ''; el.style.borderLeftColor = ''; }
+  });
+  (newLines || []).filter(function(n) { return !(oldLines || []).includes(n); }).forEach(function(n) {
+    var el = document.getElementById('cl-' + n);
+    if (!el) return;
+    if (animate) gsap.to(el, { backgroundColor: HL_BG, borderLeftColor: HL_BORD, duration: DUR, delay: 0.06 });
+    else { el.style.backgroundColor = HL_BG; el.style.borderLeftColor = HL_BORD; }
+  });
+}
+
+function buildCodePanel() {
+  var body = document.getElementById('code-body');
+  body.innerHTML = CODE_LINES.map(function(e) {
+    var ln = e[0], html = e[1];
+    return '<div class="cl"' + (ln > 0 ? ' id="cl-' + ln + '"' : '') + '><span class="ln">' + (ln > 0 ? ln : '') + '</span><span>' + html + '</span></div>';
+  }).join('');
+}
+
+function buildAndRun() {
+  currentN = parseInt(document.getElementById('inp-n').value, 10);
+  if (isNaN(currentN) || currentN < 1) currentN = 1;
+  if (currentN > 12) currentN = 12;
+  document.getElementById('inp-n').value = currentN;
+  buildCodePanel();
+  prevLines = [];
+  document.getElementById('vv-n').textContent = '—';
+  document.getElementById('vv-ret').textContent = '—';
+  document.getElementById('vv-calls').textContent = '0';
+  document.getElementById('vv-hits').textContent = '0';
+  updateMemoTrack({}, []);
+  simSteps = simulate(currentN);
+  nav.load(simSteps);
+}
+
+function loadPreset() {
+  var sel = document.getElementById('presetSel');
+  if (!sel.value) return;
+  document.getElementById('inp-n').value = sel.value;
+  buildAndRun();
+}
+
+function randomExample() {
+  var n = Math.floor(Math.random() * 11) + 1;
+  document.getElementById('inp-n').value = n;
+  document.getElementById('presetSel').value = '';
+  buildAndRun();
+}
+
+function updateStatus(snap, cur, total) {
+  document.getElementById('phase-badge').textContent = snap.phase || '';
+  document.getElementById('step-counter').textContent = 'Step ' + (cur + 1) + ' / ' + total;
+  var desc = document.getElementById('desc');
+  if (desc) desc.textContent = snap.desc || '';
+}
+
+window.addEventListener('DOMContentLoaded', function() {
+  buildCodePanel();
+  nav = VizNav({
+    btnPrev:  document.getElementById('prevBtn'),
+    btnNext:  document.getElementById('stepBtn'),
+    btnPlay:  document.getElementById('playBtn'),
+    speedSel: document.getElementById('speedSel'),
+    render: function(s, cur, total) {
+      applyStep(s, cur > 0);
+      updateStatus(s, cur, total);
+    }
+  });
+  document.getElementById('resetBtn').addEventListener('click', function() { buildAndRun(); });
+  buildAndRun();
+});
+
+(function() {
+  var handle = document.getElementById('resize-handle');
+  var panel  = document.getElementById('code-panel');
+  var dragging = false, startX = 0, startW = 0;
+  handle.addEventListener('mousedown', function(e) {
+    dragging = true; startX = e.clientX; startW = panel.offsetWidth;
+    handle.classList.add('dragging'); e.preventDefault();
+  });
+  document.addEventListener('mousemove', function(e) {
+    if (!dragging) return;
+    var delta = startX - e.clientX;
+    panel.style.width = Math.min(560, Math.max(120, startW + delta)) + 'px';
+  });
+  document.addEventListener('mouseup', function() {
+    if (!dragging) return;
+    dragging = false; handle.classList.remove('dragging');
+  });
+})();
+</script>
+</body>
+</html>

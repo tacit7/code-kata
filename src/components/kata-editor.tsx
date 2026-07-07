@@ -396,7 +396,7 @@ const VIZ_MAP: Partial<Record<VizKataName, string>> = {
   "Binary Search Find First":           "binary-search",
   "Binary Search Find Last":            "binary-search",
   "Climbing Stairs (Iterative)":        "climbing-stairs",
-  "Climbing Stairs (Recursive)":        "climbing-stairs",
+  "Climbing Stairs (Recursive)":        "climbing-stairs-recursive",
   "Sliding Window Max Sum":             "sliding-window-max",
   "Merge Sorted Arrays":                "merge-sorted-lists",
   "Merge Two Sorted Arrays":            "merge-sorted-lists",
