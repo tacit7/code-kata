@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { refreshDockBadge } from "../lib/dock-badge";
 import type { Kata, Session, Attempt, Preset, SessionType } from "../types/editor";
 import { getDb } from "../lib/database";
 
@@ -282,6 +283,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       attempts: newAttempts,
       activeSession: { ...activeSession, passCount: newPassCount },
     });
+    void refreshDockBadge();
   },
 
   nextKata: () => {
@@ -312,6 +314,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     set({
       activeSession: { ...activeSession, finishedAt: now, totalTimeMs },
     });
+    void refreshDockBadge();
   },
 
   loadSession: async (sessionId, allKatas) => {
