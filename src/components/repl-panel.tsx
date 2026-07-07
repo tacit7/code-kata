@@ -5,6 +5,8 @@ interface Entry {
   input?: string;
   result?: ReplEvalResult;
   info?: string;
+  /** Dimmed rendering for bookkeeping entries like "(editor code loaded)". */
+  muted?: boolean;
 }
 
 export interface ReplSeed {
@@ -39,7 +41,7 @@ export function ReplPanel({ language, getEditorCode, seed }: ReplPanelProps) {
     if (!seed) return;
     void (async () => {
       const code = getEditorCode();
-      if (code) await submit(code, "(editor code loaded)");
+      if (code) await submit(code, "(editor code loaded)", true);
       setInput(seed.expression);
       inputRef.current?.focus();
     })();
@@ -50,11 +52,11 @@ export function ReplPanel({ language, getEditorCode, seed }: ReplPanelProps) {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
   }, [entries]);
 
-  async function submit(code: string, label?: string) {
+  async function submit(code: string, label?: string, muted = false) {
     if (!code.trim() || busy) return;
     setBusy(true);
     const result = await replEval(language, code);
-    setEntries((prev) => [...prev, { input: label ?? code, result }]);
+    setEntries((prev) => [...prev, { input: label ?? code, result, muted }]);
     setBusy(false);
     inputRef.current?.focus();
   }
@@ -71,7 +73,7 @@ export function ReplPanel({ language, getEditorCode, seed }: ReplPanelProps) {
   function onLoadCode() {
     const code = getEditorCode();
     if (!code) return;
-    void submit(code, "(editor code loaded)");
+    void submit(code, "(editor code loaded)", true);
   }
 
   function onKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
@@ -114,7 +116,7 @@ export function ReplPanel({ language, getEditorCode, seed }: ReplPanelProps) {
           </span>
         )}
         {entries.map((entry, i) => (
-          <div key={i}>
+          <div key={i} className={entry.muted ? "opacity-40" : undefined}>
             {entry.input != null && (
               <div className="whitespace-pre-wrap text-base-content/50">
                 <span className="text-primary/60 select-none">&gt; </span>
@@ -158,6 +160,14 @@ export function ReplPanel({ language, getEditorCode, seed }: ReplPanelProps) {
           title="Evaluate the editor's current code in this session"
         >
           load code
+        </button>
+        <button
+          onClick={() => setEntries([])}
+          disabled={busy || entries.length === 0}
+          className="btn btn-ghost btn-xs text-base-content/40 hover:text-base-content/70"
+          title="Clear the scrollback (session state is kept)"
+        >
+          clear
         </button>
       </div>
     </div>
