@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from "react-router";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useSettingsStore } from "../stores/settings-store";
 import { isDarkScheme } from "../lib/editor-themes";
+import { usesOverlayTitlebar } from "../lib/platform";
 import { useKataStore } from "../stores/kata-store";
 import { useSessionStore } from "../stores/session-store";
 import { useTimerStore } from "../stores/timer-store";
@@ -57,10 +58,13 @@ export function TopBar() {
     setLaunching(false);
   }, [dailyKataIds, dailyCount, launching, katas, resetKataTimer, startSessionTimer, startSession, navigate]);
 
-  // -webkit-app-region: drag alone isn't reliable here — it operates below
-  // Tauri's window layer, so we drive dragging explicitly via the window
-  // API instead. Interactive elements opt out so clicks still work.
+  // Only macOS overlays web content into the title bar (titleBarStyle:
+  // Overlay in tauri.conf.json), so only there does our header need to act
+  // as the drag region — on Windows/Linux the native title bar already
+  // handles dragging, and -webkit-app-region isn't reliable here anyway
+  // since it operates below Tauri's window layer.
   const handleHeaderMouseDown = (e: React.MouseEvent<HTMLElement>) => {
+    if (!usesOverlayTitlebar) return;
     if (e.button !== 0) return;
     const target = e.target as HTMLElement;
     if (target.closest("button, input, select, a, [role='button']")) return;
@@ -71,9 +75,12 @@ export function TopBar() {
   return (
     <header
       onMouseDown={handleHeaderMouseDown}
-      className="flex items-center h-11 pl-20 pr-4 border-b border-base-300/60 bg-base-100 shrink-0"
+      className={`flex items-center h-11 pr-4 border-b border-base-300/60 bg-base-100 shrink-0 ${
+        usesOverlayTitlebar ? "pl-20" : "pl-4"
+      }`}
     >
-      {/* Brand — pl-20 on the header clears the macOS traffic-light overlay */}
+      {/* Brand — pl-20 clears the macOS traffic-light overlay; other platforms
+          keep their native title bar above this header, so no inset is needed. */}
       <div className="flex items-center gap-2.5 mr-8 select-none">
         <img
           src={isDarkScheme(theme) ? "/logo-dark.png" : "/logo-light.png"}
