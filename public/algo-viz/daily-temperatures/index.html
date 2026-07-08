@@ -69,8 +69,8 @@
       width: 100%;
     }
 
-    .bar.current { background: var(--orange); box-shadow: 0 0 10px rgba(255,158,100,0.5); }
-    .bar.popped  { background: var(--green);  box-shadow: 0 0 10px rgba(158,206,106,0.45); }
+    .bar.current { background: var(--orange); box-shadow: 0 0 10px rgba(var(--orange-ch),0.5); }
+    .bar.popped  { background: var(--green);  box-shadow: 0 0 10px rgba(var(--green-ch),0.45); }
     .bar.resolved { background: var(--blue); opacity: 0.55; }
     .bar.on-stack { background: var(--purple); opacity: 0.75; }
 
@@ -96,15 +96,15 @@
     .stack-item {
       display: flex; align-items: center; gap: 8px;
       padding: 6px 10px;
-      background: rgba(187,154,247,0.12);
-      border: 1px solid rgba(187,154,247,0.3);
+      background: rgba(var(--purple-ch),0.12);
+      border: 1px solid rgba(var(--purple-ch),0.3);
       border-radius: var(--radius-sm);
       font-family: monospace; font-size: 0.82rem;
       transition: all 0.25s;
     }
     .stack-item .si-temp { color: var(--purple); font-weight: 700; }
     .stack-item .si-idx  { color: var(--text-dim); font-size: 0.72rem; }
-    .stack-item.popping  { background: rgba(158,206,106,0.15); border-color: var(--green); }
+    .stack-item.popping  { background: rgba(var(--green-ch),0.15); border-color: var(--green); }
     .stack-empty { color: var(--text-dim); font-size: 0.8rem; font-style: italic; padding: 8px 0; }
 
     #result-row { display: flex; gap: 4px; flex-wrap: wrap; }
@@ -116,8 +116,8 @@
       font-family: monospace; font-weight: 700; font-size: 0.85rem;
       color: var(--text-dim); transition: all 0.3s;
     }
-    .res-val.filled      { background: rgba(125,207,255,0.15); border-color: var(--blue); color: var(--blue); }
-    .res-val.just-filled { background: rgba(158,206,106,0.2); border-color: var(--green); color: var(--green); }
+    .res-val.filled      { background: rgba(var(--blue-ch),0.15); border-color: var(--blue); color: var(--blue); }
+    .res-val.just-filled { background: rgba(var(--green-ch),0.2); border-color: var(--green); color: var(--green); }
     .res-idx { font-size: 0.6rem; color: var(--text-dim); }
 
     /* Code panel */
@@ -130,7 +130,7 @@
       display: block; padding: 1px 4px; border-radius: 3px;
       white-space: pre; transition: background 0.2s;
     }
-    .code-line.hl { background: rgba(122,162,247,0.15); color: var(--text); }
+    .code-line.hl { background: rgba(var(--accent-ch),0.15); color: var(--text); }
     .code-kw  { color: var(--purple); }
     .code-fn  { color: var(--blue); }
     .code-str { color: var(--green); }

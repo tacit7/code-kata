@@ -40,12 +40,12 @@
   .node-box.consumed { opacity: 0.2; border-style: dashed; }
   .node-box.upcoming { opacity: 0.45; }
   .node-box.in-heap { border-color: #f59e0b; background: rgba(245,158,11,0.18); }
-  .node-box.extracting { border-color: var(--accent); background: rgba(99,102,241,0.25); transform: scale(1.18); box-shadow: 0 0 0 3px rgba(99,102,241,0.3); }
+  .node-box.extracting { border-color: var(--accent); background: rgba(var(--accent-ch),0.25); transform: scale(1.18); box-shadow: 0 0 0 3px rgba(var(--accent-ch),0.3); }
   .node-arrow { color: var(--text-dim); font-size: 0.8rem; }
   #heap-area { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; }
   #heap-items { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; min-height: 44px; }
   .heap-node { display: inline-flex; flex-direction: column; align-items: center; background: rgba(245,158,11,0.18); border: 2px solid #f59e0b; border-radius: 6px; padding: 4px 12px; font-size: 0.9rem; font-weight: 700; min-width: 36px; }
-  .heap-node.top { border-color: var(--accent); background: rgba(99,102,241,0.18); }
+  .heap-node.top { border-color: var(--accent); background: rgba(var(--accent-ch),0.18); }
   .heap-node .hn-sub { font-size: 0.6rem; color: var(--text-dim); font-weight: 400; }
   #result-area { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; }
   #result-nodes { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; min-height: 44px; }

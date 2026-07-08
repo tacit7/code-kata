@@ -87,9 +87,22 @@ pub fn run() {
                 .select_all()
                 .build()?;
 
+            let devtools_item = MenuItem::with_id(
+                app,
+                "toggle-devtools",
+                "Toggle Web Inspector",
+                true,
+                Some("CmdOrCtrl+Alt+I"),
+            )?;
+
+            let view_submenu = SubmenuBuilder::new(app, "View")
+                .item(&devtools_item)
+                .build()?;
+
             let menu = MenuBuilder::new(app)
                 .item(&app_submenu)
                 .item(&edit_submenu)
+                .item(&view_submenu)
                 .build()?;
 
             app.set_menu(menu)?;
@@ -99,6 +112,16 @@ pub fn run() {
                 if id == "settings" {
                     if let Some(window) = app.get_webview_window("main") {
                         let _ = window.emit("menu:open-settings", ());
+                    }
+                    return;
+                }
+                if id == "toggle-devtools" {
+                    if let Some(window) = app.get_webview_window("main") {
+                        if window.is_devtools_open() {
+                            window.close_devtools();
+                        } else {
+                            window.open_devtools();
+                        }
                     }
                     return;
                 }

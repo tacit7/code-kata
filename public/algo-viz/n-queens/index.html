@@ -25,7 +25,7 @@
   #resize-handle:hover, #resize-handle.dragging { background: var(--accent); }
   #code-panel { width: 280px; min-width: 120px; max-width: 560px; flex-shrink: 0; background: var(--surface-dark); border-right: 1px solid var(--border); overflow-y: auto; overflow-x: auto; padding: 10px 12px; display: flex; flex-direction: column; }
   .cl { display: flex; align-items: stretch; padding: 2px 0; white-space: pre; border-left: 2px solid transparent; padding-left: 6px; color: var(--text-muted); transition: all 0.2s; font-family: 'Fira Code', 'Cascadia Code', monospace; font-size: 0.75rem; line-height: 1.8; }
-  .cl.hl { background: rgba(122,162,247,0.12); border-left-color: var(--accent); color: var(--text); }
+  .cl.hl { background: rgba(var(--accent-ch),0.12); border-left-color: var(--accent); color: var(--text); }
   .ln { display: inline-block; width: 20px; text-align: right; color: var(--text-dim); user-select: none; margin-right: 10px; font-size: 0.7rem; }
   #sidebar { width: 220px; flex-shrink: 0; background: var(--surface); border-left: 1px solid var(--border); overflow-y: auto; padding: 14px 12px; display: flex; flex-direction: column; gap: 12px; }
   .sidebar-section { font-size: 11px; }
@@ -46,8 +46,8 @@
   .cell.safe { background: #0d2016 !important; outline: 2px solid var(--green); outline-offset: -2px; z-index: 1; }
   .cell.conflict { background: #200a0a !important; outline: 2px solid var(--red); outline-offset: -2px; z-index: 1; }
   .cell.queen { background: #0d2016 !important; }
-  .cell.threat { background: rgba(247,118,142,0.07) !important; }
-  .queen-icon { font-size: 1.6rem; line-height: 1; filter: drop-shadow(0 0 4px rgba(158,206,106,0.6)); user-select: none; }
+  .cell.threat { background: rgba(var(--red-ch),0.07) !important; }
+  .queen-icon { font-size: 1.6rem; line-height: 1; filter: drop-shadow(0 0 4px rgba(var(--green-ch),0.6)); user-select: none; }
   .board-container { display: flex; flex-direction: column; align-items: center; gap: 8px; }
   .row-indicator { font-family: monospace; font-size: 0.78rem; color: var(--text-dim); text-align: center; }
   .sol-counter { font-family: monospace; font-size: 0.9rem; color: var(--green); white-space: nowrap; padding: 6px 12px; background: var(--green-bg); border: 1px solid var(--green-border); border-radius: var(--radius-sm); }
@@ -132,7 +132,7 @@
         <div class="legend-item"><div class="legend-swatch" style="background:#2a2000;outline:2px solid var(--yellow);outline-offset:-2px"></div><span>Trying</span></div>
         <div class="legend-item"><div class="legend-swatch" style="background:#0d2016;outline:2px solid var(--green);outline-offset:-2px"></div><span>Safe / placed</span></div>
         <div class="legend-item"><div class="legend-swatch" style="background:#200a0a;outline:2px solid var(--red);outline-offset:-2px"></div><span>Conflict</span></div>
-        <div class="legend-item"><div class="legend-swatch" style="background:rgba(247,118,142,0.15);border:1px solid rgba(247,118,142,0.3)"></div><span>Threatened</span></div>
+        <div class="legend-item"><div class="legend-swatch" style="background:rgba(var(--red-ch),0.15);border:1px solid rgba(var(--red-ch),0.3)"></div><span>Threatened</span></div>
       </div>
     </div>
   </div>

@@ -95,7 +95,7 @@
 
     <div class="legend">
       <div class="leg-item"><svg width="14" height="14"><circle cx="7" cy="7" r="6" fill="#1e2130" stroke="#2d3148" stroke-width="2"/></svg>Unvisited</div>
-      <div class="leg-item"><svg width="14" height="14"><circle cx="7" cy="7" r="6" fill="rgba(255,158,100,0.18)" stroke="#ff9e64" stroke-width="2"/></svg>In Queue</div>
+      <div class="leg-item"><svg width="14" height="14"><circle cx="7" cy="7" r="6" fill="rgba(var(--orange-ch),0.18)" stroke="#ff9e64" stroke-width="2"/></svg>In Queue</div>
       <div class="leg-item"><svg width="14" height="14"><circle cx="7" cy="7" r="6" fill="#4338ca" stroke="#7aa2f7" stroke-width="2"/></svg>Processing</div>
       <div class="leg-item"><svg width="14" height="14"><circle cx="7" cy="7" r="6" fill="#052e16" stroke="#16a34a" stroke-width="2"/></svg>Done</div>
     </div>
@@ -154,7 +154,7 @@
 <script>
 const COLORS = {
   idle:    { fill: '#1e2130',                stroke: '#2d3148',       text: 'var(--text-muted)' },
-  queued:  { fill: 'rgba(255,158,100,0.18)', stroke: '#ff9e64',       text: '#ff9e64' },
+  queued:  { fill: 'rgba(var(--orange-ch),0.18)', stroke: '#ff9e64',       text: '#ff9e64' },
   active:  { fill: '#4338ca',               stroke: 'var(--accent)',  text: 'var(--accent-pale)' },
   done:    { fill: '#052e16',               stroke: '#16a34a',        text: 'var(--green)' },
 };

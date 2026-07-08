@@ -36,7 +36,7 @@
   /* ── code panel ── */
   .code-panel-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--text-dim); margin-bottom: 8px; }
   .cl { display: flex; align-items: stretch; padding: 2px 0; white-space: pre; border-left: 2px solid transparent; padding-left: 6px; color: var(--text-muted); transition: all 0.2s; font-family: 'Fira Code', 'Cascadia Code', monospace; font-size: 0.75rem; line-height: 1.8; }
-  .cl.hl { background: rgba(122,162,247,0.12); border-left-color: var(--accent); color: var(--text); }
+  .cl.hl { background: rgba(var(--accent-ch),0.12); border-left-color: var(--accent); color: var(--text); }
   .ln { display: inline-block; width: 20px; text-align: right; color: var(--text-dim); user-select: none; margin-right: 10px; font-size: 0.7rem; }
   .kw { color: var(--purple); }
   .nb { color: var(--green); }
@@ -58,7 +58,7 @@
   .sidebar-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--text-dim); margin-bottom: 6px; }
   #heap-list { display: flex; flex-direction: column; gap: 5px; }
   .heap-item { display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-radius: var(--radius-sm); background: rgba(255,255,255,0.04); border: 1px solid var(--border); font-size: 0.82rem; font-weight: 600; color: var(--text); }
-  .heap-item.heap-min { border-color: var(--accent); background: rgba(122,162,247,0.1); color: var(--accent); }
+  .heap-item.heap-min { border-color: var(--accent); background: rgba(var(--accent-ch),0.1); color: var(--accent); }
   .heap-item .heap-room-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
   #rooms-counter { font-size: 0.82rem; color: var(--text-dim); }
   #rooms-counter span { font-weight: 700; color: var(--accent); }

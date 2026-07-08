@@ -342,7 +342,7 @@ function setNodeColor(id, colorKey, animate) {
 }
 
 function setCodeLines(oldLines, newLines, animate) {
-  const HL_BG = 'rgba(99,102,241,0.16)', NO_BG = 'rgba(99,102,241,0)', HL_BORD = '#818cf8', NO_BORD = 'transparent';
+  const HL_BG = 'rgba(var(--accent-ch),0.16)', NO_BG = 'rgba(var(--accent-ch),0)', HL_BORD = '#818cf8', NO_BORD = 'transparent';
   (oldLines || []).filter(n => !(newLines || []).includes(n)).forEach(n => {
     const el = document.getElementById('cl-' + n); if (!el) return;
     if (animate) gsap.to(el, { backgroundColor: NO_BG, borderLeftColor: NO_BORD, duration: 0.2 });

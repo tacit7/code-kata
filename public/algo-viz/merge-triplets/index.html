@@ -25,7 +25,7 @@
     #code-panel { width: 350px; min-width: 120px; max-width: 560px; flex-shrink: 0; background: var(--surface-dark); border-right: 1px solid var(--border); overflow-y: auto; padding: 10px 12px; display: flex; flex-direction: column; }
     .code-panel-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--text-dim); margin-bottom: 8px; }
     .cl { display: flex; align-items: stretch; padding: 2px 0; white-space: pre; border-left: 2px solid transparent; padding-left: 6px; color: var(--text-muted); font-size: 0.75rem; line-height: 1.8; }
-    .cl.hl { background: rgba(122,162,247,0.12); border-left-color: var(--accent); color: var(--text); }
+    .cl.hl { background: rgba(var(--accent-ch),0.12); border-left-color: var(--accent); color: var(--text); }
     #sidebar { width: 260px; flex-shrink: 0; background: var(--surface); border-left: 1px solid var(--border); overflow-y: auto; padding: 14px 12px; display: flex; flex-direction: column; gap: 14px; }
     .sidebar-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--text-dim); margin-bottom: 6px; }
     #nav-row { flex-shrink: 0; display: flex; align-items: center; gap: 8px; padding: 10px 16px; background: var(--surface); border-top: 1px solid var(--border); }
@@ -49,7 +49,7 @@
 
     .code-body { padding: 6px 0; font-size: 0.78rem; line-height: 1.75; white-space: pre; }
     .code-line { display: flex; align-items: center; padding: 0 8px; border-left: 2px solid transparent; }
-    .code-line.hl { background: rgba(122,162,247,0.12); border-left-color: var(--accent); }
+    .code-line.hl { background: rgba(var(--accent-ch),0.12); border-left-color: var(--accent); }
     .ln { min-width: 24px; color: var(--text-ghost); user-select: none; font-size: 0.7rem; margin-right: 6px; }
     .kw { color: var(--purple); }
     .fn { color: var(--blue); }

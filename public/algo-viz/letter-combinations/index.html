@@ -25,7 +25,7 @@
     #code-panel { width: 350px; min-width: 120px; max-width: 560px; flex-shrink: 0; background: var(--surface-dark); border-right: 1px solid var(--border); overflow-y: auto; overflow-x: auto; padding: 10px 12px; display: flex; flex-direction: column; }
     .code-panel-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--text-dim); margin-bottom: 8px; }
     .cl { display: flex; align-items: stretch; padding: 2px 0; white-space: pre; border-left: 2px solid transparent; padding-left: 6px; color: var(--text-muted); font-size: 0.75rem; line-height: 1.8; }
-    .cl.hl { background: rgba(122,162,247,0.12); border-left-color: var(--accent); color: var(--text); }
+    .cl.hl { background: rgba(var(--accent-ch),0.12); border-left-color: var(--accent); color: var(--text); }
     .ln { display: inline-block; width: 20px; text-align: right; color: var(--text-dim); user-select: none; margin-right: 10px; font-size: 0.7rem; }
     .kw { color: var(--purple); }
     .nb { color: var(--green); }
@@ -56,7 +56,7 @@
       transition: background 0.18s, border-color 0.18s;
     }
     .key.active {
-      background: rgba(99,102,241,0.18);
+      background: rgba(var(--accent-ch),0.18);
       border-color: var(--accent);
     }
     .key-digit {
@@ -567,7 +567,7 @@ function applyStep(s, animate) {
 }
 
 function setCodeLines(oldLines, newLines, animate) {
-  var HL_BG   = 'rgba(99,102,241,0.13)';
+  var HL_BG   = 'rgba(var(--accent-ch),0.13)';
   var HL_BORD = 'var(--accent)';
   var DUR = 0.18;
   (oldLines || []).filter(function(n) { return (newLines || []).indexOf(n) < 0; }).forEach(function(n) {

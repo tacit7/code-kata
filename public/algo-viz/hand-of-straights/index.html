@@ -43,10 +43,10 @@
     min-width: 54px; transition: background 0.15s, border-color 0.15s;
   }
   .freq-cell.state-idle    { border-color: var(--border); }
-  .freq-cell.state-active  { border-color: var(--accent); background: rgba(122,162,247,0.12); }
+  .freq-cell.state-active  { border-color: var(--accent); background: rgba(var(--accent-ch),0.12); }
   .freq-cell.state-zero    { border-color: var(--border); opacity: 0.35; }
-  .freq-cell.state-missing { border-color: #f7768e; background: rgba(247,118,142,0.12); }
-  .freq-cell.state-done    { border-color: #9ece6a; background: rgba(158,206,106,0.08); }
+  .freq-cell.state-missing { border-color: #f7768e; background: rgba(var(--red-ch),0.12); }
+  .freq-cell.state-done    { border-color: #9ece6a; background: rgba(var(--green-ch),0.08); }
   .freq-val { font-size: 1.3rem; font-weight: 700; color: var(--text-bright); line-height: 1; }
   .freq-card { font-size: 0.78rem; font-weight: 600; color: var(--text-dim); }
 
@@ -61,7 +61,7 @@
   }
   .hand-card.state-idle   { }
   .hand-card.state-used   { opacity: 0.25; background: var(--bg); }
-  .hand-card.state-active { border-color: var(--accent); background: rgba(122,162,247,0.15); }
+  .hand-card.state-active { border-color: var(--accent); background: rgba(var(--accent-ch),0.15); }
 
   #step-desc { font-size: 0.85rem; color: var(--text-bright); min-height: 1.4em; line-height: 1.5; }
 
@@ -73,12 +73,12 @@
     border: 1px solid var(--border);
     background: rgba(255,255,255,0.03);
   }
-  .group-row.group-done  { border-color: #9ece6a; background: rgba(158,206,106,0.08); }
-  .group-row.group-error { border-color: #f7768e; background: rgba(247,118,142,0.1); }
+  .group-row.group-done  { border-color: #9ece6a; background: rgba(var(--green-ch),0.08); }
+  .group-row.group-error { border-color: #f7768e; background: rgba(var(--red-ch),0.1); }
   .group-card-chip {
     padding: 3px 8px; border-radius: 3px;
     font-size: 0.82rem; font-weight: 700;
-    background: rgba(122,162,247,0.15);
+    background: rgba(var(--accent-ch),0.15);
     border: 1px solid var(--accent);
     color: var(--accent);
   }
@@ -87,8 +87,8 @@
     font-size: 0.9rem; font-weight: 700; text-align: center;
     display: none;
   }
-  #result-box.res-true  { background: rgba(158,206,106,0.15); border: 1px solid #9ece6a; color: #9ece6a; }
-  #result-box.res-false { background: rgba(247,118,142,0.15); border: 1px solid #f7768e; color: #f7768e; }
+  #result-box.res-true  { background: rgba(var(--green-ch),0.15); border: 1px solid #9ece6a; color: #9ece6a; }
+  #result-box.res-false { background: rgba(var(--red-ch),0.15); border: 1px solid #f7768e; color: #f7768e; }
 </style>
 </head>
 <body>

@@ -49,6 +49,7 @@ interface SessionHistoryRow {
 }
 
 export interface DrillDownRow {
+  id: number;
   kataId: number;
   kataIndex: number;
   timeMs: number | null;
@@ -261,6 +262,7 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
     const db = await getDb();
     const rows = await db.select<
       {
+        id: number;
         kata_id: number;
         kata_index: number;
         time_ms: number | null;
@@ -270,7 +272,7 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
         category: string;
       }[]
     >(
-      `SELECT a.kata_id, a.kata_index, a.time_ms, a.passed, a.code_snapshot, k.name as kata_name, k.category
+      `SELECT a.id, a.kata_id, a.kata_index, a.time_ms, a.passed, a.code_snapshot, k.name as kata_name, k.category
        FROM attempts a JOIN katas k ON k.id = a.kata_id WHERE a.session_id = $1 ORDER BY a.kata_index`,
       [sessionId],
     );
@@ -278,6 +280,7 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
     set({
       selectedSessionId: sessionId,
       drillDown: rows.map((r) => ({
+        id: r.id,
         kataId: r.kata_id,
         kataIndex: r.kata_index,
         timeMs: r.time_ms,

@@ -43,8 +43,8 @@ body { background: var(--bg); color: var(--text); font-family: "Fira Code", mono
 .char-cell { width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border: 2px solid var(--border); border-radius: 6px; background: var(--bg); font-size: 1.1rem; font-weight: 700; font-family: monospace; color: var(--text-dim); transition: border-color 0.15s, color 0.15s, background 0.15s; position: relative; }
 .char-cell .char-idx { position: absolute; top: -9px; left: 50%; transform: translateX(-50%); font-size: 0.55rem; color: var(--text-ghost); font-family: monospace; }
 .char-cell.window-start { border-color: var(--accent); }
-.char-cell.window-inner { border-color: var(--accent); background: rgba(122,162,247,0.08); color: var(--accent-pale); }
-.char-cell.window-end   { border-color: var(--yellow); background: rgba(224,175,104,0.1); color: var(--yellow-light); }
+.char-cell.window-inner { border-color: var(--accent); background: rgba(var(--accent-ch),0.08); color: var(--accent-pale); }
+.char-cell.window-end   { border-color: var(--yellow); background: rgba(var(--yellow-ch),0.1); color: var(--yellow-light); }
 .char-cell.in-path      { border-color: var(--green); background: var(--green-bg); color: var(--green); }
 
 /* Palindrome check */
@@ -175,8 +175,8 @@ body { background: var(--bg); color: var(--text); font-family: "Fira Code", mono
     <div class="panel-box">
       <div class="panel-title">Legend</div>
       <div style="display:flex;flex-direction:column;gap:6px;font-size:0.75rem;color:var(--text-muted)">
-        <div style="display:flex;align-items:center;gap:8px"><div style="width:14px;height:14px;border-radius:3px;border:2px solid var(--accent);background:rgba(122,162,247,0.08)"></div><span>Current window s[i..j]</span></div>
-        <div style="display:flex;align-items:center;gap:8px"><div style="width:14px;height:14px;border-radius:3px;border:2px solid var(--yellow);background:rgba(224,175,104,0.1)"></div><span>End char j being tested</span></div>
+        <div style="display:flex;align-items:center;gap:8px"><div style="width:14px;height:14px;border-radius:3px;border:2px solid var(--accent);background:rgba(var(--accent-ch),0.08)"></div><span>Current window s[i..j]</span></div>
+        <div style="display:flex;align-items:center;gap:8px"><div style="width:14px;height:14px;border-radius:3px;border:2px solid var(--yellow);background:rgba(var(--yellow-ch),0.1)"></div><span>End char j being tested</span></div>
         <div style="display:flex;align-items:center;gap:8px"><div style="width:14px;height:14px;border-radius:3px;border:2px solid var(--green);background:var(--green-bg)"></div><span>In current path</span></div>
         <div style="display:flex;align-items:center;gap:8px"><div style="width:14px;height:14px;border-radius:3px;background:var(--green-bg);border:1px solid var(--green-border)"></div><span>Complete partition found</span></div>
       </div>
@@ -450,7 +450,7 @@ function renderPath(s, animate) {
     }
   }
   if (animate && isFound) {
-    gsap.fromTo(row, { backgroundColor: 'rgba(158,206,106,0.12)' }, { backgroundColor: 'transparent', duration: 0.6 });
+    gsap.fromTo(row, { backgroundColor: 'rgba(var(--green-ch),0.12)' }, { backgroundColor: 'transparent', duration: 0.6 });
   }
 }
 

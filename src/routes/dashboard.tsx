@@ -393,7 +393,7 @@ function DrillDown({ rows }: { rows: DrillDownRow[] }) {
             <tbody>
               {rows.map((row) => (
                 <tr
-                  key={`${row.kataId}-${row.kataIndex}`}
+                  key={row.id}
                   className="border-b border-base-300/30 last:border-0"
                 >
                   <td className="font-medium text-sm">{row.kataName}</td>

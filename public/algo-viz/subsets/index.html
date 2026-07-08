@@ -440,7 +440,7 @@ function applyStep(s, animate) {
 }
 
 function setCodeLines(oldLines, newLines, animate) {
-  var HL_BG   = 'rgba(99,102,241,0.13)';
+  var HL_BG   = 'rgba(var(--accent-ch),0.13)';
   var HL_BORD = 'var(--accent)';
   var DUR = 0.2;
   (oldLines || []).filter(function(n) { return (newLines || []).indexOf(n) < 0; }).forEach(function(n) {

@@ -387,7 +387,7 @@ function setEdgeColor(childId, step, animate) {
   } else { edge.setAttribute('stroke', EDGE.idle.stroke); }
 }
 
-var HL_BG = 'rgba(255,158,100,0.13)', HL_NONE = 'rgba(255,158,100,0)', HL_BORD = 'var(--orange)', NO_BORD = 'transparent';
+var HL_BG = 'rgba(var(--orange-ch),0.13)', HL_NONE = 'rgba(var(--orange-ch),0)', HL_BORD = 'var(--orange)', NO_BORD = 'transparent';
 
 function setCodeLines(oldLines, newLines, animate) {
   var DUR = 0.2;

@@ -259,7 +259,7 @@ function renderIslandCount(count,islandOf){
   for(var i=1;i<=count;i++){var chip=document.createElement('div');chip.className='swatch-chip';var dot=document.createElement('div');dot.className='swatch-dot';dot.style.backgroundColor=islandBright(i);chip.appendChild(dot);chip.appendChild(document.createTextNode('#'+i));swatches.appendChild(chip);}
 }
 
-var HL_BG='rgba(122,162,247,0.12)',prevLines=[];
+var HL_BG='rgba(var(--accent-ch),0.12)',prevLines=[];
 function setCodeLines(newLines){
   prevLines.forEach(function(n){if(newLines.indexOf(n)===-1){var el=document.getElementById('cl-'+n);if(!el)return;el.style.backgroundColor='';el.style.borderLeftColor='';var ln=el.querySelector('.ln');if(ln)ln.style.color='';}});
   newLines.forEach(function(n){if(prevLines.indexOf(n)===-1){var el=document.getElementById('cl-'+n);if(!el)return;el.style.backgroundColor=HL_BG;el.style.borderLeftColor='var(--accent)';var ln=el.querySelector('.ln');if(ln)ln.style.color='var(--accent)';}});
