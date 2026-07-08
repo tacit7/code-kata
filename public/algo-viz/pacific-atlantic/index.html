@@ -53,9 +53,9 @@
   .phase-chips { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
   .phase-chip { font-size: 0.68rem; font-weight: 700; padding: 2px 8px; border-radius: 20px; border: 1px solid; opacity: 0.35; transition: opacity 0.2s; }
   .phase-chip.active { opacity: 1; }
-  .phase-chip.pac { color: #7aa2f7; border-color: #7aa2f7; background: rgba(122,162,247,0.1); }
-  .phase-chip.atl { color: #ff9e64; border-color: #ff9e64; background: rgba(255,158,100,0.1); }
-  .phase-chip.both { color: #9ece6a; border-color: #9ece6a; background: rgba(158,206,106,0.1); }
+  .phase-chip.pac { color: #7aa2f7; border-color: #7aa2f7; background: rgba(var(--accent-ch),0.1); }
+  .phase-chip.atl { color: #ff9e64; border-color: #ff9e64; background: rgba(var(--orange-ch),0.1); }
+  .phase-chip.both { color: #9ece6a; border-color: #9ece6a; background: rgba(var(--green-ch),0.1); }
   .count-row { display: flex; gap: 12px; margin-top: 6px; }
   .count-item { display: flex; flex-direction: column; gap: 2px; }
   .count-label { font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-dim); font-weight: 700; }
@@ -402,7 +402,7 @@ function renderCounts(pac, atl, phase) {
   else { bothEl.textContent = '—'; }
 }
 
-var HL_BG = 'rgba(122,162,247,0.12)';
+var HL_BG = 'rgba(var(--accent-ch),0.12)';
 var prevLines = [];
 
 function setCodeLines(newLines) {

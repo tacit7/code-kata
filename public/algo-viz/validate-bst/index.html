@@ -430,8 +430,8 @@ function setNodeColor(id, colorKey, animate) {
 
 // ─── Code line highlighting ───────────────────────────────────────────────────
 function setCodeLines(oldLines, newLines, animate) {
-  const HL_BG   = 'rgba(99,102,241,0.16)';
-  const NO_BG   = 'rgba(99,102,241,0)';
+  const HL_BG   = 'rgba(var(--accent-ch),0.16)';
+  const NO_BG   = 'rgba(var(--accent-ch),0)';
   const HL_BORD = '#818cf8';
   const NO_BORD = 'transparent';
   (oldLines || []).filter(n => !(newLines || []).includes(n)).forEach(n => {

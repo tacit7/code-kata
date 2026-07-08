@@ -50,12 +50,12 @@
     #query-track { flex: 1; height: 100%; position: relative; }
     .q-dot { position: absolute; top: 50%; transform: translate(-50%, -50%); width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--border); background: var(--surface2, var(--surface)); font-size: 0.6rem; display: flex; align-items: center; justify-content: center; color: var(--text-dim); cursor: default; }
     .q-dot.active { background: var(--accent); border-color: var(--accent); color: #1a1b26; font-weight: 700; }
-    .q-dot.done { background: rgba(99,102,241,0.3); border-color: var(--accent); color: var(--text); }
+    .q-dot.done { background: rgba(var(--accent-ch),0.3); border-color: var(--accent); color: var(--text); }
 
     /* Sidebar */
     #heap-list { display: flex; flex-direction: column; gap: 5px; }
     .heap-item { display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-radius: var(--radius); background: rgba(255,255,255,0.04); border: 1px solid var(--border); font-size: 0.8rem; font-weight: 600; color: var(--text); }
-    .heap-item.heap-min { border-color: var(--accent); background: rgba(99,102,241,0.12); color: var(--accent); }
+    .heap-item.heap-min { border-color: var(--accent); background: rgba(var(--accent-ch),0.12); color: var(--accent); }
     .heap-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
     #answers-list { display: flex; flex-direction: column; gap: 5px; }
     .ans-row { display: flex; justify-content: space-between; align-items: center; padding: 5px 10px; border-radius: var(--radius); background: rgba(255,255,255,0.03); border: 1px solid var(--border); font-size: 0.8rem; }

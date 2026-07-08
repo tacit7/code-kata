@@ -30,7 +30,7 @@
   .cl { display: flex; align-items: stretch; border-left: 3px solid transparent; padding: 0 14px 0 0; white-space: pre; transition: background-color 0.01s; }
   .cl .ln { width: 28px; min-width: 28px; text-align: right; color: #3d4468; user-select: none; padding-right: 14px; font-size: 0.72rem; line-height: 1.75; }
   .cl .code { color: var(--text-muted); }
-  .cl.hl { background: rgba(122,162,247,0.12); border-left-color: var(--accent); }
+  .cl.hl { background: rgba(var(--accent-ch),0.12); border-left-color: var(--accent); }
   .kw { color: var(--purple); } .fn { color: var(--blue); } .bi { color: var(--orange); } .cm { color: #3d4468; font-style: italic; } .num { color: var(--yellow); } .str { color: var(--green); }
   #sidebar { width: 200px; flex-shrink: 0; background: var(--surface); border-left: 1px solid var(--border); overflow-y: auto; padding: 14px 12px; display: flex; flex-direction: column; gap: 10px; }
   .sidebar-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--text-dim); margin-bottom: 6px; }
@@ -45,9 +45,9 @@
   .stack-title { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-dim); }
   .stack-body { display: flex; flex-direction: column-reverse; gap: 4px; min-height: 180px; width: 100px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 8px; justify-content: flex-start; }
   .stack-item { display: flex; align-items: center; justify-content: center; height: 36px; border-radius: 6px; font-weight: 700; font-size: 1rem; border: 2px solid; transition: all 0.2s ease; }
-  .stack-item.s1 { background: rgba(122,162,247,0.15); border-color: var(--accent); color: var(--accent); }
+  .stack-item.s1 { background: rgba(var(--accent-ch),0.15); border-color: var(--accent); color: var(--accent); }
   .stack-item.s2 { background: rgba(115,218,149,0.15); border-color: var(--green); color: var(--green); }
-  .stack-item.hl { background: rgba(224,175,104,0.25); border-color: var(--yellow); color: var(--yellow); transform: scale(1.1); }
+  .stack-item.hl { background: rgba(var(--yellow-ch),0.25); border-color: var(--yellow); color: var(--yellow); transform: scale(1.1); }
   .stack-empty { color: var(--text-dim); font-size: 0.75rem; font-style: italic; text-align: center; padding: 8px; }
   .transfer-col { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; min-width: 56px; color: var(--text-dim); font-size: 0.72rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; transition: color 0.2s; }
   .transfer-col.active { color: var(--yellow); }
@@ -59,7 +59,7 @@
   .queue-item.front { border-color: var(--green); color: var(--green); background: var(--green-bg); }
   .queue-arrow { color: var(--text-dim); font-size: 0.8rem; }
   .queue-empty { color: var(--text-dim); font-size: 0.8rem; font-style: italic; }
-  .result-tag { display: inline-block; margin-left: 6px; padding: 1px 6px; background: rgba(224,175,104,0.15); border: 1px solid var(--yellow); border-radius: 4px; color: var(--yellow); font-weight: 700; font-size: 0.78rem; }
+  .result-tag { display: inline-block; margin-left: 6px; padding: 1px 6px; background: rgba(var(--yellow-ch),0.15); border: 1px solid var(--yellow); border-radius: 4px; color: var(--yellow); font-weight: 700; font-size: 0.78rem; }
 </style>
 </head>
 <body>

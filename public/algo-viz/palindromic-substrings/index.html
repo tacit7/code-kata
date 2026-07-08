@@ -51,7 +51,7 @@
 
     .code-body { font-family: 'Fira Code','Cascadia Code',monospace; font-size: 0.75rem; line-height: 1.7; color: var(--text-muted); flex: 1; white-space: pre; }
     .code-line { display: block; padding: 0 4px; border-radius: 3px; border-left: 3px solid transparent; }
-    .code-line.active { background: rgba(122,162,247,0.18); color: var(--text); border-left-color: var(--accent); }
+    .code-line.active { background: rgba(var(--accent-ch),0.18); color: var(--text); border-left-color: var(--accent); }
     .kw { color: var(--purple); } .fn { color: var(--blue); } .bi { color: var(--orange); } .nb { color: var(--green); } .cm { color: var(--text-ghost); }
 
     .vars-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
@@ -64,12 +64,12 @@
     .var-value { font-size: 1.1rem; font-weight: 700; color: var(--text-bright); margin-top: 3px; }
     .var-sub { font-size: 0.55rem; color: var(--text-faint); margin-top: 2px; line-height: 1.3; }
     .center-badge { display: inline-flex; align-items: center; gap: 6px; font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; padding: 2px 8px; border-radius: 4px; }
-    .center-badge.odd  { color: var(--accent-pale,#a9b1d6); background: rgba(122,162,247,0.15); border: 1px solid rgba(122,162,247,0.3); }
-    .center-badge.even { color: #c4b5fd; background: rgba(187,154,247,0.15); border: 1px solid rgba(187,154,247,0.3); }
+    .center-badge.odd  { color: var(--accent-pale,#a9b1d6); background: rgba(var(--accent-ch),0.15); border: 1px solid rgba(var(--accent-ch),0.3); }
+    .center-badge.even { color: #c4b5fd; background: rgba(var(--purple-ch),0.15); border: 1px solid rgba(var(--purple-ch),0.3); }
     .status-desc { font-size: 0.76rem; color: var(--text-muted); line-height: 1.45; }
     .found-list { max-height: 180px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; }
     .found-item { display: flex; align-items: center; gap: 8px; padding: 5px 8px; border-radius: 6px; border: 1px solid var(--border); font-size: 0.72rem; }
-    .found-item.new { border-color: var(--green); background: rgba(158,206,106,0.10); }
+    .found-item.new { border-color: var(--green); background: rgba(var(--green-ch),0.10); }
     .found-idx { font-size: 0.58rem; color: var(--text-faint); min-width: 24px; }
     .found-str { font-weight: 700; color: var(--green); font-family: monospace; letter-spacing: .06em; }
     .found-range { font-size: 0.6rem; color: var(--text-dim); margin-left: auto; }
@@ -123,11 +123,11 @@
           <div class="ptr-row" id="ptr-row"></div>
         </div>
         <div class="legend-row">
-          <div class="legend-item"><div class="legend-dot" style="background:rgba(122,162,247,0.25);border-color:var(--accent)"></div>odd center</div>
-          <div class="legend-item"><div class="legend-dot" style="background:rgba(187,154,247,0.22);border-color:var(--purple)"></div>even center</div>
-          <div class="legend-item"><div class="legend-dot" style="background:rgba(122,162,247,0.10)"></div>expansion window</div>
-          <div class="legend-item"><div class="legend-dot" style="background:rgba(158,206,106,0.22);border-color:var(--green)"></div>palindrome found</div>
-          <div class="legend-item"><div class="legend-dot" style="background:rgba(247,118,142,0.15);border-color:var(--red)"></div>mismatch</div>
+          <div class="legend-item"><div class="legend-dot" style="background:rgba(var(--accent-ch),0.25);border-color:var(--accent)"></div>odd center</div>
+          <div class="legend-item"><div class="legend-dot" style="background:rgba(var(--purple-ch),0.22);border-color:var(--purple)"></div>even center</div>
+          <div class="legend-item"><div class="legend-dot" style="background:rgba(var(--accent-ch),0.10)"></div>expansion window</div>
+          <div class="legend-item"><div class="legend-dot" style="background:rgba(var(--green-ch),0.22);border-color:var(--green)"></div>palindrome found</div>
+          <div class="legend-item"><div class="legend-dot" style="background:rgba(var(--red-ch),0.15);border-color:var(--red)"></div>mismatch</div>
         </div>
       </div>
       <div class="panel-box">

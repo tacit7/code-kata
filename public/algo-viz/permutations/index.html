@@ -44,7 +44,7 @@
   .arr-cell-wrap { display: flex; flex-direction: column; align-items: center; gap: 3px; }
   .arr-cell { width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border: 2px solid var(--border); border-radius: 6px; background: var(--bg); font-family: monospace; font-size: 1rem; font-weight: 700; color: var(--text-dim); transition: border-color 0.18s, background 0.18s, color 0.18s; }
   .arr-cell.fixed   { border-color: #16a34a; background: rgba(22,163,74,0.1); color: #4ade80; }
-  .arr-cell.current { border-color: var(--accent); background: rgba(99,102,241,0.14); color: #a5b4fc; }
+  .arr-cell.current { border-color: var(--accent); background: rgba(var(--accent-ch),0.14); color: #a5b4fc; }
   .arr-cell.swap-a  { border-color: #d97706; background: rgba(234,179,8,0.13); color: #fbbf24; }
   .arr-cell.swap-b  { border-color: #ea580c; background: rgba(249,115,22,0.13); color: #fb923c; }
   .arr-idx { font-size: 0.6rem; color: var(--text-faint); font-family: monospace; }
@@ -115,7 +115,7 @@
       <div class="sidebar-title">Legend</div>
       <div class="leg-row">
         <div class="leg-item"><div class="leg-box" style="border-color:#16a34a;background:rgba(22,163,74,0.1)"></div>Fixed prefix</div>
-        <div class="leg-item"><div class="leg-box" style="border-color:var(--accent);background:rgba(99,102,241,0.14)"></div>Current pos</div>
+        <div class="leg-item"><div class="leg-box" style="border-color:var(--accent);background:rgba(var(--accent-ch),0.14)"></div>Current pos</div>
         <div class="leg-item"><div class="leg-box" style="border-color:#d97706;background:rgba(234,179,8,0.13)"></div>Swap A</div>
         <div class="leg-item"><div class="leg-box" style="border-color:#ea580c;background:rgba(249,115,22,0.13)"></div>Swap B</div>
       </div>
@@ -379,7 +379,7 @@ function applyPermsPanel(s, animate) {
 }
 
 function setCodeLines(oldLines, newLines, animate) {
-  var HL_BG = 'rgba(99,102,241,0.13)', HL_BD = 'var(--accent)', DUR = 0.2;
+  var HL_BG = 'rgba(var(--accent-ch),0.13)', HL_BD = 'var(--accent)', DUR = 0.2;
   (oldLines || []).filter(function(n) { return (newLines || []).indexOf(n) < 0; }).forEach(function(n) {
     var el = document.getElementById('cl-' + n); if (!el) return;
     if (animate) gsap.to(el, { backgroundColor: 'transparent', borderLeftColor: 'transparent', duration: DUR });

@@ -25,7 +25,7 @@
   #resize-handle:hover, #resize-handle.dragging { background: var(--accent); }
   #code-panel { width: 350px; min-width: 120px; max-width: 560px; flex-shrink: 0; background: var(--surface-dark); border-right: 1px solid var(--border); overflow-y: auto; overflow-x: auto; padding: 10px 12px; display: flex; flex-direction: column; }
   .cl { display: flex; align-items: stretch; padding: 2px 0; white-space: pre; border-left: 2px solid transparent; padding-left: 6px; color: var(--text-muted); font-family: 'Fira Code', 'Cascadia Code', monospace; font-size: 0.75rem; line-height: 1.8; }
-  .cl.hl { background: rgba(122,162,247,0.12); border-left-color: var(--accent); color: var(--text); }
+  .cl.hl { background: rgba(var(--accent-ch),0.12); border-left-color: var(--accent); color: var(--text); }
   .ln { display: inline-block; width: 20px; text-align: right; color: var(--text-dim); user-select: none; margin-right: 10px; font-size: 0.7rem; }
   #sidebar { width: 220px; flex-shrink: 0; background: var(--surface); border-left: 1px solid var(--border); overflow-y: auto; padding: 14px 12px; display: flex; flex-direction: column; gap: 12px; }
   .sidebar-section { font-size: 11px; }
@@ -43,7 +43,7 @@
   .number-line { display: flex; flex-wrap: wrap; gap: 8px; }
   .number-chip { min-width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; font-weight: 600; color: var(--text); transition: all 0.3s ease; font-size: 0.9rem; }
   .number-chip.in-set { border: 1px solid var(--accent); }
-  .number-chip.current { background: var(--accent); color: #fff; box-shadow: 0 0 12px rgba(122,162,247,0.4); }
+  .number-chip.current { background: var(--accent); color: #fff; box-shadow: 0 0 12px rgba(var(--accent-ch),0.4); }
   .number-chip.in-sequence { background: var(--green); color: #fff; border: 1px solid var(--green); }
   .number-chip.winner { background: var(--orange); color: #fff; border: 1px solid var(--orange); box-shadow: 0 0 12px rgba(255,157,77,0.4); }
   .hash-set-panel { display: flex; flex-wrap: wrap; gap: 6px; padding: 12px; background: var(--surface); border-radius: 8px; border: 1px solid var(--border); }
