@@ -19,7 +19,7 @@ export function useTimerTick(): { kataElapsed: number; sessionElapsed: number } 
           : state.sessionElapsed;
 
       setElapsed({ kataElapsed, sessionElapsed });
-    }, 100);
+    }, 250);
 
     return () => clearInterval(interval);
   }, []);
