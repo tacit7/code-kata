@@ -1,5 +1,45 @@
 use tauri::{Emitter, Manager};
-use tauri::menu::{MenuBuilder, MenuItem, SubmenuBuilder};
+use tauri::menu::{ContextMenu, MenuBuilder, MenuItem, MenuItemBuilder, SubmenuBuilder};
+
+// Native right-click menu for a kata row in the Problems table. Item ids
+// encode the action + kata id ("kata-ctx-<action>:<id>") so the single
+// app-wide on_menu_event handler below can route them by re-emitting a
+// "kata-context-action" event — the frontend owns navigation/store state/
+// clipboard, this just shows the native menu and relays which item fired.
+#[tauri::command]
+fn show_kata_context_menu(
+    app: tauri::AppHandle,
+    window: tauri::Window,
+    kata_id: i64,
+    is_favorite: bool,
+) -> Result<(), String> {
+    let favorite_label = if is_favorite { "Remove from Favorites" } else { "Add to Favorites" };
+
+    let start = MenuItemBuilder::with_id(format!("kata-ctx-start:{kata_id}"), "Start Kata")
+        .build(&app)
+        .map_err(|e| e.to_string())?;
+    let favorite = MenuItemBuilder::with_id(format!("kata-ctx-favorite:{kata_id}"), favorite_label)
+        .build(&app)
+        .map_err(|e| e.to_string())?;
+    let reset = MenuItemBuilder::with_id(format!("kata-ctx-reset:{kata_id}"), "Reset Progress")
+        .build(&app)
+        .map_err(|e| e.to_string())?;
+    let copy = MenuItemBuilder::with_id(format!("kata-ctx-copy:{kata_id}"), "Copy Kata Name")
+        .build(&app)
+        .map_err(|e| e.to_string())?;
+
+    let menu = MenuBuilder::new(&app)
+        .item(&start)
+        .separator()
+        .item(&favorite)
+        .item(&reset)
+        .separator()
+        .item(&copy)
+        .build()
+        .map_err(|e| e.to_string())?;
+
+    menu.popup(window).map_err(|e| e.to_string())
+}
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -9,7 +49,9 @@ pub fn run() {
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_window_state::Builder::default().build())
         .plugin(tauri_plugin_os::init())
-        .invoke_handler(tauri::generate_handler![])
+        .plugin(tauri_plugin_clipboard_manager::init())
+        .plugin(tauri_plugin_dialog::init())
+        .invoke_handler(tauri::generate_handler![show_kata_context_menu])
         .setup(|app| {
             if cfg!(debug_assertions) {
                 app.handle().plugin(
@@ -53,9 +95,21 @@ pub fn run() {
             app.set_menu(menu)?;
 
             app.on_menu_event(|app, event| {
-                if event.id().as_ref() == "settings" {
+                let id = event.id().as_ref();
+                if id == "settings" {
                     if let Some(window) = app.get_webview_window("main") {
                         let _ = window.emit("menu:open-settings", ());
+                    }
+                    return;
+                }
+                if let Some(rest) = id.strip_prefix("kata-ctx-") {
+                    if let Some((action, kata_id)) = rest.split_once(':') {
+                        if let (Some(window), Ok(kata_id)) = (app.get_webview_window("main"), kata_id.parse::<i64>()) {
+                            let _ = window.emit("kata-context-action", serde_json::json!({
+                                "action": action,
+                                "kataId": kata_id,
+                            }));
+                        }
                     }
                 }
             });
