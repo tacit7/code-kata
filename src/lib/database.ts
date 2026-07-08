@@ -305,3 +305,17 @@ export async function deleteKata(id: number): Promise<void> {
   await db.execute("DELETE FROM attempts WHERE kata_id = $1", [id]);
   await db.execute("DELETE FROM katas WHERE id = $1 AND is_custom = 1", [id]);
 }
+
+// Clears recorded attempts (best time, streak, pass rate) for a kata without
+// touching the kata itself or the user's saved code draft.
+export async function resetKataProgress(id: number): Promise<void> {
+  const db = await getDb();
+  await db.execute("DELETE FROM attempts WHERE kata_id = $1", [id]);
+}
+
+// Clears recorded attempts for every kata (best time, streak, pass rate)
+// without touching katas themselves or saved code drafts.
+export async function resetAllProgress(): Promise<void> {
+  const db = await getDb();
+  await db.execute("DELETE FROM attempts");
+}
