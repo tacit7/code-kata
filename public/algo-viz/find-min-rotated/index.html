@@ -28,7 +28,7 @@
     #resize-handle { width: 5px; flex-shrink: 0; cursor: col-resize; background: transparent; border-left: 1px solid var(--border); transition: background .15s; z-index: 10; }
     #resize-handle:hover, #resize-handle.dragging { background: var(--accent); }
 
-    #code-panel { width: 350px; min-width: 120px; max-width: 560px; flex-shrink: 0; background: #0d1117; border-right: 1px solid var(--border); overflow-y: auto; overflow-x: auto; padding: 10px 12px; display: flex; flex-direction: column; }
+    #code-panel { width: 350px; min-width: 120px; max-width: 560px; flex-shrink: 0; background: var(--surface-dark); border-right: 1px solid var(--border); overflow-y: auto; overflow-x: auto; padding: 10px 12px; display: flex; flex-direction: column; }
     .code-panel-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--text-dim); margin-bottom: 6px; }
 
     #sidebar { width: 200px; flex-shrink: 0; background: var(--surface); border-left: 1px solid var(--border); overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 10px; }
@@ -101,7 +101,7 @@
     .log-move { color: var(--text-dim); margin-left: auto; font-size: 0.68rem; }
 
     /* Code */
-    .code-body { padding: 10px 0; font-family: 'JetBrains Mono', 'Fira Code', monospace; font-size: 0.75rem; line-height: 1.75; background: #0a0d14; overflow: hidden; transition: max-height 0.3s ease; max-height: 400px; }
+    .code-body { padding: 10px 0; font-family: 'JetBrains Mono', 'Fira Code', monospace; font-size: 0.75rem; line-height: 1.75; background: var(--surface-dark); overflow: hidden; transition: max-height 0.3s ease; max-height: 400px; }
     .code-body.collapsed { max-height: 0; padding: 0; }
     .code-line { display: flex; align-items: stretch; border-left: 3px solid transparent; padding: 0 14px 0 0; white-space: pre; transition: background 0.2s, border-color 0.2s; }
     .code-line.hl { background: rgba(224,175,104,0.1); border-left-color: var(--yellow); }

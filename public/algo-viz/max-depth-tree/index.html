@@ -23,7 +23,7 @@
   #desc { font-size: 13px; color: var(--text-muted); text-align: center; max-width: 560px; min-height: 36px; line-height: 1.5; }
   #resize-handle { width: 5px; flex-shrink: 0; cursor: col-resize; background: transparent; border-left: 1px solid var(--border); transition: background .15s; z-index: 10; }
   #resize-handle:hover, #resize-handle.dragging { background: var(--accent); }
-  #code-panel { width: 350px; min-width: 120px; max-width: 560px; flex-shrink: 0; background: #0d1117; border-right: 1px solid var(--border); overflow-y: auto; overflow-x: auto; padding: 10px 12px; display: flex; flex-direction: column; }
+  #code-panel { width: 350px; min-width: 120px; max-width: 560px; flex-shrink: 0; background: var(--surface-dark); border-right: 1px solid var(--border); overflow-y: auto; overflow-x: auto; padding: 10px 12px; display: flex; flex-direction: column; }
   .cl { display: flex; align-items: stretch; border-left: 3px solid transparent; padding: 0 14px 0 0; white-space: pre; color: var(--text-muted); transition: all 0.2s; font-family: 'Fira Code', 'Cascadia Code', monospace; font-size: 0.75rem; line-height: 1.8; }
   .cl .ln { width: 28px; min-width: 28px; text-align: right; color: #3d4468; user-select: none; padding-right: 14px; font-size: 0.72rem; line-height: 1.7; }
   .cl .code { color: var(--text-muted); }
@@ -43,7 +43,7 @@
   .panel-box { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 12px 14px; }
   .panel-title { font-size: 0.67rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.11em; color: var(--text-dim); margin-bottom: 8px; }
   .depth-row { display: flex; gap: 8px; }
-  .depth-slot { flex: 1; background: #0a0d14; border: 1px solid var(--border); border-radius: 6px; padding: 7px 10px; font-family: 'JetBrains Mono', monospace; font-size: 0.82rem; }
+  .depth-slot { flex: 1; background: var(--surface-dark); border: 1px solid var(--border); border-radius: 6px; padding: 7px 10px; font-family: 'JetBrains Mono', monospace; font-size: 0.82rem; }
   .depth-slot .ds-label { color: var(--text-dim); font-size: 0.65rem; margin-bottom: 3px; }
   .depth-slot .ds-val { color: var(--text-bright); font-size: 1rem; font-weight: 700; }
   .depth-slot.active-slot { border-color: var(--accent); }
