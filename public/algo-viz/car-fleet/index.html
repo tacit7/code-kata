@@ -18,7 +18,7 @@ body { background: var(--bg); color: var(--text); font-family: "Fira Code", mono
 #viz-area { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
 #resize-handle { width: 5px; flex-shrink: 0; cursor: col-resize; background: transparent; border-left: 1px solid var(--border); transition: background .15s; z-index: 10; }
 #resize-handle:hover, #resize-handle.dragging { background: var(--accent); }
-#code-panel { width: 300px; min-width: 120px; max-width: 480px; flex-shrink: 0; background: #0d1117; border-right: 1px solid var(--border); overflow-y: auto; padding: 10px 12px; display: flex; flex-direction: column; }
+#code-panel { width: 300px; min-width: 120px; max-width: 480px; flex-shrink: 0; background: var(--surface-dark); border-right: 1px solid var(--border); overflow-y: auto; padding: 10px 12px; display: flex; flex-direction: column; }
 #sidebar { width: 200px; flex-shrink: 0; background: var(--surface); border-left: 1px solid var(--border); overflow-y: auto; padding: 14px 12px; display: flex; flex-direction: column; gap: 8px; }
 #nav-row { flex-shrink: 0; display: flex; align-items: center; gap: 8px; padding: 10px 16px; background: var(--surface); border-top: 1px solid var(--border); }
 .code-panel-title { font-size: 0.67rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-dim); margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }

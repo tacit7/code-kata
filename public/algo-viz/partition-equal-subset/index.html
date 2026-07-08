@@ -24,7 +24,7 @@
   .panel-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--text-dim); margin-bottom: 8px; }
   #resize-handle { width: 5px; flex-shrink: 0; cursor: col-resize; background: transparent; border-left: 1px solid var(--border); transition: background .15s; z-index: 10; }
   #resize-handle:hover, #resize-handle.dragging { background: var(--accent); }
-  #code-panel { width: 320px; min-width: 120px; max-width: 560px; flex-shrink: 0; background: #0d1117; border-right: 1px solid var(--border); overflow-y: auto; overflow-x: auto; padding: 10px 12px; display: flex; flex-direction: column; }
+  #code-panel { width: 320px; min-width: 120px; max-width: 560px; flex-shrink: 0; background: var(--surface-dark); border-right: 1px solid var(--border); overflow-y: auto; overflow-x: auto; padding: 10px 12px; display: flex; flex-direction: column; }
   .code-panel-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--text-dim); margin-bottom: 8px; }
   #sidebar { width: 200px; flex-shrink: 0; background: var(--surface); border-left: 1px solid var(--border); overflow-y: auto; padding: 14px 12px; display: flex; flex-direction: column; gap: 10px; }
   .sidebar-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--text-dim); margin-bottom: 6px; }
@@ -45,7 +45,7 @@
   .dp-cell { width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; border: 1px solid var(--border-soft); border-radius: 4px; background: var(--bg); font-size: 0.75rem; font-weight: 700; font-family: monospace; color: var(--text-ghost); transition: border-color 0.12s, background 0.12s, color 0.12s; }
   .dp-cell[data-v="T"] { background: #052e16; border-color: #166534; color: #4ade80; }
   .dp-cell[data-v="F"] { background: var(--bg); border-color: var(--border-soft); color: var(--text-ghost); }
-  .dp-cell.active-row { background: #0d1117; }
+  .dp-cell.active-row { background: var(--surface-dark); }
   .dp-cell.active-row[data-v="T"] { background: #062e16; }
   .dp-cell.cell-current { border-color: var(--accent) !important; background: var(--surface-dark) !important; outline: 2px solid var(--accent); outline-offset: 1px; color: var(--accent-pale); }
   .dp-cell.cell-current[data-v="T"] { color: #4ade80; }
