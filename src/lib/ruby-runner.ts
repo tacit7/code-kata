@@ -7,6 +7,15 @@ import { INIT_TIMEOUT_MS, EXEC_TIMEOUT_MS } from "./ruby-exec-core";
 let workerInstance: Worker | null = null;
 let readyPromise: Promise<void> | null = null;
 
+// Every run instantiates a brand-new Ruby VM inside the worker (see
+// ruby-test-worker.ts) — there's no dispose/free API on RubyVM, so each
+// run's WASM memory only becomes eligible for GC, not immediately reclaimed.
+// Over a long session that churn adds up. Recycling the whole worker every
+// so often forces the OS to actually reclaim it, at the cost of one cold
+// re-init.
+const RECYCLE_AFTER_RUNS = 15;
+let runsSinceRecycle = 0;
+
 // Single-flight queue: overlapping runRubyTests calls must not both listen
 // for the same worker "results" message. Each call awaits the previous
 // call's completion before posting its own message.
@@ -26,6 +35,7 @@ function discardWorker() {
   workerInstance?.terminate();
   workerInstance = null;
   readyPromise = null;
+  runsSinceRecycle = 0;
 }
 
 function getWorker(): { worker: Worker; ready: Promise<void> } {
@@ -120,6 +130,11 @@ async function runRubyTestsExclusive(
       clearTimeout(timer);
       worker.removeEventListener("message", onMessage);
       resolve(e.data.results ?? []);
+
+      runsSinceRecycle += 1;
+      if (runsSinceRecycle >= RECYCLE_AFTER_RUNS) {
+        discardWorker();
+      }
     };
     worker.addEventListener("message", onMessage);
 
