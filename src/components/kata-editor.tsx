@@ -702,6 +702,7 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
   const handleIframeLoad = useCallback(() => {
     try {
       (iframeRef.current?.contentWindow as Window & { eval: (s: string) => void } | null)?.eval(`
+        document.documentElement.setAttribute('data-theme', ${JSON.stringify(theme)});
         if (!window.__vizBridge) {
           window.__vizBridge = true;
           var style = document.createElement('style');
@@ -727,11 +728,21 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
               var sel = document.getElementById('speedSel');
               if (sel) { sel.value = d.value; }
             }
+            else if (d && d.type === 'theme') {
+              document.documentElement.setAttribute('data-theme', d.value);
+            }
           });
         }
       `);
     } catch (_) { /* cross-origin guard, no-op */ }
-  }, []);
+  }, [theme]);
+
+  // Keep an already-loaded viz iframe's colors in sync when the user
+  // switches themes without navigating away (handleIframeLoad only runs
+  // once per iframe load, so live changes need the postMessage path too).
+  useEffect(() => {
+    sendVizMsg({ type: "theme", value: theme });
+  }, [theme, sendVizMsg]);
 
   const tabClass = (tab: typeof showPanel) =>
     `px-3 py-1.5 text-xs font-medium border-b-2 transition-colors ${

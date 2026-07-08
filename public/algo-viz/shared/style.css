@@ -1,72 +1,258 @@
 /* ── Reset ── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-/* ── Base ── */
+/* ── Theme-aware palette ──
+   Viz pages run in an iframe and pick up the app's active theme via a
+   `data-theme` attribute the parent sets on this document (see the bridge
+   in kata-editor.tsx). Each [data-theme] block below only overrides the
+   *base* colors; everything else (hover/dim/pale/bg/border/light variants)
+   is derived once here with color-mix() so it recomputes per theme. The
+   "-ch" (R,G,B channel) variables can't be derived this way — rgba(var(...))
+   needs literal numbers — so those are restated per theme. */
 :root {
-  /* ── Tokyo Night ── */
+  /* ── dark (default/fallback) ── */
+  --bg:            #1e222b;
+  --surface:       #2b3040;
+  --surface-dark:  #181b22;
+  --border:        #3a4053;
+  --text:          #c7cdd8;
+  --text-bright:   #e8ebf1;
+  --accent:        #48c9c2;
+  --purple:        #9b8cf0;
+  --green:         #4ade80;
+  --blue:          #4c7fee;
+  --red:           #e5484d;
+  --orange:        #f0a058;
+  --yellow:        #e0b34d;
+  --accent-ch:     72,201,194;
+  --green-ch:      74,222,128;
+  --blue-ch:       76,127,238;
+  --red-ch:        229,72,77;
+  --orange-ch:     240,160,88;
+  --yellow-ch:     224,179,77;
+  --purple-ch:     155,140,240;
 
-  /* Backgrounds */
-  --bg:            #1a1b26;
-  --surface:       #24283b;
-  --surface-dark:  #16161e;
+  /* ── derived (formula-based, theme-agnostic) ── */
+  --border-soft:   color-mix(in srgb, var(--border) 55%, var(--bg));
+  --text-muted:    color-mix(in srgb, var(--text) 75%, var(--bg));
+  --text-dim:      color-mix(in srgb, var(--text) 45%, var(--bg));
+  --text-faint:    color-mix(in srgb, var(--text) 25%, var(--bg));
+  --text-ghost:    color-mix(in srgb, var(--text) 15%, var(--bg));
 
-  /* Borders */
-  --border:        #414868;
-  --border-soft:   #292e42;
+  --accent-hover:  color-mix(in srgb, var(--accent) 80%, black);
+  --accent-dim:    color-mix(in srgb, var(--accent) 70%, white);
+  --accent-pale:   color-mix(in srgb, var(--accent) 40%, white);
 
-  /* Text scale */
-  --text:          #c0caf5;
-  --text-bright:   #cdd6f4;
-  --text-muted:    #a9b1d6;
-  --text-dim:      #565f89;
-  --text-faint:    #3b4261;
-  --text-ghost:    #2f3549;
+  --green-light:   color-mix(in srgb, var(--green) 60%, white);
+  --green-bg:      color-mix(in srgb, var(--green) 15%, var(--bg));
+  --green-border:  color-mix(in srgb, var(--green) 45%, var(--bg));
 
-  /* Accent / blue */
-  --accent:        #7aa2f7;
-  --accent-hover:  #6183e4;
-  --accent-dim:    #7dcfff;
-  --accent-pale:   #b4f9f8;
-  --accent-ch:     122,162,247;
+  --blue-light:    color-mix(in srgb, var(--blue) 60%, white);
+  --blue-bg:       color-mix(in srgb, var(--blue) 15%, var(--bg));
+  --blue-border:   color-mix(in srgb, var(--blue) 45%, var(--bg));
 
-  /* Purple */
-  --purple:        #bb9af7;
+  --red-light:     color-mix(in srgb, var(--red) 60%, white);
+  --red-bg:        color-mix(in srgb, var(--red) 15%, var(--bg));
+  --red-border:    color-mix(in srgb, var(--red) 45%, var(--bg));
 
-  /* Green */
-  --green:         #9ece6a;
-  --green-light:   #b9f27c;
-  --green-bg:      #1a2b14;
-  --green-border:  #4d7a23;
-  --green-ch:      158,206,106;
+  --orange-light:  color-mix(in srgb, var(--orange) 60%, white);
+  --orange-pale:   color-mix(in srgb, var(--orange) 40%, white);
+  --orange-bg:     color-mix(in srgb, var(--orange) 15%, var(--bg));
+  --orange-border: color-mix(in srgb, var(--orange) 45%, var(--bg));
 
-  /* Blue / cyan */
-  --blue:          #7dcfff;
-  --blue-light:    #b4f9f8;
-  --blue-bg:       #1a2b3c;
-  --blue-border:   #2d6a9f;
-  --blue-ch:       125,207,255;
-
-  /* Red */
-  --red:           #f7768e;
-  --red-light:     #ff9ca7;
-  --red-ch:        247,118,142;
-
-  /* Orange */
-  --orange:        #ff9e64;
-  --orange-light:  #ffb380;
-  --orange-pale:   #ffc9a3;
-  --orange-ch:     255,158,100;
-
-  /* Yellow */
-  --yellow:        #e0af68;
-  --yellow-light:  #edc87e;
-  --yellow-pale:   #f5dba4;
-  --yellow-ch:     224,175,104;
+  --yellow-light:  color-mix(in srgb, var(--yellow) 60%, white);
+  --yellow-pale:   color-mix(in srgb, var(--yellow) 40%, white);
+  --yellow-bg:     color-mix(in srgb, var(--yellow) 15%, var(--bg));
+  --yellow-border: color-mix(in srgb, var(--yellow) 45%, var(--bg));
 
   /* Radii */
   --radius-sm:     8px;
   --radius-md:     10px;
   --radius-lg:     12px;
+}
+
+[data-theme="light"] {
+  --bg:            #f3f4f6;
+  --surface:       #ffffff;
+  --surface-dark:  #e7e9ed;
+  --border:        #d7dbe1;
+  --text:          #3a4150;
+  --text-bright:   #1f2430;
+  --accent:        #2b9488;
+  --purple:        #7c6fd6;
+  --green:         #22a35e;
+  --blue:          #2f6fd6;
+  --red:           #d1383a;
+  --orange:        #c97a1f;
+  --yellow:        #b8860b;
+  --accent-ch:     43,148,136;
+  --green-ch:      34,163,94;
+  --blue-ch:       47,111,214;
+  --red-ch:        209,56,58;
+  --orange-ch:     201,122,31;
+  --yellow-ch:     184,134,11;
+  --purple-ch:     124,111,214;
+}
+
+[data-theme="dracula"] {
+  --bg:            #282a36;
+  --surface:       #44475a;
+  --surface-dark:  #21222c;
+  --border:        #3b3e4d;
+  --text:          #f8f8f2;
+  --text-bright:   #ffffff;
+  --accent:        #ff79c6;
+  --purple:        #bd93f9;
+  --green:         #50fa7b;
+  --blue:          #8be9fd;
+  --red:           #ff5555;
+  --orange:        #ffb86c;
+  --yellow:        #f1fa8c;
+  --accent-ch:     255,121,198;
+  --green-ch:      80,250,123;
+  --blue-ch:       139,233,253;
+  --red-ch:        255,85,85;
+  --orange-ch:     255,184,108;
+  --yellow-ch:     241,250,140;
+  --purple-ch:     189,147,249;
+}
+
+[data-theme="monokai"] {
+  --bg:            #272822;
+  --surface:       #3e3d32;
+  --surface-dark:  #1e1f1a;
+  --border:        #49483e;
+  --text:          #f8f8f2;
+  --text-bright:   #ffffff;
+  --accent:        #66d9ef;
+  --purple:        #ae81ff;
+  --green:         #a6e22e;
+  --blue:          #66d9ef;
+  --red:           #f92672;
+  --orange:        #fd971f;
+  --yellow:        #e6db74;
+  --accent-ch:     102,217,239;
+  --green-ch:      166,226,46;
+  --blue-ch:       102,217,239;
+  --red-ch:        249,38,114;
+  --orange-ch:     253,151,31;
+  --yellow-ch:     230,219,116;
+  --purple-ch:     174,129,255;
+}
+
+[data-theme="github-dark"] {
+  --bg:            #24292e;
+  --surface:       #30363d;
+  --surface-dark:  #1a1e22;
+  --border:        #3d444d;
+  --text:          #e6edf3;
+  --text-bright:   #ffffff;
+  --accent:        #58a6ff;
+  --purple:        #d2a8ff;
+  --green:         #3fb950;
+  --blue:          #58a6ff;
+  --red:           #f85149;
+  --orange:        #ffa657;
+  --yellow:        #d29922;
+  --accent-ch:     88,166,255;
+  --green-ch:      63,185,80;
+  --blue-ch:       88,166,255;
+  --red-ch:        248,81,73;
+  --orange-ch:     255,166,87;
+  --yellow-ch:     210,153,34;
+  --purple-ch:     210,168,255;
+}
+
+[data-theme="night-owl"] {
+  --bg:            #011627;
+  --surface:       #0b2942;
+  --surface-dark:  #000c14;
+  --border:        #1d3b54;
+  --text:          #d6deeb;
+  --text-bright:   #ffffff;
+  --accent:        #82aaff;
+  --purple:        #c792ea;
+  --green:         #addb67;
+  --blue:          #7fdbca;
+  --red:           #ef5350;
+  --orange:        #ecc48d;
+  --yellow:        #f9c859;
+  --accent-ch:     130,170,255;
+  --green-ch:      173,219,103;
+  --blue-ch:       127,219,202;
+  --red-ch:        239,83,80;
+  --orange-ch:     236,196,141;
+  --yellow-ch:     249,200,89;
+  --purple-ch:     199,146,234;
+}
+
+[data-theme="nord"] {
+  --bg:            #2e3440;
+  --surface:       #3b4252;
+  --surface-dark:  #242933;
+  --border:        #4c566a;
+  --text:          #d8dee9;
+  --text-bright:   #eceff4;
+  --accent:        #88c0d0;
+  --purple:        #b48ead;
+  --green:         #a3be8c;
+  --blue:          #81a1c1;
+  --red:           #bf616a;
+  --orange:        #d08770;
+  --yellow:        #ebcb8b;
+  --accent-ch:     136,192,208;
+  --green-ch:      163,190,140;
+  --blue-ch:       129,161,193;
+  --red-ch:        191,97,106;
+  --orange-ch:     208,135,112;
+  --yellow-ch:     235,203,139;
+  --purple-ch:     180,142,173;
+}
+
+[data-theme="github-light"] {
+  --bg:            #ffffff;
+  --surface:       #f6f8fa;
+  --surface-dark:  #eaeef2;
+  --border:        #d0d7de;
+  --text:          #1f2328;
+  --text-bright:   #000000;
+  --accent:        #0969da;
+  --purple:        #8250df;
+  --green:         #1a7f37;
+  --blue:          #0969da;
+  --red:           #cf222e;
+  --orange:        #bc4c00;
+  --yellow:        #9a6700;
+  --accent-ch:     9,105,218;
+  --green-ch:      26,127,55;
+  --blue-ch:       9,105,218;
+  --red-ch:        207,34,46;
+  --orange-ch:     188,76,0;
+  --yellow-ch:     154,103,0;
+  --purple-ch:     130,80,223;
+}
+
+[data-theme="solarized-light"] {
+  --bg:            #fdf6e3;
+  --surface:       #eee8d5;
+  --surface-dark:  #e0dac7;
+  --border:        #d3cbb7;
+  --text:          #586e75;
+  --text-bright:   #073642;
+  --accent:        #268bd2;
+  --purple:        #6c71c4;
+  --green:         #859900;
+  --blue:          #2aa198;
+  --red:           #dc322f;
+  --orange:        #cb4b16;
+  --yellow:        #b58900;
+  --accent-ch:     38,139,210;
+  --green-ch:      133,153,0;
+  --blue-ch:       42,161,152;
+  --red-ch:        220,50,47;
+  --orange-ch:     203,75,22;
+  --yellow-ch:     181,137,0;
+  --purple-ch:     108,113,196;
 }
 
 body {
