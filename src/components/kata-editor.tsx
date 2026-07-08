@@ -800,15 +800,19 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
       {/* Viz controls (viz tab only) */}
       {showPanel === "viz" && (
         <div className="flex items-center gap-1 px-2">
-          <button onClick={() => sendVizMsg('prev')} className="btn btn-ghost btn-xs text-base-content/50 hover:text-base-content/80 px-2">← Prev</button>
-          <button onClick={() => sendVizMsg('step')} className="btn btn-ghost btn-xs text-base-content/50 hover:text-base-content/80 px-2">Step →</button>
-          <button onClick={() => sendVizMsg('play')} className="btn btn-ghost btn-xs text-base-content/50 hover:text-base-content/80 px-2">▷ Play</button>
-          <button onClick={() => sendVizMsg('reset')} className="btn btn-ghost btn-xs text-base-content/50 hover:text-base-content/80 px-2">↺ Reset</button>
-          <div className="flex items-center gap-0.5 ml-1">
+          <div className="join">
+            <button onClick={() => sendVizMsg('prev')} title="Previous step" className="btn btn-xs join-item border-base-300/60 bg-base-100 text-base-content/70 hover:bg-base-300/40">← Prev</button>
+            <button onClick={() => sendVizMsg('step')} title="Next step" className="btn btn-xs join-item border-base-300/60 bg-base-100 text-base-content/70 hover:bg-base-300/40">Step →</button>
+            <button onClick={() => sendVizMsg('play')} title="Play through remaining steps automatically" className="btn btn-xs join-item border-primary/50 bg-primary/10 text-primary hover:bg-primary/20">▷ Play</button>
+            <button onClick={() => sendVizMsg('reset')} title="Reset to the first step" className="btn btn-xs join-item border-base-300/60 bg-base-100 text-base-content/70 hover:bg-base-300/40">↺ Reset</button>
+          </div>
+          <div className="w-px self-stretch bg-base-300/60 mx-1" />
+          <div className="flex items-center gap-0.5">
             {(["900", "500", "200"] as const).map((s, i) => (
               <button
                 key={s}
                 onClick={() => { setVizSpeed(s); sendVizMsg({ type: 'speed', value: s }); }}
+                title="Playback speed"
                 className={`btn btn-xs px-2 ${vizSpeed === s ? "btn-primary" : "btn-ghost text-base-content/35"}`}
               >
                 {["Slow", "Norm", "Fast"][i]}
