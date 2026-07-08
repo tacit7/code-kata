@@ -41,7 +41,7 @@
   .array-cells { display: flex; flex-wrap: wrap; gap: 4px; }
   .arr-cell { width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; border-radius: 5px; font-size: 0.8rem; font-weight: 700; font-family: monospace; border: 2px solid var(--border); background: var(--bg); color: var(--text-faint); position: relative; transition: background 0.18s, border-color 0.18s, color 0.18s; }
   .arr-cell .idx-label { position: absolute; bottom: -14px; font-size: 0.55rem; color: var(--text-faint); font-weight: 400; }
-  .arr-cell.in-slice { background: rgba(99,102,241,0.12); border-color: var(--accent); color: var(--text); }
+  .arr-cell.in-slice { background: rgba(var(--accent-ch),0.12); border-color: var(--accent); color: var(--text); }
   .arr-cell.is-root { background: #9a3412; border-color: var(--orange); color: #fff; }
   .arr-cell.left-part { background: rgba(29,78,216,0.22); border-color: #3b82f6; color: #93c5fd; }
   .arr-cell.right-part { background: rgba(20,83,45,0.3); border-color: #22c55e; color: #86efac; }
@@ -99,7 +99,7 @@
     </div>
     <div class="legend-row">
       <div class="leg-item"><div class="leg-swatch" style="background:#9a3412;border-color:var(--orange)"></div>Root</div>
-      <div class="leg-item"><div class="leg-swatch" style="background:rgba(99,102,241,0.15);border-color:var(--accent)"></div>Active slice</div>
+      <div class="leg-item"><div class="leg-swatch" style="background:rgba(var(--accent-ch),0.15);border-color:var(--accent)"></div>Active slice</div>
       <div class="leg-item"><div class="leg-swatch" style="background:rgba(29,78,216,0.25);border-color:#3b82f6"></div>Left</div>
       <div class="leg-item"><div class="leg-swatch" style="background:rgba(20,83,45,0.3);border-color:#22c55e"></div>Right</div>
     </div>

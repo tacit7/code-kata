@@ -18,9 +18,9 @@
   .inp-error { font-size: 0.7rem; color: var(--bad); margin-top: 4px; display: none; }
 
   #header { padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
-  #phase-badge, .phase-badge { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; padding: 3px 10px; border-radius: var(--radius-sm); background: rgba(122,162,247,0.08); color: var(--accent); border: 1px solid rgba(122,162,247,0.18); }
-  .found-badge { color: var(--green) !important; background: rgba(158,206,106,0.1) !important; border-color: rgba(158,206,106,0.25) !important; }
-  .bad-badge { color: var(--bad) !important; background: rgba(247,118,142,0.1) !important; border-color: rgba(247,118,142,0.25) !important; }
+  #phase-badge, .phase-badge { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; padding: 3px 10px; border-radius: var(--radius-sm); background: rgba(var(--accent-ch),0.08); color: var(--accent); border: 1px solid rgba(var(--accent-ch),0.18); }
+  .found-badge { color: var(--green) !important; background: rgba(var(--green-ch),0.1) !important; border-color: rgba(var(--green-ch),0.25) !important; }
+  .bad-badge { color: var(--bad) !important; background: rgba(var(--red-ch),0.1) !important; border-color: rgba(var(--red-ch),0.25) !important; }
   #counter { font-size: 12px; color: var(--text-muted); margin-left: auto; }
 
   #main { display: flex; flex: 1; overflow: hidden; }
@@ -61,7 +61,7 @@
   #code-panel { width: 350px; min-width: 120px; max-width: 560px; flex-shrink: 0; background: var(--surface-dark); border-right: 1px solid var(--border); overflow-y: auto; overflow-x: auto; padding: 10px 12px; display: flex; flex-direction: column; }
   .code-panel-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--text-dim); margin-bottom: 8px; }
   .cl { display: flex; align-items: stretch; white-space: pre; border-left: 2px solid transparent; padding-left: 6px; font-family: monospace; font-size: 0.75rem; line-height: 1.8; color: var(--text-muted); }
-  .cl.hl { background: rgba(122,162,247,0.12); border-left-color: var(--accent); color: var(--text); }
+  .cl.hl { background: rgba(var(--accent-ch),0.12); border-left-color: var(--accent); color: var(--text); }
   .ln { display: inline-block; width: 20px; text-align: right; color: var(--text-dim); user-select: none; margin-right: 10px; font-size: 0.7rem; }
   .kw2 { color: #bb9af7; }
   .nb2 { color: #9ece6a; }

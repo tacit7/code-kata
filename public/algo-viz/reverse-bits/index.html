@@ -67,7 +67,7 @@
   }
   .bit-cell.result-placed {
     border-color: var(--green-border);
-    box-shadow: 0 0 8px rgba(158,206,106,0.45);
+    box-shadow: 0 0 8px rgba(var(--green-ch),0.45);
     background: var(--green-bg);
     color: var(--green-light);
   }
@@ -117,7 +117,7 @@
   .code-panel-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--text-dim); margin-bottom: 8px; }
   .code-body   { font-size: 0.78rem; line-height: 1.75; white-space: pre; }
   .code-line   { display: flex; align-items: center; padding: 0 4px; border-left: 2px solid transparent; }
-  .code-line.hl { background: rgba(122,162,247,0.12); border-left: 2px solid var(--accent); }
+  .code-line.hl { background: rgba(var(--accent-ch),0.12); border-left: 2px solid var(--accent); }
   .ln { min-width: 24px; color: var(--text-ghost); user-select: none; font-size: 0.7rem; }
 
   .kw { color: var(--purple); }
@@ -193,7 +193,7 @@
       <div class="register-indices" id="r-reg-idx"></div>
       <div class="legend-row">
         <div class="legend-item">
-          <div class="legend-dot" style="border-color:#4d7a23;background:rgba(158,206,106,0.12)"></div>
+          <div class="legend-dot" style="border-color:#4d7a23;background:rgba(var(--green-ch),0.12)"></div>
           Bit just placed
         </div>
       </div>

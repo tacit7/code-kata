@@ -30,12 +30,12 @@
   #array-row { display: flex; gap: 6px; align-items: flex-end; flex-wrap: wrap; justify-content: center; }
   .cell-wrap { display: flex; flex-direction: column; align-items: center; gap: 4px; }
   .cell { width: 46px; height: 46px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; font-weight: 700; border-radius: 8px; border: 2px solid var(--border); background: var(--bg); color: var(--text); transition: all 0.2s; }
-  .cell.left-ptr { border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,0.25); background: rgba(99,102,241,0.12); color: #818cf8; }
+  .cell.left-ptr { border-color: #6366f1; box-shadow: 0 0 0 3px rgba(var(--accent-ch),0.25); background: rgba(var(--accent-ch),0.12); color: #818cf8; }
   .cell.right-ptr { border-color: #f97316; box-shadow: 0 0 0 3px rgba(249,115,22,0.25); background: rgba(249,115,22,0.12); color: #fb923c; }
   .cell.both-ptr { border-color: #a21caf; box-shadow: 0 0 0 3px rgba(162,28,175,0.25); background: rgba(162,28,175,0.12); color: #e879f9; }
-  .cell.written { border-color: var(--green, #9ece6a); background: rgba(158,206,106,0.15); color: var(--green, #9ece6a); }
+  .cell.written { border-color: var(--green, #9ece6a); background: rgba(var(--green-ch),0.15); color: var(--green, #9ece6a); }
   .cell.dup { border-color: var(--border); background: rgba(128,128,128,0.12); color: var(--text-dim); }
-  .cell.done-k { border-color: var(--green, #9ece6a); background: rgba(158,206,106,0.15); }
+  .cell.done-k { border-color: var(--green, #9ece6a); background: rgba(var(--green-ch),0.15); }
   .cell.done-tail { border-color: var(--border); background: rgba(128,128,128,0.08); color: var(--text-dim); opacity: 0.45; }
   .ptr-label { font-size: 0.62rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; height: 14px; }
   .ptr-label.L { color: #6366f1; }
@@ -44,7 +44,7 @@
 
   #status-msg { font-size: 13px; color: var(--text-muted); text-align: center; max-width: 560px; min-height: 36px; line-height: 1.5; }
   #result-badge { padding: 8px 14px; border-radius: 6px; font-size: 0.85rem; font-weight: 600; text-align: center; display: none; }
-  #result-badge.show { background: rgba(158,206,106,0.15); border: 1px solid var(--green-border, #4a7c59); color: var(--green, #9ece6a); display: block; }
+  #result-badge.show { background: rgba(var(--green-ch),0.15); border: 1px solid var(--green-border, #4a7c59); color: var(--green, #9ece6a); display: block; }
 
   .legend { display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; font-size: 0.72rem; color: var(--text-dim); }
   .legend-item { display: flex; align-items: center; gap: 5px; }
@@ -56,7 +56,7 @@
   #code-panel { width: 350px; min-width: 120px; max-width: 560px; flex-shrink: 0; background: var(--surface-dark); border-right: 1px solid var(--border); overflow-y: auto; overflow-x: auto; padding: 10px 12px; display: flex; flex-direction: column; }
   .code-panel-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--text-dim); margin-bottom: 8px; }
   .cl { display: flex; align-items: stretch; padding: 2px 0; white-space: pre; border-left: 2px solid transparent; padding-left: 6px; color: var(--text-muted); transition: all 0.2s; font-family: "Fira Code", "Cascadia Code", monospace; font-size: 0.75rem; line-height: 1.8; }
-  .cl.hl { background: rgba(122,162,247,0.12); border-left-color: var(--accent); color: var(--text); }
+  .cl.hl { background: rgba(var(--accent-ch),0.12); border-left-color: var(--accent); color: var(--text); }
   .ln { display: inline-block; width: 20px; text-align: right; color: var(--text-dim); user-select: none; margin-right: 10px; font-size: 0.7rem; }
   .kw { color: var(--purple); }
   .nb { color: var(--green); }
@@ -119,10 +119,10 @@
     </div>
     <div id="result-badge"></div>
     <div class="legend">
-      <div class="legend-item"><div class="legend-dot" style="border-color:#6366f1;background:rgba(99,102,241,0.12)"></div> left (write)</div>
+      <div class="legend-item"><div class="legend-dot" style="border-color:#6366f1;background:rgba(var(--accent-ch),0.12)"></div> left (write)</div>
       <div class="legend-item"><div class="legend-dot" style="border-color:#f97316;background:rgba(249,115,22,0.12)"></div> right (read)</div>
       <div class="legend-item"><div class="legend-dot" style="border-color:#a21caf;background:rgba(162,28,175,0.12)"></div> both</div>
-      <div class="legend-item"><div class="legend-dot" style="border-color:var(--green,#9ece6a);background:rgba(158,206,106,0.1)"></div> written</div>
+      <div class="legend-item"><div class="legend-dot" style="border-color:var(--green,#9ece6a);background:rgba(var(--green-ch),0.1)"></div> written</div>
       <div class="legend-item"><div class="legend-dot" style="border-color:var(--border);background:rgba(128,128,128,0.12)"></div> duplicate</div>
     </div>
   </div>

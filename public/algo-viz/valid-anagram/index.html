@@ -45,7 +45,7 @@
   .freq-cell.positive .count-val { color: var(--green); }
   .freq-cell.negative { background: #2a0f14; border-color: #6b2030; }
   .freq-cell.negative .count-val { color: var(--red); }
-  .freq-cell.active { border-color: var(--accent); box-shadow: 0 0 8px rgba(122,162,247,0.3); }
+  .freq-cell.active { border-color: var(--accent); box-shadow: 0 0 8px rgba(var(--accent-ch),0.3); }
 
   .result-banner { font-size: 0.95rem; font-weight: 700; padding: 8px 16px; border-radius: 6px; display: none; width: fit-content; }
   .result-banner.true { background: var(--green-bg); color: var(--green); border: 1px solid var(--green-border); display: block; }
@@ -60,7 +60,7 @@
   .cl { display: flex; align-items: stretch; padding: 0 14px 0 0; white-space: pre; border-left: 3px solid transparent; }
   .cl .ln { width: 28px; min-width: 28px; text-align: right; color: var(--text-dim); user-select: none; padding-right: 14px; font-size: 0.72rem; line-height: 1.75; }
   .cl .code { color: var(--text-muted); font-family: 'Fira Code', 'Cascadia Code', monospace; font-size: 0.78rem; line-height: 1.75; }
-  .cl.hl { background: rgba(122,162,247,0.12); border-left-color: var(--accent); }
+  .cl.hl { background: rgba(var(--accent-ch),0.12); border-left-color: var(--accent); }
   .kw { color: var(--purple); }
   .fn { color: var(--blue); }
   .bi { color: var(--orange); }

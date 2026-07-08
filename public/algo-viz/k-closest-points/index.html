@@ -255,7 +255,7 @@ function drawPlot(canvas, pts, s) {
     var maxD2 = s.heap[0].d2, maxR = Math.sqrt(maxD2);
     var p0b = worldToCanvas(0, 0, range, cw, ch), p1b = worldToCanvas(maxR, 0, range, cw, ch);
     ctx.beginPath(); ctx.arc(ox[0], ox[1], Math.abs(p1b[0] - p0b[0]), 0, Math.PI * 2);
-    ctx.strokeStyle = 'rgba(99,102,241,0.3)'; ctx.lineWidth = 1; ctx.setLineDash([6, 3]); ctx.stroke(); ctx.setLineDash([]);
+    ctx.strokeStyle = 'rgba(var(--accent-ch),0.3)'; ctx.lineWidth = 1; ctx.setLineDash([6, 3]); ctx.stroke(); ctx.setLineDash([]);
   }
   var keptSet = {};
   for (var ki = 0; ki < s.keptSet.length; ki++) keptSet[s.keptSet[ki]] = true;
