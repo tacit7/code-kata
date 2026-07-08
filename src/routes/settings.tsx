@@ -2,7 +2,8 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router";
 import { useSettingsStore, DEFAULT_SHORTCUTS } from "../stores/settings-store";
 import type { ShortcutAction } from "../stores/settings-store";
-import { reseedKatas } from "../lib/database";
+import { confirm } from "@tauri-apps/plugin-dialog";
+import { reseedKatas, resetAllProgress } from "../lib/database";
 import { APP_THEMES } from "../lib/editor-themes";
 import { useKataStore } from "../stores/kata-store";
 
@@ -241,6 +242,8 @@ function PracticeTab() {
   const navigate = useNavigate();
   const [reseeding, setReseeding] = useState(false);
   const [reseedMsg, setReseedMsg] = useState<string | null>(null);
+  const [resettingAll, setResettingAll] = useState(false);
+  const [resetAllMsg, setResetAllMsg] = useState<string | null>(null);
 
   async function handleReseed() {
     setReseeding(true);
@@ -253,6 +256,25 @@ function PracticeTab() {
       setReseedMsg(String(e));
     } finally {
       setReseeding(false);
+    }
+  }
+
+  async function handleResetAllProgress() {
+    const ok = await confirm("Reset progress for every kata? This clears all best times and streaks.", {
+      title: "Reset All Progress",
+      kind: "warning",
+    });
+    if (!ok) return;
+    setResettingAll(true);
+    setResetAllMsg(null);
+    try {
+      await resetAllProgress();
+      await useKataStore.getState().loadKatas(language);
+      setResetAllMsg("All progress reset.");
+    } catch (e) {
+      setResetAllMsg(String(e));
+    } finally {
+      setResettingAll(false);
     }
   }
 
@@ -272,6 +294,16 @@ function PracticeTab() {
           </button>
           {reseedMsg && (
             <p className="text-[11px] text-base-content/50">{reseedMsg}</p>
+          )}
+          <button
+            onClick={handleResetAllProgress}
+            disabled={resettingAll}
+            className="btn btn-ghost btn-sm text-xs gap-1 self-start text-error"
+          >
+            {resettingAll ? "Resetting..." : "Reset All Progress"}
+          </button>
+          {resetAllMsg && (
+            <p className="text-[11px] text-base-content/50">{resetAllMsg}</p>
           )}
         </div>
       </div>

@@ -1,10 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router";
+import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
+import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { useKataStore } from "../stores/kata-store";
 import type { LibrarySortMode } from "../stores/kata-store";
 import { useSettingsStore } from "../stores/settings-store";
 import { CATEGORY_LEVEL } from "../lib/levels";
-import { reseedKatas } from "../lib/database";
+import { reseedKatas, resetKataProgress } from "../lib/database";
 
 // Module-level so the list position survives navigating to a kata and back
 // (resets only on full app reload).
@@ -105,12 +108,16 @@ export function PracticePage() {
     });
   }, [katas, search, diffSort, sortMode, dailyKataIds, bestTimes, streaks]);
 
-  const toggleDaily = (id: number, e: React.MouseEvent) => {
-    e.stopPropagation();
+  const toggleFavoriteById = (id: number) => {
     const next = dailyKataIds.includes(id)
       ? dailyKataIds.filter((x) => x !== id)
       : [...dailyKataIds, id];
     setSetting("dailyKataIds", next);
+  };
+
+  const toggleDaily = (id: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    toggleFavoriteById(id);
   };
 
   const toggleDone = (id: number, e: React.MouseEvent) => {
@@ -139,6 +146,39 @@ export function PracticePage() {
     } finally {
       setReseeding(false);
     }
+  };
+
+  // Native right-click menu on a kata row (see show_kata_context_menu in
+  // src-tauri/src/lib.rs) — Rust just shows the OS menu and relays which
+  // item fired; this owns navigation/store state/clipboard.
+  useEffect(() => {
+    const unlisten = listen<{ action: string; kataId: number }>("kata-context-action", (event) => {
+      const { action, kataId } = event.payload;
+      const kata = katas.find((k) => k.id === kataId);
+      if (!kata) return;
+      switch (action) {
+        case "start":
+          navigate(`/editor/${kataId}`);
+          break;
+        case "favorite":
+          toggleFavoriteById(kataId);
+          break;
+        case "reset":
+          if (confirm(`Reset progress for "${kata.name}"? This clears its best time and streak.`)) {
+            void resetKataProgress(kataId).then(() => useKataStore.getState().loadKatas(language));
+          }
+          break;
+        case "copy":
+          void writeText(kata.name);
+          break;
+      }
+    });
+    return () => { void unlisten.then((fn) => fn()); };
+  }, [katas, dailyKataIds, language, navigate]);
+
+  const handleKataContextMenu = (e: React.MouseEvent, kataId: number) => {
+    e.preventDefault();
+    void invoke("show_kata_context_menu", { kataId, isFavorite: dailyKataIds.includes(kataId) });
   };
 
   const listRef = useRef<HTMLDivElement>(null);
@@ -254,6 +294,7 @@ export function PracticePage() {
                 id={`kata-row-${kata.id}`}
                 onClick={() => { setSelectedIndex(idx); navigate(`/editor/${kata.id}`); }}
                 onMouseEnter={() => setSelectedIndex(idx)}
+                onContextMenu={(e) => handleKataContextMenu(e, kata.id)}
                 className={`cursor-pointer transition-colors border-base-300/30 ${
                   idx === selectedIndex ? "bg-primary/10 border-l-2 border-l-primary" : "hover:bg-base-300/20"
                 }`}
