@@ -45,6 +45,20 @@
   .arr-indices { display: flex; gap: 6px; }
   .arr-idx { min-width: 48px; flex-shrink: 0; text-align: center; font-size: 0.6rem; color: var(--text-dim); }
 
+  /* The suffix marker rides this track, parked under the result cell it is
+     about to multiply into. It starts at the last cell and walks left. */
+  .suffix-track { position: relative; height: 30px; margin-top: 2px; }
+  .suffix-badge {
+    position: absolute; top: 0; left: 0;
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 4px 10px; border-radius: 6px;
+    border: 2px solid var(--accent); background: rgba(var(--accent-ch),0.12);
+    color: var(--accent); font-family: monospace; font-size: 0.78rem; font-weight: 700;
+    white-space: nowrap; opacity: 0;
+  }
+  .sfx-arrow { font-size: 0.7rem; }
+  .sfx-tag { color: var(--text-dim); font-weight: 400; }
+
   #resize-handle { width: 5px; flex-shrink: 0; cursor: col-resize; background: transparent; border-left: 1px solid var(--border); transition: background .15s; z-index: 10; }
   #resize-handle:hover, #resize-handle.dragging { background: var(--accent); }
 
@@ -255,11 +269,24 @@ function buildArraySection(nums) {
       idx.appendChild(idxEl);
     }
     sec.appendChild(g);
+    return g;
   }
 
   makeGroup('nums (input)', 'nums');
   makeGroup('prefix pass (left → right)', 'prefix');
-  makeGroup('result = prefix × suffix (fills right → left)', 'result');
+  var resultGroup = makeGroup('result = prefix × suffix (fills right → left)', 'result');
+
+  // The marker is positioned against this track, so the track must be the
+  // badge's offset parent and must line up with the result row's left edge.
+  var track = document.createElement('div');
+  track.className = 'suffix-track';
+  track.id = 'suffix-track';
+  var badge = document.createElement('div');
+  badge.className = 'suffix-badge';
+  badge.id = 'suffix-badge';
+  badge.innerHTML = '<span class="sfx-arrow">&#9664;</span><span class="sfx-tag">suffix =</span><span id="suffix-badge-val">1</span>';
+  track.appendChild(badge);
+  resultGroup.appendChild(track);
 
   for (var k = 0; k < n; k++) {
     document.getElementById('nums-' + k).textContent = nums[k];
@@ -318,6 +345,48 @@ function simulate(nums) {
   return steps;
 }
 
+// ── Suffix marker ─────────────────────────────────────────────────────────────
+// Parks under the result cell it is about to multiply into, and walks one cell
+// left per step. While the prefix pass runs it waits, hidden, at the last cell
+// — parking it under the prefix pass's own `i` would make it slide left-to-right
+// when the suffix pass starts, which is backwards from what it does.
+function updateSuffixMarker(s, n, animate) {
+  var badge = document.getElementById('suffix-badge');
+  var track = document.getElementById('suffix-track');
+  var valEl = document.getElementById('suffix-badge-val');
+  if (!badge || !track || !valEl) return;
+
+  var active = s.phaseType === 'suffix';
+  var idx;
+  if (active)                       idx = s.i < 0 ? n - 1 : s.i;  // i < 0 on the "suffix = 1" snapshot
+  else if (s.phaseType === 'done')  idx = 0;                      // where it came to rest
+  else                              idx = n - 1;                  // waiting at the start
+
+  var cell = document.getElementById('result-' + idx);
+  if (!cell) return;
+
+  valEl.textContent = (s.suffix === null || s.suffix === undefined) ? '—' : String(s.suffix);
+
+  // Measured, not computed from cell width: the badge's width changes with the
+  // number it holds, and the row's gaps are not part of the cell box.
+  var x = cell.getBoundingClientRect().left - track.getBoundingClientRect().left
+        + (cell.offsetWidth - badge.offsetWidth) / 2;
+
+  // A travel tween outlives the step that started it, and it keeps writing
+  // opacity/x every frame. Without overwriting, a fast Play or a short array
+  // leaves the badge visible after the suffix pass ends, because the tween wins
+  // the race against the gsap.set below.
+  if (!active) {
+    gsap.killTweensOf(badge);
+    gsap.set(badge, { opacity: 0, x: x });
+  } else if (animate) {
+    gsap.to(badge, { opacity: 1, x: x, duration: 0.3, ease: 'power2.out', overwrite: true });
+  } else {
+    gsap.killTweensOf(badge);
+    gsap.set(badge, { opacity: 1, x: x });
+  }
+}
+
 // ── Apply step ────────────────────────────────────────────────────────────────
 function applyStep(s, animate) {
   var n = s.result.length;
@@ -353,6 +422,8 @@ function applyStep(s, animate) {
       gsap.fromTo(resultEl, { scale: 0.8, opacity: 0.4 }, { scale: 1, opacity: 1, duration: 0.22, ease: 'back.out(1.7)' });
     }
   }
+
+  updateSuffixMarker(s, n, animate);
 
   // Sidebar vars
   function setVar(id, val) {
