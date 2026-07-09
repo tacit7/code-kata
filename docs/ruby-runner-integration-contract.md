@@ -65,7 +65,7 @@ The `"Timeout"` error string is template-interpolated at `test-runner.ts:10` and
 | `UI_TRUNCATE_BYTES` | 8 192 | `ruby-exec-core.ts` | String fields (error, output, expected, got) are sliced to this before reaching the UI |
 | `WATCHDOG_MS` | 5 000 ms | `test-runner.ts:4` (bare literal) | JS-side watchdog for the JS runner path — **duplicates `EXEC_TIMEOUT_MS` instead of importing it** |
 
-> **Known inconsistency:** `WATCHDOG_MS` at `test-runner.ts:4` is a bare `5000` literal, not an import of `EXEC_TIMEOUT_MS`. These are two independent sources of truth for the same deadline. A native implementation should import `EXEC_TIMEOUT_MS` from `ruby-exec-core.ts` directly and avoid introducing a third definition. Fixing the duplicate is tracked as a separate cleanup item.
+> **Known inconsistency:** `WATCHDOG_MS` at `test-runner.ts:4` is a bare `5000` literal, not an import of `EXEC_TIMEOUT_MS`. These are two independent sources of truth for the same deadline. A native implementation should import `EXEC_TIMEOUT_MS` from `ruby-exec-core.ts` directly and avoid introducing a third definition. Fixing the duplicate is tracked as task **#8513**.
 
 A native runner owns `EXEC_TIMEOUT_MS` enforcement. A JS-side `setTimeout` wrapping an `invoke()` call is **not acceptable** — a blocked native thread will not respond to JS-level cancellation.
 
@@ -223,9 +223,9 @@ When a prototype branch is ready, review against this document:
 
 The following cannot be reviewed until prototype branches are available:
 
-- **Native-process prototype (TBD branch):** Verify process spawn model, timeout kill signal, and IPC serialization.
-- **Wasmtime prototype (TBD branch):** Verify WASM sandbox isolation, memory reclaim after each run, and that the Wasmtime-side prelude matches `buildPrelude()` exactly.
-- **Packaging assessment notes (TBD):** Confirm that the native binary or WASM bundle size is within acceptable Tauri app bundle constraints.
+- **Native-process prototype (task #8505, In Progress):** Work is uncommitted in the worktree — `src-tauri/src/lib.rs` modified, `src/lib/native-ruby-runner.ts` untracked. Review pending commit. Items to verify: process spawn model, timeout kill signal, IPC serialization.
+- **Wasmtime prototype (task #8506, In Progress):** Work is uncommitted in the worktree — `wasmtime-poc/` untracked. Review pending commit. Items to verify: WASM sandbox isolation, memory reclaim after each run, Wasmtime-side prelude matches `buildPrelude()` exactly.
+- **Packaging assessment:** Landed — commit `b94861593` on `worktree-ruby-runtime-packaging-assessment`. Review can proceed against that branch.
 - **REPL backend:** The contract above covers the test runner path. REPL (`repl_eval`/`repl_reset` messages, persistent VM) is a separate concern and is not blocked by this contract — but any native runner must not regress REPL functionality.
 
-Update this section with branch names and findings when prototypes land.
+Update prototype bullets when #8505 and #8506 commit their work.
