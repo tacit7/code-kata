@@ -51,18 +51,21 @@ interface TestResult {
 | `"runner_error"` | No `def test_*` methods found in `testCode` | `{ name: "runner_error", passed: false, error: "No test_* methods in test code" }` |
 | `"Timeout"` | Execution time exceeds `EXEC_TIMEOUT_MS` | `{ name: "Timeout", passed: false, error: "Execution exceeded 5s — possible infinite loop" }` |
 
-The `"Timeout"` error string is hardcoded in the UI. Do not alter the exact wording.
+The `"Timeout"` error string is template-interpolated at `test-runner.ts:10` and `ruby-runner.ts:29` — it is not read back by any UI component. The compat rule still applies: do not alter the exact wording, because any native runner must produce the same string for the two existing JS definitions to remain consistent.
 
 ---
 
-## 4. Execution Constants (source: `src/lib/ruby-exec-core.ts`)
+## 4. Execution Constants
 
-| Constant | Value | Meaning |
-|---|---|---|
-| `INIT_TIMEOUT_MS` | 15 000 ms | Max time to boot the Ruby runtime before giving up |
-| `EXEC_TIMEOUT_MS` | 5 000 ms | Max wall time for one test run (all tests combined) |
-| `OUTPUT_CAP_BYTES` | 262 144 (256 KB) | Per-test stdout byte limit inside Ruby |
-| `UI_TRUNCATE_BYTES` | 8 192 | String fields (error, output, expected, got) are sliced to this before reaching the UI |
+| Constant | Value | Source | Meaning |
+|---|---|---|---|
+| `INIT_TIMEOUT_MS` | 15 000 ms | `ruby-exec-core.ts` | Max time to boot the Ruby runtime before giving up |
+| `EXEC_TIMEOUT_MS` | 5 000 ms | `ruby-exec-core.ts` | Max wall time for one test run (all tests combined) |
+| `OUTPUT_CAP_BYTES` | 262 144 (256 KB) | `ruby-exec-core.ts` | Per-test stdout byte limit inside Ruby |
+| `UI_TRUNCATE_BYTES` | 8 192 | `ruby-exec-core.ts` | String fields (error, output, expected, got) are sliced to this before reaching the UI |
+| `WATCHDOG_MS` | 5 000 ms | `test-runner.ts:4` (bare literal) | JS-side watchdog for the JS runner path — **duplicates `EXEC_TIMEOUT_MS` instead of importing it** |
+
+> **Known inconsistency:** `WATCHDOG_MS` at `test-runner.ts:4` is a bare `5000` literal, not an import of `EXEC_TIMEOUT_MS`. These are two independent sources of truth for the same deadline. A native implementation should import `EXEC_TIMEOUT_MS` from `ruby-exec-core.ts` directly and avoid introducing a third definition. Fixing the duplicate is tracked as a separate cleanup item.
 
 A native runner owns `EXEC_TIMEOUT_MS` enforcement. A JS-side `setTimeout` wrapping an `invoke()` call is **not acceptable** — a blocked native thread will not respond to JS-level cancellation.
 
@@ -159,7 +162,7 @@ The command returns `TestResult[]` directly. Serialization over the Tauri IPC br
 
 Before a native runner prototype is considered mergeable, all of the following must pass:
 
-- [ ] `pnpm test` — unit tests for `ruby-exec-core.ts` pass (8 suites, covers `extractTestNames`, `buildRunnerScript`, `parseRunResults`, REPL helpers).
+- [ ] `pnpm test` — full suite passes (19 test files, ~163 tests as of js-ruby-version HEAD). `ruby-exec-core.test.ts` has 5 `describe` blocks covering `extractTestNames`, `buildRunnerScript`, `parseRunResults`, synthetic results, and REPL helpers.
 - [ ] `pnpm build` — TypeScript strict-mode build succeeds with no type errors.
 - [ ] `cargo check && cargo clippy` — Rust backend lints clean for any touched Rust code.
 - [ ] Manual: run the "Frequency Count" kata in the Tauri app while monitoring Activity Monitor — WebKit.WebContent CPU must not spike during Ruby execution.
