@@ -142,19 +142,37 @@ Each test run gets a fresh Ruby VM. There is no cross-run state. The current bro
 
 ## 7. Tauri Command Interface (if delegating via invoke)
 
-If the native implementation exposes a Tauri command, the expected interface is:
+The native implementation exposes a single Tauri command that accepts a fully-assembled Ruby script string. **The frontend is responsible for all Ruby source construction using the `ruby-exec-core` builders. Rust must not construct Ruby source.**
 
 ```ts
-// Frontend call site (inside ruby-runner.ts or a replacement):
-const results: TestResult[] = await invoke<TestResult[]>("run_ruby_tests", {
+// Frontend assembles the full script before invoking:
+const testNames = extractTestNames(testCode);
+if (testNames.length === 0) return runnerErrorResult();
+
+const script = [
+  buildPrelude(),
   userCode,
   testCode,
-});
+  buildRunnerScript(testNames),
+].join("\n");
+
+const raw = await invoke<{ status: string; output?: string; message?: string }>(
+  "run_ruby_tests",
+  { script },
+);
 ```
 
-The command returns `TestResult[]` directly. Serialization over the Tauri IPC bridge must preserve all optional fields. Fields absent from the result object must not arrive as `null` — either omit them or strip nulls on the frontend.
+**Rust return shape** — the command returns one of three status variants:
 
-**Timeout handling:** the native command must enforce the 5 s deadline internally and return the `Timeout` sentinel result rather than hanging. The frontend must not need a `setTimeout` wrapper.
+| `status` | Fields present | Meaning |
+|---|---|---|
+| `"ok"` | `output: string` | Runner completed; `output` is the JSON produced by `buildRunnerScript` — pass to `parseRunResults` |
+| `"timeout"` | — | Wall-clock deadline exceeded; frontend returns the `Timeout` sentinel |
+| `"error"` | `message: string` | Process failed to start or crashed before producing output; frontend returns `loadErrorResult(message)` |
+
+**Rationale:** keeping `buildPrelude` / `buildRunnerScript` / `parseRunResults` in `ruby-exec-core.ts` as the single source of Ruby codegen prevents drift between the browser WASM path and the native path. Rust is a dumb executor.
+
+**Timeout handling:** the native command enforces the wall-clock deadline and returns `status: "timeout"` — the frontend must not wrap `invoke` in a `setTimeout`.
 
 ---
 
@@ -178,7 +196,13 @@ When a prototype branch is ready, review against this document:
 ### 9.1 Command Signature
 - [ ] `runTests(userCode, testCode, language)` unchanged in `test-runner.ts`.
 - [ ] Ruby dispatch still goes through `runTests` — no alternative call sites bypassing it.
-- [ ] Tauri invoke call (if applicable) uses `{ userCode, testCode }` keys.
+- [ ] Tauri invoke call uses `{ script }` — a single pre-assembled string, not `{ userCode, testCode }`.
+- [ ] `script` is built exclusively from `ruby-exec-core` exports (`buildPrelude`, `buildRunnerScript`) — Rust contains no Ruby source construction.
+- [ ] Rust returns `{ status: "ok", output }` / `{ status: "timeout" }` / `{ status: "error", message }` — no other shapes.
+- [ ] Frontend maps `"ok"` → `parseRunResults`, `"timeout"` → `timeoutResult`, `"error"` → `loadErrorResult`.
+
+### 9.1a Constant Sourcing
+- [ ] Native side does not redeclare `EXEC_TIMEOUT_MS` / `OUTPUT_CAP_BYTES` as independent literals (e.g. `RUBY_TIMEOUT_SECS`, `OUTPUT_CAP_BYTES` in `lib.rs`). Values must be derived from or kept in sync with `ruby-exec-core.ts` — document the sync mechanism if a Rust constant is unavoidable.
 
 ### 9.2 TestResult Compatibility
 - [ ] `name`, `passed` always present.
@@ -223,7 +247,11 @@ When a prototype branch is ready, review against this document:
 
 Status of items pending prototype delivery:
 
-- **Native-process prototype (task #8505, In Progress):** Work is uncommitted in the worktree — `src-tauri/src/lib.rs` modified, `src/lib/native-ruby-runner.ts` untracked. Review pending commit. Items to verify: process spawn model, timeout kill signal, IPC serialization.
+- **Native-process prototype (task #8505):** Landed — `aa4420b5b` on `worktree-ruby-native-runner-prototype` (PR #710). **Not merge-ready — three open blockers found:**
+  1. **Unconditional `kill -9` on a possibly-recycled PID** — if the child exits between the timeout firing and the signal, the PID may have been reused by another process.
+  2. **Full parent-env inheritance** — `GEM_HOME`, `RUBYOPT`, and other env vars leak into the child process, allowing the host Ruby environment to alter kata behavior.
+  3. **No Ruby version pin** — smoke test ran on Ruby 3.2.2, but a Finder-launched `.app` resolves `/usr/bin/ruby` (2.6.10 on macOS). Must pin or vendor a known-good binary.
+  Contract issues requiring fixes before merge: §7 `{script}` shape not yet implemented (currently passes `{userCode, testCode}` to Rust); `RUBY_TIMEOUT_SECS` and `OUTPUT_CAP_BYTES` hardcoded in `lib.rs` (violates §9.1a).
 - **Wasmtime prototype (task #8506, In Progress):** Work is uncommitted in the worktree — `wasmtime-poc/` untracked. Review pending commit. Items to verify: WASM sandbox isolation, memory reclaim after each run, Wasmtime-side prelude matches `buildPrelude()` exactly.
 - **Packaging assessment:** Landed (`b94861593`, `worktree-ruby-runtime-packaging-assessment`), but recommendation contested. The assessment recommends wasmi (Option B2) and claims fuel consumption provides equivalent timeout enforcement. **This conflicts with §4 and §9.3:** `EXEC_TIMEOUT_MS` is defined as a *wall-clock* limit; §9.3 requires the enforced deadline to be "wall-clock". wasmi fuel counts instructions, not time — it cannot express "5 seconds" without calibration that varies per host CPU. Only Wasmtime epoch interruption satisfies §9.3 natively. The assessment also cites file sizes as benchmark numbers and omits Ruby VM cold-boot cost (which `INIT_TIMEOUT_MS = 15 000 ms` already tells us is expensive). **Status: pending benchmark** (cold-boot on both engines, Wizer evaluation) requested from packaging team. Engine choice must satisfy §9.3; the contract is the authority, not the assessment.
 - **REPL backend:** The contract above covers the test runner path. REPL (`repl_eval`/`repl_reset` messages, persistent VM) is a separate concern and is not blocked by this contract — but any native runner must not regress REPL functionality.
