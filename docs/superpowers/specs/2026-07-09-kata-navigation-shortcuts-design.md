@@ -1,7 +1,7 @@
 # Kata Navigation Shortcuts — Design
 
 **Date:** 2026-07-09
-**Status:** Approved
+**Status:** Approved, pending implementation
 **Branch:** `app-core` (language-agnostic; merges out to `main`, `js-ruby-version`, then `ruby-kata` via the `core` remote)
 
 ## Problem
@@ -55,6 +55,24 @@ Both remain remappable in Settings.
 
 Finishing a session becomes click-only. That is intentional.
 
+### Shortcut focus policy
+
+`nextKata` and `prevKata` are allowed to fire while Monaco has focus. This is
+intentional: the new default binding avoids Monaco's `Cmd+Left` / `Cmd+Right`
+cursor movement, and kata navigation is an editor-local action a user expects to
+work without first clicking away from the code.
+
+`useKeyboardShortcuts` binds a `window` listener with no focus guard, so if a user
+deliberately remaps next/prev onto a Monaco-owned binding, the app-level shortcut
+wins and overrides the editor. That is the user's choice, not a bug, and no guard
+is added to prevent it.
+
+Static check (2026-07-09): `monaco-editor/esm` contains no
+`KeyMod.CtrlCmd | KeyMod.Alt | KeyCode.LeftArrow/RightArrow` binding, and
+`monaco-vim`'s dist binds no `Alt-Left/Right` or `Cmd-Left/Right`. A grep cannot see
+runtime `addCommand` calls, so the binding is still confirmed by hand in the
+packaged app against both Monaco and monaco-vim before release.
+
 When a key is a no-op (first or last item), the existing kata counter (`3 of 5`)
 pulses briefly. No toast, no dialog. A silent no-op reads as a broken key.
 
@@ -70,28 +88,69 @@ A `number[]` of kata ids representing the Problems list as the user last saw it.
 and already tracks `selectedIndex`. It publishes `searchedKatas.map(k => k.id)`
 whenever that list changes. Nothing else writes `browseOrder`.
 
+The published order is the **rendered** order, not the raw store order. Publishing all
+kata ids from the store would be a plausible-looking optimization that silently breaks
+the feature, so the rule is stated rather than left to inference.
+
 Deliberately **not persisted**. A cold-opened editor has no neighbours, which the
 behavior table accounts for. Persisting it would resurrect a stale ordering from a
 filter the user no longer has applied.
 
+### `resolveKataNavigation()` — `src/lib/kata-navigation.ts`
+
+All the decision-making, as a pure function. No React, no stores, no router.
+
+```ts
+resolveKataNavigation({
+  mode: "session" | "browse",
+  currentKataId: number,
+  currentIndex: number,        // session mode only
+  sessionKataIds: number[],
+  browseOrder: number[],
+  availableKataIds: ReadonlySet<number>,
+}): {
+  prevId?: number
+  nextId?: number
+  prevIndex?: number           // session mode only
+  nextIndex?: number
+  hasPrev: boolean
+  hasNext: boolean
+}
+```
+
+It performs every bounds check, handles `indexOf === -1`, and clamps at both ends.
+Callers never index a list themselves.
+
+**Stale ids.** `browseOrder` is a snapshot and the kata store moves underneath it:
+`loadKatas(language)` replaces the whole list on a language switch, and `deleteKata`
+removes custom katas. So the resolver filters `browseOrder` against
+`availableKataIds` before computing neighbours, and never returns an id that no
+longer exists. The app must not navigate to `/editor/:id` merely because the id
+appears in `browseOrder`.
+
+**Session mode is governed by the queue, not the route.** `nextIndex`/`prevIndex` are
+returned only when that index exists in `sessionKataIds`. The resolver never infers
+position from `currentKataId` in session mode, so route/store drift cannot move the
+queue.
+
+A `currentKataId` absent from the governing list (cold open) yields
+`hasNext === hasPrev === false` and no throw.
+
 ### `useKataNavigation()` — `src/hooks/use-kata-navigation.ts`
 
-The single answer to "what is next?". Reads the route to pick the governing list:
+A thin React adapter over the resolver. It reads the route to pick `mode`, pulls the
+two lists and `availableKataIds` from the stores, and owns mutation only:
 
-```
-inside a session → sessionKatas / currentIndex   (session-store)
-otherwise        → browseOrder  / indexOf(kata.id) (kata-store)
-```
+- session mode → set `currentIndex` to the resolved index
+- browse mode  → `navigate('/editor/:nextId')`
 
-Returns `{ next, prev, hasNext, hasPrev }`. `next()` and `prev()` are no-ops at the
-ends. All clamping lives here; callers never index a list themselves.
+It returns `{ next, prev, hasNext, hasPrev }`. `next` and `prev` are
+`useCallback`-stable, so `KataEditor` can memoize its shortcut handlers and stop
+rebinding the global keydown listener on every keystroke. Without that stability the
+call-site `useMemo` is decorative.
 
-A kata whose id is absent from `browseOrder` (cold open) yields
-`hasNext === hasPrev === false` and no throw. `indexOf` returning `-1` is the most
-likely bug in this unit and is tested explicitly.
-
-The session case navigates by mutating `currentIndex`; the browse case navigates by
-`navigate('/editor/:id')`. The hook hides that difference behind `next()`.
+The hook owns no animation state. It exposes `hasNext`/`hasPrev`; the component
+decides whether to pulse the counter before calling `next()`/`prev()`.
 
 ### Shortcut registration moves to `KataEditor`
 
@@ -134,10 +193,33 @@ its id from the closure the effect was created with.
 
 **Extraction for testability:** the debounce moves into a pure
 `src/lib/autosave.ts` exposing `createAutosave({ delayMs, save })` with
-`schedule(id, getValue)` and `flush()`. This is testable with vitest fake timers and
-no DOM. The alternative — asserting the flush through the mounted component — would
-require adding `jsdom` and `@testing-library/react`, neither of which this repo has,
-to test one behavior. Not worth it.
+`schedule(id, readValue)` and `flush()`. Testable with vitest fake timers and no DOM.
+The alternative — asserting the flush through the mounted component — would require
+adding `jsdom` and `@testing-library/react`, neither of which this repo has, to test
+one behavior. Not worth it.
+
+`readValue` is named for when it runs: the value is read at flush time, not at
+schedule time, so the save always writes the editor's latest content.
+
+#### Autosave scheduling semantics
+
+The flush is conditional on the id, and that condition is load-bearing:
+
+- `schedule(sameId, readValue)` while a save is pending → **reset the timer**. Plain
+  debounce. No write.
+- `schedule(differentId, readValue)` while a save is pending → **flush the pending
+  save first**, using the pending save's own id and its own `readValue`, then schedule
+  the new one.
+- `flush()` → write the pending save under its own id. A no-op when nothing is
+  pending.
+
+An unconditional "flush whatever is pending on every `schedule()`" would be wrong.
+`onChange` fires on every keystroke and calls `schedule(kata.id, …)`, so flushing each
+time means a `saveUserCode` IPC round trip and a SQLite write per character. The
+1500ms debounce exists to prevent exactly that.
+
+The dropped-save hole still closes: a pending save can only be abandoned by an id
+change or by unmount, and both now flush.
 
 ### 2. The rebinding will not reach existing users
 
@@ -159,6 +241,11 @@ Verified against the live database: it holds
 
 The old default strings are hardcoded in this one function, with a comment saying why.
 
+`migrateShortcuts` builds its result by iterating the keys of `DEFAULT_SHORTCUTS`,
+never by spreading the stored object. A non-object, `null`, or array input returns the
+full defaults. This is what makes "unknown action is dropped" true by construction
+rather than by a separate filtering step.
+
 ## Testing
 
 **Pure unit tests (vitest, no DOM):**
@@ -166,12 +253,18 @@ The old default strings are hardcoded in this one function, with a comment sayin
 - `migrateShortcuts` — old default rewritten; custom binding untouched; missing key
   filled from defaults; unknown key dropped; empty or corrupt stored value yields full
   defaults. This writes to persisted user settings, so it gets the most attention.
-- `useKataNavigation` — a table over both governing lists: first item (`hasPrev`
-  false), last item (`hasNext` false), middle item, single-item list, empty
-  `browseOrder`, and a kata id absent from `browseOrder` (both false, no throw).
+- `resolveKataNavigation` — a table over both modes: first item (`hasPrev` false),
+  last item (`hasNext` false), middle item, single-item list, empty list, and a
+  `currentKataId` absent from the governing list (both false, no throw — the
+  `indexOf === -1` case). Plus the stale-id cases: a `browseOrder` containing ids
+  missing from `availableKataIds` skips them rather than returning them, and a
+  `browseOrder` whose entries are *all* stale yields both false. Session mode never
+  resolves an index outside `sessionKataIds`.
 - `createAutosave` — with fake timers: schedule then flush writes once with the
-  outgoing id; schedule then re-schedule for a different id flushes the first id's
-  value and never writes it under the second id; flush with nothing pending is a
+  outgoing id and the value read at flush time; re-scheduling the **same** id resets
+  the timer and writes nothing before the delay elapses (guards the debounce);
+  re-scheduling a **different** id flushes the first id's value and never writes it
+  under the second id (guards the cross-kata write); flush with nothing pending is a
   no-op.
 
 **Verified by hand in the packaged app** (cannot be asserted in a unit test, and the
@@ -181,9 +274,11 @@ last two bugs in this app appeared only when packaged):
 - `⌘⌥←` / `⌘⌥→` are not swallowed by Monaco or by monaco-vim.
 - The no-op pulse on the first/last kata reads as intentional, not as a dead key.
 
-**Regression guard:** a test asserting `session.tsx` no longer registers
-`nextKata`/`prevKata`, so the two registrations cannot silently coexist and
-double-fire.
+**Regression guard:** a source-text test asserting `src/routes/session.tsx` no longer
+references `nextKata` or `prevKata`, so the two registrations cannot silently coexist
+and double-fire. Crude, and deliberately so — the same reasoning as
+`electron/safeguards.test.ts` in the Electron repo. A double registration would not
+fail any other test; both handlers would simply run.
 
 ## Files
 
@@ -193,8 +288,9 @@ double-fire.
 | `src/lib/shortcut-keys.test.ts` | new |
 | `src/lib/autosave.ts` | new — `createAutosave()` |
 | `src/lib/autosave.test.ts` | new |
-| `src/hooks/use-kata-navigation.ts` | new |
-| `src/hooks/use-kata-navigation.test.ts` | new |
+| `src/lib/kata-navigation.ts` | new — `resolveKataNavigation()` (pure) |
+| `src/lib/kata-navigation.test.ts` | new |
+| `src/hooks/use-kata-navigation.ts` | new — React adapter, `useCallback`-stable `next`/`prev` |
 | `src/stores/kata-store.ts` | add `browseOrder` + setter |
 | `src/stores/settings-store.ts` | import defaults from `shortcut-keys.ts`; apply `migrateShortcuts` on load |
 | `src/routes/library.tsx` | publish `browseOrder` from `searchedKatas` |
@@ -203,8 +299,10 @@ double-fire.
 
 ## Open Risks
 
-- **monaco-vim may bind `⌘⌥` arrows.** Not verified. If it does, the binding choice
-  is revisited before implementation, not worked around.
+- **monaco-vim may bind `⌘⌥` arrows at runtime.** A static grep found no such binding
+  in either `monaco-editor/esm` or `monaco-vim`'s dist, but neither can see runtime
+  `addCommand` registration. Confirmed by hand in the packaged app. If it does bind
+  them, the binding choice is revisited before implementation, not worked around.
 - **`browseOrder` staleness within a session of use.** If the user opens a kata, goes
   back, changes the filter, then returns to the editor via browser history, the order
   reflects the newer filter. Acceptable: the list they last saw is the list they get.
