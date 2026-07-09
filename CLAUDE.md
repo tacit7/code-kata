@@ -56,6 +56,10 @@ no single releasable trunk; each variant branch is its own app.
   (python on `main`, ruby on `js-ruby-version`); `app-core` ships a stub and
   must never change it again.
 - `src/lib/database.ts` seed imports and the `src/lib/*kata*.ts` content files.
+- `src/lib/levels.ts` — `js-ruby-version` carries a Level 0 ("Ruby Prelude")
+  entry that no other variant has. `LEVELS` renders every level
+  unconditionally, so merging Level 0 outward would give `main` an empty
+  filter. Resolve in favour of each variant's own list.
 - `vite.config.ts` / `src-tauri/tauri.conf.json` — dev port per variant.
 
 ### Gotchas
