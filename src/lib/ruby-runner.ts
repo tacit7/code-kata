@@ -1,19 +1,19 @@
 import type { TestResult } from "../types/editor";
 import { INIT_TIMEOUT_MS, EXEC_TIMEOUT_MS } from "./ruby-exec-core";
 
-// Warm worker: reused across runs so the compiled wasm module is cached.
-// Discarded (null) after any timeout or fatal error; the next run pays the
-// cold init cost again. Fresh Ruby VM per run happens INSIDE the worker.
+// Warm worker: kept only while a single run is active. It is discarded after
+// every completed run because Safari/WebKit retains ruby.wasm worker memory
+// aggressively enough to balloon the renderer process. Fresh Ruby VM per run
+// happens INSIDE the worker.
 let workerInstance: Worker | null = null;
 let readyPromise: Promise<void> | null = null;
 
 // Every run instantiates a brand-new Ruby VM inside the worker (see
 // ruby-test-worker.ts) — there's no dispose/free API on RubyVM, so each
 // run's WASM memory only becomes eligible for GC, not immediately reclaimed.
-// Over a long session that churn adds up. Recycling the whole worker every
-// so often forces the OS to actually reclaim it, at the cost of one cold
-// re-init.
-const RECYCLE_AFTER_RUNS = 15;
+// Recycling the whole worker after each run gives WebKit a hard boundary for
+// reclaiming the WASM heap. Chrome tolerates reuse, but Tauri uses WebKit.
+const RECYCLE_AFTER_RUNS = 1;
 let runsSinceRecycle = 0;
 
 // Single-flight queue: overlapping runRubyTests calls must not both listen
