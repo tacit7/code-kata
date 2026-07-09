@@ -243,7 +243,7 @@ function buildArraySection(nums) {
 
   makeGroup('nums (input)', 'nums');
   makeGroup('prefix pass (left → right)', 'prefix');
-  makeGroup('result (after both passes)', 'result');
+  makeGroup('result = prefix × suffix (fills right → left)', 'result');
 
   for (var k = 0; k < n; k++) {
     document.getElementById('nums-' + k).textContent = nums[k];
@@ -255,40 +255,50 @@ function buildArraySection(nums) {
 function simulate(nums) {
   var n = nums.length;
   var result = new Array(n).fill(1);
+  // The prefix row has to survive the suffix pass. `result` is mutated in place
+  // by the second loop, so keep a frozen copy of the left-to-right products for
+  // display — otherwise the row labelled "prefix pass" silently turns into the
+  // final answer while the user is still watching the suffix pass run.
+  var prefixRow = new Array(n).fill(null);
   var steps = [];
   var prefix = 1, suffix = 1;
 
-  function snap(phase, desc, lines, i, p, s) {
+  // pfxFilled: how many prefix cells have been written, left to right.
+  // sfxFrom:   leftmost result cell already finalised by the suffix pass (n = none).
+  function snap(phase, desc, lines, i, p, s, pfxFilled, sfxFrom) {
     steps.push({
       phase: phase, desc: desc, lines: lines || [],
-      nums: nums.slice(), result: result.slice(),
-      prefix: p === undefined ? prefix : p,
-      suffix: s === undefined ? suffix : s,
-      i: i,
-      phaseType: phase.indexOf('Prefix') >= 0 ? 'prefix' : (phase.indexOf('Suffix') >= 0 ? 'suffix' : 'init')
+      nums: nums.slice(), result: result.slice(), prefixRow: prefixRow.slice(),
+      prefix: p, suffix: s, i: i,
+      pfxFilled: pfxFilled, sfxFrom: sfxFrom,
+      phaseType: phase.indexOf('Prefix') >= 0 ? 'prefix'
+               : phase.indexOf('Suffix') >= 0 ? 'suffix'
+               : phase === 'Done' ? 'done' : 'init'
     });
   }
 
-  snap('Init', 'n = ' + n + ', result = [1, …, 1], prefix = 1. Starting left-to-right pass.', [1, 2, 3, 4], -1, 1, 0);
+  // suffix is null, not 0 — it does not exist yet during the prefix pass.
+  snap('Init', 'n = ' + n + ', result = [1, …, 1], prefix = 1. Starting left-to-right pass.', [1, 2, 3, 4], -1, 1, null, 0, n);
 
   for (var i = 0; i < n; i++) {
-    snap('Prefix Pass', 'i = ' + i + ': result[' + i + '] = prefix = ' + prefix, [5, 6], i, prefix, 0);
+    snap('Prefix Pass', 'i = ' + i + ': result[' + i + '] = prefix = ' + prefix, [5, 6], i, prefix, null, i, n);
     result[i] = prefix;
+    prefixRow[i] = prefix;
     prefix *= nums[i];
-    snap('Prefix Pass', 'i = ' + i + ': prefix *= nums[' + i + '] (' + nums[i] + ')  →  prefix = ' + prefix, [7], i, prefix, 0);
+    snap('Prefix Pass', 'i = ' + i + ': prefix *= nums[' + i + '] (' + nums[i] + ')  →  prefix = ' + prefix, [7], i, prefix, null, i + 1, n);
   }
 
   suffix = 1;
-  snap('Suffix Pass', 'Prefix pass done. suffix = 1. Starting right-to-left pass.', [9], -1, prefix, 1);
+  snap('Suffix Pass', 'Prefix pass done. suffix = 1. Starting right-to-left pass.', [9], -1, prefix, 1, n, n);
 
   for (var i = n - 1; i >= 0; i--) {
-    snap('Suffix Pass', 'i = ' + i + ': result[' + i + '] *= suffix (' + suffix + ')  =  ' + result[i] + ' * ' + suffix + ' = ' + (result[i] * suffix), [10, 11], i, prefix, suffix);
+    snap('Suffix Pass', 'i = ' + i + ': result[' + i + '] *= suffix (' + suffix + ')  =  ' + result[i] + ' * ' + suffix + ' = ' + (result[i] * suffix), [10, 11], i, prefix, suffix, n, i + 1);
     result[i] *= suffix;
     suffix *= nums[i];
-    snap('Suffix Pass', 'i = ' + i + ': suffix *= nums[' + i + '] (' + nums[i] + ')  →  suffix = ' + suffix, [12], i, prefix, suffix);
+    snap('Suffix Pass', 'i = ' + i + ': suffix *= nums[' + i + '] (' + nums[i] + ')  →  suffix = ' + suffix, [12], i, prefix, suffix, n, i);
   }
 
-  snap('Done', 'result = [' + result.join(', ') + ']', [14], -1, prefix, suffix);
+  snap('Done', 'result = [' + result.join(', ') + ']', [14], -1, prefix, suffix, n, 0);
   return steps;
 }
 
@@ -296,32 +306,34 @@ function simulate(nums) {
 function applyStep(s, animate) {
   var n = s.result.length;
 
+  // Prefix row: renders the FROZEN left-to-right products, never `result`.
+  // A cell is filled once the prefix pass has written it (k < pfxFilled), and it
+  // stays filled for the rest of the run — including the Done step.
   for (var k = 0; k < n; k++) {
     var prefixEl = document.getElementById('prefix-' + k);
     if (!prefixEl) continue;
+    var filled = k < s.pfxFilled;
     var state = 'idle';
-    if (s.phaseType === 'prefix') {
-      if (k < s.i) state = 'computed';
-      else if (k === s.i) state = 'current';
-    } else if (s.phaseType === 'suffix') {
-      state = k > s.i ? 'computed' : (k === s.i ? 'current' : 'computed');
-    } else if (s.phase === 'Done') {
-      state = 'computed';
-    }
+    if (filled) state = (s.phaseType === 'prefix' && k === s.i) ? 'current' : 'computed';
+    else if (s.phaseType === 'prefix' && k === s.i) state = 'current';
     prefixEl.dataset.state = state;
-    prefixEl.textContent = (s.phaseType === 'init' || (s.phaseType === 'prefix' && k > s.i)) ? '' : s.result[k];
-    if (animate && state === 'current') {
+    prefixEl.textContent = filled ? s.prefixRow[k] : '';
+    if (animate && state === 'current' && filled) {
       gsap.fromTo(prefixEl, { scale: 0.8, opacity: 0.4 }, { scale: 1, opacity: 1, duration: 0.22, ease: 'back.out(1.7)' });
     }
   }
 
+  // Result row: fills in right-to-left as the suffix pass finalises each cell,
+  // so the second pass is actually watchable instead of appearing all at once.
   for (var k = 0; k < n; k++) {
     var resultEl = document.getElementById('result-' + k);
     if (!resultEl) continue;
-    var isDone = s.phase === 'Done';
-    resultEl.dataset.state = isDone ? 'computed' : 'idle';
-    resultEl.textContent = isDone ? s.result[k] : '';
-    if (isDone && animate) {
+    var done = k >= s.sfxFrom;
+    var rState = 'idle';
+    if (done) rState = (s.phaseType === 'suffix' && k === s.i) ? 'current' : 'computed';
+    resultEl.dataset.state = rState;
+    resultEl.textContent = done ? s.result[k] : '';
+    if (animate && rState === 'current') {
       gsap.fromTo(resultEl, { scale: 0.8, opacity: 0.4 }, { scale: 1, opacity: 1, duration: 0.22, ease: 'back.out(1.7)' });
     }
   }
