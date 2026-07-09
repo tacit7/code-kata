@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState, useCallback } from "react";
+import { useRef, useEffect, useState, useCallback, useMemo } from "react";
 import Editor, { DiffEditor, type OnMount } from "@monaco-editor/react";
 import type { editor } from "monaco-editor";
 import { initVimMode, type VimAdapterInstance } from "monaco-vim";
@@ -14,6 +14,8 @@ import { TestOutput } from "./test-output";
 import { ReplPanel, type ReplSeed } from "./repl-panel";
 import { extractTestCall } from "../lib/repl-seed";
 import { monacoReady } from "../lib/monaco-setup";
+import { useKataNavigation } from "../hooks/use-kata-navigation";
+import { createAutosave } from "../lib/autosave";
 import { toast } from "../stores/toast-store";
 import type { Kata, TestResult } from "../types/editor";
 
@@ -521,10 +523,34 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
   const [replSeed, setReplSeed] = useState<ReplSeed | null>(null);
   const [savedCode, setSavedCode] = useState<string | null>(null);
   const [codeLoaded, setCodeLoaded] = useState(false);
-  const autosaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [notes, setNotes] = useState("");
   const [notesSaved, setNotesSaved] = useState(true);
-  const notesAutosaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const autosave = useRef(
+    createAutosave<number>({
+      delayMs: 1500,
+      save: (id, value) => {
+        saveUserCode(id, value).then(() => setSaved(true));
+      },
+    }),
+  ).current;
+
+  const notesAutosave = useRef(
+    createAutosave<number>({
+      delayMs: 1000,
+      save: (id, value) => {
+        saveKataNotes(id, value).then(() => setNotesSaved(true));
+      },
+    }),
+  ).current;
+
+  const [nudging, setNudging] = useState(false);
+  const navigation = useKataNavigation(kata.id);
+
+  const nudge = useCallback(() => {
+    setNudging(true);
+    setTimeout(() => setNudging(false), 200);
+  }, []);
 
   const monacoTheme = resolveMonacoTheme(theme);
   const fmtCombo = (combo: string) =>
@@ -566,10 +592,13 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
       setNotesSaved(true);
     });
     return () => {
-      if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
-      if (notesAutosaveTimer.current) clearTimeout(notesAutosaveTimer.current);
+      // Flush, do not drop: this runs when the kata changes and on unmount, and
+      // the pending save belongs to the OUTGOING kata. createAutosave captured
+      // its id at schedule time, so it cannot be written under the new kata.
+      autosave.flush();
+      notesAutosave.flush();
     };
-  }, [kata.id]);
+  }, [kata.id, autosave, notesAutosave]);
 
   const vizFolder = VIZ_MAP[kata.name as VizKataName] ?? null;
 
@@ -637,10 +666,20 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
     setShowPanel((v) => (v === "solution" ? null : "solution"));
   }, []);
 
-  useKeyboardShortcuts({
-    runTests: handleRun,
-    toggleSolution: handleToggleSolution,
-  });
+  // Memoized: useKeyboardShortcuts lists `handlers` in a useEffect dependency
+  // array, and KataEditor re-renders on every keystroke. A fresh object literal
+  // would tear down and rebind the window listener on each one.
+  const shortcutHandlers = useMemo(
+    () => ({
+      runTests: handleRun,
+      toggleSolution: handleToggleSolution,
+      nextKata: () => (navigation.hasNext ? navigation.next() : nudge()),
+      prevKata: () => (navigation.hasPrev ? navigation.prev() : nudge()),
+    }),
+    [handleRun, handleToggleSolution, navigation.hasNext, navigation.hasPrev, navigation.next, navigation.prev, nudge],
+  );
+
+  useKeyboardShortcuts(shortcutHandlers);
 
   // When viz panel opens the Monaco editor unmounts. Reset editorReady so the
   // transition back triggers the vim mode effect with a real state change.
@@ -930,7 +969,7 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
   }
 
   return (
-    <div className="flex flex-col h-full">
+    <div className={`flex flex-col h-full ${nudging ? "animate-nudge" : ""}`}>
       {/* Full-width bar: tabs left, controls right */}
       {renderTabBar(true)}
 
@@ -996,10 +1035,7 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
                     const val = e.target.value;
                     setNotes(val);
                     setNotesSaved(false);
-                    if (notesAutosaveTimer.current) clearTimeout(notesAutosaveTimer.current);
-                    notesAutosaveTimer.current = setTimeout(() => {
-                      saveKataNotes(kata.id, val).then(() => setNotesSaved(true));
-                    }, 1000);
+                    notesAutosave.schedule(kata.id, () => val);
                   }}
                 />
                 <div className="px-4 pb-2 text-xs text-base-content/25">
@@ -1031,13 +1067,7 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
               onMount={handleEditorMount}
               onChange={() => {
                 setSaved(false);
-                if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
-                autosaveTimer.current = setTimeout(() => {
-                  const code = editorRef.current?.getValue();
-                  if (code != null) {
-                    saveUserCode(kata.id, code).then(() => setSaved(true));
-                  }
-                }, 1500);
+                autosave.schedule(kata.id, () => editorRef.current?.getValue());
               }}
             />
           </div>

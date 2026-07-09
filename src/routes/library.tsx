@@ -29,6 +29,7 @@ export function PracticePage() {
   const libraryDiffSort = useKataStore((s) => s.libraryDiffSort);
   const librarySortMode = useKataStore((s) => s.librarySortMode);
   const setLibraryUI = useKataStore((s) => s.setLibraryUI);
+  const setBrowseOrder = useKataStore((s) => s.setBrowseOrder);
 
   const search = librarySearch;
   const setSearch = (v: string) => setLibraryUI({ librarySearch: v });
@@ -107,6 +108,13 @@ export function PracticePage() {
       }
     });
   }, [katas, search, diffSort, sortMode, dailyKataIds, bestTimes, streaks]);
+
+  // Publish the RENDERED order — filter, then sort, then search. Publishing the
+  // raw store list would look like an optimization and would silently break
+  // next/prev in the editor.
+  useEffect(() => {
+    setBrowseOrder(searchedKatas.map((k) => k.id));
+  }, [searchedKatas, setBrowseOrder]);
 
   const toggleFavoriteById = (id: number) => {
     const next = dailyKataIds.includes(id)
