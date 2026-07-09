@@ -7,6 +7,7 @@ interface SessionState {
   activeSession: Session | null;
   sessionKatas: Kata[];
   currentIndex: number;
+  setCurrentIndex: (index: number) => void;
   attempts: Attempt[];
   presets: Preset[];
 
@@ -284,6 +285,13 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       activeSession: { ...activeSession, passCount: newPassCount },
     });
     void refreshDockBadge();
+  },
+
+  // The navigation resolver has already bounds-checked the index. Guarded anyway:
+  // this is the only unclamped write to currentIndex in the app.
+  setCurrentIndex: (index) => {
+    const { sessionKatas } = get();
+    if (index >= 0 && index < sessionKatas.length) set({ currentIndex: index });
   },
 
   nextKata: () => {

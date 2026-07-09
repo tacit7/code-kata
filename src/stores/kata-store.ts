@@ -49,6 +49,14 @@ interface LibraryUIState {
 
 interface KataState extends LibraryUIState {
   katas: Kata[];
+  /**
+   * The Problems list as last rendered — filter, sort, and search applied.
+   * Published by library.tsx and read by the navigation hook. Deliberately not
+   * persisted: a cold-opened editor has no neighbours, which is the honest
+   * answer rather than a stale ordering from a filter that is no longer set.
+   */
+  browseOrder: number[];
+  setBrowseOrder: (ids: number[]) => void;
   bestTimes: Record<number, number>;
   streaks: Record<number, number>;
   loading: boolean;
@@ -61,6 +69,8 @@ interface KataState extends LibraryUIState {
 
 export const useKataStore = create<KataState>((set) => ({
   katas: [],
+  browseOrder: [],
+  setBrowseOrder: (ids) => set({ browseOrder: ids }),
   bestTimes: {},
   streaks: {},
   loading: true,
