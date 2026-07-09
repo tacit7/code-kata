@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Ruby Runner Harness</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.4;
+      }
+
+      body {
+        margin: 0;
+        padding: 24px;
+        background: Canvas;
+        color: CanvasText;
+      }
+
+      main {
+        max-width: 1200px;
+        margin: 0 auto;
+      }
+
+      h1 {
+        margin: 0 0 8px;
+        font-size: 24px;
+      }
+
+      p {
+        margin: 0 0 20px;
+        color: color-mix(in srgb, CanvasText 70%, Canvas);
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 16px;
+      }
+
+      label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 650;
+      }
+
+      textarea,
+      pre {
+        box-sizing: border-box;
+        width: 100%;
+        border: 1px solid color-mix(in srgb, CanvasText 18%, Canvas);
+        border-radius: 6px;
+        background: color-mix(in srgb, CanvasText 5%, Canvas);
+        color: CanvasText;
+        font: 13px/1.45 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      }
+
+      textarea {
+        min-height: 220px;
+        padding: 12px;
+        resize: vertical;
+      }
+
+      .toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+        margin: 16px 0;
+      }
+
+      button {
+        border: 1px solid color-mix(in srgb, CanvasText 20%, Canvas);
+        border-radius: 6px;
+        padding: 8px 12px;
+        background: ButtonFace;
+        color: ButtonText;
+        font: inherit;
+        cursor: pointer;
+      }
+
+      button.primary {
+        border-color: #1b6ef3;
+        background: #1b6ef3;
+        color: white;
+      }
+
+      button:disabled {
+        cursor: wait;
+        opacity: 0.65;
+      }
+
+      .status {
+        margin-left: auto;
+        font-variant-numeric: tabular-nums;
+        color: color-mix(in srgb, CanvasText 72%, Canvas);
+      }
+
+      pre {
+        min-height: 180px;
+        margin: 0;
+        padding: 12px;
+        overflow: auto;
+        white-space: pre-wrap;
+      }
+
+      @media (max-width: 800px) {
+        body {
+          padding: 16px;
+        }
+
+        .grid {
+          grid-template-columns: 1fr;
+        }
+
+        .status {
+          width: 100%;
+          margin-left: 0;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Ruby Runner Harness</h1>
+      <p>Dev-only page for testing the Ruby WASM runner without React, Tauri plugins, or SQLite.</p>
+
+      <div class="grid">
+        <section>
+          <label for="user-code">User code</label>
+          <textarea id="user-code" spellcheck="false">def frequency_count(items)
+  items.each_with_object(Hash.new(0)) { |item, counts| counts[item] += 1 }
+end</textarea>
+        </section>
+        <section>
+          <label for="test-code">Test code</label>
+          <textarea id="test-code" spellcheck="false">def test_frequency_count
+  assert_equal({ "a" => 3, "b" => 2, "c" => 1 }, frequency_count(["a", "b", "a", "c", "a", "b"]))
+end
+
+def test_frequency_count_single
+  assert_equal({ "x" => 1 }, frequency_count(["x"]))
+end
+
+def test_frequency_count_numbers
+  assert_equal({ 1 => 1, 2 => 2, 3 => 3 }, frequency_count([1, 2, 2, 3, 3, 3]))
+end
+
+def test_frequency_count_empty
+  assert_equal({}, frequency_count([]))
+end</textarea>
+        </section>
+      </div>
+
+      <div class="toolbar">
+        <button id="run" class="primary" type="button">Run Once</button>
+        <button id="run-10" type="button">Run 10 Times</button>
+        <button id="clear" type="button">Clear Log</button>
+        <span id="status" class="status">Idle</span>
+      </div>
+
+      <pre id="log" aria-live="polite"></pre>
+    </main>
+
+    <script type="module">
+      import { runRubyTests } from "/src/lib/ruby-runner.ts";
+
+      const userCode = document.querySelector("#user-code");
+      const testCode = document.querySelector("#test-code");
+      const log = document.querySelector("#log");
+      const status = document.querySelector("#status");
+      const buttons = [...document.querySelectorAll("button")];
+
+      function append(message, data) {
+        const suffix = data === undefined ? "" : `\n${JSON.stringify(data, null, 2)}`;
+        log.textContent += `${new Date().toISOString()} ${message}${suffix}\n\n`;
+        log.scrollTop = log.scrollHeight;
+      }
+
+      function memorySnapshot() {
+        const memory = performance.memory;
+        if (!memory) return null;
+        return {
+          usedMb: Math.round(memory.usedJSHeapSize / 1024 / 1024),
+          totalMb: Math.round(memory.totalJSHeapSize / 1024 / 1024),
+          limitMb: Math.round(memory.jsHeapSizeLimit / 1024 / 1024),
+        };
+      }
+
+      async function runMany(count) {
+        buttons.forEach((button) => {
+          button.disabled = true;
+        });
+        const start = performance.now();
+        status.textContent = `Running ${count}...`;
+        append(`start count=${count}`, { memory: memorySnapshot() });
+
+        try {
+          for (let i = 1; i <= count; i += 1) {
+            const runStart = performance.now();
+            const results = await runRubyTests(userCode.value, testCode.value);
+            const ms = Math.round(performance.now() - runStart);
+            const passed = results.length > 0 && results.every((result) => result.passed);
+            append(`run ${i}/${count} ${passed ? "passed" : "failed"} in ${ms}ms`, {
+              memory: memorySnapshot(),
+              results,
+            });
+            status.textContent = `Run ${i}/${count}`;
+          }
+        } catch (err) {
+          append("error", { message: err instanceof Error ? err.message : String(err) });
+        } finally {
+          const totalMs = Math.round(performance.now() - start);
+          status.textContent = `Done in ${totalMs}ms`;
+          append(`done count=${count} total=${totalMs}ms`, { memory: memorySnapshot() });
+          buttons.forEach((button) => {
+            button.disabled = false;
+          });
+        }
+      }
+
+      document.querySelector("#run").addEventListener("click", () => {
+        void runMany(1);
+      });
+      document.querySelector("#run-10").addEventListener("click", () => {
+        void runMany(10);
+      });
+      document.querySelector("#clear").addEventListener("click", () => {
+        log.textContent = "";
+      });
+
+      window.__runRubyHarness = runMany;
+      append("ready", {
+        userAgent: navigator.userAgent,
+        memory: memorySnapshot(),
+      });
+    </script>
+  </body>
+</html>
