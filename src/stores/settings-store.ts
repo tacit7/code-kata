@@ -3,22 +3,11 @@ import { isAppThemeId } from "../lib/editor-themes";
 import type { AppTheme } from "../types/editor";
 import { getDb } from "../lib/database";
 
-export type ShortcutAction =
-  | "runTests"
-  | "nextKata"
-  | "prevKata"
-  | "toggleSolution"
-  | "openSettings"
-  | "closePanel";
+import { DEFAULT_SHORTCUTS, migrateShortcuts, type ShortcutAction, type ShortcutMap } from "../lib/shortcut-keys";
 
-export const DEFAULT_SHORTCUTS: Record<ShortcutAction, string> = {
-  runTests: "Meta+Enter",
-  nextKata: "Meta+ArrowRight",
-  prevKata: "Meta+ArrowLeft",
-  toggleSolution: "Meta+Shift+S",
-  openSettings: "Meta+,",
-  closePanel: "Escape",
-};
+// settings.tsx and use-keyboard-shortcuts.ts import these from here.
+export { DEFAULT_SHORTCUTS };
+export type { ShortcutAction, ShortcutMap };
 
 export type LineNumbersMode = "on" | "off" | "relative";
 
@@ -174,9 +163,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       hideDescriptionInSession:
         (patch.hideDescriptionInSession as boolean) ??
         DEFAULTS.hideDescriptionInSession,
-      shortcuts:
-        (patch.shortcuts as Record<ShortcutAction, string>) ??
-        DEFAULTS.shortcuts,
+      shortcuts: migrateShortcuts(patch.shortcuts),
       dailyKataIds:
         (patch.dailyKataIds as number[]) ?? DEFAULTS.dailyKataIds,
       doneKataIds:
@@ -187,6 +174,13 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       },
       loaded: true,
     });
+
+    // Write the migrated map back, so the rebinding survives the next load and
+    // the Settings screen shows what is actually bound.
+    const migrated = migrateShortcuts(patch.shortcuts);
+    if (JSON.stringify(migrated) !== JSON.stringify(patch.shortcuts)) {
+      await get().setSetting("shortcuts", migrated);
+    }
   },
 
   setSetting: async (key: string, value: unknown) => {
