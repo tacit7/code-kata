@@ -339,3 +339,14 @@ html, body, #root {
   --color-error: #dc322f;
   --color-error-content: #fdf6e3;
 }
+
+/* Played when next/prev is pressed at the end of a list. A silent no-op reads
+   as a broken key. */
+@keyframes nudge {
+  0%, 100% { transform: translateX(0); }
+  25%      { transform: translateX(-4px); }
+  75%      { transform: translateX(4px); }
+}
+.animate-nudge {
+  animation: nudge 180ms ease-in-out;
+}

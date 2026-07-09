@@ -3,7 +3,6 @@ import { useParams, useNavigate, Navigate } from "react-router";
 import { useSessionStore } from "../stores/session-store";
 import { useTimerStore } from "../stores/timer-store";
 import { useTimerTick } from "../hooks/use-timer-tick";
-import { useKeyboardShortcuts } from "../hooks/use-keyboard-shortcuts";
 import { useKataStore } from "../stores/kata-store";
 import { KataEditor } from "../components/kata-editor";
 import { formatTime } from "../lib/format";
@@ -81,11 +80,6 @@ export function SessionPage() {
   const handlePrev = useCallback(() => {
     prevKata();
   }, [prevKata]);
-
-  useKeyboardShortcuts({
-    nextKata: handleNext,
-    prevKata: handlePrev,
-  });
 
   const handleQuit = useCallback(() => {
     const totalMs = stopSessionTimer();
