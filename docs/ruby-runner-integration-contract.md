@@ -221,11 +221,11 @@ When a prototype branch is ready, review against this document:
 
 ## 10. Open Review Items (pending prototype delivery)
 
-The following cannot be reviewed until prototype branches are available:
+Status of items pending prototype delivery:
 
 - **Native-process prototype (task #8505, In Progress):** Work is uncommitted in the worktree — `src-tauri/src/lib.rs` modified, `src/lib/native-ruby-runner.ts` untracked. Review pending commit. Items to verify: process spawn model, timeout kill signal, IPC serialization.
 - **Wasmtime prototype (task #8506, In Progress):** Work is uncommitted in the worktree — `wasmtime-poc/` untracked. Review pending commit. Items to verify: WASM sandbox isolation, memory reclaim after each run, Wasmtime-side prelude matches `buildPrelude()` exactly.
-- **Packaging assessment:** Landed — commit `b94861593` on `worktree-ruby-runtime-packaging-assessment`. Review can proceed against that branch.
+- **Packaging assessment:** Landed (`b94861593`, `worktree-ruby-runtime-packaging-assessment`), but recommendation contested. The assessment recommends wasmi (Option B2) and claims fuel consumption provides equivalent timeout enforcement. **This conflicts with §4 and §9.3:** `EXEC_TIMEOUT_MS` is defined as a *wall-clock* limit; §9.3 requires the enforced deadline to be "wall-clock". wasmi fuel counts instructions, not time — it cannot express "5 seconds" without calibration that varies per host CPU. Only Wasmtime epoch interruption satisfies §9.3 natively. The assessment also cites file sizes as benchmark numbers and omits Ruby VM cold-boot cost (which `INIT_TIMEOUT_MS = 15 000 ms` already tells us is expensive). **Status: pending benchmark** (cold-boot on both engines, Wizer evaluation) requested from packaging team. Engine choice must satisfy §9.3; the contract is the authority, not the assessment.
 - **REPL backend:** The contract above covers the test runner path. REPL (`repl_eval`/`repl_reset` messages, persistent VM) is a separate concern and is not blocked by this contract — but any native runner must not regress REPL functionality.
 
 Update prototype bullets when #8505 and #8506 commit their work.
