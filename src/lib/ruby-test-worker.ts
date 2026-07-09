@@ -53,6 +53,7 @@ async function handleReplMessage(msg: { type: string; code?: string }) {
 
 type WorkerMessage =
   | { userCode: string; testCode: string; type?: undefined }
+  | { type: "profile"; userCode: string; testCode: string }
   | { type: "repl_eval"; code: string }
   | { type: "repl_reset" };
 
@@ -61,6 +62,57 @@ self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
     await handleReplMessage(e.data);
     return;
   }
+
+  if (e.data.type === "profile") {
+    const mark = (phase: string) => {
+      self.postMessage({ type: "profile_step", phase, at: performance.now() });
+    };
+    const { userCode, testCode } = e.data;
+    const testNames = extractTestNames(testCode);
+    mark("received");
+    if (testNames.length === 0) {
+      self.postMessage({ type: "profile_done", results: runnerErrorResult() });
+      return;
+    }
+
+    let vm;
+    try {
+      mark("before_module");
+      const module = await modulePromise;
+      mark("after_module_before_vm");
+      ({ vm } = await DefaultRubyVM(module));
+      mark("after_vm");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      self.postMessage({ type: "profile_done", results: loadErrorResult(`Ruby VM failed to start: ${message}`) });
+      return;
+    }
+
+    try {
+      mark("before_prelude");
+      vm.eval(buildPrelude());
+      mark("after_prelude_before_user_code");
+      vm.eval(userCode);
+      mark("after_user_code_before_test_code");
+      vm.eval(testCode);
+      mark("after_test_code_before_runner");
+    } catch (err) {
+      const raw = err instanceof Error ? err.message : String(err);
+      self.postMessage({ type: "profile_done", results: loadErrorResult(raw) });
+      return;
+    }
+
+    try {
+      const json = vm.eval(buildRunnerScript(testNames)).toString();
+      mark("after_runner");
+      self.postMessage({ type: "profile_done", results: parseRunResults(json, testNames) });
+    } catch (err) {
+      const raw = err instanceof Error ? err.message : String(err);
+      self.postMessage({ type: "profile_done", results: loadErrorResult(`Runner crashed: ${raw}`) });
+    }
+    return;
+  }
+
   const { userCode, testCode } = e.data;
 
   const testNames = extractTestNames(testCode);

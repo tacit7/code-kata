@@ -155,6 +155,7 @@ end</textarea>
 
       <div class="toolbar">
         <button id="run" class="primary" type="button">Run Once</button>
+        <button id="profile" type="button">Profile One Run</button>
         <button id="run-10" type="button">Run 10 Times</button>
         <button id="clear" type="button">Clear Log</button>
         <span id="status" class="status">Idle</span>
@@ -220,8 +221,84 @@ end</textarea>
         }
       }
 
+      async function profileOneRun() {
+        buttons.forEach((button) => {
+          button.disabled = true;
+        });
+        status.textContent = "Profiling...";
+        append("profile start", { memory: memorySnapshot() });
+
+        const worker = new Worker(new URL("/src/lib/ruby-test-worker.ts", import.meta.url), {
+          type: "module",
+        });
+        const start = performance.now();
+
+        try {
+          await new Promise((resolve) => {
+            const timer = setTimeout(() => {
+              worker.terminate();
+              append("profile timeout", { elapsedMs: Math.round(performance.now() - start) });
+              resolve();
+            }, 15000);
+
+            worker.addEventListener("message", (event) => {
+              if (event.data?.type === "ready") {
+                append("profile worker ready", { elapsedMs: Math.round(performance.now() - start), memory: memorySnapshot() });
+                worker.postMessage({
+                  type: "profile",
+                  userCode: userCode.value,
+                  testCode: testCode.value,
+                });
+                return;
+              }
+
+              if (event.data?.type === "init_error") {
+                clearTimeout(timer);
+                append("profile init error", event.data);
+                resolve();
+                return;
+              }
+
+              if (event.data?.type === "profile_step") {
+                append(`profile phase ${event.data.phase}`, {
+                  workerAtMs: Math.round(event.data.at),
+                  elapsedMs: Math.round(performance.now() - start),
+                  memory: memorySnapshot(),
+                });
+                return;
+              }
+
+              if (event.data?.type === "profile_done") {
+                clearTimeout(timer);
+                append("profile done", {
+                  elapsedMs: Math.round(performance.now() - start),
+                  memory: memorySnapshot(),
+                  results: event.data.results,
+                });
+                resolve();
+              }
+            });
+
+            worker.addEventListener("error", (event) => {
+              clearTimeout(timer);
+              append("profile worker error", { message: event.message });
+              resolve();
+            });
+          });
+        } finally {
+          worker.terminate();
+          status.textContent = "Profile done";
+          buttons.forEach((button) => {
+            button.disabled = false;
+          });
+        }
+      }
+
       document.querySelector("#run").addEventListener("click", () => {
         void runMany(1);
+      });
+      document.querySelector("#profile").addEventListener("click", () => {
+        void profileOneRun();
       });
       document.querySelector("#run-10").addEventListener("click", () => {
         void runMany(10);
@@ -231,6 +308,7 @@ end</textarea>
       });
 
       window.__runRubyHarness = runMany;
+      window.__profileRubyHarness = profileOneRun;
       append("ready", {
         userAgent: navigator.userAgent,
         memory: memorySnapshot(),
