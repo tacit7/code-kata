@@ -8,7 +8,7 @@ import { computeSrState, formatDue, type SrState } from "../lib/sr";
 import { useTimerStore } from "../stores/timer-store";
 import type { KataStats } from "../stores/session-store";
 import type { Kata } from "../types/editor";
-import { LEVELS, CATEGORY_LEVEL } from "../lib/levels";
+import { levelsForKatas, visibleSelection, mergeSelection, CATEGORY_LEVEL } from "../lib/levels";
 
 type Mode = "sr" | "daily" | "weak" | "speed" | "level";
 type SizeOpt = 3 | 5 | 10 | 15 | 20 | "all";
@@ -156,9 +156,19 @@ export function PracticeQueuePage() {
   const difficultyFilter = practiceConfig.difficultyFilter as DifficultyFilter;
   const sessionSize = practiceConfig.sessionSize as SizeOpt;
   const maxTestRuns = practiceConfig.maxTestRuns;
+  // Levels with no katas in the loaded language are hidden, and a level selected
+  // under another language goes inert rather than being dropped: the selection
+  // survives in settings and comes back when that language does.
+  const visibleLevels = useMemo(() => levelsForKatas(katas), [katas]);
+
+  const visibleLevelIds = useMemo(
+    () => new Set<number>(visibleLevels.map((l) => l.level)),
+    [visibleLevels],
+  );
+
   const selectedLevels = useMemo(
-    () => new Set(practiceConfig.selectedLevels),
-    [practiceConfig.selectedLevels],
+    () => visibleSelection(practiceConfig.selectedLevels, visibleLevelIds),
+    [practiceConfig.selectedLevels, visibleLevelIds],
   );
 
   const updateConfig = useCallback(
@@ -172,8 +182,12 @@ export function PracticeQueuePage() {
   const setDailyRandomize = (v: boolean) => updateConfig({ dailyRandomize: v });
   const setCategoryFilter = (c: string) => updateConfig({ categoryFilter: c });
   const setDifficultyFilter = (d: DifficultyFilter) => updateConfig({ difficultyFilter: d });
+  // `levels` only ever holds visible ones. Levels selected under another language
+  // are carried through untouched, or toggling any level here would erase them.
   const setSelectedLevels = (levels: Set<number>) =>
-    updateConfig({ selectedLevels: [...levels] });
+    updateConfig({
+      selectedLevels: mergeSelection(practiceConfig.selectedLevels, visibleLevelIds, levels),
+    });
   const setSessionSize = (s: SizeOpt) => updateConfig({ sessionSize: s });
   const setMaxTestRuns = (n: number | null) => updateConfig({ maxTestRuns: n });
 
@@ -360,7 +374,7 @@ export function PracticeQueuePage() {
               Levels
             </p>
             <div className="flex flex-col gap-1.5">
-              {LEVELS.map(({ level, label }) => {
+              {visibleLevels.map(({ level, label }) => {
                 const active = selectedLevels.has(level);
                 return (
                   <button
