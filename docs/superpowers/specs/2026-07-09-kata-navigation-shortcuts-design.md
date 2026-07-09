@@ -73,8 +73,17 @@ Static check (2026-07-09): `monaco-editor/esm` contains no
 runtime `addCommand` calls, so the binding is still confirmed by hand in the
 packaged app against both Monaco and monaco-vim before release.
 
-When a key is a no-op (first or last item), the existing kata counter (`3 of 5`)
-pulses briefly. No toast, no dialog. A silent no-op reads as a broken key.
+When a key is a no-op (first or last item), the editor gives a brief nudge — a ~180ms
+horizontal shake of `KataEditor`'s root element. No toast, no dialog. A silent no-op
+reads as a broken key.
+
+**Amended 2026-07-09 (during planning).** An earlier draft said the `3 of 5` counter
+pulses. That counter is rendered by `src/routes/session.tsx:128` and exists only in a
+session; the standalone editor has none, and `KataEditor` — which owns the shortcuts —
+cannot reach it without lifting state across routes. The nudge therefore lives on
+`KataEditor`'s own root, where it works identically in both modes and stays local to
+the component that fired the no-op. A new `@keyframes nudge` is added to
+`src/index.css`, which today has only `fade-in-up`, `fade-in`, and `shimmer`.
 
 ## Architecture
 
@@ -150,7 +159,7 @@ rebinding the global keydown listener on every keystroke. Without that stability
 call-site `useMemo` is decorative.
 
 The hook owns no animation state. It exposes `hasNext`/`hasPrev`; the component
-decides whether to pulse the counter before calling `next()`/`prev()`.
+decides whether to nudge before calling `next()`/`prev()`.
 
 ### Shortcut registration moves to `KataEditor`
 
@@ -292,10 +301,11 @@ fail any other test; both handlers would simply run.
 | `src/lib/kata-navigation.test.ts` | new |
 | `src/hooks/use-kata-navigation.ts` | new — React adapter, `useCallback`-stable `next`/`prev` |
 | `src/stores/kata-store.ts` | add `browseOrder` + setter |
-| `src/stores/settings-store.ts` | import defaults from `shortcut-keys.ts`; apply `migrateShortcuts` on load |
+| `src/stores/settings-store.ts` | import + re-export `DEFAULT_SHORTCUTS`/`ShortcutAction` from `shortcut-keys.ts` (settings.tsx and use-keyboard-shortcuts.ts import them from here); apply `migrateShortcuts` on load |
 | `src/routes/library.tsx` | publish `browseOrder` from `searchedKatas` |
+| `src/index.css` | add `@keyframes nudge` |
 | `src/routes/session.tsx` | remove `nextKata`/`prevKata` registration |
-| `src/components/kata-editor.tsx` | register shortcuts via `useKataNavigation`; use `createAutosave`; counter pulse |
+| `src/components/kata-editor.tsx` | register shortcuts via `useKataNavigation`; use `createAutosave`; nudge on no-op |
 
 ## Open Risks
 
