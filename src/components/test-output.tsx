@@ -42,6 +42,12 @@ export function TestOutput({ results, ranAt, onSendToRepl }: TestOutputProps) {
 
             {!r.passed && (r.expected !== undefined || r.got !== undefined) && (
               <div className="ml-4 mt-1 flex flex-col gap-0.5">
+                {r.input && (
+                  <div className="flex gap-2 items-baseline">
+                    <span className="text-xs text-base-content/40 w-16 shrink-0">Input</span>
+                    <pre className="text-xs text-base-content/70 whitespace-pre-wrap">{r.input}</pre>
+                  </div>
+                )}
                 <div className="flex gap-2 items-baseline">
                   <span className="text-xs text-base-content/40 w-16 shrink-0">Expected</span>
                   <pre className="text-xs text-success/80 whitespace-pre-wrap">{r.expected}</pre>
@@ -57,7 +63,17 @@ export function TestOutput({ results, ranAt, onSendToRepl }: TestOutputProps) {
             )}
 
             {!r.passed && r.expected === undefined && r.error && (
-              <pre className="ml-4 mt-0.5 text-xs text-error/80 whitespace-pre-wrap leading-relaxed bg-error/5 rounded px-2 py-1">{r.error}</pre>
+              <div className="ml-4 mt-1 flex flex-col gap-0.5">
+                {/* assert_true/assert_false failures carry no expected/got, but
+                    still know the call they came from. */}
+                {r.input && (
+                  <div className="flex gap-2 items-baseline">
+                    <span className="text-xs text-base-content/40 w-16 shrink-0">Input</span>
+                    <pre className="text-xs text-base-content/70 whitespace-pre-wrap">{r.input}</pre>
+                  </div>
+                )}
+                <pre className="mt-0.5 text-xs text-error/80 whitespace-pre-wrap leading-relaxed bg-error/5 rounded px-2 py-1">{r.error}</pre>
+              </div>
             )}
 
             {r.output && (

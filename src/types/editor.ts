@@ -35,6 +35,13 @@ export interface TestResult {
   output?: string;
   expected?: string;
   got?: string;
+  /**
+   * Source text of the assertion that failed, e.g.
+   * `assertEqual(twoSum([2, 7, 11], 9), [0, 1])`. This is where the failing
+   * inputs are written down, so it is the one thing you need to reproduce a
+   * failure. Absent when the line cannot be resolved.
+   */
+  input?: string;
 }
 
 export type SessionType = "daily" | "random" | "custom";
