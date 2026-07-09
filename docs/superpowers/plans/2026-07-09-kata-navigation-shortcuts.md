@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Make next/prev kata shortcuts work wherever a kata editor is open, stop them from finishing sessions, and give Monaco back `Cmd+Left`/`Cmd+Right`.
+**Goal:** Make next/prev kata shortcuts work wherever a kata editor is open — including while the cursor is in Monaco, where `Cmd+Left`/`Cmd+Right` never reached them — and stop them from finishing sessions.
 
 **Architecture:** A pure `resolveKataNavigation()` decides what "next" means; a thin `useKataNavigation()` hook adapts it to the router and stores; `KataEditor` registers the shortcuts, so "the editor is mounted" and "navigation is live" are the same statement. Two latent defects the feature exposes — autosave dropping its last edit on kata change, and a persisted shortcuts map that makes a default change invisible — are fixed in the same pass.
 
@@ -1190,7 +1190,13 @@ Expected: tsc silent, all tests pass, build succeeds.
 
 - [ ] **Step 2: Verify the keybindings by hand**
 
-The spec's one unresolved risk: a static grep found no `Cmd+Alt+Arrow` binding in `monaco-editor/esm` or `monaco-vim`'s dist, but neither can see runtime `addCommand` calls. So check by hand, in the Ruby variant where an editor is one click away:
+**Resolved 2026-07-09, before the manual pass.** Real Monaco was served from `node_modules/monaco-editor/min` and driven with Playwright keypresses. `Meta+Alt+ArrowRight` left the cursor at column 3 and reached the `window` listener with `defaultPrevented: false` — the binding is free. `Meta+ArrowRight` moved the cursor to end-of-line and the `ArrowRight` keydown **never reached `window`**: Monaco calls `stopPropagation()` on keys it handles.
+
+That last result disproves item (1) below and the spec's original Problem section. `Cmd+Right` never jumped katas while the cursor was in Monaco — Monaco always won. The real prior defect was that next/prev were *unreachable while typing*. The spec now records the correction; item (1) is kept only as a no-regression check.
+
+monaco-vim is settled by code reading rather than by runtime probe: `CMAdapter.handleKeyDown` calls `preventDefault()`/`stopPropagation()` only when the normalized key resolves to a bound command, `monacoToCmKey` normalizes `⌘⌥→` to `"Meta-Alt-Right"`, and no `Alt-`/`Meta-` arrow binding exists in its dist.
+
+The remaining items are behavioral and still worth a hand pass, in the Ruby variant where an editor is one click away:
 
 ```bash
 cd /Users/urielmaldonado/projects/kata-desktop && pnpm tauri dev   # port 1440
@@ -1198,7 +1204,7 @@ cd /Users/urielmaldonado/projects/kata-desktop && pnpm tauri dev   # port 1440
 
 In a kata editor, confirm each of these:
 
-1. `Cmd+Left` / `Cmd+Right` move the cursor to line start / line end. (The bug this fixes.)
+1. `Cmd+Left` / `Cmd+Right` move the cursor to line start / line end. (Unchanged by this work; a no-regression check.)
 2. `Cmd+Alt+Right` advances to the next kata while the cursor is inside Monaco.
 3. Same with vim mode on (Settings → Vim Mode).
 4. On the last kata of a session, `Cmd+Alt+Right` shakes the editor and does **not** finish the session.

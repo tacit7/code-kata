@@ -12,22 +12,36 @@ exactly one place: `src/routes/session.tsx`. Three consequences:
 
 1. **They only work inside a practice session.** The standalone editor
    (`/editor/:kataId`) has no next/prev at all.
-2. **They collide with Monaco.** `useKeyboardShortcuts` binds a `window` keydown
-   listener with no focus guard. On macOS `Cmd+Left` / `Cmd+Right` are
-   line-start / line-end. While editing a kata in a session, those keys jump katas
-   instead of moving the cursor. This ships today.
+2. **They are unreachable from the editor.** `Cmd+Left` / `Cmd+Right` are
+   line-start / line-end on macOS, and Monaco calls `stopPropagation()` on the keys
+   it handles. `useKeyboardShortcuts` binds a `window` keydown listener, so while
+   the cursor is in Monaco the keydown never reaches it: Monaco wins, the cursor
+   moves, and next/prev never fire. They fire only when focus sits outside the
+   editor.
+
+   > **Correction (2026-07-09, during implementation).** An earlier draft of this
+   > spec claimed the opposite — that these keys "jump katas instead of moving the
+   > cursor," and that this "ships today." That was wrong. A Playwright probe
+   > against real Monaco confirmed `Cmd+Right` moves the cursor to end-of-line and
+   > the `ArrowRight` keydown never reaches `window`. The rebinding is still
+   > correct, but for the inverse reason: it makes next/prev *reachable* while
+   > typing. `Meta+Alt+ArrowRight` was measured to reach `window` with
+   > `defaultPrevented: false` and no cursor movement.
+
 3. **`nextKata` means two different things.** On the last kata of a session it does
    not navigate — it finishes the session and routes to results, with no
-   confirmation. A stray keypress ends a timed session.
+   confirmation. A stray keypress ends a timed session. Real, but narrower than
+   first stated: per (2), only reachable while focus is outside Monaco.
 
 Two latent defects sit directly in this feature's path and are fixed as part of it
 (see *Correctness*).
 
 ## Goals
 
-- Next/prev work wherever a kata editor is on screen.
+- Next/prev work wherever a kata editor is on screen, including while the cursor is
+  in Monaco.
 - One key, one meaning: navigation only.
-- Restore `Cmd+Left` / `Cmd+Right` to Monaco.
+- Leave `Cmd+Left` / `Cmd+Right` to Monaco, which already owns them.
 
 ## Non-Goals
 
@@ -50,7 +64,7 @@ and `/editor/:kataId`.
 | Standalone editor, cold open (app restart, list never visited) | nothing | both keys no-op |
 
 **Binding:** `Meta+Alt+ArrowLeft` / `Meta+Alt+ArrowRight` (⌘⌥← / ⌘⌥→), matching
-VS Code's previous/next editor tab. `Cmd+Left` / `Cmd+Right` return to Monaco.
+VS Code's previous/next editor tab. `Cmd+Left` / `Cmd+Right` stay with Monaco.
 Both remain remappable in Settings.
 
 Finishing a session becomes click-only. That is intentional.
@@ -67,11 +81,19 @@ deliberately remaps next/prev onto a Monaco-owned binding, the app-level shortcu
 wins and overrides the editor. That is the user's choice, not a bug, and no guard
 is added to prevent it.
 
-Static check (2026-07-09): `monaco-editor/esm` contains no
-`KeyMod.CtrlCmd | KeyMod.Alt | KeyCode.LeftArrow/RightArrow` binding, and
-`monaco-vim`'s dist binds no `Alt-Left/Right` or `Cmd-Left/Right`. A grep cannot see
-runtime `addCommand` calls, so the binding is still confirmed by hand in the
-packaged app against both Monaco and monaco-vim before release.
+**Binding availability, measured (2026-07-09).** Real Monaco was served from
+`node_modules/monaco-editor/min` and driven with Playwright keypresses:
+
+| Keys | Monaco cursor | Reached `window` |
+|---|---|---|
+| `Meta+ArrowRight` | moved to end of line | no — Monaco stopped propagation |
+| `Meta+Alt+ArrowRight` | unmoved | yes, `defaultPrevented: false` |
+
+monaco-vim is settled by reading its dispatch path, not by grep for `addCommand`:
+`CMAdapter.handleKeyDown` calls `preventDefault()` / `stopPropagation()` **only**
+when the normalized key resolves to a bound command. `monacoToCmKey` normalizes
+`⌘⌥→` to `"Meta-Alt-Right"`, and no `Alt-`/`Meta-` arrow binding exists anywhere in
+`monaco-vim`'s dist. Unbound keys fall through untouched.
 
 When a key is a no-op (first or last item), the editor gives a brief nudge — a ~180ms
 horizontal shake of `KataEditor`'s root element. No toast, no dialog. A silent no-op
@@ -279,9 +301,11 @@ rather than by a separate filtering step.
 **Verified by hand in the packaged app** (cannot be asserted in a unit test, and the
 last two bugs in this app appeared only when packaged):
 
-- `Cmd+Left` / `Cmd+Right` again move the Monaco cursor to line start / end.
-- `⌘⌥←` / `⌘⌥→` are not swallowed by Monaco or by monaco-vim.
-- The no-op pulse on the first/last kata reads as intentional, not as a dead key.
+- `Cmd+Left` / `Cmd+Right` move the Monaco cursor to line start / end. (They always
+  did; see the Problem correction.)
+- `⌘⌥←` / `⌘⌥→` are not swallowed by Monaco or by monaco-vim. **Confirmed** — see
+  *Binding availability, measured*.
+- The no-op nudge on the first/last kata reads as intentional, not as a dead key.
 
 **Regression guard:** a source-text test asserting `src/routes/session.tsx` no longer
 references `nextKata` or `prevKata`, so the two registrations cannot silently coexist
@@ -309,10 +333,10 @@ fail any other test; both handlers would simply run.
 
 ## Open Risks
 
-- **monaco-vim may bind `⌘⌥` arrows at runtime.** A static grep found no such binding
-  in either `monaco-editor/esm` or `monaco-vim`'s dist, but neither can see runtime
-  `addCommand` registration. Confirmed by hand in the packaged app. If it does bind
-  them, the binding choice is revisited before implementation, not worked around.
+- ~~**monaco-vim may bind `⌘⌥` arrows at runtime.**~~ **Closed 2026-07-09.** Monaco
+  measured with Playwright; monaco-vim settled by reading `CMAdapter.handleKeyDown`,
+  which swallows a key only when it resolves to a bound command. See *Binding
+  availability, measured*.
 - **`browseOrder` staleness within a session of use.** If the user opens a kata, goes
   back, changes the filter, then returns to the editor via browser history, the order
   reflects the newer filter. Acceptable: the list they last saw is the list they get.
