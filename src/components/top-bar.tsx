@@ -7,14 +7,7 @@ import { usesOverlayTitlebar } from "../lib/platform";
 import { useKataStore } from "../stores/kata-store";
 import { useSessionStore } from "../stores/session-store";
 import { useTimerStore } from "../stores/timer-store";
-
-const NAV_ITEMS = [
-  { path: "/dashboard", label: "Dashboard" },
-  { path: "/practice", label: "Practice" },
-  { path: "/problems", label: "Problems", matchPrefix: "/session" },
-  { path: "/results", label: "Results" },
-  { path: "/settings", label: "Settings" },
-];
+import { NAV_ITEMS, activeNavPath, type NavItem } from "../lib/nav-items";
 
 export function TopBar() {
   const theme = useSettingsStore((s) => s.theme);
@@ -31,10 +24,8 @@ export function TopBar() {
   const kataIdSet = new Set(katas.map((k) => k.id));
   const dailyCount = dailyKataIds.filter((id) => kataIdSet.has(id)).length;
 
-  const isActive = (item: (typeof NAV_ITEMS)[number]) => {
-    if (item.matchPrefix) return location.pathname.startsWith(item.matchPrefix);
-    return location.pathname === item.path;
-  };
+  const activePath = activeNavPath(location.pathname);
+  const isActive = (item: NavItem) => item.path === activePath;
 
   const handleStartPractice = useCallback(async () => {
     if (dailyCount === 0) {
