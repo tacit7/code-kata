@@ -48,12 +48,13 @@
   #resize-handle { width: 5px; flex-shrink: 0; cursor: col-resize; background: transparent; border-left: 1px solid var(--border); transition: background .15s; z-index: 10; }
   #resize-handle:hover, #resize-handle.dragging { background: var(--accent); }
 
-  #code-panel { width: 350px; min-width: 120px; max-width: 560px; flex-shrink: 0; background: var(--surface-dark); border-right: 1px solid var(--border); overflow-y: auto; overflow-x: auto; padding: 10px 12px; display: flex; flex-direction: column; }
+  #code-panel { width: 430px; min-width: 120px; max-width: 640px; flex-shrink: 0; background: var(--surface-dark); border-right: 1px solid var(--border); overflow-y: auto; overflow-x: auto; padding: 10px 12px; display: flex; flex-direction: column; }
   .code-panel-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--text-dim); margin-bottom: 8px; }
   .cl { display: flex; align-items: stretch; padding: 2px 0; white-space: pre; border-left: 2px solid transparent; padding-left: 6px; color: var(--text-muted); transition: all 0.2s; font-family: 'Fira Code', 'Cascadia Code', monospace; font-size: 0.75rem; line-height: 1.8; }
   .cl.hl { background: rgba(var(--accent-ch),0.12); border-left-color: var(--accent); color: var(--text); }
   .ln { display: inline-block; width: 20px; text-align: right; color: var(--text-dim); user-select: none; margin-right: 10px; font-size: 0.7rem; }
   .kw { color: var(--purple); }
+  .cm { color: var(--text-dim); font-style: italic; }
   .fn { color: var(--blue); }
   .bi { color: var(--orange); }
   .op { color: var(--text); }
@@ -142,19 +143,34 @@
 </div>
 
 <script>
+// Line number 0 means "not an executable line": no id is assigned to it, so the
+// step highlighter never targets it. Blank lines and comments both use it.
 var CODE = [
   [1,  '<span class="kw">def</span> <span class="fn">product_except_self</span>(nums):'],
   [2,  '  n      = len(nums)'],
+  [0,  ''],
+  [0,  '  <span class="cm"># result[i] first holds the product of</span>'],
+  [0,  '  <span class="cm"># every number to the LEFT of i.</span>'],
   [3,  '  result = [1] * n'],
   [0,  ''],
+  [0,  '  <span class="cm"># product of everything before the current index</span>'],
   [4,  '  prefix = 1'],
+  [0,  ''],
+  [0,  '  <span class="cm"># pass 1: fill result with left-side products</span>'],
   [5,  '  <span class="kw">for</span> i <span class="kw">in</span> range(n):'],
   [6,  '    result[i] = prefix'],
+  [0,  ''],
+  [0,  '    <span class="cm"># fold nums[i] in, for the next index\'s left product</span>'],
   [7,  '    prefix *= nums[i]'],
   [0,  ''],
+  [0,  '  <span class="cm"># product of everything after the current index</span>'],
   [9,  '  suffix = 1'],
+  [0,  ''],
+  [0,  '  <span class="cm"># pass 2: multiply in the right-side products</span>'],
   [10, '  <span class="kw">for</span> i <span class="kw">in</span> range(n - 1, -1, -1):'],
   [11, '    result[i] *= suffix'],
+  [0,  ''],
+  [0,  '    <span class="cm"># fold nums[i] in, for the next index to the left</span>'],
   [12, '    suffix *= nums[i]'],
   [0,  ''],
   [14, '  <span class="kw">return</span> result'],
