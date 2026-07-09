@@ -51,11 +51,19 @@ fn show_kata_context_menu(
 // leaving the user stuck on a dead window.
 struct HeartbeatState(Mutex<Instant>);
 
+const HEARTBEAT_STALE_AFTER: Duration = Duration::from_secs(6);
+const HEARTBEAT_WATCHDOG_INTERVAL: Duration = Duration::from_secs(3);
+const HEARTBEAT_RELOAD_COOLDOWN: Duration = Duration::from_secs(10);
+
 #[tauri::command]
 fn heartbeat(state: tauri::State<HeartbeatState>) {
     if let Ok(mut last) = state.0.lock() {
         *last = Instant::now();
     }
+}
+
+fn is_stale_heartbeat(last: Instant, now: Instant) -> bool {
+    now.duration_since(last) > HEARTBEAT_STALE_AFTER
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -156,6 +164,31 @@ pub fn run() {
             });
 
             if let Some(window) = app.get_webview_window("main") {
+                let watchdog = window.clone();
+                std::thread::spawn(move || {
+                    let mut last_reload: Option<Instant> = None;
+                    loop {
+                        std::thread::sleep(HEARTBEAT_WATCHDOG_INTERVAL);
+
+                        let now = Instant::now();
+                        let state = watchdog.state::<HeartbeatState>();
+                        let stale = state
+                            .0
+                            .lock()
+                            .map(|last| is_stale_heartbeat(*last, now))
+                            .unwrap_or(false);
+
+                        let recently_reloaded = last_reload
+                            .map(|last| now.duration_since(last) < HEARTBEAT_RELOAD_COOLDOWN)
+                            .unwrap_or(false);
+
+                        if stale && !recently_reloaded {
+                            let _ = watchdog.reload();
+                            last_reload = Some(now);
+                        }
+                    }
+                });
+
                 let handle = window.clone();
                 window.on_window_event(move |event| {
                     if let tauri::WindowEvent::Focused(true) = event {
@@ -166,7 +199,7 @@ pub fn run() {
                             let stale = state
                                 .0
                                 .lock()
-                                .map(|last| last.elapsed() > Duration::from_secs(6))
+                                .map(|last| is_stale_heartbeat(*last, Instant::now()))
                                 .unwrap_or(false);
                             if stale {
                                 // .reload() goes through the native webview dispatcher, unlike
@@ -183,4 +216,20 @@ pub fn run() {
         })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn stale_heartbeat_requires_more_than_threshold() {
+        let now = Instant::now();
+
+        assert!(!is_stale_heartbeat(now - HEARTBEAT_STALE_AFTER, now));
+        assert!(is_stale_heartbeat(
+            now - HEARTBEAT_STALE_AFTER - Duration::from_millis(1),
+            now,
+        ));
+    }
 }
