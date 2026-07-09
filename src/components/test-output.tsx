@@ -42,6 +42,12 @@ export function TestOutput({ results, ranAt, onSendToRepl }: TestOutputProps) {
 
             {!r.passed && (r.expected !== undefined || r.got !== undefined) && (
               <div className="ml-4 mt-1 flex flex-col gap-0.5">
+                {r.input && (
+                  <div className="flex gap-2 items-baseline">
+                    <span className="text-xs text-base-content/40 w-16 shrink-0">Input</span>
+                    <pre className="text-xs text-base-content/70 whitespace-pre-wrap">{r.input}</pre>
+                  </div>
+                )}
                 <div className="flex gap-2 items-baseline">
                   <span className="text-xs text-base-content/40 w-16 shrink-0">Expected</span>
                   <pre className="text-xs text-success/80 whitespace-pre-wrap">{r.expected}</pre>
