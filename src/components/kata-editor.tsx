@@ -5,6 +5,7 @@ import { initVimMode, type VimAdapterInstance } from "monaco-vim";
 import { open } from "@tauri-apps/plugin-shell";
 import { useSettingsStore } from "../stores/settings-store";
 import { resolveMonacoTheme, APP_THEMES } from "../lib/editor-themes";
+import { monacoEditorOptions } from "../lib/editor-settings";
 import { useTimerStore } from "../stores/timer-store";
 import { useSessionStore } from "../stores/session-store";
 import { useKeyboardShortcuts } from "../hooks/use-keyboard-shortcuts";
@@ -493,7 +494,7 @@ interface KataEditorProps {
 }
 
 export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataEditorProps) {
-  const { theme, vimMode, toggleVimMode, shortcuts, fontSize, fontFamily, tabSize, hideDescriptionInSession, setSetting, editorAutocomplete, lineNumbersMode, wordWrap, autoClosingBrackets, fontLigatures } = useSettingsStore();
+  const { theme, vimMode, toggleVimMode, shortcuts, fontSize, fontFamily, tabSize, hideDescriptionInSession, setSetting, editorAutocomplete, lineNumbersMode, wordWrap, autoClosingBrackets, fontLigatures, highlightOccurrences } = useSettingsStore();
   const sessionMaxTestRuns = useSessionStore((s) => s.activeSession?.maxTestRuns ?? null);
   // Attempt limits only apply inside a practice session, never in the standalone editor
   const maxTestRuns = isSession ? sessionMaxTestRuns : null;
@@ -555,23 +556,17 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
   const monacoTheme = resolveMonacoTheme(theme);
   const fmtCombo = (combo: string) =>
     combo.replace("Meta", "⌘").replace("Shift", "⇧").replace("Alt", "⌥").replace("Ctrl", "⌃").replace("Enter", "↩").replace("+", "").replace("+", "");
-  const sharedEditorOptions = {
+  const sharedEditorOptions = monacoEditorOptions({
     fontSize,
     fontFamily,
     tabSize,
-    detectIndentation: false,
-    minimap: { enabled: false },
-    automaticLayout: true,
-    scrollBeyondLastLine: false,
-    lineNumbers: lineNumbersMode,
-    wordWrap: wordWrap ? ("on" as const) : ("off" as const),
-    autoClosingBrackets: autoClosingBrackets ? ("languageDefined" as const) : ("never" as const),
-    autoClosingQuotes: autoClosingBrackets ? ("languageDefined" as const) : ("never" as const),
+    lineNumbersMode,
+    editorAutocomplete,
+    autoClosingBrackets,
+    wordWrap,
     fontLigatures,
-    quickSuggestions: editorAutocomplete,
-    suggestOnTriggerCharacters: editorAutocomplete,
-    wordBasedSuggestions: editorAutocomplete ? ("currentDocument" as const) : ("off" as const),
-  };
+    highlightOccurrences,
+  });
 
   useEffect(() => {
     prewarmRunner(kata.language);
