@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { useSettingsStore } from "../stores/settings-store";
 import {
   monacoEditorOptions,
   EDITOR_TOGGLES,
@@ -209,7 +210,6 @@ describe("resolveEditorToggles", () => {
   });
 });
 
-import { useSettingsStore } from "../stores/settings-store";
 
 // settings-store imports getDb from database.ts but calls it lazily, so the
 // module imports cleanly under Vitest's Node environment. Verified 2026-07-09.
