@@ -247,10 +247,18 @@ variant; resolve per variant.
 
 ## Open Risks
 
-- **`monacoEditorOptions` returns `Record<string, unknown>`, not Monaco's
-  `IStandaloneEditorConstructionOptions`.** Importing that type into a `src/lib`
-  module pulls `monaco-editor` into the Vitest module graph, which fails in a Node
-  environment. The cost is that a misspelled option name type-checks. The
-  `kata-editor.tsx` call site, which does import Monaco, is where a bad option
-  surfaces — and every option name in the mapping is covered by a unit test that
-  asserts its exact key.
+- ~~**`monacoEditorOptions` returns `Record<string, unknown>`.**~~ **Corrected
+  during planning.** That return type does not work: `kata-editor.tsx` spreads the
+  result into Monaco's `options` prop, and `Record<string, unknown>` widens every
+  value to `unknown`, so the spread fails `tsc`. The function therefore declares
+  **no explicit return type** and lets TypeScript infer the object literal, with
+  `as const` on the string-union values exactly as the current inline
+  `sharedEditorOptions` already does. Monaco is still never imported into
+  `src/lib`, so the Vitest Node environment is unaffected. The residual cost is
+  unchanged: a misspelled option name type-checks in isolation and surfaces at the
+  `kata-editor.tsx` call site, and every option key in the mapping is asserted by
+  name in a unit test.
+
+- **`settings.tsx` conflicts on every merge-out.** It is variant-owned. Known and
+  accepted; resolve keeping each variant's language list and taking the toggle map
+  from `app-core`.
