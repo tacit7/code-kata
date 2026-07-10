@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { monacoEditorOptions, type EditorSettings } from "./editor-settings";
+import { EDITOR_TOGGLES, resolveEditorToggles, type EditorToggleKey } from "./editor-settings";
 
 const BASE: EditorSettings = {
   fontSize: 14,
@@ -122,5 +123,83 @@ describe("monacoEditorOptions", () => {
       "wordBasedSuggestions",
       "wordWrap",
     ]);
+  });
+});
+
+const TOGGLE_DEFAULTS: Record<EditorToggleKey, boolean> = {
+  editorAutocomplete: true,
+  autoClosingBrackets: true,
+  wordWrap: false,
+  highlightOccurrences: true,
+  fontLigatures: false,
+};
+
+describe("EDITOR_TOGGLES", () => {
+  it("has no duplicate keys", () => {
+    const keys = EDITOR_TOGGLES.map((t) => t.key);
+    expect(new Set(keys).size).toBe(keys.length);
+  });
+
+  it("every toggle has a non-empty label", () => {
+    for (const toggle of EDITOR_TOGGLES) {
+      expect(toggle.label.trim(), toggle.key).not.toBe("");
+    }
+  });
+
+  // The Practice/Settings split must be a real split. All-true or all-false
+  // would mean the onPractice flag is doing nothing.
+  it("splits: Practice gets a non-empty subset, and not everything", () => {
+    const onPractice = EDITOR_TOGGLES.filter((t) => t.onPractice);
+    expect(onPractice.length).toBeGreaterThan(0);
+    expect(onPractice.length).toBeLessThan(EDITOR_TOGGLES.length);
+  });
+
+  // Nobody picks a typeface feature before a timed session.
+  it("keeps Font Ligatures out of Practice", () => {
+    const ligatures = EDITOR_TOGGLES.find((t) => t.key === "fontLigatures");
+    expect(ligatures).toBeDefined();
+    expect(ligatures!.onPractice).toBe(false);
+  });
+
+  // Task 6 builds a Record<EditorToggleKey, boolean> for the Practice page.
+  // Every rendered toggle must have a value in it.
+  it("every toggle key is an EditorToggleKey the defaults record covers", () => {
+    for (const toggle of EDITOR_TOGGLES) {
+      expect(TOGGLE_DEFAULTS[toggle.key], toggle.key).toBeTypeOf("boolean");
+    }
+  });
+});
+
+describe("resolveEditorToggles", () => {
+  // This is the "no migration needed" claim, as a test. An existing database
+  // has no highlightOccurrences row; the setting must come back as its default.
+  it("falls back to the default when the key is absent from the patch", () => {
+    const resolved = resolveEditorToggles({}, TOGGLE_DEFAULTS);
+    expect(resolved.highlightOccurrences).toBe(true);
+    expect(resolved.editorAutocomplete).toBe(true);
+    expect(resolved.wordWrap).toBe(false);
+  });
+
+  it("a persisted false overrides a true default", () => {
+    const resolved = resolveEditorToggles({ highlightOccurrences: false }, TOGGLE_DEFAULTS);
+    expect(resolved.highlightOccurrences).toBe(false);
+  });
+
+  it("a persisted true overrides a false default", () => {
+    const resolved = resolveEditorToggles({ wordWrap: true }, TOGGLE_DEFAULTS);
+    expect(resolved.wordWrap).toBe(true);
+  });
+
+  it("returns every key in defaults, and only those", () => {
+    const resolved = resolveEditorToggles({ somethingElse: 1 }, TOGGLE_DEFAULTS);
+    expect(Object.keys(resolved).sort()).toEqual(Object.keys(TOGGLE_DEFAULTS).sort());
+  });
+
+  // Reproduces the existing `(patch.x as boolean) ?? DEFAULTS.x` exactly:
+  // null is nullish and falls back, but other junk passes through. Tightening
+  // this would change how a corrupted row loads. Out of scope -- see Global
+  // Constraints.
+  it("treats null as absent, matching the ?? it replaces", () => {
+    expect(resolveEditorToggles({ wordWrap: null }, TOGGLE_DEFAULTS).wordWrap).toBe(false);
   });
 });

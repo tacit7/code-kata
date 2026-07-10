@@ -58,3 +58,68 @@ export function monacoEditorOptions(s: EditorSettings) {
     selectionHighlight: s.highlightOccurrences,
   };
 }
+
+export type EditorToggleKey =
+  | "editorAutocomplete"
+  | "autoClosingBrackets"
+  | "wordWrap"
+  | "highlightOccurrences"
+  | "fontLigatures";
+
+export interface EditorToggle {
+  key: EditorToggleKey;
+  label: string;
+  hint?: string;
+  /** Practice shows only the toggles that change how hard a session is. */
+  onPractice: boolean;
+}
+
+// Order is the render order on both pages: behavior first, cosmetics last.
+export const EDITOR_TOGGLES: EditorToggle[] = [
+  {
+    key: "editorAutocomplete",
+    label: "Autocomplete",
+    hint: "Turn off to practice API recall without suggestions.",
+    onPractice: true,
+  },
+  {
+    key: "wordWrap",
+    label: "Word Wrap",
+    onPractice: true,
+  },
+  {
+    key: "autoClosingBrackets",
+    label: "Auto-Closing Brackets",
+    hint: "Turn off to type every closing bracket and quote yourself.",
+    onPractice: true,
+  },
+  {
+    key: "highlightOccurrences",
+    label: "Highlight Occurrences",
+    hint: "Turn off to stop other instances of the identifier under the cursor from lighting up.",
+    onPractice: true,
+  },
+  {
+    key: "fontLigatures",
+    label: "Font Ligatures",
+    onPractice: false,
+  },
+];
+
+/**
+ * Merges the persisted settings rows over the defaults for the editor booleans.
+ *
+ * Reproduces `(patch.x as boolean) ?? DEFAULTS.x` per key, which is why a key
+ * absent from the database yields its default and no migration is needed when a
+ * new toggle ships. The `??` semantics are deliberate: null falls back, other
+ * junk passes through, exactly as the five hand-written lines it replaces did.
+ */
+export function resolveEditorToggles(
+  patch: Record<string, unknown>,
+  defaults: Record<EditorToggleKey, boolean>,
+): Record<EditorToggleKey, boolean> {
+  const keys = Object.keys(defaults) as EditorToggleKey[];
+  return Object.fromEntries(
+    keys.map((key) => [key, (patch[key] as boolean) ?? defaults[key]]),
+  ) as Record<EditorToggleKey, boolean>;
+}
