@@ -5,6 +5,7 @@ import type { ShortcutAction } from "../stores/settings-store";
 import { confirm } from "@tauri-apps/plugin-dialog";
 import { reseedKatas, resetAllProgress } from "../lib/database";
 import { APP_THEMES } from "../lib/editor-themes";
+import { EDITOR_TOGGLES } from "../lib/editor-settings";
 import { useKataStore } from "../stores/kata-store";
 
 type Tab = "editor" | "practice" | "shortcuts";
@@ -68,11 +69,8 @@ function EditorTab() {
   const tabSize = useSettingsStore((s) => s.tabSize);
   const language = useSettingsStore((s) => s.language);
   const setSetting = useSettingsStore((s) => s.setSetting);
-  const editorAutocomplete = useSettingsStore((s) => s.editorAutocomplete);
+  const settings = useSettingsStore();
   const lineNumbersMode = useSettingsStore((s) => s.lineNumbersMode);
-  const wordWrap = useSettingsStore((s) => s.wordWrap);
-  const autoClosingBrackets = useSettingsStore((s) => s.autoClosingBrackets);
-  const fontLigatures = useSettingsStore((s) => s.fontLigatures);
 
   return (
     <div className="flex flex-col gap-6">
@@ -186,48 +184,21 @@ function EditorTab() {
         </div>
       </div>
 
-      <div>
-        <SectionLabel>Autocomplete</SectionLabel>
-        <button
-          onClick={() => setSetting("editorAutocomplete", !editorAutocomplete)}
-          className={`btn btn-sm ${editorAutocomplete ? "btn-success" : "btn-ghost"}`}
-        >
-          {editorAutocomplete ? "On" : "Off"}
-        </button>
-        <p className="text-[11px] text-base-content/40 mt-1.5">
-          Turn off to practice API recall without suggestions.
-        </p>
-      </div>
-
-      <div>
-        <SectionLabel>Word Wrap</SectionLabel>
-        <button
-          onClick={() => setSetting("wordWrap", !wordWrap)}
-          className={`btn btn-sm ${wordWrap ? "btn-success" : "btn-ghost"}`}
-        >
-          {wordWrap ? "On" : "Off"}
-        </button>
-      </div>
-
-      <div>
-        <SectionLabel>Auto-Closing Brackets</SectionLabel>
-        <button
-          onClick={() => setSetting("autoClosingBrackets", !autoClosingBrackets)}
-          className={`btn btn-sm ${autoClosingBrackets ? "btn-success" : "btn-ghost"}`}
-        >
-          {autoClosingBrackets ? "On" : "Off"}
-        </button>
-      </div>
-
-      <div>
-        <SectionLabel>Font Ligatures</SectionLabel>
-        <button
-          onClick={() => setSetting("fontLigatures", !fontLigatures)}
-          className={`btn btn-sm ${fontLigatures ? "btn-success" : "btn-ghost"}`}
-        >
-          {fontLigatures ? "On" : "Off"}
-        </button>
-      </div>
+      {EDITOR_TOGGLES.map(({ key, label, hint }) => {
+        const on = settings[key];
+        return (
+          <div key={key}>
+            <SectionLabel>{label}</SectionLabel>
+            <button
+              onClick={() => setSetting(key, !on)}
+              className={`btn btn-sm ${on ? "btn-success" : "btn-ghost"}`}
+            >
+              {on ? "On" : "Off"}
+            </button>
+            {hint && <p className="text-[11px] text-base-content/40 mt-1.5">{hint}</p>}
+          </div>
+        );
+      })}
     </div>
   );
 }
