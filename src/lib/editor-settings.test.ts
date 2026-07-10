@@ -1,6 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { monacoEditorOptions, type EditorSettings } from "./editor-settings";
-import { EDITOR_TOGGLES, resolveEditorToggles, type EditorToggleKey } from "./editor-settings";
+import {
+  monacoEditorOptions,
+  EDITOR_TOGGLES,
+  resolveEditorToggles,
+  type EditorSettings,
+  type EditorToggleKey,
+} from "./editor-settings";
 
 const BASE: EditorSettings = {
   fontSize: 14,
