@@ -208,3 +208,22 @@ describe("resolveEditorToggles", () => {
     expect(resolveEditorToggles({ wordWrap: null }, TOGGLE_DEFAULTS).wordWrap).toBe(false);
   });
 });
+
+import { useSettingsStore } from "../stores/settings-store";
+
+// settings-store imports getDb from database.ts but calls it lazily, so the
+// module imports cleanly under Vitest's Node environment. Verified 2026-07-09.
+describe("settings store", () => {
+  it("defaults highlightOccurrences to true, matching Monaco's own behavior", () => {
+    expect(useSettingsStore.getState().highlightOccurrences).toBe(true);
+  });
+
+  // A toggle naming a key the store does not have would render, flip nothing,
+  // and look like a bug in Monaco.
+  it("has a boolean for every EDITOR_TOGGLES key", () => {
+    const state = useSettingsStore.getState() as unknown as Record<string, unknown>;
+    for (const toggle of EDITOR_TOGGLES) {
+      expect(typeof state[toggle.key], toggle.key).toBe("boolean");
+    }
+  });
+});
