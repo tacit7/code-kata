@@ -208,6 +208,19 @@ describe("resolveEditorToggles", () => {
   it("treats null as absent, matching the ?? it replaces", () => {
     expect(resolveEditorToggles({ wordWrap: null }, TOGGLE_DEFAULTS).wordWrap).toBe(false);
   });
+
+  // The null test above cannot police the `??`: wordWrap's default is already
+  // false, so a `typeof value === "boolean"` guard would return false too and
+  // look identical. A key whose default is TRUE, given a falsy non-boolean,
+  // separates them -- `??` passes the junk through, a typeof guard would
+  // substitute the default. Without this, a future "cleanup" could swap the
+  // `??` for a typeof guard, silently change how a corrupted row loads, and
+  // leave the whole suite green.
+  it("passes falsy non-boolean junk through, as `??` does", () => {
+    const resolved = resolveEditorToggles({ highlightOccurrences: 0 }, TOGGLE_DEFAULTS);
+    expect(resolved.highlightOccurrences as unknown).toBe(0);
+    expect(resolveEditorToggles({ editorAutocomplete: "" }, TOGGLE_DEFAULTS).editorAutocomplete as unknown).toBe("");
+  });
 });
 
 
