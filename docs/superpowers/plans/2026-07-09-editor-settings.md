@@ -4,7 +4,7 @@
 
 **Goal:** Put the editor toggles on the Practice launcher, make `Autocomplete` and `Auto-Closing Brackets` actually silence everything they claim to, and add a `Highlight Occurrences` toggle.
 
-**Architecture:** A new pure module `src/lib/editor-settings.ts` owns two things: `EDITOR_TOGGLES` (the descriptor list that Settings and Practice both render from, so they cannot drift) and `monacoEditorOptions(settings)` (the settings→Monaco mapping, lifted out of `kata-editor.tsx` so it can be unit-tested without rendering Monaco). The store gains one boolean. Nothing else changes.
+**Architecture:** A new pure module `src/lib/editor-settings.ts` owns three things: `monacoEditorOptions(settings)` (the settings→Monaco mapping, lifted out of `kata-editor.tsx` so it is unit-testable without rendering Monaco), `EDITOR_TOGGLES` (the descriptor list Settings and Practice both render from, so they cannot drift), and `resolveEditorToggles(patch, defaults)` (the persisted-settings merge for the five editor booleans, so the "no migration needed" claim is a test rather than an assertion). The store gains one boolean.
 
 **Tech Stack:** React 19, TypeScript (strict: `noUnusedLocals`, `noUnusedParameters`), Zustand, Monaco (`@monaco-editor/react`), Vitest 4.1.10 (**Node environment — no jsdom, no `@testing-library/react`**), Tailwind v4 + daisyUI.
 
@@ -13,10 +13,12 @@
 - Branch: `app-core`. Language-agnostic work only. Flow is one-way: `app-core` → variants. **Never** merge a variant into `app-core`.
 - **No new cosmetic settings.** Bracket pair colorization, whitespace rendering, sticky scroll, indent guides are explicit non-goals.
 - **No default changes.** Every existing user's editor behaves identically until they flip something. `highlightOccurrences` defaults to `true` because that is Monaco's current behavior.
-- **No migration.** A `highlightOccurrences` row absent from the database falls through the `??` in the validation block to the default, exactly as the four existing booleans do.
+- **No migration.** A `highlightOccurrences` row absent from the database yields the default. Task 3 proves this with a test.
+- **No behavior change to the persisted-settings merge.** `resolveEditorToggles` reproduces `(patch.x as boolean) ?? DEFAULTS.x` exactly, including its tolerance of non-boolean junk. Tightening it to a `typeof` check would change how a corrupted row loads and is out of scope.
 - Nothing may render in a test. `practice.tsx` and `settings.tsx` cannot be imported under this Vitest setup. Their correctness rests on both rendering from `EDITOR_TOGGLES`, which is tested.
 - `monacoEditorOptions` declares **no explicit return type** — TypeScript infers the object literal. Annotating it `Record<string, unknown>` breaks the spread at the `kata-editor.tsx` call site.
-- `src/lib/editor-settings.ts` must **never** import `monaco-editor`. That would pull Monaco into the Vitest module graph and fail in a Node environment.
+- `src/lib/editor-settings.ts` must **never** import `monaco-editor` (it would pull Monaco into the Vitest module graph, which has no DOM) and must **never** import from `src/stores` (`src/lib` does not depend on `src/stores`; the reverse is established — four store files already import from `src/lib`).
+- `LineNumbersMode` has exactly one definition, in `src/lib/editor-settings.ts`. `settings-store.ts` imports and re-exports it.
 - Every guard in this plan is mutation-tested: break the code, confirm the test fails, restore, confirm green. A test that does not fail when its subject is broken is not a test.
 - EITS: a task must be In Progress before editing files. Commit messages carry no Anthropic attribution or co-author tags.
 
@@ -32,7 +34,7 @@ This is where both bugs live. Two of the tests below fail against today's behavi
 
 **Interfaces:**
 - Consumes: nothing.
-- Produces: `EditorSettings` (interface), `monacoEditorOptions(s: EditorSettings)` returning an inferred object literal. Task 3 calls it from `kata-editor.tsx`.
+- Produces: `LineNumbersMode` (union type), `EditorSettings` (interface), `monacoEditorOptions(s: EditorSettings)` returning an inferred object literal. Task 3 imports `LineNumbersMode`; Task 4 calls `monacoEditorOptions`.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -151,7 +153,8 @@ Create `src/lib/editor-settings.ts`. This is the current inline `sharedEditorOpt
 //
 // This module must never import monaco-editor: it would pull Monaco into the
 // Vitest module graph, which has no DOM. Option names are therefore plain
-// strings, asserted by name in editor-settings.test.ts.
+// strings, asserted by name in editor-settings.test.ts. It must also never
+// import from src/stores -- the dependency runs stores → lib.
 
 export type LineNumbersMode = "on" | "off" | "relative";
 
@@ -213,7 +216,7 @@ Expected: PASS, 8 tests.
 
 - [ ] **Step 5: Mutation-test each new option**
 
-Break each of the six new options in turn, confirm the suite catches it, restore. Run after each edit: `pnpm exec vitest run src/lib/editor-settings.test.ts`
+Break each option in turn, confirm the suite catches it, restore. Run after each edit: `pnpm exec vitest run src/lib/editor-settings.test.ts`
 
 | Mutation | Expected |
 |---|---|
@@ -233,10 +236,10 @@ If any mutation leaves the suite green, the test is not testing what it claims. 
 git add src/lib/editor-settings.ts src/lib/editor-settings.test.ts
 git commit -m "feat(editor): pure settings-to-Monaco mapping, with the options its toggles forgot
 
-Autocomplete left parameterHints on, so the signature popup still fired on `(`
+Autocomplete left parameterHints on, so the signature popup still fired on \`(\`
 with the toggle off -- despite its hint text reading 'Turn off to practice API
 recall without suggestions'. Auto-Closing Brackets left autoSurround,
-autoClosingOvertype and autoClosingDelete on, so selecting text and typing `(`
+autoClosingOvertype and autoClosingDelete on, so selecting text and typing \`(\`
 still wrapped it.
 
 Extracting the mapping out of kata-editor.tsx is what makes either fix
@@ -246,15 +249,220 @@ this repo's Node-environment Vitest cannot do."
 
 ---
 
-### Task 2: `highlightOccurrences` on the settings store
+### Task 2: `EDITOR_TOGGLES` and `resolveEditorToggles`
+
+Both are pure and depend only on Task 1's module. Neither imports the store.
 
 **Files:**
-- Modify: `src/stores/settings-store.ts` (defaults ~line 48, interface ~line 72, validation ~line 157)
+- Modify: `src/lib/editor-settings.ts` (append)
 - Test: `src/lib/editor-settings.test.ts` (append)
 
 **Interfaces:**
-- Consumes: nothing.
-- Produces: `useSettingsStore.getState().highlightOccurrences: boolean`, default `true`. Tasks 3, 4, 5 read it.
+- Consumes: nothing from Task 1 at runtime; appends to the same file.
+- Produces: `EditorToggleKey` (union type), `EditorToggle` (interface), `EDITOR_TOGGLES: EditorToggle[]`, `resolveEditorToggles(patch: Record<string, unknown>, defaults: Record<EditorToggleKey, boolean>): Record<EditorToggleKey, boolean>`. Task 3 calls `resolveEditorToggles`; Tasks 5 and 6 render from `EDITOR_TOGGLES`.
+
+- [ ] **Step 1: Write the failing test**
+
+Append to `src/lib/editor-settings.test.ts`:
+
+```ts
+import { EDITOR_TOGGLES, resolveEditorToggles, type EditorToggleKey } from "./editor-settings";
+
+const TOGGLE_DEFAULTS: Record<EditorToggleKey, boolean> = {
+  editorAutocomplete: true,
+  autoClosingBrackets: true,
+  wordWrap: false,
+  highlightOccurrences: true,
+  fontLigatures: false,
+};
+
+describe("EDITOR_TOGGLES", () => {
+  it("has no duplicate keys", () => {
+    const keys = EDITOR_TOGGLES.map((t) => t.key);
+    expect(new Set(keys).size).toBe(keys.length);
+  });
+
+  it("every toggle has a non-empty label", () => {
+    for (const toggle of EDITOR_TOGGLES) {
+      expect(toggle.label.trim(), toggle.key).not.toBe("");
+    }
+  });
+
+  // The Practice/Settings split must be a real split. All-true or all-false
+  // would mean the onPractice flag is doing nothing.
+  it("splits: Practice gets a non-empty subset, and not everything", () => {
+    const onPractice = EDITOR_TOGGLES.filter((t) => t.onPractice);
+    expect(onPractice.length).toBeGreaterThan(0);
+    expect(onPractice.length).toBeLessThan(EDITOR_TOGGLES.length);
+  });
+
+  // Nobody picks a typeface feature before a timed session.
+  it("keeps Font Ligatures out of Practice", () => {
+    const ligatures = EDITOR_TOGGLES.find((t) => t.key === "fontLigatures");
+    expect(ligatures).toBeDefined();
+    expect(ligatures!.onPractice).toBe(false);
+  });
+
+  // Task 6 builds a Record<EditorToggleKey, boolean> for the Practice page.
+  // Every rendered toggle must have a value in it.
+  it("every toggle key is an EditorToggleKey the defaults record covers", () => {
+    for (const toggle of EDITOR_TOGGLES) {
+      expect(TOGGLE_DEFAULTS[toggle.key], toggle.key).toBeTypeOf("boolean");
+    }
+  });
+});
+
+describe("resolveEditorToggles", () => {
+  // This is the "no migration needed" claim, as a test. An existing database
+  // has no highlightOccurrences row; the setting must come back as its default.
+  it("falls back to the default when the key is absent from the patch", () => {
+    const resolved = resolveEditorToggles({}, TOGGLE_DEFAULTS);
+    expect(resolved.highlightOccurrences).toBe(true);
+    expect(resolved.editorAutocomplete).toBe(true);
+    expect(resolved.wordWrap).toBe(false);
+  });
+
+  it("a persisted false overrides a true default", () => {
+    const resolved = resolveEditorToggles({ highlightOccurrences: false }, TOGGLE_DEFAULTS);
+    expect(resolved.highlightOccurrences).toBe(false);
+  });
+
+  it("a persisted true overrides a false default", () => {
+    const resolved = resolveEditorToggles({ wordWrap: true }, TOGGLE_DEFAULTS);
+    expect(resolved.wordWrap).toBe(true);
+  });
+
+  it("returns every key in defaults, and only those", () => {
+    const resolved = resolveEditorToggles({ somethingElse: 1 }, TOGGLE_DEFAULTS);
+    expect(Object.keys(resolved).sort()).toEqual(Object.keys(TOGGLE_DEFAULTS).sort());
+  });
+
+  // Reproduces the existing `(patch.x as boolean) ?? DEFAULTS.x` exactly:
+  // null is nullish and falls back, but other junk passes through. Tightening
+  // this would change how a corrupted row loads. Out of scope -- see Global
+  // Constraints.
+  it("treats null as absent, matching the ?? it replaces", () => {
+    expect(resolveEditorToggles({ wordWrap: null }, TOGGLE_DEFAULTS).wordWrap).toBe(false);
+  });
+});
+```
+
+- [ ] **Step 2: Run the test to verify it fails**
+
+Run: `pnpm exec vitest run src/lib/editor-settings.test.ts`
+Expected: FAIL — `EDITOR_TOGGLES` and `resolveEditorToggles` are not exported.
+
+- [ ] **Step 3: Write the implementation**
+
+Append to `src/lib/editor-settings.ts`:
+
+```ts
+export type EditorToggleKey =
+  | "editorAutocomplete"
+  | "autoClosingBrackets"
+  | "wordWrap"
+  | "highlightOccurrences"
+  | "fontLigatures";
+
+export interface EditorToggle {
+  key: EditorToggleKey;
+  label: string;
+  hint?: string;
+  /** Practice shows only the toggles that change how hard a session is. */
+  onPractice: boolean;
+}
+
+// Order is the render order on both pages: behavior first, cosmetics last.
+export const EDITOR_TOGGLES: EditorToggle[] = [
+  {
+    key: "editorAutocomplete",
+    label: "Autocomplete",
+    hint: "Turn off to practice API recall without suggestions.",
+    onPractice: true,
+  },
+  {
+    key: "wordWrap",
+    label: "Word Wrap",
+    onPractice: true,
+  },
+  {
+    key: "autoClosingBrackets",
+    label: "Auto-Closing Brackets",
+    hint: "Turn off to type every closing bracket and quote yourself.",
+    onPractice: true,
+  },
+  {
+    key: "highlightOccurrences",
+    label: "Highlight Occurrences",
+    hint: "Turn off to stop other instances of the identifier under the cursor from lighting up.",
+    onPractice: true,
+  },
+  {
+    key: "fontLigatures",
+    label: "Font Ligatures",
+    onPractice: false,
+  },
+];
+
+/**
+ * Merges the persisted settings rows over the defaults for the editor booleans.
+ *
+ * Reproduces `(patch.x as boolean) ?? DEFAULTS.x` per key, which is why a key
+ * absent from the database yields its default and no migration is needed when a
+ * new toggle ships. The `??` semantics are deliberate: null falls back, other
+ * junk passes through, exactly as the five hand-written lines it replaces did.
+ */
+export function resolveEditorToggles(
+  patch: Record<string, unknown>,
+  defaults: Record<EditorToggleKey, boolean>,
+): Record<EditorToggleKey, boolean> {
+  const keys = Object.keys(defaults) as EditorToggleKey[];
+  return Object.fromEntries(
+    keys.map((key) => [key, (patch[key] as boolean) ?? defaults[key]]),
+  ) as Record<EditorToggleKey, boolean>;
+}
+```
+
+- [ ] **Step 4: Run the test to verify it passes**
+
+Run: `pnpm exec vitest run src/lib/editor-settings.test.ts`
+Expected: PASS, 18 tests.
+
+- [ ] **Step 5: Mutation-test the guards**
+
+| Mutation | Expected |
+|---|---|
+| Change `fontLigatures` to `onPractice: true` | FAIL — `keeps Font Ligatures out of Practice` and `splits: Practice gets a non-empty subset, and not everything` |
+| Set every `onPractice: false` | FAIL — `splits: Practice gets a non-empty subset` |
+| Duplicate the `wordWrap` entry | FAIL — `has no duplicate keys` |
+| Change a `label` to `""` | FAIL — `every toggle has a non-empty label` |
+| `resolveEditorToggles`: return `{ ...defaults }` (ignore the patch) | FAIL — `a persisted false overrides a true default` and `a persisted true overrides a false default` |
+| `resolveEditorToggles`: return `patch as ...` (ignore the defaults) | FAIL — `falls back to the default when the key is absent` |
+| `resolveEditorToggles`: `patch[key] ?? defaults[key]` → `patch[key] !== undefined ? patch[key] : defaults[key]` | FAIL — `treats null as absent, matching the ?? it replaces` |
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add src/lib/editor-settings.ts src/lib/editor-settings.test.ts
+git commit -m "feat(editor): one definition of an editor toggle, and a tested settings merge
+
+EDITOR_TOGGLES is the single source both Settings and Practice render from.
+resolveEditorToggles replaces five hand-copied '(patch.x as boolean) ??
+DEFAULTS.x' lines with one tested function, so 'a new toggle needs no
+migration' is a test rather than a claim."
+```
+
+---
+
+### Task 3: `highlightOccurrences` on the settings store
+
+**Files:**
+- Modify: `src/stores/settings-store.ts` (type export line 12; defaults ~line 48; interface ~line 72; validation block ~lines 150-157)
+- Test: `src/lib/editor-settings.test.ts` (append)
+
+**Interfaces:**
+- Consumes: `LineNumbersMode` (Task 1), `resolveEditorToggles`, `EditorToggleKey` (Task 2).
+- Produces: `useSettingsStore.getState().highlightOccurrences: boolean`, default `true`. Tasks 4, 5, 6 read it.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -263,14 +471,25 @@ Append to `src/lib/editor-settings.test.ts`:
 ```ts
 import { useSettingsStore } from "../stores/settings-store";
 
-// settings-store imports getDb from database.ts, but calls it lazily, so the
+// settings-store imports getDb from database.ts but calls it lazily, so the
 // module imports cleanly under Vitest's Node environment. Verified 2026-07-09.
 describe("settings store", () => {
   it("defaults highlightOccurrences to true, matching Monaco's own behavior", () => {
     expect(useSettingsStore.getState().highlightOccurrences).toBe(true);
   });
+
+  // A toggle naming a key the store does not have would render, flip nothing,
+  // and look like a bug in Monaco.
+  it("has a boolean for every EDITOR_TOGGLES key", () => {
+    const state = useSettingsStore.getState() as unknown as Record<string, unknown>;
+    for (const toggle of EDITOR_TOGGLES) {
+      expect(typeof state[toggle.key], toggle.key).toBe("boolean");
+    }
+  });
 });
 ```
+
+Note: this test constrains **type**, not membership. `vimMode` is also a store boolean and would pass it. `EditorToggleKey` is what constrains membership, at compile time.
 
 - [ ] **Step 2: Run the test to verify it fails**
 
@@ -279,52 +498,94 @@ Expected: FAIL — `expected undefined to be true`.
 
 - [ ] **Step 3: Write the implementation**
 
-Three edits to `src/stores/settings-store.ts`, each placed immediately after the `fontLigatures` line in its block.
+Four edits to `src/stores/settings-store.ts`.
 
-In `DEFAULTS` (after `fontLigatures: false,`):
+Add to the imports:
+```ts
+import { resolveEditorToggles, type EditorToggleKey, type LineNumbersMode } from "../lib/editor-settings";
+```
+
+Replace the local declaration at line 12 (`export type LineNumbersMode = "on" | "off" | "relative";`) with a re-export, so the type has exactly one definition:
+```ts
+export type { LineNumbersMode };
+```
+
+In `DEFAULTS`, after `fontLigatures: false,`:
 ```ts
   highlightOccurrences: true,
 ```
 
-In the settings interface (after `fontLigatures: boolean;`):
+In the settings interface, after `fontLigatures: boolean;`:
 ```ts
   highlightOccurrences: boolean;
 ```
 
-In the persisted-settings validation block (after the `fontLigatures:` line):
+In the `set({...})` merge inside `loadSettings`, delete these four lines:
 ```ts
-      highlightOccurrences: (patch.highlightOccurrences as boolean) ?? DEFAULTS.highlightOccurrences,
+      editorAutocomplete: (patch.editorAutocomplete as boolean) ?? DEFAULTS.editorAutocomplete,
+      wordWrap: (patch.wordWrap as boolean) ?? DEFAULTS.wordWrap,
+      autoClosingBrackets: (patch.autoClosingBrackets as boolean) ?? DEFAULTS.autoClosingBrackets,
+      fontLigatures: (patch.fontLigatures as boolean) ?? DEFAULTS.fontLigatures,
 ```
+
+and replace them with a spread of the resolver. Place it where `editorAutocomplete` was, so `lineNumbersMode` keeps its position:
+```ts
+      ...resolveEditorToggles(patch, EDITOR_TOGGLE_DEFAULTS),
+```
+
+Define `EDITOR_TOGGLE_DEFAULTS` immediately after the `DEFAULTS` object, deriving from it so the two cannot disagree:
+```ts
+const EDITOR_TOGGLE_DEFAULTS: Record<EditorToggleKey, boolean> = {
+  editorAutocomplete: DEFAULTS.editorAutocomplete,
+  autoClosingBrackets: DEFAULTS.autoClosingBrackets,
+  wordWrap: DEFAULTS.wordWrap,
+  highlightOccurrences: DEFAULTS.highlightOccurrences,
+  fontLigatures: DEFAULTS.fontLigatures,
+};
+```
+
+Leave every other line of the merge alone — `theme`, `lineNumbersMode`, `shortcuts`, `practiceConfig` and the rest keep their existing handling.
 
 - [ ] **Step 4: Run the test to verify it passes**
 
 Run: `pnpm exec vitest run src/lib/editor-settings.test.ts`
-Expected: PASS, 9 tests.
+Expected: PASS, 20 tests.
 
-- [ ] **Step 5: Verify no migration is needed**
+- [ ] **Step 5: Verify the build**
 
-The `??` means a database with no `highlightOccurrences` row yields the default. Confirm by mutation: change the validation line to `(patch.highlightOccurrences as boolean)` (drop the `?? DEFAULTS...`). Run `pnpm exec vitest run`. The store test still passes — it reads `DEFAULTS` before any load — so this mutation is **not** caught by the suite, which is expected and is why the line is copied verbatim from its four siblings rather than invented. Restore the `??` immediately.
+Run: `pnpm build`
+Expected: `tsc` clean, `✓ built`. A `noUnusedLocals` error means the old `LineNumbersMode` declaration is still present.
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 6: Mutation-test the store wiring**
+
+| Mutation | Expected |
+|---|---|
+| `highlightOccurrences: false` in `DEFAULTS` | FAIL — `defaults highlightOccurrences to true` |
+| Delete `highlightOccurrences` from `DEFAULTS` | FAIL — `defaults highlightOccurrences to true` and `has a boolean for every EDITOR_TOGGLES key` |
+| Delete `highlightOccurrences` from `EDITOR_TOGGLE_DEFAULTS` | FAIL — `tsc` (Record is not satisfied) |
+
+- [ ] **Step 7: Commit**
 
 ```bash
 git add src/stores/settings-store.ts src/lib/editor-settings.test.ts
 git commit -m "feat(editor): add highlightOccurrences setting, default on
 
 Default is true because that is Monaco's current behavior: nobody's editor
-changes until they flip it. Absent from an existing database, it falls through
-the ?? to the default like every other boolean, so no migration is needed."
+changes until they flip it. The five editor booleans now load through
+resolveEditorToggles, so the no-migration fallback is covered by a test.
+LineNumbersMode moves to editor-settings.ts and is re-exported here, leaving
+one definition."
 ```
 
 ---
 
-### Task 3: `kata-editor.tsx` calls the extracted mapping
+### Task 4: `kata-editor.tsx` calls the extracted mapping
 
 **Files:**
 - Modify: `src/components/kata-editor.tsx` (store destructure line 496; `sharedEditorOptions` line 558)
 
 **Interfaces:**
-- Consumes: `monacoEditorOptions(s: EditorSettings)` from Task 1; `highlightOccurrences` from Task 2.
+- Consumes: `monacoEditorOptions(s: EditorSettings)` (Task 1); `highlightOccurrences` (Task 3).
 - Produces: nothing. The read-only solution editor keeps spreading the result and overriding `readOnly` / `lineNumbers`.
 
 - [ ] **Step 1: Add the import**
@@ -388,149 +649,38 @@ two highlight options wired to the toggles that claim to own them."
 
 ---
 
-### Task 4: `EDITOR_TOGGLES` and Settings renders from it
-
-One deliverable: the descriptor list exists and is the only definition of the Settings toggle rows.
+### Task 5: Settings renders from `EDITOR_TOGGLES`
 
 **Files:**
-- Modify: `src/lib/editor-settings.ts` (append)
-- Modify: `src/routes/settings.tsx` (selectors ~lines 71-75; toggle blocks lines 189-231)
-- Test: `src/lib/editor-settings.test.ts` (append)
+- Modify: `src/routes/settings.tsx` (selectors ~lines 70-75; toggle blocks lines 189-231)
 
 **Interfaces:**
-- Consumes: `useSettingsStore` (Task 2).
-- Produces: `EditorToggleKey` (union type), `EditorToggle` (interface), `EDITOR_TOGGLES: EditorToggle[]`. Task 5 filters it by `onPractice`.
+- Consumes: `EDITOR_TOGGLES` (Task 2); `highlightOccurrences` (Task 3).
+- Produces: nothing.
 
-- [ ] **Step 1: Write the failing test**
+- [ ] **Step 1: Add the import**
 
-Append to `src/lib/editor-settings.test.ts`:
-
-```ts
-import { EDITOR_TOGGLES } from "./editor-settings";
-
-describe("EDITOR_TOGGLES", () => {
-  // A toggle naming a key the store does not have would render, flip nothing,
-  // and look like a bug in Monaco. The union type catches typos at compile
-  // time; this catches a key that type-checks but was never added to the store.
-  it("every key exists on the store and is a boolean", () => {
-    const state = useSettingsStore.getState() as Record<string, unknown>;
-    for (const toggle of EDITOR_TOGGLES) {
-      expect(typeof state[toggle.key], toggle.key).toBe("boolean");
-    }
-  });
-
-  it("has no duplicate keys", () => {
-    const keys = EDITOR_TOGGLES.map((t) => t.key);
-    expect(new Set(keys).size).toBe(keys.length);
-  });
-
-  it("every toggle has a non-empty label", () => {
-    for (const toggle of EDITOR_TOGGLES) {
-      expect(toggle.label.trim(), toggle.key).not.toBe("");
-    }
-  });
-
-  // The Practice/Settings split must be a real split. All-true or all-false
-  // would mean the onPractice flag is doing nothing.
-  it("splits: Practice gets a non-empty subset, and not everything", () => {
-    const onPractice = EDITOR_TOGGLES.filter((t) => t.onPractice);
-    expect(onPractice.length).toBeGreaterThan(0);
-    expect(onPractice.length).toBeLessThan(EDITOR_TOGGLES.length);
-  });
-
-  // Nobody picks a typeface feature before a timed session.
-  it("keeps Font Ligatures out of Practice", () => {
-    const ligatures = EDITOR_TOGGLES.find((t) => t.key === "fontLigatures");
-    expect(ligatures).toBeDefined();
-    expect(ligatures!.onPractice).toBe(false);
-  });
-});
-```
-
-- [ ] **Step 2: Run the test to verify it fails**
-
-Run: `pnpm exec vitest run src/lib/editor-settings.test.ts`
-Expected: FAIL — `EDITOR_TOGGLES` is not exported.
-
-- [ ] **Step 3: Write the implementation**
-
-Append to `src/lib/editor-settings.ts`:
-
-```ts
-export type EditorToggleKey =
-  | "editorAutocomplete"
-  | "autoClosingBrackets"
-  | "wordWrap"
-  | "highlightOccurrences"
-  | "fontLigatures";
-
-export interface EditorToggle {
-  key: EditorToggleKey;
-  label: string;
-  hint?: string;
-  /** Practice shows only the toggles that change how hard a session is. */
-  onPractice: boolean;
-}
-
-// Order is the render order on both pages: behavior first, cosmetics last.
-export const EDITOR_TOGGLES: EditorToggle[] = [
-  {
-    key: "editorAutocomplete",
-    label: "Autocomplete",
-    hint: "Turn off to practice API recall without suggestions.",
-    onPractice: true,
-  },
-  {
-    key: "wordWrap",
-    label: "Word Wrap",
-    onPractice: true,
-  },
-  {
-    key: "autoClosingBrackets",
-    label: "Auto-Closing Brackets",
-    hint: "Turn off to type every closing bracket and quote yourself.",
-    onPractice: true,
-  },
-  {
-    key: "highlightOccurrences",
-    label: "Highlight Occurrences",
-    hint: "Turn off to stop other instances of the identifier under the cursor from lighting up.",
-    onPractice: true,
-  },
-  {
-    key: "fontLigatures",
-    label: "Font Ligatures",
-    onPractice: false,
-  },
-];
-```
-
-- [ ] **Step 4: Run the test to verify it passes**
-
-Run: `pnpm exec vitest run src/lib/editor-settings.test.ts`
-Expected: PASS, 14 tests.
-
-- [ ] **Step 5: Mutation-test the descriptor guards**
-
-| Mutation | Expected |
-|---|---|
-| Add `{ key: "vimMode" as EditorToggleKey, label: "X", onPractice: true }` | PASS — `vimMode` **is** a store boolean. This proves the key-existence test alone does not constrain membership; that is what the union type is for. Revert. |
-| Change `fontLigatures` to `onPractice: true` | FAIL — `keeps Font Ligatures out of Practice` and `splits: Practice gets a non-empty subset, and not everything` |
-| Set every `onPractice: false` | FAIL — `splits: Practice gets a non-empty subset` |
-| Duplicate the `wordWrap` entry | FAIL — `has no duplicate keys` |
-| Change a `label` to `""` | FAIL — `every toggle has a non-empty label` |
-
-- [ ] **Step 6: Render Settings from the list**
-
-In `src/routes/settings.tsx`, add the import beside the other `../lib` imports:
+Beside the other `../lib` imports in `src/routes/settings.tsx`:
 
 ```ts
 import { EDITOR_TOGGLES } from "../lib/editor-settings";
 ```
 
-Delete the four now-unused selectors at lines 71-75 (`editorAutocomplete`, `wordWrap`, `autoClosingBrackets`, `fontLigatures`). Strict mode's `noUnusedLocals` will fail the build if you leave them.
+- [ ] **Step 2: Swap the selectors**
 
-Replace the four hand-written toggle blocks (lines 189-231, from `<div>` before `<SectionLabel>Autocomplete</SectionLabel>` through the closing `</div>` after the Font Ligatures button) with:
+`settings.tsx` declares `setSetting` three times, once per tab component. The editor tab is the one at **line 70**, and every edit in this task happens inside it.
+
+Delete the four now-unused selectors at lines 71-75: `editorAutocomplete`, `wordWrap`, `autoClosingBrackets`, `fontLigatures`. Strict mode's `noUnusedLocals` fails the build if you leave them. Add one selector beside `setSetting`:
+
+```ts
+  const settings = useSettingsStore();
+```
+
+Reading the whole store here re-renders the editor tab on any settings change. That is what `kata-editor.tsx:496` already does, and this component only mounts on the Settings page.
+
+- [ ] **Step 3: Render the list**
+
+Replace the four hand-written toggle blocks (lines 189-231: from the `<div>` before `<SectionLabel>Autocomplete</SectionLabel>` through the closing `</div>` after the Font Ligatures button) with:
 
 ```tsx
       {EDITOR_TOGGLES.map(({ key, label, hint }) => {
@@ -550,46 +700,43 @@ Replace the four hand-written toggle blocks (lines 189-231, from `<div>` before 
       })}
 ```
 
-`settings` is the whole store. `settings.tsx` declares `setSetting` three times, once per tab component — the editor tab is the one at **line 70**, and every edit in this step happens inside it. Add one selector beside its `setSetting`, replacing the four you deleted:
-
-```ts
-  const settings = useSettingsStore();
-```
-
-Reading the whole store here re-renders the editor tab on any settings change. That is what `kata-editor.tsx:496` already does, and this component only mounts on the Settings page.
-
 This preserves the existing render order — Autocomplete, Word Wrap, Auto-Closing Brackets — and inserts Highlight Occurrences before Font Ligatures.
 
-- [ ] **Step 7: Verify the build**
+- [ ] **Step 4: Verify the build**
 
 Run: `pnpm build`
-Expected: `tsc` clean, `✓ built`. A `noUnusedLocals` error here means a deleted selector is still referenced somewhere else in the file — find it before proceeding.
+Expected: `tsc` clean, `✓ built`. A `noUnusedLocals` error means a deleted selector is still referenced elsewhere in the file — find it before proceeding.
 
-- [ ] **Step 8: Commit**
+- [ ] **Step 5: Run the full suite**
+
+Run: `pnpm exec vitest run`
+Expected: PASS, all tests.
+
+- [ ] **Step 6: Commit**
 
 ```bash
-git add src/lib/editor-settings.ts src/lib/editor-settings.test.ts src/routes/settings.tsx
-git commit -m "feat(editor): one definition of an editor toggle, rendered by Settings
+git add src/routes/settings.tsx
+git commit -m "refactor(settings): render editor toggles from EDITOR_TOGGLES
 
-Four hand-written near-identical blocks become a map over EDITOR_TOGGLES, so
-Practice can render the same list in Task 5 without a second copy to keep in
-sync. Adds the Highlight Occurrences row."
+Four near-identical hand-written blocks become a map, so Practice can render
+the same list in the next task without a second copy to keep in sync. The
+Highlight Occurrences row appears for free."
 ```
 
 ---
 
-### Task 5: The Editor section on the Practice launcher
+### Task 6: The Editor section on the Practice launcher
 
 **Files:**
 - Modify: `src/routes/practice.tsx` (imports; store selectors near line 196; the configuration column after the Category block that ends near line 445)
 
 **Interfaces:**
-- Consumes: `EDITOR_TOGGLES`, `EditorToggleKey` (Task 4); `highlightOccurrences` (Task 2).
+- Consumes: `EDITOR_TOGGLES`, `EditorToggleKey` (Task 2); `highlightOccurrences` (Task 3).
 - Produces: nothing.
 
 - [ ] **Step 1: Add the import**
 
-In `src/routes/practice.tsx`, beside the existing `../lib/levels` import:
+Beside the existing `../lib/levels` import in `src/routes/practice.tsx`:
 
 ```ts
 import { EDITOR_TOGGLES, type EditorToggleKey } from "../lib/editor-settings";
@@ -621,7 +768,7 @@ Individual selectors, not `useSettingsStore()`, so the page re-renders only when
 
 - [ ] **Step 3: Add the Editor section**
 
-In the configuration column, immediately after the closing `</div>` of the Level-picker / Category-filter conditional (the `) : (` ... `)}` block that ends near line 445), insert:
+In the configuration column, immediately after the closing `</div>` of the Level-picker / Category-filter conditional (the `) : (` … `)}` block ending near line 445), insert:
 
 ```tsx
         <div>
@@ -666,22 +813,7 @@ Expected: `tsc` clean, `✓ built`.
 Run: `pnpm exec vitest run`
 Expected: PASS, all tests.
 
-- [ ] **Step 6: Verify by hand**
-
-```bash
-cd /Users/urielmaldonado/projects/ruby-kata && pnpm dev
-```
-
-Use the Electron app, **not** `pnpm tauri dev`: WKWebView cannot run ruby.wasm and the Tauri Ruby variant crashes on any kata run. (This task's changes reach `ruby-kata` only after Task 6, so for a pre-merge check run `pnpm dev` on `app-core`'s Vite server instead and open `http://localhost:1420`.)
-
-1. Practice shows an Editor section with four toggles and no Font Ligatures.
-2. Flip Autocomplete off in Practice. Open Settings. It reads Off. No page reload needed.
-3. In a kata editor with Autocomplete off, type `puts(` — no signature popup. **This is the parameterHints fix.**
-4. With Auto-Closing Brackets off, select a word and type `(` — the selection is replaced, not wrapped. **This is the autoSurround fix.**
-5. With Highlight Occurrences off, rest the cursor on a variable used twice — no other instance lights up. Select a word — no other match lights up.
-6. Turn all four back on and confirm each behavior returns.
-
-- [ ] **Step 7: Commit**
+- [ ] **Step 6: Commit**
 
 ```bash
 git add src/routes/practice.tsx
@@ -694,7 +826,7 @@ no local state, so the two pages cannot drift."
 
 ---
 
-### Task 6: Propagate to the variants
+### Task 7: Verify by hand, then propagate
 
 **Files:**
 - Modify: none directly. Merge commits on `main`, `js-ruby-version`, `~/projects/ruby-kata`.
@@ -711,7 +843,23 @@ pnpm exec vitest run && pnpm build
 ```
 Expected: all tests pass, `✓ built`.
 
-- [ ] **Step 2: Merge into `js-ruby-version`**
+- [ ] **Step 2: Verify the behavior by hand**
+
+```bash
+cd /Users/urielmaldonado/projects/kata-desktop/.claude/worktrees/app-core && pnpm dev
+```
+Open `http://localhost:1420`. Do **not** run `pnpm tauri dev` on the Ruby variant: WKWebView cannot run ruby.wasm and it crashes on any kata run. Vite alone is enough for a JavaScript kata.
+
+1. Practice shows an Editor section with four toggles and no Font Ligatures.
+2. Flip Autocomplete off in Practice. Open Settings. It reads Off. No reload.
+3. In a kata editor with Autocomplete off, type `foo(` — no signature popup. **This is the parameterHints fix.**
+4. With Auto-Closing Brackets off, select a word and type `(` — the selection is replaced, not wrapped. **This is the autoSurround fix.**
+5. With Highlight Occurrences off, rest the cursor on a variable used twice — no other instance lights up. Select a word — no other match lights up.
+6. Turn all four back on; confirm each behavior returns.
+
+If (3), (4) or (5) fails, the option is not reaching Monaco. **Stop** and report — do not work around it.
+
+- [ ] **Step 3: Merge into `js-ruby-version`**
 
 ```bash
 cd /Users/urielmaldonado/projects/kata-desktop   # this checkout is js-ruby-version
@@ -725,7 +873,7 @@ pnpm exec vitest run && pnpm build && pnpm verify-katas
 ```
 Expected: all pass; `verify-katas` reports `"passed": 217, "failed": 0`.
 
-- [ ] **Step 3: Merge into `main`**
+- [ ] **Step 4: Merge into `main`**
 
 ```bash
 cd /Users/urielmaldonado/projects/kata-desktop/.claude/worktrees/main-variant
@@ -734,7 +882,7 @@ pnpm exec vitest run && pnpm build
 ```
 Resolve `settings.tsx` the same way, keeping `main`'s language list (python, not ruby).
 
-- [ ] **Step 4: Merge into the Electron fork**
+- [ ] **Step 5: Merge into the Electron fork**
 
 ```bash
 cd /Users/urielmaldonado/projects/ruby-kata
@@ -742,14 +890,14 @@ git fetch core app-core && git merge FETCH_HEAD
 pnpm exec vitest run && pnpm build
 ```
 
-- [ ] **Step 5: Log the commits to EITS**
+- [ ] **Step 6: Log the commits to EITS**
 
 ```bash
-eitsr commits create --hash <each hash from Tasks 1-5>
+eitsr commits create --hash <each hash from Tasks 1-6>
 eitsr tasks complete <task_id> --message "Editor toggles on Practice; parameterHints and autoSurround/Overtype/Delete fixed; highlightOccurrences added. Merged app-core to main, js-ruby-version, ruby-kata."
 ```
 
-- [ ] **Step 6: Stop**
+- [ ] **Step 7: Stop**
 
 Do **not** repackage the `.dmg` or install to `/Applications`. That is a separate, explicitly-requested step. Report what shipped and wait.
 
@@ -757,10 +905,10 @@ Do **not** repackage the `.dmg` or install to `/Applications`. That is a separat
 
 ## Self-Review
 
-**1. Spec coverage.** Every spec section maps to a task: the five settings and their Monaco options → Task 1; `highlightOccurrences` store field, defaults, validation, no-migration → Task 2; `kata-editor.tsx` extraction → Task 3; `EDITOR_TOGGLES` + `settings.tsx` → Task 4; `practice.tsx` Editor section + the Font Ligatures exclusion → Task 5; branch propagation and the `settings.tsx` conflict → Task 6. The spec's Testing section lists six assertions; all six appear as named tests in Tasks 1, 2 and 4. The spec's Error Handling section (no migration) is Task 2 Step 5.
+**1. Spec coverage.** Every spec section maps to a task: the five settings and their Monaco options → Task 1; `EDITOR_TOGGLES` and the descriptor list → Task 2; `highlightOccurrences` store field, defaults, validation, no-migration → Tasks 2-3; `kata-editor.tsx` extraction → Task 4; `settings.tsx` → Task 5; `practice.tsx` Editor section and the Font Ligatures exclusion → Task 6; branch propagation and the `settings.tsx` conflict → Task 7. The spec's Testing section lists six assertions; all six appear as named tests in Tasks 1-3. The spec's Error Handling section (no migration) is now a test — `falls back to the default when the key is absent` — not a note.
 
 **2. Placeholder scan.** No TBD, no "handle edge cases", no "similar to Task N". Every code step carries the code. Every command carries its expected output.
 
-**3. Type consistency.** `EditorSettings` (Task 1) has exactly the nine fields Task 3 passes. `EditorToggleKey` (Task 4) has exactly the five keys Task 5's `Record<EditorToggleKey, boolean>` supplies. `monacoEditorOptions` is spelled identically in Tasks 1 and 3. `EDITOR_TOGGLES` is spelled identically in Tasks 4 and 5. `LineNumbersMode` is re-declared in `editor-settings.ts` rather than imported from `settings-store.ts` — deliberate, so `src/lib` does not depend on `src/stores`; the two must stay in sync and Task 3's `pnpm build` is what enforces it.
+**3. Type consistency.** `EditorSettings` (Task 1) has exactly the nine fields Task 4 passes. `EditorToggleKey` (Task 2) has exactly the five keys Task 3's `EDITOR_TOGGLE_DEFAULTS` and Task 6's `toggleValues` supply. `monacoEditorOptions` is spelled identically in Tasks 1 and 4. `EDITOR_TOGGLES` is spelled identically in Tasks 2, 5 and 6. `resolveEditorToggles` is spelled identically in Tasks 2 and 3. `LineNumbersMode` is defined once, in Task 1, and re-exported by the store in Task 3.
 
-**4. Corrections found while planning.** Two, both folded in above. `monacoEditorOptions` cannot return `Record<string, unknown>` — the spread at the `kata-editor.tsx` call site would fail `tsc`; the spec's Open Risks section is amended. And Task 4's mutation table records that the store-key test does **not** constrain membership (`vimMode` would pass it); the union type is what does.
+**4. Corrections folded in during planning.** Four. `monacoEditorOptions` cannot return `Record<string, unknown>` — the spread at the `kata-editor.tsx` call site would fail `tsc`; the spec's Open Risks section is amended. The store-key test does **not** constrain `EDITOR_TOGGLES` membership (`vimMode` would pass it); Task 3 says so, and the union type is what constrains it. `LineNumbersMode` is defined once rather than duplicated — `src/stores` already imports from `src/lib` in four files, so no dependency inverts. And the persisted-settings `??` fallback, which the first draft left untested behind a deliberately-green mutation, is now `resolveEditorToggles` with seven tests and a mutation table.
