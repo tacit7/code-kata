@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { isAppThemeId } from "../lib/editor-themes";
 import type { AppTheme } from "../types/editor";
 import { getDb } from "../lib/database";
+import { resolveEditorToggles, type EditorToggleKey, type LineNumbersMode } from "../lib/editor-settings";
 
 import { DEFAULT_SHORTCUTS, migrateShortcuts, type ShortcutAction, type ShortcutMap } from "../lib/shortcut-keys";
 
@@ -9,7 +10,7 @@ import { DEFAULT_SHORTCUTS, migrateShortcuts, type ShortcutAction, type Shortcut
 export { DEFAULT_SHORTCUTS };
 export type { ShortcutAction, ShortcutMap };
 
-export type LineNumbersMode = "on" | "off" | "relative";
+export type { LineNumbersMode };
 
 export type KataLanguage = "javascript" | "python";
 
@@ -46,6 +47,7 @@ const DEFAULTS = {
   wordWrap: false,
   autoClosingBrackets: true,
   fontLigatures: false,
+  highlightOccurrences: true,
   language: "javascript" as KataLanguage,
   defaultSessionSize: 5,
   targetTimeMs: 300000,
@@ -55,6 +57,14 @@ const DEFAULTS = {
   dailyKataIds: [] as number[],
   doneKataIds: [] as number[],
   practiceConfig: { ...DEFAULT_PRACTICE_CONFIG },
+};
+
+const EDITOR_TOGGLE_DEFAULTS: Record<EditorToggleKey, boolean> = {
+  editorAutocomplete: DEFAULTS.editorAutocomplete,
+  autoClosingBrackets: DEFAULTS.autoClosingBrackets,
+  wordWrap: DEFAULTS.wordWrap,
+  highlightOccurrences: DEFAULTS.highlightOccurrences,
+  fontLigatures: DEFAULTS.fontLigatures,
 };
 
 interface SettingsState {
@@ -70,6 +80,7 @@ interface SettingsState {
   wordWrap: boolean;
   autoClosingBrackets: boolean;
   fontLigatures: boolean;
+  highlightOccurrences: boolean;
   language: KataLanguage;
   // Practice
   defaultSessionSize: number;
@@ -147,14 +158,11 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       fontSize: (patch.fontSize as number) ?? DEFAULTS.fontSize,
       fontFamily: (patch.fontFamily as string) ?? DEFAULTS.fontFamily,
       tabSize: (patch.tabSize as number) ?? DEFAULTS.tabSize,
-      editorAutocomplete: (patch.editorAutocomplete as boolean) ?? DEFAULTS.editorAutocomplete,
+      ...resolveEditorToggles(patch, EDITOR_TOGGLE_DEFAULTS),
       lineNumbersMode:
         patch.lineNumbersMode === "off" || patch.lineNumbersMode === "relative" || patch.lineNumbersMode === "on"
           ? patch.lineNumbersMode
           : DEFAULTS.lineNumbersMode,
-      wordWrap: (patch.wordWrap as boolean) ?? DEFAULTS.wordWrap,
-      autoClosingBrackets: (patch.autoClosingBrackets as boolean) ?? DEFAULTS.autoClosingBrackets,
-      fontLigatures: (patch.fontLigatures as boolean) ?? DEFAULTS.fontLigatures,
       // Persisted settings can outlive this variant's language set — a foreign
       // variant may have written "ruby", or the value may be corrupted. Only
       // known-good languages pass through; ruby (the other algo variant) maps

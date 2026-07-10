@@ -9,6 +9,7 @@ import { useTimerStore } from "../stores/timer-store";
 import type { KataStats } from "../stores/session-store";
 import type { Kata } from "../types/editor";
 import { levelsForKatas, visibleSelection, mergeSelection, CATEGORY_LEVEL } from "../lib/levels";
+import { EDITOR_TOGGLES, type EditorToggleKey } from "../lib/editor-settings";
 
 type Mode = "sr" | "daily" | "weak" | "speed" | "level";
 type SizeOpt = 3 | 5 | 10 | 15 | 20 | "all";
@@ -198,6 +199,20 @@ export function PracticeQueuePage() {
   const [reseeding, setReseeding] = useState(false);
 
   const language = useSettingsStore((s) => s.language);
+
+  const editorAutocomplete = useSettingsStore((s) => s.editorAutocomplete);
+  const autoClosingBrackets = useSettingsStore((s) => s.autoClosingBrackets);
+  const wordWrap = useSettingsStore((s) => s.wordWrap);
+  const highlightOccurrences = useSettingsStore((s) => s.highlightOccurrences);
+  const fontLigatures = useSettingsStore((s) => s.fontLigatures);
+
+  const toggleValues: Record<EditorToggleKey, boolean> = {
+    editorAutocomplete,
+    autoClosingBrackets,
+    wordWrap,
+    highlightOccurrences,
+    fontLigatures,
+  };
 
   const handleReseed = async () => {
     setReseeding(true);
@@ -462,6 +477,35 @@ export function PracticeQueuePage() {
                 {label}
               </button>
             ))}
+          </div>
+        </div>
+
+        <div>
+          <p className="text-[11px] font-bold uppercase tracking-widest text-base-content/35 mb-2">
+            Editor
+          </p>
+          <div className="flex flex-col gap-1.5">
+            {EDITOR_TOGGLES.filter((t) => t.onPractice).map(({ key, label }) => {
+              const on = toggleValues[key];
+              return (
+                <button
+                  key={key}
+                  onClick={() => setSetting(key, !on)}
+                  className={`w-full flex items-center justify-between rounded-lg px-3 py-2 border transition-colors ${
+                    on
+                      ? "border-primary/60 bg-primary/[0.06]"
+                      : "border-base-300/60 bg-base-200 hover:border-base-300"
+                  }`}
+                >
+                  <span className={`text-[12px] ${on ? "text-base-content" : "text-base-content/50"}`}>
+                    {label}
+                  </span>
+                  <span className={`text-[11px] font-bold ${on ? "text-primary" : "text-base-content/35"}`}>
+                    {on ? "On" : "Off"}
+                  </span>
+                </button>
+              );
+            })}
           </div>
         </div>
 
