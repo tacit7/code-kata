@@ -82,13 +82,45 @@ describe("monacoEditorOptions", () => {
     expect(monacoEditorOptions({ ...BASE, wordWrap: false }).wordWrap).toBe("off");
   });
 
-  // A typo'd key would silently yield undefined and Monaco would fall back to
-  // its default, producing a toggle that renders and controls nothing.
+  // Guards a value expression that evaluates to undefined. It cannot see a
+  // typo'd or deleted key: a missing key never appears in Object.entries().
+  // That case is the next test's job.
   it("never emits an undefined option value", () => {
     for (const settings of [BASE, { ...BASE, editorAutocomplete: false, autoClosingBrackets: false, highlightOccurrences: false }]) {
       for (const [key, value] of Object.entries(monacoEditorOptions(settings))) {
         expect(value, key).not.toBeUndefined();
       }
     }
+  });
+
+  // Monaco silently falls back to its default for any option it is not handed,
+  // so a dropped or misspelled key is invisible at runtime. Four of these --
+  // detectIndentation, minimap, automaticLayout, scrollBeyondLastLine -- are
+  // asserted nowhere else, and deleting one would otherwise leave the suite
+  // green while changing the editor.
+  it("emits exactly the expected option keys", () => {
+    expect(Object.keys(monacoEditorOptions(BASE)).sort()).toEqual([
+      "autoClosingBrackets",
+      "autoClosingDelete",
+      "autoClosingOvertype",
+      "autoClosingQuotes",
+      "autoSurround",
+      "automaticLayout",
+      "detectIndentation",
+      "fontFamily",
+      "fontLigatures",
+      "fontSize",
+      "lineNumbers",
+      "minimap",
+      "occurrencesHighlight",
+      "parameterHints",
+      "quickSuggestions",
+      "scrollBeyondLastLine",
+      "selectionHighlight",
+      "suggestOnTriggerCharacters",
+      "tabSize",
+      "wordBasedSuggestions",
+      "wordWrap",
+    ]);
   });
 });
