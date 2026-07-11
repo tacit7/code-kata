@@ -100,7 +100,14 @@ export function SessionResultsPage() {
                 <Fragment key={kata.id}>
                   <tr className="border-base-300/30">
                     <td className="text-base-content/30 text-sm tabular-nums">{i + 1}</td>
-                    <td className="font-medium text-sm">{kata.name}</td>
+                    <td className="text-sm">
+                      <button
+                        onClick={() => navigate(`/editor/${kata.id}`)}
+                        className="font-medium text-left hover:text-primary hover:underline transition-colors cursor-pointer"
+                      >
+                        {kata.name}
+                      </button>
+                    </td>
                     <td className="font-mono text-base-content/45 text-sm tabular-nums">
                       {attempt?.timeMs != null ? formatTime(attempt.timeMs) : "--:--"}
                     </td>
