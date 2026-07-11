@@ -695,6 +695,85 @@ def test_partition_two():
     tags: ["sorting", "partitioning"],
   },
   {
+    name: "Hoare's Partition Scheme",
+    category: "arrays",
+    language: "python",
+    difficulty: "medium",
+    description: `Hoare's Partition Scheme
+
+Implement Hoare's partition scheme. Given an array arr and indices lo and hi, use arr[lo] as the pivot. Two indices scan inward from opposite ends: one from the left past elements smaller than the pivot, one from the right past elements larger than it. When they find an out-of-place pair, swap them; when they cross, stop. Return the split index j.
+
+Unlike Lomuto, Hoare does NOT move the pivot to its final sorted position, and the returned index j is NOT the pivot's location. Its guarantee is a split point: every element in arr[lo..j] is <= every element in arr[j+1..hi]. It does about three times fewer swaps than Lomuto and stays balanced on arrays full of duplicates, where Lomuto degrades to O(n^2).
+
+Example 1:
+Input: arr = [3, 6, 8, 10, 1, 2, 1], lo = 0, hi = 6
+Output: 2
+Explanation: arr becomes [1, 2, 1, 10, 8, 6, 3]. Left arr[0..2] = [1,2,1], right arr[3..6] = [10,8,6,3]; every left element <= every right element. Note the pivot value 3 ends up at index 6, not at the returned index 2.
+
+Example 2:
+Input: arr = [2, 1], lo = 0, hi = 1
+Output: 0
+Explanation: arr becomes [1, 2]; the split falls after index 0.
+
+Example 3:
+Input: arr = [3, 3, 3], lo = 0, hi = 2
+Output: 1
+Explanation: With all elements equal, Hoare still splits evenly (unlike Lomuto).
+
+Constraints:
+- 0 <= lo <= hi < len(arr)
+- 1 <= len(arr) <= 10^5
+- The function modifies arr in-place and returns a split index j with lo <= j < hi.
+
+Ref: LeetCode #912 Sort an Array`,
+    code: `def partition(arr, lo, hi):
+    raise NotImplementedError`,
+    testCode: `def test_partition_invariant():
+    arr = [3, 6, 8, 10, 1, 2, 1]
+    orig = list(arr)
+    j = partition(arr, 0, len(arr) - 1)
+    assert 0 <= j < len(arr) - 1
+    assert sorted(arr) == sorted(orig)
+    assert max(arr[0:j + 1]) <= min(arr[j + 1:len(arr)])
+
+
+def test_reverse_sorted():
+    arr = [5, 4, 3, 2, 1]
+    orig = list(arr)
+    j = partition(arr, 0, 4)
+    assert sorted(arr) == sorted(orig)
+    assert max(arr[0:j + 1]) <= min(arr[j + 1:5])
+
+
+def test_two_elements():
+    arr = [2, 1]
+    j = partition(arr, 0, 1)
+    assert arr == [1, 2]
+    assert j == 0
+
+
+def test_all_equal():
+    arr = [3, 3, 3]
+    j = partition(arr, 0, 2)
+    assert 0 <= j < 2`,
+    solution: `def partition(arr, lo, hi):
+    pivot = arr[lo]
+    i = lo - 1
+    j = hi + 1
+    while True:
+        i += 1
+        while arr[i] < pivot:
+            i += 1
+        j -= 1
+        while arr[j] > pivot:
+            j -= 1
+        if i >= j:
+            return j
+        arr[i], arr[j] = arr[j], arr[i]`,
+    usage: null,
+    tags: ["sorting", "partitioning"],
+  },
+  {
     name: "Quick Sort",
     category: "arrays",
     language: "python",
