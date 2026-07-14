@@ -18,10 +18,8 @@ import { monacoReady } from "../lib/monaco-setup";
 import { useKataNavigation } from "../hooks/use-kata-navigation";
 import { createAutosave } from "../lib/autosave";
 import { toast } from "../stores/toast-store";
+import { leetcodeUrlFor } from "../lib/leetcode-numbers";
 import type { Kata, TestResult } from "../types/editor";
-
-// Matches "Ref: LeetCode #123 Problem Name" at the end of a description
-const LC_REF_RE = /Ref:\s*LeetCode\s*#(\d+)\s+(.+)$/m;
 
 type VizKataName =
   | "Kadane's Algorithm"
@@ -446,44 +444,11 @@ const VIZ_MAP: Partial<Record<VizKataName, string>> = {
   "FizzBuzz":                           "fizzbuzz",
 };
 
-// Overrides for slugs that can't be reliably derived from the display name
-const LC_SLUG_OVERRIDES: Record<number, string> = {
-  50: "powx-n",
-  167: "two-sum-ii-input-array-is-sorted",
-};
-
-function lcSlug(problemNum: number, rawName: string): string {
-  if (LC_SLUG_OVERRIDES[problemNum]) return LC_SLUG_OVERRIDES[problemNum];
-  return rawName
-    .replace(/\s*\(closest match\)\s*/gi, " ") // strip annotation, keep real parens like "Pow(x, n)"
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/-+$/, "")
-    .replace(/^-+/, "");
-}
-
+// Renders the kata description as-is. The "Ref: LeetCode #N" line stays as plain
+// text; the authoritative "Open on LeetCode" affordance is the header button
+// (leetcodeUrlFor), so the description no longer carries its own link.
 function DescriptionWithLink({ text }: { text: string }) {
-  const match = text.match(LC_REF_RE);
-  if (!match) {
-    return <span className="whitespace-pre-wrap">{text}</span>;
-  }
-  const [fullMatch, numStr, problemName] = match;
-  const slug = lcSlug(parseInt(numStr, 10), problemName.trim());
-  const url = `https://leetcode.com/problems/${slug}/`;
-  const before = text.slice(0, match.index);
-  return (
-    <span className="whitespace-pre-wrap">
-      {before}
-      <button
-        onClick={() => open(url)}
-        className="text-primary underline hover:text-primary/80 cursor-pointer"
-        title={url}
-      >
-        {fullMatch}
-      </button>
-    </span>
-  );
+  return <span className="whitespace-pre-wrap">{text}</span>;
 }
 
 interface KataEditorProps {
@@ -596,6 +561,7 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
   }, [kata.id, autosave, notesAutosave]);
 
   const vizFolder = VIZ_MAP[kata.name as VizKataName] ?? null;
+  const leetcodeUrl = leetcodeUrlFor(kata);
 
   const handleEditorMount: OnMount = (editorInstance) => {
     editorRef.current = editorInstance;
@@ -830,6 +796,17 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
 
       {/* Spacer */}
       <div className="flex-1" />
+
+      {/* Open the problem on LeetCode (only for LeetCode-backed katas) */}
+      {leetcodeUrl && (
+        <button
+          onClick={() => open(leetcodeUrl)}
+          title="Open on LeetCode"
+          className="btn btn-ghost btn-xs self-center mr-1 text-base-content/40 hover:text-base-content/70"
+        >
+          LeetCode ↗
+        </button>
+      )}
 
       {/* Viz controls (viz tab only) */}
       {showPanel === "viz" && (

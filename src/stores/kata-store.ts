@@ -34,6 +34,7 @@ export type LibrarySortMode =
   | "category"
   | "level"
   | "level-difficulty"
+  | "leetcode"
   | "best-time"
   | "streak"
   | "difficulty-asc"

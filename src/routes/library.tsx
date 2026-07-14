@@ -46,7 +46,14 @@ export function PracticePage() {
     const levelFilter = levelMatch ? parseInt(levelMatch[1], 10) : null;
     const filtered = katas.filter((k) => {
       if (levelFilter !== null) return (CATEGORY_LEVEL[k.category] ?? -1) === levelFilter;
+      const digits = q.replace(/^#/, "");
+      const numberMatch =
+        digits.length > 0 &&
+        /^\d+$/.test(digits) &&
+        k.leetcodeNumber != null &&
+        String(k.leetcodeNumber).includes(digits);
       return (
+        numberMatch ||
         k.name.toLowerCase().includes(q) ||
         k.category.toLowerCase().includes(q) ||
         (k.difficulty?.toLowerCase().includes(q) ?? false) ||
@@ -83,6 +90,16 @@ export function PracticePage() {
         }
         case "category":
           return a.category.localeCompare(b.category);
+        case "leetcode": {
+          // Ascending by problem number; katas without a LeetCode number
+          // always sink to the bottom.
+          const aN = a.leetcodeNumber;
+          const bN = b.leetcodeNumber;
+          if (aN == null && bN == null) return 0;
+          if (aN == null) return 1;
+          if (bN == null) return -1;
+          return aN - bN;
+        }
         case "best-time": {
           const aT = bestTimes[a.id] ?? Infinity;
           const bT = bestTimes[b.id] ?? Infinity;
@@ -263,6 +280,7 @@ export function PracticePage() {
           <option value="level">Sort: Level</option>
           <option value="level-difficulty">Sort: Level + Difficulty</option>
           <option value="category">Sort: Category A→Z</option>
+          <option value="leetcode">Sort: LeetCode #</option>
           <option value="best-time">Sort: Best time</option>
           <option value="streak">Sort: Streak</option>
           <option value="difficulty-asc">Sort: Difficulty ↑</option>

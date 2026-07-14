@@ -1,6 +1,12 @@
 import { describe, it, expect } from "vitest";
 import type { SeedKata } from "../types/editor";
-import { LEETCODE_NUMBERS, leetcodeNumberFor } from "./leetcode-numbers";
+import {
+  LEETCODE_NUMBERS,
+  LEETCODE_SLUGS,
+  leetcodeNumberFor,
+  leetcodeSlugFor,
+  leetcodeUrlFor,
+} from "./leetcode-numbers";
 import { sampleKatas } from "./sample-katas";
 import { sampleKatasPython } from "./sample-katas-python";
 import { blind75Part1 } from "./blind75-additions-part1";
@@ -67,5 +73,25 @@ describe("leetcode numbers", () => {
     const orphans = Object.keys(LEETCODE_NUMBERS).filter((key) => !seedKeys.has(key));
 
     expect(orphans).toEqual([]);
+  });
+
+  it("has a slug for every mapped LeetCode number", () => {
+    const slugless = Object.values(LEETCODE_NUMBERS).filter((n) => LEETCODE_SLUGS[n] == null);
+
+    expect(slugless).toEqual([]);
+  });
+
+  it("resolves a problem URL for a known LeetCode kata", () => {
+    expect(leetcodeUrlFor({ name: "Two Sum", language: "python" })).toBe(
+      "https://leetcode.com/problems/two-sum/",
+    );
+  });
+
+  it("resolves null URL for a non-LeetCode kata", () => {
+    expect(leetcodeUrlFor({ name: "Matrix Grid BFS", language: "python" })).toBeNull();
+  });
+
+  it("resolves the canonical slug for a hand-checked number", () => {
+    expect(leetcodeSlugFor(20)).toBe("valid-parentheses");
   });
 });
