@@ -1,5 +1,6 @@
 import Database from "@tauri-apps/plugin-sql";
 import type { SeedKata } from "../types/editor";
+import { leetcodeNumberFor } from "./leetcode-numbers";
 import { sampleKatas } from "./sample-katas";
 import { sampleKatasPython } from "./sample-katas-python";
 import { blind75Part1 } from "./blind75-additions-part1";
@@ -29,6 +30,7 @@ export async function getDb(): Promise<Database> {
   await createSchema(db);
   await seedKatas(db);
   await migrateTagsIfEmpty(db);
+  await backfillLeetcodeNumbers(db);
   return db;
 }
 
@@ -46,6 +48,7 @@ async function createSchema(db: Database) {
       solution TEXT,
       usage TEXT,
       tags TEXT DEFAULT '[]',
+      leetcode_number INTEGER,
       created_at TEXT DEFAULT CURRENT_TIMESTAMP
     )
   `);
@@ -60,6 +63,13 @@ async function createSchema(db: Database) {
   // Migrate existing DBs: add is_custom column if missing
   try {
     await db.execute(`ALTER TABLE katas ADD COLUMN is_custom INTEGER DEFAULT 0`);
+  } catch {
+    // Column already exists
+  }
+
+  // Migrate existing DBs: add leetcode_number column if missing
+  try {
+    await db.execute(`ALTER TABLE katas ADD COLUMN leetcode_number INTEGER`);
   } catch {
     // Column already exists
   }
@@ -181,6 +191,22 @@ const blind75Katas = [
   ...neetcodeMathBit,
 ];
 
+/**
+ * Backfills leetcode_number for rows that predate the column. New seeds set it
+ * at insert time; this covers databases seeded before the column existed. Rows
+ * with no known number (custom katas, non-LeetCode drills) stay null.
+ */
+async function backfillLeetcodeNumbers(db: Database) {
+  const rows = await db.select<{ id: number; name: string; language: string }[]>(
+    "SELECT id, name, language FROM katas WHERE leetcode_number IS NULL"
+  );
+  for (const row of rows) {
+    const num = leetcodeNumberFor(row);
+    if (num == null) continue;
+    await db.execute("UPDATE katas SET leetcode_number = $1 WHERE id = $2", [num, row.id]);
+  }
+}
+
 async function seedKatas(db: Database) {
   // Only seed when katas table is empty (first launch)
   const countRows = await db.select<{ count: number }[]>("SELECT COUNT(*) as count FROM katas");
@@ -188,8 +214,8 @@ async function seedKatas(db: Database) {
 
   for (const kata of [...sampleKatas, ...sampleKatasPython, ...blind75Katas]) {
     await db.execute(
-      `INSERT INTO katas (name, category, language, difficulty, description, code, test_code, solution, usage, tags)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+      `INSERT INTO katas (name, category, language, difficulty, description, code, test_code, solution, usage, tags, leetcode_number)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
       [
         kata.name,
         kata.category,
@@ -201,6 +227,7 @@ async function seedKatas(db: Database) {
         kata.solution,
         kata.usage,
         JSON.stringify(kata.tags),
+        leetcodeNumberFor(kata),
       ]
     );
   }
@@ -234,8 +261,8 @@ export async function reseedKatas(): Promise<string> {
 async function seedKatasForce(db: Database) {
   for (const kata of [...sampleKatas, ...sampleKatasPython, ...blind75Katas]) {
     await db.execute(
-      `INSERT INTO katas (name, category, language, difficulty, description, code, test_code, solution, usage, tags)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+      `INSERT INTO katas (name, category, language, difficulty, description, code, test_code, solution, usage, tags, leetcode_number)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
       [
         kata.name,
         kata.category,
@@ -247,6 +274,7 @@ async function seedKatasForce(db: Database) {
         kata.solution,
         kata.usage,
         JSON.stringify(kata.tags),
+        leetcodeNumberFor(kata),
       ]
     );
   }

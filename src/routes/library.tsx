@@ -324,6 +324,11 @@ export function PracticePage() {
                 </td>
                 <td className="font-medium text-sm">
                   <span className="inline-flex items-center gap-1.5">
+                    {kata.leetcodeNumber != null && (
+                      <span className="text-base-content/40 tabular-nums">
+                        {kata.leetcodeNumber}.
+                      </span>
+                    )}
                     {kata.name}
                     {kata.isCustom && (
                       <span className="badge badge-secondary badge-xs">Custom</span>

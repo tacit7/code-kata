@@ -15,6 +15,12 @@ export interface Kata {
   usage: string | null;
   tags: string[];
   isCustom: boolean;
+  /**
+   * LeetCode problem number, or null for katas that are not LeetCode problems.
+   * Resolved from src/lib/leetcode-numbers.ts at seed time — SeedKata source
+   * objects do not carry it, so it is optional here.
+   */
+  leetcodeNumber?: number | null;
 }
 
 export type SeedKata = Omit<Kata, "id" | "isCustom">;

@@ -15,6 +15,7 @@ interface KataRow {
   usage: string | null;
   tags: string | null;
   is_custom: number;
+  leetcode_number: number | null;
 }
 
 interface BestTimeRow {
@@ -107,6 +108,7 @@ export const useKataStore = create<KataState>((set) => ({
         usage: row.usage,
         tags: row.tags ? JSON.parse(row.tags) as string[] : [],
         isCustom: Boolean(row.is_custom),
+        leetcodeNumber: row.leetcode_number,
       }));
       const bestRows = await db.select<BestTimeRow[]>(
         `SELECT kata_id, MIN(time_ms) as best_time
