@@ -31,45 +31,47 @@ no single releasable trunk; each variant branch is its own app.
 | Branch | What it is | Dev port |
 |--------|-----------|----------|
 | `app-core` | Shared base: styling, chrome, editor, REPL panel, generic features. Not a runnable product on its own terms — it exists to be merged outward. | 1420 |
-| `main` | **JS + Python** variant. Python runs via Pyodide in a Web Worker (`public/pyodide/`). | 1420 |
-| `js-ruby-version` | **JS + Ruby** variant. Ruby runs via bundled ruby.wasm (`@ruby/wasm-wasi`) in a Web Worker; Python is fully removed. | 1440 |
+| `main` | **JS + Python** variant (product name "Code Kata Python", id `com.code-kata.app`). Python runs via Pyodide in a Web Worker (`public/pyodide/`). | 1420 |
+
+> **The Ruby variant was retired from this repo (2026-07).** The former
+> `js-ruby-version` branch was **deleted** — its Tauri WKWebView crashes running
+> `ruby.wasm`, so the Ruby app now lives as a **separate Electron project at
+> `~/projects/ruby-kata`** (Chromium runs `ruby.wasm` fine). The LeetCode
+> feature and the Ruby runner infra were ported there. Don't recreate a Ruby
+> variant here. `main` (Python via Pyodide, which WKWebView runs) is the only
+> product variant that remains in this Tauri repo.
 
 ### Flow rules
 
 - **Shared work** (UI, styling, settings, editor behavior, REPL panel, viz
-  pages, anything language-agnostic): commit on `app-core`, then merge it into
-  EVERY variant: `git merge app-core` on `main` and on `js-ruby-version`.
-- **Language work** (runners, workers, kata content, seed data, language
-  settings): commit directly on the variant that owns it.
-- Flow is strictly one-way: `app-core` → variants. **Never** merge a variant
-  into `app-core` or into another variant.
-- After merging core into a variant, build and test THAT variant before
-  moving on; on `js-ruby-version` also run `pnpm verify-katas` for changes
-  touching the Ruby runner or kata content.
+  pages, anything language-agnostic): commit on `app-core`, then `git merge
+  app-core` into `main`.
+- **Language/content work** (runners, workers, kata content, seed data): commit
+  directly on `main`.
+- Flow is one-way: `app-core` → `main`. **Never** merge `main` into `app-core`.
+- Note: `app-core` and `main` have historically **lagged** the (now-retired)
+  Ruby variant's refactors — e.g. `main` has no `src/lib/seed-katas.ts` and uses
+  inline INSERTs in `database.ts` where the Electron app has the extracted
+  helpers. Don't assume "shared" files are identical to the Electron app.
 
-### Variant-owned files (expect merge conflicts here, resolve per variant)
+### app-core-owned / merge-conflict-prone files
 
-- `src/stores/settings-store.ts` — `KataLanguage` union and persisted-language
-  validation differ per variant.
+- `src/stores/settings-store.ts` — `KataLanguage` union / persisted-language validation.
 - `src/routes/settings.tsx` / `src/routes/kata-form.tsx` — language options.
-- `src/lib/repl-backends.ts` — each variant registers its own REPL backend
-  (python on `main`, ruby on `js-ruby-version`); `app-core` ships a stub and
-  must never change it again.
+- `src/lib/repl-backends.ts` — `main` registers the python REPL backend;
+  `app-core` ships a stub and must never change it again.
 - `src/lib/database.ts` seed imports and the `src/lib/*kata*.ts` content files.
-- `src/lib/levels.ts` — `js-ruby-version` carries a Level 0 ("Ruby Prelude")
-  entry that no other variant has. `LEVELS` renders every level
-  unconditionally, so merging Level 0 outward would give `main` an empty
-  filter. Resolve in favour of each variant's own list.
-- `vite.config.ts` / `src-tauri/tauri.conf.json` — dev port per variant.
+- `vite.config.ts` / `src-tauri/tauri.conf.json` — dev port.
 
 ### Gotchas
 
-- Each variant has its own app identifier and therefore its own database:
-  `main` uses `com.code-kata.app`, `js-ruby-version` uses `com.code-kata.ruby`
-  (`~/Library/Application Support/<identifier>/kata.db`). Progress does not
-  transfer between variants.
-- Worktrees for cross-branch work live in `.claude/worktrees/` (`app-core`,
-  `main-variant`).
+- `main`'s app identifier is `com.code-kata.app`; DB at
+  `~/Library/Application Support/com.code-kata.app/kata.db`. The Electron Ruby
+  app uses `com.code-kata.ruby` — separate DB, no progress transfer.
+- **`@types/node` is a required devDependency** — `tsconfig` compiles `src/**`
+  including a test file that imports `node:fs`/`node:path`, so a clean install
+  fails `pnpm build` without it.
+- Worktrees for cross-branch work live in `.claude/worktrees/` (`app-core`, `main-variant`).
 
 ## Architecture
 
@@ -103,18 +105,37 @@ Defined in `src-tauri/capabilities/default.json`. The frontend is granted permis
 When adding new Tauri plugin features, you may need to add permissions here.
 
 ### Data Layer
-SQLite via `@tauri-apps/plugin-sql` on the frontend side. Schema defined in `PRD_kata_desktop.md` — tables: `katas`, `sessions`, `attempts`, `settings`, `presets`.
+SQLite via `@tauri-apps/plugin-sql` on the frontend side. Schema in
+`src/lib/database.ts` (`createSchema`) — tables: `katas`, `sessions`,
+`attempts`, `settings`, `presets`, `user_code`, `kata_notes`. Migrations are
+additive `ALTER TABLE ... ADD COLUMN` wrapped in `try/catch`; new content
+reaches already-seeded DBs via inline reseed guards + per-column backfills
+(`seedKatas()` only fires on an empty table).
+
+**LeetCode numbers** are structured data, not parsed from prose.
+`src/lib/leetcode-numbers.ts` holds `LEETCODE_NUMBERS` (per-kata number, keyed
+`` `${language} ${name}` ``) and `LEETCODE_SLUGS` (number → canonical
+titleSlug); resolve via `leetcodeNumberFor()` / `leetcodeUrlFor()`.
+`Kata.leetcodeNumber` maps to the `leetcode_number` column, populated at seed
+time and backfilled for existing DBs. The Problems list shows a `#.` prefix, a
+"LeetCode #" sort (nulls last), and number search; the editor header has an
+"Open on LeetCode" button; Results drill-down titles link to `/editor/:kataId`.
+Add a number to the map when adding a LeetCode-based seed kata.
+
+**Gotcha — `seedKey`:** `seedKey(name, language)` in `src/lib/seed-katas.ts`
+joins with a **NUL byte** (renders like a space). It's the DB-identity key;
+never reuse it to key a map written with a literal space — the lookup silently
+matches nothing. `leetcode-numbers.ts` uses its own space-separated key.
 
 ### Test Execution Model
 All kata tests run **in-app in Web Workers** — no child processes, no system
 runtimes, works offline:
 - JavaScript katas: evaluated in a plain worker (`src/lib/js-test-worker.ts`)
   with `test_*` functions and `assertEqual(actual, expected)` helpers.
-- The variant's second language runs on a bundled WASM runtime in its own
-  worker: Pyodide on `main` (`python-test-worker.ts`), ruby.wasm on
-  `js-ruby-version` (`ruby-test-worker.ts`, fresh VM per run).
+- Python katas: Pyodide in its own worker (`python-test-worker.ts`). Pyodide
+  runs in WKWebView, which is why the Python variant stays viable as a Tauri app.
 - The REPL panel uses separate workers with persistent sessions
-  (`repl-runner.ts` + per-variant `repl-backends.ts`).
+  (`repl-runner.ts` + `repl-backends.ts`).
 
 ## Key Conventions
 
