@@ -1,9 +1,11 @@
 import { Fragment, useEffect } from "react";
+import { useNavigate } from "react-router";
 import { useDashboardStore } from "../stores/dashboard-store";
 import type { DrillDownRow } from "../stores/dashboard-store";
 import { formatTime } from "../lib/format";
 
 function DrillDown({ rows }: { rows: DrillDownRow[] }) {
+  const navigate = useNavigate();
   return (
     <tr>
       <td colSpan={5} className="p-0">
@@ -15,7 +17,15 @@ function DrillDown({ rows }: { rows: DrillDownRow[] }) {
                   key={row.id}
                   className="border-b border-base-300/30 last:border-0"
                 >
-                  <td className="font-medium text-sm">{row.kataName}</td>
+                  <td className="font-medium text-sm">
+                    <button
+                      onClick={() => navigate(`/editor/${row.kataId}`)}
+                      className="text-left hover:text-primary hover:underline cursor-pointer"
+                      title="Open this problem"
+                    >
+                      {row.kataName}
+                    </button>
+                  </td>
                   <td className="text-base-content/45 text-sm">{row.category}</td>
                   <td className="font-mono text-base-content/45 text-sm tabular-nums">
                     {row.timeMs != null ? formatTime(row.timeMs) : "--:--"}
