@@ -1,5 +1,6 @@
 import { useState, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router";
+import { useNavHistory } from "../hooks/use-nav-history";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useSettingsStore } from "../stores/settings-store";
 import { isDarkScheme } from "../lib/editor-themes";
@@ -19,6 +20,7 @@ export function TopBar() {
   const resetKataTimer = useTimerStore((s) => s.resetKataTimer);
   const navigate = useNavigate();
   const location = useLocation();
+  const { canBack, canForward, back, forward } = useNavHistory();
   const [launching, setLaunching] = useState(false);
 
   const kataIdSet = new Set(katas.map((k) => k.id));
@@ -84,6 +86,32 @@ export function TopBar() {
           title={language}
           className="w-5 h-5"
         />
+      </div>
+
+      {/* Back / forward — VS Code style */}
+      <div className="flex items-center gap-0.5 mr-4">
+        <button
+          onClick={back}
+          disabled={!canBack}
+          title="Back"
+          aria-label="Go back"
+          className="btn btn-ghost btn-xs btn-square text-base-content/50 hover:text-base-content/80 disabled:opacity-25 disabled:hover:text-base-content/50 disabled:cursor-default"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+            <path fillRule="evenodd" d="M12.79 5.23a.75.75 0 0 1 0 1.06L9.06 10l3.73 3.71a.75.75 0 1 1-1.06 1.06l-4.25-4.24a.75.75 0 0 1 0-1.06l4.25-4.24a.75.75 0 0 1 1.06 0Z" clipRule="evenodd" />
+          </svg>
+        </button>
+        <button
+          onClick={forward}
+          disabled={!canForward}
+          title="Forward"
+          aria-label="Go forward"
+          className="btn btn-ghost btn-xs btn-square text-base-content/50 hover:text-base-content/80 disabled:opacity-25 disabled:hover:text-base-content/50 disabled:cursor-default"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+            <path fillRule="evenodd" d="M7.21 14.77a.75.75 0 0 1 0-1.06L10.94 10 7.21 6.29a.75.75 0 1 1 1.06-1.06l4.25 4.24a.75.75 0 0 1 0 1.06l-4.25 4.24a.75.75 0 0 1-1.06 0Z" clipRule="evenodd" />
+          </svg>
+        </button>
       </div>
 
       {/* Navigation */}
