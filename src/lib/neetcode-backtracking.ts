@@ -95,6 +95,48 @@ def test_stair_paths_n0():
     tags: ["backtracking", "recursion"],
   },
   {
+    name: "Dice Rolls",
+    category: "backtracking",
+    language: "python",
+    difficulty: "easy",
+    description: `Roll a 6-sided die n times and record every possible outcome. Return an array of arrays, where each inner array is a sequence of n values (each between 1 and 6), in the order the choices are made (try 1 first, then 2, ... up to 6).\n\nThis generalizes "generate binary strings" from 2 choices to 6: the two hard-coded branches become a loop. At each of the n positions, try every value 1..6 — choose, recurse, undo — which is exactly the shape of subsets and permutations. There are 6^n outcomes.\n\nExample 1:\nInput: n = 1\nOutput: [[1], [2], [3], [4], [5], [6]]\n\nExample 2:\nInput: n = 2\nOutput: [[1,1],[1,2],[1,3],[1,4],[1,5],[1,6],[2,1], ... ,[6,6]]  (36 outcomes)\n\nConstraints:\n- 0 <= n <= 6\n- For n = 0, return [[]] (one empty roll).`,
+    code: `def dice_rolls(n: int) -> list[list[int]]:
+    raise NotImplementedError`,
+    testCode: `def test_dice_rolls_n1():
+    assert dice_rolls(1) == [[1], [2], [3], [4], [5], [6]]
+
+def test_dice_rolls_n2_shape():
+    result = dice_rolls(2)
+    assert len(result) == 36
+    assert result[0] == [1, 1]
+    assert result[-1] == [6, 6]
+
+def test_dice_rolls_count_is_six_to_n():
+    assert len(dice_rolls(3)) == 216
+
+def test_dice_rolls_values_in_range():
+    assert all(1 <= v <= 6 for path in dice_rolls(2) for v in path)
+
+def test_dice_rolls_n0():
+    assert dice_rolls(0) == [[]]`,
+    solution: `def dice_rolls(n: int) -> list[list[int]]:
+    result = []
+
+    def backtrack(path):
+        if len(path) == n:
+            result.append(list(path))
+            return
+        for roll in range(1, 7):
+            path.append(roll)
+            backtrack(path)
+            path.pop()
+
+    backtrack([])
+    return result`,
+    usage: null,
+    tags: ["backtracking", "recursion"],
+  },
+  {
     name: "Combination Sum",
     category: "backtracking",
     language: "python",
