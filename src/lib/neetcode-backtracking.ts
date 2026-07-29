@@ -2,6 +2,52 @@ import type { SeedKata } from "../types/editor";
 
 const neetcodeBacktracking: SeedKata[] = [
   {
+    name: "Generate Binary Strings",
+    category: "backtracking",
+    language: "python",
+    difficulty: "easy",
+    description: `Generate every binary string of length n. Return them as an array of strings, each of length n and made up only of the characters '0' and '1', in lexicographic order ('0' before '1').\n\nThis is the "hello world" of backtracking: at each of the n positions you choose '0', recurse, undo, then choose '1', recurse, undo. That choose → recurse → un-choose rhythm is the pattern behind subsets, permutations, and combinations.\n\nExample 1:\nInput: n = 1\nOutput: ["0", "1"]\n\nExample 2:\nInput: n = 2\nOutput: ["00", "01", "10", "11"]\n\nExample 3:\nInput: n = 3\nOutput: ["000","001","010","011","100","101","110","111"]\n\nConstraints:\n- 0 <= n <= 16\n- For n = 0, return [""] (one empty string).`,
+    code: `def binary_strings(n: int) -> list[str]:
+    raise NotImplementedError`,
+    testCode: `def test_binary_strings_n1():
+    assert binary_strings(1) == ["0", "1"]
+
+def test_binary_strings_n2():
+    assert binary_strings(2) == ["00", "01", "10", "11"]
+
+def test_binary_strings_n3_shape():
+    result = binary_strings(3)
+    assert len(result) == 8
+    assert result[0] == "000"
+    assert result[-1] == "111"
+
+def test_binary_strings_unique():
+    result = binary_strings(4)
+    assert len(result) == 16
+    assert len(result) == len(set(result))
+
+def test_binary_strings_n0():
+    assert binary_strings(0) == [""]`,
+    solution: `def binary_strings(n: int) -> list[str]:
+    result = []
+
+    def backtrack(path):
+        if len(path) == n:
+            result.append("".join(path))
+            return
+        path.append("0")
+        backtrack(path)
+        path.pop()
+        path.append("1")
+        backtrack(path)
+        path.pop()
+
+    backtrack([])
+    return result`,
+    usage: null,
+    tags: ["backtracking", "recursion"],
+  },
+  {
     name: "Combination Sum",
     category: "backtracking",
     language: "python",
