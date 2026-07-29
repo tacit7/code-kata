@@ -48,6 +48,53 @@ def test_binary_strings_n0():
     tags: ["backtracking", "recursion"],
   },
   {
+    name: "Climbing Stairs Paths",
+    category: "backtracking",
+    language: "python",
+    difficulty: "easy",
+    description: `You climb a staircase of n steps by taking either 1 or 2 steps at a time. Instead of counting how many distinct ways there are, return the actual paths: an array of arrays, where each inner array is a sequence of 1s and 2s that sums to n, in the order the choices are made (try 1 before 2).\n\nThis is Climbing Stairs reframed as backtracking: at each position choose a step of 1, recurse, undo, then choose a step of 2, recurse, undo — abandoning any path that overshoots n. The number of paths is the nth Fibonacci number.\n\nExample 1:\nInput: n = 2\nOutput: [[1, 1], [2]]\n\nExample 2:\nInput: n = 3\nOutput: [[1, 1, 1], [1, 2], [2, 1]]\n\nExample 3:\nInput: n = 4\nOutput: [[1,1,1,1],[1,1,2],[1,2,1],[2,1,1],[2,2]]\n\nConstraints:\n- 0 <= n <= 20\n- For n = 0, return [[]] (one empty path).`,
+    code: `def stair_paths(n: int) -> list[list[int]]:
+    raise NotImplementedError`,
+    testCode: `def test_stair_paths_n1():
+    assert stair_paths(1) == [[1]]
+
+def test_stair_paths_n2():
+    assert stair_paths(2) == [[1, 1], [2]]
+
+def test_stair_paths_n3():
+    assert stair_paths(3) == [[1, 1, 1], [1, 2], [2, 1]]
+
+def test_stair_paths_count_is_fibonacci():
+    assert len(stair_paths(5)) == 8
+
+def test_stair_paths_all_sum_to_n():
+    for path in stair_paths(5):
+        assert sum(path) == 5
+
+def test_stair_paths_n0():
+    assert stair_paths(0) == [[]]`,
+    solution: `def stair_paths(n: int) -> list[list[int]]:
+    result = []
+
+    def backtrack(position, path):
+        if position == n:
+            result.append(list(path))
+            return
+        if position > n:
+            return
+        path.append(1)
+        backtrack(position + 1, path)
+        path.pop()
+        path.append(2)
+        backtrack(position + 2, path)
+        path.pop()
+
+    backtrack(0, [])
+    return result`,
+    usage: null,
+    tags: ["backtracking", "recursion"],
+  },
+  {
     name: "Combination Sum",
     category: "backtracking",
     language: "python",
