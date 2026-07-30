@@ -28,6 +28,7 @@ export function PracticePage() {
   const librarySearch = useKataStore((s) => s.librarySearch);
   const libraryDiffSort = useKataStore((s) => s.libraryDiffSort);
   const librarySortMode = useKataStore((s) => s.librarySortMode);
+  const leetcodeOnly = useKataStore((s) => s.libraryLeetcodeOnly);
   const setLibraryUI = useKataStore((s) => s.setLibraryUI);
   const setBrowseOrder = useKataStore((s) => s.setBrowseOrder);
 
@@ -45,6 +46,7 @@ export function PracticePage() {
     const levelMatch = q.match(/^(?:l|lv\.?|level\s*)(\d+)$/);
     const levelFilter = levelMatch ? parseInt(levelMatch[1], 10) : null;
     const filtered = katas.filter((k) => {
+      if (leetcodeOnly && k.leetcodeNumber == null) return false;
       if (levelFilter !== null) return (CATEGORY_LEVEL[k.category] ?? -1) === levelFilter;
       const digits = q.replace(/^#/, "");
       const numberMatch =
@@ -124,7 +126,7 @@ export function PracticePage() {
           return 0;
       }
     });
-  }, [katas, search, diffSort, sortMode, dailyKataIds, bestTimes, streaks]);
+  }, [katas, search, diffSort, sortMode, leetcodeOnly, dailyKataIds, bestTimes, streaks]);
 
   // Publish the RENDERED order — filter, then sort, then search. Publishing the
   // raw store list would look like an optimization and would silently break
@@ -286,6 +288,14 @@ export function PracticePage() {
           <option value="difficulty-asc">Sort: Difficulty ↑</option>
           <option value="difficulty-desc">Sort: Difficulty ↓</option>
         </select>
+        <button
+          onClick={() => setLibraryUI({ libraryLeetcodeOnly: !leetcodeOnly })}
+          title="Show only katas that map to a LeetCode problem"
+          aria-pressed={leetcodeOnly}
+          className={`btn btn-sm shrink-0 ${leetcodeOnly ? "btn-primary" : "btn-ghost btn-outline"}`}
+        >
+          LeetCode only
+        </button>
       </div>
 
       {/* Kata table */}

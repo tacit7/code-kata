@@ -46,6 +46,7 @@ interface LibraryUIState {
   libraryCategoryFilter: string;
   libraryDiffSort: "asc" | "desc" | null;
   librarySortMode: LibrarySortMode;
+  libraryLeetcodeOnly: boolean;
   setLibraryUI: (patch: Partial<LibraryUIState>) => void;
 }
 
@@ -82,6 +83,7 @@ export const useKataStore = create<KataState>((set) => ({
   libraryCategoryFilter: "",
   libraryDiffSort: null,
   librarySortMode: "level-difficulty",
+  libraryLeetcodeOnly: false,
   setLibraryUI: (patch) => set(patch),
 
   loadKatas: async (language = "javascript") => {
