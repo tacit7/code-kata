@@ -122,6 +122,19 @@ time and backfilled for existing DBs. The Problems list shows a `#.` prefix, a
 "Open on LeetCode" button; Results drill-down titles link to `/editor/:kataId`.
 Add a number to the map when adding a LeetCode-based seed kata.
 
+**Fetching LeetCode descriptions (reference only).** Given a slug from
+`LEETCODE_SLUGS`, pull the statement + metadata from LeetCode's GraphQL API
+(`POST https://leetcode.com/graphql`, `question(titleSlug:){content difficulty
+isPaidOnly topicTags hints codeSnippets}`) or the MIT-licensed wrapper
+`https://leetcode-api-pied.vercel.app/problem/<slug>` (returns `content` +
+`codeSnippets` + `hints`, no auth). Throttle bulk pulls or self-host. Premium
+problems (`isPaidOnly`) return no content; non-LeetCode katas (the backtracking
+intros, etc.) have no slug. **Copyright:** LeetCode statements are LeetCode's
+copyrighted content (the wrapper's MIT license covers only its code). Kata
+descriptions here are deliberately ORIGINAL/paraphrased — do NOT bundle verbatim
+LeetCode text into this distributed app. Fetch to a scratch file as reference,
+then write descriptions in our own words.
+
 **Gotcha — `seedKey`:** `seedKey(name, language)` in `src/lib/seed-katas.ts`
 joins with a **NUL byte** (renders like a space). It's the DB-identity key;
 never reuse it to key a map written with a literal space — the lookup silently
