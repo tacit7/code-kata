@@ -118,8 +118,10 @@ reaches already-seeded DBs via inline reseed guards + per-column backfills
 titleSlug); resolve via `leetcodeNumberFor()` / `leetcodeUrlFor()`.
 `Kata.leetcodeNumber` maps to the `leetcode_number` column, populated at seed
 time and backfilled for existing DBs. The Problems list shows a `#.` prefix, a
-"LeetCode #" sort (nulls last), and number search; the editor header has an
-"Open on LeetCode" button; Results drill-down titles link to `/editor/:kataId`.
+"LeetCode #" sort (nulls last), number search, and a "LeetCode only" toggle
+(`libraryLeetcodeOnly` UI flag → filters `leetcodeNumber != null`, hiding
+non-LeetCode katas); the editor header has an "Open on LeetCode" button; Results
+drill-down titles link to `/editor/:kataId`.
 Add a number to the map when adding a LeetCode-based seed kata.
 
 **Fetching LeetCode descriptions (reference only).** Given a slug from
