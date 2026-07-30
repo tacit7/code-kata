@@ -9,6 +9,7 @@ import {
 } from "./leetcode-numbers";
 import { sampleKatas } from "./sample-katas";
 import { sampleKatasPython } from "./sample-katas-python";
+import { treeFundamentals } from "./tree-fundamentals";
 import { blind75Part1 } from "./blind75-additions-part1";
 import { blind75Part2 } from "./blind75-additions-part2";
 import { blind75Part3 } from "./blind75-additions-part3";
@@ -33,6 +34,7 @@ import { neetcodeMathBit } from "./neetcode-math-bit";
 const ALL_SEED_KATAS: SeedKata[] = [
   ...sampleKatas,
   ...sampleKatasPython,
+  ...treeFundamentals,
   ...blind75Part1, ...blind75Part2, ...blind75Part3, ...blind75Part4,
   ...blind75Part5, ...blind75Part6, ...blind75Part7, ...blind75Part8,
   ...neetcodeStack, ...neetcodeBinarySearch, ...neetcodeTrees, ...neetcodeBacktracking,
@@ -42,11 +44,6 @@ const ALL_SEED_KATAS: SeedKata[] = [
 
 // Mirrors the (private) key format of LEETCODE_NUMBERS: a plain space.
 const lcKey = (k: { name: string; language: string }) => `${k.language} ${k.name}`;
-
-// Seed katas that deliberately have no LeetCode number: exercises with no
-// single LeetCode analogue. These must resolve to null so the list view shows
-// no number for them.
-const NON_LEETCODE_NAMES = new Set(["Matrix Grid BFS"]);
 
 describe("leetcode numbers", () => {
   it("resolves a number for known LeetCode katas", () => {
@@ -60,12 +57,21 @@ describe("leetcode numbers", () => {
     expect(leetcodeNumberFor({ name: "Nonexistent", language: "python" })).toBeNull();
   });
 
-  it("assigns a number to every LeetCode seed kata", () => {
-    const missing = ALL_SEED_KATAS.filter(
-      (k) => !NON_LEETCODE_NAMES.has(k.name) && leetcodeNumberFor(k) == null,
-    ).map(lcKey);
+  // A kata is a LeetCode problem iff its description carries a `Ref: LeetCode #N`
+  // line — this cleanly separates real problems from foundational/non-LeetCode
+  // katas (the backtracking intros, the tree fundamentals), which share
+  // categories with real problems and so can't be told apart by category.
+  it("every kata with a 'Ref: LeetCode #N' line resolves to that number", () => {
+    const REF = /Ref:\s*LeetCode\s*#(\d+)/;
+    const mismatched = ALL_SEED_KATAS.flatMap((k) => {
+      const m = k.description?.match(REF);
+      if (!m) return [];
+      const expected = Number(m[1]);
+      const actual = leetcodeNumberFor(k);
+      return actual === expected ? [] : [`${lcKey(k)}: ref #${expected}, map ${actual}`];
+    });
 
-    expect(missing).toEqual([]);
+    expect(mismatched).toEqual([]);
   });
 
   it("only maps numbers that belong to a real seed kata", () => {
