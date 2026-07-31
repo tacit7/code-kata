@@ -8,7 +8,7 @@ import type { LibrarySortMode } from "../stores/kata-store";
 import { useSettingsStore } from "../stores/settings-store";
 import { CATEGORY_LEVEL } from "../lib/levels";
 import { reseedKatas, resetKataProgress } from "../lib/database";
-import { DP_FAMILIES, dpFamilyFor, type DpFamily } from "../lib/dp-patterns";
+import { DP_MODULES, dpFamilyFor, type PatternModule } from "../lib/dp-patterns";
 import type { Kata } from "../types/editor";
 
 // Module-level so the list position survives navigating to a kata and back
@@ -138,23 +138,25 @@ export function PracticePage() {
     setBrowseOrder(searchedKatas.map((k) => k.id));
   }, [searchedKatas, setBrowseOrder]);
 
-  // Family View: group searchedKatas (search + LeetCode-only already applied)
-  // into DP_FAMILIES order, each section keeping the existing sort within it.
-  // Non-DP katas fall into a final "Other" section.
+  // Module View: group searchedKatas (search + LeetCode-only already applied)
+  // into DP_MODULES curriculum order. Non-DP katas fall into a final "Other" section.
+  // expand-around-center renders after all curriculum modules.
   const familySections = useMemo(() => {
     if (!groupByFamily) return null;
-    const buckets = new Map<DpFamily | "other", Kata[]>();
+    const buckets = new Map<PatternModule | "other", Kata[]>();
     for (const kata of searchedKatas) {
-      const family = dpFamilyFor(kata) ?? "other";
-      const bucket = buckets.get(family);
+      const mod = dpFamilyFor(kata) ?? "other";
+      const bucket = buckets.get(mod);
       if (bucket) bucket.push(kata);
-      else buckets.set(family, [kata]);
+      else buckets.set(mod, [kata]);
     }
-    const sections: { id: string; label: string; katas: Kata[] }[] = [];
-    for (const { id, label } of DP_FAMILIES) {
+    const sections: { id: string; label: string; tier?: string; katas: Kata[] }[] = [];
+    for (const { id, label, tier } of DP_MODULES) {
       const katas = buckets.get(id);
-      if (katas?.length) sections.push({ id, label, katas });
+      if (katas?.length) sections.push({ id, label, tier, katas });
     }
+    const eac = buckets.get("expand-around-center");
+    if (eac?.length) sections.push({ id: "expand-around-center", label: "Not DP · expand-around-center", katas: eac });
     const other = buckets.get("other");
     if (other?.length) sections.push({ id: "other", label: "Other", katas: other });
     return sections;
@@ -461,11 +463,11 @@ export function PracticePage() {
         <button
           data-testid="family-view-toggle"
           onClick={() => setLibraryUI({ libraryGroupByFamily: !groupByFamily })}
-          title="Group problems by DP family (recurrence pattern)"
+          title="Group problems by DP curriculum module"
           aria-pressed={groupByFamily}
           className={`btn btn-sm shrink-0 ${groupByFamily ? "btn-primary" : "btn-ghost btn-outline"}`}
         >
-          DP families
+          Module View
         </button>
       </div>
 
@@ -499,7 +501,17 @@ export function PracticePage() {
               ? familySections.map((section) => (
                   <Fragment key={section.id}>
                     <tr data-testid={`family-section-${section.id}`}>
-                      <td colSpan={9} className="!py-1.5 !px-3 bg-base-200/60 text-[11px] font-semibold text-base-content/50 uppercase tracking-wider">
+                      <td
+                        colSpan={9}
+                        className={`!py-1.5 !px-3 text-[11px] font-semibold uppercase tracking-wider ${
+                          section.tier === "prerequisite"
+                            ? "bg-primary/10 text-primary/70 border-l-2 border-primary/40"
+                            : "bg-base-200/60 text-base-content/50"
+                        }`}
+                      >
+                        {section.tier === "prerequisite" && (
+                          <span className="mr-2 text-[9px] font-bold uppercase tracking-widest text-primary/50">Prerequisites ·</span>
+                        )}
                         {section.label}
                         <span className="ml-2 text-base-content/30 normal-case font-normal">
                           {section.katas.length}

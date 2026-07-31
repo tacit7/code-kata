@@ -19,7 +19,7 @@ import { useKataNavigation } from "../hooks/use-kata-navigation";
 import { createAutosave } from "../lib/autosave";
 import { toast } from "../stores/toast-store";
 import { leetcodeUrlFor } from "../lib/leetcode-numbers";
-import { dpPatternFor, DP_FAMILIES } from "../lib/dp-patterns";
+import { dpPatternFor, DP_MODULES } from "../lib/dp-patterns";
 import type { Kata, TestResult } from "../types/editor";
 
 type VizKataName =
@@ -457,16 +457,39 @@ function DescriptionWithLink({ text }: { text: string }) {
 function DpPatternCard({ kata }: { kata: Kata }) {
   const pattern = dpPatternFor(kata);
   if (!pattern) return null;
-  const familyLabel = DP_FAMILIES.find((f) => f.id === pattern.family)?.label ?? pattern.family;
+  const primaryLabel =
+    DP_MODULES.find((m) => m.id === pattern.primaryModule)?.label ??
+    (pattern.primaryModule === "expand-around-center" ? "Not DP · expand-around-center" : pattern.primaryModule);
+  const relatedLabels = pattern.relatedPatterns?.map(
+    (r) => DP_MODULES.find((m) => m.id === r)?.label ?? r,
+  );
   return (
     <div data-testid="dp-pattern-card" className="mb-3 rounded-lg border border-base-300/50 bg-base-100 px-3 py-2.5 text-xs">
-      <span className="badge badge-sm badge-primary/20 text-primary border-primary/20 mb-2">
-        {familyLabel}
-      </span>
+      <div className="flex flex-wrap gap-1.5 mb-2">
+        <span className="badge badge-sm badge-primary/20 text-primary border-primary/20">
+          {primaryLabel}
+        </span>
+        {relatedLabels?.map((label) => (
+          <span key={label} className="badge badge-sm text-base-content/40 border-base-300/50 bg-transparent">
+            Related: {label}
+          </span>
+        ))}
+      </div>
       <div className="flex flex-col gap-1 text-base-content/70">
         <div><span className="font-semibold text-base-content/50">State:</span> {pattern.state}</div>
         <div><span className="font-semibold text-base-content/50">Transition:</span> {pattern.transition}</div>
-        <div><span className="font-semibold text-base-content/50">Dependencies:</span> {pattern.deps}</div>
+        <div>
+          <span className="font-semibold text-base-content/50">Base cases:</span>
+          <ul className="list-disc ml-4 mt-0.5 flex flex-col gap-0.5">
+            {pattern.baseCases.map((bc, i) => <li key={i}>{bc}</li>)}
+          </ul>
+        </div>
+        <div>
+          <span className="font-semibold text-base-content/50">Evaluation order: </span>
+          <code className="text-primary text-[10px]">{pattern.evaluationOrder.kind}</code>
+          {" · "}
+          {pattern.evaluationOrder.explanation}
+        </div>
       </div>
     </div>
   );

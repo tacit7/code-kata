@@ -216,6 +216,136 @@ def test_longest_palindrome_subseq_single():
                 dp[i][j] = max(dp[i + 1][j], dp[i][j - 1])
     return dp[0][n - 1]`,
     usage: null,
-    tags: ["dynamic-programming", "dp", "dp-string", "string"],
+    tags: ["dynamic-programming", "dp", "interval-dp", "string"],
+  },
+  {
+    name: "Unique Paths II",
+    category: "2-d-dp",
+    language: "python",
+    difficulty: "medium",
+    description: `You are given an m x n integer array grid. There is a robot initially located at the top-left corner. The robot tries to move to the bottom-right corner. The robot can only move either down or right at any point in time.\n\nAn obstacle and space are marked as 1 or 0 respectively in grid. A path that the robot takes cannot include any square that is an obstacle.\n\nReturn the number of possible unique paths that the robot can take to reach the bottom-right corner.\n\nExample:\nInput: grid = [[0,0,0],[0,1,0],[0,0,0]]\nOutput: 2\nExplanation: There is one obstacle in the middle of the 3x3 grid. There are two ways to reach the bottom-right corner: right→right→down→down or down→down→right→right.\n\nConstraints:\n- m == obstacle_grid.length\n- n == obstacle_grid[i].length\n- 1 <= m, n <= 100\n- obstacle_grid[i][j] is 0 or 1\n\nRef: LeetCode #63`,
+    code: `def unique_paths_with_obstacles(obstacle_grid: list[list[int]]) -> int:
+    raise NotImplementedError`,
+    testCode: `def test_unique_paths_ii_basic():
+    assert unique_paths_with_obstacles([[0,0,0],[0,1,0],[0,0,0]]) == 2
+
+def test_unique_paths_ii_start_blocked():
+    assert unique_paths_with_obstacles([[1,0]]) == 0
+
+def test_unique_paths_ii_end_blocked():
+    assert unique_paths_with_obstacles([[0,0],[0,1]]) == 0
+
+def test_unique_paths_ii_obstacle_zeroes_cell():
+    # Obstacle at (0,1) must zero dp[0][1] and make the only path: down→right→right
+    assert unique_paths_with_obstacles([[0,1,0],[0,0,0]]) == 1`,
+    solution: `def unique_paths_with_obstacles(obstacle_grid: list[list[int]]) -> int:
+    m, n = len(obstacle_grid), len(obstacle_grid[0])
+    dp = [[0] * n for _ in range(m)]
+    for r in range(m):
+        if obstacle_grid[r][0] == 1:
+            break
+        dp[r][0] = 1
+    for c in range(n):
+        if obstacle_grid[0][c] == 1:
+            break
+        dp[0][c] = 1
+    for r in range(1, m):
+        for c in range(1, n):
+            if obstacle_grid[r][c] == 0:
+                dp[r][c] = dp[r - 1][c] + dp[r][c - 1]
+    return dp[m - 1][n - 1]`,
+    usage: null,
+    tags: ["dynamic-programming", "dp", "grid-dp", "grid"],
+  },
+  {
+    name: "Triangle",
+    category: "2-d-dp",
+    language: "python",
+    difficulty: "medium",
+    description: `Given a triangle array, return the minimum path sum from top to bottom. For each step you may move to an adjacent number of the row below. More formally, if you are on index i on the current row, you may move to either index i or index i + 1 on the next row.\n\nExample:\nInput: triangle = [[2],[3,4],[6,5,7],[4,1,8,3]]\nOutput: 11\nExplanation: The triangle looks like:\n   2\n  3 4\n 6 5 7\n4 1 8 3\nThe minimum path sum from top to bottom is 2 + 3 + 5 + 1 = 11.\n\nConstraints:\n- 1 <= triangle.length <= 200\n- triangle[i].length == i + 1\n- -10^4 <= triangle[i][j] <= 10^4\n\nRef: LeetCode #120`,
+    code: `def minimum_total(triangle: list[list[int]]) -> int:
+    raise NotImplementedError`,
+    testCode: `def test_triangle_basic():
+    assert minimum_total([[2],[3,4],[6,5,7],[4,1,8,3]]) == 11
+
+def test_triangle_single():
+    assert minimum_total([[5]]) == 5
+
+def test_triangle_two_rows():
+    assert minimum_total([[1],[2,3]]) == 3
+
+def test_triangle_bottom_up_compression():
+    # Bottom-up row compression: start from last row, accumulate min upward
+    assert minimum_total([[-1],[2,3],[1,-1,-3]]) == -1`,
+    solution: `def minimum_total(triangle: list[list[int]]) -> int:
+    dp = triangle[-1][:]
+    for row in range(len(triangle) - 2, -1, -1):
+        for col in range(len(triangle[row])):
+            dp[col] = triangle[row][col] + min(dp[col], dp[col + 1])
+    return dp[0]`,
+    usage: null,
+    tags: ["dynamic-programming", "dp", "grid-dp"],
+  },
+  {
+    name: "0/1 Knapsack",
+    category: "1-d-dp",
+    language: "python",
+    difficulty: "medium",
+    description: `You are given a list of items, each with a weight and a value, and a knapsack with a maximum capacity. Each item may be selected at most once. Return the maximum total value you can fit in the knapsack.\n\nExample:\nInput: weights = [1, 2, 3], values = [6, 10, 12], capacity = 5\nOutput: 22\nExplanation: Pick items with weight 2 (value 10) and weight 3 (value 12) → total value 22 at total weight 5.\n\nConstraints:\n- 1 <= len(weights) == len(values)\n- 1 <= weights[i], values[i] <= 1000\n- 1 <= capacity <= 1000\n\nNote: This is a custom teaching kata, not a LeetCode problem. The critical implementation rule is to iterate the capacity dimension BACKWARD so each item can be used at most once.`,
+    code: `def knapsack_01(weights: list[int], values: list[int], capacity: int) -> int:
+    raise NotImplementedError`,
+    testCode: `def test_knapsack_01_basic():
+    assert knapsack_01([1, 2, 3], [6, 10, 12], 5) == 22
+
+def test_knapsack_01_zero_capacity():
+    assert knapsack_01([1, 2], [3, 4], 0) == 0
+
+def test_knapsack_01_single_item():
+    assert knapsack_01([3], [5], 2) == 0
+
+def test_knapsack_01_no_reuse():
+    # Forward (unbounded) iteration would let the one weight-1 item fill capacity 3 → 6;
+    # correct backward iteration uses it at most once → 2.
+    assert knapsack_01([1], [2], 3) == 2`,
+    solution: `def knapsack_01(weights: list[int], values: list[int], capacity: int) -> int:
+    dp = [0] * (capacity + 1)
+    for i in range(len(weights)):
+        for c in range(capacity, weights[i] - 1, -1):
+            dp[c] = max(dp[c], dp[c - weights[i]] + values[i])
+    return dp[capacity]`,
+    usage: null,
+    tags: ["dynamic-programming", "dp", "0-1-knapsack"],
+  },
+  {
+    name: "Unbounded Knapsack",
+    category: "1-d-dp",
+    language: "python",
+    difficulty: "medium",
+    description: `You are given a list of items, each with a weight and a value, and a knapsack with a maximum capacity. Each item may be selected any number of times. Return the maximum total value you can fit in the knapsack.\n\nExample:\nInput: weights = [1, 2, 3], values = [6, 10, 12], capacity = 5\nOutput: 30\nExplanation: Pick the weight-1 item five times (value 6 each) → total value 30.\n\nConstraints:\n- 1 <= len(weights) == len(values)\n- 1 <= weights[i], values[i] <= 1000\n- 1 <= capacity <= 1000\n\nNote: This is a custom teaching kata, not a LeetCode problem. The critical implementation rule is to iterate the capacity dimension FORWARD so each item can be reused.`,
+    code: `def knapsack_unbounded(weights: list[int], values: list[int], capacity: int) -> int:
+    raise NotImplementedError`,
+    testCode: `def test_knapsack_unbounded_basic():
+    assert knapsack_unbounded([1, 2, 3], [6, 10, 12], 5) == 30
+
+def test_knapsack_unbounded_zero_capacity():
+    assert knapsack_unbounded([1, 2], [3, 4], 0) == 0
+
+def test_knapsack_unbounded_reuse():
+    # Backward (0/1) iteration would use the weight-1 item at most once → 2;
+    # correct forward iteration allows full reuse → 6.
+    assert knapsack_unbounded([1], [2], 3) == 6
+
+def test_knapsack_unbounded_larger():
+    # Two copies of weight-3/value-6 item (total w=6, v=12) plus weight-2/value-3 item → 15
+    assert knapsack_unbounded([2, 5, 4, 3], [3, 4, 5, 6], 8) == 15`,
+    solution: `def knapsack_unbounded(weights: list[int], values: list[int], capacity: int) -> int:
+    dp = [0] * (capacity + 1)
+    for c in range(capacity + 1):
+        for i in range(len(weights)):
+            if weights[i] <= c:
+                dp[c] = max(dp[c], dp[c - weights[i]] + values[i])
+    return dp[capacity]`,
+    usage: null,
+    tags: ["dynamic-programming", "dp", "unbounded-knapsack"],
   },
 ];
