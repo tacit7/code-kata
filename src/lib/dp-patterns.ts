@@ -239,7 +239,13 @@ export const DP_PATTERNS: Record<string, DpPattern> = {
 };
 
 /** Resolve a kata's DP family from its tags, or null if untagged. */
-export function dpFamilyFor(kata: Pick<Kata | SeedKata, "tags">): DpFamily | null {
+export function dpFamilyFor(kata: Pick<Kata | SeedKata, "name" | "tags">): DpFamily | null {
+  // Source of truth is the pattern map (keyed by name), NOT the DB tags column:
+  // seedMissingKatas never updates tags on already-seeded rows, so an existing
+  // DB's DP katas may lack the family tag. Fall back to the tag for anything not
+  // in the map (e.g. custom katas).
+  const fromPattern = DP_PATTERNS[kata.name]?.family;
+  if (fromPattern) return fromPattern;
   const tag = kata.tags.find((t) => DP_FAMILY_IDS.has(t));
   return (tag as DpFamily | undefined) ?? null;
 }
