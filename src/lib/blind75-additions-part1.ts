@@ -166,7 +166,7 @@ def test_single_element():
 
     return result`,
     usage: null,
-    tags: ["array", "dynamic-programming", "blind75", "neetcode", "1d-dp"],
+    tags: ["array", "dynamic-programming", "blind75", "neetcode", "1d-dp", "dp-multistate"],
   },
   {
     name: "Find Minimum in Rotated Sorted Array",

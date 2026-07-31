@@ -59,7 +59,7 @@ def test_coin_change2_zero():
             dp[a] += dp[a - coin]
     return dp[amount]`,
     usage: null,
-    tags: ["dynamic-programming", "2d-dp", "neetcode"],
+    tags: ["dynamic-programming", "2d-dp", "neetcode", "dp-counting"],
   },
   {
     name: "Target Sum",
@@ -90,7 +90,7 @@ def test_target_sum_zero():
         dp = next_dp
     return dp.get(target, 0)`,
     usage: null,
-    tags: ["dynamic-programming", "2d-dp", "backtracking", "neetcode"],
+    tags: ["dynamic-programming", "2d-dp", "backtracking", "neetcode", "dp-decision"],
   },
   {
     name: "Interleaving String",
@@ -236,7 +236,7 @@ def test_edit_distance_one_empty():
             prev = temp
     return dp[n]`,
     usage: null,
-    tags: ["dynamic-programming", "2d-dp", "string", "neetcode"],
+    tags: ["dynamic-programming", "2d-dp", "string", "neetcode", "dp-subsequence"],
   },
   {
     name: "Burst Balloons",

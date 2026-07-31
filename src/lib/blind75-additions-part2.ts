@@ -29,7 +29,7 @@ def test_multiple_coins():
                 dp[i] = min(dp[i], dp[i - c] + 1)
     return dp[amount] if dp[amount] != float("inf") else -1`,
     usage: null,
-    tags: ["dynamic-programming", "blind75", "neetcode", "1d-dp"],
+    tags: ["dynamic-programming", "blind75", "neetcode", "1d-dp", "dp-min-cost"],
   },
   {
     name: "Longest Increasing Subsequence",
@@ -62,7 +62,7 @@ def length_of_lis(nums: list[int]) -> int:
             sub[pos] = num
     return len(sub)`,
     usage: null,
-    tags: ["dynamic-programming", "binary-search", "blind75", "neetcode", "1d-dp"],
+    tags: ["dynamic-programming", "binary-search", "blind75", "neetcode", "1d-dp", "dp-subsequence"],
   },
   {
     name: "Word Break",
@@ -95,7 +95,7 @@ def test_word_break_single():
                 break
     return dp[n]`,
     usage: null,
-    tags: ["dynamic-programming", "blind75", "neetcode", "1d-dp"],
+    tags: ["dynamic-programming", "blind75", "neetcode", "1d-dp", "dp-string"],
   },
   {
     name: "Combination Sum IV",
@@ -125,7 +125,7 @@ def test_combination_sum4_two():
                 dp[i] += dp[i - num]
     return dp[target]`,
     usage: null,
-    tags: ["dynamic-programming", "blind75"],
+    tags: ["dynamic-programming", "blind75", "dp-counting"],
   },
   {
     name: "House Robber",
@@ -153,7 +153,7 @@ def test_rob_two():
         prev2, prev1 = prev1, curr
     return prev1`,
     usage: null,
-    tags: ["dynamic-programming", "blind75", "neetcode", "1d-dp"],
+    tags: ["dynamic-programming", "blind75", "neetcode", "1d-dp", "dp-decision"],
   },
   {
     name: "House Robber II",
@@ -187,7 +187,7 @@ def test_rob2_single():
 
     return max(rob_linear(nums[:-1]), rob_linear(nums[1:]))`,
     usage: null,
-    tags: ["dynamic-programming", "blind75", "neetcode", "1d-dp"],
+    tags: ["dynamic-programming", "blind75", "neetcode", "1d-dp", "dp-decision"],
   },
   {
     name: "Decode Ways",
@@ -222,7 +222,7 @@ def test_decode_leading_zero():
             dp[i] += dp[i - 2]
     return dp[n]`,
     usage: null,
-    tags: ["dynamic-programming", "blind75", "neetcode", "1d-dp"],
+    tags: ["dynamic-programming", "blind75", "neetcode", "1d-dp", "dp-counting"],
   },
   {
     name: "Unique Paths",
@@ -250,7 +250,7 @@ def test_unique_paths_single():
             dp[r][c] = dp[r - 1][c] + dp[r][c - 1]
     return dp[m - 1][n - 1]`,
     usage: null,
-    tags: ["dynamic-programming", "math", "blind75"],
+    tags: ["dynamic-programming", "math", "blind75", "dp-counting"],
   },
   {
     name: "Jump Game",
@@ -306,7 +306,7 @@ def test_min_cost_equal():
         cost[i] += min(cost[i - 1], cost[i - 2])
     return min(cost[-1], cost[-2])`,
     usage: null,
-    tags: ["dynamic-programming", "neetcode", "1d-dp"],
+    tags: ["dynamic-programming", "neetcode", "1d-dp", "dp-basic"],
   },
   {
     name: "Partition Equal Subset Sum",
@@ -339,7 +339,7 @@ def test_can_partition_two():
             return True
     return False`,
     usage: null,
-    tags: ["dynamic-programming", "neetcode", "1d-dp"],
+    tags: ["dynamic-programming", "neetcode", "1d-dp", "dp-decision"],
   },
 ];
 

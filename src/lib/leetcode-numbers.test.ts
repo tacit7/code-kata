@@ -10,6 +10,7 @@ import {
 import { sampleKatas } from "./sample-katas";
 import { sampleKatasPython } from "./sample-katas-python";
 import { treeFundamentals } from "./tree-fundamentals";
+import { dpFoundations } from "./dp-foundations";
 import { blind75Part1 } from "./blind75-additions-part1";
 import { blind75Part2 } from "./blind75-additions-part2";
 import { blind75Part3 } from "./blind75-additions-part3";
@@ -35,6 +36,7 @@ const ALL_SEED_KATAS: SeedKata[] = [
   ...sampleKatas,
   ...sampleKatasPython,
   ...treeFundamentals,
+  ...dpFoundations,
   ...blind75Part1, ...blind75Part2, ...blind75Part3, ...blind75Part4,
   ...blind75Part5, ...blind75Part6, ...blind75Part7, ...blind75Part8,
   ...neetcodeStack, ...neetcodeBinarySearch, ...neetcodeTrees, ...neetcodeBacktracking,
