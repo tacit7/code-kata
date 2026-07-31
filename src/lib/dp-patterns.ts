@@ -188,6 +188,42 @@ export const DP_PATTERNS: Record<string, DpPattern> = {
     transition: "dp[i][j] = dp[i+1][j-1] + 2 if s[i] == s[j], else max(dp[i+1][j], dp[i][j-1])",
     deps: "dp[i+1][j-1], dp[i+1][j], dp[i][j-1]",
   },
+  "Best Time to Buy and Sell Stock With Cooldown": {
+    family: "dp-multistate",
+    state: "three running states per day: hold / sold / cooldown = max profit ending that day in that state",
+    transition: "hold = max(hold, cooldown-price); sold = hold+price; cooldown = max(cooldown, sold)",
+    deps: "prior day's hold, sold, cooldown",
+  },
+  "Interleaving String": {
+    family: "dp-string",
+    state: "dp[i][j] = can s3[0..i+j) be formed by interleaving s1[0..i) and s2[0..j)",
+    transition: "dp[i][j] = (dp[i-1][j] && s1[i-1]==s3[i+j-1]) || (dp[i][j-1] && s2[j-1]==s3[i+j-1])",
+    deps: "dp[i-1][j], dp[i][j-1]",
+  },
+  "Longest Increasing Path In a Matrix": {
+    family: "dp-subsequence",
+    state: "memo[r][c] = length of longest strictly increasing path starting at cell (r,c)",
+    transition: "memo[r][c] = 1 + max(memo of orthogonal neighbors with a greater value)",
+    deps: "memoized DFS into the 4 greater-valued neighbors",
+  },
+  "Burst Balloons": {
+    family: "dp-string",
+    state: "dp[l][r] = max coins from bursting every balloon strictly inside the open interval (l, r)",
+    transition: "dp[l][r] = max over k in (l,r) of dp[l][k] + nums[l]*nums[k]*nums[r] + dp[k][r]  (k burst last)",
+    deps: "shorter intervals dp[l][k], dp[k][r]",
+  },
+  "Regular Expression Matching": {
+    family: "dp-string",
+    state: "dp[i][j] = does s[0..i) match pattern p[0..j)",
+    transition: "on '*': skip x* → dp[i][j-2], or consume if p[j-2] matches s[i-1] → dp[i-1][j]; else single char/'.' match → dp[i-1][j-1]",
+    deps: "dp[i-1][j], dp[i][j-1], dp[i][j-2]",
+  },
+  "Distinct Subsequences": {
+    family: "dp-subsequence",
+    state: "dp[i][j] = number of subsequences of s[0..i) that equal t[0..j)",
+    transition: "dp[i][j] = dp[i-1][j] + (s[i-1]==t[j-1] ? dp[i-1][j-1] : 0)",
+    deps: "dp[i-1][j], dp[i-1][j-1]",
+  },
   "Longest Palindromic Substring": {
     family: "expand-around-center",
     state: "the widest palindrome found so far, expanding outward from each center (i,i) and (i,i+1) — DP's O(n²) table is a detour here",

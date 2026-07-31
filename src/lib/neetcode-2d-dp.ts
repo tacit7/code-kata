@@ -30,7 +30,7 @@ def test_cooldown_decreasing():
         cooldown = max(prev_cooldown, prev_sold)
     return max(sold, cooldown)`,
     usage: null,
-    tags: ["dynamic-programming", "2d-dp", "neetcode"],
+    tags: ["dynamic-programming", "2d-dp", "neetcode", "dp-multistate"],
   },
   {
     name: "Coin Change II",
@@ -127,7 +127,7 @@ def test_interleave_one_empty():
                         (dp[i][j-1] and s2[j-1] == s3[i+j-1])
     return dp[m][n]`,
     usage: null,
-    tags: ["dynamic-programming", "2d-dp", "string", "neetcode"],
+    tags: ["dynamic-programming", "2d-dp", "string", "neetcode", "dp-string"],
   },
   {
     name: "Longest Increasing Path In a Matrix",
@@ -167,7 +167,7 @@ def test_lip_two_by_two():
 
     return max(dfs(r, c) for r in range(m) for c in range(n))`,
     usage: null,
-    tags: ["dynamic-programming", "2d-dp", "dfs", "neetcode"],
+    tags: ["dynamic-programming", "2d-dp", "dfs", "neetcode", "dp-subsequence"],
   },
   {
     name: "Distinct Subsequences",
@@ -200,7 +200,7 @@ def test_distinct_subseq_same():
                 dp[i][j] += dp[i-1][j-1]
     return dp[m][n]`,
     usage: null,
-    tags: ["dynamic-programming", "2d-dp", "string", "neetcode"],
+    tags: ["dynamic-programming", "2d-dp", "string", "neetcode", "dp-subsequence"],
   },
   {
     name: "Edit Distance",
@@ -271,7 +271,7 @@ def test_burst_balloons_uniform():
                 )
     return dp[0][n-1]`,
     usage: null,
-    tags: ["dynamic-programming", "2d-dp", "neetcode"],
+    tags: ["dynamic-programming", "2d-dp", "neetcode", "dp-string"],
   },
   {
     name: "Regular Expression Matching",
@@ -309,7 +309,7 @@ def test_regex_complex():
                 dp[i][j] = dp[i-1][j-1]
     return dp[m][n]`,
     usage: null,
-    tags: ["dynamic-programming", "2d-dp", "string", "recursion", "neetcode"],
+    tags: ["dynamic-programming", "2d-dp", "string", "recursion", "neetcode", "dp-string"],
   },
 ];
 
