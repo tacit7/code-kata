@@ -1,0 +1,276 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>DP Curriculum v2 — UI Mockup</title>
+  <style>
+    :root {
+      --bg: #0f1117;
+      --surface: #181b24;
+      --surface2: #202431;
+      --border: #303548;
+      --accent: #8b5cf6;
+      --accent2: #a78bfa;
+      --text: #e5e7eb;
+      --muted: #8b93a7;
+      --green: #34d399;
+      --yellow: #fbbf24;
+      --blue: #60a5fa;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: radial-gradient(circle at 65% -20%, #24213a 0, transparent 40%), var(--bg);
+      color: var(--text);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    button { font: inherit; }
+    .page { max-width: 1320px; margin: 0 auto; padding: 28px; }
+    .eyebrow { color: var(--accent2); font-size: 12px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+    h1 { margin: 7px 0 4px; font-size: 28px; }
+    .lede { margin: 0; color: var(--muted); font-size: 14px; }
+    .tabs { display: flex; gap: 8px; margin: 22px 0 14px; }
+    .tab {
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--muted);
+      border-radius: 8px;
+      padding: 8px 12px;
+      cursor: pointer;
+    }
+    .tab.active { color: white; border-color: #6d52b9; background: #2a2440; }
+    .view { display: none; }
+    .view.active { display: block; }
+    .frame {
+      min-height: 700px;
+      border: 1px solid var(--border);
+      background: #11141b;
+      border-radius: 14px;
+      overflow: hidden;
+      box-shadow: 0 20px 70px rgba(0, 0, 0, .35);
+    }
+    .appbar {
+      height: 48px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      padding: 0 16px;
+      background: #151820;
+      font-size: 13px;
+    }
+    .traffic { display: flex; gap: 6px; }
+    .traffic i { width: 10px; height: 10px; border-radius: 50%; background: #484d5e; }
+    .brand { font-weight: 750; }
+    .appbody { display: grid; grid-template-columns: 190px 1fr; min-height: 652px; }
+    .sidebar { border-right: 1px solid var(--border); background: #151820; padding: 14px 10px; }
+    .nav { padding: 9px 11px; border-radius: 7px; color: var(--muted); font-size: 13px; margin-bottom: 4px; }
+    .nav.active { color: white; background: var(--surface2); }
+    .content { padding: 22px; overflow: hidden; }
+    .toolbar { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+    .toolbar h2 { font-size: 20px; margin: 0 auto 0 0; }
+    .search { width: 230px; background: var(--surface); border: 1px solid var(--border); color: var(--muted); padding: 8px 10px; border-radius: 8px; font-size: 12px; }
+    .toggle { border: 1px solid #6d52b9; color: #d8ccff; background: #2a2440; border-radius: 8px; padding: 8px 10px; font-size: 12px; }
+    .tier {
+      border: 1px solid #59459a;
+      background: linear-gradient(90deg, rgba(139, 92, 246, .11), transparent 45%);
+      border-radius: 10px;
+      margin-bottom: 14px;
+      overflow: hidden;
+    }
+    .tier-head, .module-head {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 10px 12px;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: .03em;
+      text-transform: uppercase;
+    }
+    .tier-head small, .module-head small { color: var(--muted); font-weight: 600; letter-spacing: 0; text-transform: none; }
+    .pill { color: #ddd4ff; background: rgba(139, 92, 246, .22); border: 1px solid rgba(167, 139, 250, .35); padding: 2px 7px; border-radius: 99px; font-size: 10px; }
+    .row { display: grid; grid-template-columns: 28px 1fr 90px 70px; align-items: center; min-height: 40px; border-top: 1px solid rgba(48, 53, 72, .6); padding: 0 12px; font-size: 12px; }
+    .star { color: #50576a; }
+    .difficulty.easy { color: var(--green); }
+    .difficulty.medium { color: var(--yellow); }
+    .module {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      margin-bottom: 10px;
+      overflow: hidden;
+      background: rgba(24, 27, 36, .6);
+    }
+    .module-head { background: rgba(32, 36, 49, .55); }
+    .module-index { color: var(--blue); font-variant-numeric: tabular-nums; }
+    .collapsed { opacity: .72; }
+    .editor-grid { display: grid; grid-template-columns: minmax(340px, 42%) 1fr; gap: 1px; background: var(--border); min-height: 652px; }
+    .description, .code { background: #11141b; padding: 22px; }
+    .description h2 { margin: 0 0 4px; font-size: 19px; }
+    .meta { color: var(--muted); font-size: 12px; margin-bottom: 16px; }
+    .card {
+      border: 1px solid var(--border);
+      background: var(--surface);
+      border-radius: 10px;
+      padding: 13px;
+      font-size: 12px;
+      line-height: 1.45;
+    }
+    .badges { display: flex; gap: 7px; margin-bottom: 11px; flex-wrap: wrap; }
+    .badge { border-radius: 999px; padding: 3px 8px; border: 1px solid rgba(167, 139, 250, .35); background: rgba(139, 92, 246, .17); color: #ddd4ff; }
+    .related { border-color: var(--border); background: var(--surface2); color: var(--muted); }
+    .field { display: grid; grid-template-columns: 116px 1fr; gap: 10px; padding: 7px 0; border-top: 1px solid rgba(48, 53, 72, .55); }
+    .field:first-of-type { border-top: 0; }
+    .field strong { color: #aeb5c5; }
+    .field ul { margin: 0; padding-left: 16px; }
+    .order-kind { display: inline-block; color: var(--blue); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; margin-right: 5px; }
+    pre { color: #c5cfec; background: #0d1016; border: 1px solid var(--border); border-radius: 9px; padding: 16px; min-height: 420px; overflow: hidden; font-size: 12px; line-height: 1.65; margin: 0; }
+    .annotation { margin-top: 14px; border-left: 3px solid var(--accent); background: rgba(139, 92, 246, .08); padding: 12px 14px; border-radius: 0 8px 8px 0; color: var(--muted); font-size: 13px; }
+    .annotation strong { color: var(--text); }
+    .narrow-wrap { max-width: 700px; margin: 0 auto; }
+    .narrow .appbody { grid-template-columns: 1fr; }
+    .narrow .sidebar { display: none; }
+    .narrow .toolbar { flex-wrap: wrap; }
+    .narrow .search { width: 100%; order: 3; }
+    .narrow .row { grid-template-columns: 25px 1fr 70px; }
+    .narrow .row span:last-child { display: none; }
+    @media (max-width: 760px) {
+      .page { padding: 14px; }
+      .appbody { grid-template-columns: 1fr; }
+      .sidebar { display: none; }
+      .editor-grid { grid-template-columns: 1fr; }
+      .field { grid-template-columns: 1fr; gap: 4px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <div class="eyebrow">Implementation reference</div>
+    <h1>DP Curriculum v2</h1>
+    <p class="lede">Approved taxonomy and metadata rework for the Python and Ruby apps.</p>
+
+    <div class="tabs" role="tablist">
+      <button class="tab active" data-target="library">Module View</button>
+      <button class="tab" data-target="editor">Pattern Card</button>
+      <button class="tab" data-target="narrow">Narrow Layout</button>
+    </div>
+
+    <section id="library" class="view active">
+      <div class="frame">
+        <div class="appbar"><span class="traffic"><i></i><i></i><i></i></span><span class="brand">Kata Desktop</span></div>
+        <div class="appbody">
+          <aside class="sidebar">
+            <div class="nav">Dashboard</div>
+            <div class="nav active">Problems</div>
+            <div class="nav">Practice</div>
+            <div class="nav">Results</div>
+          </aside>
+          <div class="content">
+            <div class="toolbar">
+              <h2>Problems</h2>
+              <div class="search">Search problems…</div>
+              <button class="toggle">Module View ✓</button>
+            </div>
+            <div class="tier">
+              <div class="tier-head"><span class="pill">Prerequisite tier</span> Foundations <small>learn the DP workflow before choosing a family</small></div>
+              <div class="row"><span class="star">☆</span><span>509. Fibonacci Number</span><span class="difficulty easy">Easy</span><span>1-D DP</span></div>
+              <div class="row"><span class="star">☆</span><span>Climbing Stairs (Recursive)</span><span class="difficulty easy">Easy</span><span>1-D DP</span></div>
+            </div>
+            <div class="module">
+              <div class="module-head"><span class="module-index">01</span> 1D Sequence DP <small>4 problems · recurrence over an ordered sequence</small></div>
+              <div class="row"><span class="star">☆</span><span>Climbing Stairs (Iterative)</span><span class="difficulty easy">Easy</span><span>1-D DP</span></div>
+              <div class="row"><span class="star">☆</span><span>746. Min Cost Climbing Stairs</span><span class="difficulty easy">Easy</span><span>1-D DP</span></div>
+            </div>
+            <div class="module">
+              <div class="module-head"><span class="module-index">02</span> Grid DP <small>4 problems · navigation and path aggregation</small></div>
+              <div class="row"><span class="star">☆</span><span>62. Unique Paths</span><span class="difficulty medium">Medium</span><span>2-D DP</span></div>
+              <div class="row"><span class="star">☆</span><span>63. Unique Paths II</span><span class="difficulty medium">Medium</span><span>2-D DP</span></div>
+              <div class="row"><span class="star">☆</span><span>120. Triangle</span><span class="difficulty medium">Medium</span><span>2-D DP</span></div>
+            </div>
+            <div class="module collapsed"><div class="module-head"><span class="module-index">03</span> 0/1 Knapsack <small>4 problems</small></div></div>
+            <div class="module collapsed"><div class="module-head"><span class="module-index">04</span> Unbounded Knapsack <small>5 problems</small></div></div>
+            <div class="module collapsed"><div class="module-head"><span class="module-index">05–10</span> String · Subsequence · Interval · State Machine · DFS Memo · Bitmask</div></div>
+          </div>
+        </div>
+      </div>
+      <div class="annotation"><strong>Hierarchy:</strong> Foundations is rendered as a prerequisite tier above ten numbered problem-family modules. A kata appears in exactly one section, using <code>primaryModule</code>; related patterns never duplicate rows.</div>
+    </section>
+
+    <section id="editor" class="view">
+      <div class="frame">
+        <div class="appbar"><span class="traffic"><i></i><i></i><i></i></span><span class="brand">Kata Desktop</span><span style="color:var(--muted)">/ Longest Palindromic Subsequence</span></div>
+        <div class="editor-grid">
+          <div class="description">
+            <h2>Longest Palindromic Subsequence</h2>
+            <div class="meta">Medium · 2-D DP · LeetCode 516</div>
+            <div class="card">
+              <div class="badges">
+                <span class="badge">Interval DP</span>
+                <span class="badge related">Related: Subsequence DP</span>
+              </div>
+              <div class="field"><strong>State</strong><span>dp[i][j] is the longest palindromic subsequence length inside s[i..j].</span></div>
+              <div class="field"><strong>Transition</strong><span>If the endpoints match, use the inner interval + 2; otherwise keep the better interval after dropping one endpoint.</span></div>
+              <div class="field"><strong>Base cases</strong><ul><li>dp[i][i] = 1</li><li>An empty inner interval contributes 0</li></ul></div>
+              <div class="field"><strong>Evaluation order</strong><span><span class="order-kind">increasing-interval-length</span> Solve shorter intervals before the interval that contains them.</span></div>
+            </div>
+            <p style="color:var(--muted); font-size:13px; line-height:1.55">Given a string s, return the length of the longest palindromic subsequence…</p>
+          </div>
+          <div class="code">
+            <pre><span style="color:#c084fc">def</span> <span style="color:#60a5fa">longest_palindrome_subseq</span>(s):
+    n = len(s)
+    dp = [[0] * n for _ in range(n)]
+
+    <span style="color:#c084fc">for</span> i <span style="color:#c084fc">in</span> range(n - 1, -1, -1):
+        dp[i][i] = 1
+        <span style="color:#c084fc">for</span> j <span style="color:#c084fc">in</span> range(i + 1, n):
+            <span style="color:#c084fc">if</span> s[i] == s[j]:
+                dp[i][j] = dp[i + 1][j - 1] + 2
+            <span style="color:#c084fc">else</span>:
+                dp[i][j] = max(dp[i + 1][j], dp[i][j - 1])
+
+    <span style="color:#c084fc">return</span> dp[0][n - 1]</pre>
+          </div>
+        </div>
+      </div>
+      <div class="annotation"><strong>Card contract:</strong> Dependencies is removed. Base cases render as a list; evaluation order shows a stable machine-readable kind plus a plain-language explanation. Related patterns are visually secondary.</div>
+    </section>
+
+    <section id="narrow" class="view">
+      <div class="narrow-wrap">
+        <div class="frame narrow">
+          <div class="appbar"><span class="traffic"><i></i><i></i><i></i></span><span class="brand">Kata Desktop</span></div>
+          <div class="appbody">
+            <div class="content">
+              <div class="toolbar"><h2>Problems</h2><button class="toggle">Module View ✓</button><div class="search">Search problems…</div></div>
+              <div class="tier">
+                <div class="tier-head"><span class="pill">Prerequisite</span> Foundations</div>
+                <div class="row"><span class="star">☆</span><span>509. Fibonacci Number</span><span class="difficulty easy">Easy</span><span></span></div>
+              </div>
+              <div class="module">
+                <div class="module-head"><span class="module-index">01</span> 1D Sequence DP</div>
+                <div class="row"><span class="star">☆</span><span>Climbing Stairs (Iterative)</span><span class="difficulty easy">Easy</span><span></span></div>
+              </div>
+              <div class="module">
+                <div class="module-head"><span class="module-index">02</span> Grid DP</div>
+                <div class="row"><span class="star">☆</span><span>63. Unique Paths II</span><span class="difficulty medium">Medium</span><span></span></div>
+                <div class="row"><span class="star">☆</span><span>120. Triangle</span><span class="difficulty medium">Medium</span><span></span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="annotation"><strong>Narrow behavior:</strong> The sidebar collapses, search wraps below the title, and the curriculum hierarchy remains legible without introducing a drawer or duplicated membership.</div>
+      </div>
+    </section>
+  </main>
+  <script>
+    const tabs = [...document.querySelectorAll(".tab")];
+    const views = [...document.querySelectorAll(".view")];
+    tabs.forEach((tab) => tab.addEventListener("click", () => {
+      tabs.forEach((item) => item.classList.toggle("active", item === tab));
+      views.forEach((view) => view.classList.toggle("active", view.id === tab.dataset.target));
+    }));
+  </script>
+</body>
+</html>
