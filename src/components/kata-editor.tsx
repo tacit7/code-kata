@@ -19,6 +19,7 @@ import { useKataNavigation } from "../hooks/use-kata-navigation";
 import { createAutosave } from "../lib/autosave";
 import { toast } from "../stores/toast-store";
 import { leetcodeUrlFor } from "../lib/leetcode-numbers";
+import { dpPatternFor, DP_FAMILIES } from "../lib/dp-patterns";
 import type { Kata, TestResult } from "../types/editor";
 
 type VizKataName =
@@ -449,6 +450,26 @@ const VIZ_MAP: Partial<Record<VizKataName, string>> = {
 // (leetcodeUrlFor), so the description no longer carries its own link.
 function DescriptionWithLink({ text }: { text: string }) {
   return <span className="whitespace-pre-wrap">{text}</span>;
+}
+
+// Compact, read-only recurrence summary for DP-tagged katas (see
+// src/lib/dp-patterns.ts). Renders nothing for katas without a pattern.
+function DpPatternCard({ kata }: { kata: Kata }) {
+  const pattern = dpPatternFor(kata);
+  if (!pattern) return null;
+  const familyLabel = DP_FAMILIES.find((f) => f.id === pattern.family)?.label ?? pattern.family;
+  return (
+    <div data-testid="dp-pattern-card" className="mb-3 rounded-lg border border-base-300/50 bg-base-100 px-3 py-2.5 text-xs">
+      <span className="badge badge-sm badge-primary/20 text-primary border-primary/20 mb-2">
+        {familyLabel}
+      </span>
+      <div className="flex flex-col gap-1 text-base-content/70">
+        <div><span className="font-semibold text-base-content/50">State:</span> {pattern.state}</div>
+        <div><span className="font-semibold text-base-content/50">Transition:</span> {pattern.transition}</div>
+        <div><span className="font-semibold text-base-content/50">Dependencies:</span> {pattern.deps}</div>
+      </div>
+    </div>
+  );
 }
 
 interface KataEditorProps {
@@ -955,6 +976,7 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
           >
             {showPanel === "description" && (
               <div className="flex-1 overflow-y-auto px-4 py-3 text-sm text-base-content/70">
+                <DpPatternCard kata={kata} />
                 <DescriptionWithLink text={kata.description || "No description available."} />
               </div>
             )}

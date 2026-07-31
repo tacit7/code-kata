@@ -47,6 +47,8 @@ interface LibraryUIState {
   libraryDiffSort: "asc" | "desc" | null;
   librarySortMode: LibrarySortMode;
   libraryLeetcodeOnly: boolean;
+  /** Group-by-DP-family view in the Problems list (see src/lib/dp-patterns.ts). */
+  libraryGroupByFamily: boolean;
   setLibraryUI: (patch: Partial<LibraryUIState>) => void;
 }
 
@@ -84,6 +86,7 @@ export const useKataStore = create<KataState>((set) => ({
   libraryDiffSort: null,
   librarySortMode: "level-difficulty",
   libraryLeetcodeOnly: false,
+  libraryGroupByFamily: false,
   setLibraryUI: (patch) => set(patch),
 
   loadKatas: async (language = "javascript") => {

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
@@ -8,6 +8,8 @@ import type { LibrarySortMode } from "../stores/kata-store";
 import { useSettingsStore } from "../stores/settings-store";
 import { CATEGORY_LEVEL } from "../lib/levels";
 import { reseedKatas, resetKataProgress } from "../lib/database";
+import { DP_FAMILIES, dpFamilyFor, type DpFamily } from "../lib/dp-patterns";
+import type { Kata } from "../types/editor";
 
 // Module-level so the list position survives navigating to a kata and back
 // (resets only on full app reload).
@@ -29,6 +31,7 @@ export function PracticePage() {
   const libraryDiffSort = useKataStore((s) => s.libraryDiffSort);
   const librarySortMode = useKataStore((s) => s.librarySortMode);
   const leetcodeOnly = useKataStore((s) => s.libraryLeetcodeOnly);
+  const groupByFamily = useKataStore((s) => s.libraryGroupByFamily);
   const setLibraryUI = useKataStore((s) => s.setLibraryUI);
   const setBrowseOrder = useKataStore((s) => s.setBrowseOrder);
 
@@ -134,6 +137,28 @@ export function PracticePage() {
   useEffect(() => {
     setBrowseOrder(searchedKatas.map((k) => k.id));
   }, [searchedKatas, setBrowseOrder]);
+
+  // Family View: group searchedKatas (search + LeetCode-only already applied)
+  // into DP_FAMILIES order, each section keeping the existing sort within it.
+  // Non-DP katas fall into a final "Other" section.
+  const familySections = useMemo(() => {
+    if (!groupByFamily) return null;
+    const buckets = new Map<DpFamily | "other", Kata[]>();
+    for (const kata of searchedKatas) {
+      const family = dpFamilyFor(kata) ?? "other";
+      const bucket = buckets.get(family);
+      if (bucket) bucket.push(kata);
+      else buckets.set(family, [kata]);
+    }
+    const sections: { id: string; label: string; katas: Kata[] }[] = [];
+    for (const { id, label } of DP_FAMILIES) {
+      const katas = buckets.get(id);
+      if (katas?.length) sections.push({ id, label, katas });
+    }
+    const other = buckets.get("other");
+    if (other?.length) sections.push({ id: "other", label: "Other", katas: other });
+    return sections;
+  }, [groupByFamily, searchedKatas]);
 
   const toggleFavoriteById = (id: number) => {
     const next = dailyKataIds.includes(id)
@@ -245,6 +270,143 @@ export function PracticePage() {
     document.getElementById(`kata-row-${kata.id}`)?.scrollIntoView({ block: "nearest" });
   }, [selectedIndex, searchedKatas]);
 
+  // Selection/keyboard-nav indexes into the flat searchedKatas order even when
+  // rows are rendered grouped into family sections.
+  const indexById = useMemo(() => {
+    const m = new Map<number, number>();
+    searchedKatas.forEach((k, i) => m.set(k.id, i));
+    return m;
+  }, [searchedKatas]);
+
+  const renderKataRow = (kata: Kata) => {
+    const idx = indexById.get(kata.id) ?? -1;
+    return (
+      <tr
+        key={kata.id}
+        id={`kata-row-${kata.id}`}
+        onClick={() => { setSelectedIndex(idx); navigate(`/editor/${kata.id}`); }}
+        onMouseEnter={() => setSelectedIndex(idx)}
+        onContextMenu={(e) => handleKataContextMenu(e, kata.id)}
+        className={`cursor-pointer transition-colors border-base-300/30 ${
+          idx === selectedIndex ? "bg-primary/10 border-l-2 border-l-primary" : "hover:bg-base-300/20"
+        }`}
+      >
+        <td className="w-8">
+          <button
+            onClick={(e) => toggleDaily(kata.id, e)}
+            className={`btn btn-ghost btn-xs btn-square ${
+              dailyKataIds.includes(kata.id)
+                ? "text-warning"
+                : "text-base-content/20 hover:text-base-content/40"
+            }`}
+            title={dailyKataIds.includes(kata.id) ? "Remove from daily" : "Add to daily"}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill={dailyKataIds.includes(kata.id) ? "currentColor" : "none"} stroke="currentColor" strokeWidth={1.5} className="w-4 h-4">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M11.48 3.499a.562.562 0 0 1 1.04 0l2.125 5.111a.563.563 0 0 0 .475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 0 0-.182.557l1.285 5.385a.562.562 0 0 1-.84.61l-4.725-2.885a.562.562 0 0 0-.586 0L6.982 20.54a.562.562 0 0 1-.84-.61l1.285-5.386a.562.562 0 0 0-.182-.557l-4.204-3.602a.562.562 0 0 1 .321-.988l5.518-.442a.563.563 0 0 0 .475-.345L11.48 3.5Z" />
+            </svg>
+          </button>
+        </td>
+        <td className="font-medium text-sm">
+          <span className="inline-flex items-center gap-1.5">
+            {kata.leetcodeNumber != null && (
+              <span className="text-base-content/40 tabular-nums">
+                {kata.leetcodeNumber}.
+              </span>
+            )}
+            {kata.name}
+            {kata.isCustom && (
+              <span className="badge badge-secondary badge-xs">Custom</span>
+            )}
+            <button
+              onClick={(e) => toggleDone(kata.id, e)}
+              className={`inline-flex items-center gap-0.5 rounded-full px-1 py-0.5 text-[10px] font-semibold transition-colors ${
+                doneKataIds.includes(kata.id)
+                  ? "bg-success/15 text-success hover:bg-success/25"
+                  : "text-base-content/15 hover:text-base-content/30 hover:bg-base-300/30"
+              }`}
+              title={doneKataIds.includes(kata.id) ? "Mark as not done" : "Mark as done"}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3 h-3">
+                <path fillRule="evenodd" d="M12.416 3.376a.75.75 0 0 1 .208 1.04l-5 7.5a.75.75 0 0 1-1.154.114l-3-3a.75.75 0 0 1 1.06-1.06l2.353 2.353 4.493-6.74a.75.75 0 0 1 1.04-.207Z" clipRule="evenodd" />
+              </svg>
+            </button>
+          </span>
+        </td>
+        <td>
+          {CATEGORY_LEVEL[kata.category] !== undefined ? (
+            <span className="text-[11px] font-bold px-2 py-0.5 rounded bg-base-300/60 text-base-content/50 tabular-nums">
+              Lv.{CATEGORY_LEVEL[kata.category]}
+            </span>
+          ) : (
+            <span className="text-base-content/20 text-xs">—</span>
+          )}
+        </td>
+        <td className="text-base-content/45 text-sm">{kata.category}</td>
+        <td>
+          <span className={`badge badge-sm ${diffColor(kata.difficulty)}`}>
+            {kata.difficulty ?? "-"}
+          </span>
+        </td>
+        <td>
+          <div className="flex flex-wrap items-center gap-1">
+            {(expandedTagRows.has(kata.id) ? kata.tags : kata.tags.slice(0, TAG_PREVIEW_COUNT)).map((tag) => (
+              <button
+                key={tag}
+                onClick={(e) => { e.stopPropagation(); setSearch(tag); }}
+                className="badge badge-xs bg-primary/10 text-primary/70 border-primary/10 cursor-pointer hover:bg-primary/25 hover:text-primary transition-colors"
+              >
+                {tag}
+              </button>
+            ))}
+            {!expandedTagRows.has(kata.id) && kata.tags.length > TAG_PREVIEW_COUNT && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setExpandedTagRows((prev) => new Set(prev).add(kata.id));
+                }}
+                className="badge badge-xs bg-base-300/40 text-base-content/40 border-transparent cursor-pointer hover:bg-base-300/70 hover:text-base-content/70 transition-colors"
+                title="Show all tags"
+              >
+                +{kata.tags.length - TAG_PREVIEW_COUNT}
+              </button>
+            )}
+          </div>
+        </td>
+        <td className="text-right text-base-content/45 tabular-nums text-sm">
+          {bestTimes[kata.id] != null ? `${(bestTimes[kata.id] / 1000).toFixed(1)}s` : "-"}
+        </td>
+        <td className="text-right text-base-content/45 tabular-nums text-sm">
+          {streaks[kata.id] ? streaks[kata.id] : "-"}
+        </td>
+        <td className="text-right">
+          {kata.isCustom && (
+            <div className="flex gap-0.5 justify-end">
+              <button
+                onClick={(e) => { e.stopPropagation(); navigate(`/kata/${kata.id}/edit`); }}
+                className="btn btn-ghost btn-xs btn-square text-base-content/30 hover:text-base-content/60"
+                title="Edit kata"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5">
+                  <path d="m5.433 13.917 1.262-3.155A4 4 0 0 1 7.58 9.42l6.92-6.918a2.121 2.121 0 0 1 3 3l-6.92 6.918c-.383.383-.84.685-1.343.886l-3.154 1.262a.5.5 0 0 1-.65-.65Z" />
+                  <path d="M3.5 5.75c0-.69.56-1.25 1.25-1.25H10A.75.75 0 0 0 10 3H4.75A2.75 2.75 0 0 0 2 5.75v9.5A2.75 2.75 0 0 0 4.75 18h9.5A2.75 2.75 0 0 0 17 15.25V10a.75.75 0 0 0-1.5 0v5.25c0 .69-.56 1.25-1.25 1.25h-9.5c-.69 0-1.25-.56-1.25-1.25v-9.5Z" />
+                </svg>
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); if (confirm("Delete this kata?")) deleteKata(kata.id); }}
+                className="btn btn-ghost btn-xs btn-square text-error/50 hover:text-error"
+                title="Delete kata"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5">
+                  <path fillRule="evenodd" d="M8.75 1A2.75 2.75 0 0 0 6 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 1 0 .23 1.482l.149-.022.841 10.518A2.75 2.75 0 0 0 7.596 19h4.807a2.75 2.75 0 0 0 2.742-2.53l.841-10.52.149.023a.75.75 0 0 0 .23-1.482A41.03 41.03 0 0 0 14 4.193V3.75A2.75 2.75 0 0 0 11.25 1h-2.5ZM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4ZM8.58 7.72a.75.75 0 0 1 .7.798l-.2 4.5a.75.75 0 0 1-1.496-.066l.2-4.5a.75.75 0 0 1 .796-.731ZM11.42 7.72a.75.75 0 0 1 .796.731l.2 4.5a.75.75 0 1 1-1.497.066l-.2-4.5a.75.75 0 0 1 .7-.798Z" clipRule="evenodd" />
+                </svg>
+              </button>
+            </div>
+          )}
+        </td>
+      </tr>
+    );
+  };
+
   return (
     <div className="flex flex-col h-full p-5 gap-4 animate-fade-in">
       {/* Header */}
@@ -296,6 +458,15 @@ export function PracticePage() {
         >
           LeetCode only
         </button>
+        <button
+          data-testid="family-view-toggle"
+          onClick={() => setLibraryUI({ libraryGroupByFamily: !groupByFamily })}
+          title="Group problems by DP family (recurrence pattern)"
+          aria-pressed={groupByFamily}
+          className={`btn btn-sm shrink-0 ${groupByFamily ? "btn-primary" : "btn-ghost btn-outline"}`}
+        >
+          DP families
+        </button>
       </div>
 
       {/* Kata table */}
@@ -324,131 +495,21 @@ export function PracticePage() {
             </tr>
           </thead>
           <tbody>
-            {searchedKatas.map((kata, idx) => (
-              <tr
-                key={kata.id}
-                id={`kata-row-${kata.id}`}
-                onClick={() => { setSelectedIndex(idx); navigate(`/editor/${kata.id}`); }}
-                onMouseEnter={() => setSelectedIndex(idx)}
-                onContextMenu={(e) => handleKataContextMenu(e, kata.id)}
-                className={`cursor-pointer transition-colors border-base-300/30 ${
-                  idx === selectedIndex ? "bg-primary/10 border-l-2 border-l-primary" : "hover:bg-base-300/20"
-                }`}
-              >
-                <td className="w-8">
-                  <button
-                    onClick={(e) => toggleDaily(kata.id, e)}
-                    className={`btn btn-ghost btn-xs btn-square ${
-                      dailyKataIds.includes(kata.id)
-                        ? "text-warning"
-                        : "text-base-content/20 hover:text-base-content/40"
-                    }`}
-                    title={dailyKataIds.includes(kata.id) ? "Remove from daily" : "Add to daily"}
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill={dailyKataIds.includes(kata.id) ? "currentColor" : "none"} stroke="currentColor" strokeWidth={1.5} className="w-4 h-4">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M11.48 3.499a.562.562 0 0 1 1.04 0l2.125 5.111a.563.563 0 0 0 .475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 0 0-.182.557l1.285 5.385a.562.562 0 0 1-.84.61l-4.725-2.885a.562.562 0 0 0-.586 0L6.982 20.54a.562.562 0 0 1-.84-.61l1.285-5.386a.562.562 0 0 0-.182-.557l-4.204-3.602a.562.562 0 0 1 .321-.988l5.518-.442a.563.563 0 0 0 .475-.345L11.48 3.5Z" />
-                    </svg>
-                  </button>
-                </td>
-                <td className="font-medium text-sm">
-                  <span className="inline-flex items-center gap-1.5">
-                    {kata.leetcodeNumber != null && (
-                      <span className="text-base-content/40 tabular-nums">
-                        {kata.leetcodeNumber}.
-                      </span>
-                    )}
-                    {kata.name}
-                    {kata.isCustom && (
-                      <span className="badge badge-secondary badge-xs">Custom</span>
-                    )}
-                    <button
-                      onClick={(e) => toggleDone(kata.id, e)}
-                      className={`inline-flex items-center gap-0.5 rounded-full px-1 py-0.5 text-[10px] font-semibold transition-colors ${
-                        doneKataIds.includes(kata.id)
-                          ? "bg-success/15 text-success hover:bg-success/25"
-                          : "text-base-content/15 hover:text-base-content/30 hover:bg-base-300/30"
-                      }`}
-                      title={doneKataIds.includes(kata.id) ? "Mark as not done" : "Mark as done"}
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3 h-3">
-                        <path fillRule="evenodd" d="M12.416 3.376a.75.75 0 0 1 .208 1.04l-5 7.5a.75.75 0 0 1-1.154.114l-3-3a.75.75 0 0 1 1.06-1.06l2.353 2.353 4.493-6.74a.75.75 0 0 1 1.04-.207Z" clipRule="evenodd" />
-                      </svg>
-                    </button>
-                  </span>
-                </td>
-                <td>
-                  {CATEGORY_LEVEL[kata.category] !== undefined ? (
-                    <span className="text-[11px] font-bold px-2 py-0.5 rounded bg-base-300/60 text-base-content/50 tabular-nums">
-                      Lv.{CATEGORY_LEVEL[kata.category]}
-                    </span>
-                  ) : (
-                    <span className="text-base-content/20 text-xs">—</span>
-                  )}
-                </td>
-                <td className="text-base-content/45 text-sm">{kata.category}</td>
-                <td>
-                  <span className={`badge badge-sm ${diffColor(kata.difficulty)}`}>
-                    {kata.difficulty ?? "-"}
-                  </span>
-                </td>
-                <td>
-                  <div className="flex flex-wrap items-center gap-1">
-                    {(expandedTagRows.has(kata.id) ? kata.tags : kata.tags.slice(0, TAG_PREVIEW_COUNT)).map((tag) => (
-                      <button
-                        key={tag}
-                        onClick={(e) => { e.stopPropagation(); setSearch(tag); }}
-                        className="badge badge-xs bg-primary/10 text-primary/70 border-primary/10 cursor-pointer hover:bg-primary/25 hover:text-primary transition-colors"
-                      >
-                        {tag}
-                      </button>
-                    ))}
-                    {!expandedTagRows.has(kata.id) && kata.tags.length > TAG_PREVIEW_COUNT && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setExpandedTagRows((prev) => new Set(prev).add(kata.id));
-                        }}
-                        className="badge badge-xs bg-base-300/40 text-base-content/40 border-transparent cursor-pointer hover:bg-base-300/70 hover:text-base-content/70 transition-colors"
-                        title="Show all tags"
-                      >
-                        +{kata.tags.length - TAG_PREVIEW_COUNT}
-                      </button>
-                    )}
-                  </div>
-                </td>
-                <td className="text-right text-base-content/45 tabular-nums text-sm">
-                  {bestTimes[kata.id] != null ? `${(bestTimes[kata.id] / 1000).toFixed(1)}s` : "-"}
-                </td>
-                <td className="text-right text-base-content/45 tabular-nums text-sm">
-                  {streaks[kata.id] ? streaks[kata.id] : "-"}
-                </td>
-                <td className="text-right">
-                  {kata.isCustom && (
-                    <div className="flex gap-0.5 justify-end">
-                      <button
-                        onClick={(e) => { e.stopPropagation(); navigate(`/kata/${kata.id}/edit`); }}
-                        className="btn btn-ghost btn-xs btn-square text-base-content/30 hover:text-base-content/60"
-                        title="Edit kata"
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5">
-                          <path d="m5.433 13.917 1.262-3.155A4 4 0 0 1 7.58 9.42l6.92-6.918a2.121 2.121 0 0 1 3 3l-6.92 6.918c-.383.383-.84.685-1.343.886l-3.154 1.262a.5.5 0 0 1-.65-.65Z" />
-                          <path d="M3.5 5.75c0-.69.56-1.25 1.25-1.25H10A.75.75 0 0 0 10 3H4.75A2.75 2.75 0 0 0 2 5.75v9.5A2.75 2.75 0 0 0 4.75 18h9.5A2.75 2.75 0 0 0 17 15.25V10a.75.75 0 0 0-1.5 0v5.25c0 .69-.56 1.25-1.25 1.25h-9.5c-.69 0-1.25-.56-1.25-1.25v-9.5Z" />
-                        </svg>
-                      </button>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); if (confirm("Delete this kata?")) deleteKata(kata.id); }}
-                        className="btn btn-ghost btn-xs btn-square text-error/50 hover:text-error"
-                        title="Delete kata"
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5">
-                          <path fillRule="evenodd" d="M8.75 1A2.75 2.75 0 0 0 6 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 1 0 .23 1.482l.149-.022.841 10.518A2.75 2.75 0 0 0 7.596 19h4.807a2.75 2.75 0 0 0 2.742-2.53l.841-10.52.149.023a.75.75 0 0 0 .23-1.482A41.03 41.03 0 0 0 14 4.193V3.75A2.75 2.75 0 0 0 11.25 1h-2.5ZM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4ZM8.58 7.72a.75.75 0 0 1 .7.798l-.2 4.5a.75.75 0 0 1-1.496-.066l.2-4.5a.75.75 0 0 1 .796-.731ZM11.42 7.72a.75.75 0 0 1 .796.731l.2 4.5a.75.75 0 1 1-1.497.066l-.2-4.5a.75.75 0 0 1 .7-.798Z" clipRule="evenodd" />
-                        </svg>
-                      </button>
-                    </div>
-                  )}
-                </td>
-              </tr>
-            ))}
+            {familySections
+              ? familySections.map((section) => (
+                  <Fragment key={section.id}>
+                    <tr data-testid={`family-section-${section.id}`}>
+                      <td colSpan={9} className="!py-1.5 !px-3 bg-base-200/60 text-[11px] font-semibold text-base-content/50 uppercase tracking-wider">
+                        {section.label}
+                        <span className="ml-2 text-base-content/30 normal-case font-normal">
+                          {section.katas.length}
+                        </span>
+                      </td>
+                    </tr>
+                    {section.katas.map((kata) => renderKataRow(kata))}
+                  </Fragment>
+                ))
+              : searchedKatas.map((kata) => renderKataRow(kata))}
             {searchedKatas.length === 0 && (
               <tr>
                 <td colSpan={9} className="py-12 text-center text-sm">
