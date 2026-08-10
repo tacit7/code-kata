@@ -1,5 +1,12 @@
 import type { SeedKata } from "../types/editor";
 
+const variant = (label: string, code: string, complexity: string, explanation: string) => ({
+  label,
+  code,
+  complexity,
+  explanation,
+});
+
 const blind75Part3: SeedKata[] = [
   {
     name: "Clone Graph",
@@ -81,6 +88,68 @@ def clone_graph(node):
             clones[curr].neighbors.append(clones[neighbor])
 
     return clones[node]`,
+    solutionVariants: [
+      variant(
+        "DFS clone",
+        `class Node:
+    def __init__(self, val=0, neighbors=None):
+        self.val = val
+        self.neighbors = neighbors or []
+
+
+def clone_graph(node):
+    if not node:
+        return None
+
+    clones = {}
+
+    def dfs(curr):
+        if curr in clones:
+            return clones[curr]
+
+        copy = Node(curr.val)
+        clones[curr] = copy
+
+        for neighbor in curr.neighbors:
+            copy.neighbors.append(dfs(neighbor))
+
+        return copy
+
+    return dfs(node)`,
+        "O(V + E) time, O(V) space",
+        "Recursively clone each node once and use an old-to-new map to preserve cycles without revisiting nodes.",
+      ),
+      variant(
+        "BFS clone",
+        `from collections import deque
+
+
+class Node:
+    def __init__(self, val=0, neighbors=None):
+        self.val = val
+        self.neighbors = neighbors or []
+
+
+def clone_graph(node):
+    if not node:
+        return None
+
+    clones = {node: Node(node.val)}
+    queue = deque([node])
+
+    while queue:
+        curr = queue.popleft()
+        for neighbor in curr.neighbors:
+            if neighbor not in clones:
+                clones[neighbor] = Node(neighbor.val)
+                queue.append(neighbor)
+            clones[curr].neighbors.append(clones[neighbor])
+
+    return clones[node]`,
+        "O(V + E) time, O(V) space",
+        "Create nodes level by level with a queue, wiring each cloned node to the cloned versions of its neighbors.",
+      ),
+    ],
     usage: null,
     tags: ["graph", "bfs", "dfs", "blind75"],
   },

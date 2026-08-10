@@ -1727,11 +1727,11 @@ def test_disconnected():
     tags: ["dfs", "graph"],
   },
   {
-    name: "Build Adjacency List",
+    name: "Build Adjacency List Drill",
     category: "graphs",
     language: "python",
     difficulty: "easy",
-    description: `Build Adjacency List
+    description: `Build Adjacency List Drill
 
 Given a list of edges where each edge is a tuple of two nodes, build and return an adjacency list represented as a dictionary. If directed is False (the default), add edges in both directions. If directed is True, only add edges in the given direction.
 
@@ -1754,7 +1754,7 @@ Constraints:
 - Nodes can be any hashable type (typically strings or integers).
 - The returned dict maps each node to a list of its neighbors.
 
-Ref: LeetCode #133 Clone Graph (closest match)`,
+`,
     code: `def build_adjacency_list(edges, directed=False):
     raise NotImplementedError`,
     testCode: `def test_undirected():

@@ -7,6 +7,7 @@ import {
   leetcodeSlugFor,
   leetcodeUrlFor,
 } from "./leetcode-numbers";
+import { composeScript, extractTestNames } from "./js-exec-core";
 import { sampleKatas } from "./sample-katas";
 import { sampleKatasPython } from "./sample-katas-python";
 import { treeFundamentals } from "./tree-fundamentals";
@@ -52,11 +53,18 @@ describe("leetcode numbers", () => {
     expect(leetcodeNumberFor({ name: "Two Sum", language: "python" })).toBe(1);
     expect(leetcodeNumberFor({ name: "Valid Parentheses", language: "python" })).toBe(20);
     expect(leetcodeNumberFor({ name: "Clone Graph", language: "python" })).toBe(133);
+    expect(leetcodeNumberFor({ name: "Clone Graph", language: "javascript" })).toBe(133);
   });
 
   it("resolves null for non-LeetCode katas", () => {
     expect(leetcodeNumberFor({ name: "Matrix Grid BFS", language: "python" })).toBeNull();
+    expect(leetcodeNumberFor({ name: "Build Adjacency List Drill", language: "python" })).toBeNull();
+    expect(leetcodeNumberFor({ name: "Build Adjacency List Drill", language: "javascript" })).toBeNull();
     expect(leetcodeNumberFor({ name: "Nonexistent", language: "python" })).toBeNull();
+  });
+
+  it("keeps the old adjacency-list drill name out of seed content", () => {
+    expect(ALL_SEED_KATAS.filter((k) => k.name === "Build Adjacency List")).toEqual([]);
   });
 
   // A kata is a LeetCode problem iff its description carries a `Ref: LeetCode #N`
@@ -101,5 +109,14 @@ describe("leetcode numbers", () => {
 
   it("resolves the canonical slug for a hand-checked number", () => {
     expect(leetcodeSlugFor(20)).toBe("valid-parentheses");
+  });
+
+  it("ships an executable JavaScript Clone Graph solution for LeetCode 133", () => {
+    const kata = sampleKatas.find((k) => k.name === "Clone Graph" && k.language === "javascript");
+    expect(kata?.solution).toBeTruthy();
+
+    for (const testName of extractTestNames(kata!.testCode)) {
+      expect(() => new Function(composeScript(kata!.solution!, kata!.testCode, testName))()).not.toThrow();
+    }
   });
 });

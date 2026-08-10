@@ -198,7 +198,7 @@ type VizKataName =
   | "Count Set Bits"
   | "Topological Sort"
   | "Combination Sum IV"
-  | "Build Adjacency List"
+  | "Build Adjacency List Drill"
   | "Most Frequent Element"
   | "Graph DFS"
   | "Graph DFS (Iterative)"
@@ -410,7 +410,6 @@ const VIZ_MAP: Partial<Record<VizKataName, string>> = {
   "Count Set Bits":                     "number-1-bits",
   "Topological Sort":                   "course-schedule",
   "Combination Sum IV":                 "combination-sum",
-  "Build Adjacency List":               "clone-graph",
   "Most Frequent Element":              "top-k-frequent",
   // New viz folders (built separately)
   "Graph DFS":                          "graph-dfs",

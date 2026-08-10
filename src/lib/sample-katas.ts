@@ -1255,12 +1255,12 @@ function test_disconnected() {
     tags: ["dfs","recursion"],
   },
   {
-    name: "Build Adjacency List",
+    name: "Build Adjacency List Drill",
     category: "graphs",
     language: "javascript",
     difficulty: "easy",
     description:
-      "Given an array of edges (each edge is a pair [a, b]) and a boolean directed flag, build and return an adjacency list as an object mapping each node to an array of its neighbors. If directed is false, add edges in both directions (a->b and b->a). If directed is true, add only a->b.\n\nExample 1:\n  Input: edges = [[\"a\", \"b\"], [\"b\", \"c\"], [\"a\", \"c\"]], directed = false\n  Output: { \"a\": [\"b\", \"c\"], \"b\": [\"a\", \"c\"], \"c\": [\"b\", \"a\"] }\n\nExample 2:\n  Input: edges = [[\"a\", \"b\"], [\"b\", \"c\"]], directed = true\n  Output: { \"a\": [\"b\"], \"b\": [\"c\"], \"c\": [] }\n\nExample 3:\n  Input: edges = [], directed = false\n  Output: {}\n\nRef: LeetCode #133 Clone Graph (closest match)",
+      "Given an array of edges (each edge is a pair [a, b]) and a boolean directed flag, build and return an adjacency list as an object mapping each node to an array of its neighbors. If directed is false, add edges in both directions (a->b and b->a). If directed is true, add only a->b.\n\nExample 1:\n  Input: edges = [[\"a\", \"b\"], [\"b\", \"c\"], [\"a\", \"c\"]], directed = false\n  Output: { \"a\": [\"b\", \"c\"], \"b\": [\"a\", \"c\"], \"c\": [\"b\", \"a\"] }\n\nExample 2:\n  Input: edges = [[\"a\", \"b\"], [\"b\", \"c\"]], directed = true\n  Output: { \"a\": [\"b\"], \"b\": [\"c\"], \"c\": [] }\n\nExample 3:\n  Input: edges = [], directed = false\n  Output: {}",
     code: `function buildAdjacencyList(edges, directed = false) {
   // your code here
 }`,
@@ -1307,6 +1307,201 @@ function test_multiple_neighbors() {
 }`,
     usage: `Building an adjacency list from an edge list is the first step in virtually every graph algorithm, and getting this conversion right is a prerequisite for solving any graph problem in an interview or production system. Social networks like Facebook and LinkedIn store friendship graphs as adjacency lists because real-world social graphs are sparse (the average user has a few hundred connections out of billions of possible edges), making adjacency lists far more space-efficient than adjacency matrices at O(V + E) versus O(V squared). Package managers like npm, pip, and apt internally build adjacency lists from dependency declarations to represent the dependency graph before running topological sort for installation ordering. Network routing protocols like OSPF (Open Shortest Path First) construct adjacency lists from router link-state advertisements to build a map of the network topology, which is then fed into Dijkstra's algorithm for shortest-path routing. Recommendation engines at companies like Netflix and Spotify model user-item interactions as bipartite graphs stored as adjacency lists, enabling collaborative filtering traversals. In interviews, you are almost never given a pre-built adjacency list; you receive an edge list or a matrix and must construct the adjacency list yourself, so this conversion step is a practical skill tested in every graph problem at every major tech company.`,
     tags: ["graph"],
+  },
+  {
+    name: "Clone Graph",
+    category: "graphs",
+    language: "javascript",
+    difficulty: "medium",
+    description:
+      "Given a reference to a node in a connected undirected graph, return a deep copy of the graph. Each node has a numeric value and a list of neighboring nodes. The clone must preserve the same connections while using entirely new node objects.\n\nExample 1:\n  Input: adjList = [[2,4],[1,3],[2,4],[1,3]]\n  Output: a separate graph with the same adjacency structure\n\nExample 2:\n  Input: adjList = [[]]\n  Output: one cloned node with no neighbors\n\nExample 3:\n  Input: adjList = []\n  Output: null\n\nRef: LeetCode #133 Clone Graph",
+    code: `class Node {
+  constructor(val = 0, neighbors = []) {
+    this.val = val;
+    this.neighbors = neighbors;
+  }
+}
+
+function cloneGraph(node) {
+  // your code here
+}`,
+    testCode: `function serializeGraph(node) {
+  if (node === null) return [];
+  const seen = new Set([node]);
+  const queue = [node];
+  const byValue = {};
+
+  while (queue.length > 0) {
+    const curr = queue.shift();
+    byValue[curr.val] = curr.neighbors.map((neighbor) => neighbor.val).sort((a, b) => a - b);
+
+    for (const neighbor of curr.neighbors) {
+      if (!seen.has(neighbor)) {
+        seen.add(neighbor);
+        queue.push(neighbor);
+      }
+    }
+  }
+
+  return Object.keys(byValue)
+    .map(Number)
+    .sort((a, b) => a - b)
+    .map((value) => byValue[value]);
+}
+
+function collectNodes(node) {
+  if (node === null) return new Set();
+  const seen = new Set([node]);
+  const queue = [node];
+
+  while (queue.length > 0) {
+    const curr = queue.shift();
+    for (const neighbor of curr.neighbors) {
+      if (!seen.has(neighbor)) {
+        seen.add(neighbor);
+        queue.push(neighbor);
+      }
+    }
+  }
+
+  return seen;
+}
+
+function test_empty_graph() {
+  assertEqual(cloneGraph(null), null, "empty graph should clone to null");
+}
+
+function test_single_node() {
+  const node = new Node(1);
+  const cloned = cloneGraph(node);
+  assert(cloned !== node, "clone must be a new object");
+  assertEqual(cloned.val, 1, "single node value should match");
+  assertEqual(cloned.neighbors.length, 0, "single node should have no neighbors");
+}
+
+function test_four_node_cycle_structure() {
+  const n1 = new Node(1);
+  const n2 = new Node(2);
+  const n3 = new Node(3);
+  const n4 = new Node(4);
+  n1.neighbors = [n2, n4];
+  n2.neighbors = [n1, n3];
+  n3.neighbors = [n2, n4];
+  n4.neighbors = [n1, n3];
+
+  const cloned = cloneGraph(n1);
+  assertEqual(serializeGraph(cloned), [[2, 4], [1, 3], [2, 4], [1, 3]], "adjacency structure should match");
+}
+
+function test_deep_copy_uses_no_original_nodes() {
+  const n1 = new Node(1);
+  const n2 = new Node(2);
+  const n3 = new Node(3);
+  n1.neighbors = [n2, n3];
+  n2.neighbors = [n1];
+  n3.neighbors = [n1];
+
+  const originalNodes = collectNodes(n1);
+  const clonedNodes = collectNodes(cloneGraph(n1));
+  for (const node of clonedNodes) {
+    assert(!originalNodes.has(node), "cloned graph must not reuse original nodes");
+  }
+}`,
+    solution: `class Node {
+  constructor(val = 0, neighbors = []) {
+    this.val = val;
+    this.neighbors = neighbors;
+  }
+}
+
+function cloneGraph(node) {
+  if (node === null) return null;
+
+  const clones = new Map();
+
+  function dfs(curr) {
+    if (clones.has(curr)) return clones.get(curr);
+
+    const copy = new Node(curr.val);
+    clones.set(curr, copy);
+
+    for (const neighbor of curr.neighbors) {
+      copy.neighbors.push(dfs(neighbor));
+    }
+
+    return copy;
+  }
+
+  return dfs(node);
+}`,
+    solutionVariants: [
+      {
+        label: "DFS clone",
+        complexity: "O(V + E) time, O(V) space",
+        explanation: "Recursively clone each node once and use an old-to-new map to preserve cycles without revisiting nodes.",
+        code: `class Node {
+  constructor(val = 0, neighbors = []) {
+    this.val = val;
+    this.neighbors = neighbors;
+  }
+}
+
+function cloneGraph(node) {
+  if (node === null) return null;
+
+  const clones = new Map();
+
+  function dfs(curr) {
+    if (clones.has(curr)) return clones.get(curr);
+
+    const copy = new Node(curr.val);
+    clones.set(curr, copy);
+
+    for (const neighbor of curr.neighbors) {
+      copy.neighbors.push(dfs(neighbor));
+    }
+
+    return copy;
+  }
+
+  return dfs(node);
+}`,
+      },
+      {
+        label: "BFS clone",
+        complexity: "O(V + E) time, O(V) space",
+        explanation: "Create nodes level by level with a queue, wiring each cloned node to the cloned versions of its neighbors.",
+        code: `class Node {
+  constructor(val = 0, neighbors = []) {
+    this.val = val;
+    this.neighbors = neighbors;
+  }
+}
+
+function cloneGraph(node) {
+  if (node === null) return null;
+
+  const clones = new Map([[node, new Node(node.val)]]);
+  const queue = [node];
+
+  while (queue.length > 0) {
+    const curr = queue.shift();
+
+    for (const neighbor of curr.neighbors) {
+      if (!clones.has(neighbor)) {
+        clones.set(neighbor, new Node(neighbor.val));
+        queue.push(neighbor);
+      }
+      clones.get(curr).neighbors.push(clones.get(neighbor));
+    }
+  }
+
+  return clones.get(node);
+}`,
+      },
+    ],
+    usage: `Cloning a graph is the same reference-preserving deep-copy problem behind scene duplication in game engines, object graph serialization, undo snapshots, and cache-safe state transforms. The important idea is the old-to-new map: without it, cycles recurse forever and shared neighbors accidentally become duplicated instead of shared in the clone.`,
+    tags: ["graph", "dfs", "bfs", "blind75"],
   },
   {
     name: "Matrix DFS",
