@@ -7,7 +7,7 @@ import { useKataStore } from "../stores/kata-store";
 import type { LibrarySortMode } from "../stores/kata-store";
 import { useSettingsStore } from "../stores/settings-store";
 import { CATEGORY_LEVEL } from "../lib/levels";
-import { moduleBodyClass } from "../lib/module-accordion";
+import { moduleBodyClass, moduleDetailsClass, moduleHeaderClass, moduleTitleClass } from "../lib/module-accordion";
 import { reseedKatas, resetKataProgress } from "../lib/database";
 import { compareDpCurriculumOrder, dpCategoryLabelFor, dpDisplayNameFor, dpFamilyFor, DP_MODULES } from "../lib/dp-patterns";
 import type { Kata } from "../types/editor";
@@ -557,14 +557,10 @@ function LibraryPage({ modules }: { modules: boolean }) {
           });
         }}
         data-testid={`family-section-${section.id}`}
-        className={`collapse collapse-arrow overflow-hidden border border-base-300 bg-base-100 shadow-md shadow-base-300/20 ${
-          nested ? "rounded-xl shadow-none" : "rounded-2xl"
-        }`}
+        className={moduleDetailsClass(nested)}
       >
-        <summary className={`collapse-title grid w-full grid-cols-[minmax(0,1fr)_24rem] items-center gap-5 pr-12 text-left hover:bg-base-300/20 transition-colors ${
-          nested ? "px-4 py-3" : "px-5 py-4"
-        }`}>
-          <h2 className={`truncate text-lg text-base-content ${nested ? "font-semibold" : "font-bold"}`}>{section.label}</h2>
+        <summary className={moduleHeaderClass(nested)}>
+          <h2 className={moduleTitleClass(nested)}>{section.label}</h2>
           <div className="grid grid-cols-[3.5rem_1fr] items-center gap-4">
             <span className="text-right text-sm tabular-nums text-base-content/55">
               {progress.completed}/{progress.total}
