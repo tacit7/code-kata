@@ -7,6 +7,7 @@ import { useKataStore } from "../stores/kata-store";
 import type { LibrarySortMode } from "../stores/kata-store";
 import { useSettingsStore } from "../stores/settings-store";
 import { CATEGORY_LEVEL } from "../lib/levels";
+import { moduleBodyClass } from "../lib/module-accordion";
 import { reseedKatas, resetKataProgress } from "../lib/database";
 import { compareDpCurriculumOrder, dpCategoryLabelFor, dpDisplayNameFor, dpFamilyFor, DP_MODULES } from "../lib/dp-patterns";
 import type { Kata } from "../types/editor";
@@ -571,7 +572,7 @@ function LibraryPage({ modules }: { modules: boolean }) {
             <progress className="progress progress-success h-2 w-full bg-base-content/20" value={progress.percent} max="100" />
           </div>
         </summary>
-        <div className={`collapse-content !p-0 ${section.children ? "bg-base-200/40" : ""}`}>
+        <div className={moduleBodyClass(Boolean(section.children))}>
           {section.children ? (
             <div className="space-y-1.5 p-2">
               {section.children.map((child) => renderModuleSection(child, true))}
