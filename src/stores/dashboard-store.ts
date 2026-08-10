@@ -1,5 +1,13 @@
 import { create } from "zustand";
 import { getDb } from "../lib/database";
+import {
+  computeHighValueDashboardMetrics,
+  type DpModuleProgressRow,
+  type LeetcodeProgress,
+  type MasterySummary,
+  type RecentlyImprovedRow,
+  type ReviewQueueRow,
+} from "../lib/dashboard-metrics";
 import { refreshDockBadge } from "../lib/dock-badge";
 
 interface TodayStats {
@@ -48,6 +56,22 @@ interface SessionHistoryRow {
   preset_name: string | null;
 }
 
+interface DashboardKataRow {
+  id: number;
+  name: string;
+  category: string;
+  difficulty: string | null;
+  tags: string | null;
+  leetcode_number: number | null;
+}
+
+interface DashboardAttemptMetricRow {
+  kata_id: number;
+  started_at: string;
+  time_ms: number | null;
+  passed: number;
+}
+
 export interface DrillDownRow {
   id: number;
   kataId: number;
@@ -67,6 +91,11 @@ interface DashboardState {
   categoryBreakdown: CategoryBreakdown[];
   leaderboard: LeaderboardRow[];
   trendLine: TrendPoint[];
+  masterySummary: MasterySummary;
+  reviewQueue: ReviewQueueRow[];
+  recentlyImproved: RecentlyImprovedRow[];
+  dpModuleProgress: DpModuleProgressRow[];
+  leetcodeProgress: LeetcodeProgress;
   sessionHistory: SessionHistoryRow[];
   sessionHistoryHasMore: boolean;
   drillDown: DrillDownRow[] | null;
@@ -79,6 +108,27 @@ interface DashboardState {
 }
 
 const PAGE_SIZE = 20;
+
+const EMPTY_MASTERY_SUMMARY: MasterySummary = {
+  attempted: 0,
+  strong: 0,
+  developing: 0,
+  needsReview: 0,
+  percent: 0,
+};
+
+const EMPTY_LEETCODE_PROGRESS: LeetcodeProgress = {
+  total: 0,
+  solved: 0,
+  easySolved: 0,
+  mediumSolved: 0,
+  hardSolved: 0,
+  blind75Total: 0,
+  blind75Solved: 0,
+  neetcodeTotal: 0,
+  neetcodeSolved: 0,
+  recommendedUnattempted: 0,
+};
 
 function computeStreak(days: { day: string }[]): number {
   if (days.length === 0) return 0;
@@ -116,6 +166,11 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
   categoryBreakdown: [],
   leaderboard: [],
   trendLine: [],
+  masterySummary: EMPTY_MASTERY_SUMMARY,
+  reviewQueue: [],
+  recentlyImproved: [],
+  dpModuleProgress: [],
+  leetcodeProgress: EMPTY_LEETCODE_PROGRESS,
   sessionHistory: [],
   sessionHistoryHasMore: false,
   drillDown: null,
@@ -125,7 +180,7 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
     set({ loading: true });
     const db = await getDb();
 
-    const [streakRows, todayRows, heatmapRows, categoryRows, leaderboardRows, trendRows, historyRows] =
+    const [streakRows, todayRows, heatmapRows, categoryRows, leaderboardRows, trendRows, historyRows, kataMetricRows, attemptMetricRows] =
       await Promise.all([
         // A. Streak
         db.select<{ day: string }[]>(
@@ -190,12 +245,38 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
           `SELECT * FROM sessions WHERE finished_at IS NOT NULL ORDER BY started_at DESC LIMIT $1 OFFSET $2`,
           [PAGE_SIZE + 1, 0],
         ),
+        // H. High-value dashboard kata metadata
+        db.select<DashboardKataRow[]>(
+          `SELECT id, name, category, difficulty, tags, leetcode_number FROM katas`,
+        ),
+        // I. High-value dashboard attempt history
+        db.select<DashboardAttemptMetricRow[]>(
+          `SELECT a.kata_id, a.started_at, a.time_ms, a.passed
+           FROM attempts a JOIN katas k ON k.id = a.kata_id
+           ORDER BY a.kata_id, a.started_at ASC`,
+        ),
       ]);
 
     const hasMore = historyRows.length > PAGE_SIZE;
     const sessions = hasMore ? historyRows.slice(0, PAGE_SIZE) : historyRows;
 
     const todayRow = todayRows[0];
+    const highValueMetrics = computeHighValueDashboardMetrics(
+      kataMetricRows.map((row) => ({
+        id: row.id,
+        name: row.name,
+        category: row.category,
+        difficulty: row.difficulty,
+        tags: row.tags ? JSON.parse(row.tags) as string[] : [],
+        leetcodeNumber: row.leetcode_number,
+      })),
+      attemptMetricRows.map((row) => ({
+        kataId: row.kata_id,
+        startedAt: row.started_at,
+        timeMs: row.time_ms,
+        passed: row.passed,
+      })),
+    );
 
     set({
       loading: false,
@@ -230,6 +311,11 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
         avgTimeMs: r.avg_time_ms,
         attemptCount: r.attempt_count,
       })),
+      masterySummary: highValueMetrics.masterySummary,
+      reviewQueue: highValueMetrics.reviewQueue,
+      recentlyImproved: highValueMetrics.recentlyImproved,
+      dpModuleProgress: highValueMetrics.dpModuleProgress,
+      leetcodeProgress: highValueMetrics.leetcodeProgress,
       sessionHistory: sessions,
       sessionHistoryHasMore: hasMore,
       drillDown: null,

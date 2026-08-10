@@ -339,6 +339,232 @@ function ChartsRow() {
   );
 }
 
+// -- High Value Insights --
+
+function MasteryPanel() {
+  const summary = useDashboardStore((s) => s.masterySummary);
+  const attempted = Math.max(summary.attempted, 1);
+  const strongPct = (summary.strong / attempted) * 100;
+  const developingPct = (summary.developing / attempted) * 100;
+  const reviewPct = (summary.needsReview / attempted) * 100;
+
+  return (
+    <div className="bg-base-100 rounded-lg p-5 border border-base-300/50">
+      <div className="flex items-center justify-between gap-3 mb-4">
+        <h2 className="text-[11px] font-semibold uppercase tracking-wider text-base-content/35">
+          Problem Mastery
+        </h2>
+        <span className="text-xs text-base-content/40">pass streak + recency</span>
+      </div>
+      <div className="flex items-end justify-between gap-4">
+        <div>
+          <div className="text-3xl font-bold text-primary">{summary.percent}%</div>
+          <div className="text-xs text-base-content/45 mt-1">{summary.attempted} attempted</div>
+        </div>
+        <div className="grid grid-cols-3 gap-2 text-right">
+          <div>
+            <div className="text-lg font-bold text-success">{summary.strong}</div>
+            <div className="text-[10px] uppercase tracking-wider text-base-content/35">Strong</div>
+          </div>
+          <div>
+            <div className="text-lg font-bold text-warning">{summary.developing}</div>
+            <div className="text-[10px] uppercase tracking-wider text-base-content/35">Developing</div>
+          </div>
+          <div>
+            <div className="text-lg font-bold text-error">{summary.needsReview}</div>
+            <div className="text-[10px] uppercase tracking-wider text-base-content/35">Review</div>
+          </div>
+        </div>
+      </div>
+      <div className="mt-5 h-2 rounded-full overflow-hidden bg-base-300 flex">
+        <div className="bg-success" style={{ width: `${strongPct}%` }} />
+        <div className="bg-warning" style={{ width: `${developingPct}%` }} />
+        <div className="bg-error" style={{ width: `${reviewPct}%` }} />
+      </div>
+    </div>
+  );
+}
+
+function ReviewQueuePanel() {
+  const navigate = useNavigate();
+  const reviewQueue = useDashboardStore((s) => s.reviewQueue);
+
+  return (
+    <div className="bg-base-100 rounded-lg border border-base-300/50 overflow-hidden">
+      <div className="flex items-center justify-between gap-3 px-5 py-4">
+        <h2 className="text-[11px] font-semibold uppercase tracking-wider text-base-content/35">
+          Needs Review
+        </h2>
+        <span className="text-xs text-base-content/40">highest priority</span>
+      </div>
+      {reviewQueue.length === 0 ? (
+        <div className="px-5 pb-5 text-sm text-base-content/35">No review items yet.</div>
+      ) : (
+        <table className="table table-sm">
+          <tbody>
+            {reviewQueue.map((row) => (
+              <tr
+                key={row.kataId}
+                onClick={() => navigate(`/editor/${row.kataId}`)}
+                className="cursor-pointer border-base-300/30 hover:bg-base-300/30"
+              >
+                <td>
+                  <div className="font-medium text-sm">{row.kataName}</div>
+                  <div className="text-xs text-base-content/40">
+                    {row.category} · {row.failedAttempts} fail{row.failedAttempts !== 1 ? "s" : ""}
+                  </div>
+                </td>
+                <td className="text-right">
+                  <span className="badge badge-error badge-sm">{row.reason}</span>
+                  <div className="font-mono text-xs text-base-content/35 mt-1">
+                    {row.bestTimeMs != null ? formatTime(row.bestTimeMs) : "--:--"}
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </div>
+  );
+}
+
+function RecentlyImprovedPanel() {
+  const navigate = useNavigate();
+  const recentlyImproved = useDashboardStore((s) => s.recentlyImproved);
+
+  return (
+    <div className="bg-base-100 rounded-lg border border-base-300/50 overflow-hidden">
+      <div className="flex items-center justify-between gap-3 px-5 py-4">
+        <h2 className="text-[11px] font-semibold uppercase tracking-wider text-base-content/35">
+          Recently Improved
+        </h2>
+        <span className="text-xs text-base-content/40">last 30 days</span>
+      </div>
+      {recentlyImproved.length === 0 ? (
+        <div className="px-5 pb-5 text-sm text-base-content/35">No new best times yet.</div>
+      ) : (
+        <table className="table table-sm">
+          <tbody>
+            {recentlyImproved.map((row) => (
+              <tr
+                key={`${row.kataId}-${row.improvedAt}`}
+                onClick={() => navigate(`/editor/${row.kataId}`)}
+                className="cursor-pointer border-base-300/30 hover:bg-base-300/30"
+              >
+                <td>
+                  <div className="font-medium text-sm">{row.kataName}</div>
+                  <div className="font-mono text-xs text-base-content/40">
+                    {formatTime(row.previousBestMs)} → {formatTime(row.currentBestMs)}
+                  </div>
+                </td>
+                <td className="text-right text-success font-bold tabular-nums">
+                  -{row.improvementPercent}%
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </div>
+  );
+}
+
+function DpModuleProgressPanel() {
+  const dpModuleProgress = useDashboardStore((s) => s.dpModuleProgress);
+
+  return (
+    <div className="bg-base-100 rounded-lg p-5 border border-base-300/50">
+      <div className="flex items-center justify-between gap-3 mb-4">
+        <h2 className="text-[11px] font-semibold uppercase tracking-wider text-base-content/35">
+          DP Module Progress
+        </h2>
+        <span className="text-xs text-base-content/40">solved / total</span>
+      </div>
+      {dpModuleProgress.length === 0 ? (
+        <div className="text-sm text-base-content/35">No DP modules loaded.</div>
+      ) : (
+        <div className="space-y-3">
+          {dpModuleProgress.map((row) => (
+            <div key={row.moduleId}>
+              <div className="flex items-center justify-between gap-3 mb-1">
+                <div className="truncate text-sm font-medium">{row.moduleLabel}</div>
+                <div className="text-xs text-base-content/45 tabular-nums">
+                  {row.solved}/{row.total}
+                </div>
+              </div>
+              <progress className="progress progress-success h-2 w-full bg-base-content/20" value={row.percentSolved} max="100" />
+              <div className="mt-1 text-[11px] text-base-content/35">
+                {row.strong} strong · {row.developing} developing · {row.needsReview} review
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function LeetcodeProgressPanel() {
+  const leetcode = useDashboardStore((s) => s.leetcodeProgress);
+  const solvedLabel = `${leetcode.solved}/${leetcode.total}`;
+
+  return (
+    <div className="bg-base-100 rounded-lg p-5 border border-base-300/50">
+      <div className="flex items-center justify-between gap-3 mb-4">
+        <h2 className="text-[11px] font-semibold uppercase tracking-wider text-base-content/35">
+          LeetCode Progress
+        </h2>
+        <span className="text-xs text-base-content/40">{solvedLabel}</span>
+      </div>
+      <div className="grid grid-cols-3 gap-2">
+        {[
+          ["Easy", leetcode.easySolved, "text-success"],
+          ["Medium", leetcode.mediumSolved, "text-warning"],
+          ["Hard", leetcode.hardSolved, "text-error"],
+        ].map(([label, value, color]) => (
+          <div key={label} className="rounded-md bg-base-200/70 border border-base-300/50 p-3">
+            <div className={`text-xl font-bold ${color}`}>{value}</div>
+            <div className="text-[10px] uppercase tracking-wider text-base-content/35">{label}</div>
+          </div>
+        ))}
+      </div>
+      <div className="mt-4 grid grid-cols-3 gap-2">
+        <div>
+          <div className="text-sm font-bold tabular-nums">{leetcode.blind75Solved}/{leetcode.blind75Total}</div>
+          <div className="text-[10px] uppercase tracking-wider text-base-content/35">Blind 75</div>
+        </div>
+        <div>
+          <div className="text-sm font-bold tabular-nums">{leetcode.neetcodeSolved}/{leetcode.neetcodeTotal}</div>
+          <div className="text-[10px] uppercase tracking-wider text-base-content/35">NeetCode</div>
+        </div>
+        <div>
+          <div className="text-sm font-bold tabular-nums">{leetcode.recommendedUnattempted}</div>
+          <div className="text-[10px] uppercase tracking-wider text-base-content/35">Untried</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function HighValueInsights() {
+  return (
+    <div className="grid gap-3 animate-fade-in-up" style={{ animationDelay: "225ms" }}>
+      <div className="grid grid-cols-1 xl:grid-cols-[1.05fr_0.95fr] gap-3">
+        <MasteryPanel />
+        <ReviewQueuePanel />
+      </div>
+      <div className="grid grid-cols-1 xl:grid-cols-[1fr_1fr] gap-3">
+        <DpModuleProgressPanel />
+        <div className="grid gap-3">
+          <LeetcodeProgressPanel />
+          <RecentlyImprovedPanel />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Leaderboard ──
 
 function Leaderboard() {
@@ -577,6 +803,7 @@ export function DashboardPage() {
         <div className="flex flex-col gap-4">
           <DevToolbar onRefresh={loadDashboard} />
           <StatCards />
+          <HighValueInsights />
           <Heatmap />
           <ChartsRow />
         </div>
