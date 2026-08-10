@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
@@ -8,14 +8,50 @@ import type { LibrarySortMode } from "../stores/kata-store";
 import { useSettingsStore } from "../stores/settings-store";
 import { CATEGORY_LEVEL } from "../lib/levels";
 import { reseedKatas, resetKataProgress } from "../lib/database";
-import { DP_MODULES, dpFamilyFor, type PatternModule } from "../lib/dp-patterns";
+import { compareDpCurriculumOrder, dpCategoryLabelFor, dpDisplayNameFor, dpFamilyFor, DP_MODULES } from "../lib/dp-patterns";
 import type { Kata } from "../types/editor";
 
 // Module-level so the list position survives navigating to a kata and back
 // (resets only on full app reload).
 let savedScrollTop = 0;
 
+type ModuleSection = { id: string; label: string; categories: string[]; tags?: string[]; dpModule?: string; katas: Kata[] };
+
+const MODULE_DEFS: Omit<ModuleSection, "katas">[] = [
+  { id: "arrays-hashing", label: "Arrays & Hashing", categories: ["arrays", "hashing", "string", "strings"], tags: ["arrays-hashing", "hash-map"] },
+  { id: "two-pointers", label: "Two Pointers", categories: ["two-pointers"], tags: ["two-pointers"] },
+  { id: "sliding-window", label: "Sliding Window", categories: ["sliding-window"], tags: ["sliding-window"] },
+  { id: "stack", label: "Stack", categories: ["stack"], tags: ["stack"] },
+  { id: "binary-search", label: "Binary Search", categories: ["binary-search"], tags: ["binary-search"] },
+  { id: "linked-list", label: "Linked List", categories: ["linked-list"], tags: ["linked-list"] },
+  { id: "trees", label: "Trees", categories: ["trees"], tags: ["trees"] },
+  { id: "heap", label: "Heap / Priority Queue", categories: ["heap"], tags: ["heap", "priority-queue"] },
+  { id: "backtracking", label: "Backtracking", categories: ["backtracking"], tags: ["backtracking"] },
+  { id: "tries", label: "Tries", categories: ["tries"], tags: ["trie", "tries"] },
+  { id: "graphs", label: "Graphs", categories: ["graphs", "graph"], tags: ["graphs", "graph"] },
+  { id: "advanced-graphs", label: "Advanced Graphs", categories: ["advanced-graphs"], tags: ["advanced-graphs"] },
+  { id: "intervals", label: "Intervals", categories: ["intervals"], tags: ["intervals"] },
+  { id: "greedy", label: "Greedy", categories: ["greedy"], tags: ["greedy"] },
+  ...DP_MODULES.map((module) => ({
+    id: module.id,
+    label: module.label,
+    categories: [],
+    tags: [],
+    dpModule: module.id,
+  })),
+  { id: "bit-manipulation", label: "Bit Manipulation", categories: ["binary", "bit-manipulation"], tags: ["bit-manipulation"] },
+  { id: "math-geometry", label: "Math & Geometry", categories: ["math-and-geometry", "math", "matrix"], tags: ["math", "matrix"] },
+];
+
 export function PracticePage() {
+  return <LibraryPage modules={false} />;
+}
+
+export function ModulesPage() {
+  return <LibraryPage modules />;
+}
+
+function LibraryPage({ modules }: { modules: boolean }) {
   const katas = useKataStore((s) => s.katas);
   const bestTimes = useKataStore((s) => s.bestTimes);
   const streaks = useKataStore((s) => s.streaks);
@@ -25,13 +61,15 @@ export function PracticePage() {
   const setSetting = useSettingsStore((s) => s.setSetting);
   const navigate = useNavigate();
   const [expandedTagRows, setExpandedTagRows] = useState<Set<number>>(new Set());
+  const [expandedModules, setExpandedModules] = useState<Set<string>>(() => new Set());
   const TAG_PREVIEW_COUNT = 3;
 
   const librarySearch = useKataStore((s) => s.librarySearch);
   const libraryDiffSort = useKataStore((s) => s.libraryDiffSort);
   const librarySortMode = useKataStore((s) => s.librarySortMode);
   const leetcodeOnly = useKataStore((s) => s.libraryLeetcodeOnly);
-  const groupByFamily = useKataStore((s) => s.libraryGroupByFamily);
+  const blind75Only = useKataStore((s) => s.libraryBlind75Only);
+  const neetcodeOnly = useKataStore((s) => s.libraryNeetcodeOnly);
   const setLibraryUI = useKataStore((s) => s.setLibraryUI);
   const setBrowseOrder = useKataStore((s) => s.setBrowseOrder);
 
@@ -50,6 +88,8 @@ export function PracticePage() {
     const levelFilter = levelMatch ? parseInt(levelMatch[1], 10) : null;
     const filtered = katas.filter((k) => {
       if (leetcodeOnly && k.leetcodeNumber == null) return false;
+      if (blind75Only && !k.tags.includes("blind75")) return false;
+      if (neetcodeOnly && !k.tags.includes("neetcode")) return false;
       if (levelFilter !== null) return (CATEGORY_LEVEL[k.category] ?? -1) === levelFilter;
       const digits = q.replace(/^#/, "");
       const numberMatch =
@@ -129,38 +169,59 @@ export function PracticePage() {
           return 0;
       }
     });
-  }, [katas, search, diffSort, sortMode, leetcodeOnly, dailyKataIds, bestTimes, streaks]);
+  }, [katas, search, diffSort, sortMode, leetcodeOnly, blind75Only, neetcodeOnly, dailyKataIds, bestTimes, streaks]);
 
-  // Publish the RENDERED order — filter, then sort, then search. Publishing the
-  // raw store list would look like an optimization and would silently break
-  // next/prev in the editor.
-  useEffect(() => {
-    setBrowseOrder(searchedKatas.map((k) => k.id));
-  }, [searchedKatas, setBrowseOrder]);
-
-  // Module View: group searchedKatas (search + LeetCode-only already applied)
-  // into DP_MODULES curriculum order. Non-DP katas fall into a final "Other" section.
-  // expand-around-center renders after all curriculum modules.
+  // Modules page: group the visible rows into roadmap-style accordion sections.
   const familySections = useMemo(() => {
-    if (!groupByFamily) return null;
-    const buckets = new Map<PatternModule | "other", Kata[]>();
+    if (!modules) return null;
+    const sections = MODULE_DEFS.map((def) => ({ ...def, katas: [] as Kata[] }));
+    const assigned = new Set<number>();
+
+    const matchesSection = (kata: Kata, section: Omit<ModuleSection, "katas">) => {
+      const dpModule = dpFamilyFor(kata);
+      if (section.dpModule) return dpModule === section.dpModule;
+      if (dpModule) return false;
+      const tags = kata.tags;
+      if (section.id === "arrays-hashing") {
+        if (kata.category === "arrays" || kata.category === "hashing") return true;
+        if (tags.some((tag) => section.tags?.includes(tag))) return true;
+        if ((kata.category === "string" || kata.category === "strings") &&
+            !tags.some((tag) => ["sliding-window", "two-pointers", "stack", "dynamic-programming", "1d-dp", "2d-dp", "grid-dp", "expand-around-center"].includes(tag))) {
+          return true;
+        }
+        return false;
+      }
+      return section.categories.includes(kata.category) || tags.some((tag) => section.tags?.includes(tag));
+    };
+
     for (const kata of searchedKatas) {
-      const mod = dpFamilyFor(kata) ?? "other";
-      const bucket = buckets.get(mod);
-      if (bucket) bucket.push(kata);
-      else buckets.set(mod, [kata]);
+      const section = sections.find((candidate) => matchesSection(kata, candidate));
+      if (section) {
+        section.katas.push(kata);
+        assigned.add(kata.id);
+      }
     }
-    const sections: { id: string; label: string; tier?: string; katas: Kata[] }[] = [];
-    for (const { id, label, tier } of DP_MODULES) {
-      const katas = buckets.get(id);
-      if (katas?.length) sections.push({ id, label, tier, katas });
+
+    for (const section of sections) {
+      if (section.dpModule) section.katas.sort(compareDpCurriculumOrder);
     }
-    const eac = buckets.get("expand-around-center");
-    if (eac?.length) sections.push({ id: "expand-around-center", label: "Not DP · expand-around-center", katas: eac });
-    const other = buckets.get("other");
-    if (other?.length) sections.push({ id: "other", label: "Other", katas: other });
-    return sections;
-  }, [groupByFamily, searchedKatas]);
+
+    const visible = sections.filter((section) => section.katas.length > 0);
+    const other = searchedKatas.filter((kata) => !assigned.has(kata.id));
+    if (other.length) visible.push({ id: "other", label: "Other", categories: [], katas: other });
+    return visible;
+  }, [modules, searchedKatas]);
+
+  const renderedKatas = useMemo(
+    () => familySections?.flatMap((section) => section.katas) ?? searchedKatas,
+    [familySections, searchedKatas],
+  );
+
+  // Publish the RENDERED order. Publishing the raw store list would look like
+  // an optimization and would silently break next/prev in the editor.
+  useEffect(() => {
+    setBrowseOrder(renderedKatas.map((k) => k.id));
+  }, [renderedKatas, setBrowseOrder]);
 
   const toggleFavoriteById = (id: number) => {
     const next = dailyKataIds.includes(id)
@@ -238,11 +299,11 @@ export function PracticePage() {
   const listRef = useRef<HTMLDivElement>(null);
   const restoredScroll = useRef(false);
   useEffect(() => {
-    if (!restoredScroll.current && listRef.current && searchedKatas.length > 0) {
+    if (!restoredScroll.current && listRef.current && renderedKatas.length > 0) {
       listRef.current.scrollTop = savedScrollTop;
       restoredScroll.current = true;
     }
-  }, [searchedKatas.length]);
+  }, [renderedKatas.length]);
 
   const [selectedIndex, setSelectedIndex] = useState(0);
   useEffect(() => {
@@ -253,35 +314,37 @@ export function PracticePage() {
     function onKeyDown(e: KeyboardEvent) {
       if (e.key === "ArrowDown") {
         e.preventDefault();
-        setSelectedIndex((i) => Math.min(i + 1, searchedKatas.length - 1));
+        setSelectedIndex((i) => Math.min(i + 1, renderedKatas.length - 1));
       } else if (e.key === "ArrowUp") {
         e.preventDefault();
         setSelectedIndex((i) => Math.max(i - 1, 0));
       } else if (e.key === "Enter") {
-        const kata = searchedKatas[selectedIndex];
+        const kata = renderedKatas[selectedIndex];
         if (kata) navigate(`/editor/${kata.id}`);
       }
     }
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [searchedKatas, selectedIndex, navigate]);
+  }, [renderedKatas, selectedIndex, navigate]);
 
   useEffect(() => {
-    const kata = searchedKatas[selectedIndex];
+    const kata = renderedKatas[selectedIndex];
     if (!kata) return;
     document.getElementById(`kata-row-${kata.id}`)?.scrollIntoView({ block: "nearest" });
-  }, [selectedIndex, searchedKatas]);
+  }, [selectedIndex, renderedKatas]);
 
-  // Selection/keyboard-nav indexes into the flat searchedKatas order even when
-  // rows are rendered grouped into family sections.
+  // Selection/keyboard-nav indexes into the flat rendered order even when rows
+  // are displayed under module section headings.
   const indexById = useMemo(() => {
     const m = new Map<number, number>();
-    searchedKatas.forEach((k, i) => m.set(k.id, i));
+    renderedKatas.forEach((k, i) => m.set(k.id, i));
     return m;
-  }, [searchedKatas]);
+  }, [renderedKatas]);
 
   const renderKataRow = (kata: Kata) => {
     const idx = indexById.get(kata.id) ?? -1;
+    const displayName = dpDisplayNameFor(kata);
+    const categoryLabel = dpCategoryLabelFor(kata);
     return (
       <tr
         key={kata.id}
@@ -311,11 +374,18 @@ export function PracticePage() {
         <td className="font-medium text-sm">
           <span className="inline-flex items-center gap-1.5">
             {kata.leetcodeNumber != null && (
-              <span className="text-base-content/40 tabular-nums">
-                {kata.leetcodeNumber}.
-              </span>
+              <>
+                <img
+                  src="/leetcode-dark.png"
+                  alt="LeetCode"
+                  className="h-4 w-4 shrink-0 object-contain opacity-85"
+                />
+                <span className="text-base-content/40 tabular-nums">
+                  {kata.leetcodeNumber}.
+                </span>
+              </>
             )}
-            {kata.name}
+            {displayName}
             {kata.isCustom && (
               <span className="badge badge-secondary badge-xs">Custom</span>
             )}
@@ -343,7 +413,7 @@ export function PracticePage() {
             <span className="text-base-content/20 text-xs">—</span>
           )}
         </td>
-        <td className="text-base-content/45 text-sm">{kata.category}</td>
+        <td className="text-base-content/45 text-sm">{categoryLabel}</td>
         <td>
           <span className={`badge badge-sm ${diffColor(kata.difficulty)}`}>
             {kata.difficulty ?? "-"}
@@ -409,10 +479,77 @@ export function PracticePage() {
     );
   };
 
+  const moduleProgress = (sectionKatas: Kata[]) => {
+    const completed = sectionKatas.filter((kata) => doneKataIds.includes(kata.id)).length;
+    const total = sectionKatas.length;
+    return {
+      completed,
+      total,
+      percent: total === 0 ? 0 : Math.round((completed / total) * 100),
+    };
+  };
+
+  const renderModuleSection = (section: NonNullable<typeof familySections>[number]) => {
+    const expanded = expandedModules.has(section.id);
+    const progress = moduleProgress(section.katas);
+    return (
+      <details
+        key={section.id}
+        name="modules-accordion"
+        open={expanded}
+        onToggle={(e) => {
+          const isOpen = e.currentTarget.open;
+          setExpandedModules((prev) => {
+            const next = new Set(prev);
+            if (isOpen) next.add(section.id);
+            else next.delete(section.id);
+            return next;
+          });
+        }}
+        data-testid={`family-section-${section.id}`}
+        className="collapse collapse-arrow overflow-hidden rounded-2xl border border-base-300 bg-base-100 shadow-md shadow-base-300/20"
+      >
+        <summary className="collapse-title grid w-full grid-cols-[minmax(0,1fr)_24rem] items-center gap-5 px-5 py-4 pr-12 text-left hover:bg-base-300/20 transition-colors">
+          <h2 className="truncate text-xl font-bold text-base-content">{section.label}</h2>
+          <div className="grid grid-cols-[3.5rem_1fr] items-center gap-4">
+            <span className="text-right text-sm tabular-nums text-base-content/55">
+              {progress.completed}/{progress.total}
+            </span>
+            <progress className="progress progress-success h-2 w-full bg-base-content/20" value={progress.percent} max="100" />
+          </div>
+        </summary>
+        <div className="collapse-content !p-0">
+          <table className="table table-sm">
+            <thead>
+              <tr className="border-base-300 bg-base-300/70 text-base-content/70">
+                <th className="w-8"></th>
+                <th>Problem</th>
+                <th>Level</th>
+                <th>Category</th>
+                <th
+                  className="cursor-pointer select-none hover:text-base-content"
+                  onClick={() => setDiffSort(diffSort === null ? "asc" : diffSort === "asc" ? "desc" : null)}
+                >
+                  Difficulty {diffSort === "asc" ? "▲" : diffSort === "desc" ? "▼" : ""}
+                </th>
+                <th>Tags</th>
+                <th className="text-right">Best</th>
+                <th className="text-right">Streak</th>
+                <th className="text-right"></th>
+              </tr>
+            </thead>
+            <tbody>{section.katas.map((kata) => renderKataRow(kata))}</tbody>
+          </table>
+        </div>
+      </details>
+    );
+  };
+
   return (
     <div className="flex flex-col h-full p-5 gap-4 animate-fade-in">
       {/* Header */}
       <div className="flex items-center gap-3">
+        <h1 className="text-lg font-bold shrink-0">{modules ? "Modules" : "Problems"}</h1>
         <div className="relative flex-1 max-w-sm">
           <input
             type="text"
@@ -452,92 +589,97 @@ export function PracticePage() {
           <option value="difficulty-asc">Sort: Difficulty ↑</option>
           <option value="difficulty-desc">Sort: Difficulty ↓</option>
         </select>
-        <button
-          onClick={() => setLibraryUI({ libraryLeetcodeOnly: !leetcodeOnly })}
-          title="Show only katas that map to a LeetCode problem"
-          aria-pressed={leetcodeOnly}
-          className={`btn btn-sm shrink-0 ${leetcodeOnly ? "btn-primary" : "btn-ghost btn-outline"}`}
-        >
-          LeetCode only
-        </button>
-        <button
-          data-testid="family-view-toggle"
-          onClick={() => setLibraryUI({ libraryGroupByFamily: !groupByFamily })}
-          title="Group problems by DP curriculum module"
-          aria-pressed={groupByFamily}
-          className={`btn btn-sm shrink-0 ${groupByFamily ? "btn-primary" : "btn-ghost btn-outline"}`}
-        >
-          Module View
-        </button>
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            onClick={() => setLibraryUI({ libraryLeetcodeOnly: !leetcodeOnly })}
+            title="Show only katas that map to a LeetCode problem"
+            aria-pressed={leetcodeOnly}
+            className={`btn btn-sm ${leetcodeOnly ? "btn-primary" : "btn-ghost btn-outline"}`}
+          >
+            LeetCode
+          </button>
+          <button
+            onClick={() => setLibraryUI({ libraryBlind75Only: !blind75Only })}
+            title="Show only Blind 75 katas"
+            aria-pressed={blind75Only}
+            className={`btn btn-sm ${blind75Only ? "btn-primary" : "btn-ghost btn-outline"}`}
+          >
+            Blind 75
+          </button>
+          <button
+            onClick={() => setLibraryUI({ libraryNeetcodeOnly: !neetcodeOnly })}
+            title="Show only NeetCode katas"
+            aria-pressed={neetcodeOnly}
+            className={`btn btn-sm ${neetcodeOnly ? "btn-primary" : "btn-ghost btn-outline"}`}
+          >
+            NeetCode
+          </button>
+        </div>
       </div>
 
-      {/* Kata table */}
+      {/* Kata table / modules */}
       <div
         ref={listRef}
         onScroll={(e) => { savedScrollTop = e.currentTarget.scrollTop; }}
-        className="flex-1 min-h-0 overflow-y-auto scrollbar-hidden bg-base-100 rounded-lg border border-base-300/50"
+        className={`flex-1 min-h-0 overflow-y-auto scrollbar-hidden ${
+          modules ? "space-y-1.5 pr-1" : "bg-base-100 rounded-2xl border border-base-300 shadow-md shadow-base-300/20"
+        }`}
       >
-        <table className="table table-sm">
-          <thead>
-            <tr className="text-left text-[11px] text-base-content/35 uppercase tracking-wider">
-              <th className="w-8"></th>
-              <th className="font-semibold">Name</th>
-              <th className="font-semibold">Level</th>
-              <th className="font-semibold">Category</th>
-              <th
-                className="font-semibold cursor-pointer select-none hover:text-base-content/60 transition-colors"
-                onClick={() => setDiffSort(diffSort === null ? "asc" : diffSort === "asc" ? "desc" : null)}
-              >
-                Difficulty {diffSort === "asc" ? "▲" : diffSort === "desc" ? "▼" : ""}
-              </th>
-              <th className="font-semibold">Tags</th>
-              <th className="font-semibold text-right">Best</th>
-              <th className="font-semibold text-right">Streak</th>
-              <th className="w-16"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {familySections
-              ? familySections.map((section) => (
-                  <Fragment key={section.id}>
-                    <tr data-testid={`family-section-${section.id}`}>
-                      <td
-                        colSpan={9}
-                        className={`!py-1.5 !px-3 text-[11px] font-semibold uppercase tracking-wider ${
-                          section.tier === "prerequisite"
-                            ? "bg-primary/10 text-primary/70 border-l-2 border-primary/40"
-                            : "bg-base-200/60 text-base-content/50"
-                        }`}
-                      >
-                        {section.tier === "prerequisite" && (
-                          <span className="mr-2 text-[9px] font-bold uppercase tracking-widest text-primary/50">Prerequisites ·</span>
-                        )}
-                        {section.label}
-                        <span className="ml-2 text-base-content/30 normal-case font-normal">
-                          {section.katas.length}
-                        </span>
-                      </td>
-                    </tr>
-                    {section.katas.map((kata) => renderKataRow(kata))}
-                  </Fragment>
-                ))
-              : searchedKatas.map((kata) => renderKataRow(kata))}
+        {modules ? (
+          <>
+            {familySections?.map((section) => renderModuleSection(section))}
             {searchedKatas.length === 0 && (
-              <tr>
-                <td colSpan={9} className="py-12 text-center text-sm">
-                  <p className="text-base-content/25 mb-3">No katas found</p>
-                  <button
-                    onClick={handleReseed}
-                    disabled={reseeding}
-                    className="btn btn-sm btn-ghost text-base-content/40 hover:text-base-content/70"
-                  >
-                    {reseeding ? "Reseeding…" : "Reload problem statements"}
-                  </button>
-                </td>
-              </tr>
+              <div className="rounded-2xl border border-base-300/50 bg-base-100 py-12 text-center text-sm">
+                <p className="text-base-content/25 mb-3">No katas found</p>
+                <button
+                  onClick={handleReseed}
+                  disabled={reseeding}
+                  className="btn btn-sm btn-ghost text-base-content/40 hover:text-base-content/70"
+                >
+                  {reseeding ? "Reseeding…" : "Reload problem statements"}
+                </button>
+              </div>
             )}
-          </tbody>
-        </table>
+          </>
+        ) : (
+          <table className="table table-sm">
+            <thead>
+              <tr className="border-base-300 bg-base-300/70 text-base-content/70">
+                <th className="w-8"></th>
+                <th className="font-semibold">Name</th>
+                <th className="font-semibold">Level</th>
+                <th className="font-semibold">Category</th>
+                <th
+                  className="font-semibold cursor-pointer select-none hover:text-base-content/60 transition-colors"
+                  onClick={() => setDiffSort(diffSort === null ? "asc" : diffSort === "asc" ? "desc" : null)}
+                >
+                  Difficulty {diffSort === "asc" ? "▲" : diffSort === "desc" ? "▼" : ""}
+                </th>
+                <th className="font-semibold">Tags</th>
+                <th className="font-semibold text-right">Best</th>
+                <th className="font-semibold text-right">Streak</th>
+                <th className="w-16"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {searchedKatas.map((kata) => renderKataRow(kata))}
+              {searchedKatas.length === 0 && (
+                <tr>
+                  <td colSpan={9} className="py-12 text-center text-sm">
+                    <p className="text-base-content/25 mb-3">No katas found</p>
+                    <button
+                      onClick={handleReseed}
+                      disabled={reseeding}
+                      className="btn btn-sm btn-ghost text-base-content/40 hover:text-base-content/70"
+                    >
+                      {reseeding ? "Reseeding…" : "Reload problem statements"}
+                    </button>
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        )}
       </div>
     </div>
   );
