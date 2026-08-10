@@ -15,7 +15,15 @@ import type { Kata } from "../types/editor";
 // (resets only on full app reload).
 let savedScrollTop = 0;
 
-type ModuleSection = { id: string; label: string; categories: string[]; tags?: string[]; dpModule?: string; katas: Kata[] };
+type ModuleSection = {
+  id: string;
+  label: string;
+  categories: string[];
+  tags?: string[];
+  dpModule?: string;
+  katas: Kata[];
+  children?: ModuleSection[];
+};
 
 const MODULE_DEFS: Omit<ModuleSection, "katas">[] = [
   { id: "arrays-hashing", label: "Arrays & Hashing", categories: ["arrays", "hashing", "string", "strings"], tags: ["arrays-hashing", "hash-map"] },
@@ -32,13 +40,7 @@ const MODULE_DEFS: Omit<ModuleSection, "katas">[] = [
   { id: "advanced-graphs", label: "Advanced Graphs", categories: ["advanced-graphs"], tags: ["advanced-graphs"] },
   { id: "intervals", label: "Intervals", categories: ["intervals"], tags: ["intervals"] },
   { id: "greedy", label: "Greedy", categories: ["greedy"], tags: ["greedy"] },
-  ...DP_MODULES.map((module) => ({
-    id: module.id,
-    label: module.label,
-    categories: [],
-    tags: [],
-    dpModule: module.id,
-  })),
+  { id: "dynamic-programming", label: "Dynamic Programming", categories: [], tags: [] },
   { id: "bit-manipulation", label: "Bit Manipulation", categories: ["binary", "bit-manipulation"], tags: ["bit-manipulation"] },
   { id: "math-geometry", label: "Math & Geometry", categories: ["math-and-geometry", "math", "matrix"], tags: ["math", "matrix"] },
 ];
@@ -175,6 +177,14 @@ function LibraryPage({ modules }: { modules: boolean }) {
   const familySections = useMemo(() => {
     if (!modules) return null;
     const sections = MODULE_DEFS.map((def) => ({ ...def, katas: [] as Kata[] }));
+    const dpSections = DP_MODULES.map((module) => ({
+      id: module.id,
+      label: module.label,
+      categories: [],
+      tags: [],
+      dpModule: module.id,
+      katas: [] as Kata[],
+    }));
     const assigned = new Set<number>();
 
     const matchesSection = (kata: Kata, section: Omit<ModuleSection, "katas">) => {
@@ -195,15 +205,30 @@ function LibraryPage({ modules }: { modules: boolean }) {
     };
 
     for (const kata of searchedKatas) {
-      const section = sections.find((candidate) => matchesSection(kata, candidate));
+      const dpModule = dpFamilyFor(kata);
+      if (dpModule) {
+        const dpSection = dpSections.find((candidate) => candidate.dpModule === dpModule);
+        if (dpSection) {
+          dpSection.katas.push(kata);
+          assigned.add(kata.id);
+        }
+        continue;
+      }
+
+      const section = sections.find((candidate) => candidate.id !== "dynamic-programming" && matchesSection(kata, candidate));
       if (section) {
         section.katas.push(kata);
         assigned.add(kata.id);
       }
     }
 
-    for (const section of sections) {
-      if (section.dpModule) section.katas.sort(compareDpCurriculumOrder);
+    for (const section of dpSections) section.katas.sort(compareDpCurriculumOrder);
+
+    const visibleDpSections = dpSections.filter((section) => section.katas.length > 0);
+    const dpParent = sections.find((section) => section.id === "dynamic-programming");
+    if (dpParent && visibleDpSections.length > 0) {
+      dpParent.children = visibleDpSections;
+      dpParent.katas = visibleDpSections.flatMap((section) => section.katas);
     }
 
     const visible = sections.filter((section) => section.katas.length > 0);
@@ -213,7 +238,7 @@ function LibraryPage({ modules }: { modules: boolean }) {
   }, [modules, searchedKatas]);
 
   const renderedKatas = useMemo(
-    () => familySections?.flatMap((section) => section.katas) ?? searchedKatas,
+    () => familySections?.flatMap((section) => section.children?.flatMap((child) => child.katas) ?? section.katas) ?? searchedKatas,
     [familySections, searchedKatas],
   );
 
@@ -489,13 +514,37 @@ function LibraryPage({ modules }: { modules: boolean }) {
     };
   };
 
-  const renderModuleSection = (section: NonNullable<typeof familySections>[number]) => {
+  const renderModuleTable = (section: ModuleSection) => (
+    <table className="table table-sm">
+      <thead>
+        <tr className="border-base-300 bg-base-300/70 text-base-content/70">
+          <th className="w-8"></th>
+          <th>Problem</th>
+          <th>Level</th>
+          <th>Category</th>
+          <th
+            className="cursor-pointer select-none hover:text-base-content"
+            onClick={() => setDiffSort(diffSort === null ? "asc" : diffSort === "asc" ? "desc" : null)}
+          >
+            Difficulty {diffSort === "asc" ? "▲" : diffSort === "desc" ? "▼" : ""}
+          </th>
+          <th>Tags</th>
+          <th className="text-right">Best</th>
+          <th className="text-right">Streak</th>
+          <th className="text-right"></th>
+        </tr>
+      </thead>
+      <tbody>{section.katas.map((kata) => renderKataRow(kata))}</tbody>
+    </table>
+  );
+
+  const renderModuleSection = (section: ModuleSection, nested = false) => {
     const expanded = expandedModules.has(section.id);
     const progress = moduleProgress(section.katas);
     return (
       <details
         key={section.id}
-        name="modules-accordion"
+        name={nested ? "dp-submodules-accordion" : "modules-accordion"}
         open={expanded}
         onToggle={(e) => {
           const isOpen = e.currentTarget.open;
@@ -507,10 +556,14 @@ function LibraryPage({ modules }: { modules: boolean }) {
           });
         }}
         data-testid={`family-section-${section.id}`}
-        className="collapse collapse-arrow overflow-hidden rounded-2xl border border-base-300 bg-base-100 shadow-md shadow-base-300/20"
+        className={`collapse collapse-arrow overflow-hidden border border-base-300 bg-base-100 shadow-md shadow-base-300/20 ${
+          nested ? "rounded-xl shadow-none" : "rounded-2xl"
+        }`}
       >
-        <summary className="collapse-title grid w-full grid-cols-[minmax(0,1fr)_24rem] items-center gap-5 px-5 py-4 pr-12 text-left hover:bg-base-300/20 transition-colors">
-          <h2 className="truncate text-xl font-bold text-base-content">{section.label}</h2>
+        <summary className={`collapse-title grid w-full grid-cols-[minmax(0,1fr)_24rem] items-center gap-5 pr-12 text-left hover:bg-base-300/20 transition-colors ${
+          nested ? "px-4 py-3" : "px-5 py-4"
+        }`}>
+          <h2 className={`truncate text-lg text-base-content ${nested ? "font-semibold" : "font-bold"}`}>{section.label}</h2>
           <div className="grid grid-cols-[3.5rem_1fr] items-center gap-4">
             <span className="text-right text-sm tabular-nums text-base-content/55">
               {progress.completed}/{progress.total}
@@ -518,28 +571,14 @@ function LibraryPage({ modules }: { modules: boolean }) {
             <progress className="progress progress-success h-2 w-full bg-base-content/20" value={progress.percent} max="100" />
           </div>
         </summary>
-        <div className="collapse-content !p-0">
-          <table className="table table-sm">
-            <thead>
-              <tr className="border-base-300 bg-base-300/70 text-base-content/70">
-                <th className="w-8"></th>
-                <th>Problem</th>
-                <th>Level</th>
-                <th>Category</th>
-                <th
-                  className="cursor-pointer select-none hover:text-base-content"
-                  onClick={() => setDiffSort(diffSort === null ? "asc" : diffSort === "asc" ? "desc" : null)}
-                >
-                  Difficulty {diffSort === "asc" ? "▲" : diffSort === "desc" ? "▼" : ""}
-                </th>
-                <th>Tags</th>
-                <th className="text-right">Best</th>
-                <th className="text-right">Streak</th>
-                <th className="text-right"></th>
-              </tr>
-            </thead>
-            <tbody>{section.katas.map((kata) => renderKataRow(kata))}</tbody>
-          </table>
+        <div className={`collapse-content !p-0 ${section.children ? "bg-base-200/40" : ""}`}>
+          {section.children ? (
+            <div className="space-y-1.5 p-2">
+              {section.children.map((child) => renderModuleSection(child, true))}
+            </div>
+          ) : (
+            renderModuleTable(section)
+          )}
         </div>
       </details>
     );
