@@ -3,6 +3,10 @@ import type { SeedKata } from "../types/editor";
 import {
   DP_MODULES,
   DP_PATTERNS,
+  compareDpCurriculumOrder,
+  DP_CURRICULUM_ORDER,
+  dpCategoryLabelFor,
+  dpDisplayNameFor,
   dpFamilyFor,
   dpPatternFor,
   type EvaluationOrder,
@@ -58,6 +62,24 @@ const VALID_EVAL_ORDERS = new Set<EvaluationOrder>([
 ]);
 
 const FOUR_NEW_KATAS = ["Unique Paths II", "Triangle", "0/1 Knapsack", "Unbounded Knapsack"];
+const PRE_LEETCODE_FOUNDATIONS = [
+  "Sum from 1 to n",
+  "Running Total",
+  "Double-or-Add Sequence",
+  "Two-Step Number Sequence",
+  "Move Through a Hallway",
+  "Build a Strip With Tiles",
+  "Reach Target With 1, 2, or 3",
+  "Cheapest Walk Across Stones",
+  "Maximum Points Without Adjacent Cards",
+  "Maximum Points With a One-Position Cooldown",
+  "Cheapest Route Through Checkpoints",
+  "Can the End Be Reached?",
+  "Segment a Number String",
+  "Longest Increasing Run",
+  "Longest Repeated-Character Run",
+  "Maximum Contiguous Sum Ending at Each Position",
+];
 
 describe("dp patterns", () => {
   it("every DP_PATTERNS key matches a real seed kata name", () => {
@@ -119,11 +141,114 @@ describe("dp patterns", () => {
     expect(missing).toEqual([]);
   });
 
+  it("all pre-LeetCode foundation katas are present in the seed set", () => {
+    const seedNames = new Set(ALL_SEED_KATAS.map((k) => k.name));
+    const missing = PRE_LEETCODE_FOUNDATIONS.filter((name) => !seedNames.has(name));
+    expect(missing).toEqual([]);
+  });
+
+  it("all pre-LeetCode foundation katas have DP_PATTERNS entries", () => {
+    const missing = PRE_LEETCODE_FOUNDATIONS.filter((name) => !DP_PATTERNS[name]);
+    expect(missing).toEqual([]);
+  });
+
+  it("places pre-LeetCode foundation katas in their intended teaching modules", () => {
+    expect(DP_PATTERNS["Sum from 1 to n"]?.primaryModule).toBe("dp-foundations");
+    expect(DP_PATTERNS["Running Total"]?.primaryModule).toBe("dp-foundations");
+    expect(DP_PATTERNS["Double-or-Add Sequence"]?.primaryModule).toBe("dp-foundations");
+    expect(DP_PATTERNS["Two-Step Number Sequence"]?.primaryModule).toBe("dp-foundations");
+    expect(DP_PATTERNS["Move Through a Hallway"]?.primaryModule).toBe("dp-foundations");
+    expect(DP_PATTERNS["Build a Strip With Tiles"]?.primaryModule).toBe("dp-foundations");
+    expect(DP_PATTERNS["Reach Target With 1, 2, or 3"]?.primaryModule).toBe("dp-foundations");
+    expect(DP_PATTERNS["Segment a Number String"]?.primaryModule).toBe("string-two-sequence-dp");
+    expect(DP_PATTERNS["Cheapest Walk Across Stones"]?.primaryModule).toBe("1d-sequence-dp");
+    expect(DP_PATTERNS["Maximum Points Without Adjacent Cards"]?.primaryModule).toBe("1d-sequence-dp");
+    expect(DP_PATTERNS["Maximum Points With a One-Position Cooldown"]?.primaryModule).toBe("1d-sequence-dp");
+    expect(DP_PATTERNS["Cheapest Route Through Checkpoints"]?.primaryModule).toBe("1d-sequence-dp");
+    expect(DP_PATTERNS["Can the End Be Reached?"]?.primaryModule).toBe("1d-sequence-dp");
+    expect(DP_PATTERNS["Longest Increasing Run"]?.primaryModule).toBe("1d-sequence-dp");
+    expect(DP_PATTERNS["Longest Repeated-Character Run"]?.primaryModule).toBe("1d-sequence-dp");
+    expect(DP_PATTERNS["Maximum Contiguous Sum Ending at Each Position"]?.primaryModule).toBe("1d-sequence-dp");
+  });
+
   it("resolves a known pattern by kata name", () => {
     const pattern = dpPatternFor({ name: "House Robber" });
     expect(pattern?.primaryModule).toBe("1d-sequence-dp");
     expect(pattern?.state).toContain("dp[i]");
     expect(pattern?.baseCases.length).toBeGreaterThan(0);
+  });
+
+  it("places Tribonacci in Foundations with Fibonacci-style recurrence labels", () => {
+    const pattern = dpPatternFor({ name: "N-th Tribonacci Number" });
+    expect(pattern?.primaryModule).toBe("dp-foundations");
+    expect(dpCategoryLabelFor({ name: "N-th Tribonacci Number", category: "1-d-dp" })).toBe("Fixed previous states");
+  });
+
+  it("defines the first two module sequences in curriculum order", () => {
+    expect(DP_CURRICULUM_ORDER["dp-foundations"]).toEqual([
+      "Sum from 1 to n",
+      "Running Total",
+      "Double-or-Add Sequence",
+      "Two-Step Number Sequence",
+      "Move Through a Hallway",
+      "Build a Strip With Tiles",
+      "Reach Target With 1, 2, or 3",
+      "Minimum Moves to Reach N",
+      "Fibonacci Number",
+      "Climbing Stairs (Recursive)",
+      "Climbing Stairs (Iterative)",
+      "N-th Tribonacci Number",
+    ]);
+    expect(DP_CURRICULUM_ORDER["1d-sequence-dp"]).toEqual([
+      "Longest Repeated-Character Run",
+      "Longest Increasing Run",
+      "Can the End Be Reached?",
+      "Cheapest Walk Across Stones",
+      "Maximum Points Without Adjacent Cards",
+      "Maximum Points With a One-Position Cooldown",
+      "Maximum Sum With No Three Consecutive Values",
+      "Cheapest Route Through Checkpoints",
+      "Maximum Contiguous Sum Ending at Each Position",
+      "Min Cost Climbing Stairs",
+      "House Robber",
+      "House Robber II",
+      "Delete and Earn",
+    ]);
+    expect(DP_CURRICULUM_ORDER["string-two-sequence-dp"]).toEqual([
+      "Segment a Number String",
+      "Decode Ways",
+      "Longest Common Subsequence",
+      "Edit Distance",
+      "Interleaving String",
+      "Distinct Subsequences",
+      "Regular Expression Matching",
+    ]);
+  });
+
+  it("sorts explicitly ordered curriculum rows before unordered rows", () => {
+    const rows = [
+      { name: "N-th Tribonacci Number", tags: [] },
+      { name: "Fibonacci Number", tags: [] },
+      { name: "Running Total", tags: [] },
+      { name: "Unique Paths", tags: [] },
+      { name: "Climbing Stairs (Recursive)", tags: [] },
+    ];
+    expect([...rows].sort(compareDpCurriculumOrder).map((r) => r.name)).toEqual([
+      "Running Total",
+      "Unique Paths",
+      "Fibonacci Number",
+      "Climbing Stairs (Recursive)",
+      "N-th Tribonacci Number",
+    ]);
+  });
+
+  it("exposes teaching display names and category labels for module view rows", () => {
+    expect(dpDisplayNameFor({ name: "Climbing Stairs (Recursive)" })).toBe("Climbing Stairs: Memoization");
+    expect(dpDisplayNameFor({ name: "Climbing Stairs (Iterative)" })).toBe("Climbing Stairs: Space Optimization");
+    expect(dpCategoryLabelFor({ name: "Climbing Stairs (Recursive)", category: "1-d-dp" })).toBe("Counting paths · memoized");
+    expect(dpCategoryLabelFor({ name: "Climbing Stairs (Iterative)", category: "1-d-dp" })).toBe("Counting paths · space optimized");
+    expect(dpCategoryLabelFor({ name: "House Robber II", category: "1-d-dp" })).toBe("Circular reduction");
+    expect(dpCategoryLabelFor({ name: "Two Sum", category: "arrays" })).toBe("arrays");
   });
 
   it("resolves null for a kata with no pattern", () => {
@@ -140,12 +265,18 @@ describe("dp patterns", () => {
     expect(result).toBe("grid-dp");
   });
 
+  it("dpFamilyFor normalizes legacy DP module tags", () => {
+    expect(dpFamilyFor({ name: "Unknown String Kata", tags: ["string-dp"] })).toBe("string-two-sequence-dp");
+    expect(dpFamilyFor({ name: "Unknown LIS Kata", tags: ["subsequence-dp"] })).toBe("lis-chain-dp");
+    expect(dpFamilyFor({ name: "Unknown Palindrome Kata", tags: ["expand-around-center"] })).toBe("alternative-techniques");
+  });
+
   it("dpFamilyFor returns null when neither name nor tag resolves", () => {
     const result = dpFamilyFor({ name: "Two Sum", tags: ["array"] });
     expect(result).toBeNull();
   });
 
-  it("DP_MODULES has exactly 11 entries in the correct order", () => {
+  it("DP_MODULES has exactly 13 entries in the correct order", () => {
     const ids = DP_MODULES.map((m) => m.id);
     expect(ids).toEqual([
       "dp-foundations",
@@ -153,12 +284,14 @@ describe("dp patterns", () => {
       "grid-dp",
       "0-1-knapsack",
       "unbounded-knapsack",
-      "string-dp",
-      "subsequence-dp",
+      "lis-chain-dp",
+      "string-two-sequence-dp",
       "interval-dp",
       "state-machine-dp",
       "dfs-memo",
+      "tree-dp",
       "bitmask-dp",
+      "alternative-techniques",
     ]);
   });
 

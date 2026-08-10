@@ -15,18 +15,22 @@ export type DpModule =
   | "grid-dp"
   | "0-1-knapsack"
   | "unbounded-knapsack"
-  | "string-dp"
-  | "subsequence-dp"
+  | "lis-chain-dp"
+  | "string-two-sequence-dp"
   | "interval-dp"
   | "state-machine-dp"
   | "dfs-memo"
-  | "bitmask-dp";
+  | "tree-dp"
+  | "bitmask-dp"
+  | "alternative-techniques";
 
 export type PatternModule = DpModule | "expand-around-center";
 
 export interface DpPattern {
   primaryModule: PatternModule;
   relatedPatterns?: DpModule[];
+  displayName?: string;
+  patternLabel?: string;
   state: string;
   transition: string;
   baseCases: string[];
@@ -39,7 +43,7 @@ export interface DpPattern {
 /**
  * Ordered curriculum modules. `dp-foundations` is the prerequisite tier;
  * all others are numbered problem-family modules.
- * Drive the Module View section order in the Problems list.
+ * Drive the Modules page section order.
  */
 export const DP_MODULES: { id: DpModule; label: string; tier: "prerequisite" | "problem-family" }[] = [
   { id: "dp-foundations", label: "DP Foundations", tier: "prerequisite" },
@@ -47,15 +51,103 @@ export const DP_MODULES: { id: DpModule; label: string; tier: "prerequisite" | "
   { id: "grid-dp", label: "Grid DP", tier: "problem-family" },
   { id: "0-1-knapsack", label: "0/1 Knapsack", tier: "problem-family" },
   { id: "unbounded-knapsack", label: "Unbounded Knapsack", tier: "problem-family" },
-  { id: "string-dp", label: "String DP", tier: "problem-family" },
-  { id: "subsequence-dp", label: "Subsequence DP", tier: "problem-family" },
+  { id: "lis-chain-dp", label: "LIS and Chain DP", tier: "problem-family" },
+  { id: "string-two-sequence-dp", label: "String and Two-Sequence DP", tier: "problem-family" },
   { id: "interval-dp", label: "Interval DP", tier: "problem-family" },
   { id: "state-machine-dp", label: "State-Machine DP", tier: "problem-family" },
   { id: "dfs-memo", label: "DFS with Memoization", tier: "problem-family" },
+  { id: "tree-dp", label: "Tree DP", tier: "problem-family" },
   { id: "bitmask-dp", label: "Bitmask DP", tier: "problem-family" },
+  { id: "alternative-techniques", label: "Alternative Techniques", tier: "problem-family" },
 ];
 
 const DP_MODULE_IDS = new Set<string>(DP_MODULES.map((m) => m.id));
+const LEGACY_DP_MODULE_IDS = new Map<string, PatternModule>([
+  ["string-dp", "string-two-sequence-dp"],
+  ["subsequence-dp", "lis-chain-dp"],
+  ["expand-around-center", "alternative-techniques"],
+]);
+const DP_MODULE_LABELS = new Map<PatternModule, string>([
+  ...DP_MODULES.map((m) => [m.id, m.label] as const),
+  ["expand-around-center", "Not DP · expand-around-center"],
+]);
+
+export const DP_CURRICULUM_ORDER: Partial<Record<PatternModule, readonly string[]>> = {
+  "dp-foundations": [
+    "Sum from 1 to n",
+    "Running Total",
+    "Double-or-Add Sequence",
+    "Two-Step Number Sequence",
+    "Move Through a Hallway",
+    "Build a Strip With Tiles",
+    "Reach Target With 1, 2, or 3",
+    "Minimum Moves to Reach N",
+    "Fibonacci Number",
+    "Climbing Stairs (Recursive)",
+    "Climbing Stairs (Iterative)",
+    "N-th Tribonacci Number",
+  ],
+  "1d-sequence-dp": [
+    "Longest Repeated-Character Run",
+    "Longest Increasing Run",
+    "Can the End Be Reached?",
+    "Cheapest Walk Across Stones",
+    "Maximum Points Without Adjacent Cards",
+    "Maximum Points With a One-Position Cooldown",
+    "Maximum Sum With No Three Consecutive Values",
+    "Cheapest Route Through Checkpoints",
+    "Maximum Contiguous Sum Ending at Each Position",
+    "Min Cost Climbing Stairs",
+    "House Robber",
+    "House Robber II",
+    "Delete and Earn",
+  ],
+  "grid-dp": [
+    "Fill One Grid State",
+    "Build a Path-Count Table",
+    "Unique Paths",
+    "Build a Blocked-Cell Path Table",
+    "Unique Paths II",
+    "Build a Minimum-Cost Table",
+    "Reconstruct One Minimum-Cost Grid Path",
+    "Minimum Path Sum",
+    "Triangle",
+  ],
+  "0-1-knapsack": [
+    "Subset Sum",
+    "Partition Equal Subset Sum",
+    "0/1 Knapsack",
+    "Count Subsets That Sum to Target",
+    "Target Sum",
+  ],
+  "lis-chain-dp": [
+    "LIS Length Ending at Each Index",
+    "Longest Increasing Subsequence",
+  ],
+  "string-two-sequence-dp": [
+    "Segment a Number String",
+    "Decode Ways",
+    "Longest Common Subsequence",
+    "Edit Distance",
+    "Interleaving String",
+    "Distinct Subsequences",
+    "Regular Expression Matching",
+  ],
+  "tree-dp": [
+    "Maximum Depth of Binary Tree",
+    "Balanced Binary Tree",
+    "Diameter of Binary Tree",
+    "Binary Tree Maximum Path Sum",
+  ],
+  "dfs-memo": [
+    "Count Paths in a DAG",
+    "Word Break",
+    "Longest Increasing Path In a Matrix",
+  ],
+  "bitmask-dp": [
+    "Minimum Worker-Job Assignment Cost",
+  ],
+};
 
 /**
  * Keyed by kata NAME. One entry per DP kata, derived from that kata's
@@ -63,8 +155,212 @@ const DP_MODULE_IDS = new Set<string>(DP_MODULES.map((m) => m.id));
  * state/transition describe the checked-in reference solution.
  */
 export const DP_PATTERNS: Record<string, DpPattern> = {
+  "Sum from 1 to n": {
+    primaryModule: "dp-foundations",
+    patternLabel: "Previous answer + current contribution",
+    state: "dp[i] = sum of the integers from 1 through i",
+    transition: "dp[i] = dp[i-1] + i",
+    baseCases: ["dp[0] = 0"],
+    evaluationOrder: {
+      kind: "left-to-right",
+      explanation: "dp[i] reads only dp[i-1], so filling from 1 up to n keeps the previous prefix sum available",
+    },
+  },
+  "Running Total": {
+    primaryModule: "dp-foundations",
+    patternLabel: "Prefix sums",
+    state: "dp[i] = sum of nums[0..i]",
+    transition: "dp[i] = dp[i-1] + nums[i]",
+    baseCases: ["empty input returns []", "dp[0] = nums[0] for non-empty input"],
+    evaluationOrder: {
+      kind: "left-to-right",
+      explanation: "each prefix total uses the previous prefix total plus the current element, so indexes must be filled left to right",
+    },
+  },
+  "Double-or-Add Sequence": {
+    primaryModule: "dp-foundations",
+    patternLabel: "Single previous state",
+    state: "dp[i] = value at position i",
+    transition: "dp[i] = 2 * dp[i-1] + 1",
+    baseCases: ["dp[0] = 1"],
+    evaluationOrder: {
+      kind: "left-to-right",
+      explanation: "each value depends only on the immediately previous value, so a left-to-right sweep builds the sequence in dependency order",
+    },
+  },
+  "Two-Step Number Sequence": {
+    primaryModule: "dp-foundations",
+    patternLabel: "Two previous states",
+    state: "dp[i] = value at index i",
+    transition: "dp[i] = dp[i-1] + dp[i-2]",
+    baseCases: ["dp[0] = 2", "dp[1] = 3"],
+    evaluationOrder: {
+      kind: "left-to-right",
+      explanation: "dp[i] needs the two earlier sequence values, so filling from i=2 upward keeps both dependencies settled",
+    },
+  },
+  "Move Through a Hallway": {
+    primaryModule: "dp-foundations",
+    patternLabel: "Counting paths",
+    state: "dp[i] = number of ways to reach position i",
+    transition: "dp[i] = dp[i-1] + dp[i-2] (arrive from one step back or two steps back)",
+    baseCases: ["dp[0] = 1", "dp[1] = 1"],
+    evaluationOrder: {
+      kind: "left-to-right",
+      explanation: "the final move into i can come from i-1 or i-2, so those counts must be computed before dp[i]",
+    },
+  },
+  "Build a Strip With Tiles": {
+    primaryModule: "dp-foundations",
+    patternLabel: "Recurrence recognition",
+    state: "dp[i] = number of ways to tile a strip of length i",
+    transition: "dp[i] = dp[i-1] + dp[i-2] (place a length-1 tile last or a length-2 tile last)",
+    baseCases: ["dp[0] = 1", "dp[1] = 1"],
+    evaluationOrder: {
+      kind: "left-to-right",
+      explanation: "tilings of length i are built from already-counted tilings of lengths i-1 and i-2",
+    },
+  },
+  "Reach Target With 1, 2, or 3": {
+    primaryModule: "dp-foundations",
+    patternLabel: "Three previous states",
+    state: "dp[i] = number of ordered ways to reach i",
+    transition: "dp[i] = dp[i-1] + dp[i-2] + dp[i-3], treating negative indexes as 0",
+    baseCases: ["dp[0] = 1", "dp[i] = 0 when i < 0"],
+    evaluationOrder: {
+      kind: "left-to-right",
+      explanation: "each target can be reached by appending 1, 2, or 3 to a smaller target, all of which are known when sweeping upward",
+    },
+  },
+  "Minimum Moves to Reach N": {
+    primaryModule: "dp-foundations",
+    patternLabel: "Minimum result",
+    state: "dp[i] = fewest moves needed to reach exactly i",
+    transition: "dp[i] = 1 + min(dp[i-1], dp[i-3], dp[i-5]) when those indexes exist",
+    baseCases: ["dp[0] = 0"],
+    evaluationOrder: {
+      kind: "left-to-right",
+      explanation: "each total reads only smaller totals, so filling from 1 to n keeps every candidate predecessor available",
+    },
+  },
+  "Cheapest Walk Across Stones": {
+    primaryModule: "1d-sequence-dp",
+    patternLabel: "Minimum cost",
+    state: "dp[i] = minimum cost required to land on stone i",
+    transition: "dp[i] = costs[i] + min(dp[i-1], dp[i-2])",
+    baseCases: ["empty costs returns 0", "dp[0] = costs[0]", "dp[1] = costs[1]"],
+    evaluationOrder: {
+      kind: "left-to-right",
+      explanation: "each stone cost depends on the cheapest way to reach one or two stones before it, so earlier stones must be solved first",
+    },
+  },
+  "Maximum Points Without Adjacent Cards": {
+    primaryModule: "1d-sequence-dp",
+    patternLabel: "Take or skip",
+    state: "dp[i] = maximum points obtainable from cards 0 through i",
+    transition: "dp[i] = max(skip card i: dp[i-1], take card i: cards[i] + dp[i-2])",
+    baseCases: ["empty cards returns 0", "dp[0] = cards[0]", "dp[1] = max(cards[0], cards[1])"],
+    evaluationOrder: {
+      kind: "left-to-right",
+      explanation: "taking card i needs dp[i-2] and skipping it needs dp[i-1], both available when scanning left to right",
+    },
+  },
+  "Maximum Points With a One-Position Cooldown": {
+    primaryModule: "1d-sequence-dp",
+    relatedPatterns: ["state-machine-dp"],
+    patternLabel: "Take or skip",
+    state: "dp[i] = maximum points obtainable through day i",
+    transition: "dp[i] = max(skip day i: dp[i-1], take day i: points[i] + dp[i-2])",
+    baseCases: ["empty points returns 0", "dp[0] = points[0]", "dp[1] = max(points[0], points[1])"],
+    evaluationOrder: {
+      kind: "left-to-right",
+      explanation: "the cooldown blocks the immediately previous day, so taking day i depends on dp[i-2] while skipping depends on dp[i-1]",
+    },
+  },
+  "Maximum Sum With No Three Consecutive Values": {
+    primaryModule: "1d-sequence-dp",
+    patternLabel: "Multiple take/skip choices",
+    state: "dp[i] = maximum sum obtainable from nums[0..i] without taking three consecutive values",
+    transition: "dp[i] = max(skip i: dp[i-1], take i only: dp[i-2]+nums[i], take i and i-1: dp[i-3]+nums[i-1]+nums[i])",
+    baseCases: ["empty nums returns 0", "dp[0] = max(0, nums[0])", "dp[1] considers taking none, either value, or both values"],
+    evaluationOrder: {
+      kind: "left-to-right",
+      explanation: "each decision at i depends on the best totals ending before i, i-1, or i-2, all of which are settled in a left-to-right pass",
+    },
+  },
+  "Cheapest Route Through Checkpoints": {
+    primaryModule: "1d-sequence-dp",
+    patternLabel: "Minimum cost",
+    state: "dp[i] = cheapest total cost to reach checkpoint i",
+    transition: "dp[i] = costs[i] + min(dp[i-1], dp[i-2])",
+    baseCases: ["empty costs returns 0", "dp[0] = costs[0]", "dp[1] = costs[1]"],
+    evaluationOrder: {
+      kind: "left-to-right",
+      explanation: "each checkpoint can be entered from one or two checkpoints back, so those optimal costs must already be known",
+    },
+  },
+  "Can the End Be Reached?": {
+    primaryModule: "1d-sequence-dp",
+    patternLabel: "Feasibility",
+    state: "dp[i] = whether position i is reachable",
+    transition: "dp[i] = allowed[i] && (dp[i-1] || dp[i-2])",
+    baseCases: ["empty allowed returns false", "dp[0] = allowed[0]"],
+    evaluationOrder: {
+      kind: "left-to-right",
+      explanation: "reachability at i depends only on reachability of one or two earlier positions, so scan from the start",
+    },
+  },
+  "Segment a Number String": {
+    primaryModule: "string-two-sequence-dp",
+    relatedPatterns: ["dfs-memo"],
+    patternLabel: "Prefix segmentation",
+    state: "dp[i] = whether the prefix of length i can be segmented",
+    transition: "dp[i] = true if an allowed chunk s[start:i] ends at i and dp[start] is true",
+    baseCases: ["dp[0] = true (the empty prefix is segmentable)"],
+    evaluationOrder: {
+      kind: "left-to-right",
+      explanation: "each prefix only asks whether an earlier prefix was segmentable before appending a valid chunk",
+    },
+  },
+  "Longest Increasing Run": {
+    primaryModule: "1d-sequence-dp",
+    relatedPatterns: ["lis-chain-dp"],
+    patternLabel: "Ending exactly at i",
+    state: "dp[i] = length of the increasing contiguous run ending exactly at i",
+    transition: "dp[i] = dp[i-1] + 1 if nums[i] > nums[i-1], else 1",
+    baseCases: ["empty nums returns 0", "dp[0] = 1"],
+    evaluationOrder: {
+      kind: "left-to-right",
+      explanation: "the run ending at i only extends the run ending at i-1 when the adjacent comparison succeeds",
+    },
+  },
+  "Longest Repeated-Character Run": {
+    primaryModule: "1d-sequence-dp",
+    relatedPatterns: ["string-two-sequence-dp"],
+    patternLabel: "Ending exactly at i",
+    state: "dp[i] = length of the repeated-character run ending exactly at i",
+    transition: "dp[i] = dp[i-1] + 1 if s[i] == s[i-1], else 1",
+    baseCases: ["empty string returns 0", "dp[0] = 1"],
+    evaluationOrder: {
+      kind: "left-to-right",
+      explanation: "the run ending at i depends only on whether the previous character can extend the run ending at i-1",
+    },
+  },
+  "Maximum Contiguous Sum Ending at Each Position": {
+    primaryModule: "1d-sequence-dp",
+    relatedPatterns: ["state-machine-dp"],
+    patternLabel: "Ending exactly at i",
+    state: "dp[i] = maximum sum of a contiguous subarray ending exactly at i",
+    transition: "dp[i] = max(nums[i], nums[i] + dp[i-1])",
+    baseCases: ["empty nums returns []", "dp[0] = nums[0]"],
+    evaluationOrder: {
+      kind: "left-to-right",
+      explanation: "the best sum ending at i either starts at i or extends the best sum ending at i-1",
+    },
+  },
   "Fibonacci Number": {
     primaryModule: "dp-foundations",
+    patternLabel: "Fixed previous states",
     state: "dp[i] = the i-th Fibonacci number",
     transition: "dp[i] = dp[i-1] + dp[i-2]",
     baseCases: ["dp[0] = 0", "dp[1] = 1"],
@@ -76,6 +372,8 @@ export const DP_PATTERNS: Record<string, DpPattern> = {
   "Climbing Stairs (Iterative)": {
     primaryModule: "dp-foundations",
     relatedPatterns: ["1d-sequence-dp"],
+    displayName: "Climbing Stairs: Space Optimization",
+    patternLabel: "Counting paths · space optimized",
     state: "dp[i] = number of ways to reach step i",
     transition: "dp[i] = dp[i-1] + dp[i-2] (arrive via a 1-step or a 2-step)",
     baseCases: ["dp[1] = 1 (one way to reach step 1: take a 1-step)", "dp[2] = 2 (two ways: 1+1 or a single 2-step)"],
@@ -87,6 +385,8 @@ export const DP_PATTERNS: Record<string, DpPattern> = {
   "Climbing Stairs (Recursive)": {
     primaryModule: "dp-foundations",
     relatedPatterns: ["dfs-memo"],
+    displayName: "Climbing Stairs: Memoization",
+    patternLabel: "Counting paths · memoized",
     state: "dp[i] = number of ways to reach step i",
     transition: "dp[i] = dp[i-1] + dp[i-2], memoized top-down",
     baseCases: ["dp[1] = 1", "dp[2] = 2"],
@@ -96,7 +396,8 @@ export const DP_PATTERNS: Record<string, DpPattern> = {
     },
   },
   "N-th Tribonacci Number": {
-    primaryModule: "1d-sequence-dp",
+    primaryModule: "dp-foundations",
+    patternLabel: "Fixed previous states",
     state: "dp[i] = the i-th Tribonacci number",
     transition: "dp[i] = dp[i-1] + dp[i-2] + dp[i-3]",
     baseCases: ["dp[0] = 0", "dp[1] = 1", "dp[2] = 1"],
@@ -107,6 +408,7 @@ export const DP_PATTERNS: Record<string, DpPattern> = {
   },
   "Min Cost Climbing Stairs": {
     primaryModule: "1d-sequence-dp",
+    patternLabel: "Minimum cost",
     state: "cost[i] = min cost to reach step i (mutated in place over the input)",
     transition: "cost[i] += min(cost[i-1], cost[i-2])",
     baseCases: ["cost[0] and cost[1] are unchanged — each is the price to leave from that step"],
@@ -118,6 +420,7 @@ export const DP_PATTERNS: Record<string, DpPattern> = {
   "House Robber": {
     primaryModule: "1d-sequence-dp",
     relatedPatterns: ["0-1-knapsack"],
+    patternLabel: "Take or skip",
     state: "dp[i] = max money obtainable from houses 0..i",
     transition: "dp[i] = max(skip current: dp[i-1], rob current: nums[i] + dp[i-2])",
     baseCases: ["dp[0] = nums[0]", "dp[1] = max(nums[0], nums[1])"],
@@ -128,6 +431,7 @@ export const DP_PATTERNS: Record<string, DpPattern> = {
   },
   "House Robber II": {
     primaryModule: "1d-sequence-dp",
+    patternLabel: "Circular reduction",
     state: "dp[i] = max money from a non-circular run of houses",
     transition: "House Robber's linear recurrence run twice (exclude last house, exclude first house), take the max",
     baseCases: ["each linear sub-run starts with the first element as dp[0] and max of first two as dp[1]"],
@@ -138,12 +442,78 @@ export const DP_PATTERNS: Record<string, DpPattern> = {
   },
   "Delete and Earn": {
     primaryModule: "1d-sequence-dp",
+    patternLabel: "Problem transformation",
     state: "dp[v] = max points earnable using values 0..v, after bucketing nums into points[v] = v * count(v)",
     transition: "dp[v] = max(skip value v: dp[v-1], take all of v: points[v] + dp[v-2])",
     baseCases: ["dp[0] = points[0]", "dp[1] = max(points[0], points[1])"],
     evaluationOrder: {
       kind: "left-to-right",
       explanation: "dp[v] reads dp[v-1] and dp[v-2] after building the points array; filling from v=2 upward keeps both prior buckets settled",
+    },
+  },
+  "Fill One Grid State": {
+    primaryModule: "grid-dp",
+    patternLabel: "One grid transition",
+    state: "dp[r][c] = number of paths that reach the current cell",
+    transition: "dp[r][c] = top + left",
+    baseCases: ["top and left are provided directly; no table initialization needed"],
+    evaluationOrder: {
+      kind: "top-left-to-bottom-right",
+      explanation: "this isolates the dependency shape used by path-count Grid DP: current reads the already-computed cell above and cell to the left",
+    },
+  },
+  "Build a Path-Count Table": {
+    primaryModule: "grid-dp",
+    patternLabel: "Path-count table",
+    state: "dp[r][c] = number of paths from top-left to (r, c)",
+    transition: "dp[r][c] = dp[r-1][c] + dp[r][c-1]",
+    baseCases: [
+      "dp[0][c] = 1 for every top-row cell",
+      "dp[r][0] = 1 for every left-column cell",
+    ],
+    evaluationOrder: {
+      kind: "top-left-to-bottom-right",
+      explanation: "row-major order computes the top and left predecessors before each interior cell",
+    },
+  },
+  "Build a Blocked-Cell Path Table": {
+    primaryModule: "grid-dp",
+    patternLabel: "Blocked grid states",
+    state: "dp[r][c] = number of valid paths from top-left to (r, c)",
+    transition: "dp[r][c] = 0 if blocked[r][c], else dp[r-1][c] + dp[r][c-1]",
+    baseCases: [
+      "dp[0][0] = 1 if the start cell is open, else 0",
+      "missing top or left predecessors contribute 0",
+      "blocked cells always become 0 before paths flow onward",
+    ],
+    evaluationOrder: {
+      kind: "top-left-to-bottom-right",
+      explanation: "blocked cells must be zeroed before later cells read them, so row-major order propagates obstacles correctly",
+    },
+  },
+  "Build a Minimum-Cost Table": {
+    primaryModule: "grid-dp",
+    patternLabel: "Minimum-cost table",
+    state: "dp[r][c] = minimum cost of a path from top-left to (r, c)",
+    transition: "dp[r][c] = grid[r][c] + min(dp[r-1][c], dp[r][c-1])",
+    baseCases: [
+      "dp[0][0] = grid[0][0]",
+      "missing top or left predecessors are treated as infinity",
+    ],
+    evaluationOrder: {
+      kind: "top-left-to-bottom-right",
+      explanation: "same grid movement as path counting, but the predecessor combination changes from addition to minimum",
+    },
+  },
+  "Reconstruct One Minimum-Cost Grid Path": {
+    primaryModule: "grid-dp",
+    patternLabel: "Path reconstruction",
+    state: "dp[r][c] = minimum cost to reach cell (r,c), with the path recovered by walking backward through cheaper predecessors",
+    transition: "dp[r][c] = grid[r][c] + min(dp[r-1][c], dp[r][c-1]); reconstruction chooses the predecessor that produced the min",
+    baseCases: ["dp[0][0] = grid[0][0]", "top row can only come from the left", "left column can only come from above"],
+    evaluationOrder: {
+      kind: "top-left-to-bottom-right",
+      explanation: "the cost table must be complete before backtracking from the bottom-right to the top-left through optimal predecessors",
     },
   },
   "Unique Paths": {
@@ -207,6 +577,17 @@ export const DP_PATTERNS: Record<string, DpPattern> = {
       explanation: "building a fresh set each round prevents the current item from being counted twice; this is equivalent to filling a boolean capacity array backward (high to low) so each item is used at most once",
     },
   },
+  "Subset Sum": {
+    primaryModule: "0-1-knapsack",
+    patternLabel: "Feasibility knapsack",
+    state: "dp[s] = whether some subset of the processed numbers sums to s",
+    transition: "for each num, dp[s] = dp[s] || dp[s-num] while sweeping s downward",
+    baseCases: ["dp[0] = true (the empty subset reaches sum 0)"],
+    evaluationOrder: {
+      kind: "right-to-left",
+      explanation: "capacity must sweep downward so the current number cannot be reused in the same item pass",
+    },
+  },
   "0/1 Knapsack": {
     primaryModule: "0-1-knapsack",
     state: "dp[c] = maximum value achievable with capacity c using items considered so far",
@@ -215,6 +596,17 @@ export const DP_PATTERNS: Record<string, DpPattern> = {
     evaluationOrder: {
       kind: "right-to-left",
       explanation: "iterating capacity from high to low ensures each item is considered at most once; a forward pass would let a single item contribute multiple times (unbounded knapsack behavior)",
+    },
+  },
+  "Count Subsets That Sum to Target": {
+    primaryModule: "0-1-knapsack",
+    patternLabel: "Counting knapsack",
+    state: "dp[s] = number of subsets of processed indexes that sum to s",
+    transition: "for each num, dp[s] += dp[s-num] while sweeping s downward",
+    baseCases: ["dp[0] = 1 (choose no indexes)"],
+    evaluationOrder: {
+      kind: "right-to-left",
+      explanation: "descending target sums keep each array index single-use while still adding its contribution to larger sums",
     },
   },
   "Target Sum": {
@@ -280,7 +672,7 @@ export const DP_PATTERNS: Record<string, DpPattern> = {
     },
   },
   "Decode Ways": {
-    primaryModule: "string-dp",
+    primaryModule: "string-two-sequence-dp",
     state: "dp[i] = number of ways to decode the first i characters",
     transition: "dp[i] = dp[i-1] if s[i-1] is a valid single digit, plus dp[i-2] if s[i-2:i] is a valid 10-26 pair",
     baseCases: [
@@ -293,7 +685,7 @@ export const DP_PATTERNS: Record<string, DpPattern> = {
     },
   },
   "Edit Distance": {
-    primaryModule: "string-dp",
+    primaryModule: "string-two-sequence-dp",
     state: "dp[j] = edit distance between word1[:i] and word2[:j] (rolling 1D row over i)",
     transition: "dp[j] = prev (diagonal) if word1[i-1] == word2[j-1], else 1 + min(prev, dp[j], dp[j-1])",
     baseCases: [
@@ -306,7 +698,7 @@ export const DP_PATTERNS: Record<string, DpPattern> = {
     },
   },
   "Interleaving String": {
-    primaryModule: "string-dp",
+    primaryModule: "string-two-sequence-dp",
     state: "dp[i][j] = can s3[0..i+j) be formed by interleaving s1[0..i) and s2[0..j)",
     transition: "dp[i][j] = (dp[i-1][j] && s1[i-1]==s3[i+j-1]) || (dp[i][j-1] && s2[j-1]==s3[i+j-1])",
     baseCases: [
@@ -320,7 +712,7 @@ export const DP_PATTERNS: Record<string, DpPattern> = {
     },
   },
   "Regular Expression Matching": {
-    primaryModule: "string-dp",
+    primaryModule: "string-two-sequence-dp",
     state: "dp[i][j] = does s[0..i) match pattern p[0..j)",
     transition: "on '*': skip x* → dp[i][j-2], or consume if p[j-2] matches s[i-1] → dp[i-1][j]; else single char/'.' match → dp[i-1][j-1]",
     baseCases: [
@@ -333,7 +725,7 @@ export const DP_PATTERNS: Record<string, DpPattern> = {
     },
   },
   "Maximum Length of Repeated Subarray": {
-    primaryModule: "subsequence-dp",
+    primaryModule: "string-two-sequence-dp",
     state: "dp[i][j] = length of the common run ending exactly at nums1[i-1] and nums2[j-1]",
     transition: "dp[i][j] = dp[i-1][j-1] + 1 if nums1[i-1] == nums2[j-1], else 0",
     baseCases: ["dp[i][0] = 0 and dp[0][j] = 0 for all i, j (no common run extends from an empty array)"],
@@ -342,8 +734,19 @@ export const DP_PATTERNS: Record<string, DpPattern> = {
       explanation: "dp[i][j] reads only dp[i-1][j-1]; row-major order ensures the diagonal predecessor is available when (i,j) is processed",
     },
   },
+  "LIS Length Ending at Each Index": {
+    primaryModule: "lis-chain-dp",
+    patternLabel: "Chain ending at i",
+    state: "dp[i] = length of the longest strictly increasing subsequence that must end at nums[i]",
+    transition: "dp[i] = 1 + max(dp[j]) over every j < i with nums[j] < nums[i], or 1 if no predecessor fits",
+    baseCases: ["dp[i] starts at 1 for every index (the single value nums[i])", "empty nums returns []"],
+    evaluationOrder: {
+      kind: "left-to-right",
+      explanation: "the chain ending at i can only use earlier indexes, so all candidate predecessor lengths are available when i is processed",
+    },
+  },
   "Longest Increasing Subsequence": {
-    primaryModule: "subsequence-dp",
+    primaryModule: "lis-chain-dp",
     state: "sub = smallest tail value achievable for an increasing subsequence of each length seen so far",
     transition: "binary-search num's insertion point in sub; extend sub if num is a new largest tail, else overwrite that slot",
     baseCases: ["sub = [] (empty array has LIS length 0; the first element initializes sub)"],
@@ -353,7 +756,7 @@ export const DP_PATTERNS: Record<string, DpPattern> = {
     },
   },
   "Longest Common Subsequence": {
-    primaryModule: "subsequence-dp",
+    primaryModule: "string-two-sequence-dp",
     state: "dp[i][j] = LCS length of text1[:i] and text2[:j]",
     transition: "dp[i][j] = dp[i-1][j-1] + 1 if text1[i-1] == text2[j-1], else max(dp[i-1][j], dp[i][j-1])",
     baseCases: [
@@ -366,8 +769,7 @@ export const DP_PATTERNS: Record<string, DpPattern> = {
     },
   },
   "Distinct Subsequences": {
-    primaryModule: "subsequence-dp",
-    relatedPatterns: ["string-dp"],
+    primaryModule: "string-two-sequence-dp",
     state: "dp[i][j] = number of subsequences of s[0..i) that equal t[0..j)",
     transition: "dp[i][j] = dp[i-1][j] + (s[i-1]==t[j-1] ? dp[i-1][j-1] : 0)",
     baseCases: [
@@ -381,7 +783,7 @@ export const DP_PATTERNS: Record<string, DpPattern> = {
   },
   "Longest Palindromic Subsequence": {
     primaryModule: "interval-dp",
-    relatedPatterns: ["subsequence-dp"],
+    relatedPatterns: ["string-two-sequence-dp"],
     state: "dp[i][j] = longest palindromic subsequence length within s[i..j]",
     transition: "dp[i][j] = dp[i+1][j-1] + 2 if s[i] == s[j], else max(dp[i+1][j], dp[i][j-1])",
     baseCases: ["dp[i][i] = 1 for all i (every single character is a palindrome of length 1)"],
@@ -424,9 +826,20 @@ export const DP_PATTERNS: Record<string, DpPattern> = {
       explanation: "each day's (holding, sold, cooldown) states depend only on the previous day; processing prices left to right propagates all three states",
     },
   },
+  "Count Paths in a DAG": {
+    primaryModule: "dfs-memo",
+    patternLabel: "Memoized graph state",
+    state: "ways(node) = number of paths from node to the target",
+    transition: "ways(node) = sum(ways(next) for next in graph[node])",
+    baseCases: ["ways(target) = 1"],
+    evaluationOrder: {
+      kind: "top-down-memoized",
+      explanation: "the graph does not need to be flattened into array order; DFS asks for downstream states on demand and memoizes each node once",
+    },
+  },
   "Word Break": {
     primaryModule: "dfs-memo",
-    relatedPatterns: ["string-dp"],
+    relatedPatterns: ["string-two-sequence-dp"],
     state: "dp[i] = whether s[:i] can be segmented into dictionary words",
     transition: "dp[i] = true if dp[j] is true and s[j:i] is in the dictionary, for some j < i",
     baseCases: ["dp[0] = True (the empty prefix is always decodable)"],
@@ -446,8 +859,20 @@ export const DP_PATTERNS: Record<string, DpPattern> = {
       explanation: "DFS recurses into strictly greater neighbors; since values strictly increase along any valid path there are no cycles, and each cell is computed once and cached",
     },
   },
+  "Minimum Worker-Job Assignment Cost": {
+    primaryModule: "bitmask-dp",
+    patternLabel: "Subset mask DP",
+    state: "dp[mask] = minimum cost after assigning the first popcount(mask) workers to the selected jobs in mask",
+    transition: "try each unset job bit for the next worker and relax dp[mask | (1<<job)]",
+    baseCases: ["dp[0] = 0 (no workers assigned, no jobs selected)"],
+    evaluationOrder: {
+      kind: "custom",
+      explanation: "masks are processed from smaller selected sets to larger selected sets so each assignment state expands by one job",
+    },
+  },
   "Longest Palindromic Substring": {
-    primaryModule: "expand-around-center",
+    primaryModule: "alternative-techniques",
+    patternLabel: "Expand around center",
     state: "the widest palindrome found so far, expanding outward from each center (i,i) and (i,i+1) — DP's O(n²) table is a detour here",
     transition: "grow left/right from a center while s[left] == s[right]; keep the longest span seen",
     baseCases: ["each single character (i, i) and each adjacent pair (i, i+1) is a potential expansion center"],
@@ -457,13 +882,58 @@ export const DP_PATTERNS: Record<string, DpPattern> = {
     },
   },
   "Palindromic Substrings": {
-    primaryModule: "expand-around-center",
+    primaryModule: "alternative-techniques",
+    patternLabel: "Expand around center",
     state: "count = total palindromic substrings found so far, expanding outward from each center — DP's O(n²) table is a detour here",
     transition: "for each center (i,i) and (i,i+1), count += 1 for every step s[left] == s[right] holds",
     baseCases: ["each single character (i, i) counts as one palindrome; each pair (i, i+1) is checked as an even-length center"],
     evaluationOrder: {
       kind: "custom",
       explanation: "each center expands independently; order across centers does not affect correctness",
+    },
+  },
+  "Maximum Depth of Binary Tree": {
+    primaryModule: "tree-dp",
+    patternLabel: "Returned subtree state",
+    state: "height(node) = maximum depth of the subtree rooted at node",
+    transition: "height(node) = 1 + max(height(node.left), height(node.right))",
+    baseCases: ["height(null) = 0"],
+    evaluationOrder: {
+      kind: "bottom-up",
+      explanation: "each node's height depends on its child subtree heights, so recursion computes children before returning the parent's summary",
+    },
+  },
+  "Balanced Binary Tree": {
+    primaryModule: "tree-dp",
+    patternLabel: "Subtree summary with sentinel",
+    state: "check(node) = subtree height, or -1 if the subtree is already unbalanced",
+    transition: "combine left and right heights; return -1 when either child is invalid or their heights differ by more than one",
+    baseCases: ["check(null) = 0"],
+    evaluationOrder: {
+      kind: "bottom-up",
+      explanation: "a parent can only decide balance after both child subtrees return their compressed height or invalid sentinel",
+    },
+  },
+  "Diameter of Binary Tree": {
+    primaryModule: "tree-dp",
+    patternLabel: "Return one value, update another",
+    state: "height(node) = longest downward path from node; answer tracks the best left-height + right-height seen anywhere",
+    transition: "height(node) = 1 + max(left_height, right_height), while diameter candidate = left_height + right_height",
+    baseCases: ["height(null) = 0"],
+    evaluationOrder: {
+      kind: "bottom-up",
+      explanation: "each diameter candidate needs both child heights, so DFS returns heights upward and updates the global best after visiting children",
+    },
+  },
+  "Binary Tree Maximum Path Sum": {
+    primaryModule: "tree-dp",
+    patternLabel: "Returned gain plus global answer",
+    state: "gain(node) = best non-branching path sum that starts at node and can extend to its parent",
+    transition: "gain(node) = node.val + max(0, left_gain, right_gain), while answer considers node.val + max(0,left_gain) + max(0,right_gain)",
+    baseCases: ["gain(null) = 0"],
+    evaluationOrder: {
+      kind: "bottom-up",
+      explanation: "a node's extendable gain and through-node best path both require the completed gains from the left and right subtrees",
     },
   },
 };
@@ -477,11 +947,40 @@ export const DP_PATTERNS: Record<string, DpPattern> = {
 export function dpFamilyFor(kata: Pick<Kata | SeedKata, "name" | "tags">): PatternModule | null {
   const fromPattern = DP_PATTERNS[kata.name]?.primaryModule;
   if (fromPattern) return fromPattern;
-  const tag = kata.tags.find((t) => DP_MODULE_IDS.has(t));
-  return (tag as PatternModule | undefined) ?? null;
+  const tag = kata.tags.find((t) => DP_MODULE_IDS.has(t) || LEGACY_DP_MODULE_IDS.has(t));
+  if (!tag) return null;
+  return LEGACY_DP_MODULE_IDS.get(tag) ?? (tag as PatternModule);
 }
 
 /** Resolve a kata's DP pattern (state/transition/baseCases/evaluationOrder), or null if it has none. */
 export function dpPatternFor(kata: Pick<Kata | SeedKata, "name">): DpPattern | null {
   return DP_PATTERNS[kata.name] ?? null;
+}
+
+export function dpDisplayNameFor(kata: Pick<Kata | SeedKata, "name">): string {
+  return DP_PATTERNS[kata.name]?.displayName ?? kata.name;
+}
+
+export function dpCategoryLabelFor(kata: Pick<Kata | SeedKata, "name" | "category">): string {
+  const pattern = DP_PATTERNS[kata.name];
+  if (!pattern) return kata.category;
+  return pattern.patternLabel ?? DP_MODULE_LABELS.get(pattern.primaryModule) ?? kata.category;
+}
+
+export function dpCurriculumOrderFor(kata: Pick<Kata | SeedKata, "name" | "tags">): number {
+  const module = dpFamilyFor(kata);
+  if (!module) return Number.POSITIVE_INFINITY;
+  const order = DP_CURRICULUM_ORDER[module];
+  const index = order?.indexOf(kata.name) ?? -1;
+  return index === -1 ? Number.POSITIVE_INFINITY : index;
+}
+
+export function compareDpCurriculumOrder(
+  a: Pick<Kata | SeedKata, "name" | "tags">,
+  b: Pick<Kata | SeedKata, "name" | "tags">,
+): number {
+  const aOrder = dpCurriculumOrderFor(a);
+  const bOrder = dpCurriculumOrderFor(b);
+  if (!Number.isFinite(aOrder) && !Number.isFinite(bOrder)) return 0;
+  return aOrder - bOrder;
 }
