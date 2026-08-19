@@ -5,6 +5,7 @@ import type { AppTheme } from "../types/editor";
 import { getDb } from "../lib/database";
 import { resolveEditorToggles, type EditorToggleKey, type LineNumbersMode } from "../lib/editor-settings";
 import { DEFAULT_UI_SCALE, normalizeUiScale, type UiScale } from "../lib/ui-scale";
+import { DEFAULT_AGENT_SYSTEM_PROMPT } from "../lib/agent-bridge";
 
 import { DEFAULT_SHORTCUTS, migrateShortcuts, type ShortcutAction, type ShortcutMap } from "../lib/shortcut-keys";
 
@@ -21,6 +22,7 @@ export type PracticeDifficulty = "easy" | "medium" | "hard";
 export type EditorLayoutMode = "horizontal" | "vertical";
 export type EditorPanelId = "description" | "solution" | "notes" | "viz" | "diff";
 export type DashboardTab = "overview" | "progress" | "leaderboard" | "history";
+export type AgentProvider = "codex" | "claude";
 
 export interface EditorLayoutSettings {
   problemPanelVisible: boolean;
@@ -92,6 +94,8 @@ const DEFAULTS = {
     outputPaneHeight: 280,
   } as EditorLayoutSettings,
   dashboardTab: "overview" as DashboardTab,
+  agentProvider: "codex" as AgentProvider,
+  agentSystemPrompt: DEFAULT_AGENT_SYSTEM_PROMPT,
 };
 
 const EDITOR_TOGGLE_DEFAULTS: Record<EditorToggleKey, boolean> = {
@@ -137,6 +141,8 @@ interface SettingsState {
   // Workspace layout
   editorLayout: EditorLayoutSettings;
   dashboardTab: DashboardTab;
+  agentProvider: AgentProvider;
+  agentSystemPrompt: string;
   // Actions
   loadSettings: () => Promise<void>;
   setSetting: (key: string, value: unknown) => Promise<void>;
@@ -173,6 +179,16 @@ function normalizeDashboardTab(value: unknown): DashboardTab {
   return value === "overview" || value === "progress" || value === "leaderboard" || value === "history"
     ? value
     : DEFAULTS.dashboardTab;
+}
+
+function normalizeAgentProvider(value: unknown): AgentProvider {
+  return value === "claude" || value === "codex" ? value : DEFAULTS.agentProvider;
+}
+
+function normalizeAgentSystemPrompt(value: unknown): string {
+  return typeof value === "string" && value.trim().length > 0
+    ? value
+    : DEFAULTS.agentSystemPrompt;
 }
 
 const LEGACY_MIGRATIONS: Record<string, string> = {
@@ -323,6 +339,8 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       practiceConfig: normalizePracticeConfig(patch.practiceConfig),
       editorLayout: normalizeEditorLayout(patch.editorLayout),
       dashboardTab: normalizeDashboardTab(patch.dashboardTab),
+      agentProvider: normalizeAgentProvider(patch.agentProvider),
+      agentSystemPrompt: normalizeAgentSystemPrompt(patch.agentSystemPrompt),
       loaded: true,
     });
 

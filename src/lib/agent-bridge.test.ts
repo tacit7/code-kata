@@ -78,4 +78,28 @@ describe("buildAgentEditorContext", () => {
     expect(prompt).toContain("Latest Failed Results:");
     expect(prompt).not.toContain("return [0, 1]");
   });
+
+  it("uses a custom system prompt when provided", () => {
+    const context = buildAgentEditorContext({
+      kata,
+      code: "def two_sum(nums, target):\n    return []",
+      selectedCode: "",
+      selection: null,
+      cursor: null,
+      isSession: false,
+      leetcodeNumber: 1,
+      leetcodeUrl: "https://leetcode.com/problems/two-sum/",
+      visibleTestCases: [],
+      notes: "",
+      ranAt: "",
+      results: null,
+      hasReferenceSolution: true,
+      activeVariantLabel: "Hash map",
+    });
+
+    const prompt = agentPromptFor(context, "Custom tutor rules.");
+
+    expect(prompt.startsWith("Custom tutor rules.")).toBe(true);
+    expect(prompt).toContain("Problem: Two Sum");
+  });
 });

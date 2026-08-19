@@ -548,7 +548,7 @@ const PYTHON_TEST_MARKER_OWNER = "kata-python-test-runner";
 const AGENT_CONTEXT_SAVE_KEY = "current";
 
 export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataEditorProps) {
-  const { theme, vimMode, toggleVimMode, shortcuts, fontSize, fontFamily, tabSize, hideDescriptionInSession, setSetting, editorAutocomplete, lineNumbersMode, wordWrap, autoClosingBrackets, fontLigatures, highlightOccurrences, bracketPairColorization } = useSettingsStore();
+  const { theme, vimMode, toggleVimMode, shortcuts, fontSize, fontFamily, tabSize, hideDescriptionInSession, setSetting, editorAutocomplete, lineNumbersMode, wordWrap, autoClosingBrackets, fontLigatures, highlightOccurrences, bracketPairColorization, agentProvider, agentSystemPrompt } = useSettingsStore();
   const editorLayout = useSettingsStore((s) => s.editorLayout);
   const sessionMaxTestRuns = useSessionStore((s) => s.activeSession?.maxTestRuns ?? null);
   // Attempt limits only apply inside a practice session, never in the standalone editor
@@ -585,7 +585,7 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
   const [replLayout, setReplLayout] = useState<ReplLayout>(editorLayout.replLayout);
   const [replFocusNonce, setReplFocusNonce] = useState(0);
   const [showAgentTerminal, setShowAgentTerminal] = useState(false);
-  const [agentTerminalKind, setAgentTerminalKind] = useState<AgentTerminalKind>("shell");
+  const [agentTerminalKind, setAgentTerminalKind] = useState<AgentTerminalKind>(agentProvider);
   const [agentTerminalLaunchNonce, setAgentTerminalLaunchNonce] = useState(0);
   const [mountedEditor, setMountedEditor] = useState<editor.IStandaloneCodeEditor | null>(null);
   const [activeSolutionVariant, setActiveSolutionVariant] = useState(0);
@@ -803,25 +803,25 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
     agentContextAutosave.cancel();
     const context = buildCurrentAgentContext();
     await writeAgentContext(context);
-    await writeText(agentPromptFor(context));
+    await writeText(agentPromptFor(context, agentSystemPrompt));
     toast.success("Agent prompt copied", 1800);
-  }, [agentContextAutosave, buildCurrentAgentContext]);
+  }, [agentContextAutosave, agentSystemPrompt, buildCurrentAgentContext]);
 
   const sendAgentPromptToTerminal = useCallback(async () => {
     if (!showAgentTerminal) {
-      toast.error("Open the terminal first", 1800);
+      toast.error("Open the agent first", 1800);
       return;
     }
     agentContextAutosave.cancel();
     const context = buildCurrentAgentContext();
     await writeAgentContext(context);
-    const pasted = await agentTerminalRef.current?.pasteText(agentPromptFor(context));
+    const pasted = await agentTerminalRef.current?.pasteText(agentPromptFor(context, agentSystemPrompt));
     if (pasted) {
-      toast.success("Agent prompt pasted into terminal", 1800);
+      toast.success("Agent prompt pasted", 1800);
     } else {
-      toast.error("Terminal is still starting", 1800);
+      toast.error("Agent is still starting", 1800);
     }
-  }, [agentContextAutosave, buildCurrentAgentContext, showAgentTerminal]);
+  }, [agentContextAutosave, agentSystemPrompt, buildCurrentAgentContext, showAgentTerminal]);
 
   useEffect(() => {
     setActiveSolutionVariant(0);
@@ -953,13 +953,22 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
     setReplFocusNonce((nonce) => nonce + 1);
   }, [replSupported]);
 
-  const openAgentTerminal = useCallback((kind: AgentTerminalKind = "shell") => {
+  const openAgentTerminal = useCallback((kind: AgentTerminalKind = agentProvider) => {
     setShowRepl(false);
-    setMaximizedPane(kind === "shell" ? null : "terminal");
+    setMaximizedPane("terminal");
     setAgentTerminalKind(kind);
     setAgentTerminalLaunchNonce(Date.now());
     setShowAgentTerminal(true);
-  }, []);
+  }, [agentProvider]);
+
+  const handleToggleAgentTerminal = useCallback(() => {
+    if (showAgentTerminal) {
+      setShowAgentTerminal(false);
+      if (maximizedPane === "terminal") setMaximizedPane(null);
+      return;
+    }
+    openAgentTerminal(agentProvider);
+  }, [agentProvider, maximizedPane, openAgentTerminal, showAgentTerminal]);
 
   const copySolutionToEditor = useCallback(() => {
     if (!editorRef.current || !activeSolution) return;
@@ -1037,34 +1046,11 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
       },
       {
         id: "editor:open-agent-terminal",
-        title: showAgentTerminal ? "Hide Terminal" : "Open Terminal",
-        subtitle: "Open an embedded shell panel",
+        title: showAgentTerminal ? "Hide Agent" : `Open ${agentProvider === "claude" ? "Claude" : "Codex"}`,
+        subtitle: "Launch the configured coding agent",
         section: "Editor",
-        keywords: ["terminal", "shell", "xterm"],
-        run: () => {
-          if (showAgentTerminal) {
-            setShowAgentTerminal(false);
-            if (maximizedPane === "terminal") setMaximizedPane(null);
-          } else {
-            openAgentTerminal("shell");
-          }
-        },
-      },
-      {
-        id: "editor:open-claude-terminal",
-        title: "Open Claude Terminal",
-        subtitle: "Launch claude in the embedded terminal",
-        section: "Editor",
-        keywords: ["terminal", "agent", "claude"],
-        run: () => openAgentTerminal("claude"),
-      },
-      {
-        id: "editor:open-codex-terminal",
-        title: "Open Codex Terminal",
-        subtitle: "Launch codex in the embedded terminal",
-        section: "Editor",
-        keywords: ["terminal", "agent", "codex"],
-        run: () => openAgentTerminal("codex"),
+        keywords: ["terminal", "agent", "claude", "codex"],
+        run: handleToggleAgentTerminal,
       },
       {
         id: "editor:copy-solution",
@@ -1092,8 +1078,8 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
       },
       {
         id: "editor:send-agent-prompt-to-terminal",
-        title: "Send Agent Prompt to Terminal",
-        subtitle: "Paste the current tutoring prompt into the open terminal",
+        title: "Send Agent Prompt",
+        subtitle: "Paste the current tutoring prompt into the open agent",
         section: "Editor",
         keywords: ["agent", "terminal", "prompt", "paste", "claude", "codex"],
         disabled: !showAgentTerminal,
@@ -1138,11 +1124,13 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
     return () => unregister.forEach((fn) => fn());
   }, [
     activeSolution,
+    agentProvider,
     copyAgentPrompt,
     copySolutionToEditor,
     exportAgentContextNow,
     handleReset,
     handleRun,
+    handleToggleAgentTerminal,
     handleToggleProblemPanel,
     handleToggleRepl,
     handleToggleSolution,
@@ -1150,9 +1138,7 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
     kataPassed,
     leetcodeUrl,
     maxTestRuns,
-    maximizedPane,
     navigation,
-    openAgentTerminal,
     registerCommand,
     replSupported,
     runCount,
@@ -1572,32 +1558,17 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
           </button>
         )}
         <button
-          onClick={() => {
-            if (showAgentTerminal) {
-              setShowAgentTerminal(false);
-              if (maximizedPane === "terminal") setMaximizedPane(null);
-            } else {
-              openAgentTerminal("shell");
-            }
-          }}
-          title={showAgentTerminal ? "Hide terminal" : "Open terminal"}
+          onClick={handleToggleAgentTerminal}
+          title={showAgentTerminal ? "Hide agent" : `Open ${agentProvider === "claude" ? "Claude" : "Codex"}`}
           className={`${toolbarIconButtonClass} ${showAgentTerminal ? "btn-info" : "btn-ghost text-base-content/40"}`}
-          aria-label={showAgentTerminal ? "Hide terminal" : "Open terminal"}
-        >
-          <Terminal size={16} />
-        </button>
-        <button
-          onClick={() => { void copyAgentPrompt(); }}
-          title="Ask Agent"
-          className={`${toolbarButtonClass} btn-ghost gap-1.5 text-base-content/50 hover:text-base-content/80`}
+          aria-label={showAgentTerminal ? "Hide agent" : `Open ${agentProvider === "claude" ? "Claude" : "Codex"}`}
         >
           <BotMessageSquare size={16} />
-          <span>Ask</span>
         </button>
         {showAgentTerminal && (
           <button
             onClick={() => { void sendAgentPromptToTerminal(); }}
-            title="Paste agent prompt into terminal"
+            title="Paste agent prompt"
             className={`${toolbarButtonClass} btn-ghost gap-1.5 text-base-content/50 hover:text-base-content/80`}
           >
             <span>Send</span>

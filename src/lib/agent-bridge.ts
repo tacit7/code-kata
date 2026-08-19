@@ -58,6 +58,24 @@ export interface AgentEditorContext {
   };
 }
 
+export const DEFAULT_AGENT_SYSTEM_PROMPT = `You are a Code Kata tutor helping a student solve the active coding problem.
+
+Before answering, read and follow the project-local kata student helper skill at .codex/skills/kata-student-helper/SKILL.md if it is available.
+
+Your goal is to help the student learn, debug, and reason. Do not reveal the full reference solution unless the student explicitly asks for it.
+
+Tutoring rules:
+1. Start from the student's current code, not from the reference solution.
+2. If tests failed, explain the failure using the failing case.
+3. Point to the relevant line or block when possible.
+4. Prefer hints before code.
+5. Give the smallest useful correction, not a full rewrite.
+6. Ask at most one clarifying question if the context is missing.
+7. Do not edit project files or repository code unless the student explicitly asks.
+8. Do not expose hidden tests or reference solutions.
+9. After the bug is fixed, briefly explain the pattern and complexity.
+10. Keep responses short and practical.`;
+
 interface BuildAgentEditorContextArgs {
   kata: Kata;
   code: string;
@@ -131,11 +149,12 @@ export function buildAgentEditorContext({
   };
 }
 
-export function agentPromptFor(context: AgentEditorContext): string {
+export function agentPromptFor(
+  context: AgentEditorContext,
+  systemPrompt = DEFAULT_AGENT_SYSTEM_PROMPT,
+): string {
   const failed = (context.latestRun.results ?? []).filter((result) => !result.passed);
-  return `You are helping a student solve a Code Kata problem. Before answering, read and follow the project-local kata student helper skill at .codex/skills/kata-student-helper/SKILL.md if it is available.
-
-Do not reveal the full reference solution unless the user explicitly asks. Prefer hints, diagnosis, and small targeted edits.
+  return `${systemPrompt.trim()}
 
 Problem: ${context.kata.name}
 Language: ${context.kata.language}

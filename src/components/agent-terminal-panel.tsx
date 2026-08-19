@@ -1,11 +1,11 @@
-import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState, type ReactNode } from "react";
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { open } from "@tauri-apps/plugin-shell";
 import { FitAddon } from "@xterm/addon-fit";
 import { Unicode11Addon } from "@xterm/addon-unicode11";
 import { WebLinksAddon } from "@xterm/addon-web-links";
 import { Terminal as XtermTerminal } from "@xterm/xterm";
-import { BotMessageSquare, Code2, Maximize2, Minimize2, Monitor, RotateCcw, X } from "lucide-react";
+import { BotMessageSquare, Maximize2, Minimize2, RotateCcw, X } from "lucide-react";
 import {
   closeTerminal,
   agentTerminalOptions,
@@ -260,27 +260,6 @@ export const AgentTerminalPanel = forwardRef<AgentTerminalPanelHandle, AgentTerm
     void startTerminal(launchKind);
   }, [launchKind, launchNonce, ready, startTerminal]);
 
-  const launchButtonClass = (kind: AgentTerminalKind) =>
-    `inline-flex h-6 items-center gap-1.5 rounded px-2 text-[11px] font-medium transition-colors ${
-      activeKind === kind
-        ? "bg-zinc-700/55 text-zinc-100"
-        : "text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300"
-    }`;
-
-  const launchButton = (kind: AgentTerminalKind, icon: ReactNode) => (
-    <button
-      onClick={() => {
-        if (kind !== "shell" && !maximized) onToggleMaximized();
-        void startTerminal(kind);
-      }}
-      className={launchButtonClass(kind)}
-      title={`Start ${labelFor(kind)}`}
-    >
-      {icon}
-      <span>{labelFor(kind)}</span>
-    </button>
-  );
-
   return (
     <div className="flex-1 min-h-0 flex flex-col bg-zinc-950">
       <div className="flex items-center border-b border-zinc-800 bg-zinc-900 px-3 py-2 shrink-0">
@@ -293,8 +272,8 @@ export const AgentTerminalPanel = forwardRef<AgentTerminalPanelHandle, AgentTerm
           <X size={10} strokeWidth={3} />
         </button>
         <div className="flex items-center gap-2 text-xs">
-          <Monitor size={14} className="text-zinc-500" />
-          <span className="font-medium text-zinc-300">Terminal</span>
+          <BotMessageSquare size={14} className="text-zinc-500" />
+          <span className="font-medium text-zinc-300">Agent</span>
           <span className="text-zinc-700">/</span>
           <span className="text-zinc-500">{labelFor(activeKind)}</span>
           <span className={status === "running" ? "text-emerald-400/80" : status === "error" ? "text-red-400/85" : "text-zinc-600"}>
@@ -302,9 +281,6 @@ export const AgentTerminalPanel = forwardRef<AgentTerminalPanelHandle, AgentTerm
           </span>
         </div>
         <div className="ml-4 flex items-center gap-1">
-          {launchButton("shell", <Monitor size={14} />)}
-          {launchButton("claude", <BotMessageSquare size={14} />)}
-          {launchButton("codex", <Code2 size={14} />)}
           <button
             onClick={() => { void startTerminal(activeKind); }}
             className="inline-flex size-6 items-center justify-center rounded text-zinc-500 transition-colors hover:bg-zinc-800 hover:text-zinc-300"

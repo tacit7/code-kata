@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router";
-import { Code2, Database, Dumbbell, Keyboard, Plus } from "lucide-react";
+import { BotMessageSquare, Code2, Database, Dumbbell, Keyboard, Plus, RotateCcw } from "lucide-react";
 import { useSettingsStore, DEFAULT_SHORTCUTS } from "../stores/settings-store";
 import type { ShortcutAction } from "../stores/settings-store";
 import { reseedKatas, resetAllProgress } from "../lib/database";
@@ -8,10 +8,11 @@ import { confirmAction } from "../lib/confirm-action";
 import { APP_THEMES } from "../lib/editor-themes";
 import { EDITOR_TOGGLES } from "../lib/editor-settings";
 import { formatUiScale, UI_SCALE_OPTIONS } from "../lib/ui-scale";
+import { DEFAULT_AGENT_SYSTEM_PROMPT } from "../lib/agent-bridge";
 import { useKataStore } from "../stores/kata-store";
 import { toast } from "../stores/toast-store";
 
-type Tab = "editor" | "practice" | "data" | "shortcuts";
+type Tab = "editor" | "agent" | "practice" | "data" | "shortcuts";
 
 const FONT_OPTIONS = [
   "JetBrains Mono, monospace",
@@ -268,6 +269,64 @@ function EditorTab() {
             />
           ))}
         </PreferenceGroup>
+      </section>
+    </div>
+  );
+}
+
+function AgentTab() {
+  const agentProvider = useSettingsStore((s) => s.agentProvider);
+  const agentSystemPrompt = useSettingsStore((s) => s.agentSystemPrompt);
+  const setSetting = useSettingsStore((s) => s.setSetting);
+  const isDefaultPrompt = agentSystemPrompt === DEFAULT_AGENT_SYSTEM_PROMPT;
+
+  return (
+    <div className="mx-auto flex w-full max-w-3xl flex-col gap-7">
+      <section className="space-y-2">
+        <SectionTitle>Agent</SectionTitle>
+        <PreferenceGroup>
+          <PreferenceRow label="Default Agent" hint="The problem-page robot button launches this agent.">
+            <div className="join">
+              <button
+                onClick={() => setSetting("agentProvider", "codex")}
+                className={`btn btn-xs join-item ${agentProvider === "codex" ? "btn-primary" : "btn-ghost"}`}
+              >
+                Codex
+              </button>
+              <button
+                onClick={() => setSetting("agentProvider", "claude")}
+                className={`btn btn-xs join-item ${agentProvider === "claude" ? "btn-primary" : "btn-ghost"}`}
+              >
+                Claude
+              </button>
+            </div>
+          </PreferenceRow>
+        </PreferenceGroup>
+      </section>
+
+      <section className="space-y-2">
+        <div className="flex items-center justify-between gap-3 px-1">
+          <SectionTitle>System Prompt</SectionTitle>
+          <button
+            onClick={() => setSetting("agentSystemPrompt", DEFAULT_AGENT_SYSTEM_PROMPT)}
+            disabled={isDefaultPrompt}
+            className="btn btn-xs btn-ghost gap-1.5"
+          >
+            <RotateCcw size={14} />
+            Reset
+          </button>
+        </div>
+        <div className="rounded-md border border-base-300/50 bg-base-100/70 p-3">
+          <textarea
+            value={agentSystemPrompt}
+            onChange={(event) => setSetting("agentSystemPrompt", event.currentTarget.value)}
+            className="textarea textarea-bordered min-h-72 w-full resize-y bg-base-100 font-mono text-xs leading-relaxed"
+            spellCheck={false}
+          />
+          <p className="mt-2 text-xs leading-snug text-base-content/40">
+            This text is prepended to the current problem, student code, visible cases, latest failures, and notes.
+          </p>
+        </div>
       </section>
     </div>
   );
@@ -547,6 +606,7 @@ export function SettingsPage() {
 
   const navItems = [
     { key: "editor" as const, label: "Editor", icon: Code2 },
+    { key: "agent" as const, label: "Agent", icon: BotMessageSquare },
     { key: "practice" as const, label: "Practice", icon: Dumbbell },
     { key: "data" as const, label: "Data", icon: Database },
     { key: "shortcuts" as const, label: "Shortcuts", icon: Keyboard },
@@ -576,6 +636,7 @@ export function SettingsPage() {
 
       <main className="min-w-0 flex-1 overflow-y-auto px-8 py-6">
         {tab === "editor" && <EditorTab />}
+        {tab === "agent" && <AgentTab />}
         {tab === "practice" && <PracticeTab />}
         {tab === "data" && <DataTab />}
         {tab === "shortcuts" && <ShortcutsTab />}
