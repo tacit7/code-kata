@@ -53,6 +53,20 @@ export function closeTerminal(terminalId: number): Promise<void> {
   return invoke("close_terminal", { terminalId });
 }
 
+export function retainAsyncUnlisten(
+  promise: Promise<() => void>,
+  setUnlisten: (unlisten: () => void) => void,
+  isDisposed: () => boolean,
+): void {
+  void promise.then((unlisten) => {
+    if (isDisposed()) {
+      unlisten();
+      return;
+    }
+    setUnlisten(unlisten);
+  });
+}
+
 export function shouldForwardTerminalResize(
   previous: TerminalSize | null,
   next: TerminalSize,

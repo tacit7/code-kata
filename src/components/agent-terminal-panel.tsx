@@ -8,6 +8,7 @@ import { BotMessageSquare, Code2, Maximize2, Minimize2, Monitor, RotateCcw, X } 
 import {
   closeTerminal,
   bracketedPaste,
+  retainAsyncUnlisten,
   resizeTerminal,
   shouldForwardTerminalResize,
   spawnTerminal,
@@ -224,10 +225,11 @@ export const AgentTerminalPanel = forwardRef<AgentTerminalPanelHandle, AgentTerm
   }, [fit, terminalFontFamily, terminalFontSize, maximized]);
 
   useEffect(() => {
+    let disposed = false;
     let unlistenOutput: (() => void) | null = null;
     let unlistenExit: (() => void) | null = null;
 
-    void listen<TerminalOutputPayload>("terminal-output", (event) => {
+    retainAsyncUnlisten(listen<TerminalOutputPayload>("terminal-output", (event) => {
       const terminalId = terminalIdRef.current;
       if (terminalId == null) {
         const chunks = outputBufferRef.current.get(event.payload.terminalId) ?? [];
@@ -238,11 +240,9 @@ export const AgentTerminalPanel = forwardRef<AgentTerminalPanelHandle, AgentTerm
       if (event.payload.terminalId === terminalId) {
         termRef.current?.write(new Uint8Array(event.payload.data));
       }
-    }).then((fn) => {
-      unlistenOutput = fn;
-    });
+    }), (fn) => { unlistenOutput = fn; }, () => disposed);
 
-    void listen<TerminalExitPayload>("terminal-exit", (event) => {
+    retainAsyncUnlisten(listen<TerminalExitPayload>("terminal-exit", (event) => {
       if (event.payload.terminalId !== terminalIdRef.current) return;
       terminalIdRef.current = null;
       lastSizeRef.current = null;
@@ -250,11 +250,10 @@ export const AgentTerminalPanel = forwardRef<AgentTerminalPanelHandle, AgentTerm
       setStatus("exited");
       termRef.current?.writeln("");
       termRef.current?.writeln("[process exited]");
-    }).then((fn) => {
-      unlistenExit = fn;
-    });
+    }), (fn) => { unlistenExit = fn; }, () => disposed);
 
     return () => {
+      disposed = true;
       unlistenOutput?.();
       unlistenExit?.();
     };

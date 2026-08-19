@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { bracketedPaste, shouldForwardTerminalResize } from "./terminal-pty";
+import { bracketedPaste, retainAsyncUnlisten, shouldForwardTerminalResize } from "./terminal-pty";
 
 describe("shouldForwardTerminalResize", () => {
   it("forwards the first valid resize", () => {
@@ -22,5 +22,32 @@ describe("shouldForwardTerminalResize", () => {
 
   it("wraps pasted text in bracketed paste mode", () => {
     expect(bracketedPaste("line 1\r\nline 2\rline 3")).toBe("\x1b[200~line 1\nline 2\nline 3\x1b[201~");
+  });
+
+  it("unlistens when async listener registration resolves after disposal", async () => {
+    let disposed = true;
+    let unlistenCalled = 0;
+    let retained: (() => void) | null = null;
+
+    retainAsyncUnlisten(
+      Promise.resolve(() => { unlistenCalled += 1; }),
+      (unlisten) => { retained = unlisten; },
+      () => disposed,
+    );
+    await Promise.resolve();
+
+    expect(unlistenCalled).toBe(1);
+    expect(retained).toBeNull();
+
+    disposed = false;
+    retainAsyncUnlisten(
+      Promise.resolve(() => { unlistenCalled += 1; }),
+      (unlisten) => { retained = unlisten; },
+      () => disposed,
+    );
+    await Promise.resolve();
+
+    expect(unlistenCalled).toBe(1);
+    expect(retained).not.toBeNull();
   });
 });
