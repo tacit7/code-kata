@@ -294,17 +294,17 @@ export const AgentTerminalPanel = forwardRef<AgentTerminalPanelHandle, AgentTerm
 
   return (
     <div className="flex-1 min-h-0 flex flex-col bg-base-100">
-      <div className="flex items-center border-b border-base-300/60 bg-base-200 px-3 py-2 shrink-0">
+      <div className="flex items-center border-b border-base-300/60 bg-base-200 px-3 py-1 shrink-0">
         <button
           onClick={onClose}
-          className="mr-2 flex size-3.5 items-center justify-center rounded-full bg-error/70 text-error-content/80 transition-colors hover:bg-error hover:text-error-content"
+          className="text-xs text-base-content/30 hover:text-base-content/60 transition-colors mr-2"
           title="Close terminal"
           aria-label="Close terminal"
         >
-          <X size={10} strokeWidth={3} />
+          <X size={16} />
         </button>
         <div className="flex items-center text-xs">
-          <span className="font-medium text-base-content/75">{labelFor(activeKind)}</span>
+          <span className="text-base-content/45">{labelFor(activeKind)}</span>
         </div>
         <div className="ml-4 flex items-center gap-1">
           <button
