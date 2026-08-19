@@ -72,6 +72,7 @@ the current UI/product cleanup workstream.
 | Added embedded agent terminal panel | Done | The problem page can open an xterm.js PTY panel and launch Shell, Claude, or Codex. |
 | Added Send to Terminal prompt action | Done | When the terminal is open, the toolbar shows `Send ->` to paste the current agent prompt into the terminal without submitting it. |
 | Polished embedded terminal styling | Done | Terminal panes now use editor font settings, a darker integrated surface, scoped xterm styling, and a taller default pane. |
+| Matched EITS terminal visual style | Done | The embedded terminal now uses zinc terminal chrome, the EITS ANSI palette, calmer controls, and clickable web links. |
 
 ## Session Results
 
