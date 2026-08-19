@@ -2,7 +2,7 @@ import type { SeedKata } from "../types/editor";
 
 export const sampleKatas: SeedKata[] = [
   {
-    name: "Kadane's Algorithm",
+    name: "Maximum Subarray",
     category: "1-d-dp",
     language: "javascript",
     difficulty: "medium",
@@ -45,8 +45,8 @@ function test_mixed_with_positive_end() {
 
   return maxSum;
 }`,
-    usage: `Kadane's Algorithm solves the maximum subarray problem in O(n) time by maintaining a running sum and resetting it when it drops below zero. Its most direct real-world application is in quantitative finance: traders use the maximum subarray pattern on daily profit/loss arrays to identify the most profitable contiguous trading window, which is exactly how you determine the optimal buy and sell dates for a stock. Signal processing systems apply the same logic to find the strongest contiguous signal burst in noisy data. Genomic analysis tools use maximum subarray variants to locate regions of a DNA sequence with the highest concentration of a particular nucleotide pattern. In interviews at trading firms like Jane Street, Citadel, and Two Sigma, Kadane's Algorithm frequently appears both in its pure form and as the core idea behind more complex problems involving 2D matrices or circular arrays.`,
-    tags: ["dynamic-programming","greedy"],
+    usage: `Maximum Subarray solves the maximum subarray problem in O(n) time by maintaining a running sum and resetting it when it drops below zero. Its most direct real-world application is in quantitative finance: traders use the maximum subarray pattern on daily profit/loss arrays to identify the most profitable contiguous trading window, which is exactly how you determine the optimal buy and sell dates for a stock. Signal processing systems apply the same logic to find the strongest contiguous signal burst in noisy data. Genomic analysis tools use maximum subarray variants to locate regions of a DNA sequence with the highest concentration of a particular nucleotide pattern. In interviews at trading firms like Jane Street, Citadel, and Two Sigma, Maximum Subarray frequently appears both in its pure form and as the core idea behind more complex problems involving 2D matrices or circular arrays.`,
+    tags: ["dynamic-programming", "greedy", "neetcode"],
   },
   {
     name: "Climbing Stairs",
@@ -144,7 +144,7 @@ function test_longer_strings() {
   return dp[m][n];
 }`,
     usage: `Longest Common Subsequence is the 2D dynamic programming problem that powers the diff tools developers use every day. Git's diff engine is built on the Myers diff algorithm, which is fundamentally an optimization of the LCS problem: finding the longest common subsequence between two file versions is equivalent to finding the minimal edit script (the fewest insertions and deletions) to transform one into the other. GNU diff, Google's diff-match-patch library, and every code review tool from GitHub's pull request view to VS Code's inline diff all rely on LCS variants. Beyond version control, LCS is used in bioinformatics to align DNA and protein sequences, measuring genetic similarity between organisms; tools like BLAST and FASTA use heuristic versions of sequence alignment rooted in LCS. Plagiarism detection systems compare document subsequences to identify copied passages. In interviews at companies like Google, Microsoft, and Palantir, LCS is a standard 2D DP problem that tests whether candidates can define the recurrence relation, build the DP table, and optionally reconstruct the actual subsequence via backtracking through the table.`,
-    tags: ["dynamic-programming","string"],
+    tags: ["dynamic-programming", "string", "neetcode"],
   },
   {
     name: "Topological Sort",
@@ -204,7 +204,7 @@ function test_no_edges() {
   return order;
 }`,
     usage: `Topological sort is the algorithm that makes modern software build systems, package managers, and data pipelines possible by resolving dependency order in directed acyclic graphs. Build tools like Make, Bazel, Gradle, and webpack use topological sort to determine compilation order: webpack builds a module dependency graph from import statements and topologically sorts it to ensure every module is bundled after its dependencies. Package managers including npm, pip, apt, and Homebrew topologically sort package dependency graphs to compute a valid installation order, and they use cycle detection (a byproduct of topological sort) to reject circular dependencies that would make installation impossible. Apache Airflow and other workflow orchestrators topologically sort task DAGs to schedule data pipeline stages, ensuring that ETL extraction completes before transformation, and transformation before loading. Spreadsheet engines like Excel and Google Sheets use topological sort on cell dependency graphs to determine recalculation order when a cell value changes, propagating updates only to downstream dependents. University course prerequisite systems, CI/CD pipeline stages, and database migration runners all rely on topological ordering. In interviews, topological sort appears in course-schedule and alien-dictionary problems, tested heavily at Google, Amazon, and Uber, where both Kahn's algorithm (BFS-based) and DFS-based approaches are expected.`,
-    tags: ["graph","topological-sort"],
+    tags: ["graph", "topological-sort", "neetcode"],
   },
   {
     name: "Union Find",
@@ -295,7 +295,7 @@ function test_self_connected() {
   }
 }`,
     usage: `Union-Find, also called disjoint set union, is the go-to data structure for dynamic connectivity queries, and it powers algorithms across networking, image processing, and physics simulation. Kruskal's minimum spanning tree algorithm, used by cable and telecom companies to design cost-optimal network topologies, relies on Union-Find to check whether adding an edge would create a cycle. In image processing, connected-component labeling for object detection in OpenCV uses union-find to group adjacent pixels of similar color into regions. Percolation simulation, used in materials science and epidemiology to model how substances or diseases spread through porous media or populations, is classically solved with union-find as taught in Princeton's Algorithms course by Sedgewick. Social network platforms use union-find to compute connected components for friend-of-friend suggestions and community detection. The near-constant amortized time per operation via path compression and union by rank makes it practical for graphs with millions of nodes. Interviewers at Google, Meta, and Uber ask union-find problems to test whether candidates can recognize connectivity patterns and apply the right data structure instead of brute-force BFS/DFS.`,
-    tags: ["graph","disjoint-set"],
+    tags: ["graph", "disjoint-set", "neetcode"],
   },
   {
     name: "Two Sum",
@@ -482,7 +482,7 @@ function test_numbers() {
   return maxKey;
 }`,
     usage: `Finding the most frequent element, the statistical mode, is a core operation in recommendation engines, anomaly detection, and business intelligence. Amazon's "customers also bought" feature and Spotify's genre-classification logic both start with frequency analysis of user interaction events to surface the dominant patterns. In network monitoring, identifying the most frequent source IP in a traffic log is a standard technique for detecting scanning attacks or misconfigured clients. Log aggregation tools like Splunk and Datadog surface the most frequent error messages, status codes, and endpoint paths to help engineers triage incidents quickly. In machine learning, mode imputation fills missing categorical values with the most frequent observed category, a preprocessing step used in scikit-learn's SimpleImputer. This problem tests whether a candidate can combine hash-map counting with a single-pass max-tracking step, and it appears regularly at companies like Meta and Google where analytics-heavy codebases make frequency analysis second nature.`,
-    tags: ["hash-map","counting"],
+    tags: ["hash-map", "counting", "neetcode"],
   },
   {
     name: "Merge Sort",
@@ -673,12 +673,12 @@ function quickSort(arr) {
     tags: ["divide-and-conquer","sorting","recursion"],
   },
   {
-    name: "Build Prefix Sum",
+    name: "Prefix Sum Table",
     category: "arrays",
     language: "javascript",
     difficulty: "easy",
     description:
-      "Build a prefix sum array from an input array of numbers. The prefix array has length n+1 where prefix[0] = 0 and prefix[i+1] = prefix[i] + nums[i]. This enables O(1) range sum queries.\n\nExample 1:\n  Input: nums = [1, 2, 3, 4]\n  Output: [0, 1, 3, 6, 10]\n\nExample 2:\n  Input: nums = [5, -1, 3]\n  Output: [0, 5, 4, 7]\n\nExample 3:\n  Input: nums = []\n  Output: [0]\n\nRef: LeetCode #1480 Running Sum of 1d Array",
+      "Build a prefix sum table from an input array of numbers. The table has length n+1 where prefix[0] = 0 and prefix[i+1] = prefix[i] + nums[i]. This enables O(1) range sum queries.\n\nExample 1:\n  Input: nums = [1, 2, 3, 4]\n  Output: [0, 1, 3, 6, 10]\n\nExample 2:\n  Input: nums = [5, -1, 3]\n  Output: [0, 5, 4, 7]\n\nExample 3:\n  Input: nums = []\n  Output: [0]",
     code: `function buildPrefixSum(nums) {
   // your code here
 }`,
@@ -706,6 +706,43 @@ function test_negatives() {
 }`,
     usage: `Building a prefix sum array is a preprocessing technique that trades O(n) setup time for O(1) range sum queries, and it is one of the most broadly applied patterns in production systems. Database engines like ClickHouse and Apache Druid use prefix sum structures internally to accelerate aggregate queries over time-series data. Analytics dashboards that display cumulative metrics, such as running revenue totals or cumulative user counts, compute prefix sums over their underlying datasets. In competitive programming and USACO-style contests, prefix sums are considered a fundamental silver-level technique. Game engines use 2D prefix sums for fast region queries in tile-based maps. The pattern also appears in image processing as integral images (summed-area tables), a technique used in OpenCV's Viola-Jones face detection algorithm to rapidly compute Haar-like features over arbitrary rectangular regions.`,
     tags: ["prefix-sum"],
+  },
+  {
+    name: "Running Sum of 1d Array",
+    category: "arrays",
+    language: "javascript",
+    difficulty: "easy",
+    description:
+      "Given an array of integers, return a new array where each position contains the sum of all input values from index 0 through that position.\n\nExample 1:\n  Input: nums = [1, 2, 3, 4]\n  Output: [1, 3, 6, 10]\n\nExample 2:\n  Input: nums = [1, 1, 1, 1, 1]\n  Output: [1, 2, 3, 4, 5]\n\nExample 3:\n  Input: nums = [3, 1, 2, 10, 1]\n  Output: [3, 4, 6, 16, 17]\n\nRef: LeetCode #1480 Running Sum of 1d Array",
+    code: `function runningSum(nums) {
+  // your code here
+}`,
+    testCode: `function test_basic() {
+  assertEqual(runningSum([1, 2, 3, 4]), [1, 3, 6, 10]);
+}
+
+function test_all_ones() {
+  assertEqual(runningSum([1, 1, 1, 1, 1]), [1, 2, 3, 4, 5]);
+}
+
+function test_mixed_values() {
+  assertEqual(runningSum([3, 1, 2, 10, 1]), [3, 4, 6, 16, 17]);
+}
+
+function test_with_negatives() {
+  assertEqual(runningSum([4, -2, 7]), [4, 2, 9]);
+}`,
+    solution: `function runningSum(nums) {
+  const result = [];
+  let total = 0;
+  for (const num of nums) {
+    total += num;
+    result.push(total);
+  }
+  return result;
+}`,
+    usage: `Running sums are the direct cumulative form of prefix sums. They show up in dashboards, financial reports, telemetry counters, and streaming metrics where each point represents the total so far rather than an independent value.`,
+    tags: ["prefix-sum", "arrays-hashing"],
   },
   {
     name: "Range Sum Query",
@@ -814,7 +851,7 @@ function test_four_elements_count() {
   return result;
 }`,
     usage: `Permutation generation via backtracking is foundational in systems that must evaluate all possible orderings of a set. The most concrete industrial application is in relational database query optimizers: PostgreSQL's planner exhaustively evaluates all join-order permutations for queries involving up to about 12 tables using dynamic programming, switching to a genetic algorithm only when the combinatorial explosion becomes prohibitive. Beyond databases, permutation enumeration powers the AES cipher's internal substitution-permutation network, scheduling engines that must find optimal task orderings, and evolutionary algorithms for combinatorial optimization problems like the Traveling Salesman Problem. In interviews at companies like Google, Meta, and Amazon, generating permutations is a canonical backtracking problem that tests whether a candidate can manage state correctly during recursive exploration and prune the search space when constraints are added.`,
-    tags: ["backtracking","recursion"],
+    tags: ["backtracking", "recursion", "neetcode"],
   },
   {
     name: "Subsets",
@@ -871,7 +908,163 @@ function test_four_elements_count() {
   return result;
 }`,
     usage: `Subset generation, also known as power set construction, appears wherever a system must evaluate every possible combination of elements. In compiler design and automata theory, the subset construction algorithm (also called powerset construction) converts nondeterministic finite automata into deterministic ones, a step that underpins regex engines in languages like Python, Java, and Go. Machine learning feature selection relies on evaluating subsets of input features to find the combination that yields the best model performance; scikit-learn's exhaustive feature selection does exactly this. Database query planners similarly consider subsets of indexes and columns when optimizing execution plans. The pattern also drives combinatorial optimization problems like the 0/1 knapsack. In coding interviews, subsets is a high-frequency problem at companies like Amazon and Microsoft because it tests the candidate's understanding of recursion, bit manipulation (the bitmask approach maps each integer from 0 to 2^n-1 to a unique subset), and backtracking.`,
-    tags: ["backtracking","recursion"],
+    tags: ["backtracking", "recursion", "neetcode"],
+  },
+  {
+    name: "Combination Sum II",
+    category: "backtracking",
+    language: "javascript",
+    difficulty: "medium",
+    description:
+      "Given an array of candidate numbers and a target, return every unique combination where the chosen numbers sum to the target. Each input number may be used at most once. The input can contain duplicates, but the output must not contain duplicate combinations.\n\nExample 1:\n  Input: candidates = [10,1,2,7,6,1,5], target = 8\n  Output: [[1,1,6],[1,2,5],[1,7],[2,6]]\n\nExample 2:\n  Input: candidates = [2,5,2,1,2], target = 5\n  Output: [[1,2,2],[5]]\n\nConstraints:\n- 1 <= candidates.length <= 100\n- 1 <= candidates[i] <= 50\n- 1 <= target <= 30\n\nRef: LeetCode #40 Combination Sum II",
+    code: `function combinationSum2(candidates, target) {
+  // your code here
+}`,
+    testCode: `function normalize(combinations) {
+  return combinations
+    .map((combo) => JSON.stringify([...combo].sort((a, b) => a - b)))
+    .sort();
+}
+
+function test_basic() {
+  const result = combinationSum2([10, 1, 2, 7, 6, 1, 5], 8);
+  const expected = [[1,1,6], [1,2,5], [1,7], [2,6]];
+  assertEqual(normalize(result), normalize(expected), "returns all unique combinations");
+}
+
+function test_duplicates() {
+  const result = combinationSum2([2, 5, 2, 1, 2], 5);
+  const expected = [[1,2,2], [5]];
+  assertEqual(normalize(result), normalize(expected), "handles duplicate candidates");
+}
+
+function test_no_result() {
+  assertEqual(combinationSum2([1, 1], 5), [], "returns empty array when no combination works");
+}
+
+function test_single() {
+  assertEqual(combinationSum2([1], 1), [[1]], "single exact match");
+}`,
+    solution: `function combinationSum2(candidates, target) {
+  candidates.sort((a, b) => a - b);
+  const result = [];
+
+  function backtrack(start, current, remaining) {
+    if (remaining === 0) {
+      result.push([...current]);
+      return;
+    }
+
+    for (let i = start; i < candidates.length; i++) {
+      if (candidates[i] > remaining) break;
+      if (i > start && candidates[i] === candidates[i - 1]) continue;
+
+      current.push(candidates[i]);
+      backtrack(i + 1, current, remaining - candidates[i]);
+      current.pop();
+    }
+  }
+
+  backtrack(0, [], target);
+  return result;
+}`,
+    solutionVariants: [
+      {
+        label: "Sorted loop + skip duplicates",
+        code: `function combinationSum2(candidates, target) {
+  candidates.sort((a, b) => a - b);
+  const result = [];
+
+  function backtrack(start, current, remaining) {
+    if (remaining === 0) {
+      result.push([...current]);
+      return;
+    }
+
+    for (let i = start; i < candidates.length; i++) {
+      if (candidates[i] > remaining) break;
+      if (i > start && candidates[i] === candidates[i - 1]) continue;
+
+      current.push(candidates[i]);
+      backtrack(i + 1, current, remaining - candidates[i]);
+      current.pop();
+    }
+  }
+
+  backtrack(0, [], target);
+  return result;
+}`,
+        complexity: "Time O(2^n * n), Space O(n)",
+        explanation:
+          "Sorts first, then skips equal candidates at the same recursion depth so each unique combination is emitted once.",
+      },
+      {
+        label: "Frequency counts",
+        code: `function combinationSum2(candidates, target) {
+  const counts = [...candidates.reduce((map, value) => {
+    map.set(value, (map.get(value) ?? 0) + 1);
+    return map;
+  }, new Map()).entries()].sort((a, b) => a[0] - b[0]);
+  const result = [];
+
+  function backtrack(index, current, remaining) {
+    if (remaining === 0) {
+      result.push([...current]);
+      return;
+    }
+    if (index === counts.length || remaining < 0) return;
+
+    const [value, count] = counts[index];
+    const maxTake = Math.min(count, Math.floor(remaining / value));
+    for (let take = 0; take <= maxTake; take++) {
+      for (let i = 0; i < take; i++) current.push(value);
+      backtrack(index + 1, current, remaining - value * take);
+      for (let i = 0; i < take; i++) current.pop();
+    }
+  }
+
+  backtrack(0, [], target);
+  return result;
+}`,
+        complexity: "Time O(Π(countᵢ + 1) * n), Space O(u + n)",
+        explanation:
+          "Groups duplicates first, then chooses how many copies of each distinct value to take.",
+      },
+      {
+        label: "Include/exclude duplicates",
+        code: `function combinationSum2(candidates, target) {
+  candidates.sort((a, b) => a - b);
+  const result = [];
+
+  function dfs(index, current, remaining) {
+    if (remaining === 0) {
+      result.push([...current]);
+      return;
+    }
+    if (index === candidates.length || remaining < 0) return;
+
+    const value = candidates[index];
+    current.push(value);
+    dfs(index + 1, current, remaining - value);
+    current.pop();
+
+    let nextIndex = index + 1;
+    while (nextIndex < candidates.length && candidates[nextIndex] === value) {
+      nextIndex++;
+    }
+    dfs(nextIndex, current, remaining);
+  }
+
+  dfs(0, [], target);
+  return result;
+}`,
+        complexity: "Time O(2^n * n), Space O(n)",
+        explanation:
+          "Branches into take-current or skip-all-copies-of-current; skipping all duplicates prevents repeated combinations.",
+      },
+    ],
+    usage: null,
+    tags: ["backtracking", "recursion", "neetcode"],
   },
   {
     name: "Binary Search",
@@ -931,12 +1124,12 @@ function test_single_not_found() {
     tags: ["binary-search", "divide-and-conquer", "neetcode"],
   },
   {
-    name: "Binary Search Find First",
+    name: "Find First Occurrence in Sorted Array",
     category: "binary-search",
     language: "javascript",
     difficulty: "medium",
     description:
-      "Given a sorted array that may contain duplicates, find the index of the first occurrence of the target value. Use binary search; when the target is found, record the index and continue searching left to find an earlier occurrence. Return -1 if the target is not in the array.\n\nExample 1:\n  Input: nums = [1, 2, 2, 2, 3, 4], target = 2\n  Output: 1\n\nExample 2:\n  Input: nums = [1, 1, 1, 1], target = 1\n  Output: 0\n\nExample 3:\n  Input: nums = [1, 3, 5, 7], target = 4\n  Output: -1\n\nRef: LeetCode #34 Find First and Last Position of Element in Sorted Array",
+      "Given a sorted array that may contain duplicates, find the index of the first occurrence of the target value. Use binary search; when the target is found, record the index and continue searching left to find an earlier occurrence. Return -1 if the target is not in the array.\n\nExample 1:\n  Input: nums = [1, 2, 2, 2, 3, 4], target = 2\n  Output: 1\n\nExample 2:\n  Input: nums = [1, 1, 1, 1], target = 1\n  Output: 0\n\nExample 3:\n  Input: nums = [1, 3, 5, 7], target = 4\n  Output: -1",
     code: `function findFirst(nums, target) {
   // your code here
 }`,
@@ -986,12 +1179,12 @@ function test_at_start() {
     tags: ["binary-search"],
   },
   {
-    name: "Binary Search Find Last",
+    name: "Find Last Occurrence in Sorted Array",
     category: "binary-search",
     language: "javascript",
     difficulty: "medium",
     description:
-      "Given a sorted array that may contain duplicates, find the index of the last occurrence of the target value. Use binary search; when the target is found, record the index and continue searching right to find a later occurrence. Return -1 if the target is not in the array.\n\nExample 1:\n  Input: nums = [1, 2, 2, 2, 3, 4], target = 2\n  Output: 3\n\nExample 2:\n  Input: nums = [1, 1, 1, 1], target = 1\n  Output: 3\n\nExample 3:\n  Input: nums = [1, 3, 5, 7], target = 6\n  Output: -1\n\nRef: LeetCode #34 Find First and Last Position of Element in Sorted Array",
+      "Given a sorted array that may contain duplicates, find the index of the last occurrence of the target value. Use binary search; when the target is found, record the index and continue searching right to find a later occurrence. Return -1 if the target is not in the array.\n\nExample 1:\n  Input: nums = [1, 2, 2, 2, 3, 4], target = 2\n  Output: 3\n\nExample 2:\n  Input: nums = [1, 1, 1, 1], target = 1\n  Output: 3\n\nExample 3:\n  Input: nums = [1, 3, 5, 7], target = 6\n  Output: -1",
     code: `function findLast(nums, target) {
   // your code here
 }`,
@@ -1041,7 +1234,124 @@ function test_at_end() {
     tags: ["binary-search"],
   },
   {
-    name: "Single Number XOR",
+    name: "Find First and Last Position of Element in Sorted Array",
+    category: "binary-search",
+    language: "javascript",
+    difficulty: "medium",
+    description:
+      "Given an integer array nums sorted in non-decreasing order, return the starting and ending index of target. If target does not appear, return [-1, -1]. Your algorithm must run in O(log n) time.\n\nExample 1:\n  Input: nums = [5,7,7,8,8,10], target = 8\n  Output: [3,4]\n\nExample 2:\n  Input: nums = [1], target = 1\n  Output: [0,0]\n\nExample 3:\n  Input: nums = [5,7,7,8,8,10], target = 6\n  Output: [-1,-1]\n\nConstraints:\n- 0 <= nums.length <= 100000\n- -1000000000 <= nums[i], target <= 1000000000\n- nums is sorted in non-decreasing order.\n\nRef: LeetCode #34 Find First and Last Position of Element in Sorted Array",
+    code: `function searchRange(nums, target) {
+  // your code here
+}`,
+    testCode: `function test_duplicate_range() {
+  assertEqual(searchRange([5, 7, 7, 8, 8, 10], 8), [3, 4], "finds first and last duplicate positions");
+}
+
+function test_single_element_found() {
+  assertEqual(searchRange([1], 1), [0, 0], "single matching element");
+}
+
+function test_not_found() {
+  assertEqual(searchRange([5, 7, 7, 8, 8, 10], 6), [-1, -1], "target missing");
+}
+
+function test_empty() {
+  assertEqual(searchRange([], 1), [-1, -1], "empty array");
+}
+
+function test_single_occurrence_inside_duplicates() {
+  assertEqual(searchRange([1, 2, 2, 3, 4, 4, 5], 3), [3, 3], "single occurrence in the middle");
+}`,
+    solution: `function searchRange(nums, target) {
+  function boundary(findFirst) {
+    let lo = 0;
+    let hi = nums.length - 1;
+    let result = -1;
+
+    while (lo <= hi) {
+      const mid = Math.floor((lo + hi) / 2);
+      if (nums[mid] === target) {
+        result = mid;
+        if (findFirst) {
+          hi = mid - 1;
+        } else {
+          lo = mid + 1;
+        }
+      } else if (nums[mid] < target) {
+        lo = mid + 1;
+      } else {
+        hi = mid - 1;
+      }
+    }
+
+    return result;
+  }
+
+  return [boundary(true), boundary(false)];
+}`,
+    solutionVariants: [
+      {
+        label: "Two boundary searches",
+        code: `function searchRange(nums, target) {
+  function boundary(findFirst) {
+    let lo = 0;
+    let hi = nums.length - 1;
+    let result = -1;
+
+    while (lo <= hi) {
+      const mid = Math.floor((lo + hi) / 2);
+      if (nums[mid] === target) {
+        result = mid;
+        if (findFirst) {
+          hi = mid - 1;
+        } else {
+          lo = mid + 1;
+        }
+      } else if (nums[mid] < target) {
+        lo = mid + 1;
+      } else {
+        hi = mid - 1;
+      }
+    }
+
+    return result;
+  }
+
+  return [boundary(true), boundary(false)];
+}`,
+        complexity: "Time: O(log n), Space: O(1)",
+        explanation: "Runs one modified binary search for the left boundary and one for the right boundary.",
+      },
+      {
+        label: "Lower bounds",
+        code: `function searchRange(nums, target) {
+  function lowerBound(value) {
+    let lo = 0;
+    let hi = nums.length;
+    while (lo < hi) {
+      const mid = Math.floor((lo + hi) / 2);
+      if (nums[mid] < value) {
+        lo = mid + 1;
+      } else {
+        hi = mid;
+      }
+    }
+    return lo;
+  }
+
+  const first = lowerBound(target);
+  if (first === nums.length || nums[first] !== target) return [-1, -1];
+  return [first, lowerBound(target + 1) - 1];
+}`,
+        complexity: "Time: O(log n), Space: O(1)",
+        explanation: "Finds the first index >= target and the first index > target, then converts them into the closed range.",
+      },
+    ],
+    usage: `Finding both boundaries of a target value is the range-query form of binary search. Databases use equivalent lower-bound and upper-bound searches to turn an equality predicate on a sorted index into the exact contiguous span of matching rows. The key interview skill is keeping the runtime logarithmic while handling missing targets, singleton matches, and duplicate runs without scanning outward linearly.`,
+    tags: ["binary-search"],
+  },
+  {
+    name: "Single Number",
     category: "bit-manipulation",
     language: "javascript",
     difficulty: "easy",
@@ -1073,10 +1383,10 @@ function test_larger_values() {
   return result;
 }`,
     usage: `XOR-based duplicate detection exploits the property that a XOR a equals zero and a XOR 0 equals a, meaning XORing all elements in an array where every number appears twice except one will isolate the unique number in O(n) time and O(1) space. This bit manipulation technique is not merely an interview curiosity; it has deep practical roots. RAID 5 and RAID 6 storage systems use XOR to compute parity across disk stripes, enabling data reconstruction when a drive fails. Network protocols use XOR-based checksums for error detection in transmitted packets; TCP and UDP both incorporate XOR in their checksum computations. Hamming error-correcting codes use XOR to both detect and pinpoint single-bit errors in memory (ECC RAM). The pattern also appears in simple stream ciphers where plaintext is XORed with a key stream. In interviews at systems-focused companies like Apple, Nvidia, and embedded-systems firms, the single-number XOR problem tests whether candidates understand bitwise operations and can reason about algebraic properties of XOR.`,
-    tags: ["bit-manipulation","xor"],
+    tags: ["bit-manipulation", "xor", "neetcode"],
   },
   {
-    name: "Count Set Bits",
+    name: "Number of 1 Bits",
     category: "bit-manipulation",
     language: "javascript",
     difficulty: "easy",
@@ -1121,15 +1431,15 @@ function test_ten_bits() {
   return count;
 }`,
     usage: `Counting set bits, also called Hamming weight or population count, determines how many 1-bits are in an integer's binary representation. Modern CPUs provide hardware instructions for this: Intel's POPCNT (introduced with Nehalem in 2008), AMD's equivalent in SSE4a, and ARM's VCNT in NEON extensions. The NSA reportedly requested Cray add a population count instruction to early supercomputers specifically for cryptanalysis. In chess engines like Stockfish, bitboards represent the board state as 64-bit integers, and popcount calculates the number of pieces, attacked squares, or mobility from these bitboards, making it a performance-critical operation called millions of times per second. In networking, Hamming weight computes the number of hosts in a subnet from a subnet mask. RSA encryption implementations choose public exponents with low Hamming weight (like 65537, which has only two set bits) to minimize the number of modular multiplications during encryption. Biometric systems compute Hamming distance between IrisCodes by XORing two codes and counting the set bits in the result. In interviews, this problem tests knowledge of Brian Kernighan's bit trick (n & (n-1) clears the lowest set bit) and whether candidates are aware of hardware-level optimizations.`,
-    tags: ["bit-manipulation"],
+    tags: ["bit-manipulation", "neetcode"],
   },
   {
-    name: "Matrix BFS",
+    name: "Matrix BFS With Walls",
     category: "graphs",
     language: "javascript",
     difficulty: "medium",
     description:
-      "Given a 2D grid of 0s and 1s and a starting [row, col] position, return an array of [row, col] positions visited in BFS order. 0 means passable, 1 means wall. Only move in the four cardinal directions (up, down, left, right). Do not revisit cells or pass through walls.\n\nExample 1:\n  Input: grid = [\n    [0, 0, 0],\n    [0, 1, 0],\n    [0, 0, 0]\n  ], start = [0, 0]\n  Output: [[0,0], [0,1], [1,0], [0,2], [2,0], [1,2], [2,1], [2,2]]\n\nExample 2:\n  Input: grid = [\n    [0, 1],\n    [0, 0]\n  ], start = [0, 0]\n  Output: [[0,0], [1,0], [1,1]]\n\nExample 3:\n  Input: grid = [[0]], start = [0, 0]\n  Output: [[0,0]]\n\nRef: LeetCode #1091 Shortest Path in Binary Matrix",
+      "Given a 2D grid of 0s and 1s and a starting [row, col] position, return an array of [row, col] positions visited in BFS order. 0 means passable, 1 means wall. Only move in the four cardinal directions (up, down, left, right). Do not revisit cells or pass through walls.\n\nExample 1:\n  Input: grid = [\n    [0, 0, 0],\n    [0, 1, 0],\n    [0, 0, 0]\n  ], start = [0, 0]\n  Output: [[0,0], [0,1], [1,0], [0,2], [2,0], [1,2], [2,1], [2,2]]\n\nExample 2:\n  Input: grid = [\n    [0, 1],\n    [0, 0]\n  ], start = [0, 0]\n  Output: [[0,0], [1,0], [1,1]]\n\nExample 3:\n  Input: grid = [[0]], start = [0, 0]\n  Output: [[0,0]]",
     code: `function matrixBfs(grid, start) {
   // your code here
 }`,
@@ -1199,6 +1509,67 @@ function test_all_open_2x2() {
     tags: ["bfs","matrix"],
   },
   {
+    name: "Shortest Path in Binary Matrix",
+    category: "graphs",
+    language: "javascript",
+    difficulty: "medium",
+    description:
+      "Given an n x n binary grid, find the length of the shortest clear path from the top-left cell to the bottom-right cell. A clear cell has value 0. A blocked cell has value 1. You may move in any of the 8 directions, including diagonals. The path length counts both the starting and ending cells. Return -1 if no clear path exists.\n\nExample 1:\n  Input: grid = [[0,1],[1,0]]\n  Output: 2\n\nExample 2:\n  Input: grid = [[0,0,0],[1,1,0],[1,1,0]]\n  Output: 4\n\nExample 3:\n  Input: grid = [[1,0],[0,0]]\n  Output: -1\n\nConstraints:\n- n == grid.length == grid[i].length\n- 1 <= n <= 100\n- grid[i][j] is 0 or 1\n\nRef: LeetCode #1091 Shortest Path in Binary Matrix",
+    code: `function shortestPathBinaryMatrix(grid) {
+  // your code here
+}`,
+    testCode: `function test_diagonal_two_by_two() {
+  assertEqual(shortestPathBinaryMatrix([[0, 1], [1, 0]]), 2);
+}
+
+function test_turning_path() {
+  assertEqual(shortestPathBinaryMatrix([[0, 0, 0], [1, 1, 0], [1, 1, 0]]), 4);
+}
+
+function test_blocked_start() {
+  assertEqual(shortestPathBinaryMatrix([[1, 0], [0, 0]]), -1);
+}
+
+function test_blocked_end() {
+  assertEqual(shortestPathBinaryMatrix([[0, 0], [0, 1]]), -1);
+}
+
+function test_single_open_cell() {
+  assertEqual(shortestPathBinaryMatrix([[0]]), 1);
+}`,
+    solution: `function shortestPathBinaryMatrix(grid) {
+  const n = grid.length;
+  if (n === 0 || grid[0][0] !== 0 || grid[n - 1][n - 1] !== 0) return -1;
+
+  const directions = [
+    [-1, -1], [-1, 0], [-1, 1],
+    [0, -1],           [0, 1],
+    [1, -1],  [1, 0],  [1, 1],
+  ];
+  const queue = [[0, 0, 1]];
+  const seen = new Set(["0,0"]);
+  let head = 0;
+
+  while (head < queue.length) {
+    const [row, col, dist] = queue[head++];
+    if (row === n - 1 && col === n - 1) return dist;
+
+    for (const [dr, dc] of directions) {
+      const nr = row + dr;
+      const nc = col + dc;
+      const key = nr + "," + nc;
+      if (nr < 0 || nr >= n || nc < 0 || nc >= n || grid[nr][nc] !== 0 || seen.has(key)) continue;
+      seen.add(key);
+      queue.push([nr, nc, dist + 1]);
+    }
+  }
+
+  return -1;
+}`,
+    usage: `Shortest Path in Binary Matrix is a compact shortest-path problem for unweighted grids. It tests whether you can model each open cell as a graph node, include diagonal neighbors, and use BFS levels to return the first distance that reaches the target. The same pattern appears in routing, game maps, robotics grids, and maze-style interview problems where every move has equal cost.`,
+    tags: ["bfs","matrix"],
+  },
+  {
     name: "Graph DFS",
     category: "graphs",
     language: "javascript",
@@ -1252,7 +1623,7 @@ function test_disconnected() {
   return result;
 }`,
     usage: `Graph DFS is the workhorse algorithm behind cycle detection, topological ordering, and connectivity analysis in production systems. Deadlock detectors in operating systems and database transaction managers use DFS with back-edge detection to find cycles in resource-allocation graphs; PostgreSQL's lock manager does exactly this when checking for deadlock among concurrent transactions. Web crawlers like Googlebot use DFS-based strategies to explore link structures deeply before moving laterally, which is more memory-efficient than BFS for the scale of the web (trillions of pages). Tarjan's and Kosaraju's algorithms, both DFS-based, find strongly connected components in directed graphs, which is used by compilers to identify mutually recursive function groups, by social network platforms to detect tightly-knit communities, and by search engines to identify link-farm spam clusters. Version control systems use DFS to traverse commit DAGs when computing merge bases and reachability. In coding interviews, graph DFS is tested constantly at Google, Meta, and Amazon in problems like number-of-provinces, course-schedule (cycle detection), and clone-graph, where the key challenge is tracking visited nodes correctly across recursive calls.`,
-    tags: ["dfs","recursion"],
+    tags: ["dfs", "recursion", "neetcode"],
   },
   {
     name: "Build Adjacency List Drill",
@@ -1501,7 +1872,7 @@ function cloneGraph(node) {
       },
     ],
     usage: `Cloning a graph is the same reference-preserving deep-copy problem behind scene duplication in game engines, object graph serialization, undo snapshots, and cache-safe state transforms. The important idea is the old-to-new map: without it, cycles recurse forever and shared neighbors accidentally become duplicated instead of shared in the clone.`,
-    tags: ["graph", "dfs", "bfs", "blind75"],
+    tags: ["graph", "dfs", "bfs", "blind75", "neetcode"],
   },
   {
     name: "Matrix DFS",
@@ -1569,7 +1940,7 @@ function test_all_open_2x2() {
   return result;
 }`,
     usage: `Matrix DFS, commonly known as flood fill, is the algorithm behind the paint bucket tool in every image editor from Photoshop to GIMP, where clicking a pixel fills all connected same-colored pixels by recursively visiting neighbors. Beyond graphics, geographic information systems (GIS) like QGIS and ArcGIS use flood fill to calculate land parcel areas, delineate watershed boundaries, and measure forest coverage by treating satellite imagery pixels as grid cells and propagating through connected regions of similar classification. The island-counting variant of matrix DFS is used in medical imaging to identify and count distinct tumors or lesions in MRI scans, where each connected region of abnormal tissue intensity represents a separate finding. Game engines use matrix DFS for terrain analysis, such as determining which tiles are reachable from a given position (fog-of-war calculation) or identifying enclosed regions for area-of-effect spells. Minesweeper's cascade-reveal mechanic, where clicking an empty cell reveals all connected empty cells, is a direct implementation of matrix DFS flood fill. In interviews, matrix DFS appears as number-of-islands, surrounded-regions, and flood-fill problems, and is asked frequently at Amazon, Google, and Meta, testing your ability to handle grid boundaries, visited tracking, and four-directional or eight-directional neighbor enumeration.`,
-    tags: ["dfs","matrix","recursion"],
+    tags: ["dfs", "matrix", "recursion", "neetcode"],
   },
   {
     name: "Best Time to Buy and Sell Stock",
@@ -1625,7 +1996,7 @@ function test_two_days() {
   return maxProfit;
 }`,
     usage: `Best Time to Buy and Sell Stock is the quintessential greedy algorithm problem: track the minimum price seen so far and compute the maximum profit at each step, making the locally optimal choice without revisiting past decisions. This greedy single-pass approach runs in O(n) time and O(1) space, making it practical for real-time financial systems. Quantitative trading firms like Jane Street, Citadel, and Two Sigma use this exact pattern to compute maximum drawdown and optimal entry/exit points on streaming price data. Robinhood and other retail trading platforms display "best possible trade" metrics using the same logic. The pattern generalizes to any problem where you need to find the maximum difference between two elements where the smaller one comes first, which appears in temperature analysis, inventory pricing, and time-series anomaly detection. In interviews, this is LeetCode problem #121 and one of the most frequently asked questions at Amazon, Google, Meta, and Goldman Sachs; it tests whether candidates can recognize a greedy approach instead of reaching for O(n^2) brute force.`,
-    tags: ["greedy"],
+    tags: ["greedy", "neetcode"],
   },
   {
     name: "Min Heap",
@@ -1762,7 +2133,7 @@ function test_duplicates() {
   }
 }`,
     usage: `The min-heap is the standard implementation behind priority queues, and it is embedded in some of the most performance-critical systems in computing. Dijkstra's shortest-path algorithm, which powers routing in Google Maps, Apple Maps, and OSPF network routing protocols, requires a min-heap to efficiently extract the next closest vertex. Operating system schedulers like Linux's Completely Fair Scheduler use red-black trees (a heap-like priority structure) to pick the next process to run, and timer wheels in the kernel use min-heaps to fire the soonest-expiring timer. In event-driven simulations, discrete-event frameworks like SimPy and DESMO-J use heaps to manage the event calendar. Huffman coding for data compression in gzip and zlib builds its optimal prefix tree using a min-heap to repeatedly extract the two lowest-frequency symbols. Python's heapq module and Java's PriorityQueue are both array-backed min-heaps, and interviewers expect candidates to know the O(log n) insertion and extraction costs, plus how to use them for top-k problems, median-finding, and stream processing.`,
-    tags: ["heap"],
+    tags: ["heap", "neetcode"],
   },
   {
     name: "Merge Intervals",
@@ -1840,7 +2211,7 @@ function test_unsorted_input() {
   return merged;
 }`,
     usage: `Merge Intervals is the go-to algorithm for any system that manages overlapping time ranges, and it shows up in production code far more often than most interview problems. Google Calendar, Outlook, and every scheduling application must merge overlapping meeting blocks to compute free/busy times; this is literally the merge intervals algorithm. Operating system CPU schedulers merge overlapping process time slices to optimize resource allocation. Network bandwidth managers merge overlapping allocation windows to prevent oversubscription. In genomics, tools like BEDTools merge overlapping genomic coordinate ranges when analyzing sequencing data. Airport systems merge overlapping gate-usage intervals for conflict detection. The algorithm itself is straightforward: sort intervals by start time, then iterate and merge, yielding O(n log n) overall. It appears constantly in interviews at companies like Google, Uber, and Airbnb because it tests sorting, iteration logic, and edge-case handling with adjacent and nested intervals.`,
-    tags: ["sorting","intervals"],
+    tags: ["sorting", "intervals", "neetcode"],
   },
   {
     name: "Linked List Traversal",
@@ -1896,7 +2267,7 @@ function traverse(head) {
     tags: ["linked-list","iteration"],
   },
   {
-    name: "Reverse Linked List (Iterative)",
+    name: "Reverse Linked List",
     category: "linked-list",
     language: "javascript",
     difficulty: "medium",
@@ -1969,7 +2340,7 @@ function reverseIterative(head) {
   return prev;
 }`,
     usage: `The iterative approach to reversing a linked list is the most space-efficient method at O(1) extra memory, using only three pointers (previous, current, next) to rewire links in a single pass. This matters in production systems where memory is constrained: the Linux kernel's linked list reversal operations in network packet processing, where millions of packets per second flow through linked buffer chains, must be iterative to avoid stack overflow and minimize latency. LRU cache evictions in systems like Redis and Memcached involve pointer manipulation on doubly-linked lists that mirrors the iterative reversal pattern, moving nodes from one position to another by relinking previous and next pointers. Transaction rollback mechanisms in database engines like InnoDB reverse chains of undo log entries iteratively to restore previous row states during ROLLBACK. The iterative approach is the version interviewers at Amazon, Google, and Microsoft expect you to write first, because it demonstrates that you understand pointer manipulation without the crutch of the call stack; being able to walk through the three-pointer swap on a whiteboard is considered a baseline competency for any systems or backend engineering role.`,
-    tags: ["linked-list","iteration"],
+    tags: ["linked-list", "iteration", "neetcode"],
   },
   {
     name: "Reverse Linked List (Recursive)",
@@ -2040,7 +2411,7 @@ function reverseRecursive(head) {
   return newHead;
 }`,
     usage: `The recursive approach to reversing a linked list demonstrates mastery of recursive thinking and call-stack mechanics, which is why interviewers at companies like Google and Meta ask for both solutions. While the iterative version is more memory-efficient, the recursive approach teaches a mental model that transfers directly to harder recursive problems: reverse-nodes-in-k-group, swap-nodes-in-pairs, and reorder-list all build on the recursive reversal pattern. In functional programming languages like Haskell, Erlang, and Clojure, list reversal is inherently recursive because these languages lack mutable state and iterative loops; understanding recursive reversal is essential for working in any functional codebase. Compilers and interpreters for languages like Lisp process S-expressions (nested linked structures) recursively, and internal transformations on these structures often involve recursive reversal of sublists. The recursive approach also illustrates tail-call optimization: languages that support TCO (like Scheme and Kotlin) can compile recursive reversal into iterative machine code, eliminating the O(n) stack overhead, which is a concept tested in systems design interviews. Understanding the trade-off, O(1) space iterative versus O(n) stack space recursive, and being able to articulate when each is appropriate, signals to interviewers that you think about production constraints, not just algorithmic correctness.`,
-    tags: ["linked-list","recursion"],
+    tags: ["linked-list", "recursion", "neetcode"],
   },
   {
     name: "Linked List Cycle",
@@ -2110,7 +2481,7 @@ function hasCycle(head) {
   return false;
 }`,
     usage: `Floyd's tortoise and hare algorithm is the standard O(1)-space technique for detecting cycles in linked structures, and it shows up far beyond textbook exercises. Garbage collectors in managed runtimes like CPython's reference-counting collector use cycle detection to identify and reclaim circular reference chains that simple reference counting cannot free. The same pattern applies to deadlock detection in database transaction managers, where wait-for graphs are checked for cycles to decide which transaction to abort. Pseudorandom number generator testing relies on cycle detection to measure period length and assess generator quality, a concern for cryptographic libraries and Monte Carlo simulations alike. In distributed systems, cycle detection helps identify infinite routing loops in network protocols. This is one of the most frequently asked linked-list problems at companies like Google, Meta, and Amazon, precisely because it tests whether a candidate can move beyond the naive O(n) hash-set approach to the elegant constant-space two-pointer solution.`,
-    tags: ["linked-list","fast-slow-pointer"],
+    tags: ["linked-list", "fast-slow-pointer", "neetcode"],
   },
   {
     name: "Rotate Image",
@@ -2166,7 +2537,7 @@ function test_2x2() {
   }
 }`,
     usage: `Rotate Image is the classic math and geometry problem that tests in-place matrix manipulation using the transpose-then-reverse technique. Image processing libraries like OpenCV, Pillow, and browser Canvas APIs implement rotation as a composition of transpose and flip operations on pixel matrices, which is exactly this algorithm. Game engines like Unity and Unreal perform 2D sprite rotation and tile map transformations using matrix operations that decompose into transposition and reflection. Mobile operating systems rotate screen content when the device orientation changes, applying affine transformations that are mathematically equivalent to this 90-degree rotation. Computer vision pipelines in self-driving car systems at Waymo and Tesla apply rotation augmentations to training images to make models orientation-invariant. The transpose-then-reverse approach is optimal at O(n^2) time and O(1) extra space since every element must be moved and no auxiliary matrix is needed. In interviews at companies like Google, Amazon, and Apple, this problem tests whether candidates can decompose a complex transformation into simpler steps and manipulate 2D indices correctly without off-by-one errors.`,
-    tags: ["matrix","in-place"],
+    tags: ["matrix", "in-place", "neetcode"],
   },
   {
     name: "Sliding Window Max Sum",
@@ -2266,7 +2637,7 @@ function test_empty() {
   return stack.length === 0;
 }`,
     usage: `The balanced-parentheses stack pattern is the simplest instance of recursive-descent scope tracking, and it is the core logic inside every parser, compiler, and syntax validator you depend on. Every compiler's lexer and parser, from GCC to the V8 JavaScript engine, uses stack-based matching to validate that braces, brackets, and parentheses are properly nested before attempting to build an AST. JSON validators like JSONLint and XML parsers check that opening and closing delimiters are balanced before accepting a payload, rejecting malformed data that could crash downstream processors. IDEs like VS Code, IntelliJ, and Vim highlight matching brackets in real time using the same stack-based algorithm, and linters flag unbalanced delimiters as errors before code is even compiled. The pattern extends to HTML tag validation, template engine parsing in frameworks like Jinja2 and Handlebars, and math-expression evaluation in calculators. This is among the top-five most frequently asked interview questions across all companies because it cleanly tests stack fluency, edge-case handling for empty inputs and mismatched types, and the ability to generalize from parentheses to arbitrary delimiter pairs.`,
-    tags: ["stack","string"],
+    tags: ["stack", "string", "neetcode"],
   },
   {
     name: "Queue from Stacks",
@@ -2510,7 +2881,7 @@ function bfs(root) {
   return result;
 }`,
     usage: `Level-order traversal using BFS is how real systems process hierarchical data when depth matters. The DOM in web browsers is traversed level-by-level when computing CSS inheritance and layout reflow; React's reconciliation algorithm (the fiber tree diffing) walks the component tree in a BFS-like manner to batch updates by depth. Database query planners in systems like PostgreSQL and MySQL traverse B-tree indexes level by level to locate records, which is why B-tree lookups are O(log n) with each level representing a disk page access. Social network platforms like LinkedIn use BFS to compute degrees of connection; when LinkedIn shows you are a 2nd-degree connection to someone, that is a BFS bounded at depth 2 over their social graph. File system utilities like the Unix \`find\` command with \`-maxdepth\` use BFS to scan directory trees without descending too deep. In interviews, BFS is tested heavily at Meta, Google, and Amazon, often in variants like zigzag level-order, right-side view, or level averages, all of which require the same queue-based template with minor modifications.`,
-    tags: ["bfs","tree"],
+    tags: ["bfs", "tree", "neetcode"],
   },
   {
     name: "DFS Preorder Traversal",
@@ -2699,7 +3070,7 @@ function postorder(root) {
     tags: ["dfs","tree","recursion"],
   },
   {
-    name: "Trie",
+    name: "Implement Trie (Prefix Tree)",
     category: "tries",
     language: "javascript",
     difficulty: "medium",
@@ -2794,7 +3165,7 @@ function test_empty_trie() {
   }
 }`,
     usage: `The trie, or prefix tree, is the data structure behind autocomplete, spell-checking, and IP routing, making it one of the most commercially impactful structures in computing. Google Search processes billions of autocomplete queries daily using trie-variant structures augmented with frequency scores and personalization layers to rank prefix-matched suggestions in milliseconds. IDE code-completion engines in VS Code, IntelliJ, and Xcode maintain tries over symbol tables to offer instant suggestions as developers type. Spell-checkers in browsers, word processors, and mobile keyboards use tries to look up dictionary words and suggest corrections by exploring nearby branches for edit-distance matches. In networking, longest-prefix-match lookups in IP routing tables, the operation every router performs on every packet, are implemented with compressed tries (Patricia tries or radix trees). T9 predictive text on old phone keypads was a trie lookup. This problem is asked frequently at Google, Amazon, and Microsoft because it tests tree construction, recursive traversal, and the candidate's ability to design for prefix-based retrieval rather than exact-match hashing.`,
-    tags: ["trie"],
+    tags: ["trie", "neetcode"],
   },
   {
     name: "Two Pointer Remove Dupes",
@@ -2982,7 +3353,7 @@ function test_repeated_chars() {
   return false;
 }`,
     usage: `Permutation-in-string is the core primitive behind substring anagram search, which shows up in full-text search engines when matching morphological variants and in bioinformatics for finding sequence motifs regardless of base ordering within a window. Security tools use fixed-size sliding window frequency matching to detect scrambled signatures in network payloads. The fixed-window variant of sliding window is also the building block for DNA pattern matching tools like BLAST when searching for short-read k-mers against a reference genome.`,
-    tags: ["sliding-window", "hash-map", "strings"],
+    tags: ["sliding-window", "hash-map", "strings", "neetcode"],
   },
   {
     name: "Search a 2D Matrix",
@@ -3053,7 +3424,7 @@ function test_target_at_start() {
   return false;
 }`,
     usage: `Treating a row-sorted, globally-sorted 2D matrix as a virtual 1D array is a common pattern in database storage engines where pages of sorted records are laid out in row-major order on disk — a binary search over the page directory gives O(log n) lookup without loading every page. Embedded systems with flat memory arrays representing sensor grids use the same index math (row*cols + col) to do range searches without materializing a pointer-based structure. The technique also appears in columnar databases like Parquet where row groups are sorted, and a binary search over row-group min/max metadata allows skipping entire chunks.`,
-    tags: ["binary-search", "matrix"],
+    tags: ["binary-search", "matrix", "neetcode"],
   },
   {
     name: "Time Based Key-Value Store",
@@ -3159,7 +3530,7 @@ function test_multiple_keys() {
   }
 }`,
     usage: `Time-based key-value stores are the foundation of multi-version concurrency control (MVCC) in databases like PostgreSQL and CockroachDB, where each write creates a new version stamped with the transaction timestamp and reads binary-search for the latest version visible at a given snapshot timestamp. This same pattern appears in distributed systems like Apache Cassandra where cells carry a timestamp and reads always return the highest-timestamped value. Event-sourcing architectures use timestamp-indexed stores to reconstruct aggregate state at any point in time by seeking to the largest event timestamp not exceeding the query time.`,
-    tags: ["binary-search", "design", "hash-map"],
+    tags: ["binary-search", "design", "hash-map", "neetcode"],
   },
   {
     name: "Remove Nth Node From End of List",
@@ -3232,7 +3603,7 @@ function test_two_elements_remove_first() {
   return dummy.slice(1);
 }`,
     usage: `The two-pointer gap technique for nth-from-end removal is the canonical pattern for single-pass linked list manipulation without knowing the total length upfront, which matters in streaming contexts where you can't buffer the entire sequence. Network packet processing pipelines use sliding-window pointer pairs to trim trailing elements from packet queues under memory constraints. The pattern generalizes to any scenario where you need a relative-from-end position in a single pass: sliding log buffers that discard the oldest entry after N new ones arrive, or audio/video codec ring buffers that evict frames N positions behind the write head.`,
-    tags: ["linked-list", "two-pointers"],
+    tags: ["linked-list", "two-pointers", "neetcode"],
   },
   {
     name: "Copy List with Random Pointer",
@@ -3284,7 +3655,7 @@ function test_all_null_randoms() {
   return nodes.map(([val, randomIdx]) => [val, randomIdx]);
 }`,
     usage: `Deep-copying object graphs with arbitrary cross-references is a fundamental challenge in serialization, undo/redo systems, and state persistence. Game engines implement scene graph deep copy with this two-pass pattern — first create all new nodes, then wire up references — to snapshot scene state for replay or save files without pointer aliasing bugs. React's immutable state update pattern and Immer's structural sharing rely on the same "old→new mapping" approach to clone only the changed subtree while preserving references to unchanged nodes. Browser DevTools use graph-walking copy algorithms to serialize the live DOM into JSON for timeline snapshots.`,
-    tags: ["linked-list", "hash-map"],
+    tags: ["linked-list", "hash-map", "neetcode"],
   },
   {
     name: "Add Two Numbers",
@@ -3357,7 +3728,7 @@ function test_single_digit_carry() {
   return result;
 }`,
     usage: `Digit-by-digit addition with carry propagation is the hardware algorithm inside every CPU's ALU for arbitrary-precision arithmetic. Big integer libraries like Java's BigInteger and Python's built-in int use this exact column-addition loop over digit arrays to implement addition for numbers larger than 64 bits. Cryptographic libraries implement modular arithmetic for RSA and elliptic-curve operations on 256–4096-bit integers using the same carry-propagation loop at the limb level. Financial systems that require exact decimal arithmetic (avoiding floating-point rounding) process cent-level values as integer digit sequences using carry-based addition.`,
-    tags: ["linked-list", "math", "simulation"],
+    tags: ["linked-list", "math", "simulation", "neetcode"],
   },
   {
     name: "Find the Duplicate Number",
@@ -3431,7 +3802,7 @@ function test_duplicate_last_value() {
   return slow;
 }`,
     usage: `Floyd's cycle detection ("tortoise and hare") is used beyond linked lists anywhere a sequence can be modeled as a functional graph — each element maps to exactly one successor. Database index corruption detectors use cycle checks to validate B-tree page pointer chains. Pseudorandom number generators are analyzed for period length using Floyd's algorithm to find when the sequence loops. Memory leak detectors in garbage collectors detect reference cycles in object graphs using the same two-pointer phase structure. In distributed systems, detecting repeated states in a Raft or Paxos log can be framed as cycle detection over state machine transitions.`,
-    tags: ["linked-list", "two-pointers", "cycle-detection"],
+    tags: ["linked-list", "two-pointers", "cycle-detection", "neetcode"],
   },
   {
     name: "3Sum",
@@ -3506,7 +3877,7 @@ function test_duplicates() {
   },
   {
     name: "Two Sum II - Input Array Is Sorted",
-    category: "arrays",
+    category: "two-pointers",
     language: "javascript",
     difficulty: "medium",
     description: `Given a 1-indexed sorted array, find two numbers that add up to target. Return their 1-indexed positions. Exactly one solution exists.
@@ -3557,7 +3928,266 @@ function test_negatives() {
   }
   return [];
 }`,
+    solutionVariants: [
+      {
+        label: "Two pointers",
+        code: `function twoSumII(numbers, target) {
+  let left = 0;
+  let right = numbers.length - 1;
+  while (left < right) {
+    const sum = numbers[left] + numbers[right];
+    if (sum === target) return [left + 1, right + 1];
+    if (sum < target) left++;
+    else right--;
+  }
+  return [];
+}`,
+        complexity: "Time: O(n), Space: O(1)",
+        explanation: "Uses the sorted order to move one pointer inward each step; no binary search is needed.",
+      },
+    ],
     usage: `Two Sum II leverages the sorted property to avoid the O(n) hash map lookup of Two Sum I. The two-pointer guarantee: if sum < target, we need a larger value so left++; if sum > target, we need smaller so right--. This pattern extends to 3Sum, 4Sum, and any problem on a sorted structure where you're searching for a target combination.`,
-    tags: ["array", "two-pointers", "binary-search", "neetcode"],
+    tags: ["array", "two-pointers", "neetcode"],
   },
 ];
+
+const sampleVariantMetadata: Record<string, Pick<NonNullable<SeedKata["solutionVariants"]>[number], "complexity" | "explanation">> = {
+  "Maximum Subarray": {
+    complexity: "Time: O(n), Space: O(1)",
+    explanation: "Tracks the best subarray ending at each position and the best overall sum without storing a DP table.",
+  },
+  "Climbing Stairs": {
+    complexity: "Time: O(n), Space: O(1)",
+    explanation: "Keeps only the previous two Fibonacci-style counts needed to compute the next stair count.",
+  },
+  "Longest Common Subsequence": {
+    complexity: "Time: O(m * n), Space: O(m * n)",
+    explanation: "Fills a two-dimensional DP table where each cell represents the best subsequence length for two prefixes.",
+  },
+  "Topological Sort": {
+    complexity: "Time: O(V + E), Space: O(V + E)",
+    explanation: "Builds adjacency and indegree state once, then processes every node and edge through Kahn's queue.",
+  },
+  "Union Find": {
+    complexity: "Time: O(alpha(n)) amortized per operation, Space: O(n)",
+    explanation: "Uses parent links, path compression, and rank balancing so repeated connectivity operations are nearly constant time.",
+  },
+  "Two Sum": {
+    complexity: "Time: O(n), Space: O(n)",
+    explanation: "Stores each seen value in a hash map so every complement lookup is constant time.",
+  },
+  "FizzBuzz": {
+    complexity: "Time: O(n), Space: O(n)",
+    explanation: "Visits each number once and writes one output string per position.",
+  },
+  "Frequency Count": {
+    complexity: "Time: O(n), Space: O(k)",
+    explanation: "Counts each input item once, storing one map entry per distinct value.",
+  },
+  "Most Frequent Element": {
+    complexity: "Time: O(n), Space: O(k)",
+    explanation: "Builds frequencies in one pass and tracks the highest count among distinct values.",
+  },
+  "Merge Sort": {
+    complexity: "Time: O(n log n), Space: O(n)",
+    explanation: "Recursively splits the array and merges sorted halves using temporary output storage.",
+  },
+  "Lomuto Partition": {
+    complexity: "Time: O(n), Space: O(1)",
+    explanation: "Scans the partition range once and swaps elements in place around the pivot boundary.",
+  },
+  "Hoare's Partition Scheme": {
+    complexity: "Time: O(n), Space: O(1)",
+    explanation: "Moves two pointers inward and swaps misplaced values without allocating extra arrays.",
+  },
+  "Quick Sort": {
+    complexity: "Time: O(n log n) average, O(n^2) worst, Space: O(log n) average",
+    explanation: "Partitions in place and recursively sorts both sides; balanced pivots give logarithmic recursion depth.",
+  },
+  "Prefix Sum Table": {
+    complexity: "Time: O(n), Space: O(n)",
+    explanation: "Builds one cumulative total per prefix so later range calculations can reuse the table.",
+  },
+  "Running Sum of 1d Array": {
+    complexity: "Time: O(n), Space: O(n)",
+    explanation: "Walks the array once and writes each prefix total into the returned result array.",
+  },
+  "Range Sum Query": {
+    complexity: "Time: O(n) build and O(1) query, Space: O(n)",
+    explanation: "Precomputes prefix sums so each inclusive range query becomes one subtraction.",
+  },
+  "Permutations": {
+    complexity: "Time: O(n! * n), Space: O(n) excluding output",
+    explanation: "Backtracks through every ordering and copies each completed permutation into the result.",
+  },
+  "Subsets": {
+    complexity: "Time: O(2^n * n), Space: O(n) excluding output",
+    explanation: "Explores the include/exclude decision tree and copies each subset when it is emitted.",
+  },
+  "Binary Search": {
+    complexity: "Time: O(log n), Space: O(1)",
+    explanation: "Halves the remaining sorted search range after each comparison.",
+  },
+  "Find First Occurrence in Sorted Array": {
+    complexity: "Time: O(log n), Space: O(1)",
+    explanation: "Continues binary search to the left after a match to find the earliest matching index.",
+  },
+  "Find Last Occurrence in Sorted Array": {
+    complexity: "Time: O(log n), Space: O(1)",
+    explanation: "Continues binary search to the right after a match to find the latest matching index.",
+  },
+  "Single Number": {
+    complexity: "Time: O(n), Space: O(1)",
+    explanation: "XORs every value once; duplicate values cancel out and leave the single value.",
+  },
+  "Number of 1 Bits": {
+    complexity: "Time: O(1), Space: O(1)",
+    explanation: "Counts set bits within a fixed-width integer using constant extra state.",
+  },
+  "Matrix BFS With Walls": {
+    complexity: "Time: O(rows * cols), Space: O(rows * cols)",
+    explanation: "Visits each reachable cell at most once and stores frontier and visited state for the grid.",
+  },
+  "Shortest Path in Binary Matrix": {
+    complexity: "Time: O(n^2), Space: O(n^2)",
+    explanation: "Runs BFS over the grid, where each open cell can enter the queue once.",
+  },
+  "Graph DFS": {
+    complexity: "Time: O(V + E), Space: O(V)",
+    explanation: "Traverses each vertex and edge reachable from the start while tracking visited vertices.",
+  },
+  "Build Adjacency List Drill": {
+    complexity: "Time: O(E), Space: O(V + E)",
+    explanation: "Initializes graph buckets and appends each edge to the adjacency representation once.",
+  },
+  "Matrix DFS": {
+    complexity: "Time: O(rows * cols), Space: O(rows * cols)",
+    explanation: "Recursively explores each reachable cell once, with visited state and call stack bounded by the grid.",
+  },
+  "Best Time to Buy and Sell Stock": {
+    complexity: "Time: O(n), Space: O(1)",
+    explanation: "Tracks the cheapest price so far and the best profit available at each later day.",
+  },
+  "Min Heap": {
+    complexity: "Time: O(log n) insert/extract, Space: O(n)",
+    explanation: "Maintains the heap invariant in an array and bubbles values up or down along one root-to-leaf path.",
+  },
+  "Merge Intervals": {
+    complexity: "Time: O(n log n), Space: O(n)",
+    explanation: "Sorts intervals by start time, then merges overlapping ranges in one pass.",
+  },
+  "Linked List Traversal": {
+    complexity: "Time: O(n), Space: O(1)",
+    explanation: "Follows next pointers once and stores only the current node plus output values.",
+  },
+  "Reverse Linked List": {
+    complexity: "Time: O(n), Space: O(1)",
+    explanation: "Rewires each next pointer in place while carrying previous and current pointers.",
+  },
+  "Reverse Linked List (Recursive)": {
+    complexity: "Time: O(n), Space: O(n)",
+    explanation: "Uses recursion to reverse the tail first, with one call frame per list node.",
+  },
+  "Linked List Cycle": {
+    complexity: "Time: O(n), Space: O(1)",
+    explanation: "Uses slow and fast pointers so a cycle is detected without storing visited nodes.",
+  },
+  "Rotate Image": {
+    complexity: "Time: O(n^2), Space: O(1)",
+    explanation: "Transforms the matrix in place by swapping cells instead of allocating a second matrix.",
+  },
+  "Sliding Window Max Sum": {
+    complexity: "Time: O(n), Space: O(1)",
+    explanation: "Maintains a fixed-size window sum by adding the entering value and subtracting the leaving value.",
+  },
+  "Balanced Parentheses": {
+    complexity: "Time: O(n), Space: O(n)",
+    explanation: "Pushes opening brackets onto a stack and matches each closing bracket against the latest opener.",
+  },
+  "Queue from Stacks": {
+    complexity: "Time: O(1) amortized per operation, Space: O(n)",
+    explanation: "Moves values between two stacks only when the output stack is empty, spreading transfer cost over many dequeues.",
+  },
+  "Monotonic Stack": {
+    complexity: "Time: O(n), Space: O(n)",
+    explanation: "Each value is pushed and popped at most once while maintaining a monotonic stack.",
+  },
+  "Binary Tree BFS": {
+    complexity: "Time: O(n), Space: O(n)",
+    explanation: "Processes each tree node once with a queue that can hold a full level.",
+  },
+  "DFS Preorder Traversal": {
+    complexity: "Time: O(n), Space: O(h)",
+    explanation: "Visits each node root-left-right, with recursion depth bounded by tree height.",
+  },
+  "DFS Inorder Traversal": {
+    complexity: "Time: O(n), Space: O(h)",
+    explanation: "Visits each node left-root-right, with recursion depth bounded by tree height.",
+  },
+  "DFS Postorder Traversal": {
+    complexity: "Time: O(n), Space: O(h)",
+    explanation: "Visits each node left-right-root, with recursion depth bounded by tree height.",
+  },
+  "Implement Trie (Prefix Tree)": {
+    complexity: "Time: O(m) per word operation, Space: O(total characters)",
+    explanation: "Walks one trie edge per character and stores shared prefixes as nested nodes.",
+  },
+  "Two Pointer Remove Dupes": {
+    complexity: "Time: O(n), Space: O(1)",
+    explanation: "Uses read and write pointers to compact unique sorted values in place.",
+  },
+  "Merge Sorted Arrays": {
+    complexity: "Time: O(m + n), Space: O(m + n)",
+    explanation: "Advances through both sorted inputs once and appends the smaller current value to the result.",
+  },
+  "Permutation in String": {
+    complexity: "Time: O(s1 + s2), Space: O(1)",
+    explanation: "Maintains fixed-size character frequency counts for a sliding window over the larger string.",
+  },
+  "Search a 2D Matrix": {
+    complexity: "Time: O(log(rows * cols)), Space: O(1)",
+    explanation: "Treats the sorted matrix as one flattened sorted array and binary searches it.",
+  },
+  "Time Based Key-Value Store": {
+    complexity: "Time: O(log n) get, O(1) set, Space: O(n)",
+    explanation: "Stores timestamped values per key and binary searches the key's history for reads.",
+  },
+  "Remove Nth Node From End of List": {
+    complexity: "Time: O(n), Space: O(1)",
+    explanation: "Separates fast and slow pointers by n nodes so slow lands before the node to remove.",
+  },
+  "Copy List with Random Pointer": {
+    complexity: "Time: O(n), Space: O(n)",
+    explanation: "Creates one clone per original node and uses a map to wire next and random pointers correctly.",
+  },
+  "Add Two Numbers": {
+    complexity: "Time: O(max(m, n)), Space: O(max(m, n))",
+    explanation: "Adds corresponding digits once, carrying overflow into newly allocated result nodes.",
+  },
+  "Find the Duplicate Number": {
+    complexity: "Time: O(n), Space: O(1)",
+    explanation: "Interprets values as next pointers and uses Floyd's cycle detection to locate the duplicate.",
+  },
+  "3Sum": {
+    complexity: "Time: O(n^2), Space: O(1) excluding output",
+    explanation: "Sorts once, then fixes one number and uses two pointers to find matching pairs while skipping duplicates.",
+  },
+  "Two Sum II - Input Array Is Sorted": {
+    complexity: "Time: O(n), Space: O(1)",
+    explanation: "Moves inward from both ends, using sorted order to decide which pointer can still reach the target.",
+  },
+};
+
+for (const kata of sampleKatas) {
+  if (kata.language === "javascript" && kata.solution && !kata.solutionVariants) {
+    const metadata = sampleVariantMetadata[kata.name] ?? {
+      complexity: "Time: O(n), Space: O(n)",
+      explanation: "Uses the reference implementation for this JavaScript kata.",
+    };
+    kata.solutionVariants = [{
+      label: "Reference solution",
+      code: kata.solution,
+      ...metadata,
+    }];
+  }
+}

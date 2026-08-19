@@ -9,12 +9,14 @@ import { useKataStore } from "../stores/kata-store";
 import { useSessionStore } from "../stores/session-store";
 import { useTimerStore } from "../stores/timer-store";
 import { NAV_ITEMS, activeNavPath, type NavItem } from "../lib/nav-items";
+import { resumableSessionPath } from "../lib/session-resume";
 
 export function TopBar() {
   const theme = useSettingsStore((s) => s.theme);
   const language = useSettingsStore((s) => s.language);
   const dailyKataIds = useSettingsStore((s) => s.dailyKataIds);
   const katas = useKataStore((s) => s.katas);
+  const activeSession = useSessionStore((s) => s.activeSession);
   const startSession = useSessionStore((s) => s.startSession);
   const startSessionTimer = useTimerStore((s) => s.startSessionTimer);
   const resetKataTimer = useTimerStore((s) => s.resetKataTimer);
@@ -28,8 +30,13 @@ export function TopBar() {
 
   const activePath = activeNavPath(location.pathname);
   const isActive = (item: NavItem) => item.path === activePath;
+  const resumePath = resumableSessionPath(activeSession);
 
   const handleStartPractice = useCallback(async () => {
+    if (resumePath) {
+      navigate(resumePath);
+      return;
+    }
     if (dailyCount === 0) {
       navigate("/problems");
       return;
@@ -49,7 +56,7 @@ export function TopBar() {
     const sessionId = await startSession("daily", resolved);
     navigate(`/session/${sessionId}`);
     setLaunching(false);
-  }, [dailyKataIds, dailyCount, launching, katas, resetKataTimer, startSessionTimer, startSession, navigate]);
+  }, [resumePath, dailyKataIds, dailyCount, launching, katas, resetKataTimer, startSessionTimer, startSession, navigate]);
 
   // Only macOS overlays web content into the title bar (titleBarStyle:
   // Overlay in tauri.conf.json), so only there does our header need to act
@@ -121,7 +128,7 @@ export function TopBar() {
           return (
             <button
               key={item.path}
-              onClick={() => navigate(item.path)}
+              onClick={() => navigate(item.path === "/practice" ? resumePath ?? item.path : item.path)}
               className={`relative px-3 h-full text-[13px] font-medium transition-colors ${
                 active
                   ? "text-primary"
@@ -150,7 +157,7 @@ export function TopBar() {
             <path d="M3 3.732a1.5 1.5 0 0 1 2.305-1.265l6.706 4.267a1.5 1.5 0 0 1 0 2.531l-6.706 4.268A1.5 1.5 0 0 1 3 12.267V3.732Z" />
           </svg>
         )}
-        {launching ? "Launching..." : "Start Practice"}
+        {launching ? "Launching..." : resumePath ? "Resume Practice" : "Start Practice"}
       </button>
     </header>
   );

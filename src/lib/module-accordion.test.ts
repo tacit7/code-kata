@@ -12,7 +12,8 @@ describe("module accordion classes", () => {
 
   it("makes nested submodules visually quieter than top-level modules", () => {
     expect(moduleDetailsClass(true)).toContain("ml-4");
-    expect(moduleDetailsClass(true)).toContain("border-l-4");
+    expect(moduleDetailsClass(true)).not.toContain("border-l-4");
+    expect(moduleDetailsClass(true)).not.toContain("border-l-primary");
     expect(moduleDetailsClass(false)).toContain("shadow-md");
 
     expect(moduleHeaderClass(true)).toContain("bg-base-200/70");

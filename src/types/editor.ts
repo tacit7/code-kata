@@ -12,6 +12,7 @@ export interface Kata {
   code: string;
   testCode: string;
   solution: string | null;
+  solutionVariants?: SolutionVariant[] | null;
   usage: string | null;
   tags: string[];
   isCustom: boolean;
@@ -25,6 +26,13 @@ export interface Kata {
 
 export type SeedKata = Omit<Kata, "id" | "isCustom">;
 
+export interface SolutionVariant {
+  label: string;
+  complexity?: string;
+  explanation?: string;
+  code: string;
+}
+
 export type TimerStatus = "idle" | "running" | "paused" | "completed";
 
 export interface EditorSettings {
@@ -37,10 +45,14 @@ export interface EditorSettings {
 export interface TestResult {
   name: string;
   passed: boolean;
+  errorKind?: "assertion" | "syntax" | "runtime" | "timeout" | "runner";
   error?: string;
   output?: string;
   expected?: string;
   got?: string;
+  traceback?: string;
+  errorSource?: "user" | "tests" | "runner";
+  lineNumber?: number;
   /**
    * Source text of the assertion that failed, e.g.
    * `assertEqual(twoSum([2, 7, 11], 9), [0, 1])`. This is where the failing
@@ -62,6 +74,7 @@ export interface Session {
   passCount: number;
   presetName: string | null;
   maxTestRuns: number | null;
+  kataIds?: number[] | null;
 }
 
 export interface Attempt {

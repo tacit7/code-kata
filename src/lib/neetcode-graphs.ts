@@ -1,4 +1,12 @@
 import type { SeedKata } from "../types/editor";
+import { enrichMissingPythonSolutionVariants } from "./python-solution-variants";
+
+const variant = (label: string, code: string, complexity: string, explanation: string) => ({
+  label,
+  code,
+  complexity,
+  explanation,
+});
 
 const neetcodeGraphs: SeedKata[] = [
   {
@@ -48,7 +56,7 @@ def test_max_area_single_cell():
     tags: ["graphs", "dfs", "bfs", "neetcode"],
   },
   {
-    name: "Walls And Gates",
+    name: "Walls and Gates",
     category: "graphs",
     language: "python",
     difficulty: "medium",
@@ -251,6 +259,65 @@ def test_course_schedule_ii_cycle():
         if not dfs(c):
             return []
     return output`,
+    solutionVariants: [
+      variant(
+        "DFS topological sort",
+        `def find_order(num_courses: int, prerequisites: list[list[int]]) -> list[int]:
+    prereq_map = {i: [] for i in range(num_courses)}
+    for a, b in prerequisites:
+        prereq_map[a].append(b)
+
+    visited = set()
+    cycle = set()
+    output = []
+
+    def dfs(course):
+        if course in cycle:
+            return False
+        if course in visited:
+            return True
+        cycle.add(course)
+        for pre in prereq_map[course]:
+            if not dfs(pre):
+                return False
+        cycle.remove(course)
+        visited.add(course)
+        output.append(course)
+        return True
+
+    for c in range(num_courses):
+        if not dfs(c):
+            return []
+    return output`,
+        "Time O(V + E), Space O(V + E)",
+        "Detects cycles while post-ordering courses after their prerequisites."
+      ),
+      variant(
+        "Kahn's BFS topological sort",
+        `from collections import deque
+
+def find_order(num_courses: int, prerequisites: list[list[int]]) -> list[int]:
+    graph = [[] for _ in range(num_courses)]
+    indegree = [0] * num_courses
+    for course, prereq in prerequisites:
+        graph[prereq].append(course)
+        indegree[course] += 1
+
+    queue = deque([i for i in range(num_courses) if indegree[i] == 0])
+    order = []
+    while queue:
+        course = queue.popleft()
+        order.append(course)
+        for nxt in graph[course]:
+            indegree[nxt] -= 1
+            if indegree[nxt] == 0:
+                queue.append(nxt)
+
+    return order if len(order) == num_courses else []`,
+        "Time O(V + E), Space O(V + E)",
+        "Starts from courses with no prerequisites and removes edges level by level."
+      ),
+    ],
     usage: null,
     tags: ["graphs", "topological-sort", "dfs", "neetcode"],
   },
@@ -295,6 +362,63 @@ def test_redundant_connection_two_nodes():
         if not union(u, v):
             return [u, v]
     return []`,
+    solutionVariants: [
+      variant(
+        "Union Find",
+        `def find_redundant_connection(edges: list[list[int]]) -> list[int]:
+    n = len(edges)
+    parent = list(range(n + 1))
+    rank = [1] * (n + 1)
+
+    def find(x):
+        while parent[x] != x:
+            parent[x] = parent[parent[x]]
+            x = parent[x]
+        return x
+
+    def union(x, y):
+        px, py = find(x), find(y)
+        if px == py:
+            return False
+        if rank[px] < rank[py]:
+            px, py = py, px
+        parent[py] = px
+        rank[px] += rank[py]
+        return True
+
+    for u, v in edges:
+        if not union(u, v):
+            return [u, v]
+    return []`,
+        "Time O(n α(n)), Space O(n)",
+        "Tracks connected components; the first edge joining nodes already connected is redundant."
+      ),
+      variant(
+        "Incremental DFS cycle check",
+        `from collections import defaultdict
+
+def find_redundant_connection(edges: list[list[int]]) -> list[int]:
+    graph = defaultdict(list)
+
+    def connected(src, dst, seen):
+        if src == dst:
+            return True
+        seen.add(src)
+        for nxt in graph[src]:
+            if nxt not in seen and connected(nxt, dst, seen):
+                return True
+        return False
+
+    for u, v in edges:
+        if u in graph and v in graph and connected(u, v, set()):
+            return [u, v]
+        graph[u].append(v)
+        graph[v].append(u)
+    return []`,
+        "Time O(n²), Space O(n)",
+        "Baseline graph approach: before adding each edge, search whether the endpoints are already connected."
+      ),
+    ],
     usage: null,
     tags: ["graphs", "union-find", "neetcode"],
   },
@@ -344,5 +468,7 @@ def test_word_ladder_direct():
     tags: ["graphs", "bfs", "hash-map", "neetcode"],
   },
 ];
+
+enrichMissingPythonSolutionVariants(neetcodeGraphs);
 
 export { neetcodeGraphs };

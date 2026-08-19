@@ -1,12 +1,15 @@
 import type { SeedKata } from "../types/editor";
+import { enrichMissingPythonSolutionVariants } from "./python-solution-variants";
+
+const variant = (label: string, code: string) => ({ label, code });
 
 export const sampleKatasPython: SeedKata[] = [
   {
-    name: "Kadane's Algorithm",
+    name: "Maximum Subarray",
     category: "1-d-dp",
     language: "python",
     difficulty: "medium",
-    description: `Kadane's Algorithm
+    description: `Maximum Subarray
 
 Given an integer array nums, find the subarray with the largest sum, and return its sum.
 
@@ -64,14 +67,14 @@ def test_zero_crossing():
         max_sum = max(max_sum, current)
     return max_sum`,
     usage: null,
-    tags: ["dynamic-programming", "greedy", "blind75"],
+    tags: ["dynamic-programming", "greedy", "blind75", "neetcode"],
   },
   {
-    name: "Climbing Stairs (Iterative)",
+    name: "Climbing Stairs",
     category: "1-d-dp",
     language: "python",
     difficulty: "easy",
-    description: `Climbing Stairs (Iterative)
+    description: `Climbing Stairs
 
 You are climbing a staircase. It takes n steps to reach the top. Each time you can either climb 1 or 2 steps. Return the number of distinct ways you can climb to the top.
 
@@ -261,7 +264,7 @@ def test_longer():
                 dp[i][j] = max(dp[i - 1][j], dp[i][j - 1])
     return dp[m][n]`,
     usage: null,
-    tags: ["dynamic-programming", "string", "blind75", "dp-subsequence"],
+    tags: ["dynamic-programming", "string", "blind75", "neetcode", "dp-subsequence"],
   },
   {
     name: "Topological Sort",
@@ -340,7 +343,7 @@ def test_no_edges():
     order.reverse()
     return order`,
     usage: null,
-    tags: ["graph", "topological-sort"],
+    tags: ["graph", "topological-sort", "neetcode"],
   },
   {
     name: "Union Find",
@@ -447,7 +450,7 @@ def test_self_connected():
     def connected(self, x, y):
         return self.find(x) == self.find(y)`,
     usage: null,
-    tags: ["graph", "disjoint-set"],
+    tags: ["graph", "disjoint-set", "neetcode"],
   },
   {
     name: "Frequency Count",
@@ -905,11 +908,11 @@ def test_negative():
     tags: ["hash-map", "blind75", "neetcode", "arrays-hashing"],
   },
   {
-    name: "Build Prefix Sum",
+    name: "Prefix Sum Table",
     category: "arrays",
     language: "python",
     difficulty: "easy",
-    description: `Build Prefix Sum
+    description: `Prefix Sum Table
 
 Given an array of integers nums, build a prefix sum array where prefix[i] equals the sum of nums[0] through nums[i-1]. The prefix array starts with 0, so its length is len(nums) + 1.
 
@@ -931,9 +934,7 @@ Explanation: prefix[2]=1+(-1)=0, prefix[3]=1+(-1)+2=2.
 
 Constraints:
 - 0 <= nums.length <= 10^4
-- -10^4 <= nums[i] <= 10^4
-
-Ref: LeetCode #1480 Running Sum of 1d Array`,
+- -10^4 <= nums[i] <= 10^4`,
     code: `def build_prefix(nums):
     raise NotImplementedError`,
     testCode: `def test_build_prefix():
@@ -957,6 +958,58 @@ def test_build_prefix_negatives():
     return prefix`,
     usage: null,
     tags: ["prefix-sum"],
+  },
+  {
+    name: "Running Sum of 1d Array",
+    category: "arrays",
+    language: "python",
+    difficulty: "easy",
+    description: `Running Sum of 1d Array
+
+Given an array of integers, return a new list where each index contains the sum of nums[0] through nums[i].
+
+Example 1:
+Input: nums = [1, 2, 3, 4]
+Output: [1, 3, 6, 10]
+
+Example 2:
+Input: nums = [1, 1, 1, 1, 1]
+Output: [1, 2, 3, 4, 5]
+
+Example 3:
+Input: nums = [3, 1, 2, 10, 1]
+Output: [3, 4, 6, 16, 17]
+
+Constraints:
+- 1 <= nums.length <= 1000
+- -10^6 <= nums[i] <= 10^6
+
+Ref: LeetCode #1480 Running Sum of 1d Array`,
+    code: `def running_sum(nums):
+    raise NotImplementedError`,
+    testCode: `def test_basic():
+    assert running_sum([1, 2, 3, 4]) == [1, 3, 6, 10]
+
+
+def test_all_ones():
+    assert running_sum([1, 1, 1, 1, 1]) == [1, 2, 3, 4, 5]
+
+
+def test_mixed_values():
+    assert running_sum([3, 1, 2, 10, 1]) == [3, 4, 6, 16, 17]
+
+
+def test_with_negatives():
+    assert running_sum([4, -2, 7]) == [4, 2, 9]`,
+    solution: `def running_sum(nums):
+    result = []
+    total = 0
+    for num in nums:
+        total += num
+        result.append(total)
+    return result`,
+    usage: null,
+    tags: ["prefix-sum", "arrays-hashing"],
   },
   {
     name: "Range Sum Query",
@@ -1084,7 +1137,7 @@ def test_count():
     backtrack([], nums)
     return result`,
     usage: null,
-    tags: ["backtracking", "recursion"],
+    tags: ["backtracking", "recursion", "neetcode"],
   },
   {
     name: "Subsets",
@@ -1154,14 +1207,14 @@ def test_count():
     backtrack(0, [])
     return result`,
     usage: null,
-    tags: ["backtracking", "recursion"],
+    tags: ["backtracking", "recursion", "neetcode"],
   },
   {
-    name: "Binary Search (Iterative)",
+    name: "Binary Search",
     category: "binary-search",
     language: "python",
     difficulty: "easy",
-    description: `Binary Search (Iterative)
+    description: `Binary Search
 
 Given a sorted array of integers nums in ascending order and an integer target, write a function to search target in nums. If target exists, return its index. Otherwise, return -1.
 
@@ -1234,11 +1287,11 @@ def test_single_element_not_found():
     tags: ["binary-search", "divide-and-conquer", "neetcode"],
   },
   {
-    name: "Binary Search Find First",
+    name: "Find First Occurrence in Sorted Array",
     category: "binary-search",
     language: "python",
     difficulty: "medium",
-    description: `Binary Search Find First
+    description: `Find First Occurrence in Sorted Array
 
 Given a sorted array of integers nums and a target value, find the first (leftmost) index where target appears. Return -1 if target is not found.
 
@@ -1262,9 +1315,7 @@ Explanation: 2 is not in the array.
 Constraints:
 - 0 <= nums.length <= 10^5
 - -10^9 <= nums[i] <= 10^9
-- nums is sorted in non-decreasing order.
-
-Ref: LeetCode #34 Find First and Last Position of Element in Sorted Array`,
+- nums is sorted in non-decreasing order.`,
     code: `def find_first(nums, target):
     raise NotImplementedError`,
     testCode: `def test_find_first_dupes():
@@ -1306,11 +1357,11 @@ def test_find_first_at_start():
     tags: ["binary-search"],
   },
   {
-    name: "Binary Search Find Last",
+    name: "Find Last Occurrence in Sorted Array",
     category: "binary-search",
     language: "python",
     difficulty: "medium",
-    description: `Binary Search Find Last
+    description: `Find Last Occurrence in Sorted Array
 
 Given a sorted array of integers nums and a target value, find the last (rightmost) index where target appears. Return -1 if target is not found.
 
@@ -1334,9 +1385,7 @@ Explanation: 2 is not in the array.
 Constraints:
 - 0 <= nums.length <= 10^5
 - -10^9 <= nums[i] <= 10^9
-- nums is sorted in non-decreasing order.
-
-Ref: LeetCode #34 Find First and Last Position of Element in Sorted Array`,
+- nums is sorted in non-decreasing order.`,
     code: `def find_last(nums, target):
     raise NotImplementedError`,
     testCode: `def test_find_last_dupes():
@@ -1374,6 +1423,129 @@ def test_find_last_at_end():
         else:
             hi = mid - 1
     return result`,
+    usage: null,
+    tags: ["binary-search"],
+  },
+  {
+    name: "Find First and Last Position of Element in Sorted Array",
+    category: "binary-search",
+    language: "python",
+    difficulty: "medium",
+    description: `Find First and Last Position of Element in Sorted Array
+
+Given an array of integers nums sorted in non-decreasing order, find the starting and ending position of a given target value.
+
+If target is not found in the array, return [-1, -1].
+
+You must write an algorithm with O(log n) runtime complexity.
+
+Example 1:
+Input: nums = [5, 7, 7, 8, 8, 10], target = 8
+Output: [3, 4]
+
+Example 2:
+Input: nums = [1], target = 1
+Output: [0, 0]
+
+Example 3:
+Input: nums = [5, 7, 7, 8, 8, 10], target = 6
+Output: [-1, -1]
+
+Constraints:
+- 0 <= nums.length <= 100000
+- -1000000000 <= nums[i], target <= 1000000000
+- nums is a non-decreasing array.
+
+Ref: LeetCode #34 Find First and Last Position of Element in Sorted Array`,
+    code: `def search_range(nums, target):
+    raise NotImplementedError`,
+    testCode: `def test_duplicate_range():
+    assert search_range([5, 7, 7, 8, 8, 10], 8) == [3, 4]
+
+
+def test_single_element_found():
+    assert search_range([1], 1) == [0, 0]
+
+
+def test_not_found():
+    assert search_range([5, 7, 7, 8, 8, 10], 6) == [-1, -1]
+
+
+def test_empty():
+    assert search_range([], 1) == [-1, -1]
+
+
+def test_single_occurrence_inside_duplicates():
+    assert search_range([1, 2, 2, 3, 4, 4, 5], 3) == [3, 3]`,
+    solution: `def search_range(nums, target):
+    def boundary(find_first):
+        lo, hi = 0, len(nums) - 1
+        result = -1
+
+        while lo <= hi:
+            mid = (lo + hi) // 2
+            if nums[mid] == target:
+                result = mid
+                if find_first:
+                    hi = mid - 1
+                else:
+                    lo = mid + 1
+            elif nums[mid] < target:
+                lo = mid + 1
+            else:
+                hi = mid - 1
+
+        return result
+
+    return [boundary(True), boundary(False)]`,
+    solutionVariants: [
+      {
+        label: "Two boundary searches",
+        code: `def search_range(nums, target):
+    def boundary(find_first):
+        lo, hi = 0, len(nums) - 1
+        result = -1
+
+        while lo <= hi:
+            mid = (lo + hi) // 2
+            if nums[mid] == target:
+                result = mid
+                if find_first:
+                    hi = mid - 1
+                else:
+                    lo = mid + 1
+            elif nums[mid] < target:
+                lo = mid + 1
+            else:
+                hi = mid - 1
+
+        return result
+
+    return [boundary(True), boundary(False)]`,
+        complexity: "Time: O(log n), Space: O(1)",
+        explanation: "Runs one binary search biased left and one biased right to return the closed target range.",
+      },
+      {
+        label: "Lower bounds",
+        code: `def search_range(nums, target):
+    def lower_bound(value):
+        lo, hi = 0, len(nums)
+        while lo < hi:
+            mid = (lo + hi) // 2
+            if nums[mid] < value:
+                lo = mid + 1
+            else:
+                hi = mid
+        return lo
+
+    first = lower_bound(target)
+    if first == len(nums) or nums[first] != target:
+        return [-1, -1]
+    return [first, lower_bound(target + 1) - 1]`,
+        complexity: "Time: O(log n), Space: O(1)",
+        explanation: "Computes the first index >= target and the first index > target, then converts them into start and end positions.",
+      },
+    ],
     usage: null,
     tags: ["binary-search"],
   },
@@ -1453,7 +1625,7 @@ def test_single_element_not_found():
     tags: ["binary-search", "divide-and-conquer", "recursion", "neetcode"],
   },
   {
-    name: "Single Number XOR",
+    name: "Single Number",
     category: "bit-manipulation",
     language: "python",
     difficulty: "easy",
@@ -1504,10 +1676,10 @@ def test_larger():
         result ^= num
     return result`,
     usage: null,
-    tags: ["bit-manipulation", "xor"],
+    tags: ["bit-manipulation", "xor", "neetcode"],
   },
   {
-    name: "Count Set Bits",
+    name: "Number of 1 Bits",
     category: "bit-manipulation",
     language: "python",
     difficulty: "easy",
@@ -1567,10 +1739,10 @@ def test_large():
         n >>= 1
     return count`,
     usage: null,
-    tags: ["bit-manipulation", "blind75"],
+    tags: ["bit-manipulation", "blind75", "neetcode"],
   },
   {
-    name: "Matrix BFS",
+    name: "Matrix BFS With Walls",
     category: "graphs",
     language: "python",
     difficulty: "medium",
@@ -1597,7 +1769,7 @@ Constraints:
 - grid[i][j] is 0 or 1
 - start is always a passable cell (value 0)
 
-Ref: LeetCode #1091 Shortest Path in Binary Matrix`,
+This is a traversal drill, not a LeetCode problem.`,
     code: `from collections import deque
 
 def matrix_bfs(grid, start):
@@ -1646,6 +1818,86 @@ def matrix_bfs(grid, start):
                 queue.append((nr, nc))
 
     return result`,
+    usage: null,
+    tags: ["bfs", "matrix"],
+  },
+  {
+    name: "Shortest Path in Binary Matrix",
+    category: "graphs",
+    language: "python",
+    difficulty: "medium",
+    description: `Shortest Path in Binary Matrix
+
+Given an n x n binary grid, find the length of the shortest clear path from the top-left cell to the bottom-right cell. A clear cell has value 0. A blocked cell has value 1. You may move in any of the 8 directions, including diagonals. The path length counts both the starting and ending cells. Return -1 if no clear path exists.
+
+Example 1:
+Input: grid = [[0,1],[1,0]]
+Output: 2
+
+Example 2:
+Input: grid = [[0,0,0],[1,1,0],[1,1,0]]
+Output: 4
+
+Example 3:
+Input: grid = [[1,0],[0,0]]
+Output: -1
+
+Constraints:
+- n == len(grid) == len(grid[i])
+- 1 <= n <= 100
+- grid[i][j] is 0 or 1
+
+Ref: LeetCode #1091 Shortest Path in Binary Matrix`,
+    code: `from collections import deque
+
+def shortest_path_binary_matrix(grid):
+    raise NotImplementedError`,
+    testCode: `def test_diagonal_two_by_two():
+    assert shortest_path_binary_matrix([[0, 1], [1, 0]]) == 2
+
+
+def test_turning_path():
+    assert shortest_path_binary_matrix([[0, 0, 0], [1, 1, 0], [1, 1, 0]]) == 4
+
+
+def test_blocked_start():
+    assert shortest_path_binary_matrix([[1, 0], [0, 0]]) == -1
+
+
+def test_blocked_end():
+    assert shortest_path_binary_matrix([[0, 0], [0, 1]]) == -1
+
+
+def test_single_open_cell():
+    assert shortest_path_binary_matrix([[0]]) == 1`,
+    solution: `from collections import deque
+
+
+def shortest_path_binary_matrix(grid):
+    n = len(grid)
+    if n == 0 or grid[0][0] != 0 or grid[n - 1][n - 1] != 0:
+        return -1
+
+    directions = [
+        (-1, -1), (-1, 0), (-1, 1),
+        (0, -1),           (0, 1),
+        (1, -1),  (1, 0),  (1, 1),
+    ]
+    queue = deque([(0, 0, 1)])
+    seen = {(0, 0)}
+
+    while queue:
+        row, col, dist = queue.popleft()
+        if row == n - 1 and col == n - 1:
+            return dist
+
+        for dr, dc in directions:
+            nr, nc = row + dr, col + dc
+            if 0 <= nr < n and 0 <= nc < n and grid[nr][nc] == 0 and (nr, nc) not in seen:
+                seen.add((nr, nc))
+                queue.append((nr, nc, dist + 1))
+
+    return -1`,
     usage: null,
     tags: ["bfs", "matrix"],
   },
@@ -1724,7 +1976,7 @@ def test_disconnected():
 
     return result`,
     usage: null,
-    tags: ["dfs", "graph"],
+    tags: ["dfs", "graph", "neetcode"],
   },
   {
     name: "Build Adjacency List Drill",
@@ -1879,7 +2131,7 @@ def test_all_open():
     dfs(*start)
     return result`,
     usage: null,
-    tags: ["dfs", "matrix", "recursion"],
+    tags: ["dfs", "matrix", "recursion", "neetcode"],
   },
   {
     name: "Graph DFS (Recursive)",
@@ -1953,7 +2205,7 @@ def test_disconnected():
     dfs(start)
     return result`,
     usage: null,
-    tags: ["dfs", "graph", "recursion"],
+    tags: ["dfs", "graph", "recursion", "neetcode"],
   },
   {
     name: "Matrix DFS (Iterative)",
@@ -2041,7 +2293,7 @@ def test_all_open():
 
     return result`,
     usage: null,
-    tags: ["dfs", "matrix"],
+    tags: ["dfs", "matrix", "neetcode"],
   },
   {
     name: "Matrix Grid BFS",
@@ -2287,7 +2539,7 @@ def test_insert_duplicates():
     def _swap(self, i, j):
         self.data[i], self.data[j] = self.data[j], self.data[i]`,
     usage: null,
-    tags: ["heap"],
+    tags: ["heap", "neetcode"],
   },
   {
     name: "Merge Intervals",
@@ -2359,7 +2611,7 @@ def test_unsorted():
             merged.append([start, end])
     return merged`,
     usage: null,
-    tags: ["sorting", "intervals", "blind75"],
+    tags: ["sorting", "intervals", "blind75", "neetcode"],
   },
   {
     name: "Linked List Traversal (Iterative)",
@@ -2431,14 +2683,14 @@ def traverse(head):
 
     return result`,
     usage: null,
-    tags: ["linked-list", "iteration", "blind75"],
+    tags: ["linked-list", "iteration"],
   },
   {
-    name: "Reverse Linked List (Iterative)",
+    name: "Reverse Linked List",
     category: "linked-list",
     language: "python",
     difficulty: "easy",
-    description: `Reverse Linked List (Iterative)
+    description: `Reverse Linked List
 
 Given the head of a singly linked list, reverse the list using an iterative approach, and return the reversed list.
 
@@ -2516,7 +2768,7 @@ def reverse_iterative(head):
         current = nxt
     return prev`,
     usage: null,
-    tags: ["linked-list", "iteration"],
+    tags: ["linked-list", "iteration", "neetcode"],
   },
   {
     name: "Reverse Linked List (Recursive)",
@@ -2599,14 +2851,14 @@ def reverse_recursive(head):
     head.next = None
     return new_head`,
     usage: null,
-    tags: ["linked-list", "recursion", "blind75"],
+    tags: ["linked-list", "recursion", "blind75", "neetcode"],
   },
   {
-    name: "Linked List Cycle Detection",
+    name: "Linked List Cycle",
     category: "linked-list",
     language: "python",
     difficulty: "easy",
-    description: `Linked List Cycle Detection
+    description: `Linked List Cycle
 
 Given head, the head of a linked list, determine if the linked list has a cycle in it.
 
@@ -2692,7 +2944,7 @@ def has_cycle(head):
 
     return False`,
     usage: null,
-    tags: ["linked-list", "fast-slow-pointer", "blind75"],
+    tags: ["linked-list", "fast-slow-pointer", "blind75", "neetcode"],
   },
   {
     name: "Linked List Traversal (Recursive)",
@@ -2901,7 +3153,7 @@ def test_complex():
             stack.pop()
     return len(stack) == 0`,
     usage: null,
-    tags: ["stack", "string", "blind75"],
+    tags: ["stack", "string", "blind75", "neetcode"],
   },
   {
     name: "Queue from Two Stacks",
@@ -3187,7 +3439,7 @@ def bfs(root):
 
     return result`,
     usage: null,
-    tags: ["bfs", "tree", "blind75"],
+    tags: ["bfs", "tree", "blind75", "neetcode"],
   },
   {
     name: "Binary Tree Preorder (Recursive)",
@@ -3726,7 +3978,7 @@ def postorder(root):
     tags: ["dfs", "tree"],
   },
   {
-    name: "Trie",
+    name: "Implement Trie (Prefix Tree)",
     category: "tries",
     language: "python",
     difficulty: "hard",
@@ -3836,7 +4088,7 @@ def test_empty_search():
             node = node.children[ch]
         return node`,
     usage: null,
-    tags: ["trie", "blind75"],
+    tags: ["trie", "blind75", "neetcode"],
   },
   {
     name: "Two Pointer Remove Duplicates",
@@ -3988,4 +4240,950 @@ def test_negatives():
     usage: null,
     tags: ["two-pointers", "sorting"],
   },
+  {
+    name: "Add Two Numbers",
+    category: "linked-list",
+    language: "python",
+    difficulty: "medium",
+    description: `Add Two Numbers
+
+Two non-empty linked lists store non-negative integers in reverse digit order. Add the numbers and return the sum as a linked list in the same reverse order.
+
+Example 1:
+Input: l1 = [2,4,3], l2 = [5,6,4]
+Output: [7,0,8]
+Explanation: 342 + 465 = 807.
+
+Example 2:
+Input: l1 = [9,9,9,9,9,9,9], l2 = [9,9,9,9]
+Output: [8,9,9,9,0,0,0,1]
+
+Constraints:
+- Each list has at least one node
+- Node values are digits from 0 through 9
+- The input numbers have no leading zero except the number 0 itself
+
+Ref: LeetCode #2 Add Two Numbers`,
+    code: `class ListNode:
+    def __init__(self, val=0, next=None):
+        self.val = val
+        self.next = next
+
+
+def add_two_numbers(l1, l2):
+    raise NotImplementedError`,
+    testCode: `def build_list(values):
+    dummy = ListNode()
+    cur = dummy
+    for value in values:
+        cur.next = ListNode(value)
+        cur = cur.next
+    return dummy.next
+
+
+def to_list(head):
+    values = []
+    while head:
+        values.append(head.val)
+        head = head.next
+    return values
+
+
+def test_example():
+    assert to_list(add_two_numbers(build_list([2, 4, 3]), build_list([5, 6, 4]))) == [7, 0, 8]
+
+
+def test_zero():
+    assert to_list(add_two_numbers(build_list([0]), build_list([0]))) == [0]
+
+
+def test_carry_past_longer_list():
+    assert to_list(add_two_numbers(build_list([9, 9, 9, 9, 9, 9, 9]), build_list([9, 9, 9, 9]))) == [8, 9, 9, 9, 0, 0, 0, 1]`,
+    solution: `class ListNode:
+    def __init__(self, val=0, next=None):
+        self.val = val
+        self.next = next
+
+
+def add_two_numbers(l1, l2):
+    dummy = ListNode()
+    cur = dummy
+    carry = 0
+
+    while l1 or l2 or carry:
+        total = carry
+        if l1:
+            total += l1.val
+            l1 = l1.next
+        if l2:
+            total += l2.val
+            l2 = l2.next
+
+        carry, digit = divmod(total, 10)
+        cur.next = ListNode(digit)
+        cur = cur.next
+
+    return dummy.next`,
+    usage: null,
+    tags: ["linked-list", "math", "neetcode"],
+  },
+  {
+    name: "Reverse Nodes in k-Group",
+    category: "linked-list",
+    language: "python",
+    difficulty: "hard",
+    description: `Reverse Nodes in k-Group
+
+Given a linked list, reverse every complete group of k nodes. Leave a final partial group in its original order.
+
+Example 1:
+Input: head = [1,2,3,4,5], k = 2
+Output: [2,1,4,3,5]
+
+Example 2:
+Input: head = [1,2,3,4,5], k = 3
+Output: [3,2,1,4,5]
+
+Constraints:
+- The number of nodes is between 0 and 5000
+- 1 <= k <= number of nodes when the list is non-empty
+- Node values fit in a signed 32-bit integer
+
+Ref: LeetCode #25 Reverse Nodes in k-Group`,
+    code: `class ListNode:
+    def __init__(self, val=0, next=None):
+        self.val = val
+        self.next = next
+
+
+def reverse_k_group(head, k):
+    raise NotImplementedError`,
+    testCode: `def build_list(values):
+    dummy = ListNode()
+    cur = dummy
+    for value in values:
+        cur.next = ListNode(value)
+        cur = cur.next
+    return dummy.next
+
+
+def to_list(head):
+    values = []
+    while head:
+        values.append(head.val)
+        head = head.next
+    return values
+
+
+def test_pairs():
+    assert to_list(reverse_k_group(build_list([1, 2, 3, 4, 5]), 2)) == [2, 1, 4, 3, 5]
+
+
+def test_triples_leave_tail():
+    assert to_list(reverse_k_group(build_list([1, 2, 3, 4, 5]), 3)) == [3, 2, 1, 4, 5]
+
+
+def test_k_one():
+    assert to_list(reverse_k_group(build_list([1, 2, 3]), 1)) == [1, 2, 3]`,
+    solution: `class ListNode:
+    def __init__(self, val=0, next=None):
+        self.val = val
+        self.next = next
+
+
+def reverse_k_group(head, k):
+    dummy = ListNode(0, head)
+    group_prev = dummy
+
+    while True:
+        kth = group_prev
+        for _ in range(k):
+            kth = kth.next
+            if kth is None:
+                return dummy.next
+
+        group_next = kth.next
+        prev = group_next
+        cur = group_prev.next
+
+        while cur is not group_next:
+            nxt = cur.next
+            cur.next = prev
+            prev = cur
+            cur = nxt
+
+        old_group_start = group_prev.next
+        group_prev.next = kth
+        group_prev = old_group_start`,
+    usage: null,
+    tags: ["linked-list", "neetcode"],
+  },
+  {
+    name: "Permutation in String",
+    category: "sliding-window",
+    language: "python",
+    difficulty: "medium",
+    description: `Permutation in String
+
+Given strings s1 and s2, return true if any substring of s2 is a permutation of s1.
+
+Example 1:
+Input: s1 = "ab", s2 = "eidbaooo"
+Output: true
+
+Example 2:
+Input: s1 = "ab", s2 = "eidboaoo"
+Output: false
+
+Constraints:
+- 1 <= s1.length, s2.length <= 10,000
+- s1 and s2 contain lowercase English letters
+
+Ref: LeetCode #567 Permutation in String`,
+    code: `def check_inclusion(s1, s2):
+    raise NotImplementedError`,
+    testCode: `def test_contains_permutation():
+    assert check_inclusion("ab", "eidbaooo") is True
+
+
+def test_missing_permutation():
+    assert check_inclusion("ab", "eidboaoo") is False
+
+
+def test_entire_string():
+    assert check_inclusion("adc", "dcda") is True
+
+
+def test_pattern_longer_than_text():
+    assert check_inclusion("abcd", "abc") is False`,
+    solution: `def check_inclusion(s1, s2):
+    if len(s1) > len(s2):
+        return False
+
+    need = [0] * 26
+    window = [0] * 26
+    base = ord("a")
+
+    for i, ch in enumerate(s1):
+        need[ord(ch) - base] += 1
+        window[ord(s2[i]) - base] += 1
+
+    if need == window:
+        return True
+
+    for right in range(len(s1), len(s2)):
+        window[ord(s2[right]) - base] += 1
+        window[ord(s2[right - len(s1)]) - base] -= 1
+        if window == need:
+            return True
+
+    return False`,
+    usage: null,
+    tags: ["sliding-window", "string", "neetcode"],
+  },
+  {
+    name: "Copy List with Random Pointer",
+    category: "linked-list",
+    language: "python",
+    difficulty: "medium",
+    description: `Copy List with Random Pointer
+
+Each node in a linked list has next and random pointers. Return a deep copy where every copied node points only to copied nodes.
+
+Example 1:
+Input: nodes = [[7,null],[13,0],[11,4],[10,2],[1,0]]
+Output: a structurally identical deep copy
+
+Example 2:
+Input: nodes = [[1,1],[2,1]]
+Output: a new two-node list with matching random links
+
+Constraints:
+- The list can be empty
+- Node values fit in a signed 32-bit integer
+- random may point to any node in the list or to null
+
+Ref: LeetCode #138 Copy List with Random Pointer`,
+    code: `class Node:
+    def __init__(self, x, next=None, random=None):
+        self.val = int(x)
+        self.next = next
+        self.random = random
+
+
+def copy_random_list(head):
+    raise NotImplementedError`,
+    testCode: `def build_random_list(values, random_indices):
+    nodes = [Node(value) for value in values]
+    for i, node in enumerate(nodes):
+        node.next = nodes[i + 1] if i + 1 < len(nodes) else None
+        node.random = nodes[random_indices[i]] if random_indices[i] is not None else None
+    return nodes[0] if nodes else None
+
+
+def serialize(head):
+    nodes = []
+    index = {}
+    cur = head
+    while cur:
+        index[cur] = len(nodes)
+        nodes.append(cur)
+        cur = cur.next
+    return [[node.val, index.get(node.random)] for node in nodes]
+
+
+def test_copies_values_and_random_links():
+    original = build_random_list([7, 13, 11, 10, 1], [None, 0, 4, 2, 0])
+    copied = copy_random_list(original)
+    assert serialize(copied) == [[7, None], [13, 0], [11, 4], [10, 2], [1, 0]]
+    assert copied is not original
+    assert copied.next is not original.next
+
+
+def test_empty():
+    assert copy_random_list(None) is None`,
+    solution: `class Node:
+    def __init__(self, x, next=None, random=None):
+        self.val = int(x)
+        self.next = next
+        self.random = random
+
+
+def copy_random_list(head):
+    if head is None:
+        return None
+
+    clones = {}
+    cur = head
+    while cur:
+        clones[cur] = Node(cur.val)
+        cur = cur.next
+
+    cur = head
+    while cur:
+        clones[cur].next = clones.get(cur.next)
+        clones[cur].random = clones.get(cur.random)
+        cur = cur.next
+
+    return clones[head]`,
+    usage: null,
+    tags: ["linked-list", "hash-map", "neetcode"],
+  },
+  {
+    name: "LRU Cache",
+    category: "linked-list",
+    language: "python",
+    difficulty: "medium",
+    description: `LRU Cache
+
+Design a cache with fixed capacity that supports get and put in O(1) average time. When the cache is full, evict the least recently used key.
+
+Example:
+Input: capacity = 2, operations = put(1,1), put(2,2), get(1), put(3,3), get(2)
+Output: get(1) returns 1, get(2) returns -1
+
+Constraints:
+- 1 <= capacity <= 3000
+- Keys and values fit in a signed 32-bit integer
+- Up to 200,000 operations
+
+Ref: LeetCode #146 LRU Cache`,
+    code: `class LRUCache:
+    def __init__(self, capacity):
+        pass
+
+    def get(self, key):
+        raise NotImplementedError
+
+    def put(self, key, value):
+        raise NotImplementedError`,
+    testCode: `def test_evicts_least_recently_used_key():
+    cache = LRUCache(2)
+    cache.put(1, 1)
+    cache.put(2, 2)
+    assert cache.get(1) == 1
+    cache.put(3, 3)
+    assert cache.get(2) == -1
+    cache.put(4, 4)
+    assert cache.get(1) == -1
+    assert cache.get(3) == 3
+    assert cache.get(4) == 4
+
+
+def test_updates_existing_key():
+    cache = LRUCache(2)
+    cache.put(2, 1)
+    cache.put(2, 2)
+    assert cache.get(2) == 2
+    cache.put(1, 1)
+    cache.put(4, 1)
+    assert cache.get(2) == -1`,
+    solution: `from collections import OrderedDict
+
+
+class LRUCache:
+    def __init__(self, capacity):
+        self.capacity = capacity
+        self.cache = OrderedDict()
+
+    def get(self, key):
+        if key not in self.cache:
+            return -1
+        self.cache.move_to_end(key)
+        return self.cache[key]
+
+    def put(self, key, value):
+        if key in self.cache:
+            self.cache.move_to_end(key)
+        self.cache[key] = value
+        if len(self.cache) > self.capacity:
+            self.cache.popitem(last=False)`,
+    usage: null,
+    tags: ["linked-list", "hash-map", "design", "neetcode"],
+  },
+  {
+    name: "Sliding Window Maximum",
+    category: "sliding-window",
+    language: "python",
+    difficulty: "hard",
+    description: `Sliding Window Maximum
+
+Given an integer array and a window size k, return the maximum value in each contiguous window of size k.
+
+Example 1:
+Input: nums = [1,3,-1,-3,5,3,6,7], k = 3
+Output: [3,3,5,5,6,7]
+
+Example 2:
+Input: nums = [1], k = 1
+Output: [1]
+
+Constraints:
+- 1 <= nums.length <= 100,000
+- 1 <= k <= nums.length
+- Values fit in a signed 32-bit integer
+
+Ref: LeetCode #239 Sliding Window Maximum`,
+    code: `def max_sliding_window(nums, k):
+    raise NotImplementedError`,
+    testCode: `def test_example():
+    assert max_sliding_window([1, 3, -1, -3, 5, 3, 6, 7], 3) == [3, 3, 5, 5, 6, 7]
+
+
+def test_single():
+    assert max_sliding_window([1], 1) == [1]
+
+
+def test_window_size_two():
+    assert max_sliding_window([9, 11], 2) == [11]
+
+
+def test_decreasing():
+    assert max_sliding_window([4, 3, 2, 1], 2) == [4, 3, 2]`,
+    solution: `from collections import deque
+
+
+def max_sliding_window(nums, k):
+    result = []
+    q = deque()
+
+    for right, value in enumerate(nums):
+        while q and nums[q[-1]] <= value:
+            q.pop()
+        q.append(right)
+
+        left = right - k + 1
+        if q[0] < left:
+            q.popleft()
+        if left >= 0:
+            result.append(nums[q[0]])
+
+    return result`,
+    usage: null,
+    tags: ["sliding-window", "deque", "neetcode"],
+  },
+  {
+    name: "Find the Duplicate Number",
+    category: "two-pointers",
+    language: "python",
+    difficulty: "medium",
+    description: `Find the Duplicate Number
+
+An array nums has n + 1 integers where every value is in the range 1 through n. Exactly one value is duplicated. Return that duplicated value without modifying the array.
+
+Example 1:
+Input: nums = [1,3,4,2,2]
+Output: 2
+
+Example 2:
+Input: nums = [3,1,3,4,2]
+Output: 3
+
+Constraints:
+- 1 <= n <= 100,000
+- nums.length == n + 1
+- Exactly one number appears at least twice
+
+Ref: LeetCode #287 Find the Duplicate Number`,
+    code: `def find_duplicate(nums):
+    raise NotImplementedError`,
+    testCode: `def test_example_one():
+    assert find_duplicate([1, 3, 4, 2, 2]) == 2
+
+
+def test_example_two():
+    assert find_duplicate([3, 1, 3, 4, 2]) == 3
+
+
+def test_duplicate_appears_more_than_twice():
+    assert find_duplicate([2, 2, 2, 2, 2]) == 2`,
+    solution: `def find_duplicate(nums):
+    slow = nums[0]
+    fast = nums[0]
+
+    while True:
+        slow = nums[slow]
+        fast = nums[nums[fast]]
+        if slow == fast:
+            break
+
+    slow = nums[0]
+    while slow != fast:
+        slow = nums[slow]
+        fast = nums[fast]
+
+    return slow`,
+    usage: null,
+    tags: ["array", "two-pointers", "neetcode"],
+  },
 ];
+
+const samplePythonSolutionVariants: Record<string, NonNullable<SeedKata["solutionVariants"]>> = {
+  "Maximum Subarray": [
+    variant("Brute force", `def max_subarray_sum(nums):
+    best = nums[0]
+    for start in range(len(nums)):
+        total = 0
+        for end in range(start, len(nums)):
+            total += nums[end]
+            best = max(best, total)
+    return best`),
+    variant("Kadane DP", `def max_subarray_sum(nums):
+    best = nums[0]
+    current = nums[0]
+    for num in nums[1:]:
+        current = max(num, current + num)
+        best = max(best, current)
+    return best`),
+    variant("Divide and conquer", `def max_subarray_sum(nums):
+    def solve(left, right):
+        if left == right:
+            value = nums[left]
+            return value, value, value, value
+        mid = (left + right) // 2
+        l_sum, l_prefix, l_suffix, l_best = solve(left, mid)
+        r_sum, r_prefix, r_suffix, r_best = solve(mid + 1, right)
+        total = l_sum + r_sum
+        prefix = max(l_prefix, l_sum + r_prefix)
+        suffix = max(r_suffix, r_sum + l_suffix)
+        best = max(l_best, r_best, l_suffix + r_prefix)
+        return total, prefix, suffix, best
+
+    return solve(0, len(nums) - 1)[3]`),
+  ],
+  "Climbing Stairs": [
+    variant("Memoized recursion", `def climb_stairs(n):
+    memo = {1: 1, 2: 2}
+
+    def ways(k):
+        if k not in memo:
+            memo[k] = ways(k - 1) + ways(k - 2)
+        return memo[k]
+
+    return ways(n)`),
+    variant("Tabulation", `def climb_stairs(n):
+    if n <= 2:
+        return n
+    dp = [0] * (n + 1)
+    dp[1] = 1
+    dp[2] = 2
+    for i in range(3, n + 1):
+        dp[i] = dp[i - 1] + dp[i - 2]
+    return dp[n]`),
+    variant("Optimized", `def climb_stairs(n):
+    if n <= 2:
+        return n
+    prev2, prev1 = 1, 2
+    for _ in range(3, n + 1):
+        prev2, prev1 = prev1, prev2 + prev1
+    return prev1`),
+  ],
+  "Climbing Stairs (Recursive)": [
+    variant("Plain recursion", `def climb_stairs(n):
+    if n <= 2:
+        return n
+    return climb_stairs(n - 1) + climb_stairs(n - 2)`),
+    variant("Memoized recursion", `def climb_stairs(n):
+    memo = {1: 1, 2: 2}
+
+    def ways(k):
+        if k not in memo:
+            memo[k] = ways(k - 1) + ways(k - 2)
+        return memo[k]
+
+    return ways(n)`),
+    variant("Tabulation", `def climb_stairs(n):
+    if n <= 2:
+        return n
+    dp = [0] * (n + 1)
+    dp[1] = 1
+    dp[2] = 2
+    for i in range(3, n + 1):
+        dp[i] = dp[i - 1] + dp[i - 2]
+    return dp[n]`),
+    variant("Optimized", `def climb_stairs(n):
+    if n <= 2:
+        return n
+    prev2, prev1 = 1, 2
+    for _ in range(3, n + 1):
+        prev2, prev1 = prev1, prev2 + prev1
+    return prev1`),
+  ],
+  "Longest Common Subsequence": [
+    variant("Memoized recursion", `def lcs(text1, text2):
+    memo = {}
+
+    def best(i, j):
+        if i == len(text1) or j == len(text2):
+            return 0
+        key = (i, j)
+        if key not in memo:
+            if text1[i] == text2[j]:
+                memo[key] = 1 + best(i + 1, j + 1)
+            else:
+                memo[key] = max(best(i + 1, j), best(i, j + 1))
+        return memo[key]
+
+    return best(0, 0)`),
+    variant("2D tabulation", `def lcs(text1, text2):
+    m, n = len(text1), len(text2)
+    dp = [[0] * (n + 1) for _ in range(m + 1)]
+    for i in range(1, m + 1):
+        for j in range(1, n + 1):
+            if text1[i - 1] == text2[j - 1]:
+                dp[i][j] = dp[i - 1][j - 1] + 1
+            else:
+                dp[i][j] = max(dp[i - 1][j], dp[i][j - 1])
+    return dp[m][n]`),
+    variant("Rolling rows", `def lcs(text1, text2):
+    prev = [0] * (len(text2) + 1)
+    for ch1 in text1:
+        curr = [0] * (len(text2) + 1)
+        for j, ch2 in enumerate(text2, 1):
+            if ch1 == ch2:
+                curr[j] = prev[j - 1] + 1
+            else:
+                curr[j] = max(prev[j], curr[j - 1])
+        prev = curr
+    return prev[-1]`),
+  ],
+  "Permutations": [
+    variant("Remaining-list recursion", `def permutations(nums):
+    result = []
+
+    def backtrack(path, remaining):
+        if not remaining:
+            result.append(path[:])
+            return
+        for i in range(len(remaining)):
+            backtrack(path + [remaining[i]], remaining[:i] + remaining[i + 1:])
+
+    backtrack([], nums)
+    return result`),
+    variant("Used flags", `def permutations(nums):
+    result = []
+    used = [False] * len(nums)
+
+    def backtrack(path):
+        if len(path) == len(nums):
+            result.append(path[:])
+            return
+        for i, num in enumerate(nums):
+            if used[i]:
+                continue
+            used[i] = True
+            path.append(num)
+            backtrack(path)
+            path.pop()
+            used[i] = False
+
+    backtrack([])
+    return result`),
+    variant("In-place swap", `def permutations(nums):
+    result = []
+
+    def backtrack(first):
+        if first == len(nums):
+            result.append(nums[:])
+            return
+        for i in range(first, len(nums)):
+            nums[first], nums[i] = nums[i], nums[first]
+            backtrack(first + 1)
+            nums[first], nums[i] = nums[i], nums[first]
+
+    backtrack(0)
+    return result`),
+  ],
+  "Subsets": [
+    variant("Backtracking", `def subsets(nums):
+    result = []
+
+    def backtrack(start, path):
+        result.append(path[:])
+        for i in range(start, len(nums)):
+            path.append(nums[i])
+            backtrack(i + 1, path)
+            path.pop()
+
+    backtrack(0, [])
+    return result`),
+    variant("Iterative cascading", `def subsets(nums):
+    result = [[]]
+    for num in nums:
+        result += [curr + [num] for curr in result]
+    return result`),
+    variant("Bitmask", `def subsets(nums):
+    result = []
+    n = len(nums)
+    for mask in range(1 << n):
+        subset = []
+        for i in range(n):
+            if mask & (1 << i):
+                subset.append(nums[i])
+        result.append(subset)
+    return result`),
+  ],
+  "Reverse Linked List": [
+    variant("Iterative pointers", `def reverse_iterative(head):
+    prev = None
+    current = head
+    while current:
+        nxt = current.next
+        current.next = prev
+        prev = current
+        current = nxt
+    return prev`),
+    variant("Recursive helper", `def reverse_iterative(head):
+    def reverse(node, prev):
+        if not node:
+            return prev
+        nxt = node.next
+        node.next = prev
+        return reverse(nxt, node)
+
+    return reverse(head, None)`),
+  ],
+  "Reverse Linked List (Recursive)": [
+    variant("Recursive", `def reverse_recursive(head):
+    if not head or not head.next:
+        return head
+    new_head = reverse_recursive(head.next)
+    head.next.next = head
+    head.next = None
+    return new_head`),
+    variant("Iterative loop", `def reverse_recursive(head):
+    prev = None
+    current = head
+    while current:
+        nxt = current.next
+        current.next = prev
+        prev = current
+        current = nxt
+    return prev`),
+  ],
+  "Linked List Cycle": [
+    variant("Floyd slow/fast pointers", `def has_cycle(head):
+    slow = fast = head
+    while fast and fast.next:
+        slow = slow.next
+        fast = fast.next.next
+        if slow is fast:
+            return True
+    return False`),
+    variant("Hash set", `def has_cycle(head):
+    seen = set()
+    current = head
+    while current:
+        if current in seen:
+            return True
+        seen.add(current)
+        current = current.next
+    return False`),
+  ],
+  "Binary Tree Preorder (Recursive)": [
+    variant("Recursive DFS", `def preorder(root):
+    if not root:
+        return []
+    return [root.val] + preorder(root.left) + preorder(root.right)`),
+    variant("Iterative stack", `def preorder(root):
+    if not root:
+        return []
+    result = []
+    stack = [root]
+    while stack:
+        node = stack.pop()
+        result.append(node.val)
+        if node.right:
+            stack.append(node.right)
+        if node.left:
+            stack.append(node.left)
+    return result`),
+  ],
+  "Binary Tree Inorder (Recursive)": [
+    variant("Recursive DFS", `def inorder(root):
+    if not root:
+        return []
+    return inorder(root.left) + [root.val] + inorder(root.right)`),
+    variant("Iterative stack", `def inorder(root):
+    result = []
+    stack = []
+    current = root
+    while current or stack:
+        while current:
+            stack.append(current)
+            current = current.left
+        current = stack.pop()
+        result.append(current.val)
+        current = current.right
+    return result`),
+  ],
+  "Binary Tree Postorder (Recursive)": [
+    variant("Recursive DFS", `def postorder(root):
+    if not root:
+        return []
+    return postorder(root.left) + postorder(root.right) + [root.val]`),
+    variant("Iterative stack", `def postorder(root):
+    if not root:
+        return []
+    result = []
+    stack = [root]
+    while stack:
+        node = stack.pop()
+        result.append(node.val)
+        if node.left:
+            stack.append(node.left)
+        if node.right:
+            stack.append(node.right)
+    return result[::-1]`),
+  ],
+};
+
+const samplePythonVariantMetadata: Record<string, Record<string, Pick<NonNullable<SeedKata["solutionVariants"]>[number], "complexity" | "explanation">>> = {
+  "Maximum Subarray": {
+    "Brute force": {
+      complexity: "Time: O(n²), Space: O(1)",
+      explanation: "Checks every subarray sum directly; useful as the baseline before introducing DP.",
+    },
+    "Kadane DP": {
+      complexity: "Time: O(n), Space: O(1)",
+      explanation: "Keeps the best subarray sum ending at the current index and the best seen globally.",
+    },
+    "Divide and conquer": {
+      complexity: "Time: O(n log n), Space: O(log n)",
+      explanation: "Combines each half's best prefix, suffix, total, and internal best subarray.",
+    },
+  },
+  "Climbing Stairs": {
+    "Memoized recursion": {
+      complexity: "Time: O(n), Space: O(n)",
+      explanation: "Caches ways(k), so each stair count is solved once.",
+    },
+    "Tabulation": {
+      complexity: "Time: O(n), Space: O(n)",
+      explanation: "Builds ways from the bottom up with ways[i] = ways[i-1] + ways[i-2].",
+    },
+    "Optimized": {
+      complexity: "Time: O(n), Space: O(1)",
+      explanation: "Only the previous two stair counts are needed.",
+    },
+  },
+  "Climbing Stairs (Recursive)": {
+    "Plain recursion": {
+      complexity: "Time: O(2^n), Space: O(n)",
+      explanation: "Branches into n-1 and n-2 without caching, recomputing many subproblems.",
+    },
+    "Memoized recursion": {
+      complexity: "Time: O(n), Space: O(n)",
+      explanation: "Adds a cache to the recursive recurrence so each k is computed once.",
+    },
+    "Tabulation": {
+      complexity: "Time: O(n), Space: O(n)",
+      explanation: "Fills a DP array from smaller stair counts to larger ones.",
+    },
+    "Optimized": {
+      complexity: "Time: O(n), Space: O(1)",
+      explanation: "Tracks only the last two DP states.",
+    },
+  },
+  "Longest Common Subsequence": {
+    "Memoized recursion": {
+      complexity: "Time: O(m*n), Space: O(m*n)",
+      explanation: "Caches each pair of string indices so each subproblem is solved once.",
+    },
+    "2D tabulation": {
+      complexity: "Time: O(m*n), Space: O(m*n)",
+      explanation: "Fills a table where dp[i][j] is the LCS length for two prefixes.",
+    },
+    "Rolling rows": {
+      complexity: "Time: O(m*n), Space: O(n)",
+      explanation: "Keeps only the previous and current DP rows because each row depends only on the row above.",
+    },
+  },
+  "Permutations": {
+    "Remaining-list recursion": { complexity: "Time: O(n!*n), Space: O(n!*n)", explanation: "Builds a new remaining list at each branch; clear but extra copying." },
+    "Used flags": { complexity: "Time: O(n!*n), Space: O(n)", explanation: "Keeps a path and a used array to avoid rebuilding the remaining list." },
+    "In-place swap": { complexity: "Time: O(n!*n), Space: O(n)", explanation: "Swaps each candidate into the current position and backtracks in place." },
+  },
+  "Subsets": {
+    "Backtracking": { complexity: "Time: O(n*2^n), Space: O(n)", explanation: "Chooses whether to extend the current path with each later element." },
+    "Iterative cascading": { complexity: "Time: O(n*2^n), Space: O(n*2^n)", explanation: "For each value, duplicates existing subsets with that value appended." },
+    "Bitmask": { complexity: "Time: O(n*2^n), Space: O(n*2^n)", explanation: "Treats each integer mask as one include/exclude pattern." },
+  },
+  "Reverse Linked List": {
+    "Iterative pointers": { complexity: "Time: O(n), Space: O(1)", explanation: "Rewires each next pointer while walking the list once." },
+    "Recursive helper": { complexity: "Time: O(n), Space: O(n)", explanation: "Carries the previous node through recursive calls." },
+  },
+  "Reverse Linked List (Recursive)": {
+    "Recursive": { complexity: "Time: O(n), Space: O(n)", explanation: "Reverses the tail, then points the next node back to the current node." },
+    "Iterative loop": { complexity: "Time: O(n), Space: O(1)", explanation: "Equivalent pointer rewiring without recursion." },
+  },
+  "Linked List Cycle": {
+    "Floyd slow/fast pointers": { complexity: "Time: O(n), Space: O(1)", explanation: "A fast pointer eventually catches the slow pointer if a cycle exists." },
+    "Hash set": { complexity: "Time: O(n), Space: O(n)", explanation: "Stores visited nodes and detects the first repeated node." },
+  },
+  "Binary Tree Preorder (Recursive)": {
+    "Recursive DFS": { complexity: "Time: O(n), Space: O(h)", explanation: "Visits node, then left subtree, then right subtree." },
+    "Iterative stack": { complexity: "Time: O(n), Space: O(h)", explanation: "Pushes right before left so the left subtree is processed first." },
+  },
+  "Binary Tree Inorder (Recursive)": {
+    "Recursive DFS": { complexity: "Time: O(n), Space: O(h)", explanation: "Visits left subtree, node, then right subtree." },
+    "Iterative stack": { complexity: "Time: O(n), Space: O(h)", explanation: "Simulates the recursion stack by walking left before visiting nodes." },
+  },
+  "Binary Tree Postorder (Recursive)": {
+    "Recursive DFS": { complexity: "Time: O(n), Space: O(h)", explanation: "Visits left subtree, right subtree, then node." },
+    "Iterative stack": { complexity: "Time: O(n), Space: O(h)", explanation: "Collects root-right-left order and reverses it." },
+  },
+};
+
+for (const kata of sampleKatasPython) {
+  kata.solutionVariants = samplePythonSolutionVariants[kata.name] ?? kata.solutionVariants;
+  if (kata.solutionVariants) {
+    const metadata = samplePythonVariantMetadata[kata.name] ?? {};
+    kata.solutionVariants = kata.solutionVariants.map((solution) => ({
+      ...solution,
+      ...(metadata[solution.label] ?? {}),
+    }));
+  }
+}
+
+enrichMissingPythonSolutionVariants(sampleKatasPython);

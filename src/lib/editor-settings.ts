@@ -19,6 +19,7 @@ export interface EditorSettings {
   wordWrap: boolean;
   fontLigatures: boolean;
   highlightOccurrences: boolean;
+  bracketPairColorization: boolean;
 }
 
 export function monacoEditorOptions(s: EditorSettings) {
@@ -33,6 +34,7 @@ export function monacoEditorOptions(s: EditorSettings) {
     lineNumbers: s.lineNumbersMode,
     fontLigatures: s.fontLigatures,
     wordWrap: s.wordWrap ? ("on" as const) : ("off" as const),
+    bracketPairColorization: { enabled: s.bracketPairColorization },
 
     // Autocomplete. parameterHints is the signature popup that fires on `(`;
     // it did not follow this toggle before 2026-07-09.
@@ -64,6 +66,7 @@ export type EditorToggleKey =
   | "autoClosingBrackets"
   | "wordWrap"
   | "highlightOccurrences"
+  | "bracketPairColorization"
   | "fontLigatures";
 
 export interface EditorToggle {
@@ -97,6 +100,12 @@ export const EDITOR_TOGGLES: EditorToggle[] = [
     key: "highlightOccurrences",
     label: "Highlight Occurrences",
     hint: "Turn off to stop other instances of the identifier under the cursor from lighting up.",
+    onPractice: true,
+  },
+  {
+    key: "bracketPairColorization",
+    label: "Color Parentheses",
+    hint: "Color matching parentheses, brackets, and braces by nesting depth.",
     onPractice: true,
   },
   {

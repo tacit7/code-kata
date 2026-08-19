@@ -1,4 +1,5 @@
 import type { SeedKata } from "../types/editor";
+import { enrichMissingPythonSolutionVariants } from "./python-solution-variants";
 
 const neetcodeBinarySearch: SeedKata[] = [
   {
@@ -175,8 +176,10 @@ def test_median_disjoint():
         else:
             left = i + 1`,
     usage: null,
-    tags: ["binary-search", "array", "divide-and-conquer", "blind75", "neetcode"],
+    tags: ["binary-search", "array", "divide-and-conquer", "neetcode"],
   },
 ];
+
+enrichMissingPythonSolutionVariants(neetcodeBinarySearch);
 
 export { neetcodeBinarySearch };

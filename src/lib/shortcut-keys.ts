@@ -6,7 +6,12 @@ export type ShortcutAction =
   | "nextKata"
   | "prevKata"
   | "toggleSolution"
+  | "toggleRepl"
+  | "zoomIn"
+  | "zoomOut"
+  | "resetZoom"
   | "openSettings"
+  | "openCommandPalette"
   | "closePanel";
 
 export type ShortcutMap = Record<ShortcutAction, string>;
@@ -18,7 +23,12 @@ export const DEFAULT_SHORTCUTS: ShortcutMap = {
   nextKata: "Meta+Alt+ArrowRight",
   prevKata: "Meta+Alt+ArrowLeft",
   toggleSolution: "Meta+Shift+S",
+  toggleRepl: "Meta+`",
+  zoomIn: "Meta+=",
+  zoomOut: "Meta+-",
+  resetZoom: "Meta+0",
   openSettings: "Meta+,",
+  openCommandPalette: "Meta+Shift+P",
   closePanel: "Escape",
 };
 

@@ -85,6 +85,10 @@ html, body, #root {
   letter-spacing: -0.01em;
 }
 
+html {
+  font-size: calc(16px * var(--kata-ui-scale, 1));
+}
+
 /* ── Scrollbar ── */
 .scrollbar-hidden {
   scrollbar-width: none;
@@ -156,12 +160,38 @@ html, body, #root {
     0 0 48px oklch(72% 0.19 150 / 0.06);
 }
 
-/* ── Heatmap cell colors (cyan scale) ── */
-.hm-0 { background-color: oklch(25% 0.01 255); }
-.hm-1 { background-color: oklch(32% 0.05 165); }
-.hm-2 { background-color: oklch(46% 0.08 165); }
-.hm-3 { background-color: oklch(62% 0.11 165); }
-.hm-4 { background-color: oklch(78% 0.14 165); }
+/* ── Monaco test failure markers ── */
+.kata-error-line {
+  background: oklch(63% 0.24 25 / 0.14);
+}
+
+.kata-error-line-decoration {
+  border-left: 2px solid oklch(63% 0.24 25);
+}
+
+.kata-error-glyph {
+  position: relative;
+}
+
+.kata-error-glyph::before {
+  content: "";
+  position: absolute;
+  top: 7px;
+  left: 50%;
+  width: 7px;
+  height: 7px;
+  transform: translateX(-50%);
+  border-radius: 999px;
+  background: oklch(63% 0.24 25);
+  box-shadow: 0 0 10px oklch(63% 0.24 25 / 0.6);
+}
+
+/* ── Heatmap cell colors follow the active app theme ── */
+.hm-0 { background-color: var(--color-base-300); }
+.hm-1 { background-color: color-mix(in oklch, var(--color-primary) 28%, var(--color-base-300)); }
+.hm-2 { background-color: color-mix(in oklch, var(--color-primary) 48%, var(--color-base-300)); }
+.hm-3 { background-color: color-mix(in oklch, var(--color-primary) 72%, var(--color-base-300)); }
+.hm-4 { background-color: var(--color-primary); }
 
 /* ── Unified app+editor themes: base-100 matches each Monaco theme's
      editor.background exactly so chrome and editor blend seamlessly ── */
@@ -197,11 +227,11 @@ html, body, #root {
   --color-base-200: #1e1f1a;
   --color-base-300: #171812;
   --color-base-content: #f8f8f2;
-  --color-primary: #66d9ef;
-  --color-primary-content: #1b1c17;
+  --color-primary: #f92672;
+  --color-primary-content: #f8f8f2;
   --color-secondary: #75715e;
   --color-secondary-content: #f8f8f2;
-  --color-accent: #f92672;
+  --color-accent: #ff6188;
   --color-accent-content: #f8f8f2;
   --color-neutral: #3e3d32;
   --color-neutral-content: #f8f8f2;

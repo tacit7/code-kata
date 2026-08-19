@@ -4,9 +4,13 @@ import { listen } from "@tauri-apps/api/event";
 import { useSettingsStore } from "./stores/settings-store";
 import { useKataStore } from "./stores/kata-store";
 import { useKeyboardShortcuts } from "./hooks/use-keyboard-shortcuts";
+import { DEFAULT_UI_SCALE, nextUiScale, previousUiScale } from "./lib/ui-scale";
 import { TopBar } from "./components/top-bar";
 import { Toaster } from "./components/toaster";
-import { PracticePage } from "./routes/library";
+import { CommandPalette } from "./components/command-palette";
+import { AppCommandRegistrar } from "./components/app-command-registrar";
+import { useCommandPaletteStore } from "./stores/command-palette-store";
+import { ModulesPage, PracticePage } from "./routes/library";
 import { PracticeQueuePage } from "./routes/practice";
 import { SettingsPage } from "./routes/settings";
 import { ResultsPage } from "./routes/results";
@@ -21,15 +25,31 @@ const KataFormPage = lazy(() => import("./routes/kata-form").then((m) => ({ defa
 
 function App() {
   const theme = useSettingsStore((s) => s.theme);
+  const uiScale = useSettingsStore((s) => s.uiScale);
   const language = useSettingsStore((s) => s.language);
   const loadSettings = useSettingsStore((s) => s.loadSettings);
+  const setSetting = useSettingsStore((s) => s.setSetting);
   const settingsLoaded = useSettingsStore((s) => s.loaded);
+  const toggleCommandPalette = useCommandPaletteStore((s) => s.toggle);
   const { loading, error, loadKatas } = useKataStore();
   const navigate = useNavigate();
 
   const handleOpenSettings = useCallback(() => navigate("/settings"), [navigate]);
+  const handleZoomIn = useCallback(() => {
+    setSetting("uiScale", nextUiScale(useSettingsStore.getState().uiScale));
+  }, [setSetting]);
+  const handleZoomOut = useCallback(() => {
+    setSetting("uiScale", previousUiScale(useSettingsStore.getState().uiScale));
+  }, [setSetting]);
+  const handleResetZoom = useCallback(() => {
+    setSetting("uiScale", DEFAULT_UI_SCALE);
+  }, [setSetting]);
   useKeyboardShortcuts({
     openSettings: handleOpenSettings,
+    zoomIn: handleZoomIn,
+    zoomOut: handleZoomOut,
+    resetZoom: handleResetZoom,
+    openCommandPalette: toggleCommandPalette,
   });
 
   useEffect(() => {
@@ -47,6 +67,10 @@ function App() {
   useEffect(() => {
     loadSettings();
   }, [loadSettings]);
+
+  useEffect(() => {
+    document.documentElement.style.setProperty("--kata-ui-scale", String(uiScale));
+  }, [uiScale]);
 
   useEffect(() => {
     if (settingsLoaded) {
@@ -95,6 +119,7 @@ function App() {
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/practice" element={<PracticeQueuePage />} />
             <Route path="/problems" element={<PracticePage />} />
+            <Route path="/modules" element={<ModulesPage />} />
             <Route path="/kata/new" element={<KataFormPage />} />
             <Route path="/kata/:kataId/edit" element={<KataFormPage />} />
             <Route path="/editor/:kataId" element={<EditorPage />} />
@@ -106,6 +131,8 @@ function App() {
           </Suspense>
         </main>
       </div>
+      <AppCommandRegistrar />
+      <CommandPalette />
       <Toaster />
     </div>
   );

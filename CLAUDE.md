@@ -6,6 +6,28 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Code Kata is a Tauri v2 desktop app for timed coding kata practice sessions with progress tracking. It combines algo katas (Python) and React katas (TypeScript) into a single tool with a Monaco editor, test runner, and analytics dashboard. See `PRD_kata_desktop.md` for the full product spec.
 
+For remaining LeetCode problems that should receive multiple solution variants, see `docs/multi-solution-candidates.md`. Keep that tracker updated when adding or deferring variants.
+
+When changing kata content, apply the change across all maintained language
+apps where appropriate: Python and JavaScript in this repo, plus Ruby in
+`~/projects/ruby-kata`. If a matching kata is missing in one language and the
+problem is language-agnostic, add the missing kata instead of only updating the
+languages that already have it. Keep LeetCode number mappings and
+`solutionVariants` in sync across languages; Ruby variants also require the
+Ruby app's `kind` field.
+
+For efficient cross-language kata updates, prefer shared structure over repeated
+manual edits: use small local `variant(...)` helpers plus metadata maps keyed by
+variant label/problem name, then run the TypeScript build in both this repo and
+`~/projects/ruby-kata`. Every displayed solution variant should include
+`complexity` and `explanation`; if variants are generated first and enriched in
+a later normalization pass, keep the enrichment map next to the generator.
+
+For DP curriculum/content work, read the course notes first: `dp_course.md`,
+`dp_course-2.md`, `dp_course-3.md`, `dp_course-4.md`, and `dp_course-5.md`.
+Treat these files as the source notes for module ordering, problem selection,
+and teaching intent before editing DP seed data or `dp-patterns.ts`.
+
 ## Commands
 
 ### Development
@@ -117,12 +139,21 @@ reaches already-seeded DBs via inline reseed guards + per-column backfills
 `` `${language} ${name}` ``) and `LEETCODE_SLUGS` (number → canonical
 titleSlug); resolve via `leetcodeNumberFor()` / `leetcodeUrlFor()`.
 `Kata.leetcodeNumber` maps to the `leetcode_number` column, populated at seed
-time and backfilled for existing DBs. The Problems list shows a `#.` prefix, a
-"LeetCode #" sort (nulls last), number search, and a "LeetCode only" toggle
-(`libraryLeetcodeOnly` UI flag → filters `leetcodeNumber != null`, hiding
-non-LeetCode katas); the editor header has an "Open on LeetCode" button; Results
-drill-down titles link to `/editor/:kataId`.
+time and backfilled for existing DBs. The Problems list shows the dark LeetCode
+icon plus a `#.` prefix for LeetCode-backed rows, a "LeetCode #" sort (nulls
+last), number search, and additive filter buttons:
+- `LeetCode` (`libraryLeetcodeOnly` → `leetcodeNumber != null`)
+- `Blind 75` (`libraryBlind75Only` → `tags.includes("blind75")`)
+- `NeetCode` (`libraryNeetcodeOnly` → `tags.includes("neetcode")`)
+
+The editor problem page renders a title above the tabs, including `#N` for
+LeetCode-backed katas, and has an "Open on LeetCode" button. Results drill-down
+titles link to `/editor/:kataId`.
 Add a number to the map when adding a LeetCode-based seed kata.
+
+For LeetCode API usage, including public problem-list retrieval, custom/favorite
+lists such as `https://leetcode.com/problem-list/plakya4j/`, pagination, problem
+metadata, and statement-fetching limits, see `docs/leetcode_api.md`.
 
 **Fetching LeetCode descriptions (reference only).** Given a slug from
 `LEETCODE_SLUGS`, pull the statement + metadata from LeetCode's GraphQL API
@@ -152,6 +183,28 @@ runtimes, works offline:
 - The REPL panel uses separate workers with persistent sessions
   (`repl-runner.ts` + `repl-backends.ts`).
 
+### Practice session navigation
+
+Running practice sessions are resumable application state. If a user leaves a
+session to visit Settings or another page, returning through the top-bar
+Practice item or `/practice` must route back to the unfinished `/session/:id`
+instead of showing a fresh queue launcher. Keep `src/lib/session-resume.ts` as
+the shared resolver for this behavior, and mirror the same rule in
+`~/projects/ruby-kata` when changing shared navigation/session behavior.
+
+### Solution variants
+DP LeetCode problems should expose multiple acceptable approaches through
+`solutionVariants` instead of a single generic "Solution" where practical. Use
+clear labels such as "Memoized recursion", "2D tabulation", "Rolling row", or
+"Optimized"; keep code snippets executable against the kata's existing tests.
+For DP families, prefer the progression recursion/memoization → tabulation →
+space optimization when it applies. Avoid leaving placeholder labels such as
+"Canonical DP solution". `Burst Balloons` (`[1,1,1]`) should expect `3`, not `4`.
+
+When mirroring content to `~/projects/ruby-kata`, convert variants to Ruby
+syntax and include the Ruby app's required `kind` field
+(`recursive | memoized | tabulation | optimized | standard`).
+
 ## Key Conventions
 
 - Package manager is **pnpm** (v10.29.1, specified in `packageManager` field)
@@ -159,6 +212,10 @@ runtimes, works offline:
 - Target is ES2021
 - Vite dev server runs on port 1420 (strict port); Tauri dev URL points to it
 - The Rust crate is named `app_lib` (see `src-tauri/Cargo.toml`)
+- App icons follow the current Code Kata family style: white square background,
+  large CK mark, and a language badge in the bottom-left. Keep `app-icon.png`,
+  `public/app-icon.png`, and generated `src-tauri/icons/*` in sync when changing
+  the icon.
 
 ## Algo Viz Pages (`public/algo-viz/`)
 

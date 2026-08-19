@@ -1,8 +1,16 @@
 import type { SeedKata } from "../types/editor";
+import { enrichMissingPythonSolutionVariants } from "./python-solution-variants";
+
+const variant = (label: string, code: string, complexity: string, explanation: string) => ({
+  label,
+  code,
+  complexity,
+  explanation,
+});
 
 const neetcodeHeap: SeedKata[] = [
   {
-    name: "Kth Largest Element In a Stream",
+    name: "Kth Largest Element in a Stream",
     category: "heap",
     language: "python",
     difficulty: "easy",
@@ -120,7 +128,7 @@ def k_closest(points: list[list[int]], k: int) -> list[list[int]]:
     tags: ["heap", "sort", "neetcode"],
   },
   {
-    name: "Kth Largest Element In An Array",
+    name: "Kth Largest Element in an Array",
     category: "heap",
     language: "python",
     difficulty: "medium",
@@ -147,6 +155,55 @@ def find_kth_largest(nums: list[int], k: int) -> int:
         if len(heap) > k:
             heapq.heappop(heap)
     return heap[0]`,
+    solutionVariants: [
+      variant(
+        "Min-heap of size k",
+        `import heapq
+
+def find_kth_largest(nums: list[int], k: int) -> int:
+    heap = []
+    for num in nums:
+        heapq.heappush(heap, num)
+        if len(heap) > k:
+            heapq.heappop(heap)
+    return heap[0]`,
+        "Time O(n log k), Space O(k)",
+        "Keeps only the k largest values seen so far. The heap root is the kth largest."
+      ),
+      variant(
+        "Sort descending",
+        `def find_kth_largest(nums: list[int], k: int) -> int:
+    return sorted(nums, reverse=True)[k - 1]`,
+        "Time O(n log n), Space O(n)",
+        "The simplest correct approach. Good baseline before optimizing with heap or quickselect."
+      ),
+      variant(
+        "Quickselect",
+        `def find_kth_largest(nums: list[int], k: int) -> int:
+    target = len(nums) - k
+    left, right = 0, len(nums) - 1
+
+    while left <= right:
+        pivot = nums[right]
+        store = left
+        for i in range(left, right):
+            if nums[i] <= pivot:
+                nums[store], nums[i] = nums[i], nums[store]
+                store += 1
+        nums[store], nums[right] = nums[right], nums[store]
+
+        if store == target:
+            return nums[store]
+        if store < target:
+            left = store + 1
+        else:
+            right = store - 1
+
+    return -1`,
+        "Average Time O(n), Worst Time O(n²), Space O(1)",
+        "Partitions around a pivot and only recurses into the side containing the target rank."
+      ),
+    ],
     usage: null,
     tags: ["heap", "sort", "neetcode"],
   },
@@ -277,5 +334,7 @@ class Twitter:
     tags: ["heap", "design", "hash-map", "neetcode"],
   },
 ];
+
+enrichMissingPythonSolutionVariants(neetcodeHeap);
 
 export { neetcodeHeap };

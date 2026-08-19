@@ -1,4 +1,5 @@
 import type { SeedKata } from "../types/editor";
+import { enrichMissingPythonSolutionVariants } from "./python-solution-variants";
 
 const variant = (label: string, code: string, complexity: string, explanation: string) => ({
   label,
@@ -151,7 +152,7 @@ def clone_graph(node):
       ),
     ],
     usage: null,
-    tags: ["graph", "bfs", "dfs", "blind75"],
+    tags: ["graph", "bfs", "dfs", "blind75", "neetcode"],
   },
   {
     name: "Course Schedule",
@@ -197,7 +198,7 @@ def test_can_finish_longer_cycle():
 
     return not any(has_cycle(i) for i in range(num_courses) if state[i] == 0)`,
     usage: null,
-    tags: ["graph", "topological-sort", "blind75"],
+    tags: ["graph", "topological-sort", "blind75", "neetcode"],
   },
   {
     name: "Pacific Atlantic Water Flow",
@@ -266,7 +267,7 @@ def pacific_atlantic(heights: list[list[int]]) -> list[list[int]]:
 
     return [[r, c] for r, c in pacific & atlantic]`,
     usage: null,
-    tags: ["graph", "dfs", "bfs", "blind75"],
+    tags: ["graph", "dfs", "bfs", "blind75", "neetcode"],
   },
   {
     name: "Number of Islands",
@@ -321,8 +322,64 @@ def test_num_islands_all_separate():
                 dfs(r, c)
 
     return count`,
+    solutionVariants: [
+      variant(
+        "Recursive DFS",
+        `def num_islands(grid: list[list[str]]) -> int:
+    if not grid:
+        return 0
+    m, n = len(grid), len(grid[0])
+    count = 0
+
+    def dfs(r, c):
+        if r < 0 or r >= m or c < 0 or c >= n or grid[r][c] != "1":
+            return
+        grid[r][c] = "0"
+        dfs(r + 1, c)
+        dfs(r - 1, c)
+        dfs(r, c + 1)
+        dfs(r, c - 1)
+
+    for r in range(m):
+        for c in range(n):
+            if grid[r][c] == "1":
+                count += 1
+                dfs(r, c)
+    return count`,
+        "Time O(mn), Space O(mn)",
+        "Flood-fills each island recursively and marks visited land as water."
+      ),
+      variant(
+        "Iterative BFS",
+        `from collections import deque
+
+def num_islands(grid: list[list[str]]) -> int:
+    if not grid:
+        return 0
+    m, n = len(grid), len(grid[0])
+    count = 0
+
+    for r in range(m):
+        for c in range(n):
+            if grid[r][c] != "1":
+                continue
+            count += 1
+            grid[r][c] = "0"
+            queue = deque([(r, c)])
+            while queue:
+                row, col = queue.popleft()
+                for dr, dc in [(1,0),(-1,0),(0,1),(0,-1)]:
+                    nr, nc = row + dr, col + dc
+                    if 0 <= nr < m and 0 <= nc < n and grid[nr][nc] == "1":
+                        grid[nr][nc] = "0"
+                        queue.append((nr, nc))
+    return count`,
+        "Time O(mn), Space O(min(mn))",
+        "Uses an explicit queue instead of recursion, avoiding recursion-depth issues on large grids."
+      ),
+    ],
     usage: null,
-    tags: ["graph", "dfs", "bfs", "blind75"],
+    tags: ["graph", "dfs", "bfs", "blind75", "neetcode"],
   },
   {
     name: "Longest Consecutive Sequence",
@@ -424,7 +481,7 @@ def alien_order(words: list[str]) -> str:
 
     return "".join(result)`,
     usage: null,
-    tags: ["graph", "topological-sort", "blind75"],
+    tags: ["graph", "topological-sort", "blind75", "neetcode"],
   },
   {
     name: "Graph Valid Tree",
@@ -474,7 +531,7 @@ def test_valid_tree_disconnected():
 
     return all(union(u, v) for u, v in edges)`,
     usage: null,
-    tags: ["graph", "union-find", "blind75"],
+    tags: ["graph", "union-find", "blind75", "neetcode"],
   },
   {
     name: "Number of Connected Components in an Undirected Graph",
@@ -525,8 +582,10 @@ def test_count_components_single_node():
 
     return components`,
     usage: null,
-    tags: ["graph", "union-find", "blind75"],
+    tags: ["graph", "union-find", "blind75", "neetcode"],
   },
 ];
+
+enrichMissingPythonSolutionVariants(blind75Part3);
 
 export { blind75Part3 };

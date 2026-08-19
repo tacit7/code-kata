@@ -1,4 +1,5 @@
-import { DP_MODULES, dpFamilyFor } from "./dp-patterns";
+import { dpFamilyFor, type PatternModule } from "./dp-patterns";
+import { ROADMAP_MODULES, matchesRoadmapModule } from "./roadmap-modules";
 import { computeSrState } from "./sr";
 
 export type MasteryLevel = "strong" | "developing" | "needs-review";
@@ -48,7 +49,23 @@ export interface RecentlyImprovedRow {
   improvedAt: string;
 }
 
-export interface DpModuleProgressRow {
+export interface DashboardModuleDef {
+  id: string;
+  label: string;
+  categories: readonly string[];
+  tags: readonly string[];
+}
+
+export const DASHBOARD_MODULES: readonly DashboardModuleDef[] = ROADMAP_MODULES.flatMap((module) =>
+  module.id === "dynamic-programming"
+    ? [
+        { id: "1-d-dp", label: "1-D Dynamic Programming", categories: ["1-d-dp"], tags: ["1d-dp"] },
+        { id: "2-d-dp", label: "2-D Dynamic Programming", categories: ["2-d-dp"], tags: ["2d-dp"] },
+      ]
+    : [module],
+);
+
+export interface ModuleProgressRow {
   moduleId: string;
   moduleLabel: string;
   total: number;
@@ -63,13 +80,16 @@ export interface DpModuleProgressRow {
 export interface LeetcodeProgress {
   total: number;
   solved: number;
+  percentSolved: number;
   easySolved: number;
   mediumSolved: number;
   hardSolved: number;
   blind75Total: number;
   blind75Solved: number;
+  blind75PercentSolved: number;
   neetcodeTotal: number;
   neetcodeSolved: number;
+  neetcodePercentSolved: number;
   recommendedUnattempted: number;
 }
 
@@ -77,7 +97,7 @@ export interface HighValueDashboardMetrics {
   masterySummary: MasterySummary;
   reviewQueue: ReviewQueueRow[];
   recentlyImproved: RecentlyImprovedRow[];
-  dpModuleProgress: DpModuleProgressRow[];
+  moduleProgress: ModuleProgressRow[];
   leetcodeProgress: LeetcodeProgress;
 }
 
@@ -89,10 +109,28 @@ interface KataAttemptStats {
   lastAttempt: DashboardMetricAttempt | null;
 }
 
+interface LeetcodeProblemStats {
+  solved: boolean;
+  attempted: boolean;
+  difficulty: string | null;
+  blind75: boolean;
+  neetcode: boolean;
+}
+
 const REVIEW_QUEUE_LIMIT = 5;
 const RECENTLY_IMPROVED_LIMIT = 5;
 const RECENT_IMPROVEMENT_DAYS = 30;
 const DAY_MS = 86_400_000;
+const TWO_DIMENSIONAL_DP_MODULES = new Set<PatternModule>([
+  "grid-dp",
+  "0-1-knapsack",
+  "unbounded-knapsack",
+  "string-two-sequence-dp",
+  "interval-dp",
+  "dfs-memo",
+  "tree-dp",
+  "bitmask-dp",
+]);
 
 function attemptsByKata(attempts: DashboardMetricAttempt[]): Map<number, DashboardMetricAttempt[]> {
   const grouped = new Map<number, DashboardMetricAttempt[]>();
@@ -188,6 +226,29 @@ function reviewReason(stats: KataAttemptStats, now: number): string {
   return daysSince >= 14 ? `${daysSince}d since practice` : "Review recommended";
 }
 
+function topLevelDpModuleId(kata: DashboardMetricKata): "1-d-dp" | "2-d-dp" | null {
+  const tags = new Set(kata.tags);
+  const family = dpFamilyFor(kata);
+  if (kata.category === "2-d-dp" || tags.has("2d-dp") || (family != null && TWO_DIMENSIONAL_DP_MODULES.has(family))) {
+    return "2-d-dp";
+  }
+  if (kata.category === "1-d-dp" || tags.has("1d-dp") || tags.has("dynamic-programming") || family != null) {
+    return "1-d-dp";
+  }
+  return null;
+}
+
+function matchesDashboardModule(kata: DashboardMetricKata, module: DashboardModuleDef): boolean {
+  return matchesRoadmapModule(kata, module);
+}
+
+export function dashboardModuleFor(kata: DashboardMetricKata): DashboardModuleDef | null {
+  const dpModuleId = topLevelDpModuleId(kata);
+  if (dpModuleId) return DASHBOARD_MODULES.find((module) => module.id === dpModuleId) ?? null;
+
+  return DASHBOARD_MODULES.find((module) => module.id !== "1-d-dp" && module.id !== "2-d-dp" && matchesDashboardModule(kata, module)) ?? null;
+}
+
 export function computeHighValueDashboardMetrics(
   katas: DashboardMetricKata[],
   attempts: DashboardMetricAttempt[],
@@ -281,9 +342,9 @@ export function computeHighValueDashboardMetrics(
     .sort((a, b) => new Date(b.improvedAt).getTime() - new Date(a.improvedAt).getTime())
     .slice(0, RECENTLY_IMPROVED_LIMIT);
 
-  const dpModuleProgress = DP_MODULES.map((module): DpModuleProgressRow => {
-    const moduleKatas = katas.filter((kata) => dpFamilyFor(kata) === module.id);
-    const row: DpModuleProgressRow = {
+  const moduleProgress = DASHBOARD_MODULES.map((module): ModuleProgressRow => {
+    const moduleKatas = katas.filter((kata) => dashboardModuleFor(kata)?.id === module.id);
+    const row: ModuleProgressRow = {
       moduleId: module.id,
       moduleLabel: module.label,
       total: moduleKatas.length,
@@ -309,55 +370,84 @@ export function computeHighValueDashboardMetrics(
     return row;
   }).filter((row) => row.total > 0);
 
-  const leetcodeProgress = katas.reduce<LeetcodeProgress>(
-    (progress, kata) => {
-      const isLeetcode = kata.leetcodeNumber != null;
-      const solved = (statsByKata.get(kata.id)?.passCount ?? 0) > 0;
-      const attempted = (statsByKata.get(kata.id)?.attempts.length ?? 0) > 0;
-      const difficulty = kata.difficulty?.toLowerCase();
-      const blind75 = kata.tags.includes("blind75");
-      const neetcode = kata.tags.includes("neetcode");
+  const leetcodeProblems = new Map<number, LeetcodeProblemStats>();
 
-      if (isLeetcode) {
-        progress.total++;
-        if (solved) progress.solved++;
-        if (solved && difficulty === "easy") progress.easySolved++;
-        if (solved && difficulty === "medium") progress.mediumSolved++;
-        if (solved && difficulty === "hard") progress.hardSolved++;
-      }
+  for (const kata of katas) {
+    if (kata.leetcodeNumber == null) continue;
 
-      if (blind75) {
-        progress.blind75Total++;
-        if (solved) progress.blind75Solved++;
-      }
+    const stats = statsByKata.get(kata.id);
+    const existing = leetcodeProblems.get(kata.leetcodeNumber) ?? {
+      solved: false,
+      attempted: false,
+      difficulty: null,
+      blind75: false,
+      neetcode: false,
+    };
 
-      if (neetcode) {
-        progress.neetcodeTotal++;
-        if (solved) progress.neetcodeSolved++;
-      }
+    existing.solved ||= (stats?.passCount ?? 0) > 0;
+    existing.attempted ||= (stats?.attempts.length ?? 0) > 0;
+    existing.difficulty ??= kata.difficulty?.toLowerCase() ?? null;
+    existing.blind75 ||= kata.tags.includes("blind75");
+    existing.neetcode ||= kata.tags.includes("neetcode");
+    leetcodeProblems.set(kata.leetcodeNumber, existing);
+  }
 
-      if ((blind75 || neetcode) && !attempted) progress.recommendedUnattempted++;
-      return progress;
-    },
-    {
-      total: 0,
-      solved: 0,
-      easySolved: 0,
-      mediumSolved: 0,
-      hardSolved: 0,
-      blind75Total: 0,
-      blind75Solved: 0,
-      neetcodeTotal: 0,
-      neetcodeSolved: 0,
-      recommendedUnattempted: 0,
-    },
-  );
+  const leetcodeProgress: LeetcodeProgress = {
+    total: 0,
+    solved: 0,
+    percentSolved: 0,
+    easySolved: 0,
+    mediumSolved: 0,
+    hardSolved: 0,
+    blind75Total: 0,
+    blind75Solved: 0,
+    blind75PercentSolved: 0,
+    neetcodeTotal: 0,
+    neetcodeSolved: 0,
+    neetcodePercentSolved: 0,
+    recommendedUnattempted: 0,
+  };
+
+  for (const problem of leetcodeProblems.values()) {
+    leetcodeProgress.total++;
+    if (problem.solved) {
+      leetcodeProgress.solved++;
+      if (problem.difficulty === "easy") leetcodeProgress.easySolved++;
+      if (problem.difficulty === "medium") leetcodeProgress.mediumSolved++;
+      if (problem.difficulty === "hard") leetcodeProgress.hardSolved++;
+    }
+
+    if (problem.blind75) {
+      leetcodeProgress.blind75Total++;
+      if (problem.solved) leetcodeProgress.blind75Solved++;
+    }
+
+    if (problem.neetcode) {
+      leetcodeProgress.neetcodeTotal++;
+      if (problem.solved) leetcodeProgress.neetcodeSolved++;
+    }
+
+    if ((problem.blind75 || problem.neetcode) && !problem.attempted) {
+      leetcodeProgress.recommendedUnattempted++;
+    }
+  }
+
+  leetcodeProgress.percentSolved =
+    leetcodeProgress.total > 0 ? Math.round((leetcodeProgress.solved / leetcodeProgress.total) * 100) : 0;
+  leetcodeProgress.blind75PercentSolved =
+    leetcodeProgress.blind75Total > 0
+      ? Math.round((leetcodeProgress.blind75Solved / leetcodeProgress.blind75Total) * 100)
+      : 0;
+  leetcodeProgress.neetcodePercentSolved =
+    leetcodeProgress.neetcodeTotal > 0
+      ? Math.round((leetcodeProgress.neetcodeSolved / leetcodeProgress.neetcodeTotal) * 100)
+      : 0;
 
   return {
     masterySummary,
     reviewQueue,
     recentlyImproved,
-    dpModuleProgress,
+    moduleProgress,
     leetcodeProgress,
   };
 }

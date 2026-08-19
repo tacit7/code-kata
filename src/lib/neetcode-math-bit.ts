@@ -1,4 +1,5 @@
 import type { SeedKata } from "../types/editor";
+import { enrichMissingPythonSolutionVariants } from "./python-solution-variants";
 
 const neetcodeMathBit: SeedKata[] = [
   {
@@ -225,5 +226,7 @@ def test_detect_squares_no_square():
     tags: ["math-geometry", "hash-map", "design", "neetcode"],
   },
 ];
+
+enrichMissingPythonSolutionVariants(neetcodeMathBit);
 
 export { neetcodeMathBit };

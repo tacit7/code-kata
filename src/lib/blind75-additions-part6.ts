@@ -1,4 +1,5 @@
 import type { SeedKata } from "../types/editor";
+import { enrichMissingPythonSolutionVariants } from "./python-solution-variants";
 
 const blind75Part6: SeedKata[] = [
   {
@@ -41,7 +42,7 @@ def test_pwwkew():
 
     return max_len`,
     usage: null,
-    tags: ["string", "sliding-window", "blind75"],
+    tags: ["string", "sliding-window", "blind75", "neetcode"],
   },
   {
     name: "Longest Repeating Character Replacement",
@@ -90,7 +91,7 @@ def test_abbb():
 
     return max_len`,
     usage: null,
-    tags: ["string", "sliding-window", "blind75"],
+    tags: ["string", "sliding-window", "blind75", "neetcode"],
   },
   {
     name: "Minimum Window Substring",
@@ -153,7 +154,7 @@ def min_window(s: str, t: str) -> str:
 
     return result`,
     usage: null,
-    tags: ["string", "sliding-window", "blind75"],
+    tags: ["string", "sliding-window", "blind75", "neetcode"],
   },
   {
     name: "Valid Anagram",
@@ -272,6 +273,125 @@ def test_with_punctuation():
         left += 1
         right -= 1
     return True`,
+    solutionVariants: [
+      {
+        label: "Filter then compare",
+        code: `def is_palindrome(s: str) -> bool:
+    filtered = [c.lower() for c in s if c.isalnum()]
+    left, right = 0, len(filtered) - 1
+    while left < right:
+        if filtered[left] != filtered[right]:
+            return False
+        left += 1
+        right -= 1
+    return True`,
+        complexity: "Time: O(n), Space: O(n)",
+        explanation: "Builds a normalized alphanumeric list first, then compares the list from both ends.",
+      },
+      {
+        label: "Single-pass two pointers",
+        code: `def is_palindrome(s: str) -> bool:
+    left, right = 0, len(s) - 1
+
+    while left < right:
+        while left < right and not s[left].isalnum():
+            left += 1
+        while left < right and not s[right].isalnum():
+            right -= 1
+
+        if s[left].lower() != s[right].lower():
+            return False
+
+        left += 1
+        right -= 1
+
+    return True`,
+        complexity: "Time: O(n), Space: O(1)",
+        explanation: "Walks inward over the original string, skipping punctuation in place so every character is inspected at most once.",
+      },
+    ],
+    usage: null,
+    tags: ["string", "two-pointers", "blind75", "neetcode"],
+  },
+  {
+    name: "Valid Palindrome",
+    category: "string",
+    language: "javascript",
+    difficulty: "easy",
+    description: `A phrase is a palindrome if, after converting all uppercase to lowercase and ignoring non-alphanumeric characters, it reads the same forwards and backwards.
+
+Example:
+Input: s="A man, a plan, a canal: Panama"
+Output: true
+
+Constraints:
+- 1 <= s.length <= 2 * 10^5
+- s consists of printable ASCII characters`,
+    code: `function isPalindrome(s) {
+  throw new Error("Not implemented");
+}`,
+    testCode: `function testClassic() {
+  assertEqual(isPalindrome("A man, a plan, a canal: Panama"), true, "classic phrase");
+}
+
+function testNotPalindrome() {
+  assertEqual(isPalindrome("race a car"), false, "rejects non-palindrome");
+}
+
+function testSpaceOnly() {
+  assertEqual(isPalindrome(" "), true, "space-only string");
+}
+
+function testWithPunctuation() {
+  assertEqual(isPalindrome("Was it a car or a cat I saw?"), true, "ignores punctuation");
+}`,
+    solution: `function isPalindrome(s) {
+  let left = 0;
+  let right = s.length - 1;
+
+  const isAlnum = (ch) => /[a-z0-9]/i.test(ch);
+
+  while (left < right) {
+    while (left < right && !isAlnum(s[left])) left++;
+    while (left < right && !isAlnum(s[right])) right--;
+
+    if (s[left].toLowerCase() !== s[right].toLowerCase()) {
+      return false;
+    }
+
+    left++;
+    right--;
+  }
+
+  return true;
+}`,
+    solutionVariants: [
+      {
+        label: "Single-pass two pointers",
+        code: `function isPalindrome(s) {
+  let left = 0;
+  let right = s.length - 1;
+
+  const isAlnum = (ch) => /[a-z0-9]/i.test(ch);
+
+  while (left < right) {
+    while (left < right && !isAlnum(s[left])) left++;
+    while (left < right && !isAlnum(s[right])) right--;
+
+    if (s[left].toLowerCase() !== s[right].toLowerCase()) {
+      return false;
+    }
+
+    left++;
+    right--;
+  }
+
+  return true;
+}`,
+        complexity: "Time: O(n), Space: O(1)",
+        explanation: "Walks inward over the original string, skipping punctuation in place so every character is inspected at most once.",
+      },
+    ],
     usage: null,
     tags: ["string", "two-pointers", "blind75", "neetcode"],
   },
@@ -421,5 +541,22 @@ def decode(s: str) -> list[str]:
     tags: ["string", "blind75", "neetcode", "arrays-hashing"],
   },
 ];
+
+const blind75Part6CanonicalVariantNames = new Set([
+  "Longest Palindromic Substring",
+]);
+
+for (const kata of blind75Part6) {
+  if (blind75Part6CanonicalVariantNames.has(kata.name) && kata.solution && !kata.solutionVariants) {
+    kata.solutionVariants = [{
+      label: "Canonical DP solution",
+      code: kata.solution,
+      complexity: "Time: O(n²), Space: O(1)",
+      explanation: "Expands around each possible palindrome center and keeps the best result without storing a DP table.",
+    }];
+  }
+}
+
+enrichMissingPythonSolutionVariants(blind75Part6);
 
 export { blind75Part6 };

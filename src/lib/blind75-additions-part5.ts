@@ -1,4 +1,5 @@
 import type { SeedKata } from "../types/editor";
+import { enrichMissingPythonSolutionVariants } from "./python-solution-variants";
 
 const blind75Part5: SeedKata[] = [
   {
@@ -52,7 +53,7 @@ def test_set_zeroes_single_cell_zero():
         for i in range(m):
             matrix[i][0] = 0`,
     usage: null,
-    tags: ["array", "matrix", "blind75"],
+    tags: ["array", "matrix", "blind75", "neetcode"],
   },
   {
     name: "Spiral Matrix",
@@ -99,7 +100,7 @@ def test_spiral_order_2x3():
 
     return result`,
     usage: null,
-    tags: ["array", "matrix", "blind75"],
+    tags: ["array", "matrix", "blind75", "neetcode"],
   },
   {
     name: "Rotate Image",
@@ -140,7 +141,7 @@ def test_rotate_2x2():
     for i in range(n):
         matrix[i].reverse()`,
     usage: null,
-    tags: ["array", "matrix", "blind75"],
+    tags: ["array", "matrix", "blind75", "neetcode"],
   },
   {
     name: "Word Search",
@@ -194,8 +195,10 @@ def test_exist_single_cell():
 
     return False`,
     usage: null,
-    tags: ["array", "matrix", "backtracking", "blind75"],
+    tags: ["array", "matrix", "backtracking", "blind75", "neetcode"],
   },
 ];
+
+enrichMissingPythonSolutionVariants(blind75Part5);
 
 export { blind75Part5 };

@@ -1,4 +1,5 @@
 import type { TestResult } from "../types/editor";
+import { runJavaTests } from "./java-runner";
 import { runPythonTests, prewarmPython } from "./python-runner";
 import { runRubyTests } from "./ruby-runner";
 
@@ -47,6 +48,9 @@ export async function runTests(
 ): Promise<TestResult[]> {
   if (language === "python") {
     return runPythonTests(userCode, testCode);
+  }
+  if (language === "java") {
+    return runJavaTests(userCode, testCode);
   }
   if (language === "ruby") {
     return runRubyTests(userCode, testCode);

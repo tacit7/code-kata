@@ -1,13 +1,25 @@
 import { describe, it, expect } from "vitest";
-import { activeNavPath } from "../lib/nav-items";
+import { NAV_ITEMS, activeNavPath } from "../lib/nav-items";
 
 describe("activeNavPath", () => {
   it("highlights the tab whose path you are on", () => {
     expect(activeNavPath("/dashboard")).toBe("/dashboard");
     expect(activeNavPath("/practice")).toBe("/practice");
     expect(activeNavPath("/problems")).toBe("/problems");
+    expect(activeNavPath("/modules")).toBe("/modules");
     expect(activeNavPath("/results")).toBe("/results");
     expect(activeNavPath("/settings")).toBe("/settings");
+  });
+
+  it("places Modules next to Problems in the nav", () => {
+    expect(NAV_ITEMS.map((item) => item.path)).toEqual([
+      "/dashboard",
+      "/practice",
+      "/problems",
+      "/modules",
+      "/results",
+      "/settings",
+    ]);
   });
 
   it("keeps Problems lit while a session is running", () => {

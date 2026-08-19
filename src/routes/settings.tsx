@@ -1,14 +1,17 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router";
+import { Code2, Database, Dumbbell, Keyboard, Plus } from "lucide-react";
 import { useSettingsStore, DEFAULT_SHORTCUTS } from "../stores/settings-store";
 import type { ShortcutAction } from "../stores/settings-store";
 import { confirm } from "@tauri-apps/plugin-dialog";
 import { reseedKatas, resetAllProgress } from "../lib/database";
 import { APP_THEMES } from "../lib/editor-themes";
 import { EDITOR_TOGGLES } from "../lib/editor-settings";
+import { formatUiScale, UI_SCALE_OPTIONS } from "../lib/ui-scale";
 import { useKataStore } from "../stores/kata-store";
+import { toast } from "../stores/toast-store";
 
-type Tab = "editor" | "practice" | "shortcuts";
+type Tab = "editor" | "practice" | "data" | "shortcuts";
 
 const FONT_OPTIONS = [
   "JetBrains Mono, monospace",
@@ -25,7 +28,12 @@ const SHORTCUT_LABELS: Record<ShortcutAction, string> = {
   nextKata: "Next Kata",
   prevKata: "Previous Kata",
   toggleSolution: "Toggle Solution",
+  toggleRepl: "Open REPL",
+  zoomIn: "Zoom In",
+  zoomOut: "Zoom Out",
+  resetZoom: "Actual Size",
   openSettings: "Open Settings",
+  openCommandPalette: "Open Command Palette",
   closePanel: "Close Panel",
 };
 
@@ -46,6 +54,8 @@ function formatCombo(combo: string): string {
           return "\u2193";
         case "Escape":
           return "Esc";
+        case "=":
+          return "+";
         default:
           return part;
       }
@@ -53,11 +63,57 @@ function formatCombo(combo: string): string {
     .join(" ");
 }
 
-function SectionLabel({ children }: { children: React.ReactNode }) {
+function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
-    <label className="block text-[11px] font-semibold text-base-content/35 uppercase tracking-wider mb-2">
+    <h2 className="px-1 text-[11px] font-semibold uppercase tracking-wider text-base-content/35">
       {children}
-    </label>
+    </h2>
+  );
+}
+
+function PreferenceGroup({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="overflow-hidden rounded-md border border-base-300/50 bg-base-100/70">
+      {children}
+    </div>
+  );
+}
+
+interface PreferenceRowProps {
+  label: string;
+  hint?: string;
+  children: React.ReactNode;
+}
+
+function PreferenceRow({ label, hint, children }: PreferenceRowProps) {
+  return (
+    <div className="flex min-h-12 items-center justify-between gap-5 border-b border-base-300/40 px-4 py-2.5 last:border-b-0">
+      <div className="min-w-0">
+        <div className="text-sm font-medium text-base-content/85">{label}</div>
+        {hint && <div className="mt-0.5 text-xs leading-snug text-base-content/40">{hint}</div>}
+      </div>
+      <div className="flex shrink-0 items-center justify-end">{children}</div>
+    </div>
+  );
+}
+
+interface SettingsToggleProps {
+  label: string;
+  hint?: string;
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+}
+
+function SettingsToggle({ label, hint, checked, onChange }: SettingsToggleProps) {
+  return (
+    <PreferenceRow label={label} hint={hint}>
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(event) => onChange(event.currentTarget.checked)}
+        className="toggle toggle-primary toggle-sm"
+      />
+    </PreferenceRow>
   );
 }
 
@@ -66,6 +122,7 @@ function EditorTab() {
   const vimMode = useSettingsStore((s) => s.vimMode);
   const fontSize = useSettingsStore((s) => s.fontSize);
   const fontFamily = useSettingsStore((s) => s.fontFamily);
+  const uiScale = useSettingsStore((s) => s.uiScale);
   const tabSize = useSettingsStore((s) => s.tabSize);
   const language = useSettingsStore((s) => s.language);
   const setSetting = useSettingsStore((s) => s.setSetting);
@@ -73,132 +130,145 @@ function EditorTab() {
   const lineNumbersMode = useSettingsStore((s) => s.lineNumbersMode);
 
   return (
-    <div className="flex flex-col gap-6">
-      <div>
-        <SectionLabel>Language</SectionLabel>
-        <div className="join">
-          <button
-            onClick={() => setSetting("language", "javascript")}
-            className={`btn btn-sm join-item ${language === "javascript" ? "btn-primary" : "btn-ghost"}`}
-          >
-            JavaScript
-          </button>
-          <button
-            onClick={() => setSetting("language", "python")}
-            className={`btn btn-sm join-item ${language === "python" ? "btn-primary" : "btn-ghost"}`}
-          >
-            Python
-          </button>
-        </div>
-      </div>
-
-      <div>
-        <SectionLabel>Theme</SectionLabel>
-        <select
-          value={theme}
-          onChange={(e) => setSetting("theme", e.target.value)}
-          className="select select-bordered select-sm bg-base-100"
-        >
-          {APP_THEMES.map((t) => (
-            <option key={t.id} value={t.id}>{t.label}</option>
-          ))}
-        </select>
-      </div>
-
-      <div>
-        <SectionLabel>Vim Mode</SectionLabel>
-        <button
-          onClick={() => setSetting("vimMode", !vimMode)}
-          className={`btn btn-sm ${vimMode ? "btn-success" : "btn-ghost"}`}
-        >
-          {vimMode ? "On" : "Off"}
-        </button>
-      </div>
-
-      <div>
-        <SectionLabel>Font Size</SectionLabel>
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => setSetting("fontSize", Math.max(10, fontSize - 1))}
-            disabled={fontSize <= 10}
-            className="btn btn-sm btn-square btn-ghost"
-          >
-            -
-          </button>
-          <span className="text-sm font-mono font-semibold w-6 text-center tabular-nums">
-            {fontSize}
-          </span>
-          <button
-            onClick={() => setSetting("fontSize", Math.min(24, fontSize + 1))}
-            disabled={fontSize >= 24}
-            className="btn btn-sm btn-square btn-ghost"
-          >
-            +
-          </button>
-        </div>
-      </div>
-
-      <div>
-        <SectionLabel>Font Family</SectionLabel>
-        <select
-          value={fontFamily}
-          onChange={(e) => setSetting("fontFamily", e.target.value)}
-          className="select select-bordered select-sm bg-base-100"
-        >
-          {FONT_OPTIONS.map((f) => (
-            <option key={f} value={f}>{f}</option>
-          ))}
-        </select>
-      </div>
-
-      <div>
-        <SectionLabel>Tab Size</SectionLabel>
-        <div className="join">
-          <button
-            onClick={() => setSetting("tabSize", 2)}
-            className={`btn btn-sm join-item ${tabSize === 2 ? "btn-primary" : "btn-ghost"}`}
-          >
-            2
-          </button>
-          <button
-            onClick={() => setSetting("tabSize", 4)}
-            className={`btn btn-sm join-item ${tabSize === 4 ? "btn-primary" : "btn-ghost"}`}
-          >
-            4
-          </button>
-        </div>
-      </div>
-
-      <div>
-        <SectionLabel>Line Numbers</SectionLabel>
-        <div className="join">
-          {(["on", "off", "relative"] as const).map((mode) => (
-            <button
-              key={mode}
-              onClick={() => setSetting("lineNumbersMode", mode)}
-              className={`btn btn-sm join-item ${lineNumbersMode === mode ? "btn-primary" : "btn-ghost"}`}
+    <div className="mx-auto flex w-full max-w-3xl flex-col gap-7">
+      <section className="space-y-2">
+        <SectionTitle>General</SectionTitle>
+        <PreferenceGroup>
+          <PreferenceRow label="Language" hint="Default language for new practice work.">
+            <div className="join">
+              <button
+                onClick={() => setSetting("language", "javascript")}
+                className={`btn btn-xs join-item ${language === "javascript" ? "btn-primary" : "btn-ghost"}`}
+              >
+                JavaScript
+              </button>
+              <button
+                onClick={() => setSetting("language", "python")}
+                className={`btn btn-xs join-item ${language === "python" ? "btn-primary" : "btn-ghost"}`}
+              >
+                Python
+              </button>
+              <button
+                onClick={() => setSetting("language", "java")}
+                className={`btn btn-xs join-item ${language === "java" ? "btn-primary" : "btn-ghost"}`}
+              >
+                Java
+              </button>
+            </div>
+          </PreferenceRow>
+          <PreferenceRow label="Theme">
+            <select
+              value={theme}
+              onChange={(e) => setSetting("theme", e.target.value)}
+              className="select select-bordered select-xs w-44 bg-base-100"
             >
-              {mode === "relative" ? "Relative (vim)" : mode === "on" ? "On" : "Off"}
-            </button>
-          ))}
-        </div>
-      </div>
+              {APP_THEMES.map((t) => (
+                <option key={t.id} value={t.id}>{t.label}</option>
+              ))}
+            </select>
+          </PreferenceRow>
+          <PreferenceRow label="Interface Size" hint="Scales the app chrome without changing editor font size.">
+            <div className="join">
+              {UI_SCALE_OPTIONS.map((scale) => (
+                <button
+                  key={scale}
+                  onClick={() => setSetting("uiScale", scale)}
+                  className={`btn btn-xs join-item ${uiScale === scale ? "btn-primary" : "btn-ghost"}`}
+                >
+                  {formatUiScale(scale)}
+                </button>
+              ))}
+            </div>
+          </PreferenceRow>
+        </PreferenceGroup>
+      </section>
 
-      {EDITOR_TOGGLES.map(({ key, label, hint }) => {
-        const on = settings[key];
-        return (
-          <div key={key}>
-            <SectionLabel>{label}</SectionLabel>
-            <button
-              onClick={() => setSetting(key, !on)}
-              className={`btn btn-sm ${on ? "btn-success" : "btn-ghost"}`}
+      <section className="space-y-2">
+        <SectionTitle>Editor</SectionTitle>
+        <PreferenceGroup>
+          <SettingsToggle
+            label="Vim Mode"
+            hint="Use Vim keybindings in Monaco."
+            checked={vimMode}
+            onChange={(checked) => setSetting("vimMode", checked)}
+          />
+          <PreferenceRow label="Font Size">
+            <div className="join">
+              <button
+                onClick={() => setSetting("fontSize", Math.max(10, fontSize - 1))}
+                disabled={fontSize <= 10}
+                className="btn btn-xs btn-square join-item btn-ghost"
+                aria-label="Decrease font size"
+              >
+                -
+              </button>
+              <div className="flex h-6 w-9 items-center justify-center border-y border-base-300/60 bg-base-200 font-mono text-xs tabular-nums">
+                {fontSize}
+              </div>
+              <button
+                onClick={() => setSetting("fontSize", Math.min(24, fontSize + 1))}
+                disabled={fontSize >= 24}
+                className="btn btn-xs btn-square join-item btn-ghost"
+                aria-label="Increase font size"
+              >
+                +
+              </button>
+            </div>
+          </PreferenceRow>
+          <PreferenceRow label="Font Family">
+            <select
+              value={fontFamily}
+              onChange={(e) => setSetting("fontFamily", e.target.value)}
+              className="select select-bordered select-xs w-52 bg-base-100"
             >
-              {on ? "On" : "Off"}
-            </button>
-            {hint && <p className="text-[11px] text-base-content/40 mt-1.5">{hint}</p>}
-          </div>
-        );
-      })}
+              {FONT_OPTIONS.map((f) => (
+                <option key={f} value={f}>{f}</option>
+              ))}
+            </select>
+          </PreferenceRow>
+          <PreferenceRow label="Tab Size">
+            <div className="join">
+              {[2, 4].map((size) => (
+                <button
+                  key={size}
+                  onClick={() => setSetting("tabSize", size)}
+                  className={`btn btn-xs join-item ${tabSize === size ? "btn-primary" : "btn-ghost"}`}
+                >
+                  {size}
+                </button>
+              ))}
+            </div>
+          </PreferenceRow>
+          <PreferenceRow label="Line Numbers">
+            <div className="join">
+              {(["on", "off", "relative"] as const).map((mode) => (
+                <button
+                  key={mode}
+                  onClick={() => setSetting("lineNumbersMode", mode)}
+                  className={`btn btn-xs join-item ${lineNumbersMode === mode ? "btn-primary" : "btn-ghost"}`}
+                >
+                  {mode === "relative" ? "Relative" : mode === "on" ? "On" : "Off"}
+                </button>
+              ))}
+            </div>
+          </PreferenceRow>
+        </PreferenceGroup>
+      </section>
+
+      <section className="space-y-2">
+        <SectionTitle>Behavior</SectionTitle>
+        <PreferenceGroup>
+          {EDITOR_TOGGLES.map(({ key, label, hint }) => (
+            <SettingsToggle
+              key={key}
+              label={label}
+              hint={hint}
+              checked={settings[key]}
+              onChange={(checked) => setSetting(key, checked)}
+            />
+          ))}
+        </PreferenceGroup>
+      </section>
     </div>
   );
 }
@@ -206,9 +276,79 @@ function EditorTab() {
 function PracticeTab() {
   const defaultSessionSize = useSettingsStore((s) => s.defaultSessionSize);
   const targetTimeMs = useSettingsStore((s) => s.targetTimeMs);
+  const sessionTimeLimitMs = useSettingsStore((s) => s.sessionTimeLimitMs);
   const autoRunTests = useSettingsStore((s) => s.autoRunTests);
   const hideDescriptionInSession = useSettingsStore((s) => s.hideDescriptionInSession);
   const setSetting = useSettingsStore((s) => s.setSetting);
+  const targetMinutes = Math.round(targetTimeMs / 60000);
+  const timeLimitMinutes = Math.round(sessionTimeLimitMs / 60000);
+
+  return (
+    <div className="mx-auto flex w-full max-w-3xl flex-col gap-7">
+      <section className="space-y-2">
+        <SectionTitle>Queue Defaults</SectionTitle>
+        <PreferenceGroup>
+          <PreferenceRow label="Default Session Size">
+            <div className="join">
+              {SESSION_SIZE_OPTIONS.map((n) => (
+                <button
+                  key={n}
+                  onClick={() => setSetting("defaultSessionSize", n)}
+                  className={`btn btn-xs join-item ${defaultSessionSize === n ? "btn-primary" : "btn-ghost"}`}
+                >
+                  {n}
+                </button>
+              ))}
+            </div>
+          </PreferenceRow>
+          <PreferenceRow label="Problem Time Limit" hint="Minutes per problem. Use 0 for no limit.">
+            <input
+              type="number"
+              min={0}
+              value={timeLimitMinutes}
+              onChange={(e) => {
+                const mins = Math.max(0, parseInt(e.target.value) || 0);
+                setSetting("sessionTimeLimitMs", mins * 60000);
+              }}
+              className="input input-bordered input-xs w-20 bg-base-100 text-right"
+            />
+          </PreferenceRow>
+          <PreferenceRow label="Target Time Per Kata" hint="Used for pacing and progress feedback.">
+            <input
+              type="number"
+              min={0}
+              value={targetMinutes}
+              onChange={(e) => {
+                const mins = Math.max(0, parseInt(e.target.value) || 0);
+                setSetting("targetTimeMs", mins * 60000);
+              }}
+              className="input input-bordered input-xs w-20 bg-base-100 text-right"
+            />
+          </PreferenceRow>
+        </PreferenceGroup>
+      </section>
+
+      <section className="space-y-2">
+        <SectionTitle>Session Behavior</SectionTitle>
+        <PreferenceGroup>
+          <SettingsToggle
+            label="Auto-run Tests on Save"
+            checked={autoRunTests}
+            onChange={(checked) => setSetting("autoRunTests", checked)}
+          />
+          <SettingsToggle
+            label="Hide Problem in Sessions"
+            hint="Practice from memory by hiding the prompt during sessions."
+            checked={hideDescriptionInSession}
+            onChange={(checked) => setSetting("hideDescriptionInSession", checked)}
+          />
+        </PreferenceGroup>
+      </section>
+    </div>
+  );
+}
+
+function DataTab() {
   const language = useSettingsStore((s) => s.language);
   const navigate = useNavigate();
   const [reseeding, setReseeding] = useState(false);
@@ -223,8 +363,10 @@ function PracticeTab() {
       const msg = await reseedKatas();
       await useKataStore.getState().loadKatas(language);
       setReseedMsg(msg);
+      toast.success(msg || "Problem statements reloaded");
     } catch (e) {
       setReseedMsg(String(e));
+      toast.error("Could not reload problem statements");
     } finally {
       setReseeding(false);
     }
@@ -242,107 +384,55 @@ function PracticeTab() {
       await resetAllProgress();
       await useKataStore.getState().loadKatas(language);
       setResetAllMsg("All progress reset.");
+      toast.success("All progress reset");
     } catch (e) {
       setResetAllMsg(String(e));
+      toast.error("Could not reset progress");
     } finally {
       setResettingAll(false);
     }
   }
 
-  const targetMinutes = Math.round(targetTimeMs / 60000);
-
   return (
-    <div className="flex flex-col gap-6">
-      <div>
-        <SectionLabel>Kata Library</SectionLabel>
-        <div className="flex flex-col gap-2">
-          <button
-            onClick={handleReseed}
-            disabled={reseeding}
-            className="btn btn-ghost btn-sm text-xs gap-1 self-start"
-          >
-            {reseeding ? "Reseeding..." : "Reload Problem Statements"}
-          </button>
-          {reseedMsg && (
-            <p className="text-[11px] text-base-content/50">{reseedMsg}</p>
-          )}
-          <button
-            onClick={handleResetAllProgress}
-            disabled={resettingAll}
-            className="btn btn-ghost btn-sm text-xs gap-1 self-start text-error"
-          >
-            {resettingAll ? "Resetting..." : "Reset All Progress"}
-          </button>
-          {resetAllMsg && (
-            <p className="text-[11px] text-base-content/50">{resetAllMsg}</p>
-          )}
-        </div>
-      </div>
-
-      <div>
-        <SectionLabel>Custom Katas</SectionLabel>
-        <button
-          onClick={() => navigate("/kata/new")}
-          className="btn btn-ghost btn-sm text-xs gap-1"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5">
-            <path d="M8.75 3.75a.75.75 0 0 0-1.5 0v3.5h-3.5a.75.75 0 0 0 0 1.5h3.5v3.5a.75.75 0 0 0 1.5 0v-3.5h3.5a.75.75 0 0 0 0-1.5h-3.5v-3.5Z" />
-          </svg>
-          New Kata
-        </button>
-      </div>
-
-      <div>
-        <SectionLabel>Default Session Size</SectionLabel>
-        <div className="join">
-          {SESSION_SIZE_OPTIONS.map((n) => (
+    <div className="mx-auto flex w-full max-w-3xl flex-col gap-7">
+      <section className="space-y-2">
+        <SectionTitle>Kata Library</SectionTitle>
+        <PreferenceGroup>
+          <PreferenceRow label="Reload Problem Statements" hint={reseedMsg ?? "Refresh seeded kata content for the selected language."}>
             <button
-              key={n}
-              onClick={() => setSetting("defaultSessionSize", n)}
-              className={`btn btn-sm join-item ${defaultSessionSize === n ? "btn-primary" : "btn-ghost"}`}
+              onClick={handleReseed}
+              disabled={reseeding}
+              className="btn btn-xs btn-ghost"
             >
-              {n}
+              {reseeding ? "Reloading..." : "Reload"}
             </button>
-          ))}
-        </div>
-      </div>
+          </PreferenceRow>
+          <PreferenceRow label="New Kata">
+            <button
+              onClick={() => navigate("/kata/new")}
+              className="btn btn-xs btn-ghost gap-1.5"
+            >
+              <Plus size={14} />
+              New
+            </button>
+          </PreferenceRow>
+        </PreferenceGroup>
+      </section>
 
-      <div>
-        <SectionLabel>
-          Target Time Per Kata (min)
-          <span className="text-base-content/20 ml-1 normal-case">(0 = disabled)</span>
-        </SectionLabel>
-        <input
-          type="number"
-          min={0}
-          value={targetMinutes}
-          onChange={(e) => {
-            const mins = Math.max(0, parseInt(e.target.value) || 0);
-            setSetting("targetTimeMs", mins * 60000);
-          }}
-          className="input input-bordered input-sm w-24 bg-base-100"
-        />
-      </div>
-
-      <div>
-        <SectionLabel>Auto-run Tests on Save</SectionLabel>
-        <button
-          onClick={() => setSetting("autoRunTests", !autoRunTests)}
-          className={`btn btn-sm ${autoRunTests ? "btn-success" : "btn-ghost"}`}
-        >
-          {autoRunTests ? "On" : "Off"}
-        </button>
-      </div>
-
-      <div>
-        <SectionLabel>Hide Problem in Sessions</SectionLabel>
-        <button
-          onClick={() => setSetting("hideDescriptionInSession", !hideDescriptionInSession)}
-          className={`btn btn-sm ${hideDescriptionInSession ? "btn-success" : "btn-ghost"}`}
-        >
-          {hideDescriptionInSession ? "On" : "Off"}
-        </button>
-      </div>
+      <section className="space-y-2">
+        <SectionTitle>Danger Zone</SectionTitle>
+        <PreferenceGroup>
+          <PreferenceRow label="Reset All Progress" hint={resetAllMsg ?? "Clears best times, streaks, and completion history."}>
+            <button
+              onClick={handleResetAllProgress}
+              disabled={resettingAll}
+              className="btn btn-xs btn-ghost text-error hover:bg-error/10"
+            >
+              {resettingAll ? "Resetting..." : "Reset"}
+            </button>
+          </PreferenceRow>
+        </PreferenceGroup>
+      </section>
     </div>
   );
 }
@@ -352,7 +442,7 @@ function ShortcutsTab() {
   const setSetting = useSettingsStore((s) => s.setSetting);
   const [recording, setRecording] = useState<ShortcutAction | null>(null);
   const [confirmReset, setConfirmReset] = useState(false);
-  const rowRef = useRef<HTMLTableRowElement | null>(null);
+  const rowRef = useRef<HTMLDivElement | null>(null);
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
@@ -392,48 +482,42 @@ function ShortcutsTab() {
   const actions = Object.keys(SHORTCUT_LABELS) as ShortcutAction[];
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="bg-base-100 rounded-lg border border-base-300/50 overflow-hidden">
-        <table className="table table-sm">
-          <thead>
-            <tr className="text-left text-[11px] text-base-content/35 uppercase tracking-wider">
-              <th className="font-semibold">Action</th>
-              <th className="font-semibold">Shortcut</th>
-              <th className="font-semibold w-28">Edit</th>
-            </tr>
-          </thead>
-          <tbody>
-            {actions.map((action) => (
-              <tr
-                key={action}
-                ref={recording === action ? rowRef : undefined}
-                className="border-base-300/30"
-              >
-                <td className="font-medium text-sm">{SHORTCUT_LABELS[action]}</td>
-                <td className="font-mono text-base-content/50 text-sm">
+    <div className="mx-auto flex w-full max-w-3xl flex-col gap-7">
+      <section className="space-y-2">
+        <SectionTitle>Keyboard Shortcuts</SectionTitle>
+        <PreferenceGroup>
+          {actions.map((action) => (
+            <div
+              key={action}
+              ref={recording === action ? rowRef : undefined}
+              className="flex min-h-12 items-center justify-between gap-5 border-b border-base-300/40 px-4 py-2.5 last:border-b-0"
+            >
+              <div className="text-sm font-medium text-base-content/85">
+                {SHORTCUT_LABELS[action]}
+              </div>
+              <div className="flex items-center gap-3">
+                <kbd className="kbd kbd-sm min-w-20 justify-center bg-base-200 font-mono text-xs text-base-content/60">
                   {formatCombo(shortcuts[action])}
-                </td>
-                <td>
-                  <button
-                    onClick={() => setRecording(recording === action ? null : action)}
-                    className={`btn btn-xs ${
-                      recording === action
-                        ? "btn-warning animate-pulse"
-                        : "btn-ghost"
-                    }`}
-                  >
-                    {recording === action ? "Press keys..." : "Edit"}
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+                </kbd>
+                <button
+                  onClick={() => setRecording(recording === action ? null : action)}
+                  className={`btn btn-xs ${
+                    recording === action
+                      ? "btn-warning animate-pulse"
+                      : "btn-ghost"
+                  }`}
+                >
+                  {recording === action ? "Press keys..." : "Edit"}
+                </button>
+              </div>
+            </div>
+          ))}
+        </PreferenceGroup>
+      </section>
 
       <button
         onClick={handleReset}
-        className={`btn btn-sm self-start ${confirmReset ? "btn-error" : "btn-ghost"}`}
+        className={`btn btn-xs self-start ${confirmReset ? "btn-error" : "btn-ghost"}`}
       >
         {confirmReset ? "Confirm Reset" : "Reset to Defaults"}
       </button>
@@ -452,35 +536,47 @@ export function SettingsPage() {
 
   if (!loaded) {
     return (
-      <div className="flex items-center justify-center h-full text-base-content/30 text-sm">
+      <div className="flex h-full items-center justify-center text-sm text-base-content/30">
         Loading settings...
       </div>
     );
   }
 
-  const tabClass = (t: Tab) =>
-    `px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${
-      tab === t
-        ? "bg-base-100 text-base-content shadow-sm"
-        : "text-base-content/35 hover:text-base-content/60"
-    }`;
+  const navItems = [
+    { key: "editor" as const, label: "Editor", icon: Code2 },
+    { key: "practice" as const, label: "Practice", icon: Dumbbell },
+    { key: "data" as const, label: "Data", icon: Database },
+    { key: "shortcuts" as const, label: "Shortcuts", icon: Keyboard },
+  ];
 
   return (
-    <div className="flex flex-col h-full p-5 gap-5 overflow-y-auto animate-fade-in">
-      <h1 className="text-lg font-bold">Settings</h1>
+    <div className="flex h-full animate-fade-in overflow-hidden bg-base-200">
+      <aside className="w-56 shrink-0 border-r border-base-300/60 bg-base-300/25 px-3 py-4">
+        <h1 className="mb-4 px-2 text-base font-semibold text-base-content/85">Settings</h1>
+        <nav className="flex flex-col gap-1">
+          {navItems.map(({ key, label, icon: Icon }) => (
+            <button
+              key={key}
+              onClick={() => setTab(key)}
+              className={`flex h-9 items-center gap-2.5 rounded-md px-2.5 text-left text-sm transition-colors ${
+                tab === key
+                  ? "bg-primary text-primary-content"
+                  : "text-base-content/60 hover:bg-base-100/70 hover:text-base-content"
+              }`}
+            >
+              <Icon size={16} />
+              <span>{label}</span>
+            </button>
+          ))}
+        </nav>
+      </aside>
 
-      {/* Tab switcher */}
-      <div className="flex items-center gap-1 bg-base-300/40 rounded-lg p-1 self-start">
-        <button onClick={() => setTab("editor")} className={tabClass("editor")}>Editor</button>
-        <button onClick={() => setTab("practice")} className={tabClass("practice")}>Practice</button>
-        <button onClick={() => setTab("shortcuts")} className={tabClass("shortcuts")}>Shortcuts</button>
-      </div>
-
-      <div className="flex-1 min-h-0">
+      <main className="min-w-0 flex-1 overflow-y-auto px-8 py-6">
         {tab === "editor" && <EditorTab />}
         {tab === "practice" && <PracticeTab />}
+        {tab === "data" && <DataTab />}
         {tab === "shortcuts" && <ShortcutsTab />}
-      </div>
+      </main>
     </div>
   );
 }

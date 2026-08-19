@@ -8,12 +8,13 @@ const kata = (
   description: string,
   testCode: string,
   solution: string,
-  tags: string[]
+  tags: string[],
+  difficulty: SeedKata["difficulty"] = "medium"
 ): SeedKata => ({
   name,
   category,
   language: "javascript",
-  difficulty: "medium",
+  difficulty,
   description,
   code: `function ${fn}(${params}) {
   // your code here
@@ -131,19 +132,102 @@ function test_zero() { assertEqual(countSubsetsThatSumToTarget([4, 5], 0), 1); }
   }
   return dp[target];
 }`, ["0-1-knapsack", "dp-counting", "pre-leetcode"]),
-  kata("Target Sum", "1-d-dp", "findTargetSumWays", "nums, target", "Count ways to assign + or - before each number to reach target.", `function test_basic() { assertEqual(findTargetSumWays([1,1,1,1,1], 3), 5); }
-function test_single() { assertEqual(findTargetSumWays([1], 1), 1); }`, `function findTargetSumWays(nums, target) {
-  let dp = new Map([[0, 1]]);
+  kata("Minimum Number of Items to Reach Target", "1-d-dp", "minItemsToReachTarget", "nums, target", "Return the fewest items needed to reach target exactly, using each item at most once.", `function test_basic() { assertEqual(minItemsToReachTarget([2,3,5,7], 10), 2); }
+function test_impossible() { assertEqual(minItemsToReachTarget([4,6], 5), -1); }
+function test_no_reuse() { assertEqual(minItemsToReachTarget([3], 6), -1); }`, `function minItemsToReachTarget(nums, target) {
+  const dp = new Array(target + 1).fill(Infinity);
+  dp[0] = 0;
   for (const n of nums) {
-    const next = new Map();
-    for (const [sum, count] of dp) {
-      next.set(sum + n, (next.get(sum + n) ?? 0) + count);
-      next.set(sum - n, (next.get(sum - n) ?? 0) + count);
-    }
-    dp = next;
+    for (let sum = target; sum >= n; sum--) dp[sum] = Math.min(dp[sum], dp[sum - n] + 1);
   }
-  return dp.get(target) ?? 0;
+  return dp[target] === Infinity ? -1 : dp[target];
+}`, ["0-1-knapsack", "dp-minimization", "pre-leetcode"]),
+  kata("Closest Subset Sum", "1-d-dp", "closestSubsetSum", "nums, target", "Return the reachable subset sum closest to target. Each item may be used at most once; ties choose the smaller sum.", `function test_above() { assertEqual(closestSubsetSum([2,4,9], 10), 11); }
+function test_exact() { assertEqual(closestSubsetSum([3,8,12], 11), 11); }
+function test_tie() { assertEqual(closestSubsetSum([4,6], 5), 4); }`, `function closestSubsetSum(nums, target) {
+  const maxSum = nums.reduce((a, b) => a + b, 0);
+  const dp = new Array(maxSum + 1).fill(false);
+  dp[0] = true;
+  for (const n of nums) {
+    for (let sum = maxSum; sum >= n; sum--) dp[sum] ||= dp[sum - n];
+  }
+  let best = 0;
+  for (let sum = 0; sum <= maxSum; sum++) {
+    if (dp[sum] && (Math.abs(sum - target) < Math.abs(best - target) || (Math.abs(sum - target) === Math.abs(best - target) && sum < best))) best = sum;
+  }
+  return best;
+}`, ["0-1-knapsack", "dp-feasibility", "pre-leetcode"]),
+  kata("Choose Exactly K Items With Maximum Value", "1-d-dp", "maxValueExactlyKItems", "weights, values, capacity, k", "Choose exactly k items with total weight within capacity and maximum total value.", `function test_basic() { assertEqual(maxValueExactlyKItems([2,3,4], [4,5,10], 6, 2), 14); }
+function test_capacity() { assertEqual(maxValueExactlyKItems([5,4,3], [10,40,30], 7, 2), 70); }
+function test_impossible() { assertEqual(maxValueExactlyKItems([5,6], [10,20], 4, 1), -1); }`, `function maxValueExactlyKItems(weights, values, capacity, k) {
+  const dp = Array.from({ length: k + 1 }, () => new Array(capacity + 1).fill(-Infinity));
+  for (let c = 0; c <= capacity; c++) dp[0][c] = 0;
+  for (let i = 0; i < weights.length; i++) {
+    for (let count = k; count >= 1; count--) {
+      for (let c = capacity; c >= weights[i]; c--) {
+        dp[count][c] = Math.max(dp[count][c], dp[count - 1][c - weights[i]] + values[i]);
+      }
+    }
+  }
+  return dp[k][capacity] === -Infinity ? -1 : dp[k][capacity];
+}`, ["0-1-knapsack", "dp-maximization", "pre-leetcode"]),
+  kata("Target Sum", "1-d-dp", "findTargetSumWays", "nums, target", "Count sign assignments by transforming positive_sum - negative_sum = target into a subset-count target.", `function test_basic() { assertEqual(findTargetSumWays([1,1,1,1,1], 3), 5); }
+function test_single() { assertEqual(findTargetSumWays([1], 1), 1); }`, `function findTargetSumWays(nums, target) {
+  const total = nums.reduce((a, b) => a + b, 0);
+  const shifted = total + target;
+  if (shifted < 0 || shifted % 2 !== 0) return 0;
+  const subsetTarget = shifted / 2;
+  const dp = new Array(subsetTarget + 1).fill(0);
+  dp[0] = 1;
+  for (const n of nums) {
+    for (let sum = subsetTarget; sum >= n; sum--) dp[sum] += dp[sum - n];
+  }
+  return dp[subsetTarget];
 }`, ["0-1-knapsack"]),
+  kata("Last Stone Weight II", "1-d-dp", "lastStoneWeightII", "stones", "Partition stones into two piles with minimum possible difference. Ref: LeetCode #1049.", `function test_basic() { assertEqual(lastStoneWeightII([2,7,4,1,8,1]), 1); }
+function test_single() { assertEqual(lastStoneWeightII([31]), 31); }
+function test_balanced() { assertEqual(lastStoneWeightII([1,1,2,2]), 0); }`, `function lastStoneWeightII(stones) {
+  const total = stones.reduce((a, b) => a + b, 0);
+  const target = Math.floor(total / 2);
+  const dp = new Array(target + 1).fill(false);
+  dp[0] = true;
+  for (const stone of stones) {
+    for (let sum = target; sum >= stone; sum--) dp[sum] ||= dp[sum - stone];
+  }
+  for (let left = target; left >= 0; left--) if (dp[left]) return total - 2 * left;
+  return 0;
+}`, ["0-1-knapsack"]),
+  kata("Ones and Zeroes", "1-d-dp", "findMaxForm", "strs, m, n", "Choose the largest subset of binary strings within zero and one budgets. Ref: LeetCode #474.", `function test_basic() { assertEqual(findMaxForm(["10","0001","111001","1","0"], 5, 3), 4); }
+function test_small() { assertEqual(findMaxForm(["10","0","1"], 1, 1), 2); }
+function test_no_fit() { assertEqual(findMaxForm(["111","00"], 1, 1), 0); }`, `function findMaxForm(strs, m, n) {
+  const dp = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0));
+  for (const s of strs) {
+    const zeros = [...s].filter((ch) => ch === "0").length;
+    const ones = s.length - zeros;
+    for (let z = m; z >= zeros; z--) {
+      for (let o = n; o >= ones; o--) dp[z][o] = Math.max(dp[z][o], 1 + dp[z - zeros][o - ones]);
+    }
+  }
+  return dp[m][n];
+}`, ["0-1-knapsack", "multi-capacity"]),
+  kata("Profitable Schemes", "1-d-dp", "profitableSchemes", "n, minProfit, group, profit", "Count job subsets that fit within n workers and earn at least minProfit. Ref: LeetCode #879.", `function test_basic() { assertEqual(profitableSchemes(5, 3, [2,2], [2,3]), 2); }
+function test_second() { assertEqual(profitableSchemes(10, 5, [2,3,5], [6,7,8]), 7); }
+function test_worker_limit() { assertEqual(profitableSchemes(1, 1, [2], [2]), 0); }`, `function profitableSchemes(n, minProfit, group, profit) {
+  const mod = 1000000007;
+  const dp = Array.from({ length: n + 1 }, () => new Array(minProfit + 1).fill(0));
+  dp[0][0] = 1;
+  for (let i = 0; i < group.length; i++) {
+    for (let people = n; people >= group[i]; people--) {
+      for (let earned = minProfit; earned >= 0; earned--) {
+        const nextProfit = Math.min(minProfit, earned + profit[i]);
+        dp[people][nextProfit] = (dp[people][nextProfit] + dp[people - group[i]][earned]) % mod;
+      }
+    }
+  }
+  let total = 0;
+  for (let people = 0; people <= n; people++) total = (total + dp[people][minProfit]) % mod;
+  return total;
+}`, ["0-1-knapsack", "dp-counting", "multi-capacity", "advanced"], "hard"),
   kata("Combination Sum IV", "1-d-dp", "combinationSum4", "nums, target", "Count ordered combinations that sum to target.", `function test_basic() { assertEqual(combinationSum4([1,2,3], 4), 7); }
 function test_none() { assertEqual(combinationSum4([9], 3), 0); }`, `function combinationSum4(nums, target) {
   const dp = new Array(target + 1).fill(0);
@@ -300,7 +384,7 @@ function test_zero() { assertEqual(maxProduct([-2,0,-1]), 0); }`, `function maxP
   }
   return best;
 }`, ["state-machine-dp", "blind75", "neetcode"]),
-  kata("Best Time to Buy and Sell Stock With Cooldown", "1-d-dp", "maxProfitCooldown", "prices", "Return max stock profit with one-day cooldown after selling.", `function test_basic() { assertEqual(maxProfitCooldown([1,2,3,0,2]), 3); }
+  kata("Best Time to Buy and Sell Stock with Cooldown", "1-d-dp", "maxProfitCooldown", "prices", "Return max stock profit with one-day cooldown after selling.", `function test_basic() { assertEqual(maxProfitCooldown([1,2,3,0,2]), 3); }
 function test_single() { assertEqual(maxProfitCooldown([1]), 0); }`, `function maxProfitCooldown(prices) {
   let hold = -Infinity, sold = 0, rest = 0;
   for (const price of prices) {
@@ -325,7 +409,7 @@ function test_same_node() { assertEqual(countPathsInDag([[]], 0, 0), 1); }`, `fu
   }
   return dfs(start);
 }`, ["dfs-memo", "graph", "dp-counting", "pre-leetcode"]),
-  kata("Longest Increasing Path In a Matrix", "2-d-dp", "longestIncreasingPath", "matrix", "Return the longest strictly increasing path length in a matrix.", `function test_basic() { assertEqual(longestIncreasingPath([[9,9,4],[6,6,8],[2,1,1]]), 4); }
+  kata("Longest Increasing Path in a Matrix", "2-d-dp", "longestIncreasingPath", "matrix", "Return the longest strictly increasing path length in a matrix.", `function test_basic() { assertEqual(longestIncreasingPath([[9,9,4],[6,6,8],[2,1,1]]), 4); }
 function test_single() { assertEqual(longestIncreasingPath([[1]]), 1); }`, `function longestIncreasingPath(matrix) {
   const rows = matrix.length, cols = matrix[0].length;
   const memo = Array.from({ length: rows }, () => new Array(cols).fill(0));

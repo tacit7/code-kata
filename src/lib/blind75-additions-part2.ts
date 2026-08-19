@@ -1,4 +1,5 @@
 import type { SeedKata } from "../types/editor";
+import { enrichMissingPythonSolutionVariants } from "./python-solution-variants";
 
 const blind75Part2: SeedKata[] = [
   {
@@ -250,7 +251,7 @@ def test_unique_paths_single():
             dp[r][c] = dp[r - 1][c] + dp[r][c - 1]
     return dp[m - 1][n - 1]`,
     usage: null,
-    tags: ["dynamic-programming", "math", "blind75", "dp-counting"],
+    tags: ["dynamic-programming", "math", "blind75", "neetcode", "dp-counting"],
   },
   {
     name: "Jump Game",
@@ -279,7 +280,7 @@ def test_can_jump_two():
         max_reach = max(max_reach, i + jump)
     return True`,
     usage: null,
-    tags: ["dynamic-programming", "greedy", "blind75"],
+    tags: ["dynamic-programming", "greedy", "blind75", "neetcode"],
   },
   {
     name: "Min Cost Climbing Stairs",
@@ -342,5 +343,458 @@ def test_can_partition_two():
     tags: ["dynamic-programming", "neetcode", "1d-dp", "dp-decision"],
   },
 ];
+
+const blind75Part2SolutionVariants: Record<string, NonNullable<SeedKata["solutionVariants"]>> = {
+  "Coin Change": [
+    {
+      label: "Recursive search",
+      code: `def coin_change(coins: list[int], amount: int) -> int:
+    if amount == 0:
+        return 0
+    if amount < 0:
+        return -1
+
+    best = float("inf")
+    for coin in coins:
+        sub = coin_change(coins, amount - coin)
+        if sub != -1:
+            best = min(best, sub + 1)
+    return best if best != float("inf") else -1`,
+    },
+    {
+      label: "Memoized recursion",
+      code: `def coin_change(coins: list[int], amount: int) -> int:
+    memo = {0: 0}
+
+    def dfs(rem: int) -> int:
+        if rem < 0:
+            return -1
+        if rem in memo:
+            return memo[rem]
+        best = float("inf")
+        for coin in coins:
+            sub = dfs(rem - coin)
+            if sub != -1:
+                best = min(best, sub + 1)
+        memo[rem] = best if best != float("inf") else -1
+        return memo[rem]
+
+    return dfs(amount)`,
+    },
+    {
+      label: "Bottom-up tabulation",
+      code: `def coin_change(coins: list[int], amount: int) -> int:
+    dp = [float("inf")] * (amount + 1)
+    dp[0] = 0
+    for total in range(1, amount + 1):
+        for coin in coins:
+            if coin <= total:
+                dp[total] = min(dp[total], dp[total - coin] + 1)
+    return dp[amount] if dp[amount] != float("inf") else -1`,
+    },
+  ],
+  "Longest Increasing Subsequence": [
+    {
+      label: "Memoized subsequence search",
+      code: `def length_of_lis(nums: list[int]) -> int:
+    from functools import lru_cache
+
+    @lru_cache(None)
+    def dfs(i: int, prev: int) -> int:
+        if i == len(nums):
+            return 0
+        skip = dfs(i + 1, prev)
+        take = 0
+        if prev == -1 or nums[i] > nums[prev]:
+            take = 1 + dfs(i + 1, i)
+        return max(skip, take)
+
+    return dfs(0, -1)`,
+    },
+    {
+      label: "O(n²) tabulation",
+      code: `def length_of_lis(nums: list[int]) -> int:
+    dp = [1] * len(nums)
+    for i in range(len(nums)):
+        for j in range(i):
+            if nums[j] < nums[i]:
+                dp[i] = max(dp[i], dp[j] + 1)
+    return max(dp)`,
+    },
+    {
+      label: "Patience sorting",
+      code: `import bisect
+
+def length_of_lis(nums: list[int]) -> int:
+    tails = []
+    for num in nums:
+        i = bisect.bisect_left(tails, num)
+        if i == len(tails):
+            tails.append(num)
+        else:
+            tails[i] = num
+    return len(tails)`,
+    },
+  ],
+  "Word Break": [
+    {
+      label: "Memoized start index",
+      code: `def word_break(s: str, word_dict: list[str]) -> bool:
+    words = set(word_dict)
+    memo = {}
+
+    def dfs(start: int) -> bool:
+        if start == len(s):
+            return True
+        if start in memo:
+            return memo[start]
+        for end in range(start + 1, len(s) + 1):
+            if s[start:end] in words and dfs(end):
+                memo[start] = True
+                return True
+        memo[start] = False
+        return False
+
+    return dfs(0)`,
+    },
+    {
+      label: "Prefix tabulation",
+      code: `def word_break(s: str, word_dict: list[str]) -> bool:
+    words = set(word_dict)
+    dp = [False] * (len(s) + 1)
+    dp[0] = True
+    for i in range(1, len(s) + 1):
+        for j in range(i):
+            if dp[j] and s[j:i] in words:
+                dp[i] = True
+                break
+    return dp[-1]`,
+    },
+  ],
+  "Combination Sum IV": [
+    {
+      label: "Memoized remaining target",
+      code: `def combination_sum4(nums: list[int], target: int) -> int:
+    memo = {0: 1}
+
+    def dfs(rem: int) -> int:
+        if rem < 0:
+            return 0
+        if rem in memo:
+            return memo[rem]
+        memo[rem] = sum(dfs(rem - num) for num in nums)
+        return memo[rem]
+
+    return dfs(target)`,
+    },
+    {
+      label: "Ordered tabulation",
+      code: `def combination_sum4(nums: list[int], target: int) -> int:
+    dp = [0] * (target + 1)
+    dp[0] = 1
+    for total in range(1, target + 1):
+        for num in nums:
+            if num <= total:
+                dp[total] += dp[total - num]
+    return dp[target]`,
+    },
+  ],
+  "House Robber": [
+    {
+      label: "Memoized decision tree",
+      code: `def rob(nums: list[int]) -> int:
+    memo = {}
+
+    def dfs(i: int) -> int:
+        if i >= len(nums):
+            return 0
+        if i in memo:
+            return memo[i]
+        memo[i] = max(dfs(i + 1), nums[i] + dfs(i + 2))
+        return memo[i]
+
+    return dfs(0)`,
+    },
+    {
+      label: "DP array",
+      code: `def rob(nums: list[int]) -> int:
+    if len(nums) == 1:
+        return nums[0]
+    dp = [0] * len(nums)
+    dp[0] = nums[0]
+    dp[1] = max(nums[0], nums[1])
+    for i in range(2, len(nums)):
+        dp[i] = max(dp[i - 1], dp[i - 2] + nums[i])
+    return dp[-1]`,
+    },
+    {
+      label: "Two variables",
+      code: `def rob(nums: list[int]) -> int:
+    prev2 = prev1 = 0
+    for num in nums:
+        prev2, prev1 = prev1, max(prev1, prev2 + num)
+    return prev1`,
+    },
+  ],
+  "House Robber II": [
+    {
+      label: "Split circle into two lines",
+      code: `def rob2(nums: list[int]) -> int:
+    if len(nums) == 1:
+        return nums[0]
+
+    def rob_line(houses: list[int]) -> int:
+        prev2 = prev1 = 0
+        for money in houses:
+            prev2, prev1 = prev1, max(prev1, prev2 + money)
+        return prev1
+
+    return max(rob_line(nums[:-1]), rob_line(nums[1:]))`,
+    },
+    {
+      label: "DP arrays for both ranges",
+      code: `def rob2(nums: list[int]) -> int:
+    if len(nums) == 1:
+        return nums[0]
+
+    def rob_line(houses: list[int]) -> int:
+        if not houses:
+            return 0
+        if len(houses) == 1:
+            return houses[0]
+        dp = [0] * len(houses)
+        dp[0] = houses[0]
+        dp[1] = max(houses[0], houses[1])
+        for i in range(2, len(houses)):
+            dp[i] = max(dp[i - 1], dp[i - 2] + houses[i])
+        return dp[-1]
+
+    return max(rob_line(nums[:-1]), rob_line(nums[1:]))`,
+    },
+  ],
+  "Decode Ways": [
+    {
+      label: "Memoized index",
+      code: `def num_decodings(s: str) -> int:
+    memo = {}
+
+    def dfs(i: int) -> int:
+        if i == len(s):
+            return 1
+        if s[i] == "0":
+            return 0
+        if i in memo:
+            return memo[i]
+        ways = dfs(i + 1)
+        if i + 1 < len(s) and 10 <= int(s[i:i + 2]) <= 26:
+            ways += dfs(i + 2)
+        memo[i] = ways
+        return ways
+
+    return dfs(0)`,
+    },
+    {
+      label: "DP array",
+      code: `def num_decodings(s: str) -> int:
+    dp = [0] * (len(s) + 1)
+    dp[0] = 1
+    dp[1] = 0 if s[0] == "0" else 1
+    for i in range(2, len(s) + 1):
+        if s[i - 1] != "0":
+            dp[i] += dp[i - 1]
+        if 10 <= int(s[i - 2:i]) <= 26:
+            dp[i] += dp[i - 2]
+    return dp[-1]`,
+    },
+    {
+      label: "Two running counts",
+      code: `def num_decodings(s: str) -> int:
+    prev2 = 1
+    prev1 = 0 if s[0] == "0" else 1
+    for i in range(2, len(s) + 1):
+        curr = 0
+        if s[i - 1] != "0":
+            curr += prev1
+        if 10 <= int(s[i - 2:i]) <= 26:
+            curr += prev2
+        prev2, prev1 = prev1, curr
+    return prev1`,
+    },
+  ],
+  "Unique Paths": [
+    {
+      label: "Memoized grid walk",
+      code: `def unique_paths(m: int, n: int) -> int:
+    memo = {}
+
+    def dfs(r: int, c: int) -> int:
+        if r == m - 1 and c == n - 1:
+            return 1
+        if r >= m or c >= n:
+            return 0
+        if (r, c) in memo:
+            return memo[(r, c)]
+        memo[(r, c)] = dfs(r + 1, c) + dfs(r, c + 1)
+        return memo[(r, c)]
+
+    return dfs(0, 0)`,
+    },
+    {
+      label: "2D tabulation",
+      code: `def unique_paths(m: int, n: int) -> int:
+    dp = [[1] * n for _ in range(m)]
+    for r in range(1, m):
+        for c in range(1, n):
+            dp[r][c] = dp[r - 1][c] + dp[r][c - 1]
+    return dp[-1][-1]`,
+    },
+    {
+      label: "1D rolling row",
+      code: `def unique_paths(m: int, n: int) -> int:
+    row = [1] * n
+    for _ in range(1, m):
+        for c in range(1, n):
+            row[c] += row[c - 1]
+    return row[-1]`,
+    },
+  ],
+  "Jump Game": [
+    {
+      label: "Memoized reachability",
+      code: `def can_jump(nums: list[int]) -> bool:
+    memo = {}
+
+    def dfs(i: int) -> bool:
+        if i >= len(nums) - 1:
+            return True
+        if i in memo:
+            return memo[i]
+        furthest = min(len(nums) - 1, i + nums[i])
+        for nxt in range(i + 1, furthest + 1):
+            if dfs(nxt):
+                memo[i] = True
+                return True
+        memo[i] = False
+        return False
+
+    return dfs(0)`,
+    },
+    {
+      label: "Reachable table",
+      code: `def can_jump(nums: list[int]) -> bool:
+    good = [False] * len(nums)
+    good[-1] = True
+    for i in range(len(nums) - 2, -1, -1):
+        furthest = min(len(nums) - 1, i + nums[i])
+        for nxt in range(i + 1, furthest + 1):
+            if good[nxt]:
+                good[i] = True
+                break
+    return good[0]`,
+    },
+    {
+      label: "Greedy max reach",
+      code: `def can_jump(nums: list[int]) -> bool:
+    max_reach = 0
+    for i, jump in enumerate(nums):
+        if i > max_reach:
+            return False
+        max_reach = max(max_reach, i + jump)
+    return True`,
+    },
+  ],
+  "Min Cost Climbing Stairs": [
+    {
+      label: "Memoized step cost",
+      code: `def min_cost_climbing_stairs(cost: list[int]) -> int:
+    memo = {}
+
+    def dfs(i: int) -> int:
+        if i >= len(cost):
+            return 0
+        if i in memo:
+            return memo[i]
+        memo[i] = cost[i] + min(dfs(i + 1), dfs(i + 2))
+        return memo[i]
+
+    return min(dfs(0), dfs(1))`,
+    },
+    {
+      label: "Non-mutating tabulation",
+      code: `def min_cost_climbing_stairs(cost: list[int]) -> int:
+    dp = cost[:]
+    for i in range(2, len(cost)):
+        dp[i] += min(dp[i - 1], dp[i - 2])
+    return min(dp[-1], dp[-2])`,
+    },
+    {
+      label: "Two variables",
+      code: `def min_cost_climbing_stairs(cost: list[int]) -> int:
+    prev2, prev1 = cost[0], cost[1]
+    for i in range(2, len(cost)):
+        curr = cost[i] + min(prev1, prev2)
+        prev2, prev1 = prev1, curr
+    return min(prev1, prev2)`,
+    },
+  ],
+  "Partition Equal Subset Sum": [
+    {
+      label: "Memoized subset search",
+      code: `def can_partition(nums: list[int]) -> bool:
+    total = sum(nums)
+    if total % 2:
+        return False
+    target = total // 2
+    memo = {}
+
+    def dfs(i: int, rem: int) -> bool:
+        if rem == 0:
+            return True
+        if rem < 0 or i == len(nums):
+            return False
+        key = (i, rem)
+        if key not in memo:
+            memo[key] = dfs(i + 1, rem) or dfs(i + 1, rem - nums[i])
+        return memo[key]
+
+    return dfs(0, target)`,
+    },
+    {
+      label: "2D subset table",
+      code: `def can_partition(nums: list[int]) -> bool:
+    total = sum(nums)
+    if total % 2:
+        return False
+    target = total // 2
+    dp = [[False] * (target + 1) for _ in range(len(nums) + 1)]
+    for i in range(len(nums) + 1):
+        dp[i][0] = True
+    for i, num in enumerate(nums, 1):
+        for s in range(1, target + 1):
+            dp[i][s] = dp[i - 1][s] or (s >= num and dp[i - 1][s - num])
+    return dp[-1][target]`,
+    },
+    {
+      label: "1D subset table",
+      code: `def can_partition(nums: list[int]) -> bool:
+    total = sum(nums)
+    if total % 2:
+        return False
+    target = total // 2
+    dp = [False] * (target + 1)
+    dp[0] = True
+    for num in nums:
+        for s in range(target, num - 1, -1):
+            dp[s] = dp[s] or dp[s - num]
+    return dp[target]`,
+    },
+  ],
+};
+
+for (const kata of blind75Part2) {
+  kata.solutionVariants = blind75Part2SolutionVariants[kata.name] ?? kata.solutionVariants;
+}
+
+enrichMissingPythonSolutionVariants(blind75Part2);
 
 export { blind75Part2 };

@@ -3,8 +3,11 @@ import type { SeedKata } from "../types/editor";
 import { leetcodeNumberFor } from "./leetcode-numbers";
 import { sampleKatas } from "./sample-katas";
 import { sampleKatasPython } from "./sample-katas-python";
+import { recursionFoundations } from "./recursion-foundations";
 import { treeFundamentals } from "./tree-fundamentals";
 import { dpFoundations } from "./dp-foundations";
+import { dpFoundationsJs } from "./dp-foundations-js";
+import { dpProblemsJs } from "./dp-problems-js";
 import { blind75Part1 } from "./blind75-additions-part1";
 import { blind75Part2 } from "./blind75-additions-part2";
 import { blind75Part3 } from "./blind75-additions-part3";
@@ -32,9 +35,16 @@ export async function getDb(): Promise<Database> {
   await createSchema(db);
   await seedKatas(db);
   await migrateBuildAdjacencyListDrill(db);
+  await migrateBinarySearchBoundaryDrills(db);
+  await migrateBuildPrefixSumDrill(db);
+  await migrateMatrixBfsDrill(db);
+  await migrateCanonicalNeetcodeTitles(db);
   await seedMissingKatas(db);
   await migrateTagsIfEmpty(db);
+  await backfillSeedKataTags(db);
   await backfillLeetcodeNumbers(db);
+  await backfillSolutionVariants(db);
+  await migrateTwoSumIiToTwoPointers(db);
   return db;
 }
 
@@ -50,6 +60,7 @@ async function createSchema(db: Database) {
       code TEXT NOT NULL,
       test_code TEXT NOT NULL,
       solution TEXT,
+      solution_variants TEXT,
       usage TEXT,
       tags TEXT DEFAULT '[]',
       leetcode_number INTEGER,
@@ -78,6 +89,13 @@ async function createSchema(db: Database) {
     // Column already exists
   }
 
+  // Migrate existing DBs: add solution_variants column if missing
+  try {
+    await db.execute(`ALTER TABLE katas ADD COLUMN solution_variants TEXT`);
+  } catch {
+    // Column already exists
+  }
+
   // Migrate existing DBs: rename arrays-and-hashing → arrays
   await db.execute(`UPDATE katas SET category = 'arrays' WHERE category = 'arrays-and-hashing'`);
 
@@ -90,9 +108,17 @@ async function createSchema(db: Database) {
       total_time_ms INTEGER,
       kata_count INTEGER NOT NULL,
       pass_count INTEGER DEFAULT 0,
-      preset_name TEXT
+      preset_name TEXT,
+      kata_ids TEXT
     )
   `);
+
+  // Migrate existing DBs: persist ordered session rosters for reload/resume.
+  try {
+    await db.execute(`ALTER TABLE sessions ADD COLUMN kata_ids TEXT`);
+  } catch {
+    // Column already exists
+  }
 
   await db.execute(`
     CREATE TABLE IF NOT EXISTS attempts (
@@ -114,6 +140,16 @@ async function createSchema(db: Database) {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT UNIQUE NOT NULL,
       kata_ids TEXT NOT NULL
+    )
+  `);
+
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS practice_presets (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT UNIQUE NOT NULL,
+      config TEXT NOT NULL,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT DEFAULT CURRENT_TIMESTAMP
     )
   `);
 
@@ -196,7 +232,83 @@ const blind75Katas = [
 ];
 
 /** The full seed corpus, in seed order — the single source seedMissingKatas checks against. */
-const ALL_SEED_KATAS = [...sampleKatas, ...sampleKatasPython, ...treeFundamentals, ...dpFoundations, ...blind75Katas];
+const ALL_SEED_KATAS = [...sampleKatas, ...sampleKatasPython, ...recursionFoundations, ...treeFundamentals, ...dpFoundations, ...dpFoundationsJs, ...dpProblemsJs, ...blind75Katas];
+
+async function migrateCanonicalNeetcodeTitles(db: Database) {
+  const renames = [
+    { oldName: "Count Good Nodes In Binary Tree", newName: "Count Good Nodes in Binary Tree" },
+    { oldName: "Merge K Sorted Lists", newName: "Merge k Sorted Lists" },
+    { oldName: "N Queens", newName: "N-Queens" },
+    { oldName: "Kadane's Algorithm", newName: "Maximum Subarray" },
+    { oldName: "Largest Rectangle In Histogram", newName: "Largest Rectangle in Histogram" },
+    { oldName: "Single Number XOR", newName: "Single Number" },
+    { oldName: "Linked List Cycle Detection", newName: "Linked List Cycle" },
+    { oldName: "Count Set Bits", newName: "Number of 1 Bits" },
+    { oldName: "Trie", newName: "Implement Trie (Prefix Tree)" },
+    { oldName: "Add and Search Word", newName: "Design Add and Search Words Data Structure" },
+    { oldName: "Kth Largest Element In An Array", newName: "Kth Largest Element in an Array" },
+    { oldName: "Kth Largest Element In a Stream", newName: "Kth Largest Element in a Stream" },
+    { oldName: "Swim In Rising Water", newName: "Swim in Rising Water" },
+    { oldName: "Walls And Gates", newName: "Walls and Gates" },
+    { oldName: "Best Time to Buy and Sell Stock With Cooldown", newName: "Best Time to Buy and Sell Stock with Cooldown" },
+    { oldName: "Longest Increasing Path In a Matrix", newName: "Longest Increasing Path in a Matrix" },
+    { oldName: "Climbing Stairs (Iterative)", newName: "Climbing Stairs" },
+    { oldName: "Reverse Linked List (Iterative)", newName: "Reverse Linked List" },
+    { oldName: "Binary Search (Iterative)", newName: "Binary Search" },
+  ];
+
+  for (const { oldName, newName } of renames) {
+    const renamedKatas = ALL_SEED_KATAS.filter((kata) => kata.name === newName);
+    for (const kata of renamedKatas) {
+      const seedValues = [
+        kata.name,
+        kata.category,
+        kata.difficulty,
+        kata.description,
+        kata.code,
+        kata.testCode,
+        kata.solution,
+        kata.solutionVariants ? JSON.stringify(kata.solutionVariants) : null,
+        kata.usage,
+        JSON.stringify(kata.tags),
+        leetcodeNumberFor(kata),
+      ];
+
+      await db.execute(
+        `UPDATE katas
+         SET name = $1,
+             category = $2,
+             difficulty = $3,
+             description = $4,
+             code = $5,
+             test_code = $6,
+             solution = $7,
+             solution_variants = $8,
+             usage = $9,
+             tags = $10,
+             leetcode_number = $11
+         WHERE name = $12 AND language = $13 AND (is_custom IS NULL OR is_custom = 0)`,
+        [...seedValues, oldName, kata.language],
+      );
+
+      await db.execute(
+        `UPDATE katas
+         SET category = $2,
+             difficulty = $3,
+             description = $4,
+             code = $5,
+             test_code = $6,
+             solution = $7,
+             solution_variants = $8,
+             usage = $9,
+             tags = $10,
+             leetcode_number = $11
+         WHERE name = $1 AND language = $12 AND (is_custom IS NULL OR is_custom = 0)`,
+        [...seedValues, kata.language],
+      );
+    }
+  }
+}
 
 async function migrateBuildAdjacencyListDrill(db: Database) {
   const renamedKatas = ALL_SEED_KATAS.filter((kata) => kata.name === "Build Adjacency List Drill");
@@ -209,16 +321,18 @@ async function migrateBuildAdjacencyListDrill(db: Database) {
            code = $3,
            test_code = $4,
            solution = $5,
-           usage = $6,
-           tags = $7,
+           solution_variants = $6,
+           usage = $7,
+           tags = $8,
            leetcode_number = NULL
-       WHERE name = $8 AND language = $9 AND (is_custom IS NULL OR is_custom = 0)`,
+       WHERE name = $9 AND language = $10 AND (is_custom IS NULL OR is_custom = 0)`,
       [
         kata.name,
         kata.description,
         kata.code,
         kata.testCode,
         kata.solution,
+        kata.solutionVariants ? JSON.stringify(kata.solutionVariants) : null,
         kata.usage,
         JSON.stringify(kata.tags),
         "Build Adjacency List",
@@ -230,6 +344,136 @@ async function migrateBuildAdjacencyListDrill(db: Database) {
       `UPDATE katas
        SET leetcode_number = NULL
        WHERE name = $1 AND language = $2 AND leetcode_number = 133 AND (is_custom IS NULL OR is_custom = 0)`,
+      [kata.name, kata.language],
+    );
+  }
+}
+
+async function migrateBinarySearchBoundaryDrills(db: Database) {
+  const renames = [
+    { oldName: "Binary Search Find First", newName: "Find First Occurrence in Sorted Array" },
+    { oldName: "Binary Search Find Last", newName: "Find Last Occurrence in Sorted Array" },
+  ];
+
+  for (const { oldName, newName } of renames) {
+    const renamedKatas = ALL_SEED_KATAS.filter((kata) => kata.name === newName);
+    for (const kata of renamedKatas) {
+      const seedValues = [
+        kata.name,
+        kata.description,
+        kata.code,
+        kata.testCode,
+        kata.solution,
+        kata.solutionVariants ? JSON.stringify(kata.solutionVariants) : null,
+        kata.usage,
+        JSON.stringify(kata.tags),
+      ];
+
+      await db.execute(
+        `UPDATE katas
+         SET name = $1,
+             description = $2,
+             code = $3,
+             test_code = $4,
+             solution = $5,
+             solution_variants = $6,
+             usage = $7,
+             tags = $8,
+             leetcode_number = NULL
+         WHERE name = $9 AND language = $10 AND (is_custom IS NULL OR is_custom = 0)`,
+        [...seedValues, oldName, kata.language],
+      );
+
+      await db.execute(
+        `UPDATE katas
+         SET description = $2,
+             code = $3,
+             test_code = $4,
+             solution = $5,
+             solution_variants = $6,
+             usage = $7,
+             tags = $8,
+             leetcode_number = NULL
+         WHERE name = $1 AND language = $9 AND (is_custom IS NULL OR is_custom = 0)`,
+        [...seedValues, kata.language],
+      );
+    }
+  }
+}
+
+async function migrateBuildPrefixSumDrill(db: Database) {
+  const renamedKatas = ALL_SEED_KATAS.filter((kata) => kata.name === "Prefix Sum Table");
+
+  for (const kata of renamedKatas) {
+    await db.execute(
+      `UPDATE katas
+       SET name = $1,
+           description = $2,
+           code = $3,
+           test_code = $4,
+           solution = $5,
+           solution_variants = $6,
+           usage = $7,
+           tags = $8,
+           leetcode_number = NULL
+       WHERE name = $9 AND language = $10 AND (is_custom IS NULL OR is_custom = 0)`,
+      [
+        kata.name,
+        kata.description,
+        kata.code,
+        kata.testCode,
+        kata.solution,
+        kata.solutionVariants ? JSON.stringify(kata.solutionVariants) : null,
+        kata.usage,
+        JSON.stringify(kata.tags),
+        "Build Prefix Sum",
+        kata.language,
+      ],
+    );
+
+    await db.execute(
+      `UPDATE katas
+       SET leetcode_number = NULL
+       WHERE name = $1 AND language = $2 AND leetcode_number = 1480 AND (is_custom IS NULL OR is_custom = 0)`,
+      [kata.name, kata.language],
+    );
+  }
+}
+
+async function migrateMatrixBfsDrill(db: Database) {
+  const renamedKatas = ALL_SEED_KATAS.filter((kata) => kata.name === "Matrix BFS With Walls");
+
+  for (const kata of renamedKatas) {
+    await db.execute(
+      `UPDATE katas
+       SET name = $1,
+           description = $2,
+           code = $3,
+           test_code = $4,
+           solution = $5,
+           solution_variants = $6,
+           usage = $7,
+           tags = $8,
+           leetcode_number = NULL
+       WHERE name = $9 AND language = $10 AND (is_custom IS NULL OR is_custom = 0)`,
+      [
+        kata.name,
+        kata.description,
+        kata.code,
+        kata.testCode,
+        kata.solution,
+        kata.solutionVariants ? JSON.stringify(kata.solutionVariants) : null,
+        kata.usage,
+        JSON.stringify(kata.tags),
+        "Matrix BFS",
+        kata.language,
+      ],
+    );
+
+    await db.execute(
+      `UPDATE katas
+       SET leetcode_number = NULL
+       WHERE name = $1 AND language = $2 AND leetcode_number = 1091 AND (is_custom IS NULL OR is_custom = 0)`,
       [kata.name, kata.language],
     );
   }
@@ -252,8 +496,8 @@ async function seedMissingKatas(db: Database) {
   for (const kata of ALL_SEED_KATAS) {
     if (existing.has(key(kata.name, kata.language))) continue;
     await db.execute(
-      `INSERT INTO katas (name, category, language, difficulty, description, code, test_code, solution, usage, tags, leetcode_number)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+      `INSERT INTO katas (name, category, language, difficulty, description, code, test_code, solution, solution_variants, usage, tags, leetcode_number)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
       [
         kata.name,
         kata.category,
@@ -263,6 +507,7 @@ async function seedMissingKatas(db: Database) {
         kata.code,
         kata.testCode,
         kata.solution,
+        kata.solutionVariants ? JSON.stringify(kata.solutionVariants) : null,
         kata.usage,
         JSON.stringify(kata.tags),
         leetcodeNumberFor(kata),
@@ -287,15 +532,80 @@ async function backfillLeetcodeNumbers(db: Database) {
   }
 }
 
+async function backfillSeedKataTags(db: Database) {
+  for (const kata of ALL_SEED_KATAS) {
+    await db.execute(
+      `UPDATE katas
+       SET tags = $1
+       WHERE name = $2 AND language = $3 AND (is_custom IS NULL OR is_custom = 0)`,
+      [JSON.stringify(kata.tags), kata.name, kata.language],
+    );
+  }
+}
+
+async function backfillSolutionVariants(db: Database) {
+  for (const kata of ALL_SEED_KATAS) {
+    if (!kata.solutionVariants || kata.solutionVariants.length === 0) continue;
+    const solutionVariants = JSON.stringify(kata.solutionVariants);
+    await db.execute(
+      `UPDATE katas
+       SET solution_variants = $1
+       WHERE name = $2
+         AND language = $3
+         AND (is_custom IS NULL OR is_custom = 0)
+         AND (solution_variants IS NULL OR solution_variants = '' OR solution_variants != $1)`,
+      [solutionVariants, kata.name, kata.language],
+    );
+  }
+
+  const doubleOrAdd = ALL_SEED_KATAS.find(
+    (kata) => kata.name === "Double-or-Add Sequence" && kata.language === "python"
+  );
+  if (doubleOrAdd?.description?.includes("The sequence uses zero-based indexing:")) {
+    await db.execute(
+      `UPDATE katas
+       SET description = $1
+       WHERE name = $2 AND language = $3 AND description NOT LIKE $4`,
+      [
+        doubleOrAdd.description,
+        doubleOrAdd.name,
+        doubleOrAdd.language,
+        "%The sequence uses zero-based indexing:%",
+      ],
+    );
+  }
+}
+
+async function migrateTwoSumIiToTwoPointers(db: Database) {
+  for (const kata of ALL_SEED_KATAS.filter((seed) => seed.name === "Two Sum II - Input Array Is Sorted")) {
+    await db.execute(
+      `UPDATE katas
+       SET category = $1,
+           tags = $2,
+           solution_variants = $3
+       WHERE name = $4
+         AND language = $5
+         AND (is_custom IS NULL OR is_custom = 0)`,
+      [
+        kata.category,
+        JSON.stringify(kata.tags),
+        JSON.stringify(kata.solutionVariants ?? []),
+        kata.name,
+        kata.language,
+      ],
+    );
+  }
+}
+
 async function seedKatas(db: Database) {
   // Only seed when katas table is empty (first launch)
   const countRows = await db.select<{ count: number }[]>("SELECT COUNT(*) as count FROM katas");
   if (countRows[0].count > 0) return;
 
-  for (const kata of [...sampleKatas, ...sampleKatasPython, ...treeFundamentals, ...dpFoundations, ...blind75Katas]) {
+  for (const kata of ALL_SEED_KATAS) {
     await db.execute(
-      `INSERT INTO katas (name, category, language, difficulty, description, code, test_code, solution, usage, tags, leetcode_number)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+      `INSERT INTO katas (name, category, language, difficulty, description, code, test_code, solution, solution_variants, usage, tags, leetcode_number)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
       [
         kata.name,
         kata.category,
@@ -305,6 +615,7 @@ async function seedKatas(db: Database) {
         kata.code,
         kata.testCode,
         kata.solution,
+        kata.solutionVariants ? JSON.stringify(kata.solutionVariants) : null,
         kata.usage,
         JSON.stringify(kata.tags),
         leetcodeNumberFor(kata),
@@ -339,10 +650,10 @@ export async function reseedKatas(): Promise<string> {
 }
 
 async function seedKatasForce(db: Database) {
-  for (const kata of [...sampleKatas, ...sampleKatasPython, ...treeFundamentals, ...dpFoundations, ...blind75Katas]) {
+  for (const kata of ALL_SEED_KATAS) {
     await db.execute(
-      `INSERT INTO katas (name, category, language, difficulty, description, code, test_code, solution, usage, tags, leetcode_number)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+      `INSERT INTO katas (name, category, language, difficulty, description, code, test_code, solution, solution_variants, usage, tags, leetcode_number)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
       [
         kata.name,
         kata.category,
@@ -352,6 +663,7 @@ async function seedKatasForce(db: Database) {
         kata.code,
         kata.testCode,
         kata.solution,
+        kata.solutionVariants ? JSON.stringify(kata.solutionVariants) : null,
         kata.usage,
         JSON.stringify(kata.tags),
         leetcodeNumberFor(kata),
@@ -363,8 +675,8 @@ async function seedKatasForce(db: Database) {
 export async function insertKata(kata: SeedKata): Promise<number> {
   const db = await getDb();
   const result = await db.execute(
-    `INSERT INTO katas (name, category, language, difficulty, description, code, test_code, solution, usage, tags, is_custom)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 1)`,
+    `INSERT INTO katas (name, category, language, difficulty, description, code, test_code, solution, solution_variants, usage, tags, is_custom)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 1)`,
     [
       kata.name,
       kata.category,
@@ -374,6 +686,7 @@ export async function insertKata(kata: SeedKata): Promise<number> {
       kata.code,
       kata.testCode,
       kata.solution,
+      kata.solutionVariants ? JSON.stringify(kata.solutionVariants) : null,
       kata.usage,
       JSON.stringify(kata.tags),
     ]
@@ -395,6 +708,7 @@ export async function updateKata(id: number, kata: Partial<SeedKata>): Promise<v
   if (kata.code !== undefined) { fields.push(`code = $${idx++}`); values.push(kata.code); }
   if (kata.testCode !== undefined) { fields.push(`test_code = $${idx++}`); values.push(kata.testCode); }
   if (kata.solution !== undefined) { fields.push(`solution = $${idx++}`); values.push(kata.solution); }
+  if (kata.solutionVariants !== undefined) { fields.push(`solution_variants = $${idx++}`); values.push(kata.solutionVariants ? JSON.stringify(kata.solutionVariants) : null); }
   if (kata.usage !== undefined) { fields.push(`usage = $${idx++}`); values.push(kata.usage); }
   if (kata.tags !== undefined) { fields.push(`tags = $${idx++}`); values.push(JSON.stringify(kata.tags)); }
 

@@ -7,12 +7,13 @@ const jsDp = (
   code: string,
   testCode: string,
   solution: string,
-  tags: string[] = []
+  tags: string[] = [],
+  difficulty: SeedKata["difficulty"] = "easy"
 ): SeedKata => ({
   name,
   category,
   language: "javascript",
-  difficulty: "easy",
+  difficulty,
   description,
   code,
   testCode,
@@ -215,7 +216,7 @@ function test_five() { assertEqual(climbStairs(5), 8); }`,
     ["dp-basic", "memoization", "recursion", "neetcode"]
   ),
   jsDp(
-    "Climbing Stairs (Iterative)",
+    "Climbing Stairs",
     "1-d-dp",
     "Climbing Stairs with an iterative O(1)-space DP framing.",
     `function climbStairs(n) {
@@ -516,6 +517,55 @@ function test_single() { assertEqual(buildMinCostTable([[7]]), [[7]]); }`,
     ["grid-dp", "pre-leetcode"]
   ),
   jsDp(
+    "Build a Maximum-Cost Table",
+    "2-d-dp",
+    "Return the complete DP table of maximum value collected from the top-left, moving only down or right.",
+    `function buildMaxCostTable(grid) {
+  // your code here
+}`,
+    `function test_basic() { assertEqual(buildMaxCostTable([[1,3,1],[1,5,1]]), [[1,4,5],[2,9,10]]); }
+function test_single() { assertEqual(buildMaxCostTable([[7]]), [[7]]); }
+function test_column() { assertEqual(buildMaxCostTable([[2],[3],[4]]), [[2],[5],[9]]); }`,
+    `function buildMaxCostTable(grid) {
+  const rows = grid.length, cols = grid[0].length;
+  const dp = Array.from({ length: rows }, () => new Array(cols).fill(0));
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      if (r === 0 && c === 0) dp[r][c] = grid[r][c];
+      else dp[r][c] = grid[r][c] + Math.max(r > 0 ? dp[r - 1][c] : -Infinity, c > 0 ? dp[r][c - 1] : -Infinity);
+    }
+  }
+  return dp;
+}`,
+    ["grid-dp", "pre-leetcode"]
+  ),
+  jsDp(
+    "Count Paths With Diagonal Movement",
+    "2-d-dp",
+    "Count paths from the top-left to bottom-right when each move may go right, down, or diagonal down-right.",
+    `function countPathsWithDiagonal(rows, cols) {
+  // your code here
+}`,
+    `function test_three_by_three() { assertEqual(countPathsWithDiagonal(3, 3), 13); }
+function test_two_by_two() { assertEqual(countPathsWithDiagonal(2, 2), 3); }
+function test_single_row() { assertEqual(countPathsWithDiagonal(1, 4), 1); }`,
+    `function countPathsWithDiagonal(rows, cols) {
+  const dp = Array.from({ length: rows }, () => new Array(cols).fill(0));
+  dp[0][0] = 1;
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      if (r === 0 && c === 0) continue;
+      const top = r > 0 ? dp[r - 1][c] : 0;
+      const left = c > 0 ? dp[r][c - 1] : 0;
+      const diagonal = r > 0 && c > 0 ? dp[r - 1][c - 1] : 0;
+      dp[r][c] = top + left + diagonal;
+    }
+  }
+  return dp[rows - 1][cols - 1];
+}`,
+    ["grid-dp", "pre-leetcode"]
+  ),
+  jsDp(
     "Reconstruct One Minimum-Cost Grid Path",
     "2-d-dp",
     "Given a non-negative cost grid, return one minimum-cost path from the top-left to the bottom-right as [row, col] coordinates. You may only move down or right.",
@@ -548,5 +598,138 @@ function test_single() { assertEqual(reconstructMinCostPath([[7]]), [[0,0]]); }`
   return path.reverse();
 }`,
     ["grid-dp", "dp-min-cost", "pre-leetcode"]
+  ),
+  jsDp(
+    "Minimum Falling Path in a Small Grid",
+    "2-d-dp",
+    "Return the minimum falling path sum in a grid. Each step moves to the next row in the same column or one adjacent column.",
+    `function smallMinFallingPath(matrix) {
+  // your code here
+}`,
+    `function test_basic() { assertEqual(smallMinFallingPath([[2,1,3],[6,5,4],[7,8,9]]), 13); }
+function test_single() { assertEqual(smallMinFallingPath([[5]]), 5); }
+function test_negative() { assertEqual(smallMinFallingPath([[-19,57],[-40,-5]]), -59); }`,
+    `function smallMinFallingPath(matrix) {
+  let dp = matrix[0].slice();
+  for (let r = 1; r < matrix.length; r++) {
+    const next = new Array(matrix[r].length).fill(0);
+    for (let c = 0; c < matrix[r].length; c++) {
+      let best = dp[c];
+      if (c > 0) best = Math.min(best, dp[c - 1]);
+      if (c + 1 < dp.length) best = Math.min(best, dp[c + 1]);
+      next[c] = matrix[r][c] + best;
+    }
+    dp = next;
+  }
+  return Math.min(...dp);
+}`,
+    ["grid-dp", "pre-leetcode"]
+  ),
+  jsDp(
+    "Minimum Falling Path Sum",
+    "2-d-dp",
+    "Given a square matrix, return the minimum falling path sum using same-column or adjacent-column moves between rows. Ref: LeetCode #931.",
+    `function minFallingPathSum(matrix) {
+  // your code here
+}`,
+    `function test_basic() { assertEqual(minFallingPathSum([[2,1,3],[6,5,4],[7,8,9]]), 13); }
+function test_negative() { assertEqual(minFallingPathSum([[-19,57],[-40,-5]]), -59); }
+function test_single() { assertEqual(minFallingPathSum([[7]]), 7); }`,
+    `function minFallingPathSum(matrix) {
+  let dp = matrix[0].slice();
+  for (let r = 1; r < matrix.length; r++) {
+    const next = new Array(matrix.length).fill(0);
+    for (let c = 0; c < matrix.length; c++) {
+      let best = dp[c];
+      if (c > 0) best = Math.min(best, dp[c - 1]);
+      if (c + 1 < matrix.length) best = Math.min(best, dp[c + 1]);
+      next[c] = matrix[r][c] + best;
+    }
+    dp = next;
+  }
+  return Math.min(...dp);
+}`,
+    ["grid-dp"],
+    "medium"
+  ),
+  jsDp(
+    "Maximal Square",
+    "2-d-dp",
+    "Given a binary matrix of \"0\" and \"1\" strings, return the area of the largest square containing only 1s. Ref: LeetCode #221.",
+    `function maximalSquare(matrix) {
+  // your code here
+}`,
+    `function test_basic() { assertEqual(maximalSquare([["1","0","1","0","0"],["1","0","1","1","1"],["1","1","1","1","1"],["1","0","0","1","0"]]), 4); }
+function test_zero() { assertEqual(maximalSquare([["0","0"],["0","0"]]), 0); }
+function test_all_ones() { assertEqual(maximalSquare([["1","1","1"],["1","1","1"],["1","1","1"]]), 9); }`,
+    `function maximalSquare(matrix) {
+  const rows = matrix.length, cols = matrix[0].length;
+  const dp = Array.from({ length: rows + 1 }, () => new Array(cols + 1).fill(0));
+  let bestSide = 0;
+  for (let r = 1; r <= rows; r++) {
+    for (let c = 1; c <= cols; c++) {
+      if (matrix[r - 1][c - 1] === "1") {
+        dp[r][c] = 1 + Math.min(dp[r - 1][c], dp[r][c - 1], dp[r - 1][c - 1]);
+        bestSide = Math.max(bestSide, dp[r][c]);
+      }
+    }
+  }
+  return bestSide * bestSide;
+}`,
+    ["grid-dp", "shape-dp"],
+    "medium"
+  ),
+  jsDp(
+    "Count Square Submatrices With All Ones",
+    "2-d-dp",
+    "Given a binary matrix, count all square submatrices that contain only 1s. Ref: LeetCode #1277.",
+    `function countSquares(matrix) {
+  // your code here
+}`,
+    `function test_basic() { assertEqual(countSquares([[0,1,1,1],[1,1,1,1],[0,1,1,1]]), 15); }
+function test_example_two() { assertEqual(countSquares([[1,0,1],[1,1,0],[1,1,0]]), 7); }
+function test_all_ones() { assertEqual(countSquares([[1,1,1],[1,1,1],[1,1,1]]), 14); }`,
+    `function countSquares(matrix) {
+  const rows = matrix.length, cols = matrix[0].length;
+  const dp = Array.from({ length: rows + 1 }, () => new Array(cols + 1).fill(0));
+  let total = 0;
+  for (let r = 1; r <= rows; r++) {
+    for (let c = 1; c <= cols; c++) {
+      if (matrix[r - 1][c - 1] === 1) {
+        dp[r][c] = 1 + Math.min(dp[r - 1][c], dp[r][c - 1], dp[r - 1][c - 1]);
+        total += dp[r][c];
+      }
+    }
+  }
+  return total;
+}`,
+    ["grid-dp", "shape-dp"],
+    "medium"
+  ),
+  jsDp(
+    "Dungeon Game",
+    "2-d-dp",
+    "Return the minimum starting health needed to cross a dungeon grid while health never drops below 1. Moves are only right or down. Ref: LeetCode #174.",
+    `function calculateMinimumHP(dungeon) {
+  // your code here
+}`,
+    `function test_basic() { assertEqual(calculateMinimumHP([[-2,-3,3],[-5,-10,1],[10,30,-5]]), 7); }
+function test_positive() { assertEqual(calculateMinimumHP([[10]]), 1); }
+function test_negative() { assertEqual(calculateMinimumHP([[-5]]), 6); }`,
+    `function calculateMinimumHP(dungeon) {
+  const rows = dungeon.length, cols = dungeon[0].length;
+  const dp = Array.from({ length: rows + 1 }, () => new Array(cols + 1).fill(Infinity));
+  dp[rows][cols - 1] = 1;
+  dp[rows - 1][cols] = 1;
+  for (let r = rows - 1; r >= 0; r--) {
+    for (let c = cols - 1; c >= 0; c--) {
+      const needAfter = Math.min(dp[r + 1][c], dp[r][c + 1]);
+      dp[r][c] = Math.max(1, needAfter - dungeon[r][c]);
+    }
+  }
+  return dp[0][0];
+}`,
+    ["grid-dp", "reverse-dp", "advanced"],
+    "hard"
   ),
 ];

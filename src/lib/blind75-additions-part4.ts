@@ -1,4 +1,12 @@
 import type { SeedKata } from "../types/editor";
+import { enrichMissingPythonSolutionVariants } from "./python-solution-variants";
+
+const variant = (label: string, code: string, complexity: string, explanation: string) => ({
+  label,
+  code,
+  complexity,
+  explanation,
+});
 
 const blind75Part4: SeedKata[] = [
   // 30. Insert Interval
@@ -45,7 +53,7 @@ def test_at_start():
 
     return result`,
     usage: null,
-    tags: ["array", "intervals", "blind75"],
+    tags: ["array", "intervals", "blind75", "neetcode"],
   },
 
   // 31. Non-overlapping Intervals
@@ -88,7 +96,7 @@ def test_multiple_overlaps():
 
     return removals`,
     usage: null,
-    tags: ["array", "intervals", "greedy", "blind75"],
+    tags: ["array", "intervals", "greedy", "blind75", "neetcode"],
   },
 
   // 32. Meeting Rooms
@@ -125,7 +133,7 @@ def test_back_to_back():
 
     return True`,
     usage: null,
-    tags: ["array", "intervals", "sorting", "blind75"],
+    tags: ["array", "intervals", "sorting", "blind75", "neetcode"],
   },
 
   // 33. Meeting Rooms II
@@ -170,7 +178,7 @@ def min_meeting_rooms(intervals: list[list[int]]) -> int:
 
     return len(heap)`,
     usage: null,
-    tags: ["array", "intervals", "heap", "blind75"],
+    tags: ["array", "intervals", "heap", "blind75", "neetcode"],
   },
 
   // 34. Merge Two Sorted Lists
@@ -240,12 +248,12 @@ def merge_two_lists(l1, l2):
 
     return dummy.next`,
     usage: null,
-    tags: ["linked-list", "blind75"],
+    tags: ["linked-list", "blind75", "neetcode"],
   },
 
-  // 35. Merge K Sorted Lists
+  // 35. Merge k Sorted Lists
   {
-    name: "Merge K Sorted Lists",
+    name: "Merge k Sorted Lists",
     category: "linked-list",
     language: "python",
     difficulty: "hard",
@@ -317,7 +325,7 @@ def merge_k_lists(lists):
 
     return dummy.next`,
     usage: null,
-    tags: ["linked-list", "heap", "divide-and-conquer", "blind75"],
+    tags: ["linked-list", "heap", "divide-and-conquer", "blind75", "neetcode"],
   },
 
   // 36. Remove Nth Node From End of List
@@ -389,8 +397,59 @@ def remove_nth_from_end(head, n: int):
     slow.next = slow.next.next
 
     return dummy.next`,
+    solutionVariants: [
+      variant(
+        "One-pass two pointers",
+        `class ListNode:
+    def __init__(self, val=0, next=None):
+        self.val = val
+        self.next = next
+
+def remove_nth_from_end(head, n: int):
+    dummy = ListNode(0)
+    dummy.next = head
+    fast = dummy
+    slow = dummy
+
+    for _ in range(n + 1):
+        fast = fast.next
+
+    while fast:
+        fast = fast.next
+        slow = slow.next
+
+    slow.next = slow.next.next
+    return dummy.next`,
+        "Time O(n), Space O(1)",
+        "Maintains an n-node gap so slow lands before the node to delete."
+      ),
+      variant(
+        "Two-pass length count",
+        `class ListNode:
+    def __init__(self, val=0, next=None):
+        self.val = val
+        self.next = next
+
+def remove_nth_from_end(head, n: int):
+    dummy = ListNode(0)
+    dummy.next = head
+    length = 0
+    cur = head
+    while cur:
+        length += 1
+        cur = cur.next
+
+    cur = dummy
+    for _ in range(length - n):
+        cur = cur.next
+    cur.next = cur.next.next
+    return dummy.next`,
+        "Time O(n), Space O(1)",
+        "Simpler baseline: compute length, then delete the (length - n)th next node."
+      ),
+    ],
     usage: null,
-    tags: ["linked-list", "two-pointers", "blind75"],
+    tags: ["linked-list", "two-pointers", "blind75", "neetcode"],
   },
 
   // 37. Reorder List
@@ -482,8 +541,10 @@ def reorder_list(head) -> None:
         first = tmp1
         second = tmp2`,
     usage: null,
-    tags: ["linked-list", "two-pointers", "blind75"],
+    tags: ["linked-list", "two-pointers", "blind75", "neetcode"],
   },
 ];
+
+enrichMissingPythonSolutionVariants(blind75Part4);
 
 export { blind75Part4 };

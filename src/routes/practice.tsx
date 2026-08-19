@@ -1,20 +1,36 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router";
+import { Code2, ListFilter, ListOrdered, Save, Settings2, Timer, Trash2, X } from "lucide-react";
 import { useKataStore } from "../stores/kata-store";
 import { reseedKatas } from "../lib/database";
-import { useSettingsStore, type PracticeConfig } from "../stores/settings-store";
+import { useSettingsStore, type PracticeConfig, type PracticeDifficulty } from "../stores/settings-store";
 import { useSessionStore, fetchKataStats, fetchAttemptHistory } from "../stores/session-store";
-import { computeSrState, formatDue, type SrState } from "../lib/sr";
+import { computeSrState, formatDue } from "../lib/sr";
 import { useTimerStore } from "../stores/timer-store";
 import type { KataStats } from "../stores/session-store";
 import type { Kata } from "../types/editor";
 import { levelsForKatas, visibleSelection, mergeSelection, CATEGORY_LEVEL } from "../lib/levels";
 import { EDITOR_TOGGLES, type EditorToggleKey } from "../lib/editor-settings";
+import { resumableSessionPath } from "../lib/session-resume";
+import { isReviewStatus, queueStatusForSr, type QueueKataStatus } from "../lib/practice-status";
+import { toast } from "../stores/toast-store";
+import { IMPLEMENTATION_SIZES, implementationComplexityFor, type ImplementationSize } from "../lib/implementation-complexity";
+import { DASHBOARD_MODULES, dashboardModuleFor } from "../lib/dashboard-metrics";
+import {
+  applyPracticePresetConfig,
+  deletePracticePreset,
+  loadPracticePresets,
+  normalizePracticePresetName,
+  practicePresetCanSaveName,
+  practicePresetConfigFromSettings,
+  savePracticePreset,
+  type PracticePreset,
+} from "../lib/practice-presets";
 
-type Mode = "sr" | "daily" | "weak" | "speed" | "level";
+type Mode = "sr" | "review" | "daily" | "weak" | "speed" | "level";
 type SizeOpt = 3 | 5 | 10 | 15 | 20 | "all";
-type KataStatus = "new" | "failed" | "slow" | "due" | "ok";
-type DifficultyFilter = "" | "easy" | "medium" | "hard";
+type KataStatus = QueueKataStatus;
+type PracticeSettingsSection = "queue" | "filters" | "limits" | "editor";
 
 interface QueueItem {
   kata: Kata;
@@ -31,6 +47,11 @@ const MODES: { id: Mode; title: string; desc: string }[] = [
     id: "sr",
     title: "SR Queue",
     desc: "Katas ranked by how urgently they need review — new, failed, and idle float to the top.",
+  },
+  {
+    id: "review",
+    title: "Review",
+    desc: "Only attempted katas that are failed or due by the spaced-review schedule.",
   },
   {
     id: "daily",
@@ -56,20 +77,11 @@ const MODES: { id: Mode; title: string; desc: string }[] = [
 
 const SIZE_OPTIONS: SizeOpt[] = [3, 5, 10, 15, 20, "all"];
 
-const DIFFICULTY_OPTIONS: { id: DifficultyFilter; label: string }[] = [
-  { id: "", label: "All" },
+const DIFFICULTY_OPTIONS: { id: PracticeDifficulty; label: string }[] = [
   { id: "easy", label: "Easy" },
   { id: "medium", label: "Medium" },
   { id: "hard", label: "Hard" },
 ];
-
-function srStatusToKataStatus(sr: SrState): KataStatus {
-  if (sr.status === "new") return "new";
-  if (sr.status === "failed") return "failed";
-  if (sr.status === "due") return "due";
-  return "ok";
-}
-
 
 function buildMeta(kata: Kata, stats: KataStats | undefined, status: KataStatus): string {
   if (!stats || stats.attempt_count === 0) return `${kata.category} · never attempted`;
@@ -96,6 +108,8 @@ function buildMeta(kata: Kata, stats: KataStats | undefined, status: KataStatus)
         : `${kata.category} · ${daysSince} days idle`;
     case "ok":
       return `${kata.category} · last passed ${daysStr}`;
+    case "done":
+      return `${kata.category} · marked done`;
   }
 }
 
@@ -105,6 +119,7 @@ const DOT_CLASS: Record<KataStatus, string> = {
   slow: "bg-[#e0af68] shadow-[0_0_5px_#e0af6888]",
   due: "bg-[#7aa2f7] shadow-[0_0_5px_#7aa2f788]",
   ok: "bg-[#9ece6a] shadow-[0_0_5px_#9ece6a88]",
+  done: "bg-success shadow-[0_0_5px_rgba(34,197,94,0.55)]",
 };
 
 const BADGE_CLASS: Record<KataStatus, string> = {
@@ -113,6 +128,7 @@ const BADGE_CLASS: Record<KataStatus, string> = {
   slow: "bg-[#e0af68]/10 text-[#e0af68] border border-[#e0af68]/25",
   due: "bg-[#7aa2f7]/10 text-[#7aa2f7] border border-[#7aa2f7]/25",
   ok: "bg-[#9ece6a]/10 text-[#9ece6a] border border-[#9ece6a]/25",
+  done: "bg-success/15 text-success border border-success/25",
 };
 
 const BADGE_LABEL: Record<KataStatus, string> = {
@@ -121,10 +137,12 @@ const BADGE_LABEL: Record<KataStatus, string> = {
   slow: "Slow",
   due: "Due",
   ok: "Good",
+  done: "Done",
 };
 
 const MODE_LABEL: Record<Mode, string> = {
   sr: "SR Queue",
+  review: "Review",
   daily: "Daily",
   weak: "Weak Spots",
   speed: "Speed Run",
@@ -133,6 +151,7 @@ const MODE_LABEL: Record<Mode, string> = {
 
 const MODE_SUBTITLE: Record<Mode, string> = {
   sr: "Sorted by urgency",
+  review: "Failed and due only",
   daily: "Starred katas",
   weak: "Failed last attempt",
   speed: "Sorted by best time",
@@ -144,8 +163,10 @@ export function PracticeQueuePage() {
   const bestTimes = useKataStore((s) => s.bestTimes);
   const streaks = useKataStore((s) => s.streaks);
   const dailyKataIds = useSettingsStore((s) => s.dailyKataIds);
+  const doneKataIds = useSettingsStore((s) => s.doneKataIds);
   const practiceConfig = useSettingsStore((s) => s.practiceConfig);
   const setSetting = useSettingsStore((s) => s.setSetting);
+  const activeSession = useSessionStore((s) => s.activeSession);
   const startSession = useSessionStore((s) => s.startSession);
   const startSessionTimer = useTimerStore((s) => s.startSessionTimer);
   const resetKataTimer = useTimerStore((s) => s.resetKataTimer);
@@ -153,8 +174,10 @@ export function PracticeQueuePage() {
 
   const mode = practiceConfig.mode as Mode;
   const dailyRandomize = practiceConfig.dailyRandomize;
-  const categoryFilter = practiceConfig.categoryFilter;
-  const difficultyFilter = practiceConfig.difficultyFilter as DifficultyFilter;
+  const moduleFilters = practiceConfig.moduleFilters;
+  const categoryFilters = practiceConfig.categoryFilters;
+  const difficultyFilters = practiceConfig.difficultyFilters;
+  const implementationSizeFilters = practiceConfig.implementationSizeFilters;
   const sessionSize = practiceConfig.sessionSize as SizeOpt;
   const maxTestRuns = practiceConfig.maxTestRuns;
   // Levels with no katas in the loaded language are hidden, and a level selected
@@ -181,8 +204,38 @@ export function PracticeQueuePage() {
 
   const setMode = (m: Mode) => updateConfig({ mode: m });
   const setDailyRandomize = (v: boolean) => updateConfig({ dailyRandomize: v });
-  const setCategoryFilter = (c: string) => updateConfig({ categoryFilter: c });
-  const setDifficultyFilter = (d: DifficultyFilter) => updateConfig({ difficultyFilter: d });
+  const clearModuleFilters = () => updateConfig({ moduleFilters: [] });
+  const toggleModuleFilter = (moduleId: string) => {
+    updateConfig({
+      moduleFilters: moduleFilters.includes(moduleId)
+        ? moduleFilters.filter((item) => item !== moduleId)
+        : [...moduleFilters, moduleId],
+    });
+  };
+  const clearCategoryFilters = () => updateConfig({ categoryFilters: [] });
+  const toggleCategoryFilter = (category: string) => {
+    updateConfig({
+      categoryFilters: categoryFilters.includes(category)
+        ? categoryFilters.filter((item) => item !== category)
+        : [...categoryFilters, category],
+    });
+  };
+  const clearDifficultyFilters = () => updateConfig({ difficultyFilters: [] });
+  const toggleDifficultyFilter = (difficulty: PracticeDifficulty) => {
+    updateConfig({
+      difficultyFilters: difficultyFilters.includes(difficulty)
+        ? difficultyFilters.filter((item) => item !== difficulty)
+        : [...difficultyFilters, difficulty],
+    });
+  };
+  const clearImplementationSizeFilters = () => updateConfig({ implementationSizeFilters: [] });
+  const toggleImplementationSizeFilter = (size: ImplementationSize) => {
+    updateConfig({
+      implementationSizeFilters: implementationSizeFilters.includes(size)
+        ? implementationSizeFilters.filter((item) => item !== size)
+        : [...implementationSizeFilters, size],
+    });
+  };
   // `levels` only ever holds visible ones. Levels selected under another language
   // are carried through untouched, or toggling any level here would erase them.
   const setSelectedLevels = (levels: Set<number>) =>
@@ -197,13 +250,22 @@ export function PracticeQueuePage() {
 
   const [launching, setLaunching] = useState(false);
   const [reseeding, setReseeding] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [settingsSection, setSettingsSection] = useState<PracticeSettingsSection>("queue");
+  const [practicePresets, setPracticePresets] = useState<PracticePreset[]>([]);
+  const [selectedPracticePresetId, setSelectedPracticePresetId] = useState("");
+  const [presetNameDraft, setPresetNameDraft] = useState("");
+  const [presetFeedback, setPresetFeedback] = useState<{ kind: "success" | "error"; message: string } | null>(null);
+  const [presetBusy, setPresetBusy] = useState(false);
 
   const language = useSettingsStore((s) => s.language);
+  const sessionTimeLimitMs = useSettingsStore((s) => s.sessionTimeLimitMs);
 
   const editorAutocomplete = useSettingsStore((s) => s.editorAutocomplete);
   const autoClosingBrackets = useSettingsStore((s) => s.autoClosingBrackets);
   const wordWrap = useSettingsStore((s) => s.wordWrap);
   const highlightOccurrences = useSettingsStore((s) => s.highlightOccurrences);
+  const bracketPairColorization = useSettingsStore((s) => s.bracketPairColorization);
   const fontLigatures = useSettingsStore((s) => s.fontLigatures);
 
   const toggleValues: Record<EditorToggleKey, boolean> = {
@@ -211,14 +273,134 @@ export function PracticeQueuePage() {
     autoClosingBrackets,
     wordWrap,
     highlightOccurrences,
+    bracketPairColorization,
     fontLigatures,
   };
+
+  const timeLimitMinutes = Math.round(sessionTimeLimitMs / 60000);
+
+  const selectedPracticePreset = useMemo(
+    () => practicePresets.find((preset) => String(preset.id) === selectedPracticePresetId),
+    [practicePresets, selectedPracticePresetId],
+  );
+
+  const refreshPracticePresets = useCallback(async () => {
+    const presets = await loadPracticePresets();
+    setPracticePresets(presets);
+    return presets;
+  }, []);
+
+  useEffect(() => {
+    if (!settingsOpen) return;
+    refreshPracticePresets().catch((error) => {
+      console.error("[practice] Failed to load practice presets:", error);
+    });
+  }, [refreshPracticePresets, settingsOpen]);
+
+  useEffect(() => {
+    const resumePath = resumableSessionPath(activeSession);
+    if (resumePath) navigate(resumePath, { replace: true });
+  }, [activeSession, navigate]);
+
+  useEffect(() => {
+    if (!settingsOpen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setSettingsOpen(false);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [settingsOpen]);
+
+  const handleApplyPracticePreset = useCallback(
+    async (presetId: string) => {
+      setSelectedPracticePresetId(presetId);
+      setPresetFeedback(null);
+      const preset = practicePresets.find((item) => String(item.id) === presetId);
+      if (!preset) {
+        setPresetNameDraft("");
+        return;
+      }
+
+      const next = applyPracticePresetConfig(preset.config);
+      setPresetBusy(true);
+      try {
+        await Promise.all([
+          setSetting("practiceConfig", next.practiceConfig),
+          setSetting("sessionTimeLimitMs", next.sessionTimeLimitMs),
+        ]);
+        setPresetNameDraft(preset.name);
+        setPresetFeedback({ kind: "success", message: `Applied "${preset.name}"` });
+        toast.success(`Applied preset: ${preset.name}`, 1800);
+      } catch (error) {
+        console.error("[practice] Failed to apply practice preset:", error);
+        setPresetFeedback({ kind: "error", message: "Could not apply preset" });
+        toast.error("Could not apply preset");
+      } finally {
+        setPresetBusy(false);
+      }
+    },
+    [practicePresets, setSetting],
+  );
+
+  const handleSavePracticePreset = useCallback(async () => {
+    const name = normalizePracticePresetName(presetNameDraft);
+    if (!name) {
+      setPresetFeedback({ kind: "error", message: "Name the preset before saving" });
+      toast.warning("Name the preset before saving");
+      return;
+    }
+
+    setPresetBusy(true);
+    try {
+      await savePracticePreset(
+        name,
+        practicePresetConfigFromSettings(practiceConfig, sessionTimeLimitMs),
+      );
+      const presets = await refreshPracticePresets();
+      const saved = presets.find((preset) => preset.name === name);
+      setSelectedPracticePresetId(saved ? String(saved.id) : "");
+      setPresetNameDraft(name);
+      setPresetFeedback({ kind: "success", message: `Saved "${name}"` });
+      toast.success(`Saved preset: ${name}`, 1800);
+    } catch (error) {
+      console.error("[practice] Failed to save practice preset:", error);
+      setPresetFeedback({ kind: "error", message: "Could not save preset" });
+      toast.error("Could not save preset");
+    } finally {
+      setPresetBusy(false);
+    }
+  }, [practiceConfig, presetNameDraft, refreshPracticePresets, sessionTimeLimitMs]);
+
+  const handleDeletePracticePreset = useCallback(async () => {
+    if (!selectedPracticePreset) return;
+    if (!window.confirm(`Delete "${selectedPracticePreset.name}"?`)) return;
+
+    setPresetBusy(true);
+    try {
+      await deletePracticePreset(selectedPracticePreset.id);
+      await refreshPracticePresets();
+      setSelectedPracticePresetId("");
+      setPresetNameDraft("");
+      setPresetFeedback({ kind: "success", message: `Deleted "${selectedPracticePreset.name}"` });
+      toast.success(`Deleted preset: ${selectedPracticePreset.name}`, 1800);
+    } catch (error) {
+      console.error("[practice] Failed to delete practice preset:", error);
+      setPresetFeedback({ kind: "error", message: "Could not delete preset" });
+      toast.error("Could not delete preset");
+    } finally {
+      setPresetBusy(false);
+    }
+  }, [refreshPracticePresets, selectedPracticePreset]);
 
   const handleReseed = async () => {
     setReseeding(true);
     try {
-      await reseedKatas();
+      const message = await reseedKatas();
       await useKataStore.getState().loadKatas(language);
+      toast.success(message || "Problem statements reloaded");
+    } catch (error) {
+      console.error("[practice] Failed to reload problem statements:", error);
+      toast.error("Could not reload problem statements");
     } finally {
       setReseeding(false);
     }
@@ -235,16 +417,50 @@ export function PracticeQueuePage() {
     [katas],
   );
 
-  const queueItems = useMemo((): QueueItem[] => {
-    let pool = categoryFilter
-      ? katas.filter((k) => k.category === categoryFilter)
-      : [...katas];
+  const moduleOptions = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const kata of katas) {
+      const module = dashboardModuleFor(kata);
+      if (!module) continue;
+      counts.set(module.id, (counts.get(module.id) ?? 0) + 1);
+    }
+    return DASHBOARD_MODULES
+      .map((module) => ({ ...module, count: counts.get(module.id) ?? 0 }))
+      .filter((module) => module.count > 0);
+  }, [katas]);
 
-    if (difficultyFilter) {
-      pool = pool.filter((k) => k.difficulty === difficultyFilter);
+  const queueItems = useMemo((): QueueItem[] => {
+    let pool = [...katas];
+
+    if (moduleFilters.length > 0) {
+      pool = pool.filter((k) => {
+        const module = dashboardModuleFor(k);
+        return module != null && moduleFilters.includes(module.id);
+      });
+    }
+
+    if (categoryFilters.length > 0) {
+      pool = pool.filter((k) => categoryFilters.includes(k.category));
+    }
+
+    if (difficultyFilters.length > 0) {
+      pool = pool.filter((k) => difficultyFilters.includes(k.difficulty as PracticeDifficulty));
+    }
+
+    if (implementationSizeFilters.length > 0) {
+      pool = pool.filter((k) => {
+        const size = implementationComplexityFor(k).size;
+        return size != null && implementationSizeFilters.includes(size);
+      });
     }
 
     switch (mode) {
+      case "review":
+        pool = pool.filter((k) => {
+          const sr = computeSrState(historyMap.get(k.id));
+          return sr.status === "failed" || sr.status === "due";
+        });
+        break;
       case "daily": {
         const dailySet = new Set(dailyKataIds);
         pool = pool.filter((k) => dailySet.has(k.id));
@@ -272,7 +488,7 @@ export function PracticeQueuePage() {
     const items: QueueItem[] = pool.map((kata) => {
       const stats = statsMap.get(kata.id);
       const sr = computeSrState(historyMap.get(kata.id));
-      const status = srStatusToKataStatus(sr);
+      const status = queueStatusForSr(sr, doneKataIds.includes(kata.id));
       const dueLabel = sr.status === "new" || sr.status === "failed" ? "" : ` · ${formatDue(sr)}`;
       return {
         kata,
@@ -298,28 +514,29 @@ export function PracticeQueuePage() {
     }
 
     return items;
-  }, [katas, statsMap, historyMap, mode, categoryFilter, difficultyFilter, selectedLevels, dailyKataIds, streaks, bestTimes, dailyRandomize]);
+  }, [katas, statsMap, historyMap, mode, moduleFilters, categoryFilters, difficultyFilters, implementationSizeFilters, selectedLevels, dailyKataIds, doneKataIds, streaks, bestTimes, dailyRandomize]);
 
   const modeCounts = useMemo(() => {
     const dailySet = new Set(dailyKataIds);
     const allItems = katas.map((k) => {
       const stats = statsMap.get(k.id);
-      return { id: k.id, status: srStatusToKataStatus(computeSrState(historyMap.get(k.id))), stats, inDaily: dailySet.has(k.id), category: k.category };
+      return { id: k.id, status: queueStatusForSr(computeSrState(historyMap.get(k.id)), doneKataIds.includes(k.id)), stats, inDaily: dailySet.has(k.id), category: k.category };
     });
     const levelPool = selectedLevels.size > 0
       ? allItems.filter((i) => selectedLevels.has(CATEGORY_LEVEL[i.category] ?? -1))
       : allItems;
     return {
-      sr: allItems.filter((i) => i.status !== "ok").length,
+      sr: allItems.filter((i) => isReviewStatus(i.status)).length,
+      review: allItems.filter((i) => i.status === "failed" || i.status === "due").length,
       daily: allItems.filter((i) => i.inDaily).length,
       weak: allItems.filter((i) => i.stats?.last_passed === 0).length,
       speed: allItems.filter((i) => (i.stats?.pass_count ?? 0) > 0).length,
       level: levelPool.length,
     };
-  }, [katas, statsMap, historyMap, dailyKataIds, selectedLevels]);
+  }, [katas, statsMap, historyMap, dailyKataIds, doneKataIds, selectedLevels]);
 
-  const dueNow = queueItems.filter((i) => i.status !== "ok");
-  const doingWell = queueItems.filter((i) => i.status === "ok");
+  const dueNow = queueItems.filter((i) => isReviewStatus(i.status));
+  const doingWell = queueItems.filter((i) => !isReviewStatus(i.status));
 
   const launchCount =
     sessionSize === "all" ? queueItems.length : Math.min(sessionSize, queueItems.length);
@@ -342,11 +559,49 @@ export function PracticeQueuePage() {
     return `${Math.floor(s / 60)}m ${s % 60}s`;
   };
 
+  const plural = (count: number, singular: string, pluralLabel = `${singular}s`) =>
+    `${count} ${count === 1 ? singular : pluralLabel}`;
+
+  const moduleSummary =
+    moduleFilters.length === 0
+      ? "All modules"
+      : moduleFilters.length === 1
+      ? moduleOptions.find((module) => module.id === moduleFilters[0])?.label ?? "1 module"
+      : plural(moduleFilters.length, "module");
+
+  const categorySummary =
+    mode === "level" && selectedLevels.size > 0
+      ? `Lv.${[...selectedLevels].sort((a, b) => a - b).join(", ")}`
+      : mode === "level"
+      ? "All visible levels"
+      : categoryFilters.length === 0
+      ? "All categories"
+      : categoryFilters.length === 1
+      ? categoryFilters[0]
+      : plural(categoryFilters.length, "category", "categories");
+
+  const complexitySummary =
+    implementationSizeFilters.length === 0
+      ? "Any length"
+      : implementationSizeFilters.join(", ");
+
+  const timeLimitSummary =
+    sessionTimeLimitMs > 0 ? `${timeLimitMinutes} min / problem` : "No time limit";
+
+  const attemptsSummary = maxTestRuns === null ? "Unlimited attempts" : `${maxTestRuns} attempts / kata`;
+  const settingsSections = [
+    { id: "queue" as const, label: "Queue", icon: ListOrdered },
+    { id: "filters" as const, label: "Filters", icon: ListFilter },
+    { id: "limits" as const, label: "Limits", icon: Timer },
+    { id: "editor" as const, label: "Editor", icon: Code2 },
+  ];
+  const activeSettingsSection =
+    settingsSections.find((section) => section.id === settingsSection) ?? settingsSections[0];
+
   return (
-    <div className="flex h-full overflow-hidden animate-fade-in">
+    <div className="relative flex h-full overflow-hidden animate-fade-in">
       {/* ── Left panel ── */}
       <aside className="w-[300px] shrink-0 border-r border-base-300/60 flex flex-col gap-5 p-5 overflow-y-auto bg-base-100">
-        {/* Mode selector */}
         <div>
           <p className="text-[11px] font-bold uppercase tracking-widest text-base-content/35 mb-2">
             Mode
@@ -374,246 +629,500 @@ export function PracticeQueuePage() {
                   <p
                     className={`text-[11px] font-semibold mt-1.5 ${active ? "text-primary" : "text-base-content/40"}`}
                   >
-                    {id === "sr" ? `${count} due now` : id === "level" ? `${count} in selection` : `${count} katas`}
+                    {id === "sr" ? `${count} due now` : id === "review" ? `${count} due` : id === "level" ? `${count} in selection` : `${count} katas`}
                   </p>
                 </button>
               );
             })}
           </div>
         </div>
-
-        {/* Level picker (Level Up mode) or Category filter (other modes) */}
-        {mode === "level" ? (
-          <div>
-            <p className="text-[11px] font-bold uppercase tracking-widest text-base-content/35 mb-2">
-              Levels
-            </p>
-            <div className="flex flex-col gap-1.5">
-              {visibleLevels.map(({ level, label }) => {
-                const active = selectedLevels.has(level);
-                return (
-                  <button
-                    key={level}
-                    onClick={() => {
-                      const next = new Set(selectedLevels);
-                      if (next.has(level)) next.delete(level);
-                      else next.add(level);
-                      setSelectedLevels(next);
-                    }}
-                    className={`w-full text-left rounded-lg px-3 py-2 border transition-colors ${
-                      active
-                        ? "border-primary/60 bg-primary/[0.06]"
-                        : "border-base-300/60 bg-base-200 hover:border-base-300"
-                    }`}
-                  >
-                    <span className={`text-[11px] font-bold mr-2 tabular-nums ${active ? "text-primary" : "text-base-content/35"}`}>
-                      Lv.{level}
-                    </span>
-                    <span className={`text-[12px] ${active ? "text-base-content" : "text-base-content/50"}`}>
-                      {label}
-                    </span>
-                  </button>
-                );
-              })}
-              {selectedLevels.size > 0 && (
-                <button
-                  onClick={() => setSelectedLevels(new Set())}
-                  className="text-[11px] text-base-content/35 hover:text-base-content/60 transition-colors mt-0.5 text-left px-1"
-                >
-                  Clear selection
-                </button>
-              )}
-            </div>
-          </div>
-        ) : (
-          <div>
-            <p className="text-[11px] font-bold uppercase tracking-widest text-base-content/35 mb-2">
-              Category
-            </p>
-            <div className="flex flex-wrap gap-1.5">
-              <button
-                onClick={() => setCategoryFilter("")}
-                className={`text-[11px] font-semibold px-2.5 py-1 rounded-full border transition-all ${
-                  !categoryFilter
-                    ? "border-primary/50 bg-primary/10 text-primary"
-                    : "border-base-300/60 text-base-content/40 hover:border-base-300 hover:text-base-content/60"
-                }`}
-              >
-                All
-              </button>
-              {categories.map((cat) => (
-                <button
-                  key={cat}
-                  onClick={() => setCategoryFilter(cat === categoryFilter ? "" : cat)}
-                  className={`text-[11px] font-semibold px-2.5 py-1 rounded-full border transition-all ${
-                    categoryFilter === cat
-                      ? "border-primary/50 bg-primary/10 text-primary"
-                      : "border-base-300/60 text-base-content/40 hover:border-base-300 hover:text-base-content/60"
-                  }`}
-                >
-                  {cat}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Difficulty filter */}
-        <div>
-          <p className="text-[11px] font-bold uppercase tracking-widest text-base-content/35 mb-2">
-            Difficulty
-          </p>
-          <div className="flex flex-wrap gap-1.5">
-            {DIFFICULTY_OPTIONS.map(({ id, label }) => (
-              <button
-                key={id || "all"}
-                onClick={() => setDifficultyFilter(id)}
-                className={`text-[11px] font-semibold px-2.5 py-1 rounded-full border transition-all ${
-                  difficultyFilter === id
-                    ? "border-primary/50 bg-primary/10 text-primary"
-                    : "border-base-300/60 text-base-content/40 hover:border-base-300 hover:text-base-content/60"
-                }`}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div>
-          <p className="text-[11px] font-bold uppercase tracking-widest text-base-content/35 mb-2">
-            Editor
-          </p>
-          <div className="flex flex-col gap-1.5">
-            {EDITOR_TOGGLES.filter((t) => t.onPractice).map(({ key, label }) => {
-              const on = toggleValues[key];
-              return (
-                <button
-                  key={key}
-                  onClick={() => setSetting(key, !on)}
-                  className={`w-full flex items-center justify-between rounded-lg px-3 py-2 border transition-colors ${
-                    on
-                      ? "border-primary/60 bg-primary/[0.06]"
-                      : "border-base-300/60 bg-base-200 hover:border-base-300"
-                  }`}
-                >
-                  <span className={`text-[12px] ${on ? "text-base-content" : "text-base-content/50"}`}>
-                    {label}
-                  </span>
-                  <span className={`text-[11px] font-bold ${on ? "text-primary" : "text-base-content/35"}`}>
-                    {on ? "On" : "Off"}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Daily order toggle */}
-        {mode === "daily" && (
-          <div>
-            <p className="text-[11px] font-bold uppercase tracking-widest text-base-content/35 mb-2">
-              Order
-            </p>
-            <div className="flex gap-1.5">
-              {([false, true] as const).map((rand) => (
-                <button
-                  key={String(rand)}
-                  onClick={() => setDailyRandomize(rand)}
-                  className={`flex-1 py-1.5 rounded-md border text-[12px] font-semibold transition-all ${
-                    dailyRandomize === rand
-                      ? "border-primary/50 bg-primary/10 text-primary"
-                      : "border-base-300/60 text-base-content/40 hover:border-base-300 hover:text-base-content/60 bg-transparent"
-                  }`}
-                >
-                  {rand ? "Random" : "SR Queue"}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Session size */}
-        <div>
-          <p className="text-[11px] font-bold uppercase tracking-widest text-base-content/35 mb-2">
-            Session size
-          </p>
-          <div className="flex gap-1.5">
-            {SIZE_OPTIONS.map((s) => (
-              <button
-                key={s}
-                onClick={() => setSessionSize(s)}
-                className={`flex-1 py-1.5 rounded-md border text-[12px] font-semibold transition-all ${
-                  sessionSize === s
-                    ? "border-primary/50 bg-primary/10 text-primary"
-                    : "border-base-300/60 text-base-content/40 hover:border-base-300 hover:text-base-content/60 bg-transparent"
-                }`}
-              >
-                {s === "all" ? "All" : s}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Max attempts per kata */}
-        <div>
-          <p className="text-[11px] font-bold uppercase tracking-widest text-base-content/35 mb-2">
-            Max attempts / kata
-          </p>
-          <div className="flex gap-1.5">
-            {([null, 3, 5, 10] as (number | null)[]).map((n) => (
-              <button
-                key={n ?? "none"}
-                onClick={() => setMaxTestRuns(n)}
-                className={`flex-1 py-1.5 rounded-md border text-[12px] font-semibold transition-all ${
-                  maxTestRuns === n
-                    ? "border-primary/50 bg-primary/10 text-primary"
-                    : "border-base-300/60 text-base-content/40 hover:border-base-300 hover:text-base-content/60 bg-transparent"
-                }`}
-              >
-                {n === null ? "∞" : n}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Launch button */}
-        <button
-          onClick={handleLaunch}
-          disabled={launchKatas.length === 0 || launching}
-          className="w-full py-2.5 rounded-lg bg-primary text-primary-content text-[13px] font-bold flex items-center justify-center gap-1.5 hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity"
-        >
-          {launching ? (
-            <span className="loading loading-spinner loading-xs" />
-          ) : (
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 16 16"
-              fill="currentColor"
-              className="w-3 h-3"
-            >
-              <path d="M3 3.732a1.5 1.5 0 0 1 2.305-1.265l6.706 4.267a1.5 1.5 0 0 1 0 2.531l-6.706 4.268A1.5 1.5 0 0 1 3 12.267V3.732Z" />
-            </svg>
-          )}
-          {launching ? "Launching..." : `Start ${launchCount} Katas`}
-        </button>
       </aside>
+
+      {settingsOpen && (
+        <>
+          <button
+            type="button"
+            aria-label="Close practice settings"
+            onClick={() => setSettingsOpen(false)}
+            className="absolute inset-0 z-30 cursor-default bg-black/45"
+          />
+
+          {/* ── Practice settings modal ── */}
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="practice-settings-title"
+            className="absolute left-1/2 top-1/2 z-40 flex h-[min(760px,calc(100vh-40px))] w-[min(980px,calc(100vw-40px))] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-lg border border-base-300/70 bg-base-100 shadow-2xl"
+          >
+            <div className="flex items-center gap-4 border-b border-base-300/60 px-7 py-5">
+              <div className="min-w-0">
+                <h2 id="practice-settings-title" className="text-[22px] font-bold leading-none text-base-content">
+                  Preferences
+                </h2>
+              </div>
+              <button
+                type="button"
+                aria-label="Close practice settings"
+                title="Close"
+                onClick={() => setSettingsOpen(false)}
+                className="btn btn-ghost btn-lg btn-square ml-auto text-base-content/45 hover:text-base-content"
+              >
+                <X size={28} />
+              </button>
+            </div>
+
+            <div className="flex min-h-0 flex-1">
+              <aside className="w-[260px] shrink-0 border-r border-base-300/60 bg-base-200/50 px-4 py-5">
+                <div className="flex flex-col gap-1">
+                  {settingsSections.map((section) => {
+                    const active = settingsSection === section.id;
+                    const Icon = section.icon;
+                    return (
+                      <button
+                        key={section.id}
+                        type="button"
+                        onClick={() => setSettingsSection(section.id)}
+                        className={`flex items-start gap-3 rounded-md px-3 py-2.5 text-left transition-colors ${
+                          active
+                            ? "bg-primary text-primary-content"
+                            : "text-base-content/70 hover:bg-base-300/60 hover:text-base-content"
+                        }`}
+                      >
+                        <Icon size={18} className="mt-0.5 shrink-0" />
+                        <span className="min-w-0 text-[14px] font-semibold leading-tight">{section.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </aside>
+
+              <main className="flex min-w-0 flex-1 flex-col">
+                <div className="border-b border-base-300/60 px-8 py-5">
+                  <h3 className="text-[18px] font-bold leading-none text-base-content">{activeSettingsSection.label}</h3>
+                </div>
+
+                <div className="flex-1 overflow-y-auto px-8 py-6">
+                  {settingsSection === "queue" && (
+                    <div className="max-w-[620px] space-y-8">
+                      <section>
+                        <h4 className="text-[16px] font-bold text-base-content">Queue mode</h4>
+                        <p className="mt-1 text-[13px] leading-relaxed text-base-content/45">
+                          Choose how the next practice queue is built.
+                        </p>
+                        <div className="mt-4 grid grid-cols-2 gap-2">
+                          {MODES.map(({ id, title }) => {
+                            const active = mode === id;
+                            return (
+                              <button
+                                key={id}
+                                type="button"
+                                onClick={() => setMode(id)}
+                                className={`rounded-md border px-3 py-2 text-left transition-colors ${
+                                  active
+                                    ? "border-primary/60 bg-primary/10 text-primary"
+                                    : "border-base-300/70 bg-base-100 text-base-content/65 hover:border-base-300 hover:text-base-content"
+                                }`}
+                              >
+                                <span className="block text-[13px] font-semibold">{title}</span>
+                                <span className="mt-0.5 block text-[11px] text-base-content/35">
+                                  {modeCounts[id]} {id === "sr" ? "due" : "katas"}
+                                </span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </section>
+
+                      <section className="border-t border-base-300/60 pt-7">
+                        <h4 className="text-[16px] font-bold text-base-content">Presets</h4>
+                        <p className="mt-1 text-[13px] leading-relaxed text-base-content/45">
+                          Save and reload queue settings for repeated drills.
+                        </p>
+                        <div className="mt-4 grid grid-cols-[1fr_auto_auto] gap-2">
+                          <select
+                            value={selectedPracticePresetId}
+                            onChange={(event) => handleApplyPracticePreset(event.currentTarget.value)}
+                            disabled={presetBusy}
+                            className="select select-bordered select-sm min-w-0 bg-base-100 text-sm"
+                          >
+                            <option value="">Choose preset</option>
+                            {practicePresets.map((preset) => (
+                              <option key={preset.id} value={preset.id}>
+                                {preset.name}
+                              </option>
+                            ))}
+                          </select>
+                          <button
+                            type="button"
+                            onClick={handleSavePracticePreset}
+                            disabled={presetBusy || !practicePresetCanSaveName(presetNameDraft)}
+                            className="btn btn-sm btn-primary gap-1.5"
+                            title="Save current preset"
+                          >
+                            <Save size={15} />
+                            Save
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleDeletePracticePreset}
+                            disabled={presetBusy || !selectedPracticePreset}
+                            className="btn btn-sm btn-ghost btn-square text-base-content/45 hover:text-error"
+                            title="Delete selected preset"
+                            aria-label="Delete selected preset"
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        </div>
+                        <input
+                          type="text"
+                          value={presetNameDraft}
+                          onChange={(event) => {
+                            setPresetNameDraft(event.currentTarget.value);
+                            setPresetFeedback(null);
+                          }}
+                          placeholder="Preset name"
+                          className="input input-bordered input-sm mt-2 w-full bg-base-100 text-sm"
+                        />
+                        {presetFeedback && (
+                          <p className={`mt-2 text-[11px] ${presetFeedback.kind === "error" ? "text-error" : "text-success"}`}>
+                            {presetFeedback.message}
+                          </p>
+                        )}
+                      </section>
+                    </div>
+                  )}
+
+                  {settingsSection === "filters" && (
+                    <div className="max-w-[680px] space-y-8">
+                      <section>
+                        <div className="flex items-start justify-between gap-4">
+                          <div>
+                            <h4 className="text-[16px] font-bold text-base-content">Modules</h4>
+                            <p className="mt-1 text-[13px] leading-relaxed text-base-content/45">{moduleSummary}</p>
+                          </div>
+                          {moduleFilters.length > 0 && (
+                            <button
+                              type="button"
+                              onClick={clearModuleFilters}
+                              className="btn btn-ghost btn-sm text-base-content/45 hover:text-base-content"
+                            >
+                              Clear
+                            </button>
+                          )}
+                        </div>
+
+                        <div className="mt-4 flex flex-wrap gap-2">
+                          <button
+                            type="button"
+                            onClick={clearModuleFilters}
+                            className={`rounded-md border px-3 py-1.5 text-[12px] font-semibold transition-all ${
+                              moduleFilters.length === 0
+                                ? "border-primary/50 bg-primary/10 text-primary"
+                                : "border-base-300/60 text-base-content/45 hover:border-base-300 hover:text-base-content/70"
+                            }`}
+                          >
+                            All
+                          </button>
+                          {moduleOptions.map((module) => (
+                            <button
+                              type="button"
+                              key={module.id}
+                              onClick={() => toggleModuleFilter(module.id)}
+                              className={`rounded-md border px-3 py-1.5 text-[12px] font-semibold transition-all ${
+                                moduleFilters.includes(module.id)
+                                  ? "border-primary/50 bg-primary/10 text-primary"
+                                  : "border-base-300/60 text-base-content/45 hover:border-base-300 hover:text-base-content/70"
+                              }`}
+                            >
+                              {module.label}
+                              <span className="ml-1 text-base-content/35">{module.count}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </section>
+
+                      <section className="border-t border-base-300/60 pt-7">
+                        <div className="flex items-start justify-between gap-4">
+                          <div>
+                            <h4 className="text-[16px] font-bold text-base-content">
+                              {mode === "level" ? "Levels" : "Categories"}
+                            </h4>
+                            <p className="mt-1 text-[13px] leading-relaxed text-base-content/45">{categorySummary}</p>
+                          </div>
+                          {mode === "level" && selectedLevels.size > 0 && (
+                            <button
+                              type="button"
+                              onClick={() => setSelectedLevels(new Set())}
+                              className="btn btn-ghost btn-sm text-base-content/45 hover:text-base-content"
+                            >
+                              Clear
+                            </button>
+                          )}
+                        </div>
+
+                        {mode === "level" ? (
+                          <div className="mt-4 grid gap-1.5">
+                            {visibleLevels.map(({ level, label }) => {
+                              const active = selectedLevels.has(level);
+                              return (
+                                <label
+                                  key={level}
+                                  className="flex cursor-pointer items-center gap-3 rounded-md px-2 py-2 text-[13px] transition-colors hover:bg-base-200"
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={active}
+                                    onChange={() => {
+                                      const next = new Set(selectedLevels);
+                                      if (next.has(level)) next.delete(level);
+                                      else next.add(level);
+                                      setSelectedLevels(next);
+                                    }}
+                                    className="checkbox checkbox-primary checkbox-sm"
+                                  />
+                                  <span className="w-12 shrink-0 font-mono text-[12px] text-base-content/35">Lv.{level}</span>
+                                  <span className={active ? "text-base-content" : "text-base-content/60"}>{label}</span>
+                                </label>
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          <div className="mt-4 flex flex-wrap gap-2">
+                            <button
+                              type="button"
+                              onClick={clearCategoryFilters}
+                              className={`rounded-md border px-3 py-1.5 text-[12px] font-semibold transition-all ${
+                                categoryFilters.length === 0
+                                  ? "border-primary/50 bg-primary/10 text-primary"
+                                  : "border-base-300/60 text-base-content/45 hover:border-base-300 hover:text-base-content/70"
+                              }`}
+                            >
+                              All
+                            </button>
+                            {categories.map((cat) => (
+                              <button
+                                type="button"
+                                key={cat}
+                                onClick={() => toggleCategoryFilter(cat)}
+                                className={`rounded-md border px-3 py-1.5 text-[12px] font-semibold transition-all ${
+                                  categoryFilters.includes(cat)
+                                    ? "border-primary/50 bg-primary/10 text-primary"
+                                    : "border-base-300/60 text-base-content/45 hover:border-base-300 hover:text-base-content/70"
+                                }`}
+                              >
+                                {cat}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </section>
+
+                      <section className="border-t border-base-300/60 pt-7">
+                        <h4 className="text-[16px] font-bold text-base-content">Difficulty</h4>
+                        <div className="join mt-4 w-full max-w-[520px]">
+                          <button
+                            type="button"
+                            onClick={clearDifficultyFilters}
+                            className={`btn btn-sm join-item flex-1 ${difficultyFilters.length === 0 ? "btn-primary" : "btn-ghost border-base-300/60 text-base-content/50"}`}
+                          >
+                            All
+                          </button>
+                          {DIFFICULTY_OPTIONS.map(({ id, label }) => (
+                            <button
+                              type="button"
+                              key={id}
+                              onClick={() => toggleDifficultyFilter(id)}
+                              className={`btn btn-sm join-item flex-1 ${difficultyFilters.includes(id) ? "btn-primary" : "btn-ghost border-base-300/60 text-base-content/50"}`}
+                            >
+                              {label}
+                            </button>
+                          ))}
+                        </div>
+                      </section>
+
+                      <section className="border-t border-base-300/60 pt-7">
+                        <h4 className="text-[16px] font-bold text-base-content">Implementation</h4>
+                        <p className="mt-1 text-[13px] leading-relaxed text-base-content/45">{complexitySummary}</p>
+                        <div className="mt-4 flex flex-wrap gap-2">
+                          <button
+                            type="button"
+                            onClick={clearImplementationSizeFilters}
+                            className={`rounded-md border px-3 py-1.5 text-[12px] font-semibold transition-all ${
+                              implementationSizeFilters.length === 0
+                                ? "border-primary/50 bg-primary/10 text-primary"
+                                : "border-base-300/60 text-base-content/45 hover:border-base-300 hover:text-base-content/70"
+                            }`}
+                          >
+                            Any
+                          </button>
+                          {IMPLEMENTATION_SIZES.map((size) => (
+                            <button
+                              type="button"
+                              key={size}
+                              onClick={() => toggleImplementationSizeFilter(size)}
+                              className={`rounded-md border px-3 py-1.5 text-[12px] font-semibold transition-all ${
+                                implementationSizeFilters.includes(size)
+                                  ? "border-primary/50 bg-primary/10 text-primary"
+                                  : "border-base-300/60 text-base-content/45 hover:border-base-300 hover:text-base-content/70"
+                              }`}
+                            >
+                              {size}
+                            </button>
+                          ))}
+                        </div>
+                      </section>
+                    </div>
+                  )}
+
+                  {settingsSection === "limits" && (
+                    <div className="max-w-[620px] space-y-6">
+                      {mode === "daily" && (
+                        <section>
+                          <h4 className="text-[16px] font-bold text-base-content">Daily order</h4>
+                          <div className="join mt-4 w-full max-w-[360px]">
+                            {([false, true] as const).map((rand) => (
+                              <button
+                                type="button"
+                                key={String(rand)}
+                                onClick={() => setDailyRandomize(rand)}
+                                className={`btn btn-sm join-item flex-1 ${dailyRandomize === rand ? "btn-primary" : "btn-ghost border-base-300/60 text-base-content/50"}`}
+                              >
+                                {rand ? "Random" : "SR Queue"}
+                              </button>
+                            ))}
+                          </div>
+                        </section>
+                      )}
+
+                      <section className={mode === "daily" ? "border-t border-base-300/60 pt-6" : ""}>
+                        <h4 className="text-[16px] font-bold text-base-content">Session size</h4>
+                        <div className="join mt-4 w-full">
+                          {SIZE_OPTIONS.map((s) => (
+                            <button
+                              type="button"
+                              key={s}
+                              onClick={() => setSessionSize(s)}
+                              className={`btn btn-sm join-item flex-1 ${sessionSize === s ? "btn-primary" : "btn-ghost border-base-300/60 text-base-content/50"}`}
+                            >
+                              {s === "all" ? "All" : s}
+                            </button>
+                          ))}
+                        </div>
+                      </section>
+
+                      <section className="border-t border-base-300/60 pt-6">
+                        <h4 className="text-[16px] font-bold text-base-content">Problem time limit</h4>
+                        <p className="mt-1 text-[13px] leading-relaxed text-base-content/45">{timeLimitSummary}</p>
+                        <label className="mt-4 flex items-center gap-3">
+                          <input
+                            type="number"
+                            min={0}
+                            value={timeLimitMinutes}
+                            onChange={(event) => {
+                              const mins = Math.max(0, parseInt(event.currentTarget.value) || 0);
+                              setSetting("sessionTimeLimitMs", mins * 60000);
+                            }}
+                            className="input input-bordered input-sm w-24 bg-base-100 text-sm"
+                          />
+                          <span className="text-[13px] text-base-content/40">minutes, 0 disables the timer</span>
+                        </label>
+                      </section>
+
+                      <section className="border-t border-base-300/60 pt-6">
+                        <h4 className="text-[16px] font-bold text-base-content">Attempts per kata</h4>
+                        <p className="mt-1 text-[13px] leading-relaxed text-base-content/45">{attemptsSummary}</p>
+                        <div className="join mt-4 w-full max-w-[420px]">
+                          {([null, 3, 5, 10] as (number | null)[]).map((n) => (
+                            <button
+                              type="button"
+                              key={n ?? "none"}
+                              onClick={() => setMaxTestRuns(n)}
+                              className={`btn btn-sm join-item flex-1 ${maxTestRuns === n ? "btn-primary" : "btn-ghost border-base-300/60 text-base-content/50"}`}
+                            >
+                              {n === null ? "∞" : n}
+                            </button>
+                          ))}
+                        </div>
+                      </section>
+                    </div>
+                  )}
+
+                  {settingsSection === "editor" && (
+                    <div className="max-w-[620px]">
+                      <h4 className="text-[16px] font-bold text-base-content">Practice editor behavior</h4>
+                      <p className="mt-1 text-[13px] leading-relaxed text-base-content/45">
+                        Tune assistance features that affect how much you have to remember while practicing.
+                      </p>
+                      <div className="mt-5 divide-y divide-base-300/50 border-y border-base-300/50">
+                        {EDITOR_TOGGLES.filter((t) => t.onPractice).map(({ key, label, hint }) => {
+                          const on = toggleValues[key];
+                          return (
+                            <label
+                              key={key}
+                              className="flex cursor-pointer items-center justify-between gap-6 py-4"
+                            >
+                              <span className="min-w-0">
+                                <span className={`block text-[14px] font-semibold ${on ? "text-base-content" : "text-base-content/55"}`}>
+                                  {label}
+                                </span>
+                                {hint && <span className="mt-1 block text-[12px] leading-relaxed text-base-content/35">{hint}</span>}
+                              </span>
+                              <input
+                                type="checkbox"
+                                checked={on}
+                                onChange={(event) => setSetting(key, event.currentTarget.checked)}
+                                className="toggle toggle-primary toggle-sm shrink-0"
+                              />
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+              </main>
+            </div>
+          </div>
+        </>
+      )}
 
       {/* ── Right panel ── */}
       <div className="flex flex-col flex-1 overflow-hidden">
         {/* Header */}
         <div className="px-5 py-4 border-b border-base-300/60 flex items-center gap-3 shrink-0">
-          <h2 className="text-[15px] font-bold text-base-content">{MODE_LABEL[mode]}</h2>
-          <span className="text-[12px] text-base-content/35 ml-auto">
-            {mode === "level" && selectedLevels.size > 0
-              ? `Lv.${[...selectedLevels].sort((a, b) => a - b).join(", ")} · `
-              : `${MODE_SUBTITLE[mode]} · `}
-            {mode === "sr"
-              ? `${queueItems.filter((i) => i.status !== "ok").length} due now · ${
-                  queueItems.filter((i) => i.status === "ok" && i.dueAt !== null && i.dueAt <= Date.now() + 7 * 86_400_000).length
-                } due this week · ${queueItems.length} katas`
-              : `${queueItems.length} katas`}
-          </span>
+          <div className="min-w-0">
+            <h2 className="text-[15px] font-bold text-base-content truncate">{MODE_LABEL[mode]}</h2>
+            <p className="text-[12px] text-base-content/35 truncate">
+              {mode === "level" && selectedLevels.size > 0
+                ? `Lv.${[...selectedLevels].sort((a, b) => a - b).join(", ")} · `
+                : `${MODE_SUBTITLE[mode]} · `}
+              {mode === "sr"
+                ? `${queueItems.filter((i) => isReviewStatus(i.status)).length} due now · ${
+                    queueItems.filter((i) => i.status === "ok" && i.dueAt !== null && i.dueAt <= Date.now() + 7 * 86_400_000).length
+                  } due this week · ${queueItems.length} katas`
+                : mode === "review"
+                ? `${queueItems.length} due for review`
+                : `${queueItems.length} katas`}
+            </p>
+          </div>
+          <button
+            onClick={handleLaunch}
+            disabled={launchKatas.length === 0 || launching}
+            className="btn btn-primary btn-sm ml-auto min-w-28"
+          >
+            {launching ? <span className="loading loading-spinner loading-xs" /> : null}
+            {launching ? "Launching" : `Start ${launchCount}`}
+          </button>
+          <button
+            type="button"
+            aria-label="Practice settings"
+            title="Practice settings"
+            onClick={() => setSettingsOpen(true)}
+            className="btn btn-ghost btn-sm btn-square text-base-content/55 hover:text-base-content"
+          >
+            <Settings2 size={17} />
+          </button>
         </div>
 
         {/* Queue list */}
@@ -701,8 +1210,14 @@ interface KataRowProps {
 
 function KataRow({ item, rank, bestTime, formatMs }: KataRowProps) {
   const { kata, status, meta, streak, score } = item;
+  const navigate = useNavigate();
+
   return (
-    <div className="flex items-center gap-3 px-2.5 py-2.5 rounded-lg border border-transparent hover:bg-base-200 hover:border-base-300/60 transition-colors cursor-pointer">
+    <button
+      type="button"
+      onClick={() => navigate(`/editor/${kata.id}`)}
+      className="flex w-full items-center gap-3 px-2.5 py-2.5 rounded-lg border border-transparent hover:bg-base-200 hover:border-base-300/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 transition-colors cursor-pointer text-left"
+    >
       <span className="w-[22px] text-right text-[11px] font-bold text-base-content/30 shrink-0">
         {rank}
       </span>
@@ -734,6 +1249,6 @@ function KataRow({ item, rank, bestTime, formatMs }: KataRowProps) {
           🔥 {streak}
         </span>
       )}
-    </div>
+    </button>
   );
 }

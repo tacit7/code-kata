@@ -1,4 +1,12 @@
 import type { SeedKata } from "../types/editor";
+import { enrichMissingPythonSolutionVariants } from "./python-solution-variants";
+
+const variant = (label: string, code: string, complexity: string, explanation: string) => ({
+  label,
+  code,
+  complexity,
+  explanation,
+});
 
 const neetcodeBacktracking: SeedKata[] = [
   {
@@ -220,6 +228,88 @@ def test_combination_sum2_single():
 
     backtrack(0, [], target)
     return result`,
+    solutionVariants: [
+      variant(
+        "Sorted loop + skip duplicates",
+        `def combination_sum2(candidates: list[int], target: int) -> list[list[int]]:
+    candidates.sort()
+    result = []
+
+    def backtrack(start, current, remaining):
+        if remaining == 0:
+            result.append(list(current))
+            return
+        for i in range(start, len(candidates)):
+            if candidates[i] > remaining:
+                break
+            if i > start and candidates[i] == candidates[i - 1]:
+                continue
+            current.append(candidates[i])
+            backtrack(i + 1, current, remaining - candidates[i])
+            current.pop()
+
+    backtrack(0, [], target)
+    return result`,
+        "Time O(2^n * n), Space O(n)",
+        "Sorts first, then skips equal candidates at the same recursion depth so each unique combination is emitted once."
+      ),
+      variant(
+        "Frequency counts",
+        `from collections import Counter
+
+def combination_sum2(candidates: list[int], target: int) -> list[list[int]]:
+    counts = sorted(Counter(candidates).items())
+    result = []
+
+    def backtrack(index, current, remaining):
+        if remaining == 0:
+            result.append(current[:])
+            return
+        if index == len(counts) or remaining < 0:
+            return
+
+        value, count = counts[index]
+        max_take = min(count, remaining // value)
+        for take in range(max_take + 1):
+            current.extend([value] * take)
+            backtrack(index + 1, current, remaining - value * take)
+            for _ in range(take):
+                current.pop()
+
+    backtrack(0, [], target)
+    return result`,
+        "Time O(Π(countᵢ + 1) * n), Space O(u + n)",
+        "Groups duplicates first, then chooses how many copies of each distinct value to take."
+      ),
+      variant(
+        "Include/exclude duplicates",
+        `def combination_sum2(candidates: list[int], target: int) -> list[list[int]]:
+    candidates.sort()
+    result = []
+
+    def dfs(index, current, remaining):
+        if remaining == 0:
+            result.append(current[:])
+            return
+        if index == len(candidates) or remaining < 0:
+            return
+
+        value = candidates[index]
+        current.append(value)
+        dfs(index + 1, current, remaining - value)
+        current.pop()
+
+        next_index = index + 1
+        while next_index < len(candidates) and candidates[next_index] == value:
+            next_index += 1
+        dfs(next_index, current, remaining)
+
+    dfs(0, [], target)
+    return result`,
+        "Time O(2^n * n), Space O(n)",
+        "Branches into take-current or skip-all-copies-of-current; skipping all duplicates prevents repeated combinations."
+      ),
+    ],
     usage: null,
     tags: ["backtracking", "recursion", "neetcode"],
   },
@@ -387,7 +477,7 @@ def test_letter_combinations_seven():
     tags: ["backtracking", "recursion", "string", "neetcode"],
   },
   {
-    name: "N Queens",
+    name: "N-Queens",
     category: "backtracking",
     language: "python",
     difficulty: "hard",
@@ -444,5 +534,7 @@ def test_n_queens_no_attacks():
     tags: ["backtracking", "recursion", "neetcode"],
   },
 ];
+
+enrichMissingPythonSolutionVariants(neetcodeBacktracking);
 
 export { neetcodeBacktracking };

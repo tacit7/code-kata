@@ -1,8 +1,10 @@
 import { create } from "zustand";
 import { isAppThemeId } from "../lib/editor-themes";
+import { IMPLEMENTATION_SIZES, type ImplementationSize } from "../lib/implementation-complexity";
 import type { AppTheme } from "../types/editor";
 import { getDb } from "../lib/database";
 import { resolveEditorToggles, type EditorToggleKey, type LineNumbersMode } from "../lib/editor-settings";
+import { DEFAULT_UI_SCALE, normalizeUiScale, type UiScale } from "../lib/ui-scale";
 
 import { DEFAULT_SHORTCUTS, migrateShortcuts, type ShortcutAction, type ShortcutMap } from "../lib/shortcut-keys";
 
@@ -12,14 +14,31 @@ export type { ShortcutAction, ShortcutMap };
 
 export type { LineNumbersMode };
 
-export type KataLanguage = "javascript" | "python";
+export type KataLanguage = "javascript" | "python" | "java";
 
-export type PracticeMode = "sr" | "daily" | "weak" | "speed" | "level";
+export type PracticeMode = "sr" | "review" | "daily" | "weak" | "speed" | "level";
+export type PracticeDifficulty = "easy" | "medium" | "hard";
+export type EditorLayoutMode = "horizontal" | "vertical";
+export type EditorPanelId = "description" | "solution" | "notes" | "viz" | "diff";
+export type DashboardTab = "overview" | "progress" | "leaderboard" | "history";
+
+export interface EditorLayoutSettings {
+  problemPanelVisible: boolean;
+  activePanel: EditorPanelId;
+  problemPanelWidth: number;
+  replVisible: boolean;
+  replLayout: EditorLayoutMode;
+  outputPaneVisible: boolean;
+  outputTab: "testcase" | "results";
+  outputPaneHeight: number;
+}
 
 export interface PracticeConfig {
   mode: PracticeMode;
-  categoryFilter: string;
-  difficultyFilter: "" | "easy" | "medium" | "hard";
+  moduleFilters: string[];
+  categoryFilters: string[];
+  difficultyFilters: PracticeDifficulty[];
+  implementationSizeFilters: ImplementationSize[];
   selectedLevels: number[];
   dailyRandomize: boolean;
   sessionSize: number | "all";
@@ -28,8 +47,10 @@ export interface PracticeConfig {
 
 export const DEFAULT_PRACTICE_CONFIG: PracticeConfig = {
   mode: "sr",
-  categoryFilter: "",
-  difficultyFilter: "",
+  moduleFilters: [],
+  categoryFilters: [],
+  difficultyFilters: [],
+  implementationSizeFilters: [],
   selectedLevels: [],
   dailyRandomize: false,
   sessionSize: 10,
@@ -41,6 +62,7 @@ const DEFAULTS = {
   vimMode: false,
   fontSize: 14,
   fontFamily: "JetBrains Mono, monospace",
+  uiScale: DEFAULT_UI_SCALE,
   tabSize: 2,
   editorAutocomplete: true,
   lineNumbersMode: "on" as LineNumbersMode,
@@ -48,15 +70,28 @@ const DEFAULTS = {
   autoClosingBrackets: true,
   fontLigatures: false,
   highlightOccurrences: true,
+  bracketPairColorization: true,
   language: "javascript" as KataLanguage,
   defaultSessionSize: 5,
   targetTimeMs: 300000,
+  sessionTimeLimitMs: 0,
   autoRunTests: false,
   hideDescriptionInSession: false,
   shortcuts: { ...DEFAULT_SHORTCUTS },
   dailyKataIds: [] as number[],
   doneKataIds: [] as number[],
   practiceConfig: { ...DEFAULT_PRACTICE_CONFIG },
+  editorLayout: {
+    problemPanelVisible: true,
+    activePanel: "description",
+    problemPanelWidth: 440,
+    replVisible: false,
+    replLayout: "horizontal",
+    outputPaneVisible: true,
+    outputTab: "testcase",
+    outputPaneHeight: 280,
+  } as EditorLayoutSettings,
+  dashboardTab: "overview" as DashboardTab,
 };
 
 const EDITOR_TOGGLE_DEFAULTS: Record<EditorToggleKey, boolean> = {
@@ -64,6 +99,7 @@ const EDITOR_TOGGLE_DEFAULTS: Record<EditorToggleKey, boolean> = {
   autoClosingBrackets: DEFAULTS.autoClosingBrackets,
   wordWrap: DEFAULTS.wordWrap,
   highlightOccurrences: DEFAULTS.highlightOccurrences,
+  bracketPairColorization: DEFAULTS.bracketPairColorization,
   fontLigatures: DEFAULTS.fontLigatures,
 };
 
@@ -74,6 +110,7 @@ interface SettingsState {
   vimMode: boolean;
   fontSize: number;
   fontFamily: string;
+  uiScale: UiScale;
   tabSize: number;
   editorAutocomplete: boolean;
   lineNumbersMode: LineNumbersMode;
@@ -81,10 +118,12 @@ interface SettingsState {
   autoClosingBrackets: boolean;
   fontLigatures: boolean;
   highlightOccurrences: boolean;
+  bracketPairColorization: boolean;
   language: KataLanguage;
   // Practice
   defaultSessionSize: number;
   targetTimeMs: number;
+  sessionTimeLimitMs: number;
   autoRunTests: boolean;
   hideDescriptionInSession: boolean;
   // Shortcuts
@@ -95,6 +134,9 @@ interface SettingsState {
   doneKataIds: number[];
   // Practice page config
   practiceConfig: PracticeConfig;
+  // Workspace layout
+  editorLayout: EditorLayoutSettings;
+  dashboardTab: DashboardTab;
   // Actions
   loadSettings: () => Promise<void>;
   setSetting: (key: string, value: unknown) => Promise<void>;
@@ -103,11 +145,101 @@ interface SettingsState {
   toggleVimMode: () => void;
 }
 
+function clampNumber(value: unknown, fallback: number, min: number, max: number): number {
+  return typeof value === "number" && Number.isFinite(value)
+    ? Math.max(min, Math.min(max, value))
+    : fallback;
+}
+
+function isEditorPanelId(value: unknown): value is EditorPanelId {
+  return value === "description" || value === "solution" || value === "notes" || value === "viz" || value === "diff";
+}
+
+function normalizeEditorLayout(value: unknown): EditorLayoutSettings {
+  const raw = (value && typeof value === "object" ? value : {}) as Partial<EditorLayoutSettings>;
+  return {
+    problemPanelVisible: typeof raw.problemPanelVisible === "boolean" ? raw.problemPanelVisible : DEFAULTS.editorLayout.problemPanelVisible,
+    activePanel: isEditorPanelId(raw.activePanel) ? raw.activePanel : DEFAULTS.editorLayout.activePanel,
+    problemPanelWidth: clampNumber(raw.problemPanelWidth, DEFAULTS.editorLayout.problemPanelWidth, 200, 800),
+    replVisible: typeof raw.replVisible === "boolean" ? raw.replVisible : DEFAULTS.editorLayout.replVisible,
+    replLayout: raw.replLayout === "vertical" || raw.replLayout === "horizontal" ? raw.replLayout : DEFAULTS.editorLayout.replLayout,
+    outputPaneVisible: typeof raw.outputPaneVisible === "boolean" ? raw.outputPaneVisible : DEFAULTS.editorLayout.outputPaneVisible,
+    outputTab: raw.outputTab === "results" || raw.outputTab === "testcase" ? raw.outputTab : DEFAULTS.editorLayout.outputTab,
+    outputPaneHeight: clampNumber(raw.outputPaneHeight, DEFAULTS.editorLayout.outputPaneHeight, 160, 900),
+  };
+}
+
+function normalizeDashboardTab(value: unknown): DashboardTab {
+  return value === "overview" || value === "progress" || value === "leaderboard" || value === "history"
+    ? value
+    : DEFAULTS.dashboardTab;
+}
+
 const LEGACY_MIGRATIONS: Record<string, string> = {
   "kata-theme": "theme",
   "kata-vimMode": "vimMode",
   "kata-fontSize": "fontSize",
 };
+
+function normalizeStringArray(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter((item): item is string => typeof item === "string" && item.length > 0);
+}
+
+function isPracticeDifficulty(value: unknown): value is PracticeDifficulty {
+  return value === "easy" || value === "medium" || value === "hard";
+}
+
+function normalizePracticeDifficulties(value: unknown): PracticeDifficulty[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter(isPracticeDifficulty);
+}
+
+function isImplementationSize(value: unknown): value is ImplementationSize {
+  return typeof value === "string" && IMPLEMENTATION_SIZES.includes(value as ImplementationSize);
+}
+
+function normalizeImplementationSizes(value: unknown): ImplementationSize[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter(isImplementationSize);
+}
+
+export function normalizePracticeConfig(value: unknown): PracticeConfig {
+  const raw = (value && typeof value === "object" ? value : {}) as Partial<PracticeConfig> & {
+    categoryFilter?: unknown;
+    difficultyFilter?: unknown;
+  };
+
+  const categoryFilters = Array.isArray(raw.categoryFilters)
+    ? normalizeStringArray(raw.categoryFilters)
+    : typeof raw.categoryFilter === "string" && raw.categoryFilter.length > 0
+    ? [raw.categoryFilter]
+    : DEFAULT_PRACTICE_CONFIG.categoryFilters;
+
+  const difficultyFilters = Array.isArray(raw.difficultyFilters)
+    ? normalizePracticeDifficulties(raw.difficultyFilters)
+    : isPracticeDifficulty(raw.difficultyFilter)
+    ? [raw.difficultyFilter]
+    : DEFAULT_PRACTICE_CONFIG.difficultyFilters;
+
+  return {
+    mode: raw.mode ?? DEFAULT_PRACTICE_CONFIG.mode,
+    moduleFilters: Array.isArray(raw.moduleFilters)
+      ? normalizeStringArray(raw.moduleFilters)
+      : DEFAULT_PRACTICE_CONFIG.moduleFilters,
+    categoryFilters,
+    difficultyFilters,
+    implementationSizeFilters: Array.isArray(raw.implementationSizeFilters)
+      ? normalizeImplementationSizes(raw.implementationSizeFilters)
+      : DEFAULT_PRACTICE_CONFIG.implementationSizeFilters,
+    selectedLevels: Array.isArray(raw.selectedLevels)
+      ? raw.selectedLevels.filter((level): level is number => typeof level === "number")
+      : DEFAULT_PRACTICE_CONFIG.selectedLevels,
+    dailyRandomize: raw.dailyRandomize ?? DEFAULT_PRACTICE_CONFIG.dailyRandomize,
+    sessionSize: raw.sessionSize ?? DEFAULT_PRACTICE_CONFIG.sessionSize,
+    maxTestRuns: raw.maxTestRuns ?? DEFAULT_PRACTICE_CONFIG.maxTestRuns,
+  };
+}
 
 export const useSettingsStore = create<SettingsState>((set, get) => ({
   loaded: false,
@@ -157,6 +289,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       vimMode: (patch.vimMode as boolean) ?? DEFAULTS.vimMode,
       fontSize: (patch.fontSize as number) ?? DEFAULTS.fontSize,
       fontFamily: (patch.fontFamily as string) ?? DEFAULTS.fontFamily,
+      uiScale: normalizeUiScale(patch.uiScale),
       tabSize: (patch.tabSize as number) ?? DEFAULTS.tabSize,
       ...resolveEditorToggles(patch, EDITOR_TOGGLE_DEFAULTS),
       lineNumbersMode:
@@ -165,10 +298,10 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
           : DEFAULTS.lineNumbersMode,
       // Persisted settings can outlive this variant's language set — a foreign
       // variant may have written "ruby", or the value may be corrupted. Only
-      // known-good languages pass through; ruby (the other algo variant) maps
+      // known-good languages pass through; ruby (the retired variant) maps
       // to python; everything else falls back to the default.
       language:
-        patch.language === "javascript" || patch.language === "python"
+        patch.language === "javascript" || patch.language === "python" || patch.language === "java"
           ? patch.language
           : patch.language === "ruby"
           ? "python"
@@ -176,6 +309,8 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       defaultSessionSize:
         (patch.defaultSessionSize as number) ?? DEFAULTS.defaultSessionSize,
       targetTimeMs: (patch.targetTimeMs as number) ?? DEFAULTS.targetTimeMs,
+      sessionTimeLimitMs:
+        (patch.sessionTimeLimitMs as number) ?? DEFAULTS.sessionTimeLimitMs,
       autoRunTests: (patch.autoRunTests as boolean) ?? DEFAULTS.autoRunTests,
       hideDescriptionInSession:
         (patch.hideDescriptionInSession as boolean) ??
@@ -185,10 +320,9 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
         (patch.dailyKataIds as number[]) ?? DEFAULTS.dailyKataIds,
       doneKataIds:
         (patch.doneKataIds as number[]) ?? DEFAULTS.doneKataIds,
-      practiceConfig: {
-        ...DEFAULT_PRACTICE_CONFIG,
-        ...((patch.practiceConfig as Partial<PracticeConfig>) ?? {}),
-      },
+      practiceConfig: normalizePracticeConfig(patch.practiceConfig),
+      editorLayout: normalizeEditorLayout(patch.editorLayout),
+      dashboardTab: normalizeDashboardTab(patch.dashboardTab),
       loaded: true,
     });
 

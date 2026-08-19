@@ -20,11 +20,12 @@ interface ReplPanelProps {
   language: string;
   getEditorCode: () => string | null;
   seed?: ReplSeed | null;
+  focusNonce?: number;
 }
 
 // Per-kata REPL: the parent keys this component by kata id, so switching
 // katas unmounts it — the unmount effect tears the session down.
-export function ReplPanel({ language, getEditorCode, seed }: ReplPanelProps) {
+export function ReplPanel({ language, getEditorCode, seed, focusNonce = 0 }: ReplPanelProps) {
   const [entries, setEntries] = useState<Entry[]>([]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
@@ -35,6 +36,20 @@ export function ReplPanel({ language, getEditorCode, seed }: ReplPanelProps) {
 
   useEffect(() => resetRepl, []);
 
+  function focusInput() {
+    requestAnimationFrame(() => {
+      inputRef.current?.focus();
+    });
+  }
+
+  useEffect(() => {
+    focusInput();
+  }, [focusNonce]);
+
+  useEffect(() => {
+    if (!busy) focusInput();
+  }, [busy]);
+
   // Seeded from a failing test: load the editor code into the session, then
   // pre-fill (don't run) the extracted call so the user can tweak args.
   useEffect(() => {
@@ -43,7 +58,7 @@ export function ReplPanel({ language, getEditorCode, seed }: ReplPanelProps) {
       const code = getEditorCode();
       if (code) await submit(code, "(editor code loaded)", true);
       setInput(seed.expression);
-      inputRef.current?.focus();
+      focusInput();
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [seed?.nonce]);
@@ -58,7 +73,6 @@ export function ReplPanel({ language, getEditorCode, seed }: ReplPanelProps) {
     const result = await replEval(language, code);
     setEntries((prev) => [...prev, { input: label ?? code, result, muted }]);
     setBusy(false);
-    inputRef.current?.focus();
   }
 
   function onSubmit() {

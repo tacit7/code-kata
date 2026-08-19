@@ -84,7 +84,7 @@ export const DP_CURRICULUM_ORDER: Partial<Record<PatternModule, readonly string[
     "Minimum Moves to Reach N",
     "Fibonacci Number",
     "Climbing Stairs (Recursive)",
-    "Climbing Stairs (Iterative)",
+    "Climbing Stairs",
     "N-th Tribonacci Number",
   ],
   "1d-sequence-dp": [
@@ -108,17 +108,30 @@ export const DP_CURRICULUM_ORDER: Partial<Record<PatternModule, readonly string[
     "Unique Paths",
     "Build a Blocked-Cell Path Table",
     "Unique Paths II",
+    "Count Paths With Diagonal Movement",
     "Build a Minimum-Cost Table",
+    "Build a Maximum-Cost Table",
     "Reconstruct One Minimum-Cost Grid Path",
     "Minimum Path Sum",
     "Triangle",
+    "Minimum Falling Path in a Small Grid",
+    "Minimum Falling Path Sum",
+    "Maximal Square",
+    "Count Square Submatrices With All Ones",
+    "Dungeon Game",
   ],
   "0-1-knapsack": [
     "Subset Sum",
     "Partition Equal Subset Sum",
     "0/1 Knapsack",
     "Count Subsets That Sum to Target",
+    "Minimum Number of Items to Reach Target",
+    "Closest Subset Sum",
+    "Choose Exactly K Items With Maximum Value",
     "Target Sum",
+    "Last Stone Weight II",
+    "Ones and Zeroes",
+    "Profitable Schemes",
   ],
   "lis-chain-dp": [
     "LIS Length Ending at Each Index",
@@ -142,7 +155,7 @@ export const DP_CURRICULUM_ORDER: Partial<Record<PatternModule, readonly string[
   "dfs-memo": [
     "Count Paths in a DAG",
     "Word Break",
-    "Longest Increasing Path In a Matrix",
+    "Longest Increasing Path in a Matrix",
   ],
   "bitmask-dp": [
     "Minimum Worker-Job Assignment Cost",
@@ -369,7 +382,7 @@ export const DP_PATTERNS: Record<string, DpPattern> = {
       explanation: "dp[i] needs dp[i-1] and dp[i-2]; filling from i=2 upward keeps both prior values available",
     },
   },
-  "Climbing Stairs (Iterative)": {
+  "Climbing Stairs": {
     primaryModule: "dp-foundations",
     relatedPatterns: ["1d-sequence-dp"],
     displayName: "Climbing Stairs: Space Optimization",
@@ -505,6 +518,20 @@ export const DP_PATTERNS: Record<string, DpPattern> = {
       explanation: "same grid movement as path counting, but the predecessor combination changes from addition to minimum",
     },
   },
+  "Build a Maximum-Cost Table": {
+    primaryModule: "grid-dp",
+    patternLabel: "Maximum-cost table",
+    state: "dp[r][c] = maximum cost of a path from top-left to (r, c)",
+    transition: "dp[r][c] = grid[r][c] + max(dp[r-1][c], dp[r][c-1])",
+    baseCases: [
+      "dp[0][0] = grid[0][0]",
+      "missing top or left predecessors are treated as negative infinity",
+    ],
+    evaluationOrder: {
+      kind: "top-left-to-bottom-right",
+      explanation: "the dependency shape is identical to Minimum Path Sum; row-major order still provides top and left before the current cell, while the objective changes from min to max",
+    },
+  },
   "Reconstruct One Minimum-Cost Grid Path": {
     primaryModule: "grid-dp",
     patternLabel: "Path reconstruction",
@@ -514,6 +541,21 @@ export const DP_PATTERNS: Record<string, DpPattern> = {
     evaluationOrder: {
       kind: "top-left-to-bottom-right",
       explanation: "the cost table must be complete before backtracking from the bottom-right to the top-left through optimal predecessors",
+    },
+  },
+  "Count Paths With Diagonal Movement": {
+    primaryModule: "grid-dp",
+    patternLabel: "Three-parent path counting",
+    state: "dp[r][c] = number of paths from top-left to (r, c) using right, down, or diagonal down-right moves",
+    transition: "dp[r][c] = dp[r-1][c] + dp[r][c-1] + dp[r-1][c-1]",
+    baseCases: [
+      "dp[0][0] = 1",
+      "top row cells can only come from the left",
+      "left column cells can only come from above",
+    ],
+    evaluationOrder: {
+      kind: "top-left-to-bottom-right",
+      explanation: "each state reads up to three parents that all sit above or to the left, so row-major order settles every dependency first",
     },
   },
   "Unique Paths": {
@@ -567,6 +609,64 @@ export const DP_PATTERNS: Record<string, DpPattern> = {
       explanation: "starting from the penultimate row and working upward, dp[col] accumulates the cheaper of the two choices below it; all downstream values are available because we fill from the last row upward",
     },
   },
+  "Minimum Falling Path in a Small Grid": {
+    primaryModule: "grid-dp",
+    patternLabel: "Three-parent min path",
+    state: "dp[r][c] = minimum falling path sum ending at row r, column c",
+    transition: "dp[r][c] = matrix[r][c] + min(dp[r-1][c-1], dp[r-1][c], dp[r-1][c+1]) for in-bounds parents",
+    baseCases: ["dp[0][c] = matrix[0][c] for every top-row column"],
+    evaluationOrder: {
+      kind: "top-left-to-bottom-right",
+      explanation: "each row depends only on the row above it, so filling rows from top to bottom makes all three possible parents available",
+    },
+  },
+  "Minimum Falling Path Sum": {
+    primaryModule: "grid-dp",
+    patternLabel: "Falling path minimum",
+    state: "dp[r][c] = minimum falling path sum ending at matrix[r][c]",
+    transition: "dp[r][c] = matrix[r][c] + min(valid parents from row r-1: c-1, c, c+1)",
+    baseCases: ["the first row is copied as the starting costs"],
+    evaluationOrder: {
+      kind: "top-left-to-bottom-right",
+      explanation: "the recurrence moves from row r-1 to row r, so a top-to-bottom row sweep keeps every candidate parent ready",
+    },
+  },
+  "Maximal Square": {
+    primaryModule: "grid-dp",
+    patternLabel: "Shape-ending state",
+    state: "dp[r][c] = side length of the largest all-1 square whose bottom-right corner is (r, c)",
+    transition: "if matrix[r][c] is 1, dp[r][c] = 1 + min(dp[r-1][c], dp[r][c-1], dp[r-1][c-1]); otherwise 0",
+    baseCases: ["any first-row or first-column 1 forms a square of side length 1"],
+    evaluationOrder: {
+      kind: "top-left-to-bottom-right",
+      explanation: "a square ending at (r,c) needs the top, left, and top-left squares already measured; row-major order fills those first",
+    },
+  },
+  "Count Square Submatrices With All Ones": {
+    primaryModule: "grid-dp",
+    patternLabel: "Counting shape-ending states",
+    state: "dp[r][c] = number of all-1 squares with bottom-right corner at (r, c), equivalently the largest side length there",
+    transition: "if matrix[r][c] is 1, dp[r][c] = 1 + min(top, left, diagonal); add dp[r][c] to the answer",
+    baseCases: ["first-row and first-column 1 cells contribute one 1x1 square"],
+    evaluationOrder: {
+      kind: "top-left-to-bottom-right",
+      explanation: "the same three-neighbor shape state as Maximal Square is filled row-major, then summed because each side length represents that many squares ending at the cell",
+    },
+  },
+  "Dungeon Game": {
+    primaryModule: "grid-dp",
+    patternLabel: "Reverse-direction minimum requirement",
+    state: "dp[r][c] = minimum health needed before entering cell (r, c) and still reaching the goal alive",
+    transition: "dp[r][c] = max(1, min(dp[r+1][c], dp[r][c+1]) - dungeon[r][c])",
+    baseCases: [
+      "virtual cells right of and below the goal provide a required health of 1",
+      "unreachable virtual cells are infinity",
+    ],
+    evaluationOrder: {
+      kind: "bottom-up",
+      explanation: "the requirement at a cell depends on the cheaper required health after moving down or right, so the table is filled backward from the bottom-right",
+    },
+  },
   "Partition Equal Subset Sum": {
     primaryModule: "0-1-knapsack",
     state: "dp = set of subset sums reachable using nums seen so far",
@@ -609,15 +709,82 @@ export const DP_PATTERNS: Record<string, DpPattern> = {
       explanation: "descending target sums keep each array index single-use while still adding its contribution to larger sums",
     },
   },
+  "Minimum Number of Items to Reach Target": {
+    primaryModule: "0-1-knapsack",
+    patternLabel: "Minimum-cardinality 0/1 knapsack",
+    state: "dp[s] = fewest processed items needed to reach exact sum s",
+    transition: "for each item, dp[s] = min(dp[s], 1 + dp[s-item]) while sweeping s downward",
+    baseCases: ["dp[0] = 0", "unreachable sums start at infinity"],
+    evaluationOrder: {
+      kind: "right-to-left",
+      explanation: "the target dimension sweeps downward so the current item cannot be reused while minimizing item count",
+    },
+  },
+  "Closest Subset Sum": {
+    primaryModule: "0-1-knapsack",
+    patternLabel: "Closest reachable sum",
+    state: "dp[s] = whether a subset of processed items can reach sum s",
+    transition: "for each item, dp[s] = dp[s] || dp[s-item] while sweeping s downward",
+    baseCases: ["dp[0] = true"],
+    evaluationOrder: {
+      kind: "right-to-left",
+      explanation: "after all numbers are processed, scan reachable sums for the one closest to the target; downward updates preserve one-use-per-item semantics",
+    },
+  },
+  "Choose Exactly K Items With Maximum Value": {
+    primaryModule: "0-1-knapsack",
+    patternLabel: "Two-constraint maximizing knapsack",
+    state: "dp[count][weight] = maximum value using exactly count items within this weight",
+    transition: "dp[count][w] = max(dp[count][w], dp[count-1][w-weight] + value)",
+    baseCases: ["dp[0][w] = 0 for every capacity", "other states start unreachable"],
+    evaluationOrder: {
+      kind: "right-to-left",
+      explanation: "both count and capacity dimensions sweep downward so one item cannot be chosen more than once in the same item pass",
+    },
+  },
   "Target Sum": {
     primaryModule: "0-1-knapsack",
     relatedPatterns: ["dfs-memo"],
-    state: "dp[sum] = number of ways to reach that running sum using nums seen so far",
-    transition: "for each num, next_dp[sum ± num] += dp[sum] (choose + or − for each num)",
-    baseCases: ["dp = {0: 1} (one way to reach sum 0 before processing any number)"],
+    patternLabel: "Sign assignment to subset counting",
+    state: "dp[s] = number of subsets that sum to s, where s = (sum(nums) + target) / 2",
+    transition: "positive_sum - negative_sum = target and positive_sum + negative_sum = total, so 2 * positive_sum = total + target; then count subsets reaching positive_sum",
+    baseCases: ["dp[0] = 1", "if total + target is odd or target is impossible, return 0"],
     evaluationOrder: {
-      kind: "custom",
-      explanation: "each num branches every reachable sum into two (+num and -num); a fresh dict each round prevents a single num from being applied twice to the same running sum",
+      kind: "right-to-left",
+      explanation: "after the algebraic transformation, Target Sum is a 0/1 subset-count problem, so each number updates target sums downward and is used once per sign assignment",
+    },
+  },
+  "Last Stone Weight II": {
+    primaryModule: "0-1-knapsack",
+    patternLabel: "Minimum partition difference",
+    state: "dp[s] = whether a subset of stones can reach sum s up to half of the total",
+    transition: "for each stone, dp[s] = dp[s] || dp[s-stone] while sweeping s downward",
+    baseCases: ["dp[0] = true"],
+    evaluationOrder: {
+      kind: "right-to-left",
+      explanation: "the subset sum closest to total/2 minimizes the final difference between the two stone piles; each stone updates downward so it is used once",
+    },
+  },
+  "Ones and Zeroes": {
+    primaryModule: "0-1-knapsack",
+    patternLabel: "Two-capacity 0/1 knapsack",
+    state: "dp[zeros][ones] = maximum number of strings selectable within those capacities",
+    transition: "dp[z][o] = max(dp[z][o], 1 + dp[z-zero_count][o-one_count])",
+    baseCases: ["dp[z][o] = 0 before choosing any strings"],
+    evaluationOrder: {
+      kind: "right-to-left",
+      explanation: "zeros and ones capacities both sweep downward for each string, preventing the same string from contributing more than once",
+    },
+  },
+  "Profitable Schemes": {
+    primaryModule: "0-1-knapsack",
+    patternLabel: "Multi-dimensional counting knapsack",
+    state: "dp[people][profit] = number of schemes using people members and reaching capped profit",
+    transition: "dp[p][min(minProfit, profit + earn)] += dp[p-group][profit]",
+    baseCases: ["dp[0][0] = 1 for choosing no crimes"],
+    evaluationOrder: {
+      kind: "right-to-left",
+      explanation: "people capacity sweeps downward for each crime to enforce the 0/1 choice, and profit is capped so all profits at or above the target share one bucket",
     },
   },
   "Combination Sum IV": {
@@ -812,7 +979,7 @@ export const DP_PATTERNS: Record<string, DpPattern> = {
       explanation: "cur_max and cur_min each depend only on the previous element's values; processing elements left to right propagates both states correctly",
     },
   },
-  "Best Time to Buy and Sell Stock With Cooldown": {
+  "Best Time to Buy and Sell Stock with Cooldown": {
     primaryModule: "state-machine-dp",
     state: "three running states per day: hold / sold / cooldown = max profit ending that day in that state",
     transition: "hold = max(hold, cooldown-price); sold = hold+price; cooldown = max(cooldown, sold)",
@@ -848,7 +1015,7 @@ export const DP_PATTERNS: Record<string, DpPattern> = {
       explanation: "dp[i] checks dp[j] for every j < i; filling left to right ensures all smaller prefix results are settled before the longer prefix is evaluated",
     },
   },
-  "Longest Increasing Path In a Matrix": {
+  "Longest Increasing Path in a Matrix": {
     primaryModule: "dfs-memo",
     relatedPatterns: ["grid-dp"],
     state: "memo[r][c] = length of longest strictly increasing path starting at cell (r,c)",

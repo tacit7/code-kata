@@ -1,4 +1,5 @@
 import type { SeedKata } from "../types/editor";
+import { enrichMissingPythonSolutionVariants } from "./python-solution-variants";
 
 const neetcodeGreedy: SeedKata[] = [
   {
@@ -241,5 +242,23 @@ def test_min_interval_exact():
     tags: ["intervals", "heap", "sorting", "neetcode"],
   },
 ];
+
+const neetcodeGreedyDpVariantNames = new Set([
+  "Jump Game II",
+  "Valid Parenthesis String",
+]);
+
+for (const kata of neetcodeGreedy) {
+  if (neetcodeGreedyDpVariantNames.has(kata.name) && kata.solution && !kata.solutionVariants) {
+    kata.solutionVariants = [{
+      label: "Canonical optimized solution",
+      code: kata.solution,
+      complexity: "Time: O(n), Space: O(1)",
+      explanation: "Tracks the minimum state needed while scanning once, avoiding a full DP table.",
+    }];
+  }
+}
+
+enrichMissingPythonSolutionVariants(neetcodeGreedy);
 
 export { neetcodeGreedy };

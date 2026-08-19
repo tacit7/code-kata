@@ -1,11 +1,19 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, useNavigate, Navigate } from "react-router";
 import { useSessionStore } from "../stores/session-store";
 import { useTimerStore } from "../stores/timer-store";
 import { useTimerTick } from "../hooks/use-timer-tick";
 import { useKataStore } from "../stores/kata-store";
+import { useSettingsStore } from "../stores/settings-store";
 import { KataEditor } from "../components/kata-editor";
 import { formatTime } from "../lib/format";
+
+function currentKataElapsedMs() {
+  const timerState = useTimerStore.getState();
+  return timerState.kataStatus === "running" && timerState.kataStartTime
+    ? timerState.kataElapsed + (Date.now() - timerState.kataStartTime)
+    : timerState.kataElapsed;
+}
 
 export function SessionPage() {
   const { sessionId } = useParams<{ sessionId: string }>();
@@ -20,16 +28,20 @@ export function SessionPage() {
     recordAttempt,
     finishSession,
     loadSession,
+    clearSession,
   } = useSessionStore();
 
   const allKatas = useKataStore((s) => s.katas);
   const resetKataTimer = useTimerStore((s) => s.resetKataTimer);
   const startKataTimer = useTimerStore((s) => s.startKataTimer);
   const stopSessionTimer = useTimerStore((s) => s.stopSessionTimer);
+  const sessionTimeLimitMs = useSettingsStore((s) => s.sessionTimeLimitMs);
   const { kataElapsed, sessionElapsed } = useTimerTick();
 
   const [attemptRecorded, setAttemptRecorded] = useState(false);
   const [lastPassed, setLastPassed] = useState(false);
+  const attemptLockedRef = useRef(false);
+  const timeoutHandlingRef = useRef(false);
 
   useEffect(() => {
     if (!activeSession && sessionId) {
@@ -38,29 +50,42 @@ export function SessionPage() {
   }, [activeSession, sessionId, allKatas, loadSession]);
 
   useEffect(() => {
+    if (!activeSession || sessionKatas.length > 0 || allKatas.length === 0) return;
+    clearSession();
+    navigate("/practice", { replace: true });
+  }, [activeSession, sessionKatas.length, allKatas.length, clearSession, navigate]);
+
+  useEffect(() => {
     if (activeSession && sessionKatas.length > 0) {
       resetKataTimer();
       startKataTimer();
       setAttemptRecorded(false);
       setLastPassed(false);
+      attemptLockedRef.current = false;
+      timeoutHandlingRef.current = false;
     }
   }, [activeSession?.id, currentIndex, resetKataTimer, startKataTimer]);
 
   const currentKata = sessionKatas[currentIndex];
   const isLast = currentIndex === sessionKatas.length - 1;
+  const hasAttemptForCurrent = attempts.some(
+    (a) => a.kataIndex === currentIndex,
+  );
 
   const handleTestComplete = useCallback(
     async (passed: boolean, codeSnapshot: string) => {
-      if (!currentKata || attemptRecorded) return;
+      if (!currentKata || attemptRecorded || attemptLockedRef.current) return;
       setLastPassed(passed);
       if (passed) {
-        const timerState = useTimerStore.getState();
-        const elapsed =
-          timerState.kataStatus === "running" && timerState.kataStartTime
-            ? timerState.kataElapsed + (Date.now() - timerState.kataStartTime)
-            : timerState.kataElapsed;
-        await recordAttempt(currentKata.id, elapsed, true, codeSnapshot);
+        attemptLockedRef.current = true;
         setAttemptRecorded(true);
+        try {
+          await recordAttempt(currentKata.id, currentKataElapsedMs(), true, codeSnapshot);
+        } catch (error) {
+          attemptLockedRef.current = false;
+          setAttemptRecorded(false);
+          throw error;
+        }
       }
     },
     [currentKata, attemptRecorded, recordAttempt],
@@ -88,6 +113,61 @@ export function SessionPage() {
     });
   }, [stopSessionTimer, finishSession, navigate, sessionId]);
 
+  useEffect(() => {
+    if (
+      !activeSession ||
+      !currentKata ||
+      sessionTimeLimitMs <= 0 ||
+      kataElapsed < sessionTimeLimitMs ||
+      attemptLockedRef.current ||
+      timeoutHandlingRef.current
+    ) {
+      return;
+    }
+
+    timeoutHandlingRef.current = true;
+    attemptLockedRef.current = true;
+
+    async function failAndAdvanceTimedOutKata() {
+      try {
+        if (!hasAttemptForCurrent && !attemptRecorded) {
+          setAttemptRecorded(true);
+          setLastPassed(false);
+          await recordAttempt(currentKata.id, currentKataElapsedMs(), false, "");
+        }
+
+        if (isLast) {
+          const totalMs = stopSessionTimer();
+          await finishSession(totalMs);
+          navigate(`/session/${sessionId}/results`);
+        } else {
+          nextKata();
+        }
+      } catch (error) {
+        console.error("Failed to advance after practice time limit", error);
+        attemptLockedRef.current = false;
+        timeoutHandlingRef.current = false;
+        setAttemptRecorded(false);
+      }
+    }
+
+    void failAndAdvanceTimedOutKata();
+  }, [
+    activeSession,
+    attemptRecorded,
+    currentKata,
+    finishSession,
+    hasAttemptForCurrent,
+    isLast,
+    kataElapsed,
+    navigate,
+    nextKata,
+    recordAttempt,
+    sessionId,
+    sessionTimeLimitMs,
+    stopSessionTimer,
+  ]);
+
   if (!activeSession || !currentKata) {
     if (!sessionId) return <Navigate to="/problems" replace />;
     return (
@@ -100,11 +180,10 @@ export function SessionPage() {
     );
   }
 
-  const hasAttemptForCurrent = attempts.some(
-    (a) => a.kataIndex === currentIndex,
-  );
-
   const progress = ((currentIndex + 1) / sessionKatas.length) * 100;
+  const hasProblemTimeLimit = sessionTimeLimitMs > 0;
+  const timeLimitRemainingMs = Math.max(0, sessionTimeLimitMs - kataElapsed);
+  const timeLimitExceeded = hasProblemTimeLimit && kataElapsed >= sessionTimeLimitMs;
 
   return (
     <div className="flex flex-col h-full">
@@ -130,10 +209,25 @@ export function SessionPage() {
           {formatTime(kataElapsed)}
         </span>
 
-        {/* Session timer */}
-        <span className="font-mono text-xs text-base-content/30 tabular-nums">
-          {formatTime(sessionElapsed)}
-        </span>
+        {/* Problem time limit */}
+        {hasProblemTimeLimit ? (
+          <span
+            className={`font-mono text-xs tabular-nums ${
+              timeLimitExceeded
+                ? "text-error"
+                : timeLimitRemainingMs <= 60_000
+                ? "text-warning"
+                : "text-base-content/45"
+            }`}
+            title={`Problem elapsed: ${formatTime(kataElapsed)} | Session elapsed: ${formatTime(sessionElapsed)}`}
+          >
+            {timeLimitExceeded ? `+${formatTime(kataElapsed - sessionTimeLimitMs)}` : `${formatTime(timeLimitRemainingMs)} left`}
+          </span>
+        ) : (
+          <span className="font-mono text-xs text-base-content/30 tabular-nums">
+            {formatTime(sessionElapsed)}
+          </span>
+        )}
 
         {/* Navigation */}
         <button

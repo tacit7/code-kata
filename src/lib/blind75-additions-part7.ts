@@ -1,4 +1,5 @@
 import type { SeedKata } from "../types/editor";
+import { enrichMissingPythonSolutionVariants } from "./python-solution-variants";
 
 const blind75Part7: SeedKata[] = [
   {
@@ -71,7 +72,7 @@ def max_depth(root) -> int:
         return 0
     return 1 + max(max_depth(root.left), max_depth(root.right))`,
     usage: null,
-    tags: ["tree", "dfs", "bfs", "blind75"],
+    tags: ["tree", "dfs", "bfs", "blind75", "neetcode"],
   },
   {
     name: "Same Tree",
@@ -150,7 +151,7 @@ def is_same_tree(p, q) -> bool:
         return False
     return is_same_tree(p.left, q.left) and is_same_tree(p.right, q.right)`,
     usage: null,
-    tags: ["tree", "dfs", "blind75"],
+    tags: ["tree", "dfs", "blind75", "neetcode"],
   },
   {
     name: "Invert Binary Tree",
@@ -244,7 +245,7 @@ def invert_tree(root):
     root.left, root.right = invert_tree(root.right), invert_tree(root.left)
     return root`,
     usage: null,
-    tags: ["tree", "dfs", "blind75"],
+    tags: ["tree", "dfs", "blind75", "neetcode"],
   },
   {
     name: "Binary Tree Maximum Path Sum",
@@ -326,7 +327,7 @@ def max_path_sum(root) -> int:
     dfs(root)
     return result[0]`,
     usage: null,
-    tags: ["tree", "dfs", "blind75"],
+    tags: ["tree", "dfs", "blind75", "neetcode"],
   },
   {
     name: "Serialize and Deserialize Binary Tree",
@@ -462,7 +463,7 @@ def deserialize(data: str):
         i += 1
     return root`,
     usage: null,
-    tags: ["tree", "bfs", "blind75"],
+    tags: ["tree", "bfs", "blind75", "neetcode"],
   },
   {
     name: "Subtree of Another Tree",
@@ -553,7 +554,7 @@ def is_subtree(root, sub_root) -> bool:
         return True
     return is_subtree(root.left, sub_root) or is_subtree(root.right, sub_root)`,
     usage: null,
-    tags: ["tree", "dfs", "blind75"],
+    tags: ["tree", "dfs", "blind75", "neetcode"],
   },
   {
     name: "Construct Binary Tree from Preorder and Inorder Traversal",
@@ -641,7 +642,7 @@ def build_tree(preorder: list[int], inorder: list[int]):
     root.right = build_tree(preorder[mid + 1:], inorder[mid + 1:])
     return root`,
     usage: null,
-    tags: ["tree", "dfs", "divide-and-conquer", "blind75"],
+    tags: ["tree", "dfs", "divide-and-conquer", "blind75", "neetcode"],
   },
   {
     name: "Validate Binary Search Tree",
@@ -724,7 +725,7 @@ def is_valid_bst(root) -> bool:
 
     return validate(root, float('-inf'), float('inf'))`,
     usage: null,
-    tags: ["tree", "dfs", "blind75"],
+    tags: ["tree", "dfs", "blind75", "neetcode"],
   },
   {
     name: "Kth Smallest Element in a BST",
@@ -808,8 +809,68 @@ def kth_smallest(root, k: int) -> int:
 
     dfs(root)
     return result[0]`,
+    solutionVariants: [
+      {
+        label: "Recursive inorder counter",
+        complexity: "Time: O(n) worst case, Space: O(h)",
+        explanation:
+          "Traverse the BST in sorted inorder order and count nodes as they are visited. When the counter reaches k, store that node's value.",
+        code: `class TreeNode:
+    def __init__(self, val=0, left=None, right=None):
+        self.val = val
+        self.left = left
+        self.right = right
+
+
+def kth_smallest(root, k: int) -> int:
+    count = [0]
+    result = [0]
+
+    def dfs(node):
+        if node is None:
+            return
+        dfs(node.left)
+        count[0] += 1
+        if count[0] == k:
+            result[0] = node.val
+            return
+        dfs(node.right)
+
+    dfs(root)
+    return result[0]`,
+      },
+      {
+        label: "Iterative inorder",
+        complexity: "Time: O(h + k), Space: O(h)",
+        explanation:
+          "Use an explicit stack to walk leftward, then visit nodes in inorder. The kth value popped from the stack is the answer.",
+        code: `class TreeNode:
+    def __init__(self, val=0, left=None, right=None):
+        self.val = val
+        self.left = left
+        self.right = right
+
+
+def kth_smallest(root, k: int) -> int:
+    stack = []
+    node = root
+
+    while node is not None or stack:
+        while node is not None:
+            stack.append(node)
+            node = node.left
+
+        node = stack.pop()
+        k -= 1
+        if k == 0:
+            return node.val
+        node = node.right
+
+    raise ValueError("k is larger than the tree")`,
+      },
+    ],
     usage: null,
-    tags: ["tree", "dfs", "blind75"],
+    tags: ["tree", "dfs", "blind75", "neetcode"],
   },
   {
     name: "Lowest Common Ancestor of a Binary Search Tree",
@@ -899,10 +960,10 @@ def lowest_common_ancestor(root, p, q):
         return lowest_common_ancestor(root.right, p, q)
     return root`,
     usage: null,
-    tags: ["tree", "dfs", "blind75"],
+    tags: ["tree", "dfs", "blind75", "neetcode"],
   },
   {
-    name: "Add and Search Word",
+    name: "Design Add and Search Words Data Structure",
     category: "trees",
     language: "python",
     difficulty: "medium",
@@ -998,7 +1059,7 @@ class WordDictionary:
 
         return dfs(self, 0)`,
     usage: null,
-    tags: ["trie", "dfs", "blind75"],
+    tags: ["trie", "dfs", "blind75", "neetcode"],
   },
   {
     name: "Word Search II",
@@ -1078,8 +1139,10 @@ def test_multiple_words():
 
     return result`,
     usage: null,
-    tags: ["trie", "backtracking", "blind75"],
+    tags: ["trie", "backtracking", "blind75", "neetcode"],
   },
 ];
+
+enrichMissingPythonSolutionVariants(blind75Part7);
 
 export { blind75Part7 };

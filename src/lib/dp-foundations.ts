@@ -1,4 +1,5 @@
 import type { SeedKata } from "../types/editor";
+import { enrichMissingPythonSolutionVariants } from "./python-solution-variants";
 
 const dpFoundationEntries: SeedKata[] = [
   {
@@ -736,6 +737,40 @@ def test_min_cost_table_single_row():
     tags: ["dynamic-programming", "dp", "grid-dp", "grid", "pre-leetcode"],
   },
   {
+    name: "Build a Maximum-Cost Table",
+    category: "2-d-dp",
+    language: "python",
+    difficulty: "easy",
+    description: `Given a grid of non-negative values, return the complete DP table where each cell contains the maximum value that can be collected on a path from the top-left. You may only move down or right.\n\nExample:\nInput:\n[\n  [1, 3, 1],\n  [1, 5, 1],\n]\nOutput:\n[\n  [1, 4, 5],\n  [2, 9, 10],\n]\n\nDP framing:\n- State: dp[row][col] = maximum value collected when reaching this cell\n- Transition: dp[row][col] = grid[row][col] + max(top, left)\n\nThis uses the same table shape as minimum-cost grid DP, but changes the objective from minimizing to maximizing.`,
+    code: `def build_max_cost_table(grid: list[list[int]]) -> list[list[int]]:
+    raise NotImplementedError`,
+    testCode: `def test_max_cost_table_basic():
+    assert build_max_cost_table([[1, 3, 1], [1, 5, 1]]) == [[1, 4, 5], [2, 9, 10]]
+
+def test_max_cost_table_three_by_three():
+    assert build_max_cost_table([[5, 1, 2], [4, 10, 1], [1, 1, 20]]) == [[5, 6, 8], [9, 19, 20], [10, 20, 40]]
+
+def test_max_cost_table_single_cell():
+    assert build_max_cost_table([[7]]) == [[7]]
+
+def test_max_cost_table_single_column():
+    assert build_max_cost_table([[2], [3], [4]]) == [[2], [5], [9]]`,
+    solution: `def build_max_cost_table(grid: list[list[int]]) -> list[list[int]]:
+    rows, cols = len(grid), len(grid[0])
+    dp = [[0] * cols for _ in range(rows)]
+    for r in range(rows):
+        for c in range(cols):
+            if r == 0 and c == 0:
+                dp[r][c] = grid[r][c]
+            else:
+                top = dp[r - 1][c] if r > 0 else float("-inf")
+                left = dp[r][c - 1] if c > 0 else float("-inf")
+                dp[r][c] = grid[r][c] + max(top, left)
+    return dp`,
+    usage: null,
+    tags: ["dynamic-programming", "dp", "grid-dp", "grid", "pre-leetcode"],
+  },
+  {
     name: "Minimum Path Sum",
     category: "2-d-dp",
     language: "python",
@@ -898,6 +933,40 @@ def test_unique_paths_ii_obstacle_zeroes_cell():
     tags: ["dynamic-programming", "dp", "grid-dp", "grid"],
   },
   {
+    name: "Count Paths With Diagonal Movement",
+    category: "2-d-dp",
+    language: "python",
+    difficulty: "easy",
+    description: `Given rows and cols, count how many ways there are to move from the top-left cell to the bottom-right cell when each move may go right, down, or diagonal down-right.\n\nExample:\nInput: rows = 3, cols = 3\nOutput: 13\n\nDP framing:\n- State: dp[row][col] = number of paths to this cell\n- Transition: dp[row][col] = top + left + diagonal\n- This extends classic Unique Paths from two incoming directions to three.`,
+    code: `def count_paths_with_diagonal(rows: int, cols: int) -> int:
+    raise NotImplementedError`,
+    testCode: `def test_diagonal_paths_three_by_three():
+    assert count_paths_with_diagonal(3, 3) == 13
+
+def test_diagonal_paths_two_by_two():
+    assert count_paths_with_diagonal(2, 2) == 3
+
+def test_diagonal_paths_single_row():
+    assert count_paths_with_diagonal(1, 4) == 1
+
+def test_diagonal_paths_two_by_three():
+    assert count_paths_with_diagonal(2, 3) == 5`,
+    solution: `def count_paths_with_diagonal(rows: int, cols: int) -> int:
+    dp = [[0] * cols for _ in range(rows)]
+    dp[0][0] = 1
+    for r in range(rows):
+        for c in range(cols):
+            if r == 0 and c == 0:
+                continue
+            top = dp[r - 1][c] if r > 0 else 0
+            left = dp[r][c - 1] if c > 0 else 0
+            diagonal = dp[r - 1][c - 1] if r > 0 and c > 0 else 0
+            dp[r][c] = top + left + diagonal
+    return dp[-1][-1]`,
+    usage: null,
+    tags: ["dynamic-programming", "dp", "grid-dp", "grid", "pre-leetcode"],
+  },
+  {
     name: "Triangle",
     category: "2-d-dp",
     language: "python",
@@ -925,6 +994,172 @@ def test_triangle_bottom_up_compression():
     return dp[0]`,
     usage: null,
     tags: ["dynamic-programming", "dp", "grid-dp"],
+  },
+  {
+    name: "Minimum Falling Path in a Small Grid",
+    category: "2-d-dp",
+    language: "python",
+    difficulty: "easy",
+    description: `Given a square grid of numbers, return the minimum sum of a falling path. A path starts anywhere in the first row and moves one row down at a time. From column c, the next step may go to c - 1, c, or c + 1.\n\nExample:\nInput: matrix = [[2, 1, 3], [6, 5, 4], [7, 8, 9]]\nOutput: 13\nExplanation: 1 -> 4 -> 8 has total cost 13.\n\nDP framing:\n- State: dp[row][col] = minimum falling path sum ending at this cell\n- Transition: current cell value + minimum of the three valid parents above\n- This is a small teaching version before the LeetCode problem.`,
+    code: `def small_min_falling_path(matrix: list[list[int]]) -> int:
+    raise NotImplementedError`,
+    testCode: `def test_small_min_falling_path_basic():
+    assert small_min_falling_path([[2, 1, 3], [6, 5, 4], [7, 8, 9]]) == 13
+
+def test_small_min_falling_path_single():
+    assert small_min_falling_path([[5]]) == 5
+
+def test_small_min_falling_path_negative():
+    assert small_min_falling_path([[-19, 57], [-40, -5]]) == -59
+
+def test_small_min_falling_path_edges():
+    assert small_min_falling_path([[10, 1, 10], [1, 10, 1], [10, 1, 10]]) == 3`,
+    solution: `def small_min_falling_path(matrix: list[list[int]]) -> int:
+    rows, cols = len(matrix), len(matrix[0])
+    dp = [row[:] for row in matrix]
+    for r in range(1, rows):
+        for c in range(cols):
+            best_parent = dp[r - 1][c]
+            if c > 0:
+                best_parent = min(best_parent, dp[r - 1][c - 1])
+            if c + 1 < cols:
+                best_parent = min(best_parent, dp[r - 1][c + 1])
+            dp[r][c] += best_parent
+    return min(dp[-1])`,
+    usage: null,
+    tags: ["dynamic-programming", "dp", "grid-dp", "grid", "pre-leetcode"],
+  },
+  {
+    name: "Minimum Falling Path Sum",
+    category: "2-d-dp",
+    language: "python",
+    difficulty: "medium",
+    description: `Given an n x n matrix of integers, choose one value from each row so the chosen columns stay the same or move by one between adjacent rows. Return the minimum possible sum.\n\nExample:\nInput: matrix = [[2,1,3],[6,5,4],[7,8,9]]\nOutput: 13\n\nConstraints:\n- n == matrix.length == matrix[i].length\n- 1 <= n <= 100\n- -100 <= matrix[i][j] <= 100\n\nRef: LeetCode #931`,
+    code: `def min_falling_path_sum(matrix: list[list[int]]) -> int:
+    raise NotImplementedError`,
+    testCode: `def test_min_falling_path_sum_basic():
+    assert min_falling_path_sum([[2, 1, 3], [6, 5, 4], [7, 8, 9]]) == 13
+
+def test_min_falling_path_sum_negative():
+    assert min_falling_path_sum([[-19, 57], [-40, -5]]) == -59
+
+def test_min_falling_path_sum_single():
+    assert min_falling_path_sum([[7]]) == 7
+
+def test_min_falling_path_sum_choose_edge_parent():
+    assert min_falling_path_sum([[100, -1, 100], [100, 100, -5], [100, -10, 100]]) == -16`,
+    solution: `def min_falling_path_sum(matrix: list[list[int]]) -> int:
+    n = len(matrix)
+    dp = matrix[0][:]
+    for r in range(1, n):
+        next_dp = [0] * n
+        for c in range(n):
+            best_parent = dp[c]
+            if c > 0:
+                best_parent = min(best_parent, dp[c - 1])
+            if c + 1 < n:
+                best_parent = min(best_parent, dp[c + 1])
+            next_dp[c] = matrix[r][c] + best_parent
+        dp = next_dp
+    return min(dp)`,
+    usage: null,
+    tags: ["dynamic-programming", "dp", "grid-dp", "grid"],
+  },
+  {
+    name: "Maximal Square",
+    category: "2-d-dp",
+    language: "python",
+    difficulty: "medium",
+    description: `Given a binary matrix represented with "0" and "1" strings, return the area of the largest square containing only 1s.\n\nExample:\nInput: matrix = [["1","0","1","0","0"],["1","0","1","1","1"],["1","1","1","1","1"],["1","0","0","1","0"]]\nOutput: 4\n\nConstraints:\n- 1 <= rows, cols <= 300\n- matrix[row][col] is "0" or "1"\n\nRef: LeetCode #221`,
+    code: `def maximal_square(matrix: list[list[str]]) -> int:
+    raise NotImplementedError`,
+    testCode: `def test_maximal_square_basic():
+    assert maximal_square([["1","0","1","0","0"],["1","0","1","1","1"],["1","1","1","1","1"],["1","0","0","1","0"]]) == 4
+
+def test_maximal_square_single_one():
+    assert maximal_square([["1"]]) == 1
+
+def test_maximal_square_all_zero():
+    assert maximal_square([["0", "0"], ["0", "0"]]) == 0
+
+def test_maximal_square_three_by_three():
+    assert maximal_square([["1", "1", "1"], ["1", "1", "1"], ["1", "1", "1"]]) == 9`,
+    solution: `def maximal_square(matrix: list[list[str]]) -> int:
+    rows, cols = len(matrix), len(matrix[0])
+    dp = [[0] * (cols + 1) for _ in range(rows + 1)]
+    best_side = 0
+    for r in range(1, rows + 1):
+        for c in range(1, cols + 1):
+            if matrix[r - 1][c - 1] == "1":
+                dp[r][c] = 1 + min(dp[r - 1][c], dp[r][c - 1], dp[r - 1][c - 1])
+                best_side = max(best_side, dp[r][c])
+    return best_side * best_side`,
+    usage: null,
+    tags: ["dynamic-programming", "dp", "grid-dp", "grid", "shape-dp"],
+  },
+  {
+    name: "Count Square Submatrices With All Ones",
+    category: "2-d-dp",
+    language: "python",
+    difficulty: "medium",
+    description: `Given a binary matrix of 0s and 1s, count every square submatrix that contains only 1s.\n\nExample:\nInput: matrix = [[0,1,1,1],[1,1,1,1],[0,1,1,1]]\nOutput: 15\n\nConstraints:\n- 1 <= rows, cols <= 300\n- matrix[row][col] is 0 or 1\n\nRef: LeetCode #1277`,
+    code: `def count_squares(matrix: list[list[int]]) -> int:
+    raise NotImplementedError`,
+    testCode: `def test_count_squares_basic():
+    assert count_squares([[0,1,1,1],[1,1,1,1],[0,1,1,1]]) == 15
+
+def test_count_squares_example_two():
+    assert count_squares([[1,0,1],[1,1,0],[1,1,0]]) == 7
+
+def test_count_squares_single_zero():
+    assert count_squares([[0]]) == 0
+
+def test_count_squares_all_ones_three_by_three():
+    assert count_squares([[1,1,1],[1,1,1],[1,1,1]]) == 14`,
+    solution: `def count_squares(matrix: list[list[int]]) -> int:
+    rows, cols = len(matrix), len(matrix[0])
+    dp = [[0] * (cols + 1) for _ in range(rows + 1)]
+    total = 0
+    for r in range(1, rows + 1):
+        for c in range(1, cols + 1):
+            if matrix[r - 1][c - 1] == 1:
+                dp[r][c] = 1 + min(dp[r - 1][c], dp[r][c - 1], dp[r - 1][c - 1])
+                total += dp[r][c]
+    return total`,
+    usage: null,
+    tags: ["dynamic-programming", "dp", "grid-dp", "grid", "shape-dp"],
+  },
+  {
+    name: "Dungeon Game",
+    category: "2-d-dp",
+    language: "python",
+    difficulty: "hard",
+    description: `A knight starts in the top-left room of a dungeon grid and must reach the bottom-right room by moving only right or down. Each room adds or removes health. The knight's health must never drop below 1. Return the minimum starting health required.\n\nExample:\nInput: dungeon = [[-2,-3,3],[-5,-10,1],[10,30,-5]]\nOutput: 7\n\nConstraints:\n- 1 <= rows, cols <= 200\n- -1000 <= dungeon[row][col] <= 1000\n\nRef: LeetCode #174\n\nAdvanced note: this is reverse-direction Grid DP. Instead of asking how much health you have after entering a cell, ask how much health you must have before entering it.`,
+    code: `def calculate_minimum_hp(dungeon: list[list[int]]) -> int:
+    raise NotImplementedError`,
+    testCode: `def test_dungeon_game_basic():
+    assert calculate_minimum_hp([[-2,-3,3],[-5,-10,1],[10,30,-5]]) == 7
+
+def test_dungeon_game_single_positive():
+    assert calculate_minimum_hp([[10]]) == 1
+
+def test_dungeon_game_single_negative():
+    assert calculate_minimum_hp([[-5]]) == 6
+
+def test_dungeon_game_one_row():
+    assert calculate_minimum_hp([[1, -3, 3]]) == 3`,
+    solution: `def calculate_minimum_hp(dungeon: list[list[int]]) -> int:
+    rows, cols = len(dungeon), len(dungeon[0])
+    dp = [[float("inf")] * (cols + 1) for _ in range(rows + 1)]
+    dp[rows][cols - 1] = 1
+    dp[rows - 1][cols] = 1
+    for r in range(rows - 1, -1, -1):
+        for c in range(cols - 1, -1, -1):
+            need_after = min(dp[r + 1][c], dp[r][c + 1])
+            dp[r][c] = max(1, need_after - dungeon[r][c])
+    return dp[0][0]`,
+    usage: null,
+    tags: ["dynamic-programming", "dp", "grid-dp", "grid", "reverse-dp", "advanced"],
   },
   {
     name: "0/1 Knapsack",
@@ -1161,6 +1396,204 @@ def test_count_subsets_no_solution():
     return dp[target]`,
     usage: null,
     tags: ["dynamic-programming", "dp", "0-1-knapsack", "dp-counting", "pre-leetcode"],
+  },
+  {
+    name: "Minimum Number of Items to Reach Target",
+    category: "1-d-dp",
+    language: "python",
+    difficulty: "easy",
+    description: `Given positive item values and a target, return the fewest number of items needed to reach exactly the target. Each item may be used at most once. Return -1 if no subset reaches the target.\n\nExample:\nInput: nums = [2, 3, 5, 7], target = 10\nOutput: 2\nExplanation: 3 + 7 reaches 10 with two items.\n\nDP framing:\n- State: dp[sum] = minimum item count needed to reach this sum\n- Transition: dp[sum] = min(dp[sum], 1 + dp[sum - num])\n- Iterate sums backward so each item is used once.\n\nThis contrasts with coin-change style minimization, where items can often be reused.`,
+    code: `def min_items_to_reach_target(nums: list[int], target: int) -> int:
+    raise NotImplementedError`,
+    testCode: `def test_min_items_basic():
+    assert min_items_to_reach_target([2, 3, 5, 7], 10) == 2
+
+def test_min_items_single_item_best():
+    assert min_items_to_reach_target([1, 4, 6], 6) == 1
+
+def test_min_items_impossible():
+    assert min_items_to_reach_target([4, 6], 5) == -1
+
+def test_min_items_no_reuse():
+    assert min_items_to_reach_target([3], 6) == -1`,
+    solution: `def min_items_to_reach_target(nums: list[int], target: int) -> int:
+    dp = [float("inf")] * (target + 1)
+    dp[0] = 0
+    for num in nums:
+        for total in range(target, num - 1, -1):
+            dp[total] = min(dp[total], dp[total - num] + 1)
+    return -1 if dp[target] == float("inf") else dp[target]`,
+    usage: null,
+    tags: ["dynamic-programming", "dp", "0-1-knapsack", "dp-minimization", "pre-leetcode"],
+  },
+  {
+    name: "Closest Subset Sum",
+    category: "1-d-dp",
+    language: "python",
+    difficulty: "easy",
+    description: `Given positive numbers and a target, return the subset sum closest to the target. Each number may be used at most once. If two sums are equally close, return the smaller sum.\n\nExample:\nInput: nums = [2, 4, 9], target = 10\nOutput: 11\nExplanation: 2 + 9 = 11 is closer to 10 than 2 + 4 = 6 or 9.\n\nDP framing:\n- State: dp[sum] = whether this sum is reachable\n- Transition: each number updates reachable sums backward\n- After building reachability, scan for the sum with the smallest distance to target.`,
+    code: `def closest_subset_sum(nums: list[int], target: int) -> int:
+    raise NotImplementedError`,
+    testCode: `def test_closest_subset_sum_above_target():
+    assert closest_subset_sum([2, 4, 9], 10) == 11
+
+def test_closest_subset_sum_exact():
+    assert closest_subset_sum([3, 8, 12], 11) == 11
+
+def test_closest_subset_sum_tie_returns_smaller():
+    assert closest_subset_sum([4, 6], 5) == 4
+
+def test_closest_subset_sum_empty_choice():
+    assert closest_subset_sum([8, 9], 3) == 0`,
+    solution: `def closest_subset_sum(nums: list[int], target: int) -> int:
+    max_sum = sum(nums)
+    dp = [False] * (max_sum + 1)
+    dp[0] = True
+    for num in nums:
+        for total in range(max_sum, num - 1, -1):
+            dp[total] = dp[total] or dp[total - num]
+
+    best = 0
+    for total, reachable in enumerate(dp):
+        if reachable and (abs(total - target) < abs(best - target) or (abs(total - target) == abs(best - target) and total < best)):
+            best = total
+    return best`,
+    usage: null,
+    tags: ["dynamic-programming", "dp", "0-1-knapsack", "dp-feasibility", "pre-leetcode"],
+  },
+  {
+    name: "Choose Exactly K Items With Maximum Value",
+    category: "1-d-dp",
+    language: "python",
+    difficulty: "medium",
+    description: `Given item weights, item values, a capacity, and an integer k, choose exactly k items with total weight at most capacity and maximum total value. Each item may be used once. Return -1 if it is impossible to choose exactly k items.\n\nExample:\nInput: weights = [2, 3, 4], values = [4, 5, 10], capacity = 6, k = 2\nOutput: 14\nExplanation: choose weights 2 and 4 for value 4 + 10.\n\nDP framing:\n- State: dp[count][capacity] = best value using exactly count items within capacity\n- Transition: choose or skip the current item\n- Both count and capacity sweep backward so an item cannot be selected twice.`,
+    code: `def max_value_exactly_k_items(weights: list[int], values: list[int], capacity: int, k: int) -> int:
+    raise NotImplementedError`,
+    testCode: `def test_exactly_k_basic():
+    assert max_value_exactly_k_items([2, 3, 4], [4, 5, 10], 6, 2) == 14
+
+def test_exactly_k_capacity_limit():
+    assert max_value_exactly_k_items([5, 4, 3], [10, 40, 30], 7, 2) == 70
+
+def test_exactly_k_impossible():
+    assert max_value_exactly_k_items([5, 6], [10, 20], 4, 1) == -1
+
+def test_exactly_k_zero_items():
+    assert max_value_exactly_k_items([1, 2], [5, 6], 2, 0) == 0`,
+    solution: `def max_value_exactly_k_items(weights: list[int], values: list[int], capacity: int, k: int) -> int:
+    unreachable = float("-inf")
+    dp = [[unreachable] * (capacity + 1) for _ in range(k + 1)]
+    for c in range(capacity + 1):
+        dp[0][c] = 0
+
+    for weight, value in zip(weights, values):
+        for count in range(k, 0, -1):
+            for c in range(capacity, weight - 1, -1):
+                dp[count][c] = max(dp[count][c], dp[count - 1][c - weight] + value)
+
+    return -1 if dp[k][capacity] == unreachable else dp[k][capacity]`,
+    usage: null,
+    tags: ["dynamic-programming", "dp", "0-1-knapsack", "dp-maximization", "pre-leetcode"],
+  },
+  {
+    name: "Last Stone Weight II",
+    category: "1-d-dp",
+    language: "python",
+    difficulty: "medium",
+    description: `Given stone weights, repeatedly smashing two stones is equivalent to splitting the stones into two piles and minimizing the difference between their sums. Return the smallest possible remaining weight.\n\nExample:\nInput: stones = [2,7,4,1,8,1]\nOutput: 1\n\nConstraints:\n- 1 <= stones.length <= 30\n- 1 <= stones[i] <= 100\n\nRef: LeetCode #1049`,
+    code: `def last_stone_weight_ii(stones: list[int]) -> int:
+    raise NotImplementedError`,
+    testCode: `def test_last_stone_weight_ii_basic():
+    assert last_stone_weight_ii([2, 7, 4, 1, 8, 1]) == 1
+
+def test_last_stone_weight_ii_single():
+    assert last_stone_weight_ii([31]) == 31
+
+def test_last_stone_weight_ii_balanced():
+    assert last_stone_weight_ii([1, 1, 2, 2]) == 0
+
+def test_last_stone_weight_ii_unbalanced():
+    assert last_stone_weight_ii([10, 4, 3]) == 3`,
+    solution: `def last_stone_weight_ii(stones: list[int]) -> int:
+    total = sum(stones)
+    target = total // 2
+    dp = [False] * (target + 1)
+    dp[0] = True
+    for stone in stones:
+        for weight in range(target, stone - 1, -1):
+            dp[weight] = dp[weight] or dp[weight - stone]
+
+    for left in range(target, -1, -1):
+        if dp[left]:
+            return total - 2 * left
+    return 0`,
+    usage: null,
+    tags: ["dynamic-programming", "dp", "0-1-knapsack", "dp-partition"],
+  },
+  {
+    name: "Ones and Zeroes",
+    category: "1-d-dp",
+    language: "python",
+    difficulty: "medium",
+    description: `Given binary strings and limits m zeros and n ones, return the maximum number of strings you can choose without exceeding either limit. Each string may be chosen at most once.\n\nExample:\nInput: strs = [\"10\",\"0001\",\"111001\",\"1\",\"0\"], m = 5, n = 3\nOutput: 4\n\nConstraints:\n- 1 <= strs.length <= 600\n- 1 <= strs[i].length <= 100\n- 1 <= m, n <= 100\n\nRef: LeetCode #474`,
+    code: `def find_max_form(strs: list[str], m: int, n: int) -> int:
+    raise NotImplementedError`,
+    testCode: `def test_ones_and_zeroes_basic():
+    assert find_max_form(["10", "0001", "111001", "1", "0"], 5, 3) == 4
+
+def test_ones_and_zeroes_small():
+    assert find_max_form(["10", "0", "1"], 1, 1) == 2
+
+def test_ones_and_zeroes_no_fit():
+    assert find_max_form(["111", "00"], 1, 1) == 0
+
+def test_ones_and_zeroes_reuse_guard():
+    assert find_max_form(["0"], 2, 0) == 1`,
+    solution: `def find_max_form(strs: list[str], m: int, n: int) -> int:
+    dp = [[0] * (n + 1) for _ in range(m + 1)]
+    for s in strs:
+        zeros = s.count("0")
+        ones = len(s) - zeros
+        for z in range(m, zeros - 1, -1):
+            for o in range(n, ones - 1, -1):
+                dp[z][o] = max(dp[z][o], 1 + dp[z - zeros][o - ones])
+    return dp[m][n]`,
+    usage: null,
+    tags: ["dynamic-programming", "dp", "0-1-knapsack", "multi-capacity"],
+  },
+  {
+    name: "Profitable Schemes",
+    category: "1-d-dp",
+    language: "python",
+    difficulty: "hard",
+    description: `You have at most n workers. Each job requires group[i] workers and earns profit[i]. Return the number of job subsets that use at most n workers and earn at least min_profit total profit. Return the answer modulo 1_000_000_007.\n\nExample:\nInput: n = 5, min_profit = 3, group = [2,2], profit = [2,3]\nOutput: 2\n\nConstraints:\n- 1 <= n <= 100\n- 0 <= min_profit <= 100\n- 1 <= group.length == profit.length <= 100\n\nRef: LeetCode #879\n\nAdvanced note: this is counting 0/1 knapsack with two dimensions. Profit is capped at min_profit so every value at or above the goal lands in the same bucket.`,
+    code: `def profitable_schemes(n: int, min_profit: int, group: list[int], profit: list[int]) -> int:
+    raise NotImplementedError`,
+    testCode: `def test_profitable_schemes_basic():
+    assert profitable_schemes(5, 3, [2, 2], [2, 3]) == 2
+
+def test_profitable_schemes_example_two():
+    assert profitable_schemes(10, 5, [2, 3, 5], [6, 7, 8]) == 7
+
+def test_profitable_schemes_zero_profit_target():
+    assert profitable_schemes(1, 0, [1], [0]) == 2
+
+def test_profitable_schemes_worker_limit():
+    assert profitable_schemes(1, 1, [2], [2]) == 0`,
+    solution: `def profitable_schemes(n: int, min_profit: int, group: list[int], profit: list[int]) -> int:
+    mod = 1_000_000_007
+    dp = [[0] * (min_profit + 1) for _ in range(n + 1)]
+    dp[0][0] = 1
+
+    for members, earned in zip(group, profit):
+        for people in range(n, members - 1, -1):
+            for current_profit in range(min_profit, -1, -1):
+                next_profit = min(min_profit, current_profit + earned)
+                dp[people][next_profit] = (dp[people][next_profit] + dp[people - members][current_profit]) % mod
+
+    return sum(dp[people][min_profit] for people in range(n + 1)) % mod`,
+    usage: null,
+    tags: ["dynamic-programming", "dp", "0-1-knapsack", "dp-counting", "multi-capacity", "advanced"],
   },
   {
     name: "LIS Length Ending at Each Index",
@@ -1989,6 +2422,20 @@ const dpFoundationSolutionVariants: Record<string, NonNullable<SeedKata["solutio
                 dp[r][c] = grid[r][c] + min(top, left)
     return dp`),
   ],
+  "Build a Maximum-Cost Table": [
+    variant("Tabulation", `def build_max_cost_table(grid: list[list[int]]) -> list[list[int]]:
+    rows, cols = len(grid), len(grid[0])
+    dp = [[0] * cols for _ in range(rows)]
+    for r in range(rows):
+        for c in range(cols):
+            if r == 0 and c == 0:
+                dp[r][c] = grid[r][c]
+            else:
+                top = dp[r - 1][c] if r > 0 else float("-inf")
+                left = dp[r][c - 1] if c > 0 else float("-inf")
+                dp[r][c] = grid[r][c] + max(top, left)
+    return dp`),
+  ],
   "Minimum Path Sum": [
     variant("Memoized DFS", `def min_path_sum(grid: list[list[int]]) -> int:
     rows, cols = len(grid), len(grid[0])
@@ -2169,6 +2616,34 @@ const dpFoundationSolutionVariants: Record<string, NonNullable<SeedKata["solutio
                 dp[c] += dp[c - 1]
     return dp[-1]`),
   ],
+  "Count Paths With Diagonal Movement": [
+    variant("Tabulation", `def count_paths_with_diagonal(rows: int, cols: int) -> int:
+    dp = [[0] * cols for _ in range(rows)]
+    dp[0][0] = 1
+    for r in range(rows):
+        for c in range(cols):
+            if r == 0 and c == 0:
+                continue
+            top = dp[r - 1][c] if r > 0 else 0
+            left = dp[r][c - 1] if c > 0 else 0
+            diagonal = dp[r - 1][c - 1] if r > 0 and c > 0 else 0
+            dp[r][c] = top + left + diagonal
+    return dp[-1][-1]`),
+    variant("Optimized", `def count_paths_with_diagonal(rows: int, cols: int) -> int:
+    prev = [0] * cols
+    for r in range(rows):
+        curr = [0] * cols
+        for c in range(cols):
+            if r == 0 and c == 0:
+                curr[c] = 1
+            else:
+                top = prev[c] if r > 0 else 0
+                left = curr[c - 1] if c > 0 else 0
+                diagonal = prev[c - 1] if r > 0 and c > 0 else 0
+                curr[c] = top + left + diagonal
+        prev = curr
+    return prev[-1]`),
+  ],
   "Triangle": [
     variant("Memoized recursion", `def minimum_total(triangle: list[list[int]]) -> int:
     memo = {}
@@ -2193,6 +2668,136 @@ const dpFoundationSolutionVariants: Record<string, NonNullable<SeedKata["solutio
     for r in range(len(triangle) - 2, -1, -1):
         for c in range(len(triangle[r])):
             dp[c] = triangle[r][c] + min(dp[c], dp[c + 1])
+    return dp[0]`),
+  ],
+  "Minimum Falling Path in a Small Grid": [
+    variant("Tabulation", `def small_min_falling_path(matrix: list[list[int]]) -> int:
+    rows, cols = len(matrix), len(matrix[0])
+    dp = [row[:] for row in matrix]
+    for r in range(1, rows):
+        for c in range(cols):
+            best_parent = dp[r - 1][c]
+            if c > 0:
+                best_parent = min(best_parent, dp[r - 1][c - 1])
+            if c + 1 < cols:
+                best_parent = min(best_parent, dp[r - 1][c + 1])
+            dp[r][c] += best_parent
+    return min(dp[-1])`),
+    variant("Optimized", `def small_min_falling_path(matrix: list[list[int]]) -> int:
+    dp = matrix[0][:]
+    for r in range(1, len(matrix)):
+        next_dp = [0] * len(matrix[r])
+        for c in range(len(matrix[r])):
+            best_parent = dp[c]
+            if c > 0:
+                best_parent = min(best_parent, dp[c - 1])
+            if c + 1 < len(dp):
+                best_parent = min(best_parent, dp[c + 1])
+            next_dp[c] = matrix[r][c] + best_parent
+        dp = next_dp
+    return min(dp)`),
+  ],
+  "Minimum Falling Path Sum": [
+    variant("Tabulation", `def min_falling_path_sum(matrix: list[list[int]]) -> int:
+    n = len(matrix)
+    dp = [row[:] for row in matrix]
+    for r in range(1, n):
+        for c in range(n):
+            best_parent = dp[r - 1][c]
+            if c > 0:
+                best_parent = min(best_parent, dp[r - 1][c - 1])
+            if c + 1 < n:
+                best_parent = min(best_parent, dp[r - 1][c + 1])
+            dp[r][c] += best_parent
+    return min(dp[-1])`),
+    variant("Optimized", `def min_falling_path_sum(matrix: list[list[int]]) -> int:
+    n = len(matrix)
+    dp = matrix[0][:]
+    for r in range(1, n):
+        next_dp = [0] * n
+        for c in range(n):
+            best_parent = dp[c]
+            if c > 0:
+                best_parent = min(best_parent, dp[c - 1])
+            if c + 1 < n:
+                best_parent = min(best_parent, dp[c + 1])
+            next_dp[c] = matrix[r][c] + best_parent
+        dp = next_dp
+    return min(dp)`),
+  ],
+  "Maximal Square": [
+    variant("Tabulation", `def maximal_square(matrix: list[list[str]]) -> int:
+    rows, cols = len(matrix), len(matrix[0])
+    dp = [[0] * (cols + 1) for _ in range(rows + 1)]
+    best_side = 0
+    for r in range(1, rows + 1):
+        for c in range(1, cols + 1):
+            if matrix[r - 1][c - 1] == "1":
+                dp[r][c] = 1 + min(dp[r - 1][c], dp[r][c - 1], dp[r - 1][c - 1])
+                best_side = max(best_side, dp[r][c])
+    return best_side * best_side`),
+    variant("Optimized", `def maximal_square(matrix: list[list[str]]) -> int:
+    rows, cols = len(matrix), len(matrix[0])
+    dp = [0] * (cols + 1)
+    best_side = 0
+    for r in range(1, rows + 1):
+        prev_diagonal = 0
+        for c in range(1, cols + 1):
+            saved_top = dp[c]
+            if matrix[r - 1][c - 1] == "1":
+                dp[c] = 1 + min(dp[c], dp[c - 1], prev_diagonal)
+                best_side = max(best_side, dp[c])
+            else:
+                dp[c] = 0
+            prev_diagonal = saved_top
+    return best_side * best_side`),
+  ],
+  "Count Square Submatrices With All Ones": [
+    variant("Tabulation", `def count_squares(matrix: list[list[int]]) -> int:
+    rows, cols = len(matrix), len(matrix[0])
+    dp = [[0] * (cols + 1) for _ in range(rows + 1)]
+    total = 0
+    for r in range(1, rows + 1):
+        for c in range(1, cols + 1):
+            if matrix[r - 1][c - 1] == 1:
+                dp[r][c] = 1 + min(dp[r - 1][c], dp[r][c - 1], dp[r - 1][c - 1])
+                total += dp[r][c]
+    return total`),
+    variant("Optimized", `def count_squares(matrix: list[list[int]]) -> int:
+    rows, cols = len(matrix), len(matrix[0])
+    dp = [0] * (cols + 1)
+    total = 0
+    for r in range(1, rows + 1):
+        prev_diagonal = 0
+        for c in range(1, cols + 1):
+            saved_top = dp[c]
+            if matrix[r - 1][c - 1] == 1:
+                dp[c] = 1 + min(dp[c], dp[c - 1], prev_diagonal)
+                total += dp[c]
+            else:
+                dp[c] = 0
+            prev_diagonal = saved_top
+    return total`),
+  ],
+  "Dungeon Game": [
+    variant("Tabulation", `def calculate_minimum_hp(dungeon: list[list[int]]) -> int:
+    rows, cols = len(dungeon), len(dungeon[0])
+    dp = [[float("inf")] * (cols + 1) for _ in range(rows + 1)]
+    dp[rows][cols - 1] = 1
+    dp[rows - 1][cols] = 1
+    for r in range(rows - 1, -1, -1):
+        for c in range(cols - 1, -1, -1):
+            need_after = min(dp[r + 1][c], dp[r][c + 1])
+            dp[r][c] = max(1, need_after - dungeon[r][c])
+    return dp[0][0]`),
+    variant("Optimized", `def calculate_minimum_hp(dungeon: list[list[int]]) -> int:
+    rows, cols = len(dungeon), len(dungeon[0])
+    dp = [float("inf")] * (cols + 1)
+    dp[cols - 1] = 1
+    for r in range(rows - 1, -1, -1):
+        for c in range(cols - 1, -1, -1):
+            need_after = min(dp[c], dp[c + 1])
+            dp[c] = max(1, need_after - dungeon[r][c])
     return dp[0]`),
   ],
   "0/1 Knapsack": [
@@ -2323,6 +2928,84 @@ const dpFoundationSolutionVariants: Record<string, NonNullable<SeedKata["solutio
             dp[total] += dp[total - num]
     return dp[target]`),
   ],
+  "Minimum Number of Items to Reach Target": [
+    variant("Tabulation", `def min_items_to_reach_target(nums: list[int], target: int) -> int:
+    dp = [float("inf")] * (target + 1)
+    dp[0] = 0
+    for num in nums:
+        for total in range(target, num - 1, -1):
+            dp[total] = min(dp[total], dp[total - num] + 1)
+    return -1 if dp[target] == float("inf") else dp[target]`),
+  ],
+  "Closest Subset Sum": [
+    variant("Tabulation", `def closest_subset_sum(nums: list[int], target: int) -> int:
+    max_sum = sum(nums)
+    dp = [False] * (max_sum + 1)
+    dp[0] = True
+    for num in nums:
+        for total in range(max_sum, num - 1, -1):
+            dp[total] = dp[total] or dp[total - num]
+
+    best = 0
+    for total, reachable in enumerate(dp):
+        if reachable and (abs(total - target) < abs(best - target) or (abs(total - target) == abs(best - target) and total < best)):
+            best = total
+    return best`),
+  ],
+  "Choose Exactly K Items With Maximum Value": [
+    variant("Tabulation", `def max_value_exactly_k_items(weights: list[int], values: list[int], capacity: int, k: int) -> int:
+    unreachable = float("-inf")
+    dp = [[unreachable] * (capacity + 1) for _ in range(k + 1)]
+    for c in range(capacity + 1):
+        dp[0][c] = 0
+
+    for weight, value in zip(weights, values):
+        for count in range(k, 0, -1):
+            for c in range(capacity, weight - 1, -1):
+                dp[count][c] = max(dp[count][c], dp[count - 1][c - weight] + value)
+
+    return -1 if dp[k][capacity] == unreachable else dp[k][capacity]`),
+  ],
+  "Last Stone Weight II": [
+    variant("Tabulation", `def last_stone_weight_ii(stones: list[int]) -> int:
+    total = sum(stones)
+    target = total // 2
+    dp = [False] * (target + 1)
+    dp[0] = True
+    for stone in stones:
+        for weight in range(target, stone - 1, -1):
+            dp[weight] = dp[weight] or dp[weight - stone]
+
+    for left in range(target, -1, -1):
+        if dp[left]:
+            return total - 2 * left
+    return 0`),
+  ],
+  "Ones and Zeroes": [
+    variant("Tabulation", `def find_max_form(strs: list[str], m: int, n: int) -> int:
+    dp = [[0] * (n + 1) for _ in range(m + 1)]
+    for s in strs:
+        zeros = s.count("0")
+        ones = len(s) - zeros
+        for z in range(m, zeros - 1, -1):
+            for o in range(n, ones - 1, -1):
+                dp[z][o] = max(dp[z][o], 1 + dp[z - zeros][o - ones])
+    return dp[m][n]`),
+  ],
+  "Profitable Schemes": [
+    variant("Tabulation", `def profitable_schemes(n: int, min_profit: int, group: list[int], profit: list[int]) -> int:
+    mod = 1_000_000_007
+    dp = [[0] * (min_profit + 1) for _ in range(n + 1)]
+    dp[0][0] = 1
+
+    for members, earned in zip(group, profit):
+        for people in range(n, members - 1, -1):
+            for current_profit in range(min_profit, -1, -1):
+                next_profit = min(min_profit, current_profit + earned)
+                dp[people][next_profit] = (dp[people][next_profit] + dp[people - members][current_profit]) % mod
+
+    return sum(dp[people][min_profit] for people in range(n + 1)) % mod`),
+  ],
   "LIS Length Ending at Each Index": [
     variant("Tabulation", `def lis_lengths_ending_at_each_index(nums: list[int]) -> list[int]:
     dp = [1] * len(nums)
@@ -2394,3 +3077,5 @@ export const dpFoundations: SeedKata[] = dpFoundationEntries.map((kata) => ({
   ...kata,
   solutionVariants: dpFoundationSolutionVariants[kata.name] ?? kata.solutionVariants,
 }));
+
+enrichMissingPythonSolutionVariants(dpFoundations);

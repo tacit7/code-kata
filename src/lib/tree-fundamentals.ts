@@ -127,7 +127,7 @@ def count_leaves(root) -> int:
     category: "trees",
     language: "python",
     difficulty: "easy",
-    description: `Return the largest value in a binary tree, or None if the tree is empty.\n\nThis teaches combining results from two subtrees: the answer is the maximum of this node's value and the maxima of its (non-empty) subtrees.\n\nExample:\n    4\n   / \\\n  9   2\nInput: root = [4, 9, 2]\nOutput: 9\n\nConstraints:\n- 0 <= number of nodes <= 10^4\n- Values may be negative; an empty tree returns None.`,
+    description: `Return the largest value in a binary tree, or None if the tree is empty.\n\nThis teaches combining results from two subtrees: the answer is the maximum of this node's value and the maxima of its (non-empty) subtrees.\n\nExample:\n    4\n   / \\\n  9   2\nInput: root = [4, 9, 2]\nOutput: 9\n\nNegative example:\n    -5\n   /  \\\n -2   -9\nInput: root = [-5, -2, -9]\nOutput: -2\n\nConstraints:\n- 0 <= number of nodes <= 10^4\n- Values may be negative; an empty tree returns None.`,
     code: `def max_value(root):
     raise NotImplementedError`,
     testCode: `${TEST_HEADER}def test_max_value_basic():

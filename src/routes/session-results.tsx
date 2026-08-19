@@ -1,16 +1,25 @@
-import { Fragment, useEffect, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate, Navigate } from "react-router";
 import { useSessionStore } from "../stores/session-store";
 import { useKataStore } from "../stores/kata-store";
+import { useTimerStore } from "../stores/timer-store";
 import { formatTime } from "../lib/format";
 import { CodeDiff } from "../components/code-diff";
+import { buildSessionReviewQueues } from "../lib/session-review-queues";
+import type { Kata } from "../types/editor";
 
 export function SessionResultsPage() {
   const { sessionId } = useParams<{ sessionId: string }>();
   const navigate = useNavigate();
-  const { activeSession, sessionKatas, attempts, loadSession, clearSession } = useSessionStore();
+  const { activeSession, sessionKatas, attempts, loadSession, startSession } = useSessionStore();
   const allKatas = useKataStore((s) => s.katas);
+  const resetKataTimer = useTimerStore((s) => s.resetKataTimer);
+  const startSessionTimer = useTimerStore((s) => s.startSessionTimer);
   const [expandedDiffs, setExpandedDiffs] = useState<Set<number>>(new Set());
+  const reviewQueues = useMemo(
+    () => buildSessionReviewQueues(sessionKatas, attempts),
+    [sessionKatas, attempts],
+  );
 
   useEffect(() => {
     if (!activeSession && sessionId) {
@@ -36,13 +45,12 @@ export function SessionResultsPage() {
 
   const allPassed = activeSession.passCount === activeSession.kataCount && activeSession.kataCount > 0;
 
-  const handleBackToLibrary = () => {
-    clearSession();
-    navigate("/problems");
-  };
-
-  const handlePracticeAgain = () => {
-    navigate("/problems");
+  const startReviewQueue = async (label: string, katas: Kata[]) => {
+    if (katas.length === 0 || !activeSession) return;
+    resetKataTimer();
+    startSessionTimer();
+    const nextSessionId = await startSession("custom", katas, label, activeSession.maxTestRuns);
+    navigate(`/session/${nextSessionId}`);
   };
 
   const toggleDiff = (index: number) => {
@@ -150,14 +158,28 @@ export function SessionResultsPage() {
         </table>
       </div>
 
-      {/* Actions */}
-      <div className="flex gap-3">
-        <button onClick={handleBackToLibrary} className="btn btn-ghost btn-sm">
-          Back to Practice
-        </button>
-        <button onClick={handlePracticeAgain} className="btn btn-primary btn-sm">
-          Practice Again
-        </button>
+      {/* Review queues */}
+      <div className="grid gap-3 md:grid-cols-3">
+        {[
+          reviewQueues.retryFailed,
+          reviewQueues.reviewSlow,
+          reviewQueues.repeatAll,
+        ].map((queue) => (
+          <div key={queue.label} className="rounded-lg border border-base-300/50 bg-base-100 p-4">
+            <div className="mb-1 flex items-center justify-between gap-3">
+              <h2 className="text-sm font-bold">{queue.label}</h2>
+              <span className="badge badge-sm badge-ghost tabular-nums">{queue.katas.length}</span>
+            </div>
+            <p className="min-h-9 text-xs leading-relaxed text-base-content/45">{queue.description}</p>
+            <button
+              onClick={() => void startReviewQueue(queue.label, queue.katas)}
+              disabled={queue.katas.length === 0}
+              className={`btn btn-sm mt-3 w-full ${queue.label === "Retry failed" ? "btn-primary" : "btn-ghost btn-outline"}`}
+            >
+              Start queue
+            </button>
+          </div>
+        ))}
       </div>
     </div>
   );

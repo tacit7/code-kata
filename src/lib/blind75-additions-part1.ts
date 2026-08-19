@@ -1,4 +1,12 @@
 import type { SeedKata } from "../types/editor";
+import { enrichMissingPythonSolutionVariants } from "./python-solution-variants";
+
+const variant = (label: string, code: string, complexity?: string, explanation?: string) => ({
+  label,
+  code,
+  ...(complexity ? { complexity } : {}),
+  ...(explanation ? { explanation } : {}),
+});
 
 const blind75Part1: SeedKata[] = [
   {
@@ -40,7 +48,7 @@ def test_two_prices():
             max_profit = price - min_price
     return max_profit`,
     usage: null,
-    tags: ["array", "sliding-window", "blind75"],
+    tags: ["array", "sliding-window", "blind75", "neetcode"],
   },
   {
     name: "Contains Duplicate",
@@ -264,7 +272,7 @@ def test_single_element_match():
   },
   {
     name: "Two Sum II - Input Array Is Sorted",
-    category: "arrays",
+    category: "two-pointers",
     language: "python",
     difficulty: "medium",
     description: `Given a 1-indexed sorted array of integers, find two numbers that add up to a target. Return their indices (1-indexed). You may not use the same element twice. There is exactly one solution.\n\nExample 1:\nInput: numbers = [2,7,11,15], target = 9\nOutput: [1,2]\n\nExample 2:\nInput: numbers = [2,3,4], target = 6\nOutput: [1,3]\n\nConstraints:\n- 2 <= numbers.length <= 3 * 10^4\n- -1000 <= numbers[i] <= 1000\n- numbers is sorted in non-decreasing order\n- Only one valid solution exists\n\nRef: LeetCode #167 Two Sum II`,
@@ -292,8 +300,26 @@ def test_two_sum_ii_negatives():
         else:
             right -= 1
     return []`,
+    solutionVariants: [
+      variant(
+        "Two pointers",
+        `def two_sum_ii(numbers: list[int], target: int) -> list[int]:
+    left, right = 0, len(numbers) - 1
+    while left < right:
+        total = numbers[left] + numbers[right]
+        if total == target:
+            return [left + 1, right + 1]
+        if total < target:
+            left += 1
+        else:
+            right -= 1
+    return []`,
+        "Time O(n), Space O(1)",
+        "Uses the sorted order to move one pointer inward each step; no binary search is needed."
+      ),
+    ],
     usage: null,
-    tags: ["array", "two-pointers", "binary-search", "neetcode"],
+    tags: ["array", "two-pointers", "neetcode"],
   },
   {
     name: "3Sum",
@@ -429,6 +455,65 @@ def test_trap_single():
             right_max = max(right_max, height[right])
             water += right_max - height[right]
     return water`,
+    solutionVariants: [
+      variant(
+        "Two pointers",
+        `def trap(height: list[int]) -> int:
+    if not height:
+        return 0
+    left, right = 0, len(height) - 1
+    left_max, right_max = height[left], height[right]
+    water = 0
+    while left < right:
+        if left_max <= right_max:
+            left += 1
+            left_max = max(left_max, height[left])
+            water += left_max - height[left]
+        else:
+            right -= 1
+            right_max = max(right_max, height[right])
+            water += right_max - height[right]
+    return water`,
+        "Time O(n), Space O(1)",
+        "Keeps the best wall seen from each side and moves the side with the smaller max."
+      ),
+      variant(
+        "Prefix/suffix maxima",
+        `def trap(height: list[int]) -> int:
+    n = len(height)
+    if n == 0:
+        return 0
+    left_max = [0] * n
+    right_max = [0] * n
+    left_max[0] = height[0]
+    for i in range(1, n):
+        left_max[i] = max(left_max[i - 1], height[i])
+    right_max[-1] = height[-1]
+    for i in range(n - 2, -1, -1):
+        right_max[i] = max(right_max[i + 1], height[i])
+    return sum(min(left_max[i], right_max[i]) - height[i] for i in range(n))`,
+        "Time O(n), Space O(n)",
+        "Precomputes the tallest wall to the left and right of each index."
+      ),
+      variant(
+        "Monotonic stack",
+        `def trap(height: list[int]) -> int:
+    stack = []
+    water = 0
+    for i, h in enumerate(height):
+        while stack and h > height[stack[-1]]:
+            bottom = stack.pop()
+            if not stack:
+                break
+            width = i - stack[-1] - 1
+            bounded_height = min(h, height[stack[-1]]) - height[bottom]
+            water += width * bounded_height
+        stack.append(i)
+    return water`,
+        "Time O(n), Space O(n)",
+        "Treats each popped bar as the bottom of a basin bounded by the current bar and stack top."
+      ),
+    ],
     usage: null,
     tags: ["array", "two-pointers", "stack", "neetcode"],
   },
@@ -468,7 +553,7 @@ def test_both_negative():
         return a & mask
     return a`,
     usage: null,
-    tags: ["bit-manipulation", "blind75"],
+    tags: ["bit-manipulation", "blind75", "neetcode"],
   },
   {
     name: "Counting Bits",
@@ -502,7 +587,7 @@ def test_one():
         dp[i] = dp[i >> 1] + (i & 1)
     return dp`,
     usage: null,
-    tags: ["bit-manipulation", "dynamic-programming", "blind75"],
+    tags: ["bit-manipulation", "dynamic-programming", "blind75", "neetcode"],
   },
   {
     name: "Missing Number",
@@ -538,7 +623,7 @@ def test_longer_array():
     expected = n * (n + 1) // 2
     return expected - sum(nums)`,
     usage: null,
-    tags: ["bit-manipulation", "math", "blind75"],
+    tags: ["bit-manipulation", "math", "blind75", "neetcode"],
   },
   {
     name: "Reverse Bits",
@@ -573,7 +658,7 @@ def test_max_uint32():
         n >>= 1
     return result`,
     usage: null,
-    tags: ["bit-manipulation", "blind75"],
+    tags: ["bit-manipulation", "blind75", "neetcode"],
   },
   {
     name: "Valid Sudoku",
@@ -632,5 +717,134 @@ def test_invalid_row():
     tags: ["array", "hash-map", "neetcode", "arrays-hashing"],
   },
 ];
+
+const blind75Part1SolutionVariants: Record<string, NonNullable<SeedKata["solutionVariants"]>> = {
+  "Product of Array Except Self": [
+    variant("Two prefix arrays", `def product_except_self(nums: list[int]) -> list[int]:
+    n = len(nums)
+    left = [1] * n
+    right = [1] * n
+
+    for i in range(1, n):
+        left[i] = left[i - 1] * nums[i - 1]
+
+    for i in range(n - 2, -1, -1):
+        right[i] = right[i + 1] * nums[i + 1]
+
+    return [left[i] * right[i] for i in range(n)]`),
+    variant("Output array plus suffix", `def product_except_self(nums: list[int]) -> list[int]:
+    n = len(nums)
+    result = [1] * n
+
+    prefix = 1
+    for i in range(n):
+        result[i] = prefix
+        prefix *= nums[i]
+
+    suffix = 1
+    for i in range(n - 1, -1, -1):
+        result[i] *= suffix
+        suffix *= nums[i]
+
+    return result`),
+  ],
+  "Maximum Product Subarray": [
+    variant("Rolling min/max DP", `def max_product(nums: list[int]) -> int:
+    best = nums[0]
+    cur_min = 1
+    cur_max = 1
+    for num in nums:
+        if num == 0:
+            best = max(best, 0)
+            cur_min = 1
+            cur_max = 1
+            continue
+        candidates = (num, cur_max * num, cur_min * num)
+        cur_max = max(candidates)
+        cur_min = min(candidates)
+        best = max(best, cur_max)
+    return best`),
+    variant("Prefix/suffix scan", `def max_product(nums: list[int]) -> int:
+    best = nums[0]
+    prefix = 1
+    suffix = 1
+    n = len(nums)
+    for i in range(n):
+        prefix = (prefix or 1) * nums[i]
+        suffix = (suffix or 1) * nums[n - 1 - i]
+        best = max(best, prefix, suffix)
+    return best`),
+  ],
+  "Counting Bits": [
+    variant("Shift recurrence", `def count_bits(n: int) -> list[int]:
+    dp = [0] * (n + 1)
+    for i in range(1, n + 1):
+        dp[i] = dp[i >> 1] + (i & 1)
+    return dp`),
+    variant("Lowest-set-bit recurrence", `def count_bits(n: int) -> list[int]:
+    dp = [0] * (n + 1)
+    for i in range(1, n + 1):
+        dp[i] = dp[i & (i - 1)] + 1
+    return dp`),
+    variant("Power offset recurrence", `def count_bits(n: int) -> list[int]:
+    dp = [0] * (n + 1)
+    offset = 1
+    for i in range(1, n + 1):
+        if offset * 2 == i:
+            offset = i
+        dp[i] = 1 + dp[i - offset]
+    return dp`),
+  ],
+};
+
+const blind75Part1VariantMetadata: Record<string, Record<string, Pick<NonNullable<SeedKata["solutionVariants"]>[number], "complexity" | "explanation">>> = {
+  "Product of Array Except Self": {
+    "Two prefix arrays": {
+      complexity: "Time: O(n), Space: O(n)",
+      explanation: "Builds one array of products to the left of each index and one array of products to the right, then multiplies them position by position.",
+    },
+    "Output array plus suffix": {
+      complexity: "Time: O(n), Space: O(1) extra",
+      explanation: "Stores prefix products directly in the output array, then folds in a running suffix product from the right.",
+    },
+  },
+  "Maximum Product Subarray": {
+    "Rolling min/max DP": {
+      complexity: "Time: O(n), Space: O(1)",
+      explanation: "Tracks both maximum and minimum products ending at the current index because a negative number can swap them.",
+    },
+    "Prefix/suffix scan": {
+      complexity: "Time: O(n), Space: O(1)",
+      explanation: "Scans products from both directions so zeros split the array and negative parity is handled by one of the two passes.",
+    },
+  },
+  "Counting Bits": {
+    "Shift recurrence": {
+      complexity: "Time: O(n), Space: O(n)",
+      explanation: "Uses bits(i) = bits(i >> 1) + last_bit, so each value is computed from a smaller value.",
+    },
+    "Lowest-set-bit recurrence": {
+      complexity: "Time: O(n), Space: O(n)",
+      explanation: "Clearing the lowest set bit points to a previously computed number with one fewer 1-bit.",
+    },
+    "Power offset recurrence": {
+      complexity: "Time: O(n), Space: O(n)",
+      explanation: "Tracks the highest power of two and reuses the count for the offset from that power.",
+    },
+  },
+};
+
+for (const kata of blind75Part1) {
+  kata.solutionVariants = blind75Part1SolutionVariants[kata.name] ?? kata.solutionVariants;
+  if (kata.solutionVariants) {
+    const metadata = blind75Part1VariantMetadata[kata.name] ?? {};
+    kata.solutionVariants = kata.solutionVariants.map((solution) => ({
+      ...solution,
+      ...(metadata[solution.label] ?? {}),
+    }));
+  }
+}
+
+enrichMissingPythonSolutionVariants(blind75Part1);
 
 export { blind75Part1 };

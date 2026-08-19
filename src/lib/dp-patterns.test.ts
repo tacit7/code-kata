@@ -61,6 +61,23 @@ const VALID_EVAL_ORDERS = new Set<EvaluationOrder>([
   "custom",
 ]);
 
+const COURSE_2_GRID_KATAS = [
+  "Build a Maximum-Cost Table",
+  "Count Paths With Diagonal Movement",
+  "Minimum Falling Path in a Small Grid",
+  "Minimum Falling Path Sum",
+  "Maximal Square",
+  "Count Square Submatrices With All Ones",
+  "Dungeon Game",
+];
+const COURSE_3_KNAPSACK_KATAS = [
+  "Minimum Number of Items to Reach Target",
+  "Closest Subset Sum",
+  "Choose Exactly K Items With Maximum Value",
+  "Last Stone Weight II",
+  "Ones and Zeroes",
+  "Profitable Schemes",
+];
 const FOUR_NEW_KATAS = ["Unique Paths II", "Triangle", "0/1 Knapsack", "Unbounded Knapsack"];
 const PRE_LEETCODE_FOUNDATIONS = [
   "Sum from 1 to n",
@@ -141,6 +158,28 @@ describe("dp patterns", () => {
     expect(missing).toEqual([]);
   });
 
+  it("all course-2 Grid DP katas are present in the seed set", () => {
+    const seedNames = new Set(ALL_SEED_KATAS.map((k) => k.name));
+    const missing = COURSE_2_GRID_KATAS.filter((name) => !seedNames.has(name));
+    expect(missing).toEqual([]);
+  });
+
+  it("all course-2 Grid DP katas have DP_PATTERNS entries", () => {
+    const missing = COURSE_2_GRID_KATAS.filter((name) => !DP_PATTERNS[name]);
+    expect(missing).toEqual([]);
+  });
+
+  it("all course-3 0/1 Knapsack katas are present in the seed set", () => {
+    const seedNames = new Set(ALL_SEED_KATAS.map((k) => k.name));
+    const missing = COURSE_3_KNAPSACK_KATAS.filter((name) => !seedNames.has(name));
+    expect(missing).toEqual([]);
+  });
+
+  it("all course-3 0/1 Knapsack katas have DP_PATTERNS entries", () => {
+    const missing = COURSE_3_KNAPSACK_KATAS.filter((name) => !DP_PATTERNS[name]);
+    expect(missing).toEqual([]);
+  });
+
   it("all pre-LeetCode foundation katas are present in the seed set", () => {
     const seedNames = new Set(ALL_SEED_KATAS.map((k) => k.name));
     const missing = PRE_LEETCODE_FOUNDATIONS.filter((name) => !seedNames.has(name));
@@ -196,7 +235,7 @@ describe("dp patterns", () => {
       "Minimum Moves to Reach N",
       "Fibonacci Number",
       "Climbing Stairs (Recursive)",
-      "Climbing Stairs (Iterative)",
+      "Climbing Stairs",
       "N-th Tribonacci Number",
     ]);
     expect(DP_CURRICULUM_ORDER["1d-sequence-dp"]).toEqual([
@@ -223,6 +262,37 @@ describe("dp patterns", () => {
       "Distinct Subsequences",
       "Regular Expression Matching",
     ]);
+    expect(DP_CURRICULUM_ORDER["grid-dp"]).toEqual([
+      "Fill One Grid State",
+      "Build a Path-Count Table",
+      "Unique Paths",
+      "Build a Blocked-Cell Path Table",
+      "Unique Paths II",
+      "Count Paths With Diagonal Movement",
+      "Build a Minimum-Cost Table",
+      "Build a Maximum-Cost Table",
+      "Reconstruct One Minimum-Cost Grid Path",
+      "Minimum Path Sum",
+      "Triangle",
+      "Minimum Falling Path in a Small Grid",
+      "Minimum Falling Path Sum",
+      "Maximal Square",
+      "Count Square Submatrices With All Ones",
+      "Dungeon Game",
+    ]);
+    expect(DP_CURRICULUM_ORDER["0-1-knapsack"]).toEqual([
+      "Subset Sum",
+      "Partition Equal Subset Sum",
+      "0/1 Knapsack",
+      "Count Subsets That Sum to Target",
+      "Minimum Number of Items to Reach Target",
+      "Closest Subset Sum",
+      "Choose Exactly K Items With Maximum Value",
+      "Target Sum",
+      "Last Stone Weight II",
+      "Ones and Zeroes",
+      "Profitable Schemes",
+    ]);
   });
 
   it("sorts explicitly ordered curriculum rows before unordered rows", () => {
@@ -244,9 +314,9 @@ describe("dp patterns", () => {
 
   it("exposes teaching display names and category labels for module view rows", () => {
     expect(dpDisplayNameFor({ name: "Climbing Stairs (Recursive)" })).toBe("Climbing Stairs: Memoization");
-    expect(dpDisplayNameFor({ name: "Climbing Stairs (Iterative)" })).toBe("Climbing Stairs: Space Optimization");
+    expect(dpDisplayNameFor({ name: "Climbing Stairs" })).toBe("Climbing Stairs: Space Optimization");
     expect(dpCategoryLabelFor({ name: "Climbing Stairs (Recursive)", category: "1-d-dp" })).toBe("Counting paths · memoized");
-    expect(dpCategoryLabelFor({ name: "Climbing Stairs (Iterative)", category: "1-d-dp" })).toBe("Counting paths · space optimized");
+    expect(dpCategoryLabelFor({ name: "Climbing Stairs", category: "1-d-dp" })).toBe("Counting paths · space optimized");
     expect(dpCategoryLabelFor({ name: "House Robber II", category: "1-d-dp" })).toBe("Circular reduction");
     expect(dpCategoryLabelFor({ name: "Two Sum", category: "arrays" })).toBe("arrays");
   });

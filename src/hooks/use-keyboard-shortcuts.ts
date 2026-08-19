@@ -1,6 +1,32 @@
 import { useEffect } from "react";
 import { useSettingsStore, type ShortcutAction } from "../stores/settings-store";
 
+function comboAliases(combo: string): Set<string> {
+  const aliases = new Set([combo]);
+
+  if (combo.startsWith("Ctrl+")) {
+    aliases.add(combo.replace("Ctrl+", "Meta+"));
+  }
+
+  for (const value of [...aliases]) {
+    if (value.endsWith("+Shift++")) {
+      aliases.add(value.replace("+Shift++", "+="));
+      aliases.add(value.replace("+Shift++", "++"));
+    }
+    if (value.endsWith("+Shift+=")) {
+      aliases.add(value.replace("+Shift+=", "+="));
+    }
+    if (value.endsWith("++")) {
+      aliases.add(value.replace(/\+\+$/, "+="));
+    }
+    if (value.endsWith("+=")) {
+      aliases.add(value.replace(/\+=$/, "++"));
+    }
+  }
+
+  return aliases;
+}
+
 export function useKeyboardShortcuts(
   handlers: Partial<Record<ShortcutAction, () => void>>
 ) {
@@ -24,10 +50,10 @@ export function useKeyboardShortcuts(
 
       // Check against all registered shortcuts
       // Treat Meta and Ctrl as equivalent so shortcuts work on both macOS and Windows
-      const comboAlt = combo.replace("Ctrl+", "Meta+");
+      const aliases = comboAliases(combo);
       for (const [action, handler] of Object.entries(handlers)) {
         const expected = shortcuts[action as ShortcutAction];
-        if (expected && (combo === expected || comboAlt === expected) && handler) {
+        if (expected && handler && (aliases.has(expected) || comboAliases(expected).has(combo))) {
           e.preventDefault();
           e.stopPropagation();
           handler();

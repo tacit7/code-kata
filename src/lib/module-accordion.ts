@@ -1,6 +1,6 @@
 export function moduleDetailsClass(nested: boolean): string {
   return nested
-    ? "collapse collapse-arrow ml-4 overflow-hidden rounded-lg border border-l-4 border-base-300/70 border-l-primary/50 bg-base-200/45 shadow-none"
+    ? "collapse collapse-arrow ml-4 overflow-hidden rounded-lg border border-base-300/70 bg-base-200/45 shadow-none"
     : "collapse collapse-arrow overflow-hidden rounded-2xl border border-base-300 bg-base-100 shadow-md shadow-base-300/20";
 }
 

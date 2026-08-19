@@ -34,6 +34,7 @@ interface SessionRow {
   pass_count: number;
   preset_name: string | null;
   max_test_runs: number | null;
+  kata_ids: string | null;
 }
 
 interface AttemptRow {
@@ -65,6 +66,7 @@ function rowToSession(row: SessionRow): Session {
     passCount: row.pass_count,
     presetName: row.preset_name,
     maxTestRuns: row.max_test_runs ?? null,
+    kataIds: row.kata_ids ? JSON.parse(row.kata_ids) as number[] : null,
   };
 }
 
@@ -224,11 +226,15 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     try {
       await db.execute(`ALTER TABLE sessions ADD COLUMN max_test_runs INTEGER NULL`);
     } catch (_) { /* column already exists */ }
+    try {
+      await db.execute(`ALTER TABLE sessions ADD COLUMN kata_ids TEXT`);
+    } catch (_) { /* column already exists */ }
     const now = new Date().toISOString();
+    const kataIds = JSON.stringify(katas.map((k) => k.id));
     const result = await db.execute(
-      `INSERT INTO sessions (session_type, started_at, kata_count, pass_count, preset_name, max_test_runs)
-       VALUES ($1, $2, $3, 0, $4, $5)`,
-      [type, now, katas.length, presetName ?? null, maxTestRuns ?? null],
+      `INSERT INTO sessions (session_type, started_at, kata_count, pass_count, preset_name, max_test_runs, kata_ids)
+       VALUES ($1, $2, $3, 0, $4, $5, $6)`,
+      [type, now, katas.length, presetName ?? null, maxTestRuns ?? null, kataIds],
     );
     const sessionId = result.lastInsertId as number;
     const session: Session = {
@@ -241,6 +247,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       passCount: 0,
       presetName: presetName ?? null,
       maxTestRuns: maxTestRuns ?? null,
+      kataIds: JSON.parse(kataIds) as number[],
     };
     set({ activeSession: session, sessionKatas: katas, currentIndex: 0, attempts: [] });
     return sessionId;
@@ -384,11 +391,11 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     );
     const attempts = attemptRows.map(rowToAttempt);
 
-    // Reconstruct kata list from attempts
     const kataMap = new Map(allKatas.map((k) => [k.id, k]));
-    const kataIds = attemptRows.map((a) => a.kata_id);
-    const uniqueIds = [...new Set(kataIds)];
-    const sessionKatas = uniqueIds.map((id) => kataMap.get(id)).filter(Boolean) as Kata[];
+    const rosterIds = session.kataIds?.length
+      ? session.kataIds
+      : attemptRows.map((a) => a.kata_id);
+    const sessionKatas = rosterIds.map((id) => kataMap.get(id)).filter(Boolean) as Kata[];
 
     set({ activeSession: session, sessionKatas, attempts, currentIndex: 0 });
   },

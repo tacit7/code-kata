@@ -1,4 +1,12 @@
 import type { SeedKata } from "../types/editor";
+import { enrichMissingPythonSolutionVariants } from "./python-solution-variants";
+
+const variant = (label: string, code: string, complexity: string, explanation: string) => ({
+  label,
+  code,
+  complexity,
+  explanation,
+});
 
 const blind75Part8: SeedKata[] = [
   {
@@ -32,6 +40,49 @@ from collections import Counter
 def top_k_frequent(nums: list[int], k: int) -> list[int]:
     count = Counter(nums)
     return heapq.nlargest(k, count.keys(), key=lambda x: count[x])`,
+    solutionVariants: [
+      variant(
+        "Bucket sort by frequency",
+        `from collections import Counter
+
+def top_k_frequent(nums: list[int], k: int) -> list[int]:
+    count = Counter(nums)
+    buckets = [[] for _ in range(len(nums) + 1)]
+    for num, freq in count.items():
+        buckets[freq].append(num)
+
+    result = []
+    for freq in range(len(buckets) - 1, 0, -1):
+        for num in buckets[freq]:
+            result.append(num)
+            if len(result) == k:
+                return result
+    return result`,
+        "Time O(n), Space O(n)",
+        "Uses frequency as an index, then scans from highest frequency down."
+      ),
+      variant(
+        "Heap",
+        `import heapq
+from collections import Counter
+
+def top_k_frequent(nums: list[int], k: int) -> list[int]:
+    count = Counter(nums)
+    return heapq.nlargest(k, count.keys(), key=lambda x: count[x])`,
+        "Time O(n log k), Space O(n)",
+        "Keeps the top k keys by frequency through the heap helper."
+      ),
+      variant(
+        "Sort frequencies",
+        `from collections import Counter
+
+def top_k_frequent(nums: list[int], k: int) -> list[int]:
+    count = Counter(nums)
+    return [num for num, _ in count.most_common(k)]`,
+        "Time O(n log n), Space O(n)",
+        "Shortest baseline: count, sort by frequency, take k."
+      ),
+    ],
     usage: null,
     tags: ["heap", "hash-map", "blind75", "neetcode", "arrays-hashing"],
   },
@@ -100,8 +151,10 @@ class MedianFinder:
             return float(-self.small[0])
         return (-self.small[0] + self.large[0]) / 2.0`,
     usage: null,
-    tags: ["heap", "two-heaps", "blind75"],
+    tags: ["heap", "two-heaps", "blind75", "neetcode"],
   },
 ];
+
+enrichMissingPythonSolutionVariants(blind75Part8);
 
 export { blind75Part8 };

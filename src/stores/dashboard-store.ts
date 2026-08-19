@@ -2,9 +2,9 @@ import { create } from "zustand";
 import { getDb } from "../lib/database";
 import {
   computeHighValueDashboardMetrics,
-  type DpModuleProgressRow,
   type LeetcodeProgress,
   type MasterySummary,
+  type ModuleProgressRow,
   type RecentlyImprovedRow,
   type ReviewQueueRow,
 } from "../lib/dashboard-metrics";
@@ -94,7 +94,7 @@ interface DashboardState {
   masterySummary: MasterySummary;
   reviewQueue: ReviewQueueRow[];
   recentlyImproved: RecentlyImprovedRow[];
-  dpModuleProgress: DpModuleProgressRow[];
+  moduleProgress: ModuleProgressRow[];
   leetcodeProgress: LeetcodeProgress;
   sessionHistory: SessionHistoryRow[];
   sessionHistoryHasMore: boolean;
@@ -120,13 +120,16 @@ const EMPTY_MASTERY_SUMMARY: MasterySummary = {
 const EMPTY_LEETCODE_PROGRESS: LeetcodeProgress = {
   total: 0,
   solved: 0,
+  percentSolved: 0,
   easySolved: 0,
   mediumSolved: 0,
   hardSolved: 0,
   blind75Total: 0,
   blind75Solved: 0,
+  blind75PercentSolved: 0,
   neetcodeTotal: 0,
   neetcodeSolved: 0,
+  neetcodePercentSolved: 0,
   recommendedUnattempted: 0,
 };
 
@@ -169,7 +172,7 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
   masterySummary: EMPTY_MASTERY_SUMMARY,
   reviewQueue: [],
   recentlyImproved: [],
-  dpModuleProgress: [],
+  moduleProgress: [],
   leetcodeProgress: EMPTY_LEETCODE_PROGRESS,
   sessionHistory: [],
   sessionHistoryHasMore: false,
@@ -314,7 +317,7 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
       masterySummary: highValueMetrics.masterySummary,
       reviewQueue: highValueMetrics.reviewQueue,
       recentlyImproved: highValueMetrics.recentlyImproved,
-      dpModuleProgress: highValueMetrics.dpModuleProgress,
+      moduleProgress: highValueMetrics.moduleProgress,
       leetcodeProgress: highValueMetrics.leetcodeProgress,
       sessionHistory: sessions,
       sessionHistoryHasMore: hasMore,

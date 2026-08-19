@@ -1,4 +1,5 @@
 import type { SeedKata } from "../types/editor";
+import { enrichMissingPythonSolutionVariants } from "./python-solution-variants";
 
 const neetcodeStack: SeedKata[] = [
   {
@@ -205,7 +206,7 @@ def test_car_fleet_none_merge():
     tags: ["stack", "sorting", "math", "neetcode"],
   },
   {
-    name: "Largest Rectangle In Histogram",
+    name: "Largest Rectangle in Histogram",
     category: "stack",
     language: "python",
     difficulty: "hard",
@@ -243,5 +244,7 @@ def test_largest_rect_ascending():
     tags: ["stack", "monotonic-stack", "array", "neetcode"],
   },
 ];
+
+enrichMissingPythonSolutionVariants(neetcodeStack);
 
 export { neetcodeStack };

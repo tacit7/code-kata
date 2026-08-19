@@ -6,6 +6,20 @@ describe("DEFAULT_SHORTCUTS", () => {
     expect(DEFAULT_SHORTCUTS.nextKata).toBe("Meta+Alt+ArrowRight");
     expect(DEFAULT_SHORTCUTS.prevKata).toBe("Meta+Alt+ArrowLeft");
   });
+
+  it("binds REPL toggle to the terminal-style shortcut", () => {
+    expect(DEFAULT_SHORTCUTS.toggleRepl).toBe("Meta+`");
+  });
+
+  it("binds app zoom to Chrome-style shortcuts", () => {
+    expect(DEFAULT_SHORTCUTS.zoomIn).toBe("Meta+=");
+    expect(DEFAULT_SHORTCUTS.zoomOut).toBe("Meta+-");
+    expect(DEFAULT_SHORTCUTS.resetZoom).toBe("Meta+0");
+  });
+
+  it("binds the command palette to a VS Code-style shortcut", () => {
+    expect(DEFAULT_SHORTCUTS.openCommandPalette).toBe("Meta+Shift+P");
+  });
 });
 
 describe("migrateShortcuts", () => {
@@ -30,6 +44,7 @@ describe("migrateShortcuts", () => {
   it("fills a missing action from its own default, not the whole map", () => {
     const out = migrateShortcuts({ runTests: "Meta+K" });
     expect(out.runTests).toBe("Meta+K");
+    expect(out.toggleRepl).toBe(DEFAULT_SHORTCUTS.toggleRepl);
     expect(out.closePanel).toBe(DEFAULT_SHORTCUTS.closePanel);
   });
 

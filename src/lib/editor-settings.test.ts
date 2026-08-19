@@ -18,6 +18,7 @@ const BASE: EditorSettings = {
   wordWrap: false,
   fontLigatures: false,
   highlightOccurrences: true,
+  bracketPairColorization: true,
 };
 
 describe("monacoEditorOptions", () => {
@@ -85,6 +86,15 @@ describe("monacoEditorOptions", () => {
     expect(o.fontLigatures).toBe(true);
   });
 
+  it("bracketPairColorization controls colored bracket pairs", () => {
+    expect(monacoEditorOptions({ ...BASE, bracketPairColorization: true }).bracketPairColorization).toEqual({
+      enabled: true,
+    });
+    expect(monacoEditorOptions({ ...BASE, bracketPairColorization: false }).bracketPairColorization).toEqual({
+      enabled: false,
+    });
+  });
+
   it("wordWrap false maps to the string 'off', not the boolean", () => {
     expect(monacoEditorOptions({ ...BASE, wordWrap: false }).wordWrap).toBe("off");
   });
@@ -113,6 +123,7 @@ describe("monacoEditorOptions", () => {
       "autoClosingQuotes",
       "autoSurround",
       "automaticLayout",
+      "bracketPairColorization",
       "detectIndentation",
       "fontFamily",
       "fontLigatures",
@@ -137,6 +148,7 @@ const TOGGLE_DEFAULTS: Record<EditorToggleKey, boolean> = {
   autoClosingBrackets: true,
   wordWrap: false,
   highlightOccurrences: true,
+  bracketPairColorization: true,
   fontLigatures: false,
 };
 
@@ -167,6 +179,12 @@ describe("EDITOR_TOGGLES", () => {
     expect(ligatures!.onPractice).toBe(false);
   });
 
+  it("shows Color Parentheses in Practice", () => {
+    const colorParens = EDITOR_TOGGLES.find((t) => t.key === "bracketPairColorization");
+    expect(colorParens?.label).toBe("Color Parentheses");
+    expect(colorParens?.onPractice).toBe(true);
+  });
+
   // Task 6 builds a Record<EditorToggleKey, boolean> for the Practice page.
   // Every rendered toggle must have a value in it.
   it("every toggle key is an EditorToggleKey the defaults record covers", () => {
@@ -182,6 +200,7 @@ describe("resolveEditorToggles", () => {
   it("falls back to the default when the key is absent from the patch", () => {
     const resolved = resolveEditorToggles({}, TOGGLE_DEFAULTS);
     expect(resolved.highlightOccurrences).toBe(true);
+    expect(resolved.bracketPairColorization).toBe(true);
     expect(resolved.editorAutocomplete).toBe(true);
     expect(resolved.wordWrap).toBe(false);
   });
@@ -229,6 +248,10 @@ describe("resolveEditorToggles", () => {
 describe("settings store", () => {
   it("defaults highlightOccurrences to true, matching Monaco's own behavior", () => {
     expect(useSettingsStore.getState().highlightOccurrences).toBe(true);
+  });
+
+  it("defaults bracketPairColorization to true", () => {
+    expect(useSettingsStore.getState().bracketPairColorization).toBe(true);
   });
 
   // A toggle naming a key the store does not have would render, flip nothing,

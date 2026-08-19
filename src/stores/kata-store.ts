@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import type { ImplementationSize } from "../lib/implementation-complexity";
 import type { Kata, SeedKata } from "../types/editor";
 import { getDb, insertKata, updateKata as dbUpdateKata, deleteKata as dbDeleteKata } from "../lib/database";
 
@@ -12,6 +13,7 @@ interface KataRow {
   code: string;
   test_code: string;
   solution: string | null;
+  solution_variants: string | null;
   usage: string | null;
   tags: string | null;
   is_custom: number;
@@ -35,6 +37,7 @@ export type LibrarySortMode =
   | "level"
   | "level-difficulty"
   | "leetcode"
+  | "implementation-complexity"
   | "best-time"
   | "streak"
   | "difficulty-asc"
@@ -47,8 +50,10 @@ interface LibraryUIState {
   libraryDiffSort: "asc" | "desc" | null;
   librarySortMode: LibrarySortMode;
   libraryLeetcodeOnly: boolean;
-  /** Group-by-DP-family view in the Problems list (see src/lib/dp-patterns.ts). */
-  libraryGroupByFamily: boolean;
+  libraryBlind75Only: boolean;
+  libraryNeetcodeOnly: boolean;
+  libraryNeetcode250Only: boolean;
+  libraryImplementationSizeFilters: ImplementationSize[];
   setLibraryUI: (patch: Partial<LibraryUIState>) => void;
 }
 
@@ -86,7 +91,10 @@ export const useKataStore = create<KataState>((set) => ({
   libraryDiffSort: null,
   librarySortMode: "level-difficulty",
   libraryLeetcodeOnly: false,
-  libraryGroupByFamily: false,
+  libraryBlind75Only: false,
+  libraryNeetcodeOnly: false,
+  libraryNeetcode250Only: false,
+  libraryImplementationSizeFilters: [],
   setLibraryUI: (patch) => set(patch),
 
   loadKatas: async (language = "javascript") => {
@@ -111,6 +119,7 @@ export const useKataStore = create<KataState>((set) => ({
         code: row.code,
         testCode: row.test_code,
         solution: row.solution,
+        solutionVariants: row.solution_variants ? JSON.parse(row.solution_variants) : null,
         usage: row.usage,
         tags: row.tags ? JSON.parse(row.tags) as string[] : [],
         isCustom: Boolean(row.is_custom),

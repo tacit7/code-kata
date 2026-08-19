@@ -1,4 +1,5 @@
 import type { SeedKata } from "../types/editor";
+import { enrichMissingPythonSolutionVariants } from "./python-solution-variants";
 
 const TREE_NODE_CLASS = `class TreeNode:
     def __init__(self, val=0, left=None, right=None):
@@ -205,11 +206,11 @@ def right_side_view(root) -> list[int]:
     tags: ["trees", "bfs", "dfs", "neetcode"],
   },
   {
-    name: "Count Good Nodes In Binary Tree",
+    name: "Count Good Nodes in Binary Tree",
     category: "trees",
     language: "python",
     difficulty: "medium",
-    description: `Given a binary tree root, a node X in the tree is named "good" if in the path from root to X there are no nodes with a value greater than X.\n\nReturn the number of good nodes in the binary tree.\n\nExample 1:\nInput: root = [3,1,4,3,null,1,5]\nOutput: 4  (root=3, 4, 3 under left, 5 are good)\n\nExample 2:\nInput: root = [3,3,null,4,2]\nOutput: 3  (root=3, left 3, and 4 are good)\n\nExample 3:\nInput: root = [1]\nOutput: 1\n\nConstraints:\n- The number of nodes in the binary tree is in the range [1, 10^5].\n- Each node's value is between [-10^4, 10^4].\n\nRef: LeetCode #1448 Count Good Nodes In Binary Tree`,
+    description: `Given a binary tree root, a node X in the tree is named "good" if in the path from root to X there are no nodes with a value greater than X.\n\nReturn the number of good nodes in the binary tree.\n\nExample 1:\nInput: root = [3,1,4,3,null,1,5]\nOutput: 4  (root=3, 4, 3 under left, 5 are good)\n\nExample 2:\nInput: root = [3,3,null,4,2]\nOutput: 3  (root=3, left 3, and 4 are good)\n\nExample 3:\nInput: root = [1]\nOutput: 1\n\nConstraints:\n- The number of nodes in the binary tree is in the range [1, 10^5].\n- Each node's value is between [-10^4, 10^4].\n\nRef: LeetCode #1448 Count Good Nodes in Binary Tree`,
     code: `def good_nodes(root) -> int:
     raise NotImplementedError`,
     testCode: `${TEST_HEADER}def test_good_nodes_basic():
@@ -242,5 +243,7 @@ def good_nodes(root) -> int:
     tags: ["trees", "dfs", "neetcode"],
   },
 ];
+
+enrichMissingPythonSolutionVariants(neetcodeTrees);
 
 export { neetcodeTrees };

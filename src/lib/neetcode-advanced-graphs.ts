@@ -1,4 +1,5 @@
 import type { SeedKata } from "../types/editor";
+import { enrichMissingPythonSolutionVariants } from "./python-solution-variants";
 
 const neetcodeAdvancedGraphs: SeedKata[] = [
   {
@@ -108,7 +109,7 @@ def test_min_cost_single():
     tags: ["graphs", "advanced-graphs", "minimum-spanning-tree", "neetcode"],
   },
   {
-    name: "Swim In Rising Water",
+    name: "Swim in Rising Water",
     category: "advanced-graphs",
     language: "python",
     difficulty: "hard",
@@ -176,5 +177,22 @@ def test_cheapest_flights_no_route():
     tags: ["graphs", "advanced-graphs", "dynamic-programming", "bellman-ford", "neetcode"],
   },
 ];
+
+const neetcodeAdvancedGraphCanonicalVariantNames = new Set([
+  "Cheapest Flights Within K Stops",
+]);
+
+for (const kata of neetcodeAdvancedGraphs) {
+  if (neetcodeAdvancedGraphCanonicalVariantNames.has(kata.name) && kata.solution && !kata.solutionVariants) {
+    kata.solutionVariants = [{
+      label: "Canonical DP solution",
+      code: kata.solution,
+      complexity: "Time: O(k * flights), Space: O(cities)",
+      explanation: "Runs Bellman-Ford style relaxation for each allowed stop count while keeping only the previous distance layer.",
+    }];
+  }
+}
+
+enrichMissingPythonSolutionVariants(neetcodeAdvancedGraphs);
 
 export { neetcodeAdvancedGraphs };
