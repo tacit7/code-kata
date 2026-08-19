@@ -28,6 +28,11 @@
   "bundle": {
     "active": true,
     "targets": "all",
+    "resources": {
+      "../.codex/skills/kata-student-helper/SKILL.md": "agent/skills/kata-student-helper/SKILL.md",
+      "../tools/kata-agent.mjs": "agent/kata-agent.mjs",
+      "../docs/agent_bridge.md": "agent/agent_bridge.md"
+    },
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",

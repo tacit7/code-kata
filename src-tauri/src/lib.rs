@@ -10,6 +10,8 @@ use tauri::menu::{ContextMenu, MenuBuilder, MenuItem, MenuItemBuilder, SubmenuBu
 use tauri::{Emitter, Manager};
 
 const JAVA_RUN_TIMEOUT: Duration = Duration::from_secs(5);
+const AGENT_CONTEXT_DIR: &str = "agent";
+const AGENT_CONTEXT_FILE: &str = "current-context.json";
 
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -20,6 +22,30 @@ struct JavaTestResult {
     output: Option<String>,
     expected: Option<String>,
     got: Option<String>,
+}
+
+#[tauri::command]
+fn agent_context_path(app: tauri::AppHandle) -> Result<String, String> {
+    Ok(agent_context_file(&app)?.to_string_lossy().to_string())
+}
+
+#[tauri::command]
+fn write_agent_context(app: tauri::AppHandle, context_json: String) -> Result<String, String> {
+    let parsed: serde_json::Value = serde_json::from_str(&context_json).map_err(|e| e.to_string())?;
+    let path = agent_context_file(&app)?;
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+    }
+    let pretty = serde_json::to_string_pretty(&parsed).map_err(|e| e.to_string())?;
+    fs::write(&path, pretty).map_err(|e| e.to_string())?;
+    Ok(path.to_string_lossy().to_string())
+}
+
+fn agent_context_file(app: &tauri::AppHandle) -> Result<PathBuf, String> {
+    app.path()
+        .app_data_dir()
+        .map(|dir| dir.join(AGENT_CONTEXT_DIR).join(AGENT_CONTEXT_FILE))
+        .map_err(|e| e.to_string())
 }
 
 // Native right-click menu for a kata row in the Problems table. Item ids
@@ -424,6 +450,8 @@ pub fn run() {
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_dialog::init())
         .invoke_handler(tauri::generate_handler![
+            agent_context_path,
+            write_agent_context,
             show_kata_context_menu,
             run_java_tests
         ])

@@ -39,6 +39,7 @@ Current cross-app feature status. `Partial` means the feature exists but is not 
 | Native preferences-style settings page | Yes | Yes | Unknown | Unknown |
 | Chrome-style app UI zoom | Yes | Yes | Unknown | Unknown |
 | Command palette | Yes | Yes | No | No |
+| Agent helper bridge and CLI | Yes | No | No | No |
 | Toast notifications | Yes | Yes | Unknown | Unknown |
 | Colorized bracket pairs | Yes | Yes | Unknown | Unknown |
 | Configurable keyboard shortcuts, including REPL toggle | Yes | Partial | Unknown | Unknown |
@@ -143,6 +144,28 @@ settings commands. Problem pages register editor-scoped commands while mounted:
 run tests, show/hide the problem panel, show/hide solutions, open/hide the REPL,
 copy the selected solution to the editor, reset code, move to the next/previous
 kata, and open the current problem on LeetCode when available.
+
+### Agent Helper Bridge and CLI
+
+Python exports the current Monaco problem context to the app data directory for
+local agents. The export includes problem metadata, student code, selected code,
+cursor/selection, visible test cases, raw tests, notes, and latest run results.
+Reference solution code is intentionally not exported.
+
+Agents can inspect the context through:
+
+```bash
+pnpm agent summary
+pnpm agent prompt
+pnpm agent code
+pnpm agent results
+```
+
+The problem page also registers `Ask Agent` and `Export Agent Context` commands
+in the command palette. `Ask Agent` exports fresh context and copies a
+no-spoilers tutoring prompt to the clipboard. See `docs/agent_bridge.md` for the
+schema and usage contract. Tauri packaged builds include the project-local
+skill, CLI, and bridge doc under the app's bundled `agent/` resources.
 
 ### Persisted Pane Layouts
 

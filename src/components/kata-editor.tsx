@@ -2,6 +2,7 @@ import { useRef, useEffect, useState, useCallback, useMemo } from "react";
 import Editor, { DiffEditor, type OnMount } from "@monaco-editor/react";
 import type { editor } from "monaco-editor";
 import { initVimMode, type VimAdapterInstance } from "monaco-vim";
+import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import {
   ArrowLeft,
   ArrowRight,
@@ -45,6 +46,7 @@ import { leetcodeNumberFor, leetcodeUrlFor } from "../lib/leetcode-numbers";
 import { dpPatternFor, DP_MODULES } from "../lib/dp-patterns";
 import { visibleTestCasesFor } from "../lib/visible-testcases";
 import { solutionNotesFor } from "../lib/solution-notes";
+import { agentPromptFor, buildAgentEditorContext, writeAgentContext, type AgentEditorContext } from "../lib/agent-bridge";
 import type { EditorLayoutSettings } from "../stores/settings-store";
 import type { Kata, TestResult } from "../types/editor";
 
@@ -539,6 +541,7 @@ type MaximizedPane = "repl" | "results" | null;
 type OutputTab = "testcase" | "results";
 
 const PYTHON_TEST_MARKER_OWNER = "kata-python-test-runner";
+const AGENT_CONTEXT_SAVE_KEY = "current";
 
 export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataEditorProps) {
   const { theme, vimMode, toggleVimMode, shortcuts, fontSize, fontFamily, tabSize, hideDescriptionInSession, setSetting, editorAutocomplete, lineNumbersMode, wordWrap, autoClosingBrackets, fontLigatures, highlightOccurrences, bracketPairColorization } = useSettingsStore();
@@ -603,6 +606,17 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
       delayMs: 1000,
       save: (id, value) => {
         saveKataNotes(id, value).then(() => setNotesSaved(true));
+      },
+    }),
+  ).current;
+
+  const agentContextAutosave = useRef(
+    createAutosave<string>({
+      delayMs: 400,
+      save: (_id, value) => {
+        writeAgentContext(JSON.parse(value) as AgentEditorContext).catch((error) => {
+          console.warn("[agent-bridge] Failed to export editor context", error);
+        });
       },
     }),
   ).current;
@@ -677,8 +691,9 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
       // its id at schedule time, so it cannot be written under the new kata.
       autosave.flush();
       notesAutosave.flush();
+      agentContextAutosave.flush();
     };
-  }, [kata.id, autosave, notesAutosave]);
+  }, [kata.id, autosave, notesAutosave, agentContextAutosave]);
 
   const vizFolder = VIZ_MAP[kata.name as VizKataName] ?? null;
   const leetcodeNumber = kata.leetcodeNumber ?? leetcodeNumberFor(kata);
@@ -706,6 +721,79 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
   const hasOutputPane = hasReplPane || hasResultsPane;
   const workAreaHidden = maximizedPane === "repl" && hasReplPane;
   const editorHidden = workAreaHidden || (maximizedPane === "results" && hasResultsPane);
+
+  const buildCurrentAgentContext = useCallback(() => {
+    const editorInstance = editorRef.current;
+    const model = editorInstance?.getModel();
+    const selection = editorInstance?.getSelection() ?? null;
+    const cursor = editorInstance?.getPosition() ?? null;
+    const code = editorInstance?.getValue() ?? savedCode ?? kata.code;
+    const selectedCode = model && selection ? model.getValueInRange(selection) : "";
+
+    return buildAgentEditorContext({
+      kata,
+      code,
+      selectedCode,
+      selection: selection
+        ? {
+            startLineNumber: selection.startLineNumber,
+            startColumn: selection.startColumn,
+            endLineNumber: selection.endLineNumber,
+            endColumn: selection.endColumn,
+          }
+        : null,
+      cursor: cursor
+        ? {
+            lineNumber: cursor.lineNumber,
+            column: cursor.column,
+          }
+        : null,
+      isSession: Boolean(isSession),
+      leetcodeNumber,
+      leetcodeUrl,
+      visibleTestCases: visibleTestCases.map((testCase) => ({
+        name: testCase.testName,
+        inputs: Object.fromEntries(testCase.inputs.map((input) => [input.name, input.value])),
+        expected: testCase.expected,
+      })),
+      notes,
+      ranAt,
+      results,
+      hasReferenceSolution: solutionVariants.length > 0,
+      activeVariantLabel: activeSolution?.label ?? null,
+    });
+  }, [
+    activeSolution?.label,
+    isSession,
+    kata,
+    leetcodeNumber,
+    leetcodeUrl,
+    notes,
+    ranAt,
+    results,
+    savedCode,
+    solutionVariants.length,
+    visibleTestCases,
+  ]);
+
+  const scheduleAgentContextExport = useCallback(() => {
+    agentContextAutosave.schedule(AGENT_CONTEXT_SAVE_KEY, () => JSON.stringify(buildCurrentAgentContext()));
+  }, [agentContextAutosave, buildCurrentAgentContext]);
+
+  const exportAgentContextNow = useCallback(async () => {
+    agentContextAutosave.cancel();
+    const path = await writeAgentContext(buildCurrentAgentContext());
+    toast.success("Agent context exported", 1600);
+    return path;
+  }, [agentContextAutosave, buildCurrentAgentContext]);
+
+  const copyAgentPrompt = useCallback(async () => {
+    agentContextAutosave.cancel();
+    const context = buildCurrentAgentContext();
+    await writeAgentContext(context);
+    await writeText(agentPromptFor(context));
+    toast.success("Agent prompt copied", 1800);
+  }, [agentContextAutosave, buildCurrentAgentContext]);
 
   useEffect(() => {
     setActiveSolutionVariant(0);
@@ -906,6 +994,22 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
         run: copySolutionToEditor,
       },
       {
+        id: "editor:export-agent-context",
+        title: "Export Agent Context",
+        subtitle: "Refresh current code, tests, and latest results for agents",
+        section: "Editor",
+        keywords: ["agent", "helper", "context", "debug"],
+        run: () => { void exportAgentContextNow(); },
+      },
+      {
+        id: "editor:ask-agent",
+        title: "Ask Agent",
+        subtitle: "Copy a tutoring prompt from the current problem",
+        section: "Editor",
+        keywords: ["agent", "help", "hint", "debug", "prompt"],
+        run: () => { void copyAgentPrompt(); },
+      },
+      {
         id: "editor:reset-code",
         title: "Reset Code",
         section: "Editor",
@@ -944,7 +1048,9 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
     return () => unregister.forEach((fn) => fn());
   }, [
     activeSolution,
+    copyAgentPrompt,
     copySolutionToEditor,
+    exportAgentContextNow,
     handleReset,
     handleRun,
     handleToggleProblemPanel,
@@ -968,6 +1074,19 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
     showRepl,
     solutionVariants.length,
   ]);
+
+  useEffect(() => {
+    if (!codeLoaded) return;
+    scheduleAgentContextExport();
+  }, [codeLoaded, scheduleAgentContextExport]);
+
+  useEffect(() => {
+    if (!mountedEditor) return;
+    const disposable = mountedEditor.onDidChangeCursorSelection(() => {
+      scheduleAgentContextExport();
+    });
+    return () => disposable.dispose();
+  }, [mountedEditor, scheduleAgentContextExport]);
 
   // Memoized: useKeyboardShortcuts lists `handlers` in a useEffect dependency
   // array, and KataEditor re-renders on every keystroke. A fresh object literal
@@ -1640,6 +1759,7 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
                     clearEditorErrorMarkers();
                     setSaved(false);
                     autosave.schedule(kata.id, () => editorRef.current?.getValue());
+                    scheduleAgentContextExport();
                   }}
                 />
               </div>

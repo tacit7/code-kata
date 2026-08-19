@@ -106,7 +106,13 @@ All commands passed. Builds emitted only existing-style warnings from DaisyUI/Ta
 ## Known Follow-Ups
 
 - Visually test the command palette in dev mode if the user asks to run the app.
+- Agent helper bridge now exists for Python:
+  - App writes `current-context.json` under the app data directory.
+  - CLI entry point is `pnpm agent <command>`.
+  - Project-local skill lives at `.codex/skills/kata-student-helper/SKILL.md`.
+  - Packaged Tauri builds include the skill, CLI, and bridge doc under `agent/` resources.
+  - Contract doc is `docs/agent_bridge.md`.
+  - First version is read-only and intentionally does not export reference solution code.
 - Consider adding native menu commands next; the command palette action model makes this easier.
 - If doing EITS-tracked work, fix EITS auth/session registration first.
 - If committing, review the dirty worktree carefully. There are many pre-existing modifications and untracked files from earlier tasks.
-
