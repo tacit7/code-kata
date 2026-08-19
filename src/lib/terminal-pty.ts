@@ -38,6 +38,8 @@ export interface AgentTerminalThemeTokens {
   error: string;
 }
 
+export const AGENT_TERMINAL_SCROLLBACK = 800;
+
 export function agentTerminalFontSize(preferredFontSize: number): number {
   return Math.max(11, Math.min(13, preferredFontSize));
 }
@@ -79,7 +81,7 @@ export function agentTerminalOptions({ fontFamily, fontSize, theme }: AgentTermi
     lineHeight: 1.25,
     macOptionIsMeta: true,
     minimumContrastRatio: 4.5,
-    scrollback: 5000,
+    scrollback: AGENT_TERMINAL_SCROLLBACK,
     theme,
   };
 }

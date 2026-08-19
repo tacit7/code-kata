@@ -1708,6 +1708,7 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
           if (maximizedPane === "terminal") setMaximizedPane(null);
         }}
         onLayoutChange={(layout) => {
+          if (layout === replLayout && maximizedPane !== "terminal") return;
           setReplLayout(layout);
           setMaximizedPane(null);
         }}

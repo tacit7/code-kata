@@ -90,6 +90,7 @@ export const AgentTerminalPanel = forwardRef<AgentTerminalPanelHandle, AgentTerm
   const terminalIdRef = useRef<number | null>(null);
   const lastSizeRef = useRef<TerminalSize | null>(null);
   const outputBufferRef = useRef<Map<number, number[][]>>(new Map());
+  const fitFrameRef = useRef<number | null>(null);
   const [ready, setReady] = useState(false);
   const [activeKind, setActiveKind] = useState<AgentTerminalKind>(launchKind);
   const [status, setStatus] = useState<"starting" | "running" | "exited" | "error">("starting");
@@ -107,6 +108,24 @@ export const AgentTerminalPanel = forwardRef<AgentTerminalPanelHandle, AgentTerm
       return null;
     }
   }, []);
+
+  const fitAndForwardResize = useCallback(() => {
+    const size = fit();
+    const terminalId = terminalIdRef.current;
+    if (!size || terminalId == null || !shouldForwardTerminalResize(lastSizeRef.current, size)) return;
+    lastSizeRef.current = size;
+    void resizeTerminal(terminalId, size).catch(() => undefined);
+  }, [fit]);
+
+  const scheduleFit = useCallback(() => {
+    if (fitFrameRef.current != null) {
+      cancelAnimationFrame(fitFrameRef.current);
+    }
+    fitFrameRef.current = requestAnimationFrame(() => {
+      fitFrameRef.current = null;
+      fitAndForwardResize();
+    });
+  }, [fitAndForwardResize]);
 
   const closeCurrentTerminal = useCallback(async () => {
     const terminalId = terminalIdRef.current;
@@ -192,11 +211,7 @@ export const AgentTerminalPanel = forwardRef<AgentTerminalPanelHandle, AgentTerm
       void resizeTerminal(terminalId, size).catch(() => undefined);
     });
     const resizeObserver = new ResizeObserver(() => {
-      const size = fit();
-      const terminalId = terminalIdRef.current;
-      if (!size || terminalId == null || !shouldForwardTerminalResize(lastSizeRef.current, size)) return;
-      lastSizeRef.current = size;
-      void resizeTerminal(terminalId, size).catch(() => undefined);
+      scheduleFit();
     });
     resizeObserver.observe(host);
     requestAnimationFrame(() => {
@@ -207,13 +222,17 @@ export const AgentTerminalPanel = forwardRef<AgentTerminalPanelHandle, AgentTerm
     return () => {
       void closeCurrentTerminal();
       resizeObserver.disconnect();
+      if (fitFrameRef.current != null) {
+        cancelAnimationFrame(fitFrameRef.current);
+        fitFrameRef.current = null;
+      }
       dataDisposable.dispose();
       resizeDisposable.dispose();
       term.dispose();
       termRef.current = null;
       fitRef.current = null;
     };
-  }, [closeCurrentTerminal, fit]);
+  }, [closeCurrentTerminal, fit, scheduleFit]);
 
   useEffect(() => {
     const term = termRef.current;
@@ -221,11 +240,8 @@ export const AgentTerminalPanel = forwardRef<AgentTerminalPanelHandle, AgentTerm
     term.options.fontFamily = terminalFontFamily;
     term.options.fontSize = terminalFontSize;
     term.options.lineHeight = 1.25;
-    requestAnimationFrame(() => {
-      fit();
-      window.setTimeout(() => fit(), 80);
-    });
-  }, [fit, terminalFontFamily, terminalFontSize, layout, maximized]);
+    scheduleFit();
+  }, [scheduleFit, terminalFontFamily, terminalFontSize, layout, maximized]);
 
   useEffect(() => {
     const term = termRef.current;

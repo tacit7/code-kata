@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { agentTerminalFontSize, agentTerminalOptions, agentTerminalTheme, bracketedPaste, retainAsyncUnlisten, shouldForwardTerminalResize } from "./terminal-pty";
+import {
+  AGENT_TERMINAL_SCROLLBACK,
+  agentTerminalFontSize,
+  agentTerminalOptions,
+  agentTerminalTheme,
+  bracketedPaste,
+  retainAsyncUnlisten,
+  shouldForwardTerminalResize,
+} from "./terminal-pty";
 
 describe("shouldForwardTerminalResize", () => {
   it("forwards the first valid resize", () => {
@@ -30,6 +38,15 @@ describe("shouldForwardTerminalResize", () => {
       fontSize: 13,
       theme: {},
     })).not.toHaveProperty("convertEol");
+  });
+
+  it("keeps agent terminal scrollback small enough for responsive split changes", () => {
+    expect(agentTerminalOptions({
+      fontFamily: "monospace",
+      fontSize: 13,
+      theme: {},
+    }).scrollback).toBe(AGENT_TERMINAL_SCROLLBACK);
+    expect(AGENT_TERMINAL_SCROLLBACK).toBeLessThanOrEqual(1000);
   });
 
   it("keeps agent terminal fonts in a TUI-friendly range", () => {
