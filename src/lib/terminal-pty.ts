@@ -1,4 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
+import type { ITheme } from "@xterm/xterm";
 
 export type AgentTerminalKind = "shell" | "claude" | "codex";
 
@@ -14,6 +15,28 @@ export interface TerminalOutputPayload {
 
 export interface TerminalExitPayload {
   terminalId: number;
+}
+
+export interface AgentTerminalOptionInput {
+  fontFamily: string;
+  fontSize: number;
+  theme: ITheme;
+}
+
+export function agentTerminalOptions({ fontFamily, fontSize, theme }: AgentTerminalOptionInput) {
+  return {
+    allowProposedApi: true,
+    cursorBlink: true,
+    cursorStyle: "block" as const,
+    fontFamily,
+    fontSize,
+    letterSpacing: 0,
+    lineHeight: 1.25,
+    macOptionIsMeta: true,
+    minimumContrastRatio: 4.5,
+    scrollback: 5000,
+    theme,
+  };
 }
 
 export function spawnTerminal(

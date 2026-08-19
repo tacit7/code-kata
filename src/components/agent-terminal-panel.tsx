@@ -8,6 +8,7 @@ import { Terminal as XtermTerminal } from "@xterm/xterm";
 import { BotMessageSquare, Code2, Maximize2, Minimize2, Monitor, RotateCcw, X } from "lucide-react";
 import {
   closeTerminal,
+  agentTerminalOptions,
   bracketedPaste,
   retainAsyncUnlisten,
   resizeTerminal,
@@ -156,20 +157,11 @@ export const AgentTerminalPanel = forwardRef<AgentTerminalPanelHandle, AgentTerm
     if (!host) return;
 
     const fitAddon = new FitAddon();
-    const term = new XtermTerminal({
-      allowProposedApi: true,
-      cursorBlink: true,
-      cursorStyle: "block",
-      convertEol: true,
+    const term = new XtermTerminal(agentTerminalOptions({
       fontFamily: terminalFontFamily,
       fontSize: terminalFontSize,
-      letterSpacing: 0,
-      lineHeight: 1.25,
-      macOptionIsMeta: true,
-      minimumContrastRatio: 4.5,
-      scrollback: 5000,
       theme: terminalTheme,
-    });
+    }));
     term.loadAddon(fitAddon);
     term.loadAddon(new Unicode11Addon());
     term.unicode.activeVersion = "11";

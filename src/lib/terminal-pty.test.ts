@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { bracketedPaste, retainAsyncUnlisten, shouldForwardTerminalResize } from "./terminal-pty";
+import { agentTerminalOptions, bracketedPaste, retainAsyncUnlisten, shouldForwardTerminalResize } from "./terminal-pty";
 
 describe("shouldForwardTerminalResize", () => {
   it("forwards the first valid resize", () => {
@@ -22,6 +22,14 @@ describe("shouldForwardTerminalResize", () => {
 
   it("wraps pasted text in bracketed paste mode", () => {
     expect(bracketedPaste("line 1\r\nline 2\rline 3")).toBe("\x1b[200~line 1\nline 2\nline 3\x1b[201~");
+  });
+
+  it("keeps PTY output line endings raw for full-screen TUIs", () => {
+    expect(agentTerminalOptions({
+      fontFamily: "monospace",
+      fontSize: 13,
+      theme: {},
+    })).not.toHaveProperty("convertEol");
   });
 
   it("unlistens when async listener registration resolves after disposal", async () => {
