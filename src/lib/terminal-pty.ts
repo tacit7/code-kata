@@ -23,6 +23,10 @@ export interface AgentTerminalOptionInput {
   theme: ITheme;
 }
 
+export function agentTerminalFontSize(preferredFontSize: number): number {
+  return Math.max(11, Math.min(13, preferredFontSize));
+}
+
 export function agentTerminalOptions({ fontFamily, fontSize, theme }: AgentTerminalOptionInput) {
   return {
     allowProposedApi: true,

@@ -9,6 +9,7 @@ import { BotMessageSquare, Code2, Maximize2, Minimize2, Monitor, RotateCcw, X } 
 import {
   closeTerminal,
   agentTerminalOptions,
+  agentTerminalFontSize,
   bracketedPaste,
   retainAsyncUnlisten,
   resizeTerminal,
@@ -85,7 +86,7 @@ export const AgentTerminalPanel = forwardRef<AgentTerminalPanelHandle, AgentTerm
   const [ready, setReady] = useState(false);
   const [activeKind, setActiveKind] = useState<AgentTerminalKind>(launchKind);
   const [status, setStatus] = useState<"starting" | "running" | "exited" | "error">("starting");
-  const terminalFontSize = Math.max(12, Math.min(18, fontSize));
+  const terminalFontSize = agentTerminalFontSize(fontSize);
   const terminalFontFamily = `${fontFamily}, "Fira Code", "Cascadia Code", monospace`;
 
   const fit = useCallback(() => {
@@ -268,7 +269,10 @@ export const AgentTerminalPanel = forwardRef<AgentTerminalPanelHandle, AgentTerm
 
   const launchButton = (kind: AgentTerminalKind, icon: ReactNode) => (
     <button
-      onClick={() => { void startTerminal(kind); }}
+      onClick={() => {
+        if (kind !== "shell" && !maximized) onToggleMaximized();
+        void startTerminal(kind);
+      }}
       className={launchButtonClass(kind)}
       title={`Start ${labelFor(kind)}`}
     >

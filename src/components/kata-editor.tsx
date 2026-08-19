@@ -955,7 +955,7 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
 
   const openAgentTerminal = useCallback((kind: AgentTerminalKind = "shell") => {
     setShowRepl(false);
-    setMaximizedPane(null);
+    setMaximizedPane(kind === "shell" ? null : "terminal");
     setAgentTerminalKind(kind);
     setAgentTerminalLaunchNonce(Date.now());
     setShowAgentTerminal(true);

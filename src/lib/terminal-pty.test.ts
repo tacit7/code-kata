@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { agentTerminalOptions, bracketedPaste, retainAsyncUnlisten, shouldForwardTerminalResize } from "./terminal-pty";
+import { agentTerminalFontSize, agentTerminalOptions, bracketedPaste, retainAsyncUnlisten, shouldForwardTerminalResize } from "./terminal-pty";
 
 describe("shouldForwardTerminalResize", () => {
   it("forwards the first valid resize", () => {
@@ -30,6 +30,12 @@ describe("shouldForwardTerminalResize", () => {
       fontSize: 13,
       theme: {},
     })).not.toHaveProperty("convertEol");
+  });
+
+  it("keeps agent terminal fonts in a TUI-friendly range", () => {
+    expect(agentTerminalFontSize(10)).toBe(11);
+    expect(agentTerminalFontSize(13)).toBe(13);
+    expect(agentTerminalFontSize(18)).toBe(13);
   });
 
   it("unlistens when async listener registration resolves after disposal", async () => {
