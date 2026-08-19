@@ -243,7 +243,7 @@ fn close_terminal(terminal_id: u64, state: State<'_, TerminalState>) -> Result<(
 fn terminal_command(kind: &str) -> (String, Vec<String>) {
     match kind {
         "claude" => terminal_shell_command(Some("claude")),
-        "codex" => terminal_shell_command(Some("codex")),
+        "codex" => terminal_shell_command(Some("codex -c check_for_update_on_startup=false")),
         _ => terminal_shell_command(None),
     }
 }
@@ -390,7 +390,7 @@ mod tests {
     #[cfg(not(windows))]
     #[test]
     fn agent_launch_command_forces_color_after_shell_startup() {
-        let command = terminal_agent_launch_command("codex");
+        let command = terminal_agent_launch_command("codex -c check_for_update_on_startup=false");
 
         assert!(command.starts_with("exec env "));
         assert!(command.contains("-u NO_COLOR"));
@@ -400,7 +400,16 @@ mod tests {
         assert!(command.contains("COLORTERM=truecolor"));
         assert!(command.contains("FORCE_COLOR=3"));
         assert!(command.contains("CLICOLOR_FORCE=1"));
-        assert!(command.ends_with(" codex"));
+        assert!(command.ends_with(" codex -c check_for_update_on_startup=false"));
+    }
+
+    #[cfg(not(windows))]
+    #[test]
+    fn codex_terminal_command_disables_startup_update_check() {
+        let (_program, args) = terminal_command("codex");
+
+        assert_eq!(args[0], "-lc");
+        assert!(args[1].contains("codex -c check_for_update_on_startup=false"));
     }
 }
 
