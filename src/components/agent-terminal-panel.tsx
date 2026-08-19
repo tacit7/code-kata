@@ -5,7 +5,7 @@ import { FitAddon } from "@xterm/addon-fit";
 import { Unicode11Addon } from "@xterm/addon-unicode11";
 import { WebLinksAddon } from "@xterm/addon-web-links";
 import { Terminal as XtermTerminal } from "@xterm/xterm";
-import { BotMessageSquare, Maximize2, Minimize2, RotateCcw, X } from "lucide-react";
+import { BotMessageSquare, Maximize2, Minimize2, RotateCcw, SquareSplitHorizontal, SquareSplitVertical, X } from "lucide-react";
 import {
   closeTerminal,
   agentTerminalOptions,
@@ -55,8 +55,10 @@ interface AgentTerminalPanelProps {
   theme: AppTheme;
   fontFamily: string;
   fontSize: number;
+  layout: "horizontal" | "vertical";
   maximized: boolean;
   onClose: () => void;
+  onLayoutChange: (layout: "horizontal" | "vertical") => void;
   onToggleMaximized: () => void;
 }
 
@@ -76,8 +78,10 @@ export const AgentTerminalPanel = forwardRef<AgentTerminalPanelHandle, AgentTerm
   theme,
   fontFamily,
   fontSize,
+  layout,
   maximized,
   onClose,
+  onLayoutChange,
   onToggleMaximized,
 }, ref) {
   const hostRef = useRef<HTMLDivElement | null>(null);
@@ -221,7 +225,7 @@ export const AgentTerminalPanel = forwardRef<AgentTerminalPanelHandle, AgentTerm
       fit();
       window.setTimeout(() => fit(), 80);
     });
-  }, [fit, terminalFontFamily, terminalFontSize, maximized]);
+  }, [fit, terminalFontFamily, terminalFontSize, layout, maximized]);
 
   useEffect(() => {
     const term = termRef.current;
@@ -272,6 +276,11 @@ export const AgentTerminalPanel = forwardRef<AgentTerminalPanelHandle, AgentTerm
     void startTerminal(launchKind);
   }, [launchKind, launchNonce, ready, startTerminal]);
 
+  const splitButtonClass = (active: boolean) =>
+    `btn btn-ghost btn-sm btn-square h-7 min-h-7 ${
+      active ? "text-primary bg-primary/10" : "text-base-content/35 hover:text-base-content/70"
+    }`;
+
   return (
     <div className="flex-1 min-h-0 flex flex-col bg-base-100">
       <div className="flex items-center border-b border-base-300/60 bg-base-200 px-3 py-2 shrink-0">
@@ -302,14 +311,34 @@ export const AgentTerminalPanel = forwardRef<AgentTerminalPanelHandle, AgentTerm
             <RotateCcw size={14} />
           </button>
         </div>
-        <button
-          onClick={onToggleMaximized}
-          className="ml-auto inline-flex size-6 items-center justify-center rounded text-base-content/45 transition-colors hover:bg-base-300 hover:text-base-content/75"
-          title={maximized ? "Restore terminal pane" : "Maximize terminal"}
-          aria-label={maximized ? "Restore terminal pane" : "Maximize terminal"}
-        >
-          {maximized ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
-        </button>
+        <div className="ml-auto flex items-center gap-1">
+          <div className="join">
+            <button
+              onClick={() => onLayoutChange("vertical")}
+              className={`${splitButtonClass(layout === "vertical" && !maximized)} join-item`}
+              title="Split problem and agent side by side"
+              aria-label="Split problem and agent side by side"
+            >
+              <SquareSplitHorizontal size={16} />
+            </button>
+            <button
+              onClick={() => onLayoutChange("horizontal")}
+              className={`${splitButtonClass(layout === "horizontal" && !maximized)} join-item`}
+              title="Split problem and agent stacked"
+              aria-label="Split problem and agent stacked"
+            >
+              <SquareSplitVertical size={16} />
+            </button>
+          </div>
+          <button
+            onClick={onToggleMaximized}
+            className="inline-flex size-6 items-center justify-center rounded text-base-content/45 transition-colors hover:bg-base-300 hover:text-base-content/75"
+            title={maximized ? "Restore terminal pane" : "Maximize terminal"}
+            aria-label={maximized ? "Restore terminal pane" : "Maximize terminal"}
+          >
+            {maximized ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+          </button>
+        </div>
       </div>
       <div className="kata-agent-terminal min-h-0 flex-1 overflow-hidden bg-base-100 p-2">
         <div ref={hostRef} className="h-full min-h-0 w-full overflow-hidden [&_.xterm]:h-full" />

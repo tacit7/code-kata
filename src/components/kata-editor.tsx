@@ -1677,17 +1677,23 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
 
   const renderAgentTerminalPane = () => (
     <div
-      className={`min-h-0 flex flex-col border-t border-base-300/60 bg-base-200 ${
-        maximizedPane === "terminal" ? "flex-1" : "shrink-0"
+      className={`min-h-0 flex flex-col bg-base-200 ${
+        maximizedPane === "terminal"
+          ? "flex-1"
+          : replLayout === "vertical"
+            ? "flex-1 basis-0 border-l border-base-300/60"
+            : "shrink-0 border-t border-base-300/60"
       }`}
-      style={maximizedPane === "terminal" ? undefined : { height: terminalPaneHeight }}
+      style={maximizedPane === "terminal" || replLayout === "vertical" ? undefined : { height: terminalPaneHeight }}
     >
-      <div
-        onMouseDown={onOutputResizeMouseDown}
-        className={`h-1 shrink-0 bg-base-300/60 transition-colors ${
-          maximizedPane === "terminal" ? "cursor-default" : "cursor-row-resize hover:bg-primary"
-        }`}
-      />
+      {replLayout === "horizontal" && (
+        <div
+          onMouseDown={onOutputResizeMouseDown}
+          className={`h-1 shrink-0 bg-base-300/60 transition-colors ${
+            maximizedPane === "terminal" ? "cursor-default" : "cursor-row-resize hover:bg-primary"
+          }`}
+        />
+      )}
       <AgentTerminalPanel
         ref={agentTerminalRef}
         launchKind={agentTerminalKind}
@@ -1695,10 +1701,15 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
         theme={theme}
         fontFamily={fontFamily}
         fontSize={fontSize}
+        layout={replLayout}
         maximized={maximizedPane === "terminal"}
         onClose={() => {
           setShowAgentTerminal(false);
           if (maximizedPane === "terminal") setMaximizedPane(null);
+        }}
+        onLayoutChange={(layout) => {
+          setReplLayout(layout);
+          setMaximizedPane(null);
         }}
         onToggleMaximized={() => setMaximizedPane((pane) => (pane === "terminal" ? null : "terminal"))}
       />
@@ -1867,7 +1878,7 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
         {/* Editor/results area + REPL split */}
         <div
           className={`flex flex-1 min-w-0 min-h-0 ${
-            (hasAgentTerminalPane || (hasReplPane && replLayout === "horizontal")) &&
+            ((hasAgentTerminalPane && replLayout === "horizontal") || (hasReplPane && replLayout === "horizontal")) &&
             maximizedPane !== "repl" &&
             maximizedPane !== "terminal"
               ? "flex-col"
