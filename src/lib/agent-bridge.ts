@@ -133,7 +133,9 @@ export function buildAgentEditorContext({
 
 export function agentPromptFor(context: AgentEditorContext): string {
   const failed = (context.latestRun.results ?? []).filter((result) => !result.passed);
-  return `You are helping a student solve a Code Kata problem. Do not reveal the full reference solution unless the user explicitly asks. Prefer hints, diagnosis, and small targeted edits.
+  return `You are helping a student solve a Code Kata problem. Before answering, read and follow the project-local kata student helper skill at .codex/skills/kata-student-helper/SKILL.md if it is available.
+
+Do not reveal the full reference solution unless the user explicitly asks. Prefer hints, diagnosis, and small targeted edits.
 
 Problem: ${context.kata.name}
 Language: ${context.kata.language}

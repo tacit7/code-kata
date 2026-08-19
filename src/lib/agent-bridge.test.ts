@@ -71,6 +71,7 @@ describe("buildAgentEditorContext", () => {
 
     const prompt = agentPromptFor(context);
 
+    expect(prompt).toContain(".codex/skills/kata-student-helper/SKILL.md");
     expect(prompt).toContain("Do not reveal the full reference solution");
     expect(prompt).toContain("Problem: Two Sum");
     expect(prompt).toContain("Student Code:");
