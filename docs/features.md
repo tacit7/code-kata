@@ -187,7 +187,9 @@ menu can launch shell, Claude, or Codex directly. The terminal sets
 `KATA_AGENT_CONTEXT_PATH` so local agent CLIs can locate the current exported
 problem context from the agent helper bridge. The editor can paste the current
 agent prompt into the active terminal, but it does not submit the prompt
-automatically.
+automatically. In dev, embedded terminals start in the kata project repo. In
+packaged builds, they start in the app data directory so agent output and local
+scratch files stay outside the read-only app bundle.
 
 ### Persisted Pane Layouts
 

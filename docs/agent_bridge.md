@@ -55,6 +55,21 @@ agent/agent_bridge.md
 On macOS, that is inside the `.app` bundle's `Contents/Resources` directory.
 The bundled CLI still reads the same app data context file.
 
+## Embedded Terminal Working Directory
+
+In dev builds, embedded Shell, Claude, and Codex terminals start in the kata
+project repo so agents can see the repo-local `.codex/skills` directory and run
+`pnpm agent ...` directly.
+
+In packaged builds, embedded terminals start in the app data directory:
+
+```text
+~/Library/Application Support/com.code-kata.app/
+```
+
+This keeps generated notes, scratch files, and downloaded agent artifacts out of
+the read-only `.app` bundle while still exposing `KATA_AGENT_CONTEXT_PATH`.
+
 ## Schema
 
 Top-level shape:

@@ -110,7 +110,7 @@ fn spawn_terminal(
         })
         .map_err(|e| format!("Failed to open terminal: {e}"))?;
 
-    let working_dir = terminal_working_dir(cwd);
+    let working_dir = terminal_working_dir(&app, cwd);
     let (program, args) = terminal_command(&kind);
     let mut cmd = CommandBuilder::new(program);
     cmd.args(&args);
@@ -276,12 +276,86 @@ fn terminal_shell_command(command: Option<&str>) -> (String, Vec<String>) {
     }
 }
 
-fn terminal_working_dir(cwd: Option<String>) -> PathBuf {
-    cwd.map(PathBuf::from)
-        .filter(|path| path.is_dir())
+fn terminal_working_dir(app: &tauri::AppHandle, cwd: Option<String>) -> PathBuf {
+    explicit_terminal_working_dir(cwd)
+        .or_else(|| default_terminal_working_dir(app))
         .or_else(|| env::current_dir().ok().filter(|path| path.is_dir()))
         .or_else(home_dir)
         .unwrap_or_else(|| PathBuf::from("."))
+}
+
+fn explicit_terminal_working_dir(cwd: Option<String>) -> Option<PathBuf> {
+    cwd.map(PathBuf::from).filter(|path| path.is_dir())
+}
+
+fn default_terminal_working_dir(app: &tauri::AppHandle) -> Option<PathBuf> {
+    if cfg!(debug_assertions) {
+        terminal_dev_project_dir()
+    } else {
+        terminal_app_data_dir(app)
+    }
+}
+
+fn terminal_dev_project_dir() -> Option<PathBuf> {
+    let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    manifest_dir
+        .parent()
+        .map(Path::to_path_buf)
+        .filter(|path| path.is_dir())
+}
+
+fn terminal_app_data_dir(app: &tauri::AppHandle) -> Option<PathBuf> {
+    let dir = app.path().app_data_dir().ok()?;
+    fs::create_dir_all(&dir).ok()?;
+    Some(dir)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn explicit_terminal_working_dir_uses_existing_directory() {
+        let dir = env::temp_dir().join(format!(
+            "kata-terminal-cwd-{}",
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .expect("system clock before unix epoch")
+                .as_nanos()
+        ));
+        fs::create_dir_all(&dir).expect("create temp dir");
+
+        assert_eq!(
+            explicit_terminal_working_dir(Some(dir.to_string_lossy().to_string())),
+            Some(dir.clone())
+        );
+
+        fs::remove_dir_all(dir).expect("remove temp dir");
+    }
+
+    #[test]
+    fn explicit_terminal_working_dir_ignores_missing_directory() {
+        let dir = env::temp_dir().join(format!(
+            "missing-kata-terminal-cwd-{}",
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .expect("system clock before unix epoch")
+                .as_nanos()
+        ));
+
+        assert_eq!(
+            explicit_terminal_working_dir(Some(dir.to_string_lossy().to_string())),
+            None
+        );
+    }
+
+    #[test]
+    fn terminal_dev_project_dir_points_at_repo_root() {
+        let dir = terminal_dev_project_dir().expect("dev project dir");
+
+        assert!(dir.join("package.json").is_file());
+        assert!(dir.join("src-tauri").join("Cargo.toml").is_file());
+    }
 }
 
 fn home_dir() -> Option<PathBuf> {
