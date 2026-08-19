@@ -5,7 +5,7 @@ import { FitAddon } from "@xterm/addon-fit";
 import { Unicode11Addon } from "@xterm/addon-unicode11";
 import { WebLinksAddon } from "@xterm/addon-web-links";
 import { Terminal as XtermTerminal } from "@xterm/xterm";
-import { BotMessageSquare, Maximize2, Minimize2, RotateCcw, SquareSplitHorizontal, SquareSplitVertical, X } from "lucide-react";
+import { Maximize2, Minimize2, RotateCcw, SquareSplitHorizontal, SquareSplitVertical, X } from "lucide-react";
 import {
   closeTerminal,
   agentTerminalOptions,
@@ -93,7 +93,6 @@ export const AgentTerminalPanel = forwardRef<AgentTerminalPanelHandle, AgentTerm
   const fitFrameRef = useRef<number | null>(null);
   const [ready, setReady] = useState(false);
   const [activeKind, setActiveKind] = useState<AgentTerminalKind>(launchKind);
-  const [status, setStatus] = useState<"starting" | "running" | "exited" | "error">("starting");
   const terminalFontSize = agentTerminalFontSize(fontSize);
   const terminalFontFamily = `${fontFamily}, "Fira Code", "Cascadia Code", monospace`;
 
@@ -140,7 +139,6 @@ export const AgentTerminalPanel = forwardRef<AgentTerminalPanelHandle, AgentTerm
     if (!term) return;
 
     setActiveKind(kind);
-    setStatus("starting");
     await closeCurrentTerminal();
     term.reset();
     term.writeln(`Starting ${labelFor(kind)}...`);
@@ -149,7 +147,6 @@ export const AgentTerminalPanel = forwardRef<AgentTerminalPanelHandle, AgentTerm
     try {
       const terminalId = await spawnTerminal(kind, size);
       terminalIdRef.current = terminalId;
-      setStatus("running");
       term.reset();
 
       const buffered = outputBufferRef.current.get(terminalId);
@@ -162,7 +159,6 @@ export const AgentTerminalPanel = forwardRef<AgentTerminalPanelHandle, AgentTerm
       }
       term.focus();
     } catch (error) {
-      setStatus("error");
       term.writeln("");
       term.writeln(error instanceof Error ? error.message : String(error));
     }
@@ -275,7 +271,6 @@ export const AgentTerminalPanel = forwardRef<AgentTerminalPanelHandle, AgentTerm
       terminalIdRef.current = null;
       lastSizeRef.current = null;
       void closeTerminal(event.payload.terminalId).catch(() => undefined);
-      setStatus("exited");
       termRef.current?.writeln("");
       termRef.current?.writeln("[process exited]");
     }), (fn) => { unlistenExit = fn; }, () => disposed);
@@ -302,20 +297,14 @@ export const AgentTerminalPanel = forwardRef<AgentTerminalPanelHandle, AgentTerm
       <div className="flex items-center border-b border-base-300/60 bg-base-200 px-3 py-2 shrink-0">
         <button
           onClick={onClose}
-          className="mr-2 flex size-3.5 items-center justify-center rounded-full bg-error/70 text-transparent transition-colors hover:bg-error hover:text-error-content"
+          className="mr-2 flex size-3.5 items-center justify-center rounded-full bg-error/70 text-error-content/80 transition-colors hover:bg-error hover:text-error-content"
           title="Close terminal"
           aria-label="Close terminal"
         >
           <X size={10} strokeWidth={3} />
         </button>
-        <div className="flex items-center gap-2 text-xs">
-          <BotMessageSquare size={14} className="text-base-content/40" />
-          <span className="font-medium text-base-content/80">Agent</span>
-          <span className="text-base-content/25">/</span>
-          <span className="text-base-content/45">{labelFor(activeKind)}</span>
-          <span className={status === "running" ? "text-success/80" : status === "error" ? "text-error/85" : "text-base-content/35"}>
-            {status}
-          </span>
+        <div className="flex items-center text-xs">
+          <span className="font-medium text-base-content/75">{labelFor(activeKind)}</span>
         </div>
         <div className="ml-4 flex items-center gap-1">
           <button
