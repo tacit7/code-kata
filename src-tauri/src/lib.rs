@@ -373,6 +373,15 @@ fn home_dir() -> Option<PathBuf> {
 fn configure_terminal_env(app: &tauri::AppHandle, cmd: &mut CommandBuilder) {
     cmd.env("TERM", "xterm-256color");
     cmd.env("COLORTERM", "truecolor");
+    cmd.env("FORCE_COLOR", "3");
+    cmd.env(
+        "LANG",
+        env::var("LANG").unwrap_or_else(|_| "en_US.UTF-8".to_string()),
+    );
+    cmd.env(
+        "LC_ALL",
+        env::var("LC_ALL").unwrap_or_else(|_| "en_US.UTF-8".to_string()),
+    );
     cmd.env("KATA_TERMINAL", "1");
     cmd.env("PATH", enriched_terminal_path());
     if let Ok(path) = agent_context_file(app) {

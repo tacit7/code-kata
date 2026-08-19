@@ -2,6 +2,7 @@ import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useSta
 import { listen } from "@tauri-apps/api/event";
 import { open } from "@tauri-apps/plugin-shell";
 import { FitAddon } from "@xterm/addon-fit";
+import { Unicode11Addon } from "@xterm/addon-unicode11";
 import { WebLinksAddon } from "@xterm/addon-web-links";
 import { Terminal as XtermTerminal } from "@xterm/xterm";
 import { BotMessageSquare, Code2, Maximize2, Minimize2, Monitor, RotateCcw, X } from "lucide-react";
@@ -170,6 +171,8 @@ export const AgentTerminalPanel = forwardRef<AgentTerminalPanelHandle, AgentTerm
       theme: terminalTheme,
     });
     term.loadAddon(fitAddon);
+    term.loadAddon(new Unicode11Addon());
+    term.unicode.activeVersion = "11";
     term.loadAddon(new WebLinksAddon((_event, url) => {
       void open(url).catch(() => undefined);
     }));
