@@ -69,6 +69,7 @@ the current UI/product cleanup workstream.
 | Added REPL split controls | Done | The REPL pane can switch between horizontal and vertical 50/50 splits with VS Code-style layout icons. |
 | Added copy solution to editor | Done | The solution copy action copies the selected solution into the editor, using `Copy ->` wording. |
 | Added visible Ask Agent action | Done | The problem toolbar includes an `Ask` action that exports fresh agent context and copies a no-spoilers tutoring prompt. |
+| Added embedded agent terminal panel | Done | The problem page can open an xterm.js PTY panel and launch Shell, Claude, or Codex. |
 
 ## Session Results
 

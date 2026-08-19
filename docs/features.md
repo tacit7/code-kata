@@ -40,6 +40,7 @@ Current cross-app feature status. `Partial` means the feature exists but is not 
 | Chrome-style app UI zoom | Yes | Yes | Unknown | Unknown |
 | Command palette | Yes | Yes | No | No |
 | Agent helper bridge and CLI | Yes | No | No | No |
+| Embedded xterm agent terminal | Yes | No | No | No |
 | Native confirmation dialogs | Yes | No | Unknown | Unknown |
 | Toast notifications | Yes | Yes | Unknown | Unknown |
 | Colorized bracket pairs | Yes | Yes | Unknown | Unknown |
@@ -175,6 +176,14 @@ Python uses Tauri's native confirmation dialog for destructive actions such as
 resetting code, deleting custom katas, deleting practice presets, resetting kata
 progress, and resetting all progress. A browser-confirm fallback remains for
 tests and non-Tauri contexts.
+
+### Embedded xterm Agent Terminal
+
+Python includes an embedded xterm.js terminal panel backed by a native PTY. The
+problem toolbar can open a shell terminal, and the command palette/native Kata
+menu can launch shell, Claude, or Codex directly. The terminal sets
+`KATA_AGENT_CONTEXT_PATH` so local agent CLIs can locate the current exported
+problem context from the agent helper bridge.
 
 ### Persisted Pane Layouts
 

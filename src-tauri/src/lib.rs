@@ -1,13 +1,20 @@
+use portable_pty::{native_pty_system, CommandBuilder, PtySize};
 use serde::{Deserialize, Serialize};
 use std::{
+    collections::HashMap,
     env, fs,
+    io::{Read, Write},
     path::{Path, PathBuf},
     process::{Command, Stdio},
+    sync::{
+        atomic::{AtomicU64, Ordering},
+        Mutex,
+    },
     thread,
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
 use tauri::menu::{ContextMenu, MenuBuilder, MenuItem, MenuItemBuilder, SubmenuBuilder};
-use tauri::{Emitter, Manager};
+use tauri::{Emitter, Manager, State};
 
 const JAVA_RUN_TIMEOUT: Duration = Duration::from_secs(5);
 const AGENT_CONTEXT_DIR: &str = "agent";
@@ -24,6 +31,39 @@ struct JavaTestResult {
     got: Option<String>,
 }
 
+struct TerminalState {
+    next_id: AtomicU64,
+    sessions: Mutex<HashMap<u64, TerminalSession>>,
+}
+
+struct TerminalSession {
+    writer: Mutex<Box<dyn Write + Send>>,
+    master: Mutex<Box<dyn portable_pty::MasterPty + Send>>,
+    child: Mutex<Box<dyn portable_pty::Child + Send>>,
+}
+
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct TerminalOutputPayload {
+    terminal_id: u64,
+    data: Vec<u8>,
+}
+
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct TerminalExitPayload {
+    terminal_id: u64,
+}
+
+impl Default for TerminalState {
+    fn default() -> Self {
+        Self {
+            next_id: AtomicU64::new(1),
+            sessions: Mutex::new(HashMap::new()),
+        }
+    }
+}
+
 #[tauri::command]
 fn agent_context_path(app: tauri::AppHandle) -> Result<String, String> {
     Ok(agent_context_file(&app)?.to_string_lossy().to_string())
@@ -31,7 +71,8 @@ fn agent_context_path(app: tauri::AppHandle) -> Result<String, String> {
 
 #[tauri::command]
 fn write_agent_context(app: tauri::AppHandle, context_json: String) -> Result<String, String> {
-    let parsed: serde_json::Value = serde_json::from_str(&context_json).map_err(|e| e.to_string())?;
+    let parsed: serde_json::Value =
+        serde_json::from_str(&context_json).map_err(|e| e.to_string())?;
     let path = agent_context_file(&app)?;
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent).map_err(|e| e.to_string())?;
@@ -46,6 +87,262 @@ fn agent_context_file(app: &tauri::AppHandle) -> Result<PathBuf, String> {
         .app_data_dir()
         .map(|dir| dir.join(AGENT_CONTEXT_DIR).join(AGENT_CONTEXT_FILE))
         .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn spawn_terminal(
+    app: tauri::AppHandle,
+    kind: String,
+    cwd: Option<String>,
+    cols: Option<u16>,
+    rows: Option<u16>,
+    state: State<'_, TerminalState>,
+) -> Result<u64, String> {
+    let cols = cols.unwrap_or(80).max(1);
+    let rows = rows.unwrap_or(24).max(1);
+    let pty_system = native_pty_system();
+    let pair = pty_system
+        .openpty(PtySize {
+            rows,
+            cols,
+            pixel_width: 0,
+            pixel_height: 0,
+        })
+        .map_err(|e| format!("Failed to open terminal: {e}"))?;
+
+    let working_dir = terminal_working_dir(cwd);
+    let (program, args) = terminal_command(&kind);
+    let mut cmd = CommandBuilder::new(program);
+    cmd.args(&args);
+    cmd.cwd(&working_dir);
+    configure_terminal_env(&app, &mut cmd);
+
+    let child = pair
+        .slave
+        .spawn_command(cmd)
+        .map_err(|e| format!("Failed to start {kind}: {e}"))?;
+    drop(pair.slave);
+
+    let mut reader = pair
+        .master
+        .try_clone_reader()
+        .map_err(|e| format!("Failed to attach terminal reader: {e}"))?;
+    let writer = pair
+        .master
+        .take_writer()
+        .map_err(|e| format!("Failed to attach terminal writer: {e}"))?;
+
+    let terminal_id = state.next_id.fetch_add(1, Ordering::SeqCst);
+    let emitter = app.clone();
+    thread::spawn(move || {
+        let mut buf = [0u8; 4096];
+        loop {
+            match reader.read(&mut buf) {
+                Ok(0) => break,
+                Ok(n) => {
+                    let _ = emitter.emit(
+                        "terminal-output",
+                        TerminalOutputPayload {
+                            terminal_id,
+                            data: buf[..n].to_vec(),
+                        },
+                    );
+                }
+                Err(_) => break,
+            }
+        }
+        let _ = emitter.emit("terminal-exit", TerminalExitPayload { terminal_id });
+    });
+
+    let session = TerminalSession {
+        writer: Mutex::new(writer),
+        master: Mutex::new(pair.master),
+        child: Mutex::new(child),
+    };
+    state
+        .sessions
+        .lock()
+        .map_err(|e| format!("Terminal lock error: {e}"))?
+        .insert(terminal_id, session);
+
+    Ok(terminal_id)
+}
+
+#[tauri::command]
+fn write_terminal(
+    terminal_id: u64,
+    data: Vec<u8>,
+    state: State<'_, TerminalState>,
+) -> Result<(), String> {
+    let sessions = state
+        .sessions
+        .lock()
+        .map_err(|e| format!("Terminal lock error: {e}"))?;
+    let session = sessions
+        .get(&terminal_id)
+        .ok_or_else(|| "Terminal session not found".to_string())?;
+    let result = session
+        .writer
+        .lock()
+        .map_err(|e| format!("Terminal writer lock error: {e}"))?
+        .write_all(&data)
+        .map_err(|e| format!("Terminal write failed: {e}"));
+    result
+}
+
+#[tauri::command]
+fn resize_terminal(
+    terminal_id: u64,
+    cols: u16,
+    rows: u16,
+    state: State<'_, TerminalState>,
+) -> Result<(), String> {
+    if cols == 0 || rows == 0 {
+        return Ok(());
+    }
+
+    let sessions = state
+        .sessions
+        .lock()
+        .map_err(|e| format!("Terminal lock error: {e}"))?;
+    let session = sessions
+        .get(&terminal_id)
+        .ok_or_else(|| "Terminal session not found".to_string())?;
+    let result = session
+        .master
+        .lock()
+        .map_err(|e| format!("Terminal resize lock error: {e}"))?
+        .resize(PtySize {
+            rows,
+            cols,
+            pixel_width: 0,
+            pixel_height: 0,
+        })
+        .map_err(|e| format!("Terminal resize failed: {e}"));
+    result
+}
+
+#[tauri::command]
+fn close_terminal(terminal_id: u64, state: State<'_, TerminalState>) -> Result<(), String> {
+    let session = state
+        .sessions
+        .lock()
+        .map_err(|e| format!("Terminal lock error: {e}"))?
+        .remove(&terminal_id);
+
+    if let Some(session) = session {
+        if let Ok(mut child) = session.child.into_inner() {
+            let _ = child.kill();
+            let _ = child.wait();
+        }
+    }
+
+    Ok(())
+}
+
+fn terminal_command(kind: &str) -> (String, Vec<String>) {
+    match kind {
+        "claude" => terminal_shell_command(Some("claude")),
+        "codex" => terminal_shell_command(Some("codex")),
+        _ => terminal_shell_command(None),
+    }
+}
+
+fn terminal_shell_command(command: Option<&str>) -> (String, Vec<String>) {
+    #[cfg(windows)]
+    {
+        let shell = env::var("COMSPEC").unwrap_or_else(|_| "cmd.exe".to_string());
+        if let Some(command) = command {
+            (shell, vec!["/C".to_string(), command.to_string()])
+        } else {
+            (shell, Vec::new())
+        }
+    }
+
+    #[cfg(not(windows))]
+    {
+        let shell = env::var("SHELL").unwrap_or_else(|_| {
+            if Path::new("/bin/zsh").exists() {
+                "/bin/zsh".to_string()
+            } else {
+                "/bin/sh".to_string()
+            }
+        });
+        if let Some(command) = command {
+            (shell, vec!["-lc".to_string(), command.to_string()])
+        } else {
+            (shell, Vec::new())
+        }
+    }
+}
+
+fn terminal_working_dir(cwd: Option<String>) -> PathBuf {
+    cwd.map(PathBuf::from)
+        .filter(|path| path.is_dir())
+        .or_else(|| env::current_dir().ok().filter(|path| path.is_dir()))
+        .or_else(home_dir)
+        .unwrap_or_else(|| PathBuf::from("."))
+}
+
+fn home_dir() -> Option<PathBuf> {
+    #[cfg(windows)]
+    {
+        env::var_os("USERPROFILE").map(PathBuf::from)
+    }
+
+    #[cfg(not(windows))]
+    {
+        env::var_os("HOME").map(PathBuf::from)
+    }
+}
+
+fn configure_terminal_env(app: &tauri::AppHandle, cmd: &mut CommandBuilder) {
+    cmd.env("TERM", "xterm-256color");
+    cmd.env("COLORTERM", "truecolor");
+    cmd.env("KATA_TERMINAL", "1");
+    cmd.env("PATH", enriched_terminal_path());
+    if let Ok(path) = agent_context_file(app) {
+        cmd.env(
+            "KATA_AGENT_CONTEXT_PATH",
+            path.to_string_lossy().to_string(),
+        );
+    }
+}
+
+fn enriched_terminal_path() -> String {
+    let mut parts: Vec<String> = env::var_os("PATH")
+        .map(|path| {
+            env::split_paths(&path)
+                .map(|p| p.to_string_lossy().to_string())
+                .collect()
+        })
+        .unwrap_or_default();
+
+    let home = home_dir();
+    let mut candidates = vec![
+        "/opt/homebrew/bin".to_string(),
+        "/usr/local/bin".to_string(),
+        "/usr/bin".to_string(),
+        "/bin".to_string(),
+        "/usr/sbin".to_string(),
+        "/sbin".to_string(),
+    ];
+    if let Some(home) = home {
+        let home = home.to_string_lossy();
+        candidates.push(format!("{home}/.local/bin"));
+        candidates.push(format!("{home}/.cargo/bin"));
+        candidates.push(format!("{home}/.npm-global/bin"));
+    }
+
+    for candidate in candidates {
+        if !parts.iter().any(|part| part == &candidate) {
+            parts.push(candidate);
+        }
+    }
+
+    env::join_paths(parts.iter().map(Path::new))
+        .map(|path| path.to_string_lossy().to_string())
+        .unwrap_or_else(|_| parts.join(if cfg!(windows) { ";" } else { ":" }))
 }
 
 // Native right-click menu for a kata row in the Problems table. Item ids
@@ -442,6 +739,7 @@ fn java_string_escape(raw: &str) -> String {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .manage(TerminalState::default())
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_sql::Builder::default().build())
         .plugin(tauri_plugin_fs::init())
@@ -451,7 +749,11 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .invoke_handler(tauri::generate_handler![
             agent_context_path,
+            close_terminal,
+            resize_terminal,
+            spawn_terminal,
             write_agent_context,
+            write_terminal,
             show_kata_context_menu,
             run_java_tests
         ])
@@ -521,6 +823,27 @@ pub fn run() {
                 app,
                 "cmd:editor:toggle-repl",
                 "Toggle REPL",
+                true,
+                None::<&str>,
+            )?;
+            let open_terminal_item = MenuItem::with_id(
+                app,
+                "cmd:editor:open-agent-terminal",
+                "Open Terminal",
+                true,
+                None::<&str>,
+            )?;
+            let open_claude_terminal_item = MenuItem::with_id(
+                app,
+                "cmd:editor:open-claude-terminal",
+                "Open Claude Terminal",
+                true,
+                None::<&str>,
+            )?;
+            let open_codex_terminal_item = MenuItem::with_id(
+                app,
+                "cmd:editor:open-codex-terminal",
+                "Open Codex Terminal",
                 true,
                 None::<&str>,
             )?;
@@ -606,6 +929,9 @@ pub fn run() {
                 .item(&toggle_problem_panel_item)
                 .item(&toggle_solution_item)
                 .item(&toggle_repl_item)
+                .item(&open_terminal_item)
+                .item(&open_claude_terminal_item)
+                .item(&open_codex_terminal_item)
                 .separator()
                 .item(&copy_solution_item)
                 .item(&reset_code_item)
