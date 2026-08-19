@@ -22,6 +22,8 @@ const encoder = new TextEncoder();
 interface AgentTerminalPanelProps {
   launchKind: AgentTerminalKind;
   launchNonce: number;
+  fontFamily: string;
+  fontSize: number;
   maximized: boolean;
   onClose: () => void;
   onToggleMaximized: () => void;
@@ -40,6 +42,8 @@ function labelFor(kind: AgentTerminalKind): string {
 export const AgentTerminalPanel = forwardRef<AgentTerminalPanelHandle, AgentTerminalPanelProps>(function AgentTerminalPanel({
   launchKind,
   launchNonce,
+  fontFamily,
+  fontSize,
   maximized,
   onClose,
   onToggleMaximized,
@@ -53,6 +57,7 @@ export const AgentTerminalPanel = forwardRef<AgentTerminalPanelHandle, AgentTerm
   const [ready, setReady] = useState(false);
   const [activeKind, setActiveKind] = useState<AgentTerminalKind>(launchKind);
   const [status, setStatus] = useState<"starting" | "running" | "exited" | "error">("starting");
+  const terminalFontSize = Math.max(12, Math.min(18, fontSize));
 
   const fit = useCallback(() => {
     const term = termRef.current;
@@ -125,14 +130,21 @@ export const AgentTerminalPanel = forwardRef<AgentTerminalPanelHandle, AgentTerm
     const fitAddon = new FitAddon();
     const term = new XtermTerminal({
       cursorBlink: true,
+      cursorStyle: "block",
       convertEol: true,
-      fontFamily: "JetBrains Mono, Menlo, Monaco, Consolas, monospace",
-      fontSize: 13,
+      fontFamily,
+      fontSize: terminalFontSize,
+      letterSpacing: 0,
+      lineHeight: 1.25,
+      macOptionIsMeta: true,
+      minimumContrastRatio: 4.5,
       scrollback: 5000,
       theme: {
-        background: "#111217",
-        foreground: "#d6d6d6",
+        background: "#101116",
+        foreground: "#e4e4e4",
         cursor: "#f8f8f0",
+        cursorAccent: "#101116",
+        selectionBackground: "#3d455c",
         black: "#272822",
         red: "#f92672",
         green: "#a6e22e",
@@ -192,6 +204,18 @@ export const AgentTerminalPanel = forwardRef<AgentTerminalPanelHandle, AgentTerm
   }, [closeCurrentTerminal, fit]);
 
   useEffect(() => {
+    const term = termRef.current;
+    if (!term) return;
+    term.options.fontFamily = fontFamily;
+    term.options.fontSize = terminalFontSize;
+    term.options.lineHeight = 1.25;
+    requestAnimationFrame(() => {
+      fit();
+      window.setTimeout(() => fit(), 80);
+    });
+  }, [fit, fontFamily, terminalFontSize, maximized]);
+
+  useEffect(() => {
     let unlistenOutput: (() => void) | null = null;
     let unlistenExit: (() => void) | null = null;
 
@@ -248,7 +272,7 @@ export const AgentTerminalPanel = forwardRef<AgentTerminalPanelHandle, AgentTerm
 
   return (
     <div className="flex-1 min-h-0 flex flex-col bg-base-200">
-      <div className="flex items-center border-b border-base-300/60 bg-base-200 px-3 py-1 shrink-0">
+      <div className="flex items-center border-b border-base-300/70 bg-base-300/45 px-3 py-1.5 shrink-0">
         <button
           onClick={onClose}
           className="mr-2 text-xs text-base-content/30 transition-colors hover:text-base-content/60"
@@ -287,7 +311,9 @@ export const AgentTerminalPanel = forwardRef<AgentTerminalPanelHandle, AgentTerm
           {maximized ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
         </button>
       </div>
-      <div ref={hostRef} className="min-h-0 flex-1 p-2 [&_.xterm]:h-full" />
+      <div className="kata-agent-terminal min-h-0 flex-1 overflow-hidden bg-[#101116] p-2">
+        <div ref={hostRef} className="h-full min-h-0 w-full overflow-hidden [&_.xterm]:h-full" />
+      </div>
     </div>
   );
 });

@@ -732,6 +732,7 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
     (maximizedPane === "repl" && hasReplPane) ||
     (maximizedPane === "terminal" && hasAgentTerminalPane);
   const editorHidden = workAreaHidden || (maximizedPane === "results" && hasResultsPane);
+  const terminalPaneHeight = Math.max(outputPaneHeight, 380);
 
   const buildCurrentAgentContext = useCallback(() => {
     const editorInstance = editorRef.current;
@@ -1708,7 +1709,7 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
       className={`min-h-0 flex flex-col border-t border-base-300/60 bg-base-200 ${
         maximizedPane === "terminal" ? "flex-1" : "shrink-0"
       }`}
-      style={maximizedPane === "terminal" ? undefined : { height: outputPaneHeight }}
+      style={maximizedPane === "terminal" ? undefined : { height: terminalPaneHeight }}
     >
       <div
         onMouseDown={onOutputResizeMouseDown}
@@ -1720,6 +1721,8 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
         ref={agentTerminalRef}
         launchKind={agentTerminalKind}
         launchNonce={agentTerminalLaunchNonce}
+        fontFamily={fontFamily}
+        fontSize={fontSize}
         maximized={maximizedPane === "terminal"}
         onClose={() => {
           setShowAgentTerminal(false);
