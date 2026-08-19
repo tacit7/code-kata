@@ -1692,6 +1692,7 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
         ref={agentTerminalRef}
         launchKind={agentTerminalKind}
         launchNonce={agentTerminalLaunchNonce}
+        theme={theme}
         fontFamily={fontFamily}
         fontSize={fontSize}
         maximized={maximizedPane === "terminal"}

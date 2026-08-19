@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { agentTerminalFontSize, agentTerminalOptions, bracketedPaste, retainAsyncUnlisten, shouldForwardTerminalResize } from "./terminal-pty";
+import { agentTerminalFontSize, agentTerminalOptions, agentTerminalTheme, bracketedPaste, retainAsyncUnlisten, shouldForwardTerminalResize } from "./terminal-pty";
 
 describe("shouldForwardTerminalResize", () => {
   it("forwards the first valid resize", () => {
@@ -36,6 +36,31 @@ describe("shouldForwardTerminalResize", () => {
     expect(agentTerminalFontSize(10)).toBe(11);
     expect(agentTerminalFontSize(13)).toBe(13);
     expect(agentTerminalFontSize(18)).toBe(13);
+  });
+
+  it("maps terminal colors from app theme tokens", () => {
+    const theme = agentTerminalTheme({
+      base100: "#111111",
+      base200: "#222222",
+      base300: "#333333",
+      baseContent: "#eeeeee",
+      primary: "#00aa88",
+      secondary: "#667788",
+      accent: "#cc66dd",
+      neutral: "#444444",
+      info: "#4488ff",
+      success: "#22aa66",
+      warning: "#ddaa22",
+      error: "#dd3344",
+    });
+
+    expect(theme.background).toBe("#111111");
+    expect(theme.foreground).toBe("#eeeeee");
+    expect(theme.cursor).toBe("#00aa88");
+    expect(theme.red).toBe("#dd3344");
+    expect(theme.green).toBe("#22aa66");
+    expect(theme.blue).toBe("#00aa88");
+    expect(theme.magenta).toBe("#cc66dd");
   });
 
   it("unlistens when async listener registration resolves after disposal", async () => {

@@ -23,8 +23,49 @@ export interface AgentTerminalOptionInput {
   theme: ITheme;
 }
 
+export interface AgentTerminalThemeTokens {
+  base100: string;
+  base200: string;
+  base300: string;
+  baseContent: string;
+  primary: string;
+  secondary: string;
+  accent: string;
+  neutral: string;
+  info: string;
+  success: string;
+  warning: string;
+  error: string;
+}
+
 export function agentTerminalFontSize(preferredFontSize: number): number {
   return Math.max(11, Math.min(13, preferredFontSize));
+}
+
+export function agentTerminalTheme(tokens: AgentTerminalThemeTokens): ITheme {
+  return {
+    background: tokens.base100,
+    foreground: tokens.baseContent,
+    cursor: tokens.primary,
+    cursorAccent: tokens.base100,
+    selectionBackground: tokens.base300,
+    black: tokens.base300,
+    brightBlack: tokens.neutral,
+    red: tokens.error,
+    brightRed: tokens.error,
+    green: tokens.success,
+    brightGreen: tokens.success,
+    yellow: tokens.warning,
+    brightYellow: tokens.warning,
+    blue: tokens.primary,
+    brightBlue: tokens.info,
+    magenta: tokens.accent,
+    brightMagenta: tokens.accent,
+    cyan: tokens.secondary,
+    brightCyan: tokens.info,
+    white: tokens.baseContent,
+    brightWhite: tokens.baseContent,
+  };
 }
 
 export function agentTerminalOptions({ fontFamily, fontSize, theme }: AgentTerminalOptionInput) {

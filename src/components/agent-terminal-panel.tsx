@@ -10,6 +10,7 @@ import {
   closeTerminal,
   agentTerminalOptions,
   agentTerminalFontSize,
+  agentTerminalTheme,
   bracketedPaste,
   retainAsyncUnlisten,
   resizeTerminal,
@@ -21,36 +22,37 @@ import {
   type TerminalOutputPayload,
   type TerminalSize,
 } from "../lib/terminal-pty";
+import type { AppTheme } from "../types/editor";
 import "@xterm/xterm/css/xterm.css";
 
 const encoder = new TextEncoder();
-const terminalTheme = {
-  background: "#09090b",
-  foreground: "#e4e4e7",
-  cursor: "#a1a1aa",
-  cursorAccent: "#09090b",
-  selectionBackground: "#3f3f46",
-  black: "#18181b",
-  brightBlack: "#3f3f46",
-  red: "#f87171",
-  brightRed: "#fca5a5",
-  green: "#4ade80",
-  brightGreen: "#86efac",
-  yellow: "#facc15",
-  brightYellow: "#fde047",
-  blue: "#60a5fa",
-  brightBlue: "#93c5fd",
-  magenta: "#c084fc",
-  brightMagenta: "#d8b4fe",
-  cyan: "#22d3ee",
-  brightCyan: "#67e8f9",
-  white: "#d4d4d8",
-  brightWhite: "#f4f4f5",
-};
+
+function cssThemeColor(styles: CSSStyleDeclaration, name: string, fallback: string): string {
+  return styles.getPropertyValue(name).trim() || fallback;
+}
+
+function terminalThemeFromElement(element: HTMLElement) {
+  const styles = getComputedStyle(element);
+  return agentTerminalTheme({
+    base100: cssThemeColor(styles, "--color-base-100", "#09090b"),
+    base200: cssThemeColor(styles, "--color-base-200", "#18181b"),
+    base300: cssThemeColor(styles, "--color-base-300", "#3f3f46"),
+    baseContent: cssThemeColor(styles, "--color-base-content", "#e4e4e7"),
+    primary: cssThemeColor(styles, "--color-primary", "#4ade80"),
+    secondary: cssThemeColor(styles, "--color-secondary", "#a1a1aa"),
+    accent: cssThemeColor(styles, "--color-accent", "#c084fc"),
+    neutral: cssThemeColor(styles, "--color-neutral", "#3f3f46"),
+    info: cssThemeColor(styles, "--color-info", "#60a5fa"),
+    success: cssThemeColor(styles, "--color-success", "#4ade80"),
+    warning: cssThemeColor(styles, "--color-warning", "#facc15"),
+    error: cssThemeColor(styles, "--color-error", "#f87171"),
+  });
+}
 
 interface AgentTerminalPanelProps {
   launchKind: AgentTerminalKind;
   launchNonce: number;
+  theme: AppTheme;
   fontFamily: string;
   fontSize: number;
   maximized: boolean;
@@ -71,6 +73,7 @@ function labelFor(kind: AgentTerminalKind): string {
 export const AgentTerminalPanel = forwardRef<AgentTerminalPanelHandle, AgentTerminalPanelProps>(function AgentTerminalPanel({
   launchKind,
   launchNonce,
+  theme,
   fontFamily,
   fontSize,
   maximized,
@@ -161,7 +164,7 @@ export const AgentTerminalPanel = forwardRef<AgentTerminalPanelHandle, AgentTerm
     const term = new XtermTerminal(agentTerminalOptions({
       fontFamily: terminalFontFamily,
       fontSize: terminalFontSize,
-      theme: terminalTheme,
+      theme: terminalThemeFromElement(host),
     }));
     term.loadAddon(fitAddon);
     term.loadAddon(new Unicode11Addon());
@@ -221,6 +224,15 @@ export const AgentTerminalPanel = forwardRef<AgentTerminalPanelHandle, AgentTerm
   }, [fit, terminalFontFamily, terminalFontSize, maximized]);
 
   useEffect(() => {
+    const term = termRef.current;
+    const host = hostRef.current;
+    if (!term || !host) return;
+    requestAnimationFrame(() => {
+      term.options.theme = terminalThemeFromElement(host);
+    });
+  }, [theme]);
+
+  useEffect(() => {
     let disposed = false;
     let unlistenOutput: (() => void) | null = null;
     let unlistenExit: (() => void) | null = null;
@@ -261,29 +273,29 @@ export const AgentTerminalPanel = forwardRef<AgentTerminalPanelHandle, AgentTerm
   }, [launchKind, launchNonce, ready, startTerminal]);
 
   return (
-    <div className="flex-1 min-h-0 flex flex-col bg-zinc-950">
-      <div className="flex items-center border-b border-zinc-800 bg-zinc-900 px-3 py-2 shrink-0">
+    <div className="flex-1 min-h-0 flex flex-col bg-base-100">
+      <div className="flex items-center border-b border-base-300/60 bg-base-200 px-3 py-2 shrink-0">
         <button
           onClick={onClose}
-          className="mr-2 flex size-3.5 items-center justify-center rounded-full bg-red-500/70 text-transparent transition-colors hover:bg-red-500 hover:text-zinc-950"
+          className="mr-2 flex size-3.5 items-center justify-center rounded-full bg-error/70 text-transparent transition-colors hover:bg-error hover:text-error-content"
           title="Close terminal"
           aria-label="Close terminal"
         >
           <X size={10} strokeWidth={3} />
         </button>
         <div className="flex items-center gap-2 text-xs">
-          <BotMessageSquare size={14} className="text-zinc-500" />
-          <span className="font-medium text-zinc-300">Agent</span>
-          <span className="text-zinc-700">/</span>
-          <span className="text-zinc-500">{labelFor(activeKind)}</span>
-          <span className={status === "running" ? "text-emerald-400/80" : status === "error" ? "text-red-400/85" : "text-zinc-600"}>
+          <BotMessageSquare size={14} className="text-base-content/40" />
+          <span className="font-medium text-base-content/80">Agent</span>
+          <span className="text-base-content/25">/</span>
+          <span className="text-base-content/45">{labelFor(activeKind)}</span>
+          <span className={status === "running" ? "text-success/80" : status === "error" ? "text-error/85" : "text-base-content/35"}>
             {status}
           </span>
         </div>
         <div className="ml-4 flex items-center gap-1">
           <button
             onClick={() => { void startTerminal(activeKind); }}
-            className="inline-flex size-6 items-center justify-center rounded text-zinc-500 transition-colors hover:bg-zinc-800 hover:text-zinc-300"
+            className="inline-flex size-6 items-center justify-center rounded text-base-content/45 transition-colors hover:bg-base-300 hover:text-base-content/75"
             title={`Restart ${labelFor(activeKind)}`}
             aria-label={`Restart ${labelFor(activeKind)}`}
           >
@@ -292,14 +304,14 @@ export const AgentTerminalPanel = forwardRef<AgentTerminalPanelHandle, AgentTerm
         </div>
         <button
           onClick={onToggleMaximized}
-          className="ml-auto inline-flex size-6 items-center justify-center rounded text-zinc-500 transition-colors hover:bg-zinc-800 hover:text-zinc-300"
+          className="ml-auto inline-flex size-6 items-center justify-center rounded text-base-content/45 transition-colors hover:bg-base-300 hover:text-base-content/75"
           title={maximized ? "Restore terminal pane" : "Maximize terminal"}
           aria-label={maximized ? "Restore terminal pane" : "Maximize terminal"}
         >
           {maximized ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
         </button>
       </div>
-      <div className="kata-agent-terminal min-h-0 flex-1 overflow-hidden bg-zinc-950 p-2">
+      <div className="kata-agent-terminal min-h-0 flex-1 overflow-hidden bg-base-100 p-2">
         <div ref={hostRef} className="h-full min-h-0 w-full overflow-hidden [&_.xterm]:h-full" />
       </div>
     </div>
