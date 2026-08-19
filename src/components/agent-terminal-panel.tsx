@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState, type ReactNode } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { FitAddon } from "@xterm/addon-fit";
 import { Terminal as XtermTerminal } from "@xterm/xterm";
 import { BotMessageSquare, Code2, Maximize2, Minimize2, Monitor, RotateCcw, X } from "lucide-react";
 import {
   closeTerminal,
+  bracketedPaste,
   resizeTerminal,
   shouldForwardTerminalResize,
   spawnTerminal,
@@ -26,19 +27,23 @@ interface AgentTerminalPanelProps {
   onToggleMaximized: () => void;
 }
 
+export interface AgentTerminalPanelHandle {
+  pasteText: (text: string) => Promise<boolean>;
+}
+
 function labelFor(kind: AgentTerminalKind): string {
   if (kind === "claude") return "Claude";
   if (kind === "codex") return "Codex";
   return "Shell";
 }
 
-export function AgentTerminalPanel({
+export const AgentTerminalPanel = forwardRef<AgentTerminalPanelHandle, AgentTerminalPanelProps>(function AgentTerminalPanel({
   launchKind,
   launchNonce,
   maximized,
   onClose,
   onToggleMaximized,
-}: AgentTerminalPanelProps) {
+}, ref) {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const termRef = useRef<XtermTerminal | null>(null);
   const fitRef = useRef<FitAddon | null>(null);
@@ -101,6 +106,17 @@ export function AgentTerminalPanel({
       term.writeln(error instanceof Error ? error.message : String(error));
     }
   }, [closeCurrentTerminal, fit]);
+
+  const pasteText = useCallback(async (text: string) => {
+    const terminalId = terminalIdRef.current;
+    const term = termRef.current;
+    if (terminalId == null || !term) return false;
+    await writeTerminal(terminalId, encoder.encode(bracketedPaste(text)));
+    term.focus();
+    return true;
+  }, []);
+
+  useImperativeHandle(ref, () => ({ pasteText }), [pasteText]);
 
   useEffect(() => {
     const host = hostRef.current;
@@ -274,4 +290,4 @@ export function AgentTerminalPanel({
       <div ref={hostRef} className="min-h-0 flex-1 p-2 [&_.xterm]:h-full" />
     </div>
   );
-}
+});

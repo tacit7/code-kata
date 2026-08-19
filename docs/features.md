@@ -163,12 +163,14 @@ pnpm agent code
 pnpm agent results
 ```
 
-The problem page also exposes an `Ask` toolbar button and registers `Ask Agent`
-and `Export Agent Context` commands in the command palette. `Ask Agent` exports
-fresh context and copies a no-spoilers tutoring prompt to the clipboard. See
-`docs/agent_bridge.md` for the schema and usage contract. Tauri packaged builds
-include the project-local skill, CLI, and bridge doc under the app's bundled
-`agent/` resources.
+The problem page also exposes an `Ask` toolbar button and registers `Ask Agent`,
+`Send Agent Prompt to Terminal`, and `Export Agent Context` commands in the
+command palette. `Ask Agent` exports fresh context and copies a no-spoilers
+tutoring prompt to the clipboard. When the embedded terminal is open, `Send ->`
+pastes that prompt into the active terminal using bracketed paste mode, without
+pressing Enter. See `docs/agent_bridge.md` for the schema and usage contract.
+Tauri packaged builds include the project-local skill, CLI, and bridge doc under
+the app's bundled `agent/` resources.
 
 ### Native Confirmation Dialogs
 
@@ -183,7 +185,9 @@ Python includes an embedded xterm.js terminal panel backed by a native PTY. The
 problem toolbar can open a shell terminal, and the command palette/native Kata
 menu can launch shell, Claude, or Codex directly. The terminal sets
 `KATA_AGENT_CONTEXT_PATH` so local agent CLIs can locate the current exported
-problem context from the agent helper bridge.
+problem context from the agent helper bridge. The editor can paste the current
+agent prompt into the active terminal, but it does not submit the prompt
+automatically.
 
 ### Persisted Pane Layouts
 

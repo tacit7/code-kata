@@ -36,7 +36,7 @@ import { saveUserCode, loadUserCode, deleteUserCode, saveKataNotes, loadKataNote
 import { TestOutput } from "./test-output";
 import { TestcasePanel } from "./testcase-panel";
 import { ReplPanel, type ReplSeed } from "./repl-panel";
-import { AgentTerminalPanel } from "./agent-terminal-panel";
+import { AgentTerminalPanel, type AgentTerminalPanelHandle } from "./agent-terminal-panel";
 import { extractTestCall } from "../lib/repl-seed";
 import { monacoReady } from "../lib/monaco-setup";
 import { useKataNavigation } from "../hooks/use-kata-navigation";
@@ -559,6 +559,7 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
   const vimModeRef = useRef<VimModeState<editor.IStandaloneCodeEditor, VimAdapterInstance> | null>(null);
   const statusBarRef = useRef<HTMLDivElement | null>(null);
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
+  const agentTerminalRef = useRef<AgentTerminalPanelHandle | null>(null);
   const [vizSpeed, setVizSpeed] = useState<"900" | "500" | "200">("500");
   const [results, setResults] = useState<TestResult[] | null>(null);
   const [ranAt, setRanAt] = useState<string>("");
@@ -804,6 +805,22 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
     await writeText(agentPromptFor(context));
     toast.success("Agent prompt copied", 1800);
   }, [agentContextAutosave, buildCurrentAgentContext]);
+
+  const sendAgentPromptToTerminal = useCallback(async () => {
+    if (!showAgentTerminal) {
+      toast.error("Open the terminal first", 1800);
+      return;
+    }
+    agentContextAutosave.cancel();
+    const context = buildCurrentAgentContext();
+    await writeAgentContext(context);
+    const pasted = await agentTerminalRef.current?.pasteText(agentPromptFor(context));
+    if (pasted) {
+      toast.success("Agent prompt pasted into terminal", 1800);
+    } else {
+      toast.error("Terminal is still starting", 1800);
+    }
+  }, [agentContextAutosave, buildCurrentAgentContext, showAgentTerminal]);
 
   useEffect(() => {
     setActiveSolutionVariant(0);
@@ -1073,6 +1090,15 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
         run: () => { void copyAgentPrompt(); },
       },
       {
+        id: "editor:send-agent-prompt-to-terminal",
+        title: "Send Agent Prompt to Terminal",
+        subtitle: "Paste the current tutoring prompt into the open terminal",
+        section: "Editor",
+        keywords: ["agent", "terminal", "prompt", "paste", "claude", "codex"],
+        disabled: !showAgentTerminal,
+        run: () => { void sendAgentPromptToTerminal(); },
+      },
+      {
         id: "editor:reset-code",
         title: "Reset Code",
         section: "Editor",
@@ -1129,6 +1155,7 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
     registerCommand,
     replSupported,
     runCount,
+    sendAgentPromptToTerminal,
     running,
     shortcuts.nextKata,
     shortcuts.prevKata,
@@ -1566,6 +1593,16 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
           <BotMessageSquare size={16} />
           <span>Ask</span>
         </button>
+        {showAgentTerminal && (
+          <button
+            onClick={() => { void sendAgentPromptToTerminal(); }}
+            title="Paste agent prompt into terminal"
+            className={`${toolbarButtonClass} btn-ghost gap-1.5 text-base-content/50 hover:text-base-content/80`}
+          >
+            <span>Send</span>
+            <ArrowRight size={16} />
+          </button>
+        )}
         {(hasVisibleTestCases || results || running) && (
           <button
             onClick={handleToggleOutputPane}
@@ -1680,6 +1717,7 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
         }`}
       />
       <AgentTerminalPanel
+        ref={agentTerminalRef}
         launchKind={agentTerminalKind}
         launchNonce={agentTerminalLaunchNonce}
         maximized={maximizedPane === "terminal"}

@@ -70,6 +70,7 @@ the current UI/product cleanup workstream.
 | Added copy solution to editor | Done | The solution copy action copies the selected solution into the editor, using `Copy ->` wording. |
 | Added visible Ask Agent action | Done | The problem toolbar includes an `Ask` action that exports fresh agent context and copies a no-spoilers tutoring prompt. |
 | Added embedded agent terminal panel | Done | The problem page can open an xterm.js PTY panel and launch Shell, Claude, or Codex. |
+| Added Send to Terminal prompt action | Done | When the terminal is open, the toolbar shows `Send ->` to paste the current agent prompt into the terminal without submitting it. |
 
 ## Session Results
 

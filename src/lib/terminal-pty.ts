@@ -36,6 +36,11 @@ export function writeTerminal(terminalId: number, data: Uint8Array): Promise<voi
   });
 }
 
+export function bracketedPaste(text: string): string {
+  const normalized = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+  return `\x1b[200~${normalized}\x1b[201~`;
+}
+
 export function resizeTerminal(terminalId: number, size: TerminalSize): Promise<void> {
   return invoke("resize_terminal", {
     terminalId,
