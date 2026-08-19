@@ -6,6 +6,7 @@ import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import {
   ArrowLeft,
   ArrowRight,
+  BotMessageSquare,
   GitCompareArrows,
   ListChecks,
   Maximize2,
@@ -39,6 +40,7 @@ import { extractTestCall } from "../lib/repl-seed";
 import { monacoReady } from "../lib/monaco-setup";
 import { useKataNavigation } from "../hooks/use-kata-navigation";
 import { createAutosave } from "../lib/autosave";
+import { confirmAction } from "../lib/confirm-action";
 import { disposeVimMode, syncVimMode, type VimModeState } from "../lib/vim-mode";
 import { toast } from "../stores/toast-store";
 import { useCommandPaletteStore } from "../stores/command-palette-store";
@@ -843,10 +845,18 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
 
   const handleReset = useCallback(async () => {
     if (!editorRef.current) return;
+    const ok = await confirmAction({
+      message: `Reset code for "${kata.name}"? This restores the starter code and clears your saved edits for this kata.`,
+      title: "Reset Code",
+      kind: "warning",
+      okLabel: "Reset",
+      cancelLabel: "Cancel",
+    });
+    if (!ok) return;
     editorRef.current.setValue(kata.code);
     await deleteUserCode(kata.id);
     setSaved(true);
-  }, [kata.id, kata.code]);
+  }, [kata.id, kata.code, kata.name]);
 
   const handleRun = useCallback(async () => {
     if (!editorRef.current || running) return;
@@ -1477,6 +1487,14 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
             <Terminal size={16} />
           </button>
         )}
+        <button
+          onClick={() => { void copyAgentPrompt(); }}
+          title="Ask Agent"
+          className={`${toolbarButtonClass} btn-ghost gap-1.5 text-base-content/50 hover:text-base-content/80`}
+        >
+          <BotMessageSquare size={16} />
+          <span>Ask</span>
+        </button>
         {(hasVisibleTestCases || results || running) && (
           <button
             onClick={handleToggleOutputPane}

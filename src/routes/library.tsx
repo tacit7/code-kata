@@ -8,6 +8,7 @@ import { useKataStore } from "../stores/kata-store";
 import type { LibrarySortMode } from "../stores/kata-store";
 import { useSettingsStore } from "../stores/settings-store";
 import { CATEGORY_LEVEL } from "../lib/levels";
+import { confirmAction } from "../lib/confirm-action";
 import { moduleBodyClass, moduleDetailsClass, moduleHeaderClass, moduleTitleClass } from "../lib/module-accordion";
 import { reseedKatas, resetKataProgress } from "../lib/database";
 import { compareDpCurriculumOrder, dpCategoryLabelFor, dpDisplayNameFor, dpFamilyFor, DP_MODULES } from "../lib/dp-patterns";
@@ -364,6 +365,19 @@ function LibraryPage({ modules }: { modules: boolean }) {
     }
   };
 
+  const handleDeleteCustomKata = async (kataId: number) => {
+    const kata = katas.find((item) => item.id === kataId);
+    const ok = await confirmAction({
+      message: kata ? `Delete "${kata.name}"?` : "Delete this kata?",
+      title: "Delete Kata",
+      kind: "warning",
+      okLabel: "Delete",
+      cancelLabel: "Cancel",
+    });
+    if (!ok) return;
+    await deleteKata(kataId);
+  };
+
   // Native right-click menu on a kata row (see show_kata_context_menu in
   // src-tauri/src/lib.rs) — Rust just shows the OS menu and relays which
   // item fired; this owns navigation/store state/clipboard.
@@ -380,7 +394,15 @@ function LibraryPage({ modules }: { modules: boolean }) {
           toggleFavoriteById(kataId);
           break;
         case "reset":
-          if (confirm(`Reset progress for "${kata.name}"? This clears its best time and streak.`)) {
+          void (async () => {
+            const ok = await confirmAction({
+              message: `Reset progress for "${kata.name}"? This clears its best time and streak.`,
+              title: "Reset Progress",
+              kind: "warning",
+              okLabel: "Reset",
+              cancelLabel: "Cancel",
+            });
+            if (!ok) return;
             void resetKataProgress(kataId)
               .then(() => useKataStore.getState().loadKatas(language))
               .then(() => toast.success(`Reset progress: ${kata.name}`))
@@ -388,7 +410,7 @@ function LibraryPage({ modules }: { modules: boolean }) {
                 console.error("[library] Failed to reset kata progress:", error);
                 toast.error("Could not reset progress");
               });
-          }
+          })();
           break;
         case "copy":
           void writeText(kata.name)
@@ -606,7 +628,7 @@ function LibraryPage({ modules }: { modules: boolean }) {
                 </svg>
               </button>
               <button
-                onClick={(e) => { e.stopPropagation(); if (confirm("Delete this kata?")) deleteKata(kata.id); }}
+                onClick={(e) => { e.stopPropagation(); void handleDeleteCustomKata(kata.id); }}
                 className="btn btn-ghost btn-xs btn-square text-error/50 hover:text-error"
                 title="Delete kata"
               >

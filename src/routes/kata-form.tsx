@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router";
 import Editor from "@monaco-editor/react";
 import { monacoReady } from "../lib/monaco-setup";
+import { confirmAction } from "../lib/confirm-action";
 import { useKataStore } from "../stores/kata-store";
 import { useSettingsStore } from "../stores/settings-store";
 
@@ -88,7 +89,14 @@ export function KataFormPage() {
 
   const handleDelete = async () => {
     if (!kataId) return;
-    if (!confirm("Delete this kata? This cannot be undone.")) return;
+    const ok = await confirmAction({
+      message: "Delete this kata? This cannot be undone.",
+      title: "Delete Kata",
+      kind: "warning",
+      okLabel: "Delete",
+      cancelLabel: "Cancel",
+    });
+    if (!ok) return;
     await deleteKata(Number(kataId));
     navigate("/problems");
   };

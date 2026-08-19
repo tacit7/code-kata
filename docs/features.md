@@ -40,6 +40,7 @@ Current cross-app feature status. `Partial` means the feature exists but is not 
 | Chrome-style app UI zoom | Yes | Yes | Unknown | Unknown |
 | Command palette | Yes | Yes | No | No |
 | Agent helper bridge and CLI | Yes | No | No | No |
+| Native confirmation dialogs | Yes | No | Unknown | Unknown |
 | Toast notifications | Yes | Yes | Unknown | Unknown |
 | Colorized bracket pairs | Yes | Yes | Unknown | Unknown |
 | Configurable keyboard shortcuts, including REPL toggle | Yes | Partial | Unknown | Unknown |
@@ -161,11 +162,19 @@ pnpm agent code
 pnpm agent results
 ```
 
-The problem page also registers `Ask Agent` and `Export Agent Context` commands
-in the command palette. `Ask Agent` exports fresh context and copies a
-no-spoilers tutoring prompt to the clipboard. See `docs/agent_bridge.md` for the
-schema and usage contract. Tauri packaged builds include the project-local
-skill, CLI, and bridge doc under the app's bundled `agent/` resources.
+The problem page also exposes an `Ask` toolbar button and registers `Ask Agent`
+and `Export Agent Context` commands in the command palette. `Ask Agent` exports
+fresh context and copies a no-spoilers tutoring prompt to the clipboard. See
+`docs/agent_bridge.md` for the schema and usage contract. Tauri packaged builds
+include the project-local skill, CLI, and bridge doc under the app's bundled
+`agent/` resources.
+
+### Native Confirmation Dialogs
+
+Python uses Tauri's native confirmation dialog for destructive actions such as
+resetting code, deleting custom katas, deleting practice presets, resetting kata
+progress, and resetting all progress. A browser-confirm fallback remains for
+tests and non-Tauri contexts.
 
 ### Persisted Pane Layouts
 
@@ -355,7 +364,7 @@ a generic `recursion` tag remain under Trees.
 | Keyboard shortcut editor | Planned | Planned | No | No |
 | Context menus | Planned | Planned | No | No |
 | Skeleton loading states | Planned | Planned | No | No |
-| Custom native-style dialogs | Planned | Planned | No | No |
+| Custom native-style dialogs | Yes | Planned | No | No |
 | Follow system theme | Planned | Planned | No | No |
 
 ### Native-Feel Improvements
@@ -372,7 +381,7 @@ a shell and more like local developer tools.
 | Context menus | Add right-click actions for problem rows and editor surfaces, including mark done, star, add/remove from daily, copy link, and reset progress. |
 | Persisted pane layouts | Remember problem panel visibility, REPL split direction, REPL size, active output tab, and dashboard tab. |
 | Skeleton loading states | Replace broad loading spinners with compact skeleton rows and specific status text where possible. |
-| Custom native-style dialogs | Replace browser `confirm()` prompts for delete/reset actions with app-styled confirmation dialogs. |
+| Custom native-style dialogs | Replace browser `confirm()` prompts for delete/reset actions with app-styled or native confirmation dialogs. |
 | Follow system theme | Add a theme option that follows the operating system light/dark appearance. |
 
 Suggested implementation order:

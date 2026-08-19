@@ -11,6 +11,7 @@ import type { KataStats } from "../stores/session-store";
 import type { Kata } from "../types/editor";
 import { levelsForKatas, visibleSelection, mergeSelection, CATEGORY_LEVEL } from "../lib/levels";
 import { EDITOR_TOGGLES, type EditorToggleKey } from "../lib/editor-settings";
+import { confirmAction } from "../lib/confirm-action";
 import { resumableSessionPath } from "../lib/session-resume";
 import { isReviewStatus, queueStatusForSr, type QueueKataStatus } from "../lib/practice-status";
 import { toast } from "../stores/toast-store";
@@ -373,7 +374,14 @@ export function PracticeQueuePage() {
 
   const handleDeletePracticePreset = useCallback(async () => {
     if (!selectedPracticePreset) return;
-    if (!window.confirm(`Delete "${selectedPracticePreset.name}"?`)) return;
+    const ok = await confirmAction({
+      message: `Delete "${selectedPracticePreset.name}"?`,
+      title: "Delete Preset",
+      kind: "warning",
+      okLabel: "Delete",
+      cancelLabel: "Cancel",
+    });
+    if (!ok) return;
 
     setPresetBusy(true);
     try {

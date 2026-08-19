@@ -3,8 +3,8 @@ import { useNavigate } from "react-router";
 import { Code2, Database, Dumbbell, Keyboard, Plus } from "lucide-react";
 import { useSettingsStore, DEFAULT_SHORTCUTS } from "../stores/settings-store";
 import type { ShortcutAction } from "../stores/settings-store";
-import { confirm } from "@tauri-apps/plugin-dialog";
 import { reseedKatas, resetAllProgress } from "../lib/database";
+import { confirmAction } from "../lib/confirm-action";
 import { APP_THEMES } from "../lib/editor-themes";
 import { EDITOR_TOGGLES } from "../lib/editor-settings";
 import { formatUiScale, UI_SCALE_OPTIONS } from "../lib/ui-scale";
@@ -373,9 +373,12 @@ function DataTab() {
   }
 
   async function handleResetAllProgress() {
-    const ok = await confirm("Reset progress for every kata? This clears all best times and streaks.", {
+    const ok = await confirmAction({
+      message: "Reset progress for every kata? This clears all best times and streaks.",
       title: "Reset All Progress",
       kind: "warning",
+      okLabel: "Reset",
+      cancelLabel: "Cancel",
     });
     if (!ok) return;
     setResettingAll(true);

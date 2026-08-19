@@ -68,6 +68,7 @@ the current UI/product cleanup workstream.
 | Added collapsible problem panel | Done | The problem/solution/notes side panel can be hidden and restored from the editor tab bar. |
 | Added REPL split controls | Done | The REPL pane can switch between horizontal and vertical 50/50 splits with VS Code-style layout icons. |
 | Added copy solution to editor | Done | The solution copy action copies the selected solution into the editor, using `Copy ->` wording. |
+| Added visible Ask Agent action | Done | The problem toolbar includes an `Ask` action that exports fresh agent context and copies a no-spoilers tutoring prompt. |
 
 ## Session Results
 
@@ -85,6 +86,7 @@ the current UI/product cleanup workstream.
 | Added colorized bracket pair setting | Done | Editor settings include bracket pair colorization. |
 | Used toggles for editor settings | Done | Binary settings are displayed as toggles. |
 | Improved settings section spacing | Done | Category sections have more margin for scanability. |
+| Switched destructive prompts to native confirmations | Done | Reset/delete actions use Tauri native confirmation dialogs with browser fallback outside Tauri. |
 
 ## App Shell And Branding
 
