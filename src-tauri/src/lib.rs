@@ -269,11 +269,21 @@ fn terminal_shell_command(command: Option<&str>) -> (String, Vec<String>) {
             }
         });
         if let Some(command) = command {
-            (shell, vec!["-lc".to_string(), command.to_string()])
+            (
+                shell,
+                vec!["-lc".to_string(), terminal_agent_launch_command(command)],
+            )
         } else {
             (shell, Vec::new())
         }
     }
+}
+
+#[cfg(not(windows))]
+fn terminal_agent_launch_command(command: &str) -> String {
+    format!(
+        "exec env -u NO_COLOR -u NODE_DISABLE_COLORS -u CODEX_CI TERM=xterm-256color COLORTERM=truecolor FORCE_COLOR=3 CLICOLOR=1 CLICOLOR_FORCE=1 {command}"
+    )
 }
 
 fn terminal_working_dir(app: &tauri::AppHandle, cwd: Option<String>) -> PathBuf {
@@ -313,6 +323,7 @@ fn terminal_app_data_dir(app: &tauri::AppHandle) -> Option<PathBuf> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::ffi::OsStr;
 
     #[test]
     fn explicit_terminal_working_dir_uses_existing_directory() {
@@ -356,6 +367,41 @@ mod tests {
         assert!(dir.join("package.json").is_file());
         assert!(dir.join("src-tauri").join("Cargo.toml").is_file());
     }
+
+    #[test]
+    fn terminal_color_env_removes_color_suppression() {
+        let mut cmd = CommandBuilder::new("dummy");
+        cmd.env("NO_COLOR", "1");
+        cmd.env("NODE_DISABLE_COLORS", "1");
+        cmd.env("CODEX_CI", "1");
+
+        configure_terminal_color_env(&mut cmd);
+
+        assert!(cmd.get_env("NO_COLOR").is_none());
+        assert!(cmd.get_env("NODE_DISABLE_COLORS").is_none());
+        assert!(cmd.get_env("CODEX_CI").is_none());
+        assert_eq!(cmd.get_env("TERM"), Some(OsStr::new("xterm-256color")));
+        assert_eq!(cmd.get_env("COLORTERM"), Some(OsStr::new("truecolor")));
+        assert_eq!(cmd.get_env("FORCE_COLOR"), Some(OsStr::new("3")));
+        assert_eq!(cmd.get_env("CLICOLOR"), Some(OsStr::new("1")));
+        assert_eq!(cmd.get_env("CLICOLOR_FORCE"), Some(OsStr::new("1")));
+    }
+
+    #[cfg(not(windows))]
+    #[test]
+    fn agent_launch_command_forces_color_after_shell_startup() {
+        let command = terminal_agent_launch_command("codex");
+
+        assert!(command.starts_with("exec env "));
+        assert!(command.contains("-u NO_COLOR"));
+        assert!(command.contains("-u NODE_DISABLE_COLORS"));
+        assert!(command.contains("-u CODEX_CI"));
+        assert!(command.contains("TERM=xterm-256color"));
+        assert!(command.contains("COLORTERM=truecolor"));
+        assert!(command.contains("FORCE_COLOR=3"));
+        assert!(command.contains("CLICOLOR_FORCE=1"));
+        assert!(command.ends_with(" codex"));
+    }
 }
 
 fn home_dir() -> Option<PathBuf> {
@@ -371,17 +417,7 @@ fn home_dir() -> Option<PathBuf> {
 }
 
 fn configure_terminal_env(app: &tauri::AppHandle, cmd: &mut CommandBuilder) {
-    cmd.env("TERM", "xterm-256color");
-    cmd.env("COLORTERM", "truecolor");
-    cmd.env("FORCE_COLOR", "3");
-    cmd.env(
-        "LANG",
-        env::var("LANG").unwrap_or_else(|_| "en_US.UTF-8".to_string()),
-    );
-    cmd.env(
-        "LC_ALL",
-        env::var("LC_ALL").unwrap_or_else(|_| "en_US.UTF-8".to_string()),
-    );
+    configure_terminal_color_env(cmd);
     cmd.env("KATA_TERMINAL", "1");
     cmd.env("PATH", enriched_terminal_path());
     if let Ok(path) = agent_context_file(app) {
@@ -390,6 +426,25 @@ fn configure_terminal_env(app: &tauri::AppHandle, cmd: &mut CommandBuilder) {
             path.to_string_lossy().to_string(),
         );
     }
+}
+
+fn configure_terminal_color_env(cmd: &mut CommandBuilder) {
+    cmd.env_remove("NO_COLOR");
+    cmd.env_remove("NODE_DISABLE_COLORS");
+    cmd.env_remove("CODEX_CI");
+    cmd.env("TERM", "xterm-256color");
+    cmd.env("COLORTERM", "truecolor");
+    cmd.env("FORCE_COLOR", "3");
+    cmd.env("CLICOLOR", "1");
+    cmd.env("CLICOLOR_FORCE", "1");
+    cmd.env(
+        "LANG",
+        env::var("LANG").unwrap_or_else(|_| "en_US.UTF-8".to_string()),
+    );
+    cmd.env(
+        "LC_ALL",
+        env::var("LC_ALL").unwrap_or_else(|_| "en_US.UTF-8".to_string()),
+    );
 }
 
 fn enriched_terminal_path() -> String {
