@@ -234,6 +234,38 @@ def group_anagrams(strs: list[str]) -> list[list[str]]:
         key = tuple(sorted(word))
         groups[key].append(word)
     return list(groups.values())`,
+    solutionVariants: [
+      {
+        label: "Sorted key",
+        code: `from collections import defaultdict
+
+def group_anagrams(strs: list[str]) -> list[list[str]]:
+    groups = defaultdict(list)
+    for word in strs:
+        key = tuple(sorted(word))
+        groups[key].append(word)
+    return list(groups.values())`,
+        complexity: "Time: O(n * k log k), Space: O(n * k)",
+        explanation: "Sorts each word to build an anagram signature. This is concise and often fast enough, but each word pays the cost of sorting its characters.",
+      },
+      {
+        label: "Character count key",
+        code: `from collections import defaultdict
+
+def group_anagrams(strs: list[str]) -> list[list[str]]:
+    groups = defaultdict(list)
+
+    for word in strs:
+        counts = [0] * 26
+        for char in word:
+            counts[ord(char) - ord("a")] += 1
+        groups[tuple(counts)].append(word)
+
+    return list(groups.values())`,
+        complexity: "Time: O(n * k), Space: O(n * k)",
+        explanation: "Counts lowercase letters to build a fixed-size signature for each word, avoiding the per-word sort while still grouping anagrams by identical character frequencies.",
+      },
+    ],
     usage: null,
     tags: ["string", "hash-map", "blind75", "neetcode", "arrays-hashing"],
   },
