@@ -585,6 +585,7 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
   const [replLayout, setReplLayout] = useState<ReplLayout>(editorLayout.replLayout);
   const [replFocusNonce, setReplFocusNonce] = useState(0);
   const [showAgentTerminal, setShowAgentTerminal] = useState(false);
+  const [agentTerminalMinimized, setAgentTerminalMinimized] = useState(false);
   const [agentTerminalKind, setAgentTerminalKind] = useState<AgentTerminalKind>(agentProvider);
   const [agentTerminalLaunchNonce, setAgentTerminalLaunchNonce] = useState(0);
   const [mountedEditor, setMountedEditor] = useState<editor.IStandaloneCodeEditor | null>(null);
@@ -725,7 +726,7 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
         ? "notes"
         : null;
   const hasReplPane = showRepl && replSupported;
-  const hasAgentTerminalPane = showAgentTerminal;
+  const hasAgentTerminalPane = showAgentTerminal && !agentTerminalMinimized;
   const hasResultsPane = (showTestcasePane && hasVisibleTestCases) || Boolean(results || running);
   const hasOutputPane = hasReplPane || hasResultsPane || hasAgentTerminalPane;
   const workAreaHidden =
@@ -808,7 +809,7 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
   }, [agentContextAutosave, agentSystemPrompt, buildCurrentAgentContext]);
 
   const sendAgentPromptToTerminal = useCallback(async () => {
-    if (!showAgentTerminal) {
+    if (!showAgentTerminal || agentTerminalMinimized) {
       toast.error("Open the agent first", 1800);
       return;
     }
@@ -821,7 +822,7 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
     } else {
       toast.error("Agent is still starting", 1800);
     }
-  }, [agentContextAutosave, agentSystemPrompt, buildCurrentAgentContext, showAgentTerminal]);
+  }, [agentContextAutosave, agentSystemPrompt, agentTerminalMinimized, buildCurrentAgentContext, showAgentTerminal]);
 
   useEffect(() => {
     setActiveSolutionVariant(0);
@@ -939,6 +940,7 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
     if (!replSupported) return;
     if (!showRepl) {
       setShowAgentTerminal(false);
+      setAgentTerminalMinimized(false);
       setMaximizedPane(null);
       setReplFocusNonce((nonce) => nonce + 1);
     }
@@ -948,6 +950,7 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
   const handleOpenRepl = useCallback(() => {
     if (!replSupported) return;
     setShowAgentTerminal(false);
+    setAgentTerminalMinimized(false);
     setMaximizedPane(null);
     setShowRepl(true);
     setReplFocusNonce((nonce) => nonce + 1);
@@ -956,19 +959,29 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
   const openAgentTerminal = useCallback((kind: AgentTerminalKind = agentProvider) => {
     setShowRepl(false);
     setMaximizedPane("terminal");
-    setAgentTerminalKind(kind);
-    setAgentTerminalLaunchNonce(Date.now());
+    setAgentTerminalMinimized(false);
+    if (!showAgentTerminal || agentTerminalKind !== kind) {
+      setAgentTerminalKind(kind);
+      setAgentTerminalLaunchNonce(Date.now());
+    }
     setShowAgentTerminal(true);
-  }, [agentProvider]);
+  }, [agentProvider, agentTerminalKind, showAgentTerminal]);
 
   const handleToggleAgentTerminal = useCallback(() => {
     if (showAgentTerminal) {
-      setShowAgentTerminal(false);
-      if (maximizedPane === "terminal") setMaximizedPane(null);
+      if (agentTerminalMinimized) {
+        setShowRepl(false);
+        setAgentTerminalMinimized(false);
+      } else {
+        setAgentTerminalMinimized(true);
+      }
+      if (maximizedPane === "terminal") {
+        setMaximizedPane(null);
+      }
       return;
     }
     openAgentTerminal(agentProvider);
-  }, [agentProvider, maximizedPane, openAgentTerminal, showAgentTerminal]);
+  }, [agentProvider, agentTerminalMinimized, maximizedPane, openAgentTerminal, showAgentTerminal]);
 
   const copySolutionToEditor = useCallback(() => {
     if (!editorRef.current || !activeSolution) return;
@@ -1046,7 +1059,11 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
       },
       {
         id: "editor:open-agent-terminal",
-        title: showAgentTerminal ? "Hide Agent" : `Open ${agentProvider === "claude" ? "Claude" : "Codex"}`,
+        title: showAgentTerminal
+          ? agentTerminalMinimized
+            ? "Show Agent"
+            : "Minimize Agent"
+          : `Open ${agentProvider === "claude" ? "Claude" : "Codex"}`,
         subtitle: "Launch the configured coding agent",
         section: "Editor",
         keywords: ["terminal", "agent", "claude", "codex"],
@@ -1082,7 +1099,7 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
         subtitle: "Paste the current tutoring prompt into the open agent",
         section: "Editor",
         keywords: ["agent", "terminal", "prompt", "paste", "claude", "codex"],
-        disabled: !showAgentTerminal,
+        disabled: !showAgentTerminal || agentTerminalMinimized,
         run: () => { void sendAgentPromptToTerminal(); },
       },
       {
@@ -1124,6 +1141,7 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
     return () => unregister.forEach((fn) => fn());
   }, [
     activeSolution,
+    agentTerminalMinimized,
     agentProvider,
     copyAgentPrompt,
     copySolutionToEditor,
@@ -1559,13 +1577,25 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
         )}
         <button
           onClick={handleToggleAgentTerminal}
-          title={showAgentTerminal ? "Hide agent" : `Open ${agentProvider === "claude" ? "Claude" : "Codex"}`}
+          title={
+            showAgentTerminal
+              ? agentTerminalMinimized
+                ? "Show agent"
+                : "Minimize agent"
+              : `Open ${agentProvider === "claude" ? "Claude" : "Codex"}`
+          }
           className={`${toolbarIconButtonClass} ${showAgentTerminal ? "btn-info" : "btn-ghost text-base-content/40"}`}
-          aria-label={showAgentTerminal ? "Hide agent" : `Open ${agentProvider === "claude" ? "Claude" : "Codex"}`}
+          aria-label={
+            showAgentTerminal
+              ? agentTerminalMinimized
+                ? "Show agent"
+                : "Minimize agent"
+              : `Open ${agentProvider === "claude" ? "Claude" : "Codex"}`
+          }
         >
           <BotMessageSquare size={16} />
         </button>
-        {showAgentTerminal && (
+        {hasAgentTerminalPane && (
           <button
             onClick={() => { void sendAgentPromptToTerminal(); }}
             title="Paste agent prompt"
@@ -1678,7 +1708,9 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
   const renderAgentTerminalPane = () => (
     <div
       className={`min-h-0 flex flex-col bg-base-200 ${
-        maximizedPane === "terminal"
+        agentTerminalMinimized
+          ? "hidden"
+          : maximizedPane === "terminal"
           ? "flex-1"
           : replLayout === "vertical"
             ? "flex-1 basis-0 border-l border-base-300/60"
@@ -1703,8 +1735,14 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
         fontSize={fontSize}
         layout={replLayout}
         maximized={maximizedPane === "terminal"}
+        visible={hasAgentTerminalPane}
         onClose={() => {
           setShowAgentTerminal(false);
+          setAgentTerminalMinimized(false);
+          if (maximizedPane === "terminal") setMaximizedPane(null);
+        }}
+        onMinimize={() => {
+          setAgentTerminalMinimized(true);
           if (maximizedPane === "terminal") setMaximizedPane(null);
         }}
         onLayoutChange={(layout) => {
@@ -2008,6 +2046,7 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
                           onSendToRepl={(testName) => {
                             const expression = extractTestCall(kata.testCode, testName, kata.language) ?? "";
                             setShowAgentTerminal(false);
+                            setAgentTerminalMinimized(false);
                             setShowRepl(true);
                             setMaximizedPane(null);
                             setReplSeed({ expression, nonce: Date.now() });
@@ -2026,7 +2065,7 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
           )}
 
           {hasReplPane && renderReplPane()}
-          {hasAgentTerminalPane && renderAgentTerminalPane()}
+          {showAgentTerminal && renderAgentTerminalPane()}
         </div>
       </div>
     </div>

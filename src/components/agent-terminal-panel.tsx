@@ -5,7 +5,7 @@ import { FitAddon } from "@xterm/addon-fit";
 import { Unicode11Addon } from "@xterm/addon-unicode11";
 import { WebLinksAddon } from "@xterm/addon-web-links";
 import { Terminal as XtermTerminal } from "@xterm/xterm";
-import { Maximize2, Minimize2, RotateCcw, SquareSplitHorizontal, SquareSplitVertical, X } from "lucide-react";
+import { Maximize2, Minimize2, Minus, RotateCcw, SquareSplitHorizontal, SquareSplitVertical, X } from "lucide-react";
 import {
   closeTerminal,
   agentTerminalOptions,
@@ -57,7 +57,9 @@ interface AgentTerminalPanelProps {
   fontSize: number;
   layout: "horizontal" | "vertical";
   maximized: boolean;
+  visible: boolean;
   onClose: () => void;
+  onMinimize: () => void;
   onLayoutChange: (layout: "horizontal" | "vertical") => void;
   onToggleMaximized: () => void;
 }
@@ -80,7 +82,9 @@ export const AgentTerminalPanel = forwardRef<AgentTerminalPanelHandle, AgentTerm
   fontSize,
   layout,
   maximized,
+  visible,
   onClose,
+  onMinimize,
   onLayoutChange,
   onToggleMaximized,
 }, ref) {
@@ -236,8 +240,9 @@ export const AgentTerminalPanel = forwardRef<AgentTerminalPanelHandle, AgentTerm
     term.options.fontFamily = terminalFontFamily;
     term.options.fontSize = terminalFontSize;
     term.options.lineHeight = 1.25;
+    if (!visible) return;
     scheduleFit();
-  }, [scheduleFit, terminalFontFamily, terminalFontSize, layout, maximized]);
+  }, [scheduleFit, terminalFontFamily, terminalFontSize, layout, maximized, visible]);
 
   useEffect(() => {
     const term = termRef.current;
@@ -302,6 +307,14 @@ export const AgentTerminalPanel = forwardRef<AgentTerminalPanelHandle, AgentTerm
           aria-label="Close terminal"
         >
           <X size={16} />
+        </button>
+        <button
+          onClick={onMinimize}
+          className="text-xs text-base-content/30 hover:text-base-content/60 transition-colors mr-2"
+          title="Hide terminal"
+          aria-label="Hide terminal"
+        >
+          <Minus size={16} />
         </button>
         <div className="flex items-center text-xs">
           <span className="text-base-content/45">{labelFor(activeKind)}</span>
