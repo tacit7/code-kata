@@ -141,3 +141,6 @@ When helping a student:
 - Prefer hints and small targeted fixes.
 - Do not provide the full solution unless the student asks for it.
 - Use latest test output before making assumptions.
+- Inspect exported context silently. Do not narrate `ls`, `rg`, `sqlite3`,
+  `kata.db`, `current-context.json`, or other integration plumbing unless the
+  student asks how the bridge works.

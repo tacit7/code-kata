@@ -7,6 +7,8 @@ description: Use when helping a student with the current Code Kata desktop probl
 
 Use the bundled/project-local `kata-agent` CLI before answering questions about
 the active Code Kata problem. The CLI reads the app-exported Monaco context.
+Use that context silently: do not narrate file listing, database queries,
+context-file discovery, or other tool-use details to the student.
 
 ## Commands
 
@@ -57,6 +59,11 @@ and copies a tutoring prompt to the clipboard.
 - Explain bugs using the visible testcase or latest failed result.
 - If giving code, keep it limited to the relevant line/block when possible.
 - Use the student's current code as the source of truth.
+- Do not mention `current-context.json`, `kata.db`, `sqlite3`, `ls`, `rg`, or
+  other integration plumbing unless the user asks how the agent integration
+  works.
+- Keep visible responses student-facing: state the diagnosis, hint, or next
+  step directly instead of describing your investigation process.
 
 ## Context Contract
 
