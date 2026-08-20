@@ -58,6 +58,7 @@ interface AgentTerminalPanelProps {
   layout: "horizontal" | "vertical";
   maximized: boolean;
   visible: boolean;
+  showHeader?: boolean;
   buildStartupPrompt: () => Promise<string | null>;
   onClose: () => void;
   onMinimize: () => void;
@@ -67,6 +68,7 @@ interface AgentTerminalPanelProps {
 
 export interface AgentTerminalPanelHandle {
   pasteText: (text: string) => Promise<boolean>;
+  restart: () => Promise<void>;
 }
 
 function labelFor(kind: AgentTerminalKind): string {
@@ -84,6 +86,7 @@ export const AgentTerminalPanel = forwardRef<AgentTerminalPanelHandle, AgentTerm
   layout,
   maximized,
   visible,
+  showHeader = true,
   buildStartupPrompt,
   onClose,
   onMinimize,
@@ -190,7 +193,11 @@ export const AgentTerminalPanel = forwardRef<AgentTerminalPanelHandle, AgentTerm
     return true;
   }, []);
 
-  useImperativeHandle(ref, () => ({ pasteText }), [pasteText]);
+  const restart = useCallback(async () => {
+    await startTerminal(activeKind);
+  }, [activeKind, startTerminal]);
+
+  useImperativeHandle(ref, () => ({ pasteText, restart }), [pasteText, restart]);
 
   useEffect(() => {
     const host = hostRef.current;
@@ -312,65 +319,67 @@ export const AgentTerminalPanel = forwardRef<AgentTerminalPanelHandle, AgentTerm
 
   return (
     <div className="flex-1 min-h-0 flex flex-col bg-base-100">
-      <div className="flex items-center border-b border-base-300/60 bg-base-200 px-3 py-1 shrink-0">
-        <button
-          onClick={onClose}
-          className="text-xs text-base-content/30 hover:text-base-content/60 transition-colors mr-2"
-          title="Close terminal"
-          aria-label="Close terminal"
-        >
-          <X size={16} />
-        </button>
-        <button
-          onClick={onMinimize}
-          className="text-xs text-base-content/30 hover:text-base-content/60 transition-colors mr-2"
-          title="Hide terminal"
-          aria-label="Hide terminal"
-        >
-          <Minus size={16} />
-        </button>
-        <div className="flex items-center text-xs">
-          <span className="text-base-content/45">{labelFor(activeKind)}</span>
-        </div>
-        <div className="ml-4 flex items-center gap-1">
+      {showHeader && (
+        <div className="flex items-center border-b border-base-300/60 bg-base-200 px-3 py-1 shrink-0">
           <button
-            onClick={() => { void startTerminal(activeKind); }}
-            className="inline-flex size-6 items-center justify-center rounded text-base-content/45 transition-colors hover:bg-base-300 hover:text-base-content/75"
-            title={`Restart ${labelFor(activeKind)}`}
-            aria-label={`Restart ${labelFor(activeKind)}`}
+            onClick={onClose}
+            className="text-xs text-base-content/30 hover:text-base-content/60 transition-colors mr-2"
+            title="Close terminal"
+            aria-label="Close terminal"
           >
-            <RotateCcw size={14} />
+            <X size={16} />
           </button>
-        </div>
-        <div className="ml-auto flex items-center gap-1">
-          <div className="join">
+          <button
+            onClick={onMinimize}
+            className="text-xs text-base-content/30 hover:text-base-content/60 transition-colors mr-2"
+            title="Hide terminal"
+            aria-label="Hide terminal"
+          >
+            <Minus size={16} />
+          </button>
+          <div className="flex items-center text-xs">
+            <span className="text-base-content/45">{labelFor(activeKind)}</span>
+          </div>
+          <div className="ml-4 flex items-center gap-1">
             <button
-              onClick={() => onLayoutChange("vertical")}
-              className={`${splitButtonClass(layout === "vertical" && !maximized)} join-item`}
-              title="Split problem and agent side by side"
-              aria-label="Split problem and agent side by side"
+              onClick={() => { void restart(); }}
+              className="inline-flex size-6 items-center justify-center rounded text-base-content/45 transition-colors hover:bg-base-300 hover:text-base-content/75"
+              title={`Restart ${labelFor(activeKind)}`}
+              aria-label={`Restart ${labelFor(activeKind)}`}
             >
-              <SquareSplitHorizontal size={16} />
-            </button>
-            <button
-              onClick={() => onLayoutChange("horizontal")}
-              className={`${splitButtonClass(layout === "horizontal" && !maximized)} join-item`}
-              title="Split problem and agent stacked"
-              aria-label="Split problem and agent stacked"
-            >
-              <SquareSplitVertical size={16} />
+              <RotateCcw size={14} />
             </button>
           </div>
-          <button
-            onClick={onToggleMaximized}
-            className="inline-flex size-6 items-center justify-center rounded text-base-content/45 transition-colors hover:bg-base-300 hover:text-base-content/75"
-            title={maximized ? "Restore terminal pane" : "Maximize terminal"}
-            aria-label={maximized ? "Restore terminal pane" : "Maximize terminal"}
-          >
-            {maximized ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
-          </button>
+          <div className="ml-auto flex items-center gap-1">
+            <div className="join">
+              <button
+                onClick={() => onLayoutChange("vertical")}
+                className={`${splitButtonClass(layout === "vertical" && !maximized)} join-item`}
+                title="Split problem and agent side by side"
+                aria-label="Split problem and agent side by side"
+              >
+                <SquareSplitHorizontal size={16} />
+              </button>
+              <button
+                onClick={() => onLayoutChange("horizontal")}
+                className={`${splitButtonClass(layout === "horizontal" && !maximized)} join-item`}
+                title="Split problem and agent stacked"
+                aria-label="Split problem and agent stacked"
+              >
+                <SquareSplitVertical size={16} />
+              </button>
+            </div>
+            <button
+              onClick={onToggleMaximized}
+              className="inline-flex size-6 items-center justify-center rounded text-base-content/45 transition-colors hover:bg-base-300 hover:text-base-content/75"
+              title={maximized ? "Restore terminal pane" : "Maximize terminal"}
+              aria-label={maximized ? "Restore terminal pane" : "Maximize terminal"}
+            >
+              {maximized ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+            </button>
+          </div>
         </div>
-      </div>
+      )}
       <div className="kata-agent-terminal min-h-0 flex-1 overflow-hidden bg-base-100 p-2">
         <div ref={hostRef} className="h-full min-h-0 w-full overflow-hidden [&_.xterm]:h-full" />
       </div>

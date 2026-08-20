@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { invoke } from "@tauri-apps/api/core";
-import { listen } from "@tauri-apps/api/event";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { open } from "@tauri-apps/plugin-shell";
 import { useKataStore } from "../stores/kata-store";
@@ -19,6 +18,7 @@ import { uniqueLeetcodeProblemKatas } from "../lib/problem-list-filter";
 import { compareRecursionCurriculumOrder, recursionFamilyFor, RECURSION_MODULES } from "../lib/recursion-patterns";
 import { ROADMAP_MODULES, compareRoadmapModuleOrder, isNeetcode150Kata, isNeetcode250Kata, matchesRoadmapModule, roadmapModuleTargetCount, type RoadmapListMode } from "../lib/roadmap-modules";
 import { toast } from "../stores/toast-store";
+import { useCommandPaletteStore } from "../stores/command-palette-store";
 import type { Kata } from "../types/editor";
 
 // Module-level so list positions survive navigating to a kata and back
@@ -57,6 +57,7 @@ function LibraryPage({ modules }: { modules: boolean }) {
   const dailyKataIds = useSettingsStore((s) => s.dailyKataIds);
   const doneKataIds = useSettingsStore((s) => s.doneKataIds);
   const setSetting = useSettingsStore((s) => s.setSetting);
+  const registerCommand = useCommandPaletteStore((s) => s.registerCommand);
   const navigate = useNavigate();
   const [urlSearchParams, setUrlSearchParams] = useSearchParams();
   const openModulesParam = modules ? urlSearchParams.get(OPEN_MODULES_PARAM) : null;
@@ -64,6 +65,7 @@ function LibraryPage({ modules }: { modules: boolean }) {
   const [expandedModules, setExpandedModules] = useState<Set<string>>(() => (
     modules ? parseOpenModuleIds(openModulesParam) : new Set()
   ));
+  const contextCommandCleanupRef = useRef<(() => void) | null>(null);
   const TAG_PREVIEW_COUNT = 3;
 
   const librarySearch = useKataStore((s) => s.librarySearch);
@@ -378,56 +380,112 @@ function LibraryPage({ modules }: { modules: boolean }) {
     await deleteKata(kataId);
   };
 
-  // Native right-click menu on a kata row (see show_kata_context_menu in
-  // src-tauri/src/lib.rs) — Rust just shows the OS menu and relays which
-  // item fired; this owns navigation/store state/clipboard.
-  useEffect(() => {
-    const unlisten = listen<{ action: string; kataId: number }>("kata-context-action", (event) => {
-      const { action, kataId } = event.payload;
-      const kata = katas.find((k) => k.id === kataId);
-      if (!kata) return;
-      switch (action) {
-        case "start":
-          navigate(`/editor/${kataId}`);
-          break;
-        case "favorite":
-          toggleFavoriteById(kataId);
-          break;
-        case "reset":
-          void (async () => {
-            const ok = await confirmAction({
-              message: `Reset progress for "${kata.name}"? This clears its best time and streak.`,
-              title: "Reset Progress",
-              kind: "warning",
-              okLabel: "Reset",
-              cancelLabel: "Cancel",
-            });
-            if (!ok) return;
-            void resetKataProgress(kataId)
-              .then(() => useKataStore.getState().loadKatas(language))
-              .then(() => toast.success(`Reset progress: ${kata.name}`))
-              .catch((error) => {
-                console.error("[library] Failed to reset kata progress:", error);
-                toast.error("Could not reset progress");
-              });
-          })();
-          break;
-        case "copy":
-          void writeText(kata.name)
-            .then(() => toast.success("Problem name copied", 1500))
-            .catch((error) => {
-              console.error("[library] Failed to copy kata name:", error);
-              toast.error("Could not copy problem name");
-            });
-          break;
-      }
+  const resetProgressForKata = async (kata: Kata) => {
+    const ok = await confirmAction({
+      message: `Reset progress for "${kata.name}"? This clears its best time and streak.`,
+      title: "Reset Progress",
+      kind: "warning",
+      okLabel: "Reset",
+      cancelLabel: "Cancel",
     });
-    return () => { void unlisten.then((fn) => fn()); };
-  }, [katas, dailyKataIds, language, navigate]);
+    if (!ok) return;
+    try {
+      await resetKataProgress(kata.id);
+      await useKataStore.getState().loadKatas(language);
+      toast.success(`Reset progress: ${kata.name}`);
+    } catch (error) {
+      console.error("[library] Failed to reset kata progress:", error);
+      toast.error("Could not reset progress");
+    }
+  };
+
+  const copyKataName = async (kata: Kata) => {
+    try {
+      await writeText(kata.name);
+      toast.success("Problem name copied", 1500);
+    } catch (error) {
+      console.error("[library] Failed to copy kata name:", error);
+      toast.error("Could not copy problem name");
+    }
+  };
+
+  useEffect(() => {
+    return () => contextCommandCleanupRef.current?.();
+  }, []);
 
   const handleKataContextMenu = (e: React.MouseEvent, kataId: number) => {
     e.preventDefault();
-    void invoke("show_kata_context_menu", { kataId, isFavorite: dailyKataIds.includes(kataId) });
+    const kata = katas.find((item) => item.id === kataId);
+    if (!kata) return;
+    const leetcodeUrl = leetcodeUrlFor(kata);
+
+    contextCommandCleanupRef.current?.();
+    const unregister = [
+      registerCommand({
+        id: "library:context:open",
+        title: "Open Kata",
+        hidden: true,
+        run: () => navigate(`/editor/${kata.id}`),
+      }),
+      registerCommand({
+        id: "library:context:favorite",
+        title: dailyKataIds.includes(kata.id) ? "Remove from Daily" : "Add to Daily",
+        hidden: true,
+        run: () => toggleFavoriteById(kata.id),
+      }),
+      registerCommand({
+        id: "library:context:reset-progress",
+        title: "Reset Progress",
+        hidden: true,
+        run: () => { void resetProgressForKata(kata); },
+      }),
+      registerCommand({
+        id: "library:context:copy-name",
+        title: "Copy Kata Name",
+        hidden: true,
+        run: () => { void copyKataName(kata); },
+      }),
+    ];
+
+    if (leetcodeUrl) {
+      unregister.push(
+        registerCommand({
+          id: "library:context:open-leetcode",
+          title: "Open on LeetCode",
+          hidden: true,
+          run: () => { void open(leetcodeUrl); },
+        }),
+      );
+    }
+
+    if (kata.isCustom) {
+      unregister.push(
+        registerCommand({
+          id: "library:context:edit",
+          title: "Edit Kata",
+          hidden: true,
+          run: () => navigate(`/kata/${kata.id}/edit`),
+        }),
+        registerCommand({
+          id: "library:context:delete",
+          title: "Delete Kata",
+          hidden: true,
+          run: () => { void handleDeleteCustomKata(kata.id); },
+        }),
+      );
+    }
+
+    contextCommandCleanupRef.current = () => {
+      unregister.forEach((fn) => fn());
+      contextCommandCleanupRef.current = null;
+    };
+
+    void invoke("show_kata_context_menu", {
+      kataId,
+      isFavorite: dailyKataIds.includes(kataId),
+      isCustom: kata.isCustom,
+      hasLeetcode: Boolean(leetcodeUrl),
+    });
   };
 
   const listRef = useRef<HTMLDivElement>(null);

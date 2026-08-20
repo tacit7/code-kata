@@ -492,46 +492,149 @@ fn enriched_terminal_path() -> String {
         .unwrap_or_else(|_| parts.join(if cfg!(windows) { ";" } else { ":" }))
 }
 
-// Native right-click menu for a kata row in the Problems table. Item ids
-// encode the action + kata id ("kata-ctx-<action>:<id>") so the single
-// app-wide on_menu_event handler below can route them by re-emitting a
-// "kata-context-action" event — the frontend owns navigation/store state/
-// clipboard, this just shows the native menu and relays which item fired.
+// Native right-click menu for a kata row in the Problems table. The frontend
+// registers hidden row-scoped commands before showing this menu; Rust only
+// presents native menu items and lets the generic "cmd:" bridge dispatch them.
 #[tauri::command]
 fn show_kata_context_menu(
     app: tauri::AppHandle,
     window: tauri::Window,
     kata_id: i64,
     is_favorite: bool,
+    is_custom: bool,
+    has_leetcode: bool,
 ) -> Result<(), String> {
+    let _ = kata_id;
     let favorite_label = if is_favorite {
         "Remove from Favorites"
     } else {
         "Add to Favorites"
     };
 
-    let start = MenuItemBuilder::with_id(format!("kata-ctx-start:{kata_id}"), "Start Kata")
+    let open = MenuItemBuilder::with_id("cmd:library:context:open", "Open Kata")
         .build(&app)
         .map_err(|e| e.to_string())?;
-    let favorite = MenuItemBuilder::with_id(format!("kata-ctx-favorite:{kata_id}"), favorite_label)
+    let favorite = MenuItemBuilder::with_id("cmd:library:context:favorite", favorite_label)
         .build(&app)
         .map_err(|e| e.to_string())?;
-    let reset = MenuItemBuilder::with_id(format!("kata-ctx-reset:{kata_id}"), "Reset Progress")
+    let reset = MenuItemBuilder::with_id("cmd:library:context:reset-progress", "Reset Progress")
         .build(&app)
         .map_err(|e| e.to_string())?;
-    let copy = MenuItemBuilder::with_id(format!("kata-ctx-copy:{kata_id}"), "Copy Kata Name")
+    let copy = MenuItemBuilder::with_id("cmd:library:context:copy-name", "Copy Kata Name")
+        .build(&app)
+        .map_err(|e| e.to_string())?;
+    let open_leetcode =
+        MenuItemBuilder::with_id("cmd:library:context:open-leetcode", "Open on LeetCode")
+            .build(&app)
+            .map_err(|e| e.to_string())?;
+    let edit = MenuItemBuilder::with_id("cmd:library:context:edit", "Edit Kata")
+        .build(&app)
+        .map_err(|e| e.to_string())?;
+    let delete = MenuItemBuilder::with_id("cmd:library:context:delete", "Delete Kata")
         .build(&app)
         .map_err(|e| e.to_string())?;
 
-    let menu = MenuBuilder::new(&app)
-        .item(&start)
+    let mut menu_builder = MenuBuilder::new(&app)
+        .item(&open)
         .separator()
         .item(&favorite)
         .item(&reset)
         .separator()
-        .item(&copy)
-        .build()
+        .item(&copy);
+
+    if has_leetcode {
+        menu_builder = menu_builder.item(&open_leetcode);
+    }
+
+    if is_custom {
+        menu_builder = menu_builder
+            .separator()
+            .item(&edit)
+            .item(&delete);
+    }
+
+    let menu = menu_builder.build().map_err(|e| e.to_string())?;
+
+    menu.popup(window).map_err(|e| e.to_string())
+}
+
+// Native right-click menu for the Monaco editor surface. Item ids map directly
+// to registered frontend commands; availability-sensitive items are omitted.
+#[tauri::command]
+fn show_editor_context_menu(
+    app: tauri::AppHandle,
+    window: tauri::Window,
+    has_solution: bool,
+    has_leetcode: bool,
+    repl_supported: bool,
+    agent_open: bool,
+    agent_provider: String,
+) -> Result<(), String> {
+    let ask_agent_label = match agent_provider.as_str() {
+        "claude" => "Ask Claude",
+        "codex" => "Ask Codex",
+        _ => "Ask Agent",
+    };
+    let run_tests = MenuItemBuilder::with_id("cmd:editor:run-tests", "Run Tests")
+        .build(&app)
         .map_err(|e| e.to_string())?;
+    let reset_code = MenuItemBuilder::with_id("cmd:editor:reset-code", "Reset Code")
+        .build(&app)
+        .map_err(|e| e.to_string())?;
+    let toggle_problem_panel =
+        MenuItemBuilder::with_id("cmd:editor:toggle-problem-panel", "Toggle Problem Panel")
+            .build(&app)
+            .map_err(|e| e.to_string())?;
+    let toggle_solution = MenuItemBuilder::with_id("cmd:editor:toggle-solution", "Toggle Solutions")
+        .build(&app)
+        .map_err(|e| e.to_string())?;
+    let copy_solution =
+        MenuItemBuilder::with_id("cmd:editor:copy-solution", "Copy Solution to Editor")
+            .build(&app)
+            .map_err(|e| e.to_string())?;
+    let toggle_repl = MenuItemBuilder::with_id("cmd:editor:toggle-repl", "Toggle REPL")
+        .build(&app)
+        .map_err(|e| e.to_string())?;
+    let ask_agent = MenuItemBuilder::with_id("cmd:editor:ask-agent", ask_agent_label)
+        .build(&app)
+        .map_err(|e| e.to_string())?;
+    let send_agent_prompt = MenuItemBuilder::with_id(
+        "cmd:editor:send-agent-prompt-to-terminal",
+        "Send Agent Prompt",
+    )
+    .build(&app)
+    .map_err(|e| e.to_string())?;
+    let open_leetcode = MenuItemBuilder::with_id("cmd:editor:open-leetcode", "Open on LeetCode")
+        .build(&app)
+        .map_err(|e| e.to_string())?;
+
+    let mut menu_builder = MenuBuilder::new(&app)
+        .item(&run_tests)
+        .separator()
+        .item(&reset_code)
+        .item(&toggle_problem_panel);
+
+    if has_solution {
+        menu_builder = menu_builder.item(&toggle_solution).item(&copy_solution);
+    }
+
+    menu_builder = menu_builder.separator();
+
+    if repl_supported {
+        menu_builder = menu_builder.item(&toggle_repl);
+    }
+
+    menu_builder = menu_builder.item(&ask_agent);
+
+    if agent_open {
+        menu_builder = menu_builder.item(&send_agent_prompt);
+    }
+
+    if has_leetcode {
+        menu_builder = menu_builder.separator().item(&open_leetcode);
+    }
+
+    let menu = menu_builder.build().map_err(|e| e.to_string())?;
 
     menu.popup(window).map_err(|e| e.to_string())
 }
@@ -901,6 +1004,7 @@ pub fn run() {
             spawn_terminal,
             write_agent_context,
             write_terminal,
+            show_editor_context_menu,
             show_kata_context_menu,
             run_java_tests
         ])
@@ -1142,21 +1246,6 @@ pub fn run() {
                         }
                     }
                     return;
-                }
-                if let Some(rest) = id.strip_prefix("kata-ctx-") {
-                    if let Some((action, kata_id)) = rest.split_once(':') {
-                        if let (Some(window), Ok(kata_id)) =
-                            (app.get_webview_window("main"), kata_id.parse::<i64>())
-                        {
-                            let _ = window.emit(
-                                "kata-context-action",
-                                serde_json::json!({
-                                    "action": action,
-                                    "kataId": kata_id,
-                                }),
-                            );
-                        }
-                    }
                 }
             });
 

@@ -39,14 +39,17 @@ Current cross-app feature status. `Partial` means the feature exists but is not 
 | Native preferences-style settings page | Yes | Yes | Unknown | Unknown |
 | Chrome-style app UI zoom | Yes | Yes | Unknown | Unknown |
 | Command palette | Yes | Yes | No | No |
+| Native app menu commands | Yes | Yes | No | No |
+| Native context menus | Yes | Yes | No | No |
 | Agent helper bridge and CLI | Yes | No | No | No |
 | Embedded xterm agent terminal | Yes | No | No | No |
-| Native confirmation dialogs | Yes | No | Unknown | Unknown |
+| Native confirmation dialogs | Yes | Yes | Unknown | Unknown |
 | Toast notifications | Yes | Yes | Unknown | Unknown |
 | Colorized bracket pairs | Yes | Yes | Unknown | Unknown |
 | Configurable keyboard shortcuts, including REPL toggle | Yes | Partial | Unknown | Unknown |
 | Problem notes | Yes | Yes | Unknown | Unknown |
 | REPL panel | Yes | Yes | Unknown | Unknown |
+| VS Code-style bottom panel tabs | Yes | Yes | No | No |
 | Resizable REPL/results pane | Yes | Yes | No | No |
 | Collapsible problem panel and REPL split layouts | Yes | Yes | No | No |
 | Persisted pane layouts | Yes | Yes | Unknown | Unknown |
@@ -147,6 +150,27 @@ run tests, show/hide the problem panel, show/hide solutions, open/hide the REPL,
 copy the selected solution to the editor, reset code, move to the next/previous
 kata, and open the current problem on LeetCode when available.
 
+### Native App Menus and Context Menus
+
+Python and Ruby route native menu items through the same registered command
+model used by the command palette, so menu items stay aligned with the current
+route and editor state.
+
+The desktop app menu exposes common commands such as Settings, New Kata,
+Start/Resume Practice, Run Tests, previous/next kata, problem-panel and solution
+toggles, REPL controls, agent terminal launch commands where supported, copy
+solution, reset code, Open on LeetCode, and UI zoom.
+
+Problem/library rows have a native right-click menu for row-scoped actions:
+open the kata, add/remove favorites or daily practice, reset progress, copy the
+kata name, and edit/delete custom katas. Python also includes `Open on LeetCode`
+in this menu when the row maps to a LeetCode problem.
+
+The editor surface has a native right-click menu for Run Tests, Reset Code,
+problem panel, solution, REPL, agent prompt, and LeetCode actions. In Python,
+the agent prompt action is labeled `Ask Codex` or `Ask Claude` based on the
+configured default agent, matching the problem-page robot button.
+
 ### Agent Helper Bridge and CLI
 
 Python exports the current Monaco problem context to the app data directory for
@@ -163,21 +187,23 @@ pnpm agent code
 pnpm agent results
 ```
 
-The problem page also exposes an `Ask` toolbar button and registers `Ask Agent`,
-`Send Agent Prompt to Terminal`, and `Export Agent Context` commands in the
-command palette. `Ask Agent` exports fresh context and copies a no-spoilers
-tutoring prompt to the clipboard. When the embedded terminal is open, `Send ->`
-pastes that prompt into the active terminal using bracketed paste mode, without
-pressing Enter. See `docs/agent_bridge.md` for the schema and usage contract.
+The problem page also exposes an agent toolbar button and registers provider-
+specific ask commands (`Ask Codex` or `Ask Claude`), `Send Agent Prompt to
+Terminal`, and `Export Agent Context` in the command palette. The ask command
+exports fresh context and copies a no-spoilers tutoring prompt to the clipboard.
+When the embedded terminal is open, `Send ->` pastes that prompt into the active
+terminal using bracketed paste mode. Starting a Codex or Claude terminal also
+exports fresh context and submits the generated tutoring prompt automatically. See
+`docs/agent_bridge.md` for the schema and usage contract.
 Tauri packaged builds include the project-local skill, CLI, and bridge doc under
 the app's bundled `agent/` resources.
 
 ### Native Confirmation Dialogs
 
-Python uses Tauri's native confirmation dialog for destructive actions such as
-resetting code, deleting custom katas, deleting practice presets, resetting kata
-progress, and resetting all progress. A browser-confirm fallback remains for
-tests and non-Tauri contexts.
+Python uses Tauri's native confirmation dialog, and Ruby uses Electron's native
+message box, for destructive actions such as resetting code, deleting custom
+katas, deleting practice presets, resetting kata progress, and resetting all
+progress. A browser-confirm fallback remains for tests and non-native contexts.
 
 ### Embedded xterm Agent Terminal
 
@@ -196,9 +222,10 @@ scratch files stay outside the read-only app bundle.
 Python and Ruby persist workspace layout in the settings table so the app
 reopens in the user's last working shape. The editor remembers left-panel
 visibility, active panel, left-panel width, REPL visibility, REPL split
-direction, and output pane height. Python also remembers the active output tab
-and testcase/results visibility. The Dashboard remembers the last active tab in
-each app.
+direction, output pane height, active solution variant, visualization playback
+speed, and maximized pane. Python also remembers the active output tab,
+testcase/results visibility, and active testcase index. The Dashboard remembers
+the last active tab in each app.
 
 Session-only "Hide Problem in Sessions" does not overwrite the normal persisted
 left-panel preference.
@@ -240,11 +267,14 @@ settings store.
 Python and Ruby problem pages include layout controls for focused practice:
 
 - The left problem panel can be hidden and restored from the editor tab bar.
-- The REPL can split horizontally, with the editor/problem area above and REPL
-  below in a 50/50 layout.
-- The REPL can split vertically, with the editor/problem area beside the REPL in
-  a 50/50 layout.
-- REPL and results panes keep maximize/restore controls for temporary full-pane
+- Bottom tools live in one VS Code-style panel with tabs. Python has `REPL`,
+  `Testcase`, `Test Result`, and `Codex`/`Claude` tabs; Ruby has `REPL` and
+  `Test Result`.
+- The panel can be hidden and restored without destroying REPL state or killing
+  a running Python Codex/Claude agent process.
+- The panel can split horizontally, with the editor/problem area above and the
+  panel below, or vertically, with the editor/problem area beside the panel.
+- The active panel tab keeps maximize/restore controls for temporary full-pane
   focus.
 
 Both apps also expose a `copy ->` action in the Solutions panel. It replaces the
@@ -374,12 +404,9 @@ a generic `recursion` tag remain under Trees.
 |---|---:|---:|---:|---:|
 | Mistake tags on attempts | Planned | No | No | No |
 | Readable debug reprs for common kata objects | Planned | No | No | No |
-| Native app menu commands | Planned | Planned | No | No |
 | Native window chrome polish | Planned | Planned | No | No |
 | Keyboard shortcut editor | Planned | Planned | No | No |
-| Context menus | Planned | Planned | No | No |
 | Skeleton loading states | Planned | Planned | No | No |
-| Custom native-style dialogs | Yes | Planned | No | No |
 | Follow system theme | Planned | Planned | No | No |
 
 ### Native-Feel Improvements
@@ -389,22 +416,22 @@ a shell and more like local developer tools.
 
 | Feature | Intended Behavior |
 |---|---|
-| Native app menu commands | Add menu items for Run, Open REPL, Toggle Vim, Zoom In/Out, Preferences, Next Problem, and Previous Problem so shortcuts are discoverable from the system menu. |
+| Native app menu commands | Implemented in Python and Ruby. Continue refining labels and availability as new commands are added. |
 | Native window chrome polish | Tighten titlebar and toolbar spacing, especially around macOS traffic lights, so the app frame feels intentional. |
 | Keyboard shortcut editor | Show shortcuts in Settings as editable rows with conflict detection and reset controls. |
 | Toast notifications | Use compact bottom-right messages for actions such as copied solution, preset saved, session resumed, and problem marked done. |
-| Context menus | Add right-click actions for problem rows and editor surfaces, including mark done, star, add/remove from daily, copy link, and reset progress. |
-| Persisted pane layouts | Remember problem panel visibility, REPL split direction, REPL size, active output tab, and dashboard tab. |
+| Context menus | Implemented in Python and Ruby for problem rows and editor surfaces. Continue expanding row-specific actions such as done-state toggles if needed. |
+| Persisted pane layouts | Implemented in Python and Ruby for core editor panes. Continue adding new pane state here as more panels are introduced. |
 | Skeleton loading states | Replace broad loading spinners with compact skeleton rows and specific status text where possible. |
-| Custom native-style dialogs | Replace browser `confirm()` prompts for delete/reset actions with app-styled or native confirmation dialogs. |
+| Custom native-style dialogs | Implemented for destructive confirmations in Python and Ruby. Continue using the shared helper for new delete/reset flows. |
 | Follow system theme | Add a theme option that follows the operating system light/dark appearance. |
 
-Suggested implementation order:
+Remaining suggested implementation order:
 
-1. Native app menu commands
-2. Persisted pane layouts
-3. Custom native-style dialogs
-4. Context menus
+1. Native window chrome polish
+2. Keyboard shortcut editor with conflict detection
+3. Skeleton loading states
+4. Follow system theme
 
 ### Mistake Tags
 

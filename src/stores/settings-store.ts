@@ -21,6 +21,8 @@ export type PracticeMode = "sr" | "review" | "daily" | "weak" | "speed" | "level
 export type PracticeDifficulty = "easy" | "medium" | "hard";
 export type EditorLayoutMode = "horizontal" | "vertical";
 export type EditorPanelId = "description" | "solution" | "notes" | "viz" | "diff";
+export type EditorMaximizedPane = "repl" | "results" | null;
+export type VizSpeed = "900" | "500" | "200";
 export type DashboardTab = "overview" | "progress" | "leaderboard" | "history";
 export type AgentProvider = "codex" | "claude";
 
@@ -33,6 +35,10 @@ export interface EditorLayoutSettings {
   outputPaneVisible: boolean;
   outputTab: "testcase" | "results";
   outputPaneHeight: number;
+  activeTestcaseIndex: number;
+  activeSolutionVariant: number;
+  vizSpeed: VizSpeed;
+  maximizedPane: EditorMaximizedPane;
 }
 
 export interface PracticeConfig {
@@ -92,6 +98,10 @@ const DEFAULTS = {
     outputPaneVisible: true,
     outputTab: "testcase",
     outputPaneHeight: 280,
+    activeTestcaseIndex: 0,
+    activeSolutionVariant: 0,
+    vizSpeed: "500",
+    maximizedPane: null,
   } as EditorLayoutSettings,
   dashboardTab: "overview" as DashboardTab,
   agentProvider: "codex" as AgentProvider,
@@ -157,11 +167,23 @@ function clampNumber(value: unknown, fallback: number, min: number, max: number)
     : fallback;
 }
 
+function clampInteger(value: unknown, fallback: number, min: number, max: number): number {
+  return Math.trunc(clampNumber(value, fallback, min, max));
+}
+
 function isEditorPanelId(value: unknown): value is EditorPanelId {
   return value === "description" || value === "solution" || value === "notes" || value === "viz" || value === "diff";
 }
 
-function normalizeEditorLayout(value: unknown): EditorLayoutSettings {
+function isVizSpeed(value: unknown): value is VizSpeed {
+  return value === "900" || value === "500" || value === "200";
+}
+
+function isEditorMaximizedPane(value: unknown): value is EditorMaximizedPane {
+  return value === null || value === "repl" || value === "results";
+}
+
+export function normalizeEditorLayout(value: unknown): EditorLayoutSettings {
   const raw = (value && typeof value === "object" ? value : {}) as Partial<EditorLayoutSettings>;
   return {
     problemPanelVisible: typeof raw.problemPanelVisible === "boolean" ? raw.problemPanelVisible : DEFAULTS.editorLayout.problemPanelVisible,
@@ -172,6 +194,10 @@ function normalizeEditorLayout(value: unknown): EditorLayoutSettings {
     outputPaneVisible: typeof raw.outputPaneVisible === "boolean" ? raw.outputPaneVisible : DEFAULTS.editorLayout.outputPaneVisible,
     outputTab: raw.outputTab === "results" || raw.outputTab === "testcase" ? raw.outputTab : DEFAULTS.editorLayout.outputTab,
     outputPaneHeight: clampNumber(raw.outputPaneHeight, DEFAULTS.editorLayout.outputPaneHeight, 160, 900),
+    activeTestcaseIndex: clampInteger(raw.activeTestcaseIndex, DEFAULTS.editorLayout.activeTestcaseIndex, 0, 999),
+    activeSolutionVariant: clampInteger(raw.activeSolutionVariant, DEFAULTS.editorLayout.activeSolutionVariant, 0, 999),
+    vizSpeed: isVizSpeed(raw.vizSpeed) ? raw.vizSpeed : DEFAULTS.editorLayout.vizSpeed,
+    maximizedPane: isEditorMaximizedPane(raw.maximizedPane) ? raw.maximizedPane : DEFAULTS.editorLayout.maximizedPane,
   };
 }
 
