@@ -824,6 +824,13 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
     }
   }, [agentContextAutosave, agentSystemPrompt, agentTerminalMinimized, buildCurrentAgentContext, showAgentTerminal]);
 
+  const buildAgentStartupPrompt = useCallback(async () => {
+    agentContextAutosave.cancel();
+    const context = buildCurrentAgentContext();
+    await writeAgentContext(context);
+    return agentPromptFor(context, agentSystemPrompt);
+  }, [agentContextAutosave, agentSystemPrompt, buildCurrentAgentContext]);
+
   useEffect(() => {
     setActiveSolutionVariant(0);
     setActiveTestcaseIndex(0);
@@ -1736,6 +1743,7 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
         layout={replLayout}
         maximized={maximizedPane === "terminal"}
         visible={hasAgentTerminalPane}
+        buildStartupPrompt={buildAgentStartupPrompt}
         onClose={() => {
           setShowAgentTerminal(false);
           setAgentTerminalMinimized(false);

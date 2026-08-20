@@ -58,6 +58,7 @@ interface AgentTerminalPanelProps {
   layout: "horizontal" | "vertical";
   maximized: boolean;
   visible: boolean;
+  buildStartupPrompt: () => Promise<string | null>;
   onClose: () => void;
   onMinimize: () => void;
   onLayoutChange: (layout: "horizontal" | "vertical") => void;
@@ -83,6 +84,7 @@ export const AgentTerminalPanel = forwardRef<AgentTerminalPanelHandle, AgentTerm
   layout,
   maximized,
   visible,
+  buildStartupPrompt,
   onClose,
   onMinimize,
   onLayoutChange,
@@ -95,6 +97,7 @@ export const AgentTerminalPanel = forwardRef<AgentTerminalPanelHandle, AgentTerm
   const lastSizeRef = useRef<TerminalSize | null>(null);
   const outputBufferRef = useRef<Map<number, number[][]>>(new Map());
   const fitFrameRef = useRef<number | null>(null);
+  const buildStartupPromptRef = useRef(buildStartupPrompt);
   const [ready, setReady] = useState(false);
   const [activeKind, setActiveKind] = useState<AgentTerminalKind>(launchKind);
   const terminalFontSize = agentTerminalFontSize(fontSize);
@@ -138,6 +141,10 @@ export const AgentTerminalPanel = forwardRef<AgentTerminalPanelHandle, AgentTerm
     await closeTerminal(terminalId).catch(() => undefined);
   }, []);
 
+  useEffect(() => {
+    buildStartupPromptRef.current = buildStartupPrompt;
+  }, [buildStartupPrompt]);
+
   const startTerminal = useCallback(async (kind: AgentTerminalKind) => {
     const term = termRef.current;
     if (!term) return;
@@ -160,6 +167,12 @@ export const AgentTerminalPanel = forwardRef<AgentTerminalPanelHandle, AgentTerm
       if (shouldForwardTerminalResize(lastSizeRef.current, size)) {
         lastSizeRef.current = size;
         await resizeTerminal(terminalId, size).catch(() => undefined);
+      }
+      if (kind === "claude" || kind === "codex") {
+        const prompt = await buildStartupPromptRef.current().catch(() => null);
+        if (prompt) {
+          await writeTerminal(terminalId, encoder.encode(`${bracketedPaste(prompt)}\r`)).catch(() => undefined);
+        }
       }
       term.focus();
     } catch (error) {
