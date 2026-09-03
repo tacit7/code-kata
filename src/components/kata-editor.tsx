@@ -8,6 +8,7 @@ import {
   ArrowLeft,
   ArrowRight,
   BotMessageSquare,
+  ChevronRight,
   GitCompareArrows,
   ListChecks,
   Maximize2,
@@ -51,9 +52,11 @@ import { dpPatternFor, DP_MODULES } from "../lib/dp-patterns";
 import { visibleTestCasesFor } from "../lib/visible-testcases";
 import { solutionNotesFor } from "../lib/solution-notes";
 import { agentPromptFor, buildAgentEditorContext, writeAgentContext, type AgentEditorContext } from "../lib/agent-bridge";
+import { codeTemplatesForLanguage, type CodeTemplate } from "../lib/code-templates";
 import type { AgentTerminalKind } from "../lib/terminal-pty";
 import type { EditorLayoutSettings, VizSpeed } from "../stores/settings-store";
 import type { Kata, TestResult } from "../types/editor";
+import { formatTime } from "../lib/format";
 
 type VizKataName =
   | "Kadane's Algorithm"
@@ -483,16 +486,72 @@ const VIZ_MAP: Partial<Record<VizKataName, string>> = {
   "FizzBuzz":                           "fizzbuzz",
 };
 
-// Renders the kata description as-is. The "Ref: LeetCode #N" line stays as plain
-// text; the authoritative "Open on LeetCode" affordance is the header button
-// (leetcodeUrlFor), so the description no longer carries its own link.
-function DescriptionWithLink({ text }: { text: string }) {
-  return <span className="whitespace-pre-wrap">{text}</span>;
+type DescriptionSection = {
+  title: string;
+  body: string;
+};
+
+const DESCRIPTION_SECTION_TITLES: Record<string, string> = {
+  example: "Examples",
+  examples: "Examples",
+  constraints: "Constraints",
+  constraint: "Constraints",
+  notes: "Notes",
+  note: "Notes",
+  ref: "Reference",
+  reference: "Reference",
+  references: "Reference",
+};
+
+function normalizedDescriptionHeading(line: string): string | null {
+  const trimmed = line.trim();
+  const match = trimmed.match(/^([A-Za-z][A-Za-z ]*?)(?:\s+\d+)?\s*:/);
+  if (!match) return null;
+  const key = match[1].trim().toLowerCase();
+  return DESCRIPTION_SECTION_TITLES[key] ?? null;
 }
 
-// Compact, read-only recurrence summary for DP-tagged katas (see
-// src/lib/dp-patterns.ts). Renders nothing for katas without a pattern.
-function DpPatternCard({ kata }: { kata: Kata }) {
+function parseDescriptionSections(text: string): DescriptionSection[] {
+  const lines = text.replace(/\r\n/g, "\n").split("\n");
+  const sections: DescriptionSection[] = [];
+  let current: DescriptionSection = { title: "Prompt", body: "" };
+
+  for (const line of lines) {
+    const heading = normalizedDescriptionHeading(line);
+    if (heading) {
+      if (current.body.trim()) sections.push({ ...current, body: current.body.trim() });
+      current = { title: heading, body: line.trim() };
+      continue;
+    }
+    current.body += `${current.body ? "\n" : ""}${line}`;
+  }
+
+  if (current.body.trim()) sections.push({ ...current, body: current.body.trim() });
+  return sections.length > 0 ? sections : [{ title: "Prompt", body: text }];
+}
+
+// Renders the kata description in scan-friendly sections. The "Ref: LeetCode #N"
+// line stays as plain text; the authoritative "Open on LeetCode" affordance is
+// the header button (leetcodeUrlFor).
+function DescriptionWithLink({ text }: { text: string }) {
+  const sections = parseDescriptionSections(text);
+  return (
+    <div className="space-y-4">
+      {sections.map((section, index) => (
+        <section key={`${section.title}-${index}`} className="border-b border-base-300/40 pb-4 last:border-b-0 last:pb-0">
+          <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-base-content/35">
+            {section.title}
+          </h3>
+          <div className="whitespace-pre-wrap leading-relaxed">{section.body}</div>
+        </section>
+      ))}
+    </div>
+  );
+}
+
+// LeetCode-style hints for DP-tagged katas (see src/lib/dp-patterns.ts).
+// Renders nothing for katas without a pattern.
+function DpPatternHints({ kata }: { kata: Kata }) {
   const pattern = dpPatternFor(kata);
   if (!pattern) return null;
   const primaryLabel =
@@ -501,35 +560,78 @@ function DpPatternCard({ kata }: { kata: Kata }) {
   const relatedLabels = pattern.relatedPatterns?.map(
     (r) => DP_MODULES.find((m) => m.id === r)?.label ?? r,
   );
-  return (
-    <div data-testid="dp-pattern-card" className="mb-3 rounded-lg border border-base-300/50 bg-base-100 px-3 py-2.5 text-xs">
-      <div className="flex flex-wrap gap-1.5 mb-2">
-        <span className="badge badge-sm badge-primary/20 text-primary border-primary/20">
-          {primaryLabel}
-        </span>
-        {relatedLabels?.map((label) => (
-          <span key={label} className="badge badge-sm text-base-content/40 border-base-300/50 bg-transparent">
-            Related: {label}
-          </span>
-        ))}
-      </div>
-      <div className="flex flex-col gap-1 text-base-content/70">
-        <div><span className="font-semibold text-base-content/50">State:</span> {pattern.state}</div>
-        <div><span className="font-semibold text-base-content/50">Transition:</span> {pattern.transition}</div>
+  const hints = [
+    {
+      label: "Hint 1",
+      content: (
+        <>
+          Start by recognizing the pattern family: <span className="font-medium text-base-content/75">{primaryLabel}</span>.
+          {relatedLabels && relatedLabels.length > 0 ? ` Related patterns: ${relatedLabels.join(", ")}.` : ""}
+        </>
+      ),
+    },
+    {
+      label: "Hint 2",
+      content: <>Define the state as: {pattern.state}</>,
+    },
+    {
+      label: "Hint 3",
+      content: <>Use this transition: {pattern.transition}</>,
+    },
+    {
+      label: "Hint 4",
+      content: (
         <div>
-          <span className="font-semibold text-base-content/50">Base cases:</span>
-          <ul className="list-disc ml-4 mt-0.5 flex flex-col gap-0.5">
-            {pattern.baseCases.map((bc, i) => <li key={i}>{bc}</li>)}
+          <div className="mb-1">Anchor the recursion or table with these base cases:</div>
+          <ul className="ml-4 list-disc space-y-0.5">
+            {pattern.baseCases.map((baseCase, index) => (
+              <li key={index}>{baseCase}</li>
+            ))}
           </ul>
         </div>
-        <div>
-          <span className="font-semibold text-base-content/50">Evaluation order: </span>
-          <code className="text-primary text-[10px]">{pattern.evaluationOrder.kind}</code>
-          {" · "}
+      ),
+    },
+    {
+      label: "Hint 5",
+      content: (
+        <>
+          Fill or evaluate in <code className="text-[10px] text-primary">{pattern.evaluationOrder.kind}</code> order:
+          {" "}
           {pattern.evaluationOrder.explanation}
-        </div>
+        </>
+      ),
+    },
+  ];
+
+  return (
+    <details
+      data-testid="dp-pattern-card"
+      className="mt-4 rounded-lg border border-base-300/60 bg-base-100 text-xs"
+    >
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-2.5 font-semibold text-base-content/70">
+        <span>Hints</span>
+        <span className="rounded border border-base-300/60 px-1.5 py-0.5 text-[10px] font-medium text-base-content/40">
+          {hints.length}
+        </span>
+      </summary>
+      <div className="border-t border-base-300/50">
+        {hints.map((hint) => (
+          <details key={hint.label} className="group border-b border-base-300/40 last:border-b-0">
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-2 text-base-content/65">
+              <span className="font-medium">{hint.label}</span>
+              <ChevronRight
+                size={14}
+                aria-hidden="true"
+                className="shrink-0 text-base-content/30 transition-transform group-open:rotate-90"
+              />
+            </summary>
+            <div className="px-3 pb-3 leading-relaxed text-base-content/65">
+              {hint.content}
+            </div>
+          </details>
+        ))}
       </div>
-    </div>
+    </details>
   );
 }
 
@@ -561,6 +663,7 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
   const vimModeRef = useRef<VimModeState<editor.IStandaloneCodeEditor, VimAdapterInstance> | null>(null);
   const statusBarRef = useRef<HTMLDivElement | null>(null);
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
+  const editorSplitRef = useRef<HTMLDivElement | null>(null);
   const agentTerminalRef = useRef<AgentTerminalPanelHandle | null>(null);
   const [vizSpeed, setVizSpeed] = useState<VizSpeed>(editorLayout.vizSpeed);
   const [results, setResults] = useState<TestResult[] | null>(null);
@@ -569,7 +672,6 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
   const [outputTab, setOutputTab] = useState<OutputTab>(editorLayout.outputTab);
   const [activeBottomTab, setActiveBottomTab] = useState<BottomPanelTab>(editorLayout.outputTab);
   const [bottomPanelVisible, setBottomPanelVisible] = useState(editorLayout.outputPaneVisible);
-  const [showTestcasePane, setShowTestcasePane] = useState(editorLayout.outputPaneVisible);
   const [activeTestcaseIndex, setActiveTestcaseIndex] = useState(editorLayout.activeTestcaseIndex);
   const [runCount, setRunCount] = useState(0);
   const [kataPassed, setKataPassed] = useState(false);
@@ -581,6 +683,7 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
   const [panelWidth, setPanelWidth] = useState(editorLayout.problemPanelWidth);
   const dragging = useRef(false);
   const [outputPaneHeight, setOutputPaneHeight] = useState(editorLayout.outputPaneHeight);
+  const [outputPaneWidth, setOutputPaneWidth] = useState(editorLayout.outputPaneWidth);
   const [maximizedPane, setMaximizedPane] = useState<MaximizedPane>(editorLayout.maximizedPane);
   const outputDragging = useRef(false);
   const [saved, setSaved] = useState(true);
@@ -671,7 +774,7 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
       activePanel: hiddenBySessionSetting && showPanel === null ? current.activePanel : showPanel ?? lastPanelRef.current,
       replVisible: showRepl,
       replLayout,
-      outputPaneVisible: showTestcasePane,
+      outputPaneVisible: bottomPanelVisible,
       outputTab,
       activeTestcaseIndex,
       activeSolutionVariant,
@@ -682,6 +785,7 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
   }, [
     activeSolutionVariant,
     activeTestcaseIndex,
+    bottomPanelVisible,
     hideDescriptionInSession,
     isSession,
     maximizedPane,
@@ -690,7 +794,6 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
     setSetting,
     showPanel,
     showRepl,
-    showTestcasePane,
     vizSpeed,
   ]);
 
@@ -729,6 +832,9 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
   const leetcodeNumber = kata.leetcodeNumber ?? leetcodeNumberFor(kata);
   const leetcodeUrl = leetcodeUrlFor(kata);
   const problemTitle = leetcodeNumber != null ? `#${leetcodeNumber} ${kata.name}` : kata.name;
+  const normalizedDifficulty = kata.difficulty
+    ? kata.difficulty.charAt(0).toUpperCase() + kata.difficulty.slice(1)
+    : null;
   const solutionVariants = kata.solutionVariants?.length
     ? kata.solutionVariants
     : kata.solution
@@ -746,18 +852,19 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
       : !isSession
         ? "notes"
         : null;
-  const hasReplPane = showRepl && replSupported;
+  const hasReplPane = replSupported;
   const hasAgentTerminalPane = showAgentTerminal && !agentTerminalMinimized;
   const hasAgentTerminalSession = showAgentTerminal;
-  const hasTestcasePane = showTestcasePane && hasVisibleTestCases;
-  const hasTestResultPane = Boolean(results || running);
+  const hasTestcasePane = hasVisibleTestCases;
+  const hasTestResultPane = true;
   const hasResultsPane = hasTestcasePane || hasTestResultPane;
-  const hasOutputPane = hasReplPane || hasResultsPane || hasAgentTerminalSession;
+  const hasAgentTab = true;
+  const hasOutputPane = hasReplPane || hasResultsPane || hasAgentTerminalSession || hasAgentTab;
   const bottomPanelTabs = [
     hasReplPane ? "repl" : null,
     hasTestcasePane ? "testcase" : null,
     hasTestResultPane ? "results" : null,
-    hasAgentTerminalPane ? "agent" : null,
+    hasAgentTab ? "agent" : null,
   ].filter(Boolean) as BottomPanelTab[];
   const effectiveBottomTab = bottomPanelTabs.includes(activeBottomTab)
     ? activeBottomTab
@@ -870,7 +977,6 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
     const persistedLayout = useSettingsStore.getState().editorLayout;
     setActiveSolutionVariant(Math.min(persistedLayout.activeSolutionVariant, Math.max(solutionVariants.length - 1, 0)));
     setActiveTestcaseIndex(Math.min(persistedLayout.activeTestcaseIndex, Math.max(visibleTestCases.length - 1, 0)));
-    setShowTestcasePane(persistedLayout.outputPaneVisible);
     setOutputTab(persistedLayout.outputTab);
     setVizSpeed(persistedLayout.vizSpeed);
     setMaximizedPane(persistedLayout.maximizedPane);
@@ -921,7 +1027,7 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
     setMountedEditor(editorInstance);
   };
 
-  const { kataStatus, startKataTimer, completeKataTimer } =
+  const { kataStatus, kataElapsed, startKataTimer, completeKataTimer } =
     useTimerStore();
 
   const handleReset = useCallback(async () => {
@@ -1055,13 +1161,36 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
     openAgentTerminal(agentProvider);
   }, [activeBottomTab, agentProvider, agentTerminalMinimized, bottomPanelVisible, maximizedPane, openAgentTerminal, showAgentTerminal]);
 
-  const copySolutionToEditor = useCallback(() => {
+  const copySolutionToEditor = useCallback(async () => {
     if (!editorRef.current || !activeSolution) return;
+    if (!saved) {
+      const ok = await confirmAction({
+        message: `Replace your current code for "${kata.name}" with ${activeSolution.label}? Your unsaved edits will be overwritten.`,
+        title: "Replace Editor Code",
+        kind: "warning",
+        okLabel: "Replace",
+        cancelLabel: "Cancel",
+      });
+      if (!ok) return;
+    }
     editorRef.current.setValue(activeSolution.code);
     setSaved(false);
     autosave.schedule(kata.id, () => activeSolution.code);
-    toast.success(`Copied ${activeSolution.label} to editor`, 1800);
-  }, [activeSolution, autosave, kata.id]);
+    toast.success(`Replaced editor with ${activeSolution.label}`, 1800);
+  }, [activeSolution, autosave, kata.id, kata.name, saved]);
+
+  const insertCodeTemplate = useCallback((template: CodeTemplate) => {
+    const editorInstance = editorRef.current;
+    if (!editorInstance) return;
+
+    editorInstance.focus();
+    editorInstance.pushUndoStop();
+    editorInstance.trigger("command-palette-template", "type", { text: template.code });
+    editorInstance.pushUndoStop();
+    setSaved(false);
+    autosave.schedule(kata.id, () => editorInstance.getValue());
+    toast.success(`Inserted ${template.title} template`, 1500);
+  }, [autosave, kata.id]);
 
   const handleToggleProblemPanel = useCallback(() => {
     setShowPanel((panel) => panel === null ? lastPanelRef.current ?? fallbackPanel : null);
@@ -1086,7 +1215,6 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
       setBottomPanelVisible(true);
       return;
     }
-    setShowTestcasePane(true);
     setOutputTab("testcase");
     setActiveBottomTab("testcase");
     setBottomPanelVisible(true);
@@ -1094,6 +1222,7 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
 
   useEffect(() => {
     const testRunDisabled = running || (maxTestRuns !== null && runCount >= maxTestRuns && !kataPassed);
+    const codeTemplates = codeTemplatesForLanguage(kata.language);
     const commands = [
       {
         id: "editor:run-tests",
@@ -1159,11 +1288,12 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
       },
       {
         id: "editor:copy-solution",
-        title: "Copy Solution to Editor",
+        title: "Replace Editor With Solution",
+        subtitle: "Overwrites the current editor code with the selected reference solution",
         section: "Editor",
-        keywords: ["copy", "reference"],
+        keywords: ["copy", "replace", "reference", "solution"],
         disabled: !activeSolution || isSession,
-        run: copySolutionToEditor,
+        run: () => { void copySolutionToEditor(); },
       },
       {
         id: "editor:export-agent-context",
@@ -1197,6 +1327,14 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
         keywords: ["restore", "starter"],
         run: () => { void handleReset(); },
       },
+      ...codeTemplates.map((template) => ({
+        id: `editor:code-template:${kata.language}:${template.id}`,
+        title: `Insert Template: ${template.title}`,
+        subtitle: template.description,
+        section: "Templates",
+        keywords: ["cs", "cheatsheet", "snippet", "template", kata.language, ...template.keywords],
+        run: () => insertCodeTemplate(template),
+      })),
       {
         id: "editor:previous-kata",
         title: "Previous Kata",
@@ -1240,7 +1378,9 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
     handleToggleProblemPanel,
     handleToggleRepl,
     handleToggleSolution,
+    insertCodeTemplate,
     isSession,
+    kata.language,
     kataPassed,
     leetcodeUrl,
     maxTestRuns,
@@ -1454,6 +1594,38 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
     document.addEventListener("mouseup", onMouseUp);
   }, [outputPaneHeight, maximizedPane, saveEditorLayout]);
 
+  const onOutputWidthResizeMouseDown = useCallback((e: React.MouseEvent) => {
+    if (maximizedPane === "results" || maximizedPane === "terminal") return;
+    e.preventDefault();
+    outputDragging.current = true;
+    const startX = e.clientX;
+    const startWidth = outputPaneWidth;
+    let nextWidth = startWidth;
+
+    const onMouseMove = (ev: MouseEvent) => {
+      if (!outputDragging.current) return;
+      const delta = startX - ev.clientX;
+      const splitWidth = editorSplitRef.current?.getBoundingClientRect().width ?? window.innerWidth;
+      const maxWidth = Math.max(280, splitWidth - 320);
+      nextWidth = Math.max(280, Math.min(maxWidth, startWidth + delta));
+      setOutputPaneWidth(nextWidth);
+    };
+
+    const onMouseUp = () => {
+      outputDragging.current = false;
+      saveEditorLayout({ outputPaneWidth: nextWidth });
+      document.removeEventListener("mousemove", onMouseMove);
+      document.removeEventListener("mouseup", onMouseUp);
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+    };
+
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+    document.addEventListener("mousemove", onMouseMove);
+    document.addEventListener("mouseup", onMouseUp);
+  }, [outputPaneWidth, maximizedPane, saveEditorLayout]);
+
   const hasTabs = true;
 
   const sendVizMsg = useCallback((msg: unknown) => {
@@ -1608,29 +1780,40 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
       {/* Editor controls (all other tabs) */}
       {showPanel !== "viz" && (
       <div className="flex items-center gap-2 px-2.5">
-        <span className={`text-xs ${saved ? "text-success/60" : "text-base-content/30"}`}>
-          {saved ? "•" : "○"}
+        <span
+          className={`inline-flex h-7 items-center gap-1.5 rounded-md border px-2 text-[11px] font-semibold ${
+            saved
+              ? "border-success/20 bg-success/10 text-success/80"
+              : "border-warning/25 bg-warning/10 text-warning"
+          }`}
+          title={saved ? "All edits are saved locally" : "Autosave pending"}
+        >
+          <span className={`h-1.5 w-1.5 rounded-full ${saved ? "bg-success" : "bg-warning"}`} />
+          {saved ? "Saved" : "Unsaved"}
         </span>
         <div
           ref={statusBarRef}
           className={`text-xs font-mono text-base-content/40 max-w-[120px] truncate ${vimMode ? "" : "invisible w-0"}`}
         />
-        <button
-          onClick={handleReset}
-          title="Reset to original"
-          className={`${toolbarIconButtonClass} btn-ghost text-base-content/35 hover:text-base-content/70`}
-          aria-label="Reset to original"
-        >
-          <RotateCcw size={16} />
-        </button>
-        <button
-          onClick={() => setShowConfig((v) => !v)}
-          title="Editor settings"
-          className={`${toolbarIconButtonClass} ${showConfig ? "btn-primary" : "btn-ghost text-base-content/35 hover:text-base-content/70"}`}
-          aria-label="Editor settings"
-        >
-          <Settings size={16} />
-        </button>
+        <div className="h-5 w-px bg-base-300/70" />
+        <div className="join">
+          <button
+            onClick={handleReset}
+            title="Reset to original"
+            className={`${toolbarIconButtonClass} join-item btn-ghost text-base-content/35 hover:text-base-content/70`}
+            aria-label="Reset to original"
+          >
+            <RotateCcw size={16} />
+          </button>
+          <button
+            onClick={() => setShowConfig((v) => !v)}
+            title="Editor settings"
+            className={`${toolbarIconButtonClass} join-item ${showConfig ? "btn-primary" : "btn-ghost text-base-content/35 hover:text-base-content/70"}`}
+            aria-label="Editor settings"
+          >
+            <Settings size={16} />
+          </button>
+        </div>
         {showConfig && (
           <div className="absolute top-full right-0 mt-1 z-50 w-56 rounded-lg border border-base-300/50 bg-base-100 shadow-lg py-2 px-3 flex flex-col gap-2.5">
             <div className="flex items-center justify-between">
@@ -1660,46 +1843,52 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
           </div>
         )}
         {maxTestRuns !== null && (
-          <span className={`text-xs font-mono tabular-nums ${
+          <span
+            className={`inline-flex h-7 items-center rounded-md border border-base-300/60 bg-base-100 px-2 text-[11px] font-semibold tabular-nums ${
             !kataPassed && maxTestRuns - runCount === 1 ? "text-warning" : "text-base-content/35"
-          }`}>
-            {runCount}/{maxTestRuns}
+            }`}
+            title={`${runCount} of ${maxTestRuns} allowed test attempts used`}
+          >
+            Attempts {runCount}/{maxTestRuns}
           </span>
         )}
-        {replSupported && (
+        <div className="h-5 w-px bg-base-300/70" />
+        <div className="join">
+          {replSupported && (
+            <button
+              onClick={handleToggleRepl}
+              title={`Toggle REPL. Shortcut opens and focuses it (${fmtCombo(shortcuts.toggleRepl)})`}
+              className={`${toolbarIconButtonClass} join-item ${bottomPanelVisible && activeBottomTab === "repl" ? "btn-info" : "btn-ghost text-base-content/40"}`}
+              aria-label="Toggle REPL"
+            >
+              <Terminal size={16} />
+            </button>
+          )}
           <button
-            onClick={handleToggleRepl}
-            title={`Toggle REPL. Shortcut opens and focuses it (${fmtCombo(shortcuts.toggleRepl)})`}
-            className={`${toolbarIconButtonClass} ${bottomPanelVisible && activeBottomTab === "repl" ? "btn-info" : "btn-ghost text-base-content/40"}`}
-            aria-label="Toggle REPL"
+            onClick={handleToggleAgentTerminal}
+            title={
+              showAgentTerminal
+                ? agentTerminalMinimized
+                  ? "Show agent"
+                  : bottomPanelVisible && activeBottomTab === "agent"
+                    ? "Hide agent panel"
+                    : "Show agent"
+                : `Open ${agentProvider === "claude" ? "Claude" : "Codex"}`
+            }
+            className={`${toolbarIconButtonClass} join-item ${bottomPanelVisible && activeBottomTab === "agent" ? "btn-info" : "btn-ghost text-base-content/40"}`}
+            aria-label={
+              showAgentTerminal
+                ? agentTerminalMinimized
+                  ? "Show agent"
+                  : bottomPanelVisible && activeBottomTab === "agent"
+                    ? "Hide agent panel"
+                    : "Show agent"
+                : `Open ${agentProvider === "claude" ? "Claude" : "Codex"}`
+            }
           >
-            <Terminal size={16} />
+            <BotMessageSquare size={16} />
           </button>
-        )}
-        <button
-          onClick={handleToggleAgentTerminal}
-          title={
-            showAgentTerminal
-              ? agentTerminalMinimized
-                ? "Show agent"
-                : bottomPanelVisible && activeBottomTab === "agent"
-                  ? "Hide agent panel"
-                  : "Show agent"
-              : `Open ${agentProvider === "claude" ? "Claude" : "Codex"}`
-          }
-          className={`${toolbarIconButtonClass} ${bottomPanelVisible && activeBottomTab === "agent" ? "btn-info" : "btn-ghost text-base-content/40"}`}
-          aria-label={
-            showAgentTerminal
-              ? agentTerminalMinimized
-                ? "Show agent"
-                : bottomPanelVisible && activeBottomTab === "agent"
-                  ? "Hide agent panel"
-                  : "Show agent"
-              : `Open ${agentProvider === "claude" ? "Claude" : "Codex"}`
-          }
-        >
-          <BotMessageSquare size={16} />
-        </button>
+        </div>
         {hasAgentTerminalPane && (
           <button
             onClick={() => { void sendAgentPromptToTerminal(); }}
@@ -1711,36 +1900,49 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
           </button>
         )}
         {(hasVisibleTestCases || results || running) && (
-          <button
-            onClick={handleToggleOutputPane}
-            title={
-              bottomPanelVisible && (activeBottomTab === "testcase" || activeBottomTab === "results")
-                ? "Hide panel"
-                : results || running
-                  ? "Show test result"
-                  : "Show testcase"
-            }
-            className={`${toolbarIconButtonClass} ${
-              bottomPanelVisible && (activeBottomTab === "testcase" || activeBottomTab === "results") ? "btn-info" : "btn-ghost text-base-content/40"
-            }`}
-            aria-label={
-              bottomPanelVisible && (activeBottomTab === "testcase" || activeBottomTab === "results")
-                ? "Hide panel"
-                : results || running
-                  ? "Show test result"
-                  : "Show testcase"
-            }
-          >
-            <ListChecks size={16} />
-          </button>
+          <>
+            <div className="h-5 w-px bg-base-300/70" />
+            <button
+              onClick={handleToggleOutputPane}
+              title={
+                bottomPanelVisible && (activeBottomTab === "testcase" || activeBottomTab === "results")
+                  ? "Hide panel"
+                  : results || running
+                    ? "Show test result"
+                    : "Show testcase"
+              }
+              className={`${toolbarIconButtonClass} ${
+                bottomPanelVisible && (activeBottomTab === "testcase" || activeBottomTab === "results") ? "btn-info" : "btn-ghost text-base-content/40"
+              }`}
+              aria-label={
+                bottomPanelVisible && (activeBottomTab === "testcase" || activeBottomTab === "results")
+                  ? "Hide panel"
+                  : results || running
+                    ? "Show test result"
+                    : "Show testcase"
+              }
+            >
+              <ListChecks size={16} />
+            </button>
+          </>
         )}
         <button
           onClick={handleRun}
           disabled={running || (maxTestRuns !== null && runCount >= maxTestRuns && !kataPassed)}
           title={`Run tests (${fmtCombo(shortcuts.runTests)})`}
-          className={`${toolbarButtonClass} btn-primary gap-1.5`}
+          className={`${toolbarButtonClass} btn-primary min-w-28 justify-center gap-1.5`}
         >
-          {running ? "..." : <><Play size={16} /><span>run</span></>}
+          {running ? (
+            <>
+              <span className="loading loading-spinner loading-xs" />
+              <span>Running</span>
+            </>
+          ) : (
+            <>
+              <Play size={16} />
+              <span>Run tests</span>
+            </>
+          )}
         </button>
       </div>
       )}
@@ -1767,36 +1969,51 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
       setActiveBottomTab(tab);
       setBottomPanelVisible(true);
       if (tab === "repl") {
+        setShowRepl(true);
         setReplFocusNonce((nonce) => nonce + 1);
       } else if (tab === "testcase") {
-        setShowTestcasePane(true);
         setOutputTab("testcase");
       } else if (tab === "results") {
         setOutputTab("results");
       } else if (tab === "agent") {
-        setAgentTerminalMinimized(false);
+        if (showAgentTerminal) setAgentTerminalMinimized(false);
       }
     };
 
     return (
-      <div
-        className={`${hasVisibleBottomPanel ? "flex" : "hidden"} min-h-0 flex-col bg-base-200 ${
-          isMaximized
-            ? "flex-1"
-            : replLayout === "vertical"
-              ? "flex-1 basis-0 border-l border-base-300/60"
-              : "shrink-0 border-t border-base-300/60"
-        }`}
-        style={isMaximized || replLayout === "vertical" ? undefined : { height: outputPaneHeight }}
-      >
-        {replLayout === "horizontal" && (
+      <>
+        {replLayout === "vertical" && (
+          <div
+            onMouseDown={onOutputWidthResizeMouseDown}
+            className={`${hasVisibleBottomPanel ? "block" : "hidden"} w-1 shrink-0 bg-base-300/60 transition-colors ${
+              isMaximized ? "cursor-default" : "cursor-col-resize hover:bg-primary"
+            }`}
+          />
+        )}
+        <div
+          className={`${hasVisibleBottomPanel ? "flex" : "hidden"} min-h-0 flex-col bg-base-200 ${
+            isMaximized
+              ? "flex-1"
+              : replLayout === "vertical"
+                ? "shrink-0 border-l border-base-300/60"
+                : "shrink-0 border-t border-base-300/60"
+          }`}
+          style={
+            isMaximized
+              ? undefined
+              : replLayout === "vertical"
+                ? { width: outputPaneWidth }
+                : { height: outputPaneHeight }
+          }
+        >
+          {replLayout === "horizontal" && (
           <div
             onMouseDown={onOutputResizeMouseDown}
             className={`h-1 shrink-0 bg-base-300/60 transition-colors ${
               isMaximized ? "cursor-default" : "cursor-row-resize hover:bg-primary"
             }`}
           />
-        )}
+          )}
         <div className="flex items-center border-b border-base-300/60 bg-base-200 shrink-0">
           <button
             onClick={() => {
@@ -1810,29 +2027,32 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
             <X size={16} />
           </button>
           <div className="flex min-w-0 items-center self-stretch overflow-x-auto">
+            {hasTestcasePane && (
+              <button onClick={() => selectTab("testcase")} className={tabClass("testcase")}>
+                Test Case
+              </button>
+            )}
+            {hasTestResultPane && (
+              <button onClick={() => selectTab("results")} className={tabClass("results")}>
+                Results
+              </button>
+            )}
+            {(hasReplPane || hasAgentTab) && (
+              <span className="mx-1 h-4 w-px shrink-0 bg-base-300/70" />
+            )}
             {hasReplPane && (
               <button onClick={() => selectTab("repl")} className={tabClass("repl")}>
                 REPL
               </button>
             )}
-            {hasTestcasePane && (
-              <button onClick={() => selectTab("testcase")} className={tabClass("testcase")}>
-                Testcase
-              </button>
-            )}
-            {hasTestResultPane && (
-              <button onClick={() => selectTab("results")} className={tabClass("results")}>
-                Test Result
-              </button>
-            )}
-            {hasAgentTerminalPane && (
+            {hasAgentTab && (
               <button onClick={() => selectTab("agent")} className={tabClass("agent")}>
-                {agentTerminalKind === "claude" ? "Claude" : "Codex"}
+                Assist
               </button>
             )}
           </div>
           <div className="ml-auto flex items-center gap-1 px-2">
-            {effectiveBottomTab === "agent" && (
+            {effectiveBottomTab === "agent" && hasAgentTerminalPane && (
               <>
                 <button
                   onClick={() => {
@@ -1952,8 +2172,30 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
               )}
             </div>
           )}
-          {showAgentTerminal && (
-            <div className={`${hasVisibleBottomPanel && !agentTerminalMinimized && effectiveBottomTab === "agent" ? "flex" : "hidden"} h-full min-h-0 flex-col`}>
+          {hasAgentTab && (
+            <div className={`${hasVisibleBottomPanel && effectiveBottomTab === "agent" ? "flex" : "hidden"} h-full min-h-0 flex-col`}>
+              {(!showAgentTerminal || agentTerminalMinimized) && (
+                <div className="flex h-full flex-col items-center justify-center gap-3 px-6 text-center text-sm text-base-content/45">
+                  <BotMessageSquare size={22} className="text-base-content/35" />
+                  <div className="max-w-sm">
+                    <div className="font-semibold text-base-content/70">
+                      Optional coding assistant
+                    </div>
+                    <p className="mt-1 text-xs leading-relaxed text-base-content/45">
+                      {showAgentTerminal
+                        ? `${agentTerminalKind === "claude" ? "Claude" : "Codex"} is hidden. Bring it back when you want help debugging this kata.`
+                        : `Start ${agentProvider === "claude" ? "Claude" : "Codex"} when you want help debugging this kata without leaving the editor.`}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => openAgentTerminal(showAgentTerminal ? agentTerminalKind : agentProvider)}
+                    className={`${toolbarButtonClass} btn-primary gap-1.5`}
+                  >
+                    {showAgentTerminal ? "show assistant" : `start ${agentProvider === "claude" ? "claude" : "codex"}`}
+                  </button>
+                </div>
+              )}
+              {showAgentTerminal && !agentTerminalMinimized && (
               <AgentTerminalPanel
                 ref={agentTerminalRef}
                 launchKind={agentTerminalKind}
@@ -1982,18 +2224,47 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
                 }}
                 onToggleMaximized={() => setMaximizedPane((pane) => (pane === "terminal" ? null : "terminal"))}
               />
+              )}
             </div>
           )}
         </div>
-      </div>
+        </div>
+      </>
     );
   };
 
   const renderTitleBar = () => (
     <div className="shrink-0 border-b border-base-300/60 bg-base-100 px-4 py-2">
-      <h1 className="truncate text-sm font-semibold text-base-content">
-        {problemTitle}
-      </h1>
+      <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
+        <h1 className="min-w-0 truncate text-sm font-semibold text-base-content">
+          {problemTitle}
+        </h1>
+        <div className="flex min-w-0 flex-wrap items-center gap-1.5 text-[11px] text-base-content/45">
+          {normalizedDifficulty && (
+            <span className="rounded border border-base-300/60 bg-base-200/60 px-1.5 py-0.5">
+              {normalizedDifficulty}
+            </span>
+          )}
+          {kata.category && (
+            <span className="rounded border border-base-300/60 bg-base-200/60 px-1.5 py-0.5">
+              {kata.category}
+            </span>
+          )}
+          <span className="rounded border border-base-300/60 bg-base-200/60 px-1.5 py-0.5">
+            {kata.language}
+          </span>
+          {kataStatus !== "idle" && (
+            <span className="rounded border border-base-300/60 bg-base-200/60 px-1.5 py-0.5">
+              {kataStatus === "completed" ? "Completed" : "Elapsed"} {formatTime(kataElapsed)}
+            </span>
+          )}
+          {hasVisibleTestCases && (
+            <span className="rounded border border-base-300/60 bg-base-200/60 px-1.5 py-0.5">
+              {visibleTestCases.length} test {visibleTestCases.length === 1 ? "case" : "cases"}
+            </span>
+          )}
+        </div>
+      </div>
     </div>
   );
 
@@ -2035,8 +2306,8 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
           >
             {showPanel === "description" && (
               <div className="flex-1 overflow-y-auto px-4 py-3 text-sm text-base-content/70">
-                <DpPatternCard kata={kata} />
                 <DescriptionWithLink text={kata.description || "No description available."} />
+                <DpPatternHints kata={kata} />
               </div>
             )}
             {showPanel === "solution" && activeSolution && (
@@ -2062,11 +2333,11 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
                       </div>
                     )}
                     <button
-                      onClick={copySolutionToEditor}
+                      onClick={() => { void copySolutionToEditor(); }}
                       className={`${toolbarButtonClass} btn-ghost shrink-0 gap-1 text-base-content/45 hover:text-base-content/80`}
-                      title="Copy solution to editor"
+                      title="Replace editor with selected solution"
                     >
-                      <span>copy</span>
+                      <span>Replace editor</span>
                       <ArrowRight size={16} />
                     </button>
                   </div>
@@ -2150,6 +2421,7 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
 
         {/* Editor/results area + REPL split */}
         <div
+          ref={editorSplitRef}
           className={`flex flex-1 min-w-0 min-h-0 ${
             hasOutputPane && replLayout === "horizontal"
               ? "flex-col"

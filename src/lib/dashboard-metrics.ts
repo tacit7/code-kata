@@ -8,6 +8,7 @@ export interface DashboardMetricKata {
   id: number;
   name: string;
   category: string;
+  language: string;
   difficulty: string | null;
   tags: string[];
   leetcodeNumber?: number | null;
@@ -32,6 +33,7 @@ export interface ReviewQueueRow {
   kataId: number;
   kataName: string;
   category: string;
+  language: string;
   difficulty: string | null;
   reason: string;
   failedAttempts: number;
@@ -43,6 +45,7 @@ export interface RecentlyImprovedRow {
   kataId: number;
   kataName: string;
   category: string;
+  language: string;
   previousBestMs: number;
   currentBestMs: number;
   improvementPercent: number;
@@ -296,6 +299,7 @@ export function computeHighValueDashboardMetrics(
         kataId: kata.id,
         kataName: kata.name,
         category: kata.category,
+        language: kata.language,
         difficulty: kata.difficulty,
         reason: reviewReason(stats, now),
         failedAttempts: stats.failedAttempts,
@@ -326,6 +330,7 @@ export function computeHighValueDashboardMetrics(
               kataId: kata.id,
               kataName: kata.name,
               category: kata.category,
+              language: kata.language,
               previousBestMs: best,
               currentBestMs: timeMs,
               improvementPercent: Math.round(((best - timeMs) / best) * 100),

@@ -10,6 +10,7 @@ import { Toaster } from "./components/toaster";
 import { CommandPalette } from "./components/command-palette";
 import { AppCommandRegistrar } from "./components/app-command-registrar";
 import { useCommandPaletteStore } from "./stores/command-palette-store";
+import { isDarkScheme } from "./lib/editor-themes";
 import { ModulesPage, PracticePage } from "./routes/library";
 import { PracticeQueuePage } from "./routes/practice";
 import { SettingsPage } from "./routes/settings";
@@ -25,12 +26,13 @@ const KataFormPage = lazy(() => import("./routes/kata-form").then((m) => ({ defa
 
 function App() {
   const theme = useSettingsStore((s) => s.theme);
+  const darkClass = isDarkScheme(theme) ? "dark" : "";
   const uiScale = useSettingsStore((s) => s.uiScale);
   const language = useSettingsStore((s) => s.language);
   const loadSettings = useSettingsStore((s) => s.loadSettings);
   const setSetting = useSettingsStore((s) => s.setSetting);
   const settingsLoaded = useSettingsStore((s) => s.loaded);
-  const toggleCommandPalette = useCommandPaletteStore((s) => s.toggle);
+  const setCommandPaletteOpen = useCommandPaletteStore((s) => s.setOpen);
   const { loading, error, loadKatas } = useKataStore();
   const navigate = useNavigate();
 
@@ -49,7 +51,7 @@ function App() {
     zoomIn: handleZoomIn,
     zoomOut: handleZoomOut,
     resetZoom: handleResetZoom,
-    openCommandPalette: toggleCommandPalette,
+    openCommandPalette: () => setCommandPaletteOpen(true),
   });
 
   useEffect(() => {
@@ -80,7 +82,7 @@ function App() {
 
   if (loading || !settingsLoaded) {
     return (
-      <div className={`${theme === "dark" ? "dark" : ""} flex flex-col h-full`} data-theme={theme}>
+      <div className={`${darkClass} flex flex-col h-full`} data-theme={theme}>
         <div className="flex items-center justify-center h-full bg-base-200">
           <div className="flex flex-col items-center gap-3 animate-fade-in">
             <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
@@ -95,7 +97,7 @@ function App() {
 
   if (error) {
     return (
-      <div className={`${theme === "dark" ? "dark" : ""} flex flex-col h-full`} data-theme={theme}>
+      <div className={`${darkClass} flex flex-col h-full`} data-theme={theme}>
         <div className="flex items-center justify-center h-full bg-base-200">
           <div className="flex flex-col items-center gap-3 text-error animate-fade-in">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-6 h-6 opacity-60">
@@ -109,7 +111,7 @@ function App() {
   }
 
   return (
-    <div className={`${theme === "dark" ? "dark" : ""} flex flex-col h-full`} data-theme={theme}>
+    <div className={`${darkClass} flex flex-col h-full`} data-theme={theme}>
       <div className="flex flex-col h-full bg-base-200 text-base-content">
         <TopBar />
         <main className="flex-1 min-h-0">

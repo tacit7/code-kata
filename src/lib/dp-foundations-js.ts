@@ -216,24 +216,6 @@ function test_five() { assertEqual(climbStairs(5), 8); }`,
     ["dp-basic", "memoization", "recursion", "neetcode"]
   ),
   jsDp(
-    "Climbing Stairs",
-    "1-d-dp",
-    "Climbing Stairs with an iterative O(1)-space DP framing.",
-    `function climbStairs(n) {
-  // your code here
-}`,
-    `function test_two() { assertEqual(climbStairs(2), 2); }
-function test_four() { assertEqual(climbStairs(4), 5); }
-function test_ten() { assertEqual(climbStairs(10), 89); }`,
-    `function climbStairs(n) {
-  if (n <= 2) return n;
-  let prev2 = 1, prev1 = 2;
-  for (let i = 3; i <= n; i++) [prev2, prev1] = [prev1, prev1 + prev2];
-  return prev1;
-}`,
-    ["dp-basic", "neetcode"]
-  ),
-  jsDp(
     "N-th Tribonacci Number",
     "1-d-dp",
     "Return tribonacci(n), where T0=0, T1=1, T2=1, and Tn=Tn-1+Tn-2+Tn-3.",

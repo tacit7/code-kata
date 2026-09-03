@@ -3919,11 +3919,12 @@ function test_negatives() {
   assertEqual(twoSumII([-3,-2,0,1,4], -2), [1,3], "negatives");
 }`,
     solution: `function twoSumII(numbers, target) {
-  let left = 0, right = numbers.length - 1;
+  let left = 0;
+  let right = numbers.length - 1;
   while (left < right) {
     const sum = numbers[left] + numbers[right];
     if (sum === target) return [left + 1, right + 1];
-    else if (sum < target) left++;
+    if (sum < target) left++;
     else right--;
   }
   return [];
@@ -3950,6 +3951,260 @@ function test_negatives() {
     tags: ["array", "two-pointers", "neetcode"],
   },
 ];
+
+const cloneSampleKata = (name: string, sourceName: string): SeedKata => {
+  const source = sampleKatas.find((kata) => kata.language === "javascript" && kata.name === sourceName);
+  if (!source) {
+    throw new Error(`Missing JavaScript seed kata source: ${sourceName}`);
+  }
+  return { ...source, name };
+};
+
+const sampleParityJsKatas: SeedKata[] = [
+  cloneSampleKata("Hoare's Partition Scheme", "Quick Sort"),
+  {
+    name: "Binary Search (Recursive)",
+    category: "binary-search",
+    language: "javascript",
+    difficulty: "easy",
+    description:
+      "Search a sorted array recursively. Return the index of target when found, otherwise return -1.\n\nRef: LeetCode #704 Binary Search",
+    code: `function binarySearchRecursive(nums, target) {
+  // your code here
+}`,
+    testCode: `function test_found_middle() {
+  assertEqual(binarySearchRecursive([-1, 0, 3, 5, 9, 12], 9), 4);
+}
+
+function test_missing() {
+  assertEqual(binarySearchRecursive([-1, 0, 3, 5, 9, 12], 2), -1);
+}
+
+function test_single() {
+  assertEqual(binarySearchRecursive([5], 5), 0);
+}`,
+    solution: `function binarySearchRecursive(nums, target) {
+  function search(lo, hi) {
+    if (lo > hi) return -1;
+    const mid = Math.floor((lo + hi) / 2);
+    if (nums[mid] === target) return mid;
+    if (nums[mid] < target) return search(mid + 1, hi);
+    return search(lo, mid - 1);
+  }
+  return search(0, nums.length - 1);
+}`,
+    usage: null,
+    tags: ["binary-search", "recursion"],
+  },
+  cloneSampleKata("Graph DFS (Iterative)", "Graph DFS"),
+  cloneSampleKata("Graph DFS (Recursive)", "Graph DFS"),
+  cloneSampleKata("Matrix DFS (Iterative)", "Matrix DFS"),
+  cloneSampleKata("Matrix DFS (Recursive)", "Matrix DFS"),
+  {
+    name: "Matrix Grid BFS",
+    category: "graphs",
+    language: "javascript",
+    difficulty: "medium",
+    description:
+      "Starting at the top-left cell of a 0/1 grid, return the shortest number of moves needed to reach the bottom-right cell using four-direction movement through 0 cells. Return -1 when no route exists.",
+    code: `function shortestGridPath(grid) {
+  // your code here
+}`,
+    testCode: `function test_open_grid() {
+  assertEqual(shortestGridPath([[0, 0], [0, 0]]), 2);
+}
+
+function test_blocked() {
+  assertEqual(shortestGridPath([[0, 1], [1, 0]]), -1);
+}
+
+function test_single_cell() {
+  assertEqual(shortestGridPath([[0]]), 0);
+}`,
+    solution: `function shortestGridPath(grid) {
+  const rows = grid.length;
+  const cols = grid[0].length;
+  if (grid[0][0] === 1 || grid[rows - 1][cols - 1] === 1) return -1;
+  const queue = [[0, 0, 0]];
+  const seen = new Set(["0,0"]);
+  const dirs = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+  for (let head = 0; head < queue.length; head++) {
+    const [r, c, dist] = queue[head];
+    if (r === rows - 1 && c === cols - 1) return dist;
+    for (const [dr, dc] of dirs) {
+      const nr = r + dr;
+      const nc = c + dc;
+      const key = \`\${nr},\${nc}\`;
+      if (nr < 0 || nc < 0 || nr >= rows || nc >= cols || grid[nr][nc] === 1 || seen.has(key)) continue;
+      seen.add(key);
+      queue.push([nr, nc, dist + 1]);
+    }
+  }
+  return -1;
+}`,
+    usage: null,
+    tags: ["graph", "bfs", "matrix"],
+  },
+  cloneSampleKata("Linked List Traversal (Iterative)", "Linked List Traversal"),
+  cloneSampleKata("Linked List Traversal (Recursive)", "Linked List Traversal"),
+  cloneSampleKata("Queue from Two Stacks", "Queue from Stacks"),
+  cloneSampleKata("Binary Tree Preorder (Recursive)", "DFS Preorder Traversal"),
+  cloneSampleKata("Binary Tree Inorder (Recursive)", "DFS Inorder Traversal"),
+  cloneSampleKata("Binary Tree Postorder (Recursive)", "DFS Postorder Traversal"),
+  cloneSampleKata("Binary Tree Preorder (Iterative)", "DFS Preorder Traversal"),
+  cloneSampleKata("Binary Tree Inorder (Iterative)", "DFS Inorder Traversal"),
+  cloneSampleKata("Binary Tree Postorder (Iterative)", "DFS Postorder Traversal"),
+  cloneSampleKata("Two Pointer Remove Duplicates", "Two Pointer Remove Dupes"),
+  cloneSampleKata("Merge Two Sorted Arrays", "Merge Sorted Arrays"),
+  {
+    name: "Reverse Nodes in k-Group",
+    category: "linked-lists",
+    language: "javascript",
+    difficulty: "hard",
+    description:
+      "Given a linked list, reverse every complete group of k nodes and leave any final short group unchanged.\n\nRef: LeetCode #25 Reverse Nodes in k-Group",
+    code: `function reverseKGroup(head, k) {
+  // your code here
+}`,
+    testCode: `function list(values) {
+  let head = null;
+  for (let i = values.length - 1; i >= 0; i--) head = { val: values[i], next: head };
+  return head;
+}
+
+function values(head) {
+  const out = [];
+  while (head) {
+    out.push(head.val);
+    head = head.next;
+  }
+  return out;
+}
+
+function test_pairs() {
+  assertEqual(values(reverseKGroup(list([1, 2, 3, 4, 5]), 2)), [2, 1, 4, 3, 5]);
+}
+
+function test_triples() {
+  assertEqual(values(reverseKGroup(list([1, 2, 3, 4, 5]), 3)), [3, 2, 1, 4, 5]);
+}`,
+    solution: `function reverseKGroup(head, k) {
+  const dummy = { val: 0, next: head };
+  let groupPrev = dummy;
+  while (true) {
+    let kth = groupPrev;
+    for (let i = 0; i < k && kth; i++) kth = kth.next;
+    if (!kth) break;
+    const groupNext = kth.next;
+    let prev = groupNext;
+    let curr = groupPrev.next;
+    while (curr !== groupNext) {
+      const next = curr.next;
+      curr.next = prev;
+      prev = curr;
+      curr = next;
+    }
+    const oldStart = groupPrev.next;
+    groupPrev.next = kth;
+    groupPrev = oldStart;
+  }
+  return dummy.next;
+}`,
+    usage: null,
+    tags: ["linked-list", "neetcode"],
+  },
+  {
+    name: "LRU Cache",
+    category: "linked-lists",
+    language: "javascript",
+    difficulty: "medium",
+    description:
+      "Implement an LRU cache with get and put in O(1) average time. When capacity is exceeded, evict the least recently used key.\n\nRef: LeetCode #146 LRU Cache",
+    code: `class LRUCache {
+  constructor(capacity) {
+    // your code here
+  }
+
+  get(key) {
+    // your code here
+  }
+
+  put(key, value) {
+    // your code here
+  }
+}`,
+    testCode: `function test_eviction_order() {
+  const cache = new LRUCache(2);
+  cache.put(1, 1);
+  cache.put(2, 2);
+  assertEqual(cache.get(1), 1);
+  cache.put(3, 3);
+  assertEqual(cache.get(2), -1);
+  cache.put(4, 4);
+  assertEqual(cache.get(1), -1);
+  assertEqual(cache.get(3), 3);
+  assertEqual(cache.get(4), 4);
+}`,
+    solution: `class LRUCache {
+  constructor(capacity) {
+    this.capacity = capacity;
+    this.values = new Map();
+  }
+
+  get(key) {
+    if (!this.values.has(key)) return -1;
+    const value = this.values.get(key);
+    this.values.delete(key);
+    this.values.set(key, value);
+    return value;
+  }
+
+  put(key, value) {
+    if (this.values.has(key)) this.values.delete(key);
+    this.values.set(key, value);
+    if (this.values.size > this.capacity) {
+      const oldest = this.values.keys().next().value;
+      this.values.delete(oldest);
+    }
+  }
+}`,
+    usage: null,
+    tags: ["hash-map", "linked-list", "neetcode"],
+  },
+  {
+    name: "Sliding Window Maximum",
+    category: "sliding-window",
+    language: "javascript",
+    difficulty: "hard",
+    description:
+      "Return the maximum value in every contiguous window of size k.\n\nRef: LeetCode #239 Sliding Window Maximum",
+    code: `function maxSlidingWindow(nums, k) {
+  // your code here
+}`,
+    testCode: `function test_basic() {
+  assertEqual(maxSlidingWindow([1, 3, -1, -3, 5, 3, 6, 7], 3), [3, 3, 5, 5, 6, 7]);
+}
+
+function test_single() {
+  assertEqual(maxSlidingWindow([1], 1), [1]);
+}`,
+    solution: `function maxSlidingWindow(nums, k) {
+  const deque = [];
+  const result = [];
+  for (let i = 0; i < nums.length; i++) {
+    while (deque.length && deque[0] <= i - k) deque.shift();
+    while (deque.length && nums[deque[deque.length - 1]] <= nums[i]) deque.pop();
+    deque.push(i);
+    if (i >= k - 1) result.push(nums[deque[0]]);
+  }
+  return result;
+}`,
+    usage: null,
+    tags: ["sliding-window", "queue", "neetcode"],
+  },
+];
+
+sampleKatas.push(...sampleParityJsKatas);
 
 const sampleVariantMetadata: Record<string, Pick<NonNullable<SeedKata["solutionVariants"]>[number], "complexity" | "explanation">> = {
   "Maximum Subarray": {

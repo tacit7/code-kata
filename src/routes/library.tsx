@@ -1,10 +1,12 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
+import type { ReactNode } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { invoke } from "@tauri-apps/api/core";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { open } from "@tauri-apps/plugin-shell";
+import { Check, Info, Search, SlidersHorizontal, Star, X } from "lucide-react";
 import { useKataStore } from "../stores/kata-store";
-import type { LibrarySortMode } from "../stores/kata-store";
+import type { LibraryDifficultyFilter, LibrarySortMode } from "../stores/kata-store";
 import { useSettingsStore } from "../stores/settings-store";
 import { CATEGORY_LEVEL } from "../lib/levels";
 import { confirmAction } from "../lib/confirm-action";
@@ -28,6 +30,55 @@ const savedScrollTopByPage = {
   problems: 0,
 };
 
+const LIBRARY_DIFFICULTIES: LibraryDifficultyFilter[] = ["easy", "medium", "hard"];
+
+function isLibraryKeyboardTarget(target: EventTarget | null) {
+  if (!(target instanceof HTMLElement)) return true;
+  if (target.isContentEditable) return false;
+  return !target.closest("button, input, select, textarea, a, [role='button'], [role='menuitem']");
+}
+
+function filterPillClass(active: boolean) {
+  return [
+    "btn btn-sm rounded-md border px-4 font-semibold",
+    active
+      ? "kata-btn-selected"
+      : "kata-btn-secondary",
+  ].join(" ");
+}
+
+function TooltipHint({
+  label,
+  text,
+  children,
+}: {
+  label: string;
+  text: string;
+  children: ReactNode;
+}) {
+  const id = useId();
+
+  return (
+    <span className="group relative inline-flex">
+      <span
+        className="inline-flex cursor-help items-center gap-1 rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2 focus-visible:ring-offset-base-100"
+        aria-describedby={id}
+        aria-label={`${label}: ${text}`}
+        tabIndex={0}
+      >
+        {children}
+      </span>
+      <span
+        id={id}
+        role="tooltip"
+        className="pointer-events-none invisible absolute left-0 top-full z-50 mt-2 w-72 rounded-md border border-base-300 bg-base-100 px-3 py-2 text-left text-xs normal-case leading-5 tracking-normal text-base-content/75 opacity-0 shadow-xl shadow-black/20 transition-opacity group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100"
+      >
+        {text}
+      </span>
+    </span>
+  );
+}
+
 type ModuleSection = {
   id: string;
   label: string;
@@ -37,6 +88,15 @@ type ModuleSection = {
   recursionModule?: string;
   katas: Kata[];
   children?: ModuleSection[];
+};
+
+type ModuleProgress = {
+  completed: number;
+  total: number;
+  percent: number;
+  nextKata: Kata | null;
+  unstarted: number;
+  needsReview: number;
 };
 
 const MODULE_DEFS: Omit<ModuleSection, "katas">[] = [...ROADMAP_MODULES];
@@ -65,6 +125,7 @@ function LibraryPage({ modules }: { modules: boolean }) {
   const [expandedModules, setExpandedModules] = useState<Set<string>>(() => (
     modules ? parseOpenModuleIds(openModulesParam) : new Set()
   ));
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const contextCommandCleanupRef = useRef<(() => void) | null>(null);
   const TAG_PREVIEW_COUNT = 3;
 
@@ -75,6 +136,7 @@ function LibraryPage({ modules }: { modules: boolean }) {
   const blind75Only = useKataStore((s) => s.libraryBlind75Only);
   const neetcodeOnly = useKataStore((s) => s.libraryNeetcodeOnly);
   const neetcode250Only = useKataStore((s) => s.libraryNeetcode250Only);
+  const difficultyFilters = useKataStore((s) => s.libraryDifficultyFilters);
   const implementationSizeFilters = useKataStore((s) => s.libraryImplementationSizeFilters);
   const setLibraryUI = useKataStore((s) => s.setLibraryUI);
   const setBrowseOrder = useKataStore((s) => s.setBrowseOrder);
@@ -89,6 +151,52 @@ function LibraryPage({ modules }: { modules: boolean }) {
   const roadmapListMode: RoadmapListMode = neetcodeOnly ? "neetcode150" : neetcode250Only ? "neetcode250" : "all";
 
   const diffRank: Record<string, number> = { easy: 0, medium: 1, hard: 2 };
+  const hasActiveCollectionFilters =
+    leetcodeOnly ||
+    blind75Only ||
+    neetcodeOnly ||
+    neetcode250Only;
+  const hasActiveLibraryFilters =
+    search.trim().length > 0 ||
+    hasActiveCollectionFilters ||
+    difficultyFilters.length > 0 ||
+    implementationSizeFilters.length > 0;
+  const activeFilterCount =
+    Number(leetcodeOnly) +
+    Number(blind75Only) +
+    Number(neetcodeOnly) +
+    Number(neetcode250Only) +
+    difficultyFilters.length +
+    implementationSizeFilters.length;
+
+  const clearLibraryFilters = () => {
+    setLibraryUI({
+      librarySearch: "",
+      libraryLeetcodeOnly: false,
+      libraryBlind75Only: false,
+      libraryNeetcodeOnly: false,
+      libraryNeetcode250Only: false,
+      libraryDifficultyFilters: [],
+      libraryImplementationSizeFilters: [],
+    });
+  };
+
+  const clearCollectionFilters = () => {
+    setLibraryUI({
+      libraryLeetcodeOnly: false,
+      libraryBlind75Only: false,
+      libraryNeetcodeOnly: false,
+      libraryNeetcode250Only: false,
+    });
+  };
+
+  const toggleDifficultyFilter = (difficulty: LibraryDifficultyFilter) => {
+    setLibraryUI({
+      libraryDifficultyFilters: difficultyFilters.includes(difficulty)
+        ? difficultyFilters.filter((item) => item !== difficulty)
+        : [...difficultyFilters, difficulty],
+    });
+  };
 
   const toggleImplementationSizeFilter = (size: ImplementationSize) => {
     setLibraryUI({
@@ -125,6 +233,10 @@ function LibraryPage({ modules }: { modules: boolean }) {
       if (blind75Only && !k.tags.includes("blind75")) return false;
       if (neetcodeOnly && !isNeetcode150Kata(k)) return false;
       if (neetcode250Only && !isNeetcode250Kata(k)) return false;
+      if (
+        difficultyFilters.length > 0 &&
+        (!k.difficulty || !difficultyFilters.includes(k.difficulty as LibraryDifficultyFilter))
+      ) return false;
       const implementationComplexity = implementationComplexityFor(k);
       if (implementationSizeFilters.length > 0 && (!implementationComplexity.size || !implementationSizeFilters.includes(implementationComplexity.size))) return false;
       if (levelFilter !== null) return (CATEGORY_LEVEL[k.category] ?? -1) === levelFilter;
@@ -218,7 +330,7 @@ function LibraryPage({ modules }: { modules: boolean }) {
     });
 
     return blind75Only || neetcodeOnly || neetcode250Only ? uniqueLeetcodeProblemKatas(sorted) : sorted;
-  }, [katas, search, diffSort, sortMode, leetcodeOnly, blind75Only, neetcodeOnly, neetcode250Only, implementationSizeFilters, dailyKataIds, bestTimes, streaks]);
+  }, [katas, search, diffSort, sortMode, leetcodeOnly, blind75Only, neetcodeOnly, neetcode250Only, difficultyFilters, implementationSizeFilters, dailyKataIds, bestTimes, streaks]);
 
   // Modules page: group the visible rows into roadmap-style accordion sections.
   const familySections = useMemo(() => {
@@ -310,7 +422,10 @@ function LibraryPage({ modules }: { modules: boolean }) {
     () => familySections?.flatMap((section) => section.children?.flatMap((child) => child.katas) ?? section.katas) ?? searchedKatas,
     [familySections, searchedKatas],
   );
-
+  const visibleDoneCount = renderedKatas.filter((kata) => doneKataIds.includes(kata.id)).length;
+  const visibleDailyCount = renderedKatas.filter((kata) => dailyKataIds.includes(kata.id)).length;
+  const visibleMissingFromDaily = renderedKatas.filter((kata) => !dailyKataIds.includes(kata.id));
+  const nextVisibleKata = renderedKatas.find((kata) => !doneKataIds.includes(kata.id)) ?? renderedKatas[0] ?? null;
   // Publish the RENDERED order. Publishing the raw store list would look like
   // an optimization and would silently break next/prev in the editor.
   useEffect(() => {
@@ -330,6 +445,13 @@ function LibraryPage({ modules }: { modules: boolean }) {
   const toggleDaily = (id: number, e: React.MouseEvent) => {
     e.stopPropagation();
     toggleFavoriteById(id);
+  };
+
+  const addVisibleToDaily = () => {
+    if (visibleMissingFromDaily.length === 0) return;
+    const next = [...dailyKataIds, ...visibleMissingFromDaily.map((kata) => kata.id)];
+    setSetting("dailyKataIds", next);
+    toast.success(`Added ${visibleMissingFromDaily.length} visible problem${visibleMissingFromDaily.length === 1 ? "" : "s"} to daily`, 1800);
   };
 
   const toggleDone = (id: number, e: React.MouseEvent) => {
@@ -409,6 +531,31 @@ function LibraryPage({ modules }: { modules: boolean }) {
     }
   };
 
+  const renderEmptyContent = () => (
+    <div className="flex flex-col items-center gap-3">
+      <p className="text-base-content/25">
+        {hasActiveLibraryFilters ? "No matching problems" : "No katas found"}
+      </p>
+      <div className="flex items-center justify-center gap-2">
+        {hasActiveLibraryFilters && (
+          <button
+            onClick={clearLibraryFilters}
+            className="btn btn-sm btn-primary"
+          >
+            Clear filters
+          </button>
+        )}
+        <button
+          onClick={handleReseed}
+          disabled={reseeding}
+          className="btn btn-sm btn-ghost text-base-content/40 hover:text-base-content/70"
+        >
+          {reseeding ? "Reseeding…" : "Reload problem statements"}
+        </button>
+      </div>
+    </div>
+  );
+
   useEffect(() => {
     return () => contextCommandCleanupRef.current?.();
   }, []);
@@ -423,9 +570,9 @@ function LibraryPage({ modules }: { modules: boolean }) {
     const unregister = [
       registerCommand({
         id: "library:context:open",
-        title: "Open Kata",
+        title: "Select Kata",
         hidden: true,
-        run: () => navigate(`/editor/${kata.id}`),
+        run: () => setSelectedIndex(indexById.get(kata.id) ?? 0),
       }),
       registerCommand({
         id: "library:context:favorite",
@@ -502,8 +649,15 @@ function LibraryPage({ modules }: { modules: boolean }) {
     setSelectedIndex(0);
   }, [search, sortMode, diffSort]);
 
+  const openKata = (kata: Kata) => {
+    navigate(`/editor/${kata.id}`);
+  };
+
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
+      if (filtersOpen) return;
+      if (e.defaultPrevented || !isLibraryKeyboardTarget(e.target)) return;
+      if (renderedKatas.length === 0) return;
       if (e.key === "ArrowDown") {
         e.preventDefault();
         setSelectedIndex((i) => Math.min(i + 1, renderedKatas.length - 1));
@@ -512,12 +666,21 @@ function LibraryPage({ modules }: { modules: boolean }) {
         setSelectedIndex((i) => Math.max(i - 1, 0));
       } else if (e.key === "Enter") {
         const kata = renderedKatas[selectedIndex];
-        if (kata) navigate(`/editor/${kata.id}`);
+        if (kata) openKata(kata);
       }
     }
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [renderedKatas, selectedIndex, navigate]);
+  }, [filtersOpen, renderedKatas, selectedIndex, navigate]);
+
+  useEffect(() => {
+    if (!filtersOpen) return;
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") setFiltersOpen(false);
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [filtersOpen]);
 
   useEffect(() => {
     const kata = renderedKatas[selectedIndex];
@@ -543,7 +706,7 @@ function LibraryPage({ modules }: { modules: boolean }) {
       <tr
         key={kata.id}
         id={`kata-row-${kata.id}`}
-        onClick={() => { setSelectedIndex(idx); navigate(`/editor/${kata.id}`); }}
+        onClick={() => openKata(kata)}
         onMouseEnter={() => setSelectedIndex(idx)}
         onContextMenu={(e) => handleKataContextMenu(e, kata.id)}
         className={`cursor-pointer transition-colors border-base-300/30 ${
@@ -559,10 +722,23 @@ function LibraryPage({ modules }: { modules: boolean }) {
                 : "text-base-content/20 hover:text-base-content/40"
             }`}
             title={dailyKataIds.includes(kata.id) ? "Remove from daily" : "Add to daily"}
+            aria-label={dailyKataIds.includes(kata.id) ? `Remove ${displayName} from daily` : `Add ${displayName} to daily`}
           >
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill={dailyKataIds.includes(kata.id) ? "currentColor" : "none"} stroke="currentColor" strokeWidth={1.5} className="w-4 h-4">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M11.48 3.499a.562.562 0 0 1 1.04 0l2.125 5.111a.563.563 0 0 0 .475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 0 0-.182.557l1.285 5.385a.562.562 0 0 1-.84.61l-4.725-2.885a.562.562 0 0 0-.586 0L6.982 20.54a.562.562 0 0 1-.84-.61l1.285-5.386a.562.562 0 0 0-.182-.557l-4.204-3.602a.562.562 0 0 1 .321-.988l5.518-.442a.563.563 0 0 0 .475-.345L11.48 3.5Z" />
-            </svg>
+            <Star className="h-4 w-4" fill={dailyKataIds.includes(kata.id) ? "currentColor" : "none"} />
+          </button>
+        </td>
+        <td className="w-8">
+          <button
+            onClick={(e) => toggleDone(kata.id, e)}
+            className={`btn btn-ghost btn-xs btn-square ${
+              doneKataIds.includes(kata.id)
+                ? "text-success"
+                : "text-base-content/20 hover:text-base-content/40"
+            }`}
+            title={doneKataIds.includes(kata.id) ? "Mark as not done" : "Mark as done"}
+            aria-label={doneKataIds.includes(kata.id) ? `Mark ${displayName} as not done` : `Mark ${displayName} as done`}
+          >
+            <Check className="h-4 w-4" />
           </button>
         </td>
         <td className="font-medium text-sm">
@@ -576,19 +752,6 @@ function LibraryPage({ modules }: { modules: boolean }) {
             {kata.isCustom && (
               <span className="badge badge-secondary badge-xs">Custom</span>
             )}
-            <button
-              onClick={(e) => toggleDone(kata.id, e)}
-              className={`inline-flex items-center gap-0.5 rounded-full px-1 py-0.5 text-[10px] font-semibold transition-colors ${
-                doneKataIds.includes(kata.id)
-                  ? "bg-success/15 text-success hover:bg-success/25"
-                  : "text-base-content/15 hover:text-base-content/30 hover:bg-base-300/30"
-              }`}
-              title={doneKataIds.includes(kata.id) ? "Mark as not done" : "Mark as done"}
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3 h-3">
-                <path fillRule="evenodd" d="M12.416 3.376a.75.75 0 0 1 .208 1.04l-5 7.5a.75.75 0 0 1-1.154.114l-3-3a.75.75 0 0 1 1.06-1.06l2.353 2.353 4.493-6.74a.75.75 0 0 1 1.04-.207Z" clipRule="evenodd" />
-              </svg>
-            </button>
           </span>
         </td>
         <td className="w-10 text-center">
@@ -610,9 +773,7 @@ function LibraryPage({ modules }: { modules: boolean }) {
                 className="h-4 w-4 shrink-0 object-contain"
               />
             </a>
-          ) : (
-            <span className="text-base-content/15 text-xs">-</span>
-          )}
+          ) : null}
         </td>
         {!modules && (
           <td>
@@ -646,7 +807,7 @@ function LibraryPage({ modules }: { modules: boolean }) {
                 <button
                   key={tag}
                   onClick={(e) => { e.stopPropagation(); setSearch(tag); }}
-                  className="badge badge-xs bg-primary/10 text-primary/70 border-primary/10 cursor-pointer hover:bg-primary/25 hover:text-primary transition-colors"
+                  className="badge badge-xs cursor-pointer border-base-300/50 bg-base-300/30 text-base-content/45 transition-colors hover:bg-primary/15 hover:text-primary"
                 >
                   {tag}
                 </button>
@@ -701,14 +862,20 @@ function LibraryPage({ modules }: { modules: boolean }) {
     );
   };
 
-  const moduleProgress = (section: ModuleSection) => {
+  const moduleProgress = (section: ModuleSection): ModuleProgress => {
     const sectionKatas = section.katas;
     const completed = sectionKatas.filter((kata) => doneKataIds.includes(kata.id)).length;
     const total = roadmapModuleTargetCount(section.id, roadmapListMode) ?? sectionKatas.length;
+    const nextKata = sectionKatas.find((kata) => !doneKataIds.includes(kata.id)) ?? sectionKatas[0] ?? null;
+    const unstarted = sectionKatas.filter((kata) => bestTimes[kata.id] == null).length;
+    const needsReview = sectionKatas.filter((kata) => bestTimes[kata.id] != null && !doneKataIds.includes(kata.id) && (streaks[kata.id] ?? 0) < 2).length;
     return {
       completed,
       total,
       percent: total === 0 ? 0 : Math.round((completed / total) * 100),
+      nextKata,
+      unstarted,
+      needsReview,
     };
   };
 
@@ -716,6 +883,7 @@ function LibraryPage({ modules }: { modules: boolean }) {
     <table className="table table-sm">
       <thead>
         <tr className="border-base-300 bg-base-300/70 text-base-content/70">
+          <th className="w-8"></th>
           <th className="w-8"></th>
           <th>Problem</th>
           <th className="w-10 text-center">
@@ -740,6 +908,7 @@ function LibraryPage({ modules }: { modules: boolean }) {
   const renderModuleSection = (section: ModuleSection, nested = false) => {
     const expanded = expandedModules.has(section.id);
     const progress = moduleProgress(section);
+    const nextKata = progress.nextKata;
     return (
       <details
         key={section.id}
@@ -752,12 +921,30 @@ function LibraryPage({ modules }: { modules: boolean }) {
         className={moduleDetailsClass(nested)}
       >
         <summary className={moduleHeaderClass(nested)}>
-          <h2 className={moduleTitleClass(nested)}>{section.label}</h2>
-          <div className="grid grid-cols-[3.5rem_1fr] items-center gap-4">
-            <span className="text-right text-sm tabular-nums text-base-content/55">
-              {progress.completed}/{progress.total}
-            </span>
-            <progress className="progress progress-success h-2 w-full bg-base-content/20" value={progress.percent} max="100" />
+          <div className="min-w-0">
+            <h2 className={moduleTitleClass(nested)}>{section.label}</h2>
+            {nextKata && (
+              <p className="mt-1 truncate text-xs text-base-content/45">
+                Next: {dpDisplayNameFor(nextKata)}
+              </p>
+            )}
+          </div>
+          <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
+            <div className="min-w-0">
+              <div className="mb-1 flex items-center justify-between gap-3 text-xs text-base-content/50">
+                <span className="tabular-nums">
+                  {progress.completed}/{progress.total} complete
+                </span>
+                <span className="hidden truncate text-right sm:block">
+                  {progress.unstarted > 0
+                    ? `${progress.unstarted} unstarted`
+                    : progress.needsReview > 0
+                      ? `${progress.needsReview} to repeat`
+                      : "ready to reinforce"}
+                </span>
+              </div>
+              <progress className="progress progress-success h-2 w-full bg-base-content/20" value={progress.percent} max="100" />
+            </div>
           </div>
         </summary>
         <div className={moduleBodyClass(Boolean(section.children))}>
@@ -776,54 +963,66 @@ function LibraryPage({ modules }: { modules: boolean }) {
   return (
     <div className="flex flex-col h-full p-5 gap-4 animate-fade-in">
       {/* Header */}
-      <div className="flex items-center gap-3">
-        <h1 className="text-lg font-bold shrink-0">{modules ? "Modules" : "Problems"}</h1>
-        <div className="relative flex-1 max-w-sm">
-          <input
-            type="text"
-            placeholder="Search katas..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="input input-bordered input-sm w-full bg-base-100 pr-7"
-          />
-          {search && (
-            <button
-              onClick={() => setSearch("")}
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-base-content/40 hover:text-base-content/80 transition-colors"
-              aria-label="Clear search"
-            >
-              ✕
-            </button>
-          )}
+      <div className="flex flex-col gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <h1 className="text-lg font-bold shrink-0">{modules ? "Modules" : "Problems"}</h1>
+          <div className="relative min-w-64 flex-1 max-w-md">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-base-content/35" />
+            <input
+              type="text"
+              placeholder="Search problems, tags, level, or #"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="input input-bordered input-sm h-10 w-full rounded-md bg-base-100 pl-9 pr-8"
+            />
+            {search && (
+              <button
+                onClick={() => setSearch("")}
+                className="btn btn-ghost btn-xs btn-square absolute right-1.5 top-1/2 -translate-y-1/2 text-base-content/40 hover:text-base-content/80"
+                aria-label="Clear search"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
+          <select
+            value={diffSort ? `difficulty-${diffSort}` : sortMode}
+            onChange={(e) => {
+              const v = e.target.value as LibrarySortMode | "difficulty-asc" | "difficulty-desc";
+              if (v === "difficulty-asc") { setSortMode("default"); setDiffSort("asc"); }
+              else if (v === "difficulty-desc") { setSortMode("default"); setDiffSort("desc"); }
+              else { setDiffSort(null); setSortMode(v as LibrarySortMode); }
+            }}
+            className="select select-bordered select-sm ml-auto h-10 w-52 shrink-0 rounded-md bg-base-100 text-xs"
+          >
+            <option value="default">Sort: Default</option>
+            <option value="starred">Sort: Starred first</option>
+            <option value="level">Sort: Level</option>
+            <option value="level-difficulty">Sort: Level + Difficulty</option>
+            <option value="category">Sort: Category A→Z</option>
+            <option value="leetcode">Sort: LeetCode #</option>
+            <option value="implementation-complexity">Sort: Complexity</option>
+            <option value="best-time">Sort: Best time</option>
+            <option value="streak">Sort: Streak</option>
+            <option value="difficulty-asc">Sort: Difficulty ↑</option>
+            <option value="difficulty-desc">Sort: Difficulty ↓</option>
+          </select>
         </div>
-        <select
-          value={diffSort ? `difficulty-${diffSort}` : sortMode}
-          onChange={(e) => {
-            const v = e.target.value as LibrarySortMode | "difficulty-asc" | "difficulty-desc";
-            if (v === "difficulty-asc") { setSortMode("default"); setDiffSort("asc"); }
-            else if (v === "difficulty-desc") { setSortMode("default"); setDiffSort("desc"); }
-            else { setDiffSort(null); setSortMode(v as LibrarySortMode); }
-          }}
-          className="select select-bordered select-sm bg-base-100 text-xs w-52 shrink-0"
-        >
-          <option value="default">Sort: Default</option>
-          <option value="starred">Sort: Starred first</option>
-          <option value="level">Sort: Level</option>
-          <option value="level-difficulty">Sort: Level + Difficulty</option>
-          <option value="category">Sort: Category A→Z</option>
-          <option value="leetcode">Sort: LeetCode #</option>
-          <option value="implementation-complexity">Sort: Complexity</option>
-          <option value="best-time">Sort: Best time</option>
-          <option value="streak">Sort: Streak</option>
-          <option value="difficulty-asc">Sort: Difficulty ↑</option>
-          <option value="difficulty-desc">Sort: Difficulty ↓</option>
-        </select>
-        <div className="flex items-center gap-2 shrink-0">
+
+        <div className="scrollbar-hidden flex items-center gap-2 overflow-x-auto pb-1 text-xs">
+          <button
+            type="button"
+            onClick={clearLibraryFilters}
+            aria-pressed={!hasActiveLibraryFilters}
+            className={filterPillClass(!hasActiveLibraryFilters)}
+          >
+            All
+          </button>
           <button
             onClick={() => setLibraryUI({ libraryLeetcodeOnly: !leetcodeOnly })}
             title="Show only katas that map to a LeetCode problem"
             aria-pressed={leetcodeOnly}
-            className={`btn btn-sm ${leetcodeOnly ? "btn-primary" : "btn-ghost btn-outline"}`}
+            className={filterPillClass(leetcodeOnly)}
           >
             LeetCode
           </button>
@@ -831,7 +1030,7 @@ function LibraryPage({ modules }: { modules: boolean }) {
             onClick={() => setLibraryUI({ libraryBlind75Only: !blind75Only })}
             title="Show only Blind 75 katas"
             aria-pressed={blind75Only}
-            className={`btn btn-sm ${blind75Only ? "btn-primary" : "btn-ghost btn-outline"}`}
+            className={filterPillClass(blind75Only)}
           >
             Blind 75
           </button>
@@ -839,46 +1038,236 @@ function LibraryPage({ modules }: { modules: boolean }) {
             onClick={() => setLibraryUI({ libraryNeetcodeOnly: !neetcodeOnly })}
             title="Show only NeetCode 150 katas"
             aria-pressed={neetcodeOnly}
-            className={`btn btn-sm ${neetcodeOnly ? "btn-primary" : "btn-ghost btn-outline"}`}
+            className={filterPillClass(neetcodeOnly)}
           >
             NeetCode 150
           </button>
           <button
-            onClick={() => setLibraryUI({ libraryNeetcode250Only: !neetcode250Only })}
-            title="Show only NeetCode 250 katas available in this app"
-            aria-pressed={neetcode250Only}
-            className={`btn btn-sm ${neetcode250Only ? "btn-primary" : "btn-ghost btn-outline"}`}
+            type="button"
+            onClick={() => setFiltersOpen(true)}
+            className={[
+              "btn btn-sm rounded-md border px-4 font-semibold",
+              activeFilterCount > 0
+                ? "border-primary bg-primary/10 text-primary hover:bg-primary/15"
+                : "border-base-300 bg-base-100 text-base-content/75 hover:border-base-content/25 hover:bg-base-100",
+            ].join(" ")}
           >
-            NeetCode 250
+            <SlidersHorizontal className="h-4 w-4" />
+            Filters
+            {activeFilterCount > 0 && (
+              <span className="badge badge-primary badge-xs ml-1 h-5 min-w-5 rounded-md px-1">
+                {activeFilterCount}
+              </span>
+            )}
           </button>
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-2 text-xs">
-        <span className="text-base-content/45">Complexity</span>
-        {IMPLEMENTATION_SIZES.map((size) => {
-          const active = implementationSizeFilters.includes(size);
-          return (
-            <button
-              key={size}
-              type="button"
-              onClick={() => toggleImplementationSizeFilter(size)}
-              aria-pressed={active}
-              className={`btn btn-xs ${active ? "btn-primary" : "btn-ghost btn-outline text-base-content/55"}`}
-            >
-              {size}
-            </button>
-          );
-        })}
-        {implementationSizeFilters.length > 0 && (
-          <button
-            type="button"
-            onClick={() => setLibraryUI({ libraryImplementationSizeFilters: [] })}
-            className="btn btn-ghost btn-xs text-base-content/40 hover:text-base-content/70"
+      {filtersOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-base-300/40 p-4 backdrop-blur-sm"
+          role="presentation"
+          onMouseDown={() => setFiltersOpen(false)}
+        >
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="library-filters-title"
+            className="flex max-h-[82vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-base-300 bg-base-100 shadow-2xl"
+            onMouseDown={(e) => e.stopPropagation()}
           >
-            Clear
-          </button>
-        )}
+            <header className="grid h-16 grid-cols-[3rem_1fr_3rem] items-center border-b border-base-300/70 px-4">
+              <span />
+              <h2 id="library-filters-title" className="text-center text-lg font-bold">
+                Filters
+              </h2>
+              <button
+                type="button"
+                onClick={() => setFiltersOpen(false)}
+                className="btn btn-ghost btn-sm btn-square justify-self-end"
+                aria-label="Close filters"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </header>
+
+            <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
+              <section className="border-b border-base-300/70 pb-6">
+                <h3 className="mb-4 text-base font-bold">Collections</h3>
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                  <button
+                    type="button"
+                    onClick={clearCollectionFilters}
+                    aria-pressed={!hasActiveCollectionFilters}
+                    className={filterPillClass(!hasActiveCollectionFilters)}
+                  >
+                    All
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setLibraryUI({ libraryLeetcodeOnly: !leetcodeOnly })}
+                    aria-pressed={leetcodeOnly}
+                    className={filterPillClass(leetcodeOnly)}
+                  >
+                    LeetCode
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setLibraryUI({ libraryBlind75Only: !blind75Only })}
+                    aria-pressed={blind75Only}
+                    className={filterPillClass(blind75Only)}
+                  >
+                    Blind 75
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setLibraryUI({ libraryNeetcodeOnly: !neetcodeOnly })}
+                    aria-pressed={neetcodeOnly}
+                    className={filterPillClass(neetcodeOnly)}
+                  >
+                    NeetCode 150
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setLibraryUI({ libraryNeetcode250Only: !neetcode250Only })}
+                    aria-pressed={neetcode250Only}
+                    className={filterPillClass(neetcode250Only)}
+                  >
+                    NeetCode 250
+                  </button>
+                </div>
+              </section>
+
+              <section className="border-b border-base-300/70 py-6">
+                <h3 className="mb-4 text-base font-bold">Difficulty</h3>
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                  <button
+                    type="button"
+                    onClick={() => setLibraryUI({ libraryDifficultyFilters: [] })}
+                    aria-pressed={difficultyFilters.length === 0}
+                    className={filterPillClass(difficultyFilters.length === 0)}
+                  >
+                    Any
+                  </button>
+                  {LIBRARY_DIFFICULTIES.map((difficulty) => {
+                    const active = difficultyFilters.includes(difficulty);
+                    return (
+                      <button
+                        key={difficulty}
+                        type="button"
+                        onClick={() => toggleDifficultyFilter(difficulty)}
+                        aria-pressed={active}
+                        className={filterPillClass(active)}
+                      >
+                        {difficulty[0].toUpperCase() + difficulty.slice(1)}
+                      </button>
+                    );
+                  })}
+                </div>
+              </section>
+
+              <section className="pt-6">
+                <div className="mb-1 flex items-center gap-2">
+                  <h3 className="text-base font-bold">Problem size</h3>
+                  <TooltipHint
+                    label="Problem size"
+                    text="Estimated from executable lines in the reference solution. It describes how much code the solution usually takes, not the input size or Big-O complexity."
+                  >
+                    <Info className="h-3.5 w-3.5 text-base-content/35" aria-hidden="true" />
+                  </TooltipHint>
+                </div>
+                <p className="mb-4 text-sm text-base-content/50">
+                  Filter by how compact or involved the reference implementation is.
+                </p>
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
+                  {IMPLEMENTATION_SIZES.map((size) => {
+                    const active = implementationSizeFilters.includes(size);
+                    return (
+                      <button
+                        key={size}
+                        type="button"
+                        onClick={() => toggleImplementationSizeFilter(size)}
+                        aria-pressed={active}
+                        title={`Show ${size.toLowerCase()} problems by reference-solution code size`}
+                        className={filterPillClass(active)}
+                      >
+                        {size}
+                      </button>
+                    );
+                  })}
+                </div>
+              </section>
+            </div>
+
+            <footer className="flex items-center justify-between gap-3 border-t border-base-300/70 px-6 py-4">
+              <button
+                type="button"
+                onClick={clearLibraryFilters}
+                disabled={!hasActiveLibraryFilters}
+                className="btn btn-ghost btn-sm"
+              >
+                Clear all
+              </button>
+              <button
+                type="button"
+                onClick={() => setFiltersOpen(false)}
+                className="btn btn-primary btn-sm rounded-md px-6"
+              >
+                Show {renderedKatas.length} {renderedKatas.length === 1 ? "problem" : "problems"}
+              </button>
+            </footer>
+          </section>
+        </div>
+      )}
+
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-base-300/70 bg-base-100/60 px-3 py-2 text-xs">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-base-content/70">
+          <span className="font-semibold text-base-content/75">
+            {renderedKatas.length} {renderedKatas.length === 1 ? "problem" : "problems"}
+          </span>
+          {modules && familySections && (
+            <span>
+              {familySections.length} {familySections.length === 1 ? "module" : "modules"}
+            </span>
+          )}
+          <span>
+            {visibleDoneCount} done
+          </span>
+          <span>
+            {visibleDailyCount} daily
+          </span>
+          {modules && nextVisibleKata && (
+            <span className="min-w-0 max-w-full truncate text-base-content/70">
+              Next: {dpDisplayNameFor(nextVisibleKata)}
+            </span>
+          )}
+          {hasActiveLibraryFilters && (
+            <span className="text-primary/80">
+              filtered
+            </span>
+          )}
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          {!modules && (
+            <button
+              type="button"
+              onClick={addVisibleToDaily}
+              disabled={visibleMissingFromDaily.length === 0}
+              className="btn btn-primary btn-xs rounded-md px-3"
+            >
+              {visibleMissingFromDaily.length === 0 ? "Visible in daily" : "Add visible to daily"}
+            </button>
+          )}
+          {hasActiveLibraryFilters && (
+            <button
+              type="button"
+              onClick={clearLibraryFilters}
+              className="btn btn-xs kata-btn-secondary"
+            >
+              Clear filters
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Kata table / modules */}
@@ -886,7 +1275,7 @@ function LibraryPage({ modules }: { modules: boolean }) {
         ref={listRef}
         onScroll={(e) => { savedScrollTopByPage[pageKey] = e.currentTarget.scrollTop; }}
         className={`flex-1 min-h-0 overflow-y-auto scrollbar-hidden ${
-          modules ? "mx-auto w-full max-w-5xl space-y-1.5 pr-1" : "bg-base-100 rounded-2xl border border-base-300 shadow-md shadow-base-300/20"
+          modules ? "mx-auto w-full max-w-5xl space-y-1.5 pr-1" : "bg-base-100 rounded-lg border border-base-300 shadow-sm shadow-base-300/20"
         }`}
       >
         {modules ? (
@@ -894,14 +1283,7 @@ function LibraryPage({ modules }: { modules: boolean }) {
             {familySections?.map((section) => renderModuleSection(section))}
             {searchedKatas.length === 0 && (
               <div className="rounded-2xl border border-base-300/50 bg-base-100 py-12 text-center text-sm">
-                <p className="text-base-content/25 mb-3">No katas found</p>
-                <button
-                  onClick={handleReseed}
-                  disabled={reseeding}
-                  className="btn btn-sm btn-ghost text-base-content/40 hover:text-base-content/70"
-                >
-                  {reseeding ? "Reseeding…" : "Reload problem statements"}
-                </button>
+                {renderEmptyContent()}
               </div>
             )}
           </>
@@ -909,6 +1291,7 @@ function LibraryPage({ modules }: { modules: boolean }) {
           <table className="table table-sm">
             <thead>
               <tr className="border-base-300 bg-base-300/70 text-base-content/70">
+                <th className="w-8"></th>
                 <th className="w-8"></th>
                 <th className="font-semibold">Name</th>
                 <th className="w-10 text-center">
@@ -935,15 +1318,8 @@ function LibraryPage({ modules }: { modules: boolean }) {
               {searchedKatas.map((kata) => renderKataRow(kata))}
               {searchedKatas.length === 0 && (
                 <tr>
-                  <td colSpan={11} className="py-12 text-center text-sm">
-                    <p className="text-base-content/25 mb-3">No katas found</p>
-                    <button
-                      onClick={handleReseed}
-                      disabled={reseeding}
-                      className="btn btn-sm btn-ghost text-base-content/40 hover:text-base-content/70"
-                    >
-                      {reseeding ? "Reseeding…" : "Reload problem statements"}
-                    </button>
+                  <td colSpan={12} className="py-12 text-center text-sm">
+                    {renderEmptyContent()}
                   </td>
                 </tr>
               )}

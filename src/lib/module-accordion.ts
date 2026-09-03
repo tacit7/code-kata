@@ -6,8 +6,8 @@ export function moduleDetailsClass(nested: boolean): string {
 
 export function moduleHeaderClass(nested: boolean): string {
   return nested
-    ? "collapse-title grid w-full grid-cols-[minmax(0,1fr)_16rem] items-center gap-4 bg-base-200/70 px-4 py-2.5 pr-10 text-left transition-colors hover:bg-base-300/30"
-    : "collapse-title grid w-full grid-cols-[minmax(0,1fr)_24rem] items-center gap-5 px-5 py-4 pr-12 text-left transition-colors hover:bg-base-300/20";
+    ? "collapse-title grid w-full grid-cols-1 items-center gap-3 bg-base-200/70 px-4 py-2.5 pr-10 text-left transition-colors hover:bg-base-300/30 sm:grid-cols-[minmax(0,1fr)_minmax(14rem,18rem)]"
+    : "collapse-title grid w-full grid-cols-1 items-center gap-4 px-5 py-4 pr-12 text-left transition-colors hover:bg-base-300/20 sm:grid-cols-[minmax(0,1fr)_minmax(18rem,26rem)]";
 }
 
 export function moduleTitleClass(nested: boolean): string {

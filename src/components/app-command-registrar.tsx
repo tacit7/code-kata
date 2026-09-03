@@ -78,7 +78,6 @@ export function AppCommandRegistrar() {
       keywords: [item.label, item.path],
       run: () => navigate(item.path === "/practice" ? resumePath ?? item.path : item.path),
     }));
-
     return [
       ...navActions,
       {

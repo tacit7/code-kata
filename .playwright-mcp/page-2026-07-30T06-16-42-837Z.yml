@@ -1,0 +1,4 @@
+- generic [active] [ref=e1]:
+  - heading "C++ Kata Spike — clang-in-wasm (binji/wasm-clang), STL two-sum" [level=1] [ref=e2]
+  - generic [ref=e3]: running…
+  - generic [ref=e4]: "> Untarring ./vendor/wasm-clang/sysroot.tar... done."

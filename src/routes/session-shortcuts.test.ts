@@ -12,8 +12,15 @@ import { join } from "node:path";
 //
 // Crude on purpose, same reasoning as electron/safeguards.test.ts.
 describe("session.tsx", () => {
+  const source = readFileSync(join(__dirname, "session.tsx"), "utf8");
+
   it("does not register keyboard shortcuts", () => {
-    const src = readFileSync(join(__dirname, "session.tsx"), "utf8");
-    expect(src).not.toContain("useKeyboardShortcuts");
+    expect(source).not.toContain("useKeyboardShortcuts");
+  });
+
+  it("enforces the time limit against the live per-problem timer", () => {
+    expect(source).toContain("const liveKataElapsed = currentKataElapsedMs();");
+    expect(source).toContain("liveKataElapsed < sessionTimeLimitMs");
+    expect(source).toContain("await recordAttempt(currentKata.id, liveKataElapsed, false, \"\");");
   });
 });

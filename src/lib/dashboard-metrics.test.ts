@@ -13,6 +13,7 @@ const at = (daysAgo: number) => new Date(NOW - daysAgo * DAY).toISOString();
 function kata(partial: Partial<DashboardMetricKata> & Pick<DashboardMetricKata, "id" | "name">): DashboardMetricKata {
   return {
     category: "dynamic-programming",
+    language: "javascript",
     difficulty: "medium",
     tags: [],
     leetcodeNumber: null,
@@ -72,6 +73,7 @@ describe("computeHighValueDashboardMetrics", () => {
         kataId: 1,
         kataName: "House Robber",
         category: "dynamic-programming",
+        language: "javascript",
         previousBestMs: 12_000,
         currentBestMs: 8_000,
         improvementPercent: 33,

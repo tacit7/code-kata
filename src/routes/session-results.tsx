@@ -134,7 +134,7 @@ export function SessionResultsPage() {
                       {hasDiff && (
                         <button
                           onClick={() => toggleDiff(i)}
-                          className="btn btn-ghost btn-xs text-xs"
+                          className="btn btn-xs kata-btn-secondary text-xs"
                         >
                           {isExpanded ? "Hide" : "Diff"}
                         </button>
@@ -174,7 +174,7 @@ export function SessionResultsPage() {
             <button
               onClick={() => void startReviewQueue(queue.label, queue.katas)}
               disabled={queue.katas.length === 0}
-              className={`btn btn-sm mt-3 w-full ${queue.label === "Retry failed" ? "btn-primary" : "btn-ghost btn-outline"}`}
+              className={`btn btn-sm mt-3 w-full ${queue.label === "Retry failed" ? "btn-primary" : "kata-btn-secondary"}`}
             >
               Start queue
             </button>

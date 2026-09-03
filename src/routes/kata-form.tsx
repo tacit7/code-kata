@@ -124,7 +124,7 @@ export function KataFormPage() {
           )}
           <button
             onClick={() => navigate("/problems")}
-            className="btn btn-ghost btn-sm"
+            className="btn btn-sm kata-btn-secondary"
           >
             Cancel
           </button>

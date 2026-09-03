@@ -25,6 +25,7 @@ export type EditorMaximizedPane = "repl" | "results" | null;
 export type VizSpeed = "900" | "500" | "200";
 export type DashboardTab = "overview" | "progress" | "leaderboard" | "history";
 export type AgentProvider = "codex" | "claude";
+export type SettingsSaveStatus = "idle" | "saving" | "saved" | "error";
 
 export interface EditorLayoutSettings {
   problemPanelVisible: boolean;
@@ -35,6 +36,7 @@ export interface EditorLayoutSettings {
   outputPaneVisible: boolean;
   outputTab: "testcase" | "results";
   outputPaneHeight: number;
+  outputPaneWidth: number;
   activeTestcaseIndex: number;
   activeSolutionVariant: number;
   vizSpeed: VizSpeed;
@@ -98,6 +100,7 @@ const DEFAULTS = {
     outputPaneVisible: true,
     outputTab: "testcase",
     outputPaneHeight: 280,
+    outputPaneWidth: 560,
     activeTestcaseIndex: 0,
     activeSolutionVariant: 0,
     vizSpeed: "500",
@@ -116,6 +119,8 @@ const EDITOR_TOGGLE_DEFAULTS: Record<EditorToggleKey, boolean> = {
   bracketPairColorization: DEFAULTS.bracketPairColorization,
   fontLigatures: DEFAULTS.fontLigatures,
 };
+
+let pendingSettingsSaves = 0;
 
 interface SettingsState {
   loaded: boolean;
@@ -153,9 +158,12 @@ interface SettingsState {
   dashboardTab: DashboardTab;
   agentProvider: AgentProvider;
   agentSystemPrompt: string;
+  saveStatus: SettingsSaveStatus;
+  lastSavedAt: number | null;
+  saveError: string | null;
   // Actions
   loadSettings: () => Promise<void>;
-  setSetting: (key: string, value: unknown) => Promise<void>;
+  setSetting: (key: string, value: unknown, options?: { throwOnError?: boolean }) => Promise<void>;
   resetDefaults: () => Promise<void>;
   toggleTheme: () => void;
   toggleVimMode: () => void;
@@ -194,6 +202,7 @@ export function normalizeEditorLayout(value: unknown): EditorLayoutSettings {
     outputPaneVisible: typeof raw.outputPaneVisible === "boolean" ? raw.outputPaneVisible : DEFAULTS.editorLayout.outputPaneVisible,
     outputTab: raw.outputTab === "results" || raw.outputTab === "testcase" ? raw.outputTab : DEFAULTS.editorLayout.outputTab,
     outputPaneHeight: clampNumber(raw.outputPaneHeight, DEFAULTS.editorLayout.outputPaneHeight, 160, 900),
+    outputPaneWidth: clampNumber(raw.outputPaneWidth, DEFAULTS.editorLayout.outputPaneWidth, 280, 1200),
     activeTestcaseIndex: clampInteger(raw.activeTestcaseIndex, DEFAULTS.editorLayout.activeTestcaseIndex, 0, 999),
     activeSolutionVariant: clampInteger(raw.activeSolutionVariant, DEFAULTS.editorLayout.activeSolutionVariant, 0, 999),
     vizSpeed: isVizSpeed(raw.vizSpeed) ? raw.vizSpeed : DEFAULTS.editorLayout.vizSpeed,
@@ -285,6 +294,9 @@ export function normalizePracticeConfig(value: unknown): PracticeConfig {
 
 export const useSettingsStore = create<SettingsState>((set, get) => ({
   loaded: false,
+  saveStatus: "idle",
+  lastSavedAt: null,
+  saveError: null,
   ...DEFAULTS,
 
   loadSettings: async () => {
@@ -339,11 +351,10 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
           ? patch.lineNumbersMode
           : DEFAULTS.lineNumbersMode,
       // Persisted settings can outlive this variant's language set — a foreign
-      // variant may have written "ruby", or the value may be corrupted. Only
-      // known-good languages pass through; ruby (the retired variant) maps
-      // to python; everything else falls back to the default.
+      // variant may have written "ruby" or "java", or the value may be
+      // corrupted. This Tauri variant exposes JavaScript and Python.
       language:
-        patch.language === "javascript" || patch.language === "python" || patch.language === "java"
+        patch.language === "javascript" || patch.language === "python"
           ? patch.language
           : patch.language === "ruby"
           ? "python"
@@ -367,6 +378,9 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       dashboardTab: normalizeDashboardTab(patch.dashboardTab),
       agentProvider: normalizeAgentProvider(patch.agentProvider),
       agentSystemPrompt: normalizeAgentSystemPrompt(patch.agentSystemPrompt),
+      saveStatus: "saved",
+      lastSavedAt: Date.now(),
+      saveError: null,
       loaded: true,
     });
 
@@ -376,19 +390,38 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     if (JSON.stringify(migrated) !== JSON.stringify(patch.shortcuts)) {
       await get().setSetting("shortcuts", migrated);
     }
+    if (patch.language !== undefined && patch.language !== get().language) {
+      await get().setSetting("language", get().language);
+    }
   },
 
-  setSetting: async (key: string, value: unknown) => {
+  setSetting: async (key: string, value: unknown, options) => {
     // Optimistic update first so UI is always immediate
-    set({ [key]: value });
+    const startsNewSaveBatch = pendingSettingsSaves === 0;
+    pendingSettingsSaves += 1;
+    set({
+      [key]: value,
+      saveStatus: "saving",
+      ...(startsNewSaveBatch ? { saveError: null } : {}),
+    });
     try {
       const db = await getDb();
       await db.execute(
         "INSERT OR REPLACE INTO settings (key, value) VALUES ($1, $2)",
         [key, JSON.stringify(value)]
       );
+      pendingSettingsSaves -= 1;
+      if (pendingSettingsSaves === 0 && get().saveStatus !== "error") {
+        set({ saveStatus: "saved", lastSavedAt: Date.now(), saveError: null });
+      }
     } catch (err) {
+      pendingSettingsSaves -= 1;
       console.error(`[settings] Failed to persist "${key}":`, err);
+      set({
+        saveStatus: "error",
+        saveError: err instanceof Error ? err.message : String(err),
+      });
+      if (options?.throwOnError) throw err;
     }
   },
 

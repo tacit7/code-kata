@@ -415,6 +415,50 @@ def test_longest_consecutive_single():
             best = max(best, length)
 
     return best`,
+    solutionVariants: [
+      variant(
+        "Set sequence starts",
+        `def longest_consecutive(nums: list[int]) -> int:
+    num_set = set(nums)
+    best = 0
+
+    for num in num_set:
+        if num - 1 in num_set:
+            continue
+
+        length = 1
+        while num + length in num_set:
+            length += 1
+        best = max(best, length)
+
+    return best`,
+        "Time O(n), Space O(n)",
+        "Stores every value in a set and only expands runs from numbers that have no predecessor, so each number is visited at most a constant number of times."
+      ),
+      variant(
+        "Sort and scan",
+        `def longest_consecutive(nums: list[int]) -> int:
+    if not nums:
+        return 0
+
+    nums.sort()
+    best = 1
+    current = 1
+
+    for i in range(1, len(nums)):
+        if nums[i] == nums[i - 1]:
+            continue
+        if nums[i] == nums[i - 1] + 1:
+            current += 1
+        else:
+            best = max(best, current)
+            current = 1
+
+    return max(best, current)`,
+        "Time O(n log n), Space O(1) extra",
+        "Sorting makes consecutive runs adjacent, which simplifies the scan but is not optimal for the LeetCode O(n) time requirement."
+      ),
+    ],
     usage: null,
     tags: ["array", "hash-map", "blind75", "neetcode", "arrays-hashing"],
   },

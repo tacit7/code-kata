@@ -1,6 +1,7 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useId } from "react";
+import type { ReactNode } from "react";
 import { useNavigate } from "react-router";
-import { Code2, ListFilter, ListOrdered, Save, Settings2, Timer, Trash2, X } from "lucide-react";
+import { Code2, Flame, Info, ListFilter, ListOrdered, Play, Save, Settings2, Timer, Trash2, X } from "lucide-react";
 import { useKataStore } from "../stores/kata-store";
 import { reseedKatas } from "../lib/database";
 import { useSettingsStore, type PracticeConfig, type PracticeDifficulty } from "../stores/settings-store";
@@ -32,6 +33,38 @@ type Mode = "sr" | "review" | "daily" | "weak" | "speed" | "level";
 type SizeOpt = 3 | 5 | 10 | 15 | 20 | "all";
 type KataStatus = QueueKataStatus;
 type PracticeSettingsSection = "queue" | "filters" | "limits" | "editor";
+
+function TooltipHint({
+  label,
+  text,
+  children,
+}: {
+  label: string;
+  text: string;
+  children: ReactNode;
+}) {
+  const id = useId();
+
+  return (
+    <span className="group relative inline-flex">
+      <span
+        className="inline-flex cursor-help items-center gap-1 rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2 focus-visible:ring-offset-base-100"
+        aria-describedby={id}
+        aria-label={`${label}: ${text}`}
+        tabIndex={0}
+      >
+        {children}
+      </span>
+      <span
+        id={id}
+        role="tooltip"
+        className="pointer-events-none invisible absolute right-0 top-full z-50 mt-2 w-72 rounded-md border border-base-300 bg-base-100 px-3 py-2 text-left text-xs normal-case leading-5 tracking-normal text-base-content/75 opacity-0 shadow-xl shadow-black/20 transition-opacity group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100"
+      >
+        {text}
+      </span>
+    </span>
+  );
+}
 
 interface QueueItem {
   kata: Kata;
@@ -150,15 +183,6 @@ const MODE_LABEL: Record<Mode, string> = {
   level: "Level Up",
 };
 
-const MODE_SUBTITLE: Record<Mode, string> = {
-  sr: "Sorted by urgency",
-  review: "Failed and due only",
-  daily: "Starred katas",
-  weak: "Failed last attempt",
-  speed: "Sorted by best time",
-  level: "By level",
-};
-
 export function PracticeQueuePage() {
   const katas = useKataStore((s) => s.katas);
   const bestTimes = useKataStore((s) => s.bestTimes);
@@ -245,6 +269,15 @@ export function PracticeQueuePage() {
     });
   const setSessionSize = (s: SizeOpt) => updateConfig({ sessionSize: s });
   const setMaxTestRuns = (n: number | null) => updateConfig({ maxTestRuns: n });
+  const clearPracticeFilters = () => {
+    updateConfig({
+      moduleFilters: [],
+      categoryFilters: [],
+      difficultyFilters: [],
+      implementationSizeFilters: [],
+      selectedLevels: mergeSelection(practiceConfig.selectedLevels, visibleLevelIds, new Set()),
+    });
+  };
 
   const [statsMap, setStatsMap] = useState<Map<number, KataStats>>(new Map());
   const [historyMap, setHistoryMap] = useState<Map<number, { passed: number; started_at: string }[]>>(new Map());
@@ -326,8 +359,8 @@ export function PracticeQueuePage() {
       setPresetBusy(true);
       try {
         await Promise.all([
-          setSetting("practiceConfig", next.practiceConfig),
-          setSetting("sessionTimeLimitMs", next.sessionTimeLimitMs),
+          setSetting("practiceConfig", next.practiceConfig, { throwOnError: true }),
+          setSetting("sessionTimeLimitMs", next.sessionTimeLimitMs, { throwOnError: true }),
         ]);
         setPresetNameDraft(preset.name);
         setPresetFeedback({ kind: "success", message: `Applied "${preset.name}"` });
@@ -597,6 +630,39 @@ export function PracticeQueuePage() {
     sessionTimeLimitMs > 0 ? `${timeLimitMinutes} min / problem` : "No time limit";
 
   const attemptsSummary = maxTestRuns === null ? "Unlimited attempts" : `${maxTestRuns} attempts / kata`;
+  const activeFilterCount =
+    moduleFilters.length +
+    categoryFilters.length +
+    difficultyFilters.length +
+    implementationSizeFilters.length +
+    (mode === "level" ? selectedLevels.size : 0);
+  const activeFilterSummary = [
+    moduleSummary,
+    categorySummary,
+    difficultyFilters.length === 0
+      ? "Any difficulty"
+      : difficultyFilters.map((item) => item[0].toUpperCase() + item.slice(1)).join(", "),
+    complexitySummary,
+  ];
+  const dueThisWeekCount = queueItems.filter((i) => i.status === "ok" && i.dueAt !== null && i.dueAt <= Date.now() + 7 * 86_400_000).length;
+  const launchReason =
+    mode === "sr"
+      ? `${dueNow.length} due now, ${dueThisWeekCount} due this week`
+      : mode === "review"
+      ? "Failed and due problems only"
+      : mode === "daily"
+      ? dailyRandomize ? "Daily list in random order" : "Daily list in review order"
+      : mode === "weak"
+      ? "Problems failed on the last attempt"
+      : mode === "speed"
+      ? "Solved problems sorted by best time"
+      : categorySummary;
+  const launchDisabledReason =
+    katas.length === 0
+      ? "No problems are loaded yet."
+      : queueItems.length === 0
+      ? "No problems match the current setup."
+      : "";
   const settingsSections = [
     { id: "queue" as const, label: "Queue", icon: ListOrdered },
     { id: "filters" as const, label: "Filters", icon: ListFilter },
@@ -607,14 +673,14 @@ export function PracticeQueuePage() {
     settingsSections.find((section) => section.id === settingsSection) ?? settingsSections[0];
 
   return (
-    <div className="relative flex h-full overflow-hidden animate-fade-in">
-      {/* ── Left panel ── */}
-      <aside className="w-[300px] shrink-0 border-r border-base-300/60 flex flex-col gap-5 p-5 overflow-y-auto bg-base-100">
+    <div className="relative flex h-full flex-col overflow-hidden animate-fade-in xl:flex-row">
+      {/* ── Mode panel ── */}
+      <aside className="flex max-h-[38vh] shrink-0 flex-col gap-3 overflow-y-auto border-b border-base-300/60 bg-base-100 p-4 xl:max-h-none xl:w-[300px] xl:border-b-0 xl:border-r xl:p-5">
         <div>
-          <p className="text-[11px] font-bold uppercase tracking-widest text-base-content/35 mb-2">
+          <p className="mb-2 text-[11px] font-bold uppercase tracking-widest text-base-content/35">
             Mode
           </p>
-          <div className="flex flex-col gap-2">
+          <div className="grid grid-cols-2 gap-2 md:grid-cols-3 xl:flex xl:flex-col">
             {MODES.map(({ id, title, desc }) => {
               const count = modeCounts[id];
               const active = mode === id;
@@ -622,7 +688,8 @@ export function PracticeQueuePage() {
                 <button
                   key={id}
                   onClick={() => setMode(id)}
-                  className={`w-full text-left rounded-lg px-3.5 py-3 border transition-colors cursor-pointer ${
+                  aria-pressed={active}
+                  className={`min-h-[92px] w-full cursor-pointer rounded-lg border px-3.5 py-3 text-left transition-colors xl:min-h-0 ${
                     active
                       ? "border-primary/60 bg-primary/[0.06]"
                       : "border-base-300/60 bg-base-200 hover:border-base-300"
@@ -633,7 +700,7 @@ export function PracticeQueuePage() {
                   >
                     {title}
                   </p>
-                  <p className="text-[12px] text-base-content/40 leading-snug">{desc}</p>
+                  <p className="hidden text-[12px] leading-snug text-base-content/40 sm:block">{desc}</p>
                   <p
                     className={`text-[11px] font-semibold mt-1.5 ${active ? "text-primary" : "text-base-content/40"}`}
                   >
@@ -665,7 +732,7 @@ export function PracticeQueuePage() {
             <div className="flex items-center gap-4 border-b border-base-300/60 px-7 py-5">
               <div className="min-w-0">
                 <h2 id="practice-settings-title" className="text-[22px] font-bold leading-none text-base-content">
-                  Preferences
+                  Practice setup
                 </h2>
               </div>
               <button
@@ -690,6 +757,7 @@ export function PracticeQueuePage() {
                         key={section.id}
                         type="button"
                         onClick={() => setSettingsSection(section.id)}
+                        aria-pressed={active}
                         className={`flex items-start gap-3 rounded-md px-3 py-2.5 text-left transition-colors ${
                           active
                             ? "bg-primary text-primary-content"
@@ -725,10 +793,11 @@ export function PracticeQueuePage() {
                                 key={id}
                                 type="button"
                                 onClick={() => setMode(id)}
+                                aria-pressed={active}
                                 className={`rounded-md border px-3 py-2 text-left transition-colors ${
                                   active
                                     ? "border-primary/60 bg-primary/10 text-primary"
-                                    : "border-base-300/70 bg-base-100 text-base-content/65 hover:border-base-300 hover:text-base-content"
+                                    : "kata-btn-secondary"
                                 }`}
                               >
                                 <span className="block text-[13px] font-semibold">{title}</span>
@@ -789,6 +858,7 @@ export function PracticeQueuePage() {
                             setPresetFeedback(null);
                           }}
                           placeholder="Preset name"
+                          aria-label="Preset name"
                           className="input input-bordered input-sm mt-2 w-full bg-base-100 text-sm"
                         />
                         {presetFeedback && (
@@ -812,7 +882,7 @@ export function PracticeQueuePage() {
                             <button
                               type="button"
                               onClick={clearModuleFilters}
-                              className="btn btn-ghost btn-sm text-base-content/45 hover:text-base-content"
+                              className="btn btn-sm kata-btn-secondary"
                             >
                               Clear
                             </button>
@@ -823,10 +893,11 @@ export function PracticeQueuePage() {
                           <button
                             type="button"
                             onClick={clearModuleFilters}
+                            aria-pressed={moduleFilters.length === 0}
                             className={`rounded-md border px-3 py-1.5 text-[12px] font-semibold transition-all ${
                               moduleFilters.length === 0
-                                ? "border-primary/50 bg-primary/10 text-primary"
-                                : "border-base-300/60 text-base-content/45 hover:border-base-300 hover:text-base-content/70"
+                                ? "kata-btn-selected"
+                                : "kata-btn-secondary"
                             }`}
                           >
                             All
@@ -836,10 +907,11 @@ export function PracticeQueuePage() {
                               type="button"
                               key={module.id}
                               onClick={() => toggleModuleFilter(module.id)}
+                              aria-pressed={moduleFilters.includes(module.id)}
                               className={`rounded-md border px-3 py-1.5 text-[12px] font-semibold transition-all ${
                                 moduleFilters.includes(module.id)
-                                  ? "border-primary/50 bg-primary/10 text-primary"
-                                  : "border-base-300/60 text-base-content/45 hover:border-base-300 hover:text-base-content/70"
+                                  ? "kata-btn-selected"
+                                  : "kata-btn-secondary"
                               }`}
                             >
                               {module.label}
@@ -861,7 +933,7 @@ export function PracticeQueuePage() {
                             <button
                               type="button"
                               onClick={() => setSelectedLevels(new Set())}
-                              className="btn btn-ghost btn-sm text-base-content/45 hover:text-base-content"
+                              className="btn btn-sm kata-btn-secondary"
                             >
                               Clear
                             </button>
@@ -899,10 +971,11 @@ export function PracticeQueuePage() {
                             <button
                               type="button"
                               onClick={clearCategoryFilters}
+                              aria-pressed={categoryFilters.length === 0}
                               className={`rounded-md border px-3 py-1.5 text-[12px] font-semibold transition-all ${
                                 categoryFilters.length === 0
-                                  ? "border-primary/50 bg-primary/10 text-primary"
-                                  : "border-base-300/60 text-base-content/45 hover:border-base-300 hover:text-base-content/70"
+                                  ? "kata-btn-selected"
+                                  : "kata-btn-secondary"
                               }`}
                             >
                               All
@@ -912,10 +985,11 @@ export function PracticeQueuePage() {
                                 type="button"
                                 key={cat}
                                 onClick={() => toggleCategoryFilter(cat)}
+                                aria-pressed={categoryFilters.includes(cat)}
                                 className={`rounded-md border px-3 py-1.5 text-[12px] font-semibold transition-all ${
                                   categoryFilters.includes(cat)
-                                    ? "border-primary/50 bg-primary/10 text-primary"
-                                    : "border-base-300/60 text-base-content/45 hover:border-base-300 hover:text-base-content/70"
+                                    ? "kata-btn-selected"
+                                    : "kata-btn-secondary"
                                 }`}
                               >
                                 {cat}
@@ -931,7 +1005,8 @@ export function PracticeQueuePage() {
                           <button
                             type="button"
                             onClick={clearDifficultyFilters}
-                            className={`btn btn-sm join-item flex-1 ${difficultyFilters.length === 0 ? "btn-primary" : "btn-ghost border-base-300/60 text-base-content/50"}`}
+                            aria-pressed={difficultyFilters.length === 0}
+                            className={`btn btn-sm join-item flex-1 ${difficultyFilters.length === 0 ? "btn-primary" : "kata-btn-secondary"}`}
                           >
                             All
                           </button>
@@ -940,7 +1015,8 @@ export function PracticeQueuePage() {
                               type="button"
                               key={id}
                               onClick={() => toggleDifficultyFilter(id)}
-                              className={`btn btn-sm join-item flex-1 ${difficultyFilters.includes(id) ? "btn-primary" : "btn-ghost border-base-300/60 text-base-content/50"}`}
+                              aria-pressed={difficultyFilters.includes(id)}
+                              className={`btn btn-sm join-item flex-1 ${difficultyFilters.includes(id) ? "btn-primary" : "kata-btn-secondary"}`}
                             >
                               {label}
                             </button>
@@ -955,10 +1031,11 @@ export function PracticeQueuePage() {
                           <button
                             type="button"
                             onClick={clearImplementationSizeFilters}
+                            aria-pressed={implementationSizeFilters.length === 0}
                             className={`rounded-md border px-3 py-1.5 text-[12px] font-semibold transition-all ${
                               implementationSizeFilters.length === 0
-                                ? "border-primary/50 bg-primary/10 text-primary"
-                                : "border-base-300/60 text-base-content/45 hover:border-base-300 hover:text-base-content/70"
+                                ? "kata-btn-selected"
+                                : "kata-btn-secondary"
                             }`}
                           >
                             Any
@@ -968,10 +1045,11 @@ export function PracticeQueuePage() {
                               type="button"
                               key={size}
                               onClick={() => toggleImplementationSizeFilter(size)}
+                              aria-pressed={implementationSizeFilters.includes(size)}
                               className={`rounded-md border px-3 py-1.5 text-[12px] font-semibold transition-all ${
                                 implementationSizeFilters.includes(size)
-                                  ? "border-primary/50 bg-primary/10 text-primary"
-                                  : "border-base-300/60 text-base-content/45 hover:border-base-300 hover:text-base-content/70"
+                                  ? "kata-btn-selected"
+                                  : "kata-btn-secondary"
                               }`}
                             >
                               {size}
@@ -993,7 +1071,8 @@ export function PracticeQueuePage() {
                                 type="button"
                                 key={String(rand)}
                                 onClick={() => setDailyRandomize(rand)}
-                                className={`btn btn-sm join-item flex-1 ${dailyRandomize === rand ? "btn-primary" : "btn-ghost border-base-300/60 text-base-content/50"}`}
+                                aria-pressed={dailyRandomize === rand}
+                                className={`btn btn-sm join-item flex-1 ${dailyRandomize === rand ? "btn-primary" : "kata-btn-secondary"}`}
                               >
                                 {rand ? "Random" : "SR Queue"}
                               </button>
@@ -1010,7 +1089,8 @@ export function PracticeQueuePage() {
                               type="button"
                               key={s}
                               onClick={() => setSessionSize(s)}
-                              className={`btn btn-sm join-item flex-1 ${sessionSize === s ? "btn-primary" : "btn-ghost border-base-300/60 text-base-content/50"}`}
+                              aria-pressed={sessionSize === s}
+                              className={`btn btn-sm join-item flex-1 ${sessionSize === s ? "btn-primary" : "kata-btn-secondary"}`}
                             >
                               {s === "all" ? "All" : s}
                             </button>
@@ -1026,6 +1106,7 @@ export function PracticeQueuePage() {
                             type="number"
                             min={0}
                             value={timeLimitMinutes}
+                            aria-label="Minutes per problem"
                             onChange={(event) => {
                               const mins = Math.max(0, parseInt(event.currentTarget.value) || 0);
                               setSetting("sessionTimeLimitMs", mins * 60000);
@@ -1045,7 +1126,8 @@ export function PracticeQueuePage() {
                               type="button"
                               key={n ?? "none"}
                               onClick={() => setMaxTestRuns(n)}
-                              className={`btn btn-sm join-item flex-1 ${maxTestRuns === n ? "btn-primary" : "btn-ghost border-base-300/60 text-base-content/50"}`}
+                              aria-pressed={maxTestRuns === n}
+                              className={`btn btn-sm join-item flex-1 ${maxTestRuns === n ? "btn-primary" : "kata-btn-secondary"}`}
                             >
                               {n === null ? "∞" : n}
                             </button>
@@ -1097,47 +1179,188 @@ export function PracticeQueuePage() {
 
       {/* ── Right panel ── */}
       <div className="flex flex-col flex-1 overflow-hidden">
-        {/* Header */}
-        <div className="px-5 py-4 border-b border-base-300/60 flex items-center gap-3 shrink-0">
-          <div className="min-w-0">
-            <h2 className="text-[15px] font-bold text-base-content truncate">{MODE_LABEL[mode]}</h2>
-            <p className="text-[12px] text-base-content/35 truncate">
-              {mode === "level" && selectedLevels.size > 0
-                ? `Lv.${[...selectedLevels].sort((a, b) => a - b).join(", ")} · `
-                : `${MODE_SUBTITLE[mode]} · `}
-              {mode === "sr"
-                ? `${queueItems.filter((i) => isReviewStatus(i.status)).length} due now · ${
-                    queueItems.filter((i) => i.status === "ok" && i.dueAt !== null && i.dueAt <= Date.now() + 7 * 86_400_000).length
-                  } due this week · ${queueItems.length} katas`
-                : mode === "review"
-                ? `${queueItems.length} due for review`
-                : `${queueItems.length} katas`}
-            </p>
+        {/* Launch command */}
+        <div className="shrink-0 border-b border-base-300/60 bg-base-100 px-4 py-4 lg:px-5">
+          <div className="flex flex-col gap-4 2xl:flex-row 2xl:items-center">
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <h2 className="text-[18px] font-bold leading-tight text-base-content">
+                  {MODE_LABEL[mode]}
+                </h2>
+                <span className="kata-chip rounded-md border px-2 py-0.5 text-[11px] font-semibold">
+                  {queueItems.length} queued
+                </span>
+                {activeFilterCount > 0 && (
+                  <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary">
+                    {activeFilterCount} filter{activeFilterCount === 1 ? "" : "s"}
+                  </span>
+                )}
+              </div>
+              <p className="mt-1 text-[13px] text-base-content/50">
+                {launchReason}
+              </p>
+              {launchDisabledReason && (
+                <p className="mt-1 text-[12px] font-medium text-warning">
+                  {launchDisabledReason}
+                </p>
+              )}
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="flex items-center gap-2">
+                <TooltipHint
+                  label="Session size"
+                  text="Pick how many problems this session will include."
+                >
+                  <Info size={15} className="text-base-content/35" aria-hidden="true" />
+                </TooltipHint>
+                <div className="join" title="Pick how many problems this session will include">
+                  {SIZE_OPTIONS.map((s) => (
+                    <button
+                      type="button"
+                      key={s}
+                      onClick={() => setSessionSize(s)}
+                      aria-pressed={sessionSize === s}
+                      title={s === "all" ? "Include every matching problem" : `Include ${s} problems in this session`}
+                      className={`btn btn-sm join-item min-w-10 ${sessionSize === s ? "btn-primary" : "kata-btn-secondary"}`}
+                    >
+                      {s === "all" ? "All" : s}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <TooltipHint
+                  label="Time limit"
+                  text="Set the minutes allowed for each problem. Use 0 for no timer."
+                >
+                  <Info size={15} className="text-base-content/35" aria-hidden="true" />
+                </TooltipHint>
+                <label
+                  className="kata-chip flex h-8 items-center gap-2 rounded-md border px-2 text-[12px]"
+                  title="Set minutes per problem. Use 0 for no timer."
+                >
+                  <Timer size={14} aria-hidden="true" />
+                  <input
+                    type="number"
+                    min={0}
+                    value={timeLimitMinutes}
+                    aria-label="Minutes per problem"
+                    onChange={(event) => {
+                      const mins = Math.max(0, parseInt(event.currentTarget.value) || 0);
+                      setSetting("sessionTimeLimitMs", mins * 60000);
+                    }}
+                    className="w-9 bg-transparent text-right text-[12px] font-semibold tabular-nums text-base-content outline-none"
+                  />
+                  <span>min</span>
+                </label>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setSettingsSection("filters");
+                  setSettingsOpen(true);
+                }}
+                className="btn btn-sm kata-btn-secondary"
+              >
+                <ListFilter size={15} />
+                Filters
+              </button>
+              <button
+                type="button"
+                aria-label="Practice setup"
+                title="Practice setup"
+                onClick={() => setSettingsOpen(true)}
+                className="btn btn-ghost btn-sm btn-square text-base-content/55 hover:text-base-content"
+              >
+                <Settings2 size={17} />
+              </button>
+              <button
+                onClick={handleLaunch}
+                disabled={launchKatas.length === 0 || launching}
+                className="btn btn-primary btn-sm min-w-36"
+              >
+                {launching ? <span className="loading loading-spinner loading-xs" /> : <Play size={15} />}
+                {launching ? "Launching" : `Start ${launchCount}`}
+              </button>
+            </div>
           </div>
-          <button
-            onClick={handleLaunch}
-            disabled={launchKatas.length === 0 || launching}
-            className="btn btn-primary btn-sm ml-auto min-w-28"
-          >
-            {launching ? <span className="loading loading-spinner loading-xs" /> : null}
-            {launching ? "Launching" : `Start ${launchCount}`}
-          </button>
-          <button
-            type="button"
-            aria-label="Practice settings"
-            title="Practice settings"
-            onClick={() => setSettingsOpen(true)}
-            className="btn btn-ghost btn-sm btn-square text-base-content/55 hover:text-base-content"
-          >
-            <Settings2 size={17} />
-          </button>
+
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            {activeFilterSummary.map((item) => (
+              <span key={item} className="kata-chip rounded-md border px-2 py-1 text-[11px] font-medium">
+                {item}
+              </span>
+            ))}
+            <span className="kata-chip rounded-md border px-2 py-1 text-[11px] font-medium">
+              {timeLimitSummary}
+            </span>
+            <span className="kata-chip rounded-md border px-2 py-1 text-[11px] font-medium">
+              {attemptsSummary}
+            </span>
+            {activeFilterCount > 0 && (
+              <button
+                type="button"
+                onClick={clearPracticeFilters}
+                className="btn btn-xs kata-btn-secondary"
+              >
+                Clear filters
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Queue list */}
         <div className="flex-1 overflow-y-auto px-3 py-2">
           {queueItems.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full gap-3">
-              <p className="text-base-content/30 text-sm">No katas match this filter</p>
+            <div className="flex h-full flex-col items-center justify-center gap-4 px-4 text-center">
+              <div>
+                <p className="text-sm font-semibold text-base-content/65">
+                  {katas.length === 0 ? "No problems loaded" : "No problems match this setup"}
+                </p>
+                <p className="mt-1 max-w-md text-[12px] leading-relaxed text-base-content/40">
+                  {katas.length === 0
+                    ? "Reload the bundled problem statements to build a practice queue."
+                    : "Relax one of the active constraints, or switch back to the review queue."}
+                </p>
+              </div>
+              {katas.length > 0 && (
+                <div className="flex flex-wrap items-center justify-center gap-2">
+                  {activeFilterCount > 0 && (
+                    <button
+                      type="button"
+                      onClick={clearPracticeFilters}
+                      className="btn btn-primary btn-sm"
+                    >
+                      Clear filters
+                    </button>
+                  )}
+                  {mode !== "sr" && (
+                    <button
+                      type="button"
+                      onClick={() => setMode("sr")}
+                      className="btn btn-sm kata-btn-secondary"
+                    >
+                      Use SR Queue
+                    </button>
+                  )}
+                  {moduleFilters.length > 0 && (
+                    <button type="button" onClick={clearModuleFilters} className="btn btn-ghost btn-sm">
+                      Clear modules
+                    </button>
+                  )}
+                  {difficultyFilters.length > 0 && (
+                    <button type="button" onClick={clearDifficultyFilters} className="btn btn-ghost btn-sm">
+                      Clear difficulty
+                    </button>
+                  )}
+                  {implementationSizeFilters.length > 0 && (
+                    <button type="button" onClick={clearImplementationSizeFilters} className="btn btn-ghost btn-sm">
+                      Clear length
+                    </button>
+                  )}
+                </div>
+              )}
               {katas.length === 0 && (
                 <button
                   onClick={handleReseed}
@@ -1201,7 +1424,7 @@ export function PracticeQueuePage() {
             On track
           </span>
           <span className="ml-auto text-[11px] text-base-content/30">
-            Score = SR weight · higher = more urgent
+            Urgency rises when a problem is failed, new, slow, or idle
           </span>
         </div>
       </div>
@@ -1218,13 +1441,10 @@ interface KataRowProps {
 
 function KataRow({ item, rank, bestTime, formatMs }: KataRowProps) {
   const { kata, status, meta, streak, score } = item;
-  const navigate = useNavigate();
 
   return (
-    <button
-      type="button"
-      onClick={() => navigate(`/editor/${kata.id}`)}
-      className="flex w-full items-center gap-3 px-2.5 py-2.5 rounded-lg border border-transparent hover:bg-base-200 hover:border-base-300/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 transition-colors cursor-pointer text-left"
+    <div
+      className="flex w-full items-center gap-3 px-2.5 py-2.5 rounded-lg border border-transparent text-left"
     >
       <span className="w-[22px] text-right text-[11px] font-bold text-base-content/30 shrink-0">
         {rank}
@@ -1253,10 +1473,12 @@ function KataRow({ item, rank, bestTime, formatMs }: KataRowProps) {
       {streak > 0 && (
         <span
           className={`text-[10px] shrink-0 flex items-center gap-0.5 ${streak >= 5 ? "text-[#ff9e64]" : "text-base-content/35"}`}
+          title={`${streak} pass streak`}
         >
-          🔥 {streak}
+          <Flame size={12} aria-hidden="true" />
+          {streak}
         </span>
       )}
-    </button>
+    </div>
   );
 }

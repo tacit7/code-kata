@@ -1,11 +1,9 @@
 import { Fragment, useEffect } from "react";
-import { useNavigate } from "react-router";
 import { useDashboardStore } from "../stores/dashboard-store";
 import type { DrillDownRow } from "../stores/dashboard-store";
 import { formatTime } from "../lib/format";
 
 function DrillDown({ rows }: { rows: DrillDownRow[] }) {
-  const navigate = useNavigate();
   return (
     <tr>
       <td colSpan={5} className="p-0">
@@ -18,13 +16,9 @@ function DrillDown({ rows }: { rows: DrillDownRow[] }) {
                   className="border-b border-base-300/30 last:border-0"
                 >
                   <td className="px-2 py-1.5 text-xs font-medium">
-                    <button
-                      onClick={() => navigate(`/editor/${row.kataId}`)}
-                      className="text-left hover:text-primary hover:underline cursor-pointer"
-                      title="Open this problem"
-                    >
+                    <span className="text-left">
                       {row.kataName}
-                    </button>
+                    </span>
                   </td>
                   <td className="px-2 py-1.5 text-xs text-base-content/45">{row.category}</td>
                   <td className="px-2 py-1.5 font-mono text-xs text-base-content/45 tabular-nums">
@@ -141,7 +135,7 @@ export function ResultsPage() {
           </table>
           {sessionHistoryHasMore && (
             <div className="px-4 py-3 border-t border-base-300/30">
-              <button onClick={loadMoreSessions} className="btn btn-ghost btn-sm text-xs">
+              <button onClick={loadMoreSessions} className="btn btn-sm kata-btn-secondary text-xs">
                 Load more
               </button>
             </div>

@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Command } from "cmdk";
 import {
   BarChart3,
@@ -44,7 +44,7 @@ function formatCombo(combo: string | undefined): string | null {
     .join(" ");
 }
 
-const SECTION_ORDER = ["Navigation", "Practice", "Editor", "View"];
+const SECTION_ORDER = ["Navigation", "Katas", "Practice", "Editor", "Templates", "View"];
 
 function sectionRank(section: string): number {
   const index = SECTION_ORDER.indexOf(section);
@@ -60,18 +60,47 @@ function commandValue(action: CommandPaletteAction): string {
   ].filter(Boolean).join(" ");
 }
 
+function normalizedSearch(value: string): string {
+  return value.trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+export function isTemplateSearch(value: string): boolean {
+  return /^cs(?:\s|$)/.test(normalizedSearch(value));
+}
+
+export function templateSearchValue(value: string): string {
+  return normalizedSearch(value).replace(/^cs(?:\s+|$)/, "");
+}
+
+function actionMatchesSearch(action: CommandPaletteAction, value: string): boolean {
+  const query = normalizedSearch(value);
+  if (!query) return true;
+
+  const terms = query.split(" ").filter(Boolean);
+  const haystack = commandValue(action).toLowerCase();
+  return terms.every((term) => haystack.includes(term));
+}
+
 export function CommandPalette() {
   const open = useCommandPaletteStore((s) => s.open);
   const setOpen = useCommandPaletteStore((s) => s.setOpen);
   const registeredActions = useCommandPaletteStore((s) => s.registeredActions);
   const shortcuts = useSettingsStore((s) => s.shortcuts);
+  const [search, setSearch] = useState("");
 
   const actions = useMemo(() => {
-    return Object.values(registeredActions).filter((action) => !action.hidden).sort((a, b) => {
+    const templateMode = isTemplateSearch(search);
+    const effectiveSearch = templateMode ? templateSearchValue(search) : search;
+
+    return Object.values(registeredActions).filter((action) => {
+      if (action.hidden) return false;
+      if (templateMode && action.section !== "Templates") return false;
+      return actionMatchesSearch(action, effectiveSearch);
+    }).sort((a, b) => {
       const sectionDiff = sectionRank(a.section ?? "Other") - sectionRank(b.section ?? "Other");
       return sectionDiff || a.title.localeCompare(b.title);
     });
-  }, [registeredActions]);
+  }, [registeredActions, search]);
 
   const grouped = useMemo(() => {
     const groups = new Map<string, CommandPaletteAction[]>();
@@ -83,7 +112,10 @@ export function CommandPalette() {
   }, [actions]);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      setSearch("");
+      return;
+    }
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") setOpen(false);
     };
@@ -102,13 +134,16 @@ export function CommandPalette() {
     >
       <Command
         label="Command Palette"
+        shouldFilter={false}
         className="w-full max-w-2xl overflow-hidden rounded-lg border border-base-300/80 bg-base-100 shadow-2xl"
       >
         <div className="flex items-center gap-2 border-b border-base-300/70 px-3 py-2.5">
           <Search size={18} className="text-base-content/35" />
           <Command.Input
             autoFocus
-            placeholder="Type a command or search..."
+            value={search}
+            onValueChange={setSearch}
+            placeholder={isTemplateSearch(search) ? "Search templates..." : "Type a command or search..."}
             className="h-8 flex-1 bg-transparent text-sm text-base-content outline-none placeholder:text-base-content/30"
           />
           {formatCombo(shortcuts.openCommandPalette) && (
@@ -118,10 +153,11 @@ export function CommandPalette() {
           )}
         </div>
         <Command.List className="max-h-[56vh] overflow-y-auto p-2">
-          <Command.Empty className="px-3 py-8 text-center text-sm text-base-content/35">
-            No commands found.
-          </Command.Empty>
-          {grouped.map(([section, sectionActions]) => (
+          {grouped.length === 0 ? (
+            <div className="px-3 py-8 text-center text-sm text-base-content/35">
+              No commands found.
+            </div>
+          ) : grouped.map(([section, sectionActions]) => (
             <Command.Group
               key={section}
               heading={section}

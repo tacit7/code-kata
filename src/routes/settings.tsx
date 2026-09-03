@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router";
-import { BotMessageSquare, Code2, Database, Dumbbell, Keyboard, Plus, RotateCcw } from "lucide-react";
+import { AlertTriangle, BotMessageSquare, CheckCircle2, Code2, Database, Dumbbell, Keyboard, Plus, RotateCcw } from "lucide-react";
 import { useSettingsStore, DEFAULT_SHORTCUTS } from "../stores/settings-store";
 import type { ShortcutAction } from "../stores/settings-store";
 import { reseedKatas, resetAllProgress } from "../lib/database";
@@ -12,7 +12,7 @@ import { DEFAULT_AGENT_SYSTEM_PROMPT } from "../lib/agent-bridge";
 import { useKataStore } from "../stores/kata-store";
 import { toast } from "../stores/toast-store";
 
-type Tab = "editor" | "agent" | "practice" | "data" | "shortcuts";
+type Tab = "editor" | "agent" | "practice" | "library" | "shortcuts";
 
 const FONT_OPTIONS = [
   "JetBrains Mono, monospace",
@@ -23,6 +23,7 @@ const FONT_OPTIONS = [
 ];
 
 const SESSION_SIZE_OPTIONS = [5, 10, 15, 20];
+const SEGMENTED_INACTIVE_CLASS = "kata-btn-secondary";
 
 const SHORTCUT_LABELS: Record<ShortcutAction, string> = {
   runTests: "Run Tests",
@@ -66,7 +67,7 @@ function formatCombo(combo: string): string {
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
-    <h2 className="px-1 text-[11px] font-semibold uppercase tracking-wider text-base-content/35">
+    <h2 className="px-1 text-[11px] font-semibold uppercase tracking-wider text-base-content/50">
       {children}
     </h2>
   );
@@ -118,6 +119,40 @@ function SettingsToggle({ label, hint, checked, onChange }: SettingsToggleProps)
   );
 }
 
+function formatSavedAt(timestamp: number | null): string {
+  if (!timestamp) return "Not saved yet";
+  return new Date(timestamp).toLocaleTimeString(undefined, {
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+function SettingsSaveIndicator() {
+  const saveStatus = useSettingsStore((s) => s.saveStatus);
+  const lastSavedAt = useSettingsStore((s) => s.lastSavedAt);
+  const saveError = useSettingsStore((s) => s.saveError);
+
+  if (saveStatus === "error") {
+    return (
+      <div className="flex max-w-sm items-center gap-2 rounded-md border border-error/35 bg-error/10 px-2.5 py-1.5 text-xs text-error">
+        <AlertTriangle size={14} />
+        <span className="truncate" title={saveError ?? undefined}>
+          Settings could not be saved
+        </span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-2 rounded-md border border-base-300/50 bg-base-100/70 px-2.5 py-1.5 text-xs text-base-content/45">
+      <CheckCircle2 size={14} className={saveStatus === "saving" ? "text-warning" : "text-success"} />
+      <span>
+        {saveStatus === "saving" ? "Saving locally..." : `Saved locally ${formatSavedAt(lastSavedAt)}`}
+      </span>
+    </div>
+  );
+}
+
 function EditorTab() {
   const theme = useSettingsStore((s) => s.theme);
   const vimMode = useSettingsStore((s) => s.vimMode);
@@ -135,25 +170,19 @@ function EditorTab() {
       <section className="space-y-2">
         <SectionTitle>General</SectionTitle>
         <PreferenceGroup>
-          <PreferenceRow label="Language" hint="Default language for new practice work.">
+          <PreferenceRow label="Language" hint="Chooses the kata library used across practice, problems, and progress.">
             <div className="join">
               <button
                 onClick={() => setSetting("language", "javascript")}
-                className={`btn btn-xs join-item ${language === "javascript" ? "btn-primary" : "btn-ghost"}`}
+                className={`btn btn-xs join-item ${language === "javascript" ? "btn-primary" : SEGMENTED_INACTIVE_CLASS}`}
               >
                 JavaScript
               </button>
               <button
                 onClick={() => setSetting("language", "python")}
-                className={`btn btn-xs join-item ${language === "python" ? "btn-primary" : "btn-ghost"}`}
+                className={`btn btn-xs join-item ${language === "python" ? "btn-primary" : SEGMENTED_INACTIVE_CLASS}`}
               >
                 Python
-              </button>
-              <button
-                onClick={() => setSetting("language", "java")}
-                className={`btn btn-xs join-item ${language === "java" ? "btn-primary" : "btn-ghost"}`}
-              >
-                Java
               </button>
             </div>
           </PreferenceRow>
@@ -174,7 +203,7 @@ function EditorTab() {
                 <button
                   key={scale}
                   onClick={() => setSetting("uiScale", scale)}
-                  className={`btn btn-xs join-item ${uiScale === scale ? "btn-primary" : "btn-ghost"}`}
+                  className={`btn btn-xs join-item ${uiScale === scale ? "btn-primary" : SEGMENTED_INACTIVE_CLASS}`}
                 >
                   {formatUiScale(scale)}
                 </button>
@@ -198,7 +227,7 @@ function EditorTab() {
               <button
                 onClick={() => setSetting("fontSize", Math.max(10, fontSize - 1))}
                 disabled={fontSize <= 10}
-                className="btn btn-xs btn-square join-item btn-ghost"
+                className="btn btn-xs btn-square join-item kata-btn-secondary"
                 aria-label="Decrease font size"
               >
                 -
@@ -209,7 +238,7 @@ function EditorTab() {
               <button
                 onClick={() => setSetting("fontSize", Math.min(24, fontSize + 1))}
                 disabled={fontSize >= 24}
-                className="btn btn-xs btn-square join-item btn-ghost"
+                className="btn btn-xs btn-square join-item kata-btn-secondary"
                 aria-label="Increase font size"
               >
                 +
@@ -233,7 +262,7 @@ function EditorTab() {
                 <button
                   key={size}
                   onClick={() => setSetting("tabSize", size)}
-                  className={`btn btn-xs join-item ${tabSize === size ? "btn-primary" : "btn-ghost"}`}
+                  className={`btn btn-xs join-item ${tabSize === size ? "btn-primary" : SEGMENTED_INACTIVE_CLASS}`}
                 >
                   {size}
                 </button>
@@ -246,7 +275,7 @@ function EditorTab() {
                 <button
                   key={mode}
                   onClick={() => setSetting("lineNumbersMode", mode)}
-                  className={`btn btn-xs join-item ${lineNumbersMode === mode ? "btn-primary" : "btn-ghost"}`}
+                  className={`btn btn-xs join-item ${lineNumbersMode === mode ? "btn-primary" : SEGMENTED_INACTIVE_CLASS}`}
                 >
                   {mode === "relative" ? "Relative" : mode === "on" ? "On" : "Off"}
                 </button>
@@ -279,23 +308,36 @@ function AgentTab() {
   const agentSystemPrompt = useSettingsStore((s) => s.agentSystemPrompt);
   const setSetting = useSettingsStore((s) => s.setSetting);
   const isDefaultPrompt = agentSystemPrompt === DEFAULT_AGENT_SYSTEM_PROMPT;
+  const handleResetPrompt = async () => {
+    if (isDefaultPrompt) return;
+    const ok = await confirmAction({
+      message: "Reset your assistant instructions to the default prompt? Your custom prompt text will be replaced.",
+      title: "Reset Assistant Prompt",
+      kind: "warning",
+      okLabel: "Reset",
+      cancelLabel: "Cancel",
+    });
+    if (!ok) return;
+    await setSetting("agentSystemPrompt", DEFAULT_AGENT_SYSTEM_PROMPT);
+    toast.success("Assistant prompt reset");
+  };
 
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-7">
       <section className="space-y-2">
-        <SectionTitle>Agent</SectionTitle>
+        <SectionTitle>Assistant</SectionTitle>
         <PreferenceGroup>
-          <PreferenceRow label="Default Agent" hint="The problem-page robot button launches this agent.">
+          <PreferenceRow label="Default Assistant" hint="The editor Assist tab launches this helper for the current kata.">
             <div className="join">
               <button
                 onClick={() => setSetting("agentProvider", "codex")}
-                className={`btn btn-xs join-item ${agentProvider === "codex" ? "btn-primary" : "btn-ghost"}`}
+                className={`btn btn-xs join-item ${agentProvider === "codex" ? "btn-primary" : SEGMENTED_INACTIVE_CLASS}`}
               >
                 Codex
               </button>
               <button
                 onClick={() => setSetting("agentProvider", "claude")}
-                className={`btn btn-xs join-item ${agentProvider === "claude" ? "btn-primary" : "btn-ghost"}`}
+                className={`btn btn-xs join-item ${agentProvider === "claude" ? "btn-primary" : SEGMENTED_INACTIVE_CLASS}`}
               >
                 Claude
               </button>
@@ -308,9 +350,9 @@ function AgentTab() {
         <div className="flex items-center justify-between gap-3 px-1">
           <SectionTitle>System Prompt</SectionTitle>
           <button
-            onClick={() => setSetting("agentSystemPrompt", DEFAULT_AGENT_SYSTEM_PROMPT)}
+            onClick={() => { void handleResetPrompt(); }}
             disabled={isDefaultPrompt}
-            className="btn btn-xs btn-ghost gap-1.5"
+            className="btn btn-xs kata-btn-secondary gap-1.5"
           >
             <RotateCcw size={14} />
             Reset
@@ -324,7 +366,7 @@ function AgentTab() {
             spellCheck={false}
           />
           <p className="mt-2 text-xs leading-snug text-base-content/40">
-            This text is prepended to the current problem, student code, visible cases, latest failures, and notes.
+            This instruction is prepended when the assistant receives the current problem, editor code, visible cases, latest failures, and notes.
           </p>
         </div>
       </section>
@@ -353,7 +395,7 @@ function PracticeTab() {
                 <button
                   key={n}
                   onClick={() => setSetting("defaultSessionSize", n)}
-                  className={`btn btn-xs join-item ${defaultSessionSize === n ? "btn-primary" : "btn-ghost"}`}
+                  className={`btn btn-xs join-item ${defaultSessionSize === n ? "btn-primary" : SEGMENTED_INACTIVE_CLASS}`}
                 >
                   {n}
                 </button>
@@ -458,37 +500,37 @@ function DataTab() {
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-7">
       <section className="space-y-2">
-        <SectionTitle>Kata Library</SectionTitle>
+        <SectionTitle>Library Maintenance</SectionTitle>
         <PreferenceGroup>
           <PreferenceRow label="Reload Problem Statements" hint={reseedMsg ?? "Refresh seeded kata content for the selected language."}>
             <button
               onClick={handleReseed}
               disabled={reseeding}
-              className="btn btn-xs btn-ghost"
+              className="btn btn-xs kata-btn-secondary"
             >
               {reseeding ? "Reloading..." : "Reload"}
             </button>
           </PreferenceRow>
-          <PreferenceRow label="New Kata">
+          <PreferenceRow label="Create Custom Kata" hint="Add your own problem, tests, and reference solution.">
             <button
               onClick={() => navigate("/kata/new")}
-              className="btn btn-xs btn-ghost gap-1.5"
+              className="btn btn-xs kata-btn-secondary gap-1.5"
             >
               <Plus size={14} />
-              New
+              Create
             </button>
           </PreferenceRow>
         </PreferenceGroup>
       </section>
 
       <section className="space-y-2">
-        <SectionTitle>Danger Zone</SectionTitle>
+        <SectionTitle>Progress Records</SectionTitle>
         <PreferenceGroup>
           <PreferenceRow label="Reset All Progress" hint={resetAllMsg ?? "Clears best times, streaks, and completion history."}>
             <button
               onClick={handleResetAllProgress}
               disabled={resettingAll}
-              className="btn btn-xs btn-ghost text-error hover:bg-error/10"
+              className="btn btn-xs kata-btn-danger-secondary"
             >
               {resettingAll ? "Resetting..." : "Reset"}
             </button>
@@ -504,24 +546,50 @@ function ShortcutsTab() {
   const setSetting = useSettingsStore((s) => s.setSetting);
   const [recording, setRecording] = useState<ShortcutAction | null>(null);
   const [confirmReset, setConfirmReset] = useState(false);
+  const [shortcutError, setShortcutError] = useState<string | null>(null);
   const rowRef = useRef<HTMLDivElement | null>(null);
 
   const handleKeyDown = useCallback(
-    (e: KeyboardEvent) => {
+    async (e: KeyboardEvent) => {
       if (!recording) return;
       e.preventDefault();
       e.stopPropagation();
+      if (e.key === "Escape") {
+        setRecording(null);
+        setShortcutError(null);
+        return;
+      }
       if (["Meta", "Control", "Alt", "Shift"].includes(e.key)) return;
       const parts: string[] = [];
       if (e.metaKey) parts.push("Meta");
       if (e.ctrlKey) parts.push("Control");
       if (e.altKey) parts.push("Alt");
       if (e.shiftKey) parts.push("Shift");
+      if (parts.length === 0 && e.key.length === 1) {
+        setShortcutError("Use at least one modifier key for letter and number shortcuts.");
+        return;
+      }
       parts.push(e.key.length === 1 ? e.key.toUpperCase() : e.key);
       const combo = parts.join("+");
-      const updated = { ...shortcuts, [recording]: combo };
-      setSetting("shortcuts", updated);
+      const duplicate = (Object.entries(shortcuts) as [ShortcutAction, string][])
+        .find(([action, currentCombo]) => action !== recording && currentCombo === combo);
+      if (duplicate) {
+        const ok = await confirmAction({
+          message: `${formatCombo(combo)} is already assigned to ${SHORTCUT_LABELS[duplicate[0]]}. Replace it?`,
+          title: "Replace Shortcut",
+          kind: "warning",
+          okLabel: "Replace",
+          cancelLabel: "Cancel",
+        });
+        if (!ok) return;
+      }
+      const updated = duplicate
+        ? { ...shortcuts, [duplicate[0]]: shortcuts[recording], [recording]: combo }
+        : { ...shortcuts, [recording]: combo };
+      await setSetting("shortcuts", updated);
       setRecording(null);
+      setShortcutError(null);
+      toast.success(`${SHORTCUT_LABELS[recording]} shortcut updated`);
     },
     [recording, shortcuts, setSetting]
   );
@@ -539,6 +607,15 @@ function ShortcutsTab() {
     }
     await setSetting("shortcuts", { ...DEFAULT_SHORTCUTS });
     setConfirmReset(false);
+    setShortcutError(null);
+    toast.success("Shortcuts reset to defaults");
+  };
+
+  const resetShortcut = async (action: ShortcutAction) => {
+    await setSetting("shortcuts", { ...shortcuts, [action]: DEFAULT_SHORTCUTS[action] });
+    if (recording === action) setRecording(null);
+    setShortcutError(null);
+    toast.success(`${SHORTCUT_LABELS[action]} reset`);
   };
 
   const actions = Object.keys(SHORTCUT_LABELS) as ShortcutAction[];
@@ -552,7 +629,7 @@ function ShortcutsTab() {
             <div
               key={action}
               ref={recording === action ? rowRef : undefined}
-              className="flex min-h-12 items-center justify-between gap-5 border-b border-base-300/40 px-4 py-2.5 last:border-b-0"
+              className="flex min-h-12 flex-wrap items-center justify-between gap-x-5 gap-y-1 border-b border-base-300/40 px-4 py-2.5 last:border-b-0"
             >
               <div className="text-sm font-medium text-base-content/85">
                 {SHORTCUT_LABELS[action]}
@@ -562,24 +639,46 @@ function ShortcutsTab() {
                   {formatCombo(shortcuts[action])}
                 </kbd>
                 <button
-                  onClick={() => setRecording(recording === action ? null : action)}
+                  onClick={() => { void resetShortcut(action); }}
+                  disabled={shortcuts[action] === DEFAULT_SHORTCUTS[action]}
+                  className="btn btn-xs btn-square kata-btn-secondary"
+                  title={`Reset ${SHORTCUT_LABELS[action]} to ${formatCombo(DEFAULT_SHORTCUTS[action])}`}
+                  aria-label={`Reset ${SHORTCUT_LABELS[action]} shortcut`}
+                >
+                  <RotateCcw size={13} />
+                </button>
+                <button
+                  onClick={() => {
+                    setShortcutError(null);
+                    setRecording(recording === action ? null : action);
+                  }}
                   className={`btn btn-xs ${
                     recording === action
                       ? "btn-warning animate-pulse"
-                      : "btn-ghost"
+                      : "kata-btn-secondary"
                   }`}
                 >
-                  {recording === action ? "Press keys..." : "Edit"}
+                  {recording === action ? "Press keys" : "Edit"}
                 </button>
               </div>
+              {recording === action && (
+                <div className="basis-full text-xs text-base-content/40">
+                  Press a shortcut with a modifier, or Esc to cancel.
+                </div>
+              )}
             </div>
           ))}
         </PreferenceGroup>
+        {shortcutError && (
+          <div className="px-1 text-xs text-warning">
+            {shortcutError}
+          </div>
+        )}
       </section>
 
       <button
         onClick={handleReset}
-        className={`btn btn-xs self-start ${confirmReset ? "btn-error" : "btn-ghost"}`}
+        className={`btn btn-xs self-start ${confirmReset ? "btn-error" : "kata-btn-secondary"}`}
       >
         {confirmReset ? "Confirm Reset" : "Reset to Defaults"}
       </button>
@@ -606,9 +705,9 @@ export function SettingsPage() {
 
   const navItems = [
     { key: "editor" as const, label: "Editor", icon: Code2 },
-    { key: "agent" as const, label: "Agent", icon: BotMessageSquare },
-    { key: "practice" as const, label: "Practice", icon: Dumbbell },
-    { key: "data" as const, label: "Data", icon: Database },
+    { key: "agent" as const, label: "Assistant", icon: BotMessageSquare },
+    { key: "practice" as const, label: "Practice Flow", icon: Dumbbell },
+    { key: "library" as const, label: "Library & Progress", icon: Database },
     { key: "shortcuts" as const, label: "Shortcuts", icon: Keyboard },
   ];
 
@@ -621,6 +720,7 @@ export function SettingsPage() {
             <button
               key={key}
               onClick={() => setTab(key)}
+              aria-current={tab === key ? "page" : undefined}
               className={`flex h-9 items-center gap-2.5 rounded-md px-2.5 text-left text-sm transition-colors ${
                 tab === key
                   ? "bg-primary text-primary-content"
@@ -635,10 +735,19 @@ export function SettingsPage() {
       </aside>
 
       <main className="min-w-0 flex-1 overflow-y-auto px-8 py-6">
+        <div className="mx-auto mb-5 flex w-full max-w-3xl items-center justify-between gap-4">
+          <div>
+            <div className="text-xs font-semibold uppercase tracking-wide text-base-content/40">Configuration</div>
+            <h2 className="text-lg font-semibold text-base-content/90">
+              {navItems.find((item) => item.key === tab)?.label}
+            </h2>
+          </div>
+          <SettingsSaveIndicator />
+        </div>
         {tab === "editor" && <EditorTab />}
         {tab === "agent" && <AgentTab />}
         {tab === "practice" && <PracticeTab />}
-        {tab === "data" && <DataTab />}
+        {tab === "library" && <DataTab />}
         {tab === "shortcuts" && <ShortcutsTab />}
       </main>
     </div>

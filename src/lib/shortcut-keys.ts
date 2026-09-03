@@ -32,6 +32,17 @@ export const DEFAULT_SHORTCUTS: ShortcutMap = {
   closePanel: "Escape",
 };
 
+export function normalizeShortcutCombo(combo: string): string {
+  return combo
+    .split("+")
+    .map((part) => {
+      if (part === "Control") return "Ctrl";
+      if (part.length === 1 && /[a-z]/i.test(part)) return part.toUpperCase();
+      return part;
+    })
+    .join("+");
+}
+
 // The bindings nextKata/prevKata shipped with before 2026-07-09. Hardcoded here
 // because this is the only place that needs to recognise them: a stored value
 // still equal to one of these was never customised, so the user gets the fix.
@@ -64,7 +75,7 @@ export function migrateShortcuts(stored: unknown): ShortcutMap {
       if (typeof value !== "string") return [action, DEFAULT_SHORTCUTS[action]];
       if (value === SUPERSEDED[action]) return [action, DEFAULT_SHORTCUTS[action]];
 
-      return [action, value];
+      return [action, normalizeShortcutCombo(value)];
     }),
   ) as ShortcutMap;
 }

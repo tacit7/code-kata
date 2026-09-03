@@ -26,6 +26,7 @@ import { neetcodeGreedy } from "./neetcode-greedy";
 import { neetcodeAdvancedGraphs } from "./neetcode-advanced-graphs";
 import { neetcode2dDp } from "./neetcode-2d-dp";
 import { neetcodeMathBit } from "./neetcode-math-bit";
+import { languageParityKatas } from "./language-parity-katas";
 
 let db: Database | null = null;
 
@@ -232,7 +233,11 @@ const blind75Katas = [
 ];
 
 /** The full seed corpus, in seed order — the single source seedMissingKatas checks against. */
-const ALL_SEED_KATAS = [...sampleKatas, ...sampleKatasPython, ...recursionFoundations, ...treeFundamentals, ...dpFoundations, ...dpFoundationsJs, ...dpProblemsJs, ...blind75Katas];
+const ALL_SEED_KATAS = [...sampleKatas, ...sampleKatasPython, ...recursionFoundations, ...treeFundamentals, ...dpFoundations, ...dpFoundationsJs, ...dpProblemsJs, ...blind75Katas, ...languageParityKatas];
+
+function seedLeetcodeNumberFor(kata: SeedKata): number | null {
+  return leetcodeNumberFor(kata) ?? kata.leetcodeNumber ?? null;
+}
 
 async function migrateCanonicalNeetcodeTitles(db: Database) {
   const renames = [
@@ -271,7 +276,7 @@ async function migrateCanonicalNeetcodeTitles(db: Database) {
         kata.solutionVariants ? JSON.stringify(kata.solutionVariants) : null,
         kata.usage,
         JSON.stringify(kata.tags),
-        leetcodeNumberFor(kata),
+        seedLeetcodeNumberFor(kata),
       ];
 
       await db.execute(
@@ -510,7 +515,7 @@ async function seedMissingKatas(db: Database) {
         kata.solutionVariants ? JSON.stringify(kata.solutionVariants) : null,
         kata.usage,
         JSON.stringify(kata.tags),
-        leetcodeNumberFor(kata),
+        seedLeetcodeNumberFor(kata),
       ]
     );
   }
@@ -526,7 +531,8 @@ async function backfillLeetcodeNumbers(db: Database) {
     "SELECT id, name, language FROM katas WHERE leetcode_number IS NULL"
   );
   for (const row of rows) {
-    const num = leetcodeNumberFor(row);
+    const seedKata = ALL_SEED_KATAS.find((kata) => kata.name === row.name && kata.language === row.language);
+    const num = seedKata ? seedLeetcodeNumberFor(seedKata) : leetcodeNumberFor(row);
     if (num == null) continue;
     await db.execute("UPDATE katas SET leetcode_number = $1 WHERE id = $2", [num, row.id]);
   }
@@ -618,7 +624,7 @@ async function seedKatas(db: Database) {
         kata.solutionVariants ? JSON.stringify(kata.solutionVariants) : null,
         kata.usage,
         JSON.stringify(kata.tags),
-        leetcodeNumberFor(kata),
+        seedLeetcodeNumberFor(kata),
       ]
     );
   }
@@ -666,7 +672,7 @@ async function seedKatasForce(db: Database) {
         kata.solutionVariants ? JSON.stringify(kata.solutionVariants) : null,
         kata.usage,
         JSON.stringify(kata.tags),
-        leetcodeNumberFor(kata),
+        seedLeetcodeNumberFor(kata),
       ]
     );
   }

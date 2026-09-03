@@ -43,6 +43,8 @@ export type LibrarySortMode =
   | "difficulty-asc"
   | "difficulty-desc";
 
+export type LibraryDifficultyFilter = "easy" | "medium" | "hard";
+
 interface LibraryUIState {
   librarySearch: string;
   libraryTab: "browse" | "daily" | "random" | "custom";
@@ -53,6 +55,7 @@ interface LibraryUIState {
   libraryBlind75Only: boolean;
   libraryNeetcodeOnly: boolean;
   libraryNeetcode250Only: boolean;
+  libraryDifficultyFilters: LibraryDifficultyFilter[];
   libraryImplementationSizeFilters: ImplementationSize[];
   setLibraryUI: (patch: Partial<LibraryUIState>) => void;
 }
@@ -94,6 +97,7 @@ export const useKataStore = create<KataState>((set) => ({
   libraryBlind75Only: false,
   libraryNeetcodeOnly: false,
   libraryNeetcode250Only: false,
+  libraryDifficultyFilters: [],
   libraryImplementationSizeFilters: [],
   setLibraryUI: (patch) => set(patch),
 

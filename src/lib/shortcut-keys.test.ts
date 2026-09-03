@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { DEFAULT_SHORTCUTS, migrateShortcuts } from "./shortcut-keys";
+import { DEFAULT_SHORTCUTS, migrateShortcuts, normalizeShortcutCombo } from "./shortcut-keys";
 
 describe("DEFAULT_SHORTCUTS", () => {
   it("binds next/prev off Monaco's line-start/line-end keys", () => {
@@ -62,5 +62,21 @@ describe("migrateShortcuts", () => {
     expect(migrateShortcuts(null)).toEqual(DEFAULT_SHORTCUTS);
     expect(migrateShortcuts("nope")).toEqual(DEFAULT_SHORTCUTS);
     expect(migrateShortcuts([])).toEqual(DEFAULT_SHORTCUTS);
+  });
+});
+
+describe("normalizeShortcutCombo", () => {
+  it("normalizes letter key casing so recorded shortcuts match keydown events", () => {
+    expect(normalizeShortcutCombo("Meta+k")).toBe("Meta+K");
+    expect(normalizeShortcutCombo("Meta+Shift+p")).toBe("Meta+Shift+P");
+  });
+
+  it("normalizes Control to the listener's Ctrl token", () => {
+    expect(normalizeShortcutCombo("Control+K")).toBe("Ctrl+K");
+  });
+
+  it("normalizes migrated user shortcuts", () => {
+    const out = migrateShortcuts({ ...DEFAULT_SHORTCUTS, openCommandPalette: "Meta+k" });
+    expect(out.openCommandPalette).toBe("Meta+K");
   });
 });

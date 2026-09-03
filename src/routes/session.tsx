@@ -114,11 +114,13 @@ export function SessionPage() {
   }, [stopSessionTimer, finishSession, navigate, sessionId]);
 
   useEffect(() => {
+    const liveKataElapsed = currentKataElapsedMs();
+
     if (
       !activeSession ||
       !currentKata ||
       sessionTimeLimitMs <= 0 ||
-      kataElapsed < sessionTimeLimitMs ||
+      liveKataElapsed < sessionTimeLimitMs ||
       attemptLockedRef.current ||
       timeoutHandlingRef.current
     ) {
@@ -133,7 +135,7 @@ export function SessionPage() {
         if (!hasAttemptForCurrent && !attemptRecorded) {
           setAttemptRecorded(true);
           setLastPassed(false);
-          await recordAttempt(currentKata.id, currentKataElapsedMs(), false, "");
+          await recordAttempt(currentKata.id, liveKataElapsed, false, "");
         }
 
         if (isLast) {
@@ -233,7 +235,7 @@ export function SessionPage() {
         <button
           onClick={handlePrev}
           disabled={currentIndex === 0}
-          className="btn btn-ghost btn-xs disabled:opacity-20"
+          className="btn btn-xs kata-btn-secondary disabled:opacity-20"
         >
           Prev
         </button>
@@ -245,14 +247,14 @@ export function SessionPage() {
         )}
 
         {!attemptRecorded && !hasAttemptForCurrent && (
-          <button onClick={handleNext} className="btn btn-ghost btn-xs">
+          <button onClick={handleNext} className="btn btn-xs kata-btn-secondary">
             {isLast ? "Finish" : "Skip"}
           </button>
         )}
 
         <button
           onClick={handleQuit}
-          className="btn btn-ghost btn-xs text-error/60 hover:text-error"
+          className="btn btn-xs kata-btn-danger-secondary"
         >
           Quit
         </button>

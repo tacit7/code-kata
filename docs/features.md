@@ -145,10 +145,12 @@ Python and Ruby include a `cmdk` command palette opened with
 and can be customized like the other app commands.
 
 The palette includes global navigation, start/resume practice, app zoom, and
-settings commands. Problem pages register editor-scoped commands while mounted:
-run tests, show/hide the problem panel, show/hide solutions, open/hide the REPL,
-copy the selected solution to the editor, reset code, move to the next/previous
-kata, and open the current problem on LeetCode when available.
+settings commands. Loaded katas are searchable directly from the palette by
+problem name, category, difficulty, LeetCode number, and tags; selecting one
+opens its problem page. Problem pages register editor-scoped commands while
+mounted: run tests, show/hide the problem panel, show/hide solutions, open/hide
+the REPL, copy the selected solution to the editor, reset code, move to the
+next/previous kata, and open the current problem on LeetCode when available.
 
 ### Native App Menus and Context Menus
 

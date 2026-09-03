@@ -95,7 +95,7 @@ body { background: var(--bg); color: var(--text); font-family: "Fira Code", mono
     </div>
   </div>
   <button class="vi-btn-run" onclick="buildAndRun()">Build &amp; Run</button>
-  <button onclick="randomExample()">&#x1F3B2; Random</button>
+  <button onclick="randomExample()">Random</button>
 </div>
 
 <div class="controls"></div>
@@ -164,6 +164,7 @@ body { background: var(--bg); color: var(--text); font-family: "Fira Code", mono
   <button class="btn-step" id="prevBtn" disabled>&#8592; Prev</button>
   <button class="btn-step" id="stepBtn" disabled>Step &#8594;</button>
   <button class="btn-play" id="playBtn" disabled>&#9654; Play</button>
+  <button class="btn-step" id="resetBtn">&#8635; Reset</button>
   <select id="speedSel">
     <option value="800">Slow</option>
     <option value="400" selected>Medium</option>
@@ -561,6 +562,8 @@ window.addEventListener('DOMContentLoaded', function() {
       if (descEl)  descEl.textContent = snap.desc;
     }
   });
+  document.getElementById('resetBtn').addEventListener('click', buildAndRun);
+  buildAndRun();
 });
 </script>
 <script>
