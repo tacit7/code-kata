@@ -348,6 +348,8 @@ const blind75Part2SolutionVariants: Record<string, NonNullable<SeedKata["solutio
   "Coin Change": [
     {
       label: "Recursive search",
+      complexity: "Time: O(c^amount), Space: O(amount)",
+      explanation: "Tries every coin from the remaining amount with no cache, so overlapping subproblems are recomputed exponentially.",
       code: `def coin_change(coins: list[int], amount: int) -> int:
     if amount == 0:
         return 0
@@ -363,6 +365,8 @@ const blind75Part2SolutionVariants: Record<string, NonNullable<SeedKata["solutio
     },
     {
       label: "Memoized recursion",
+      complexity: "Time: O(amount * c), Space: O(amount)",
+      explanation: "Caches the best coin count per remaining amount so each subproblem is solved once.",
       code: `def coin_change(coins: list[int], amount: int) -> int:
     memo = {0: 0}
 
@@ -383,6 +387,8 @@ const blind75Part2SolutionVariants: Record<string, NonNullable<SeedKata["solutio
     },
     {
       label: "Bottom-up tabulation",
+      complexity: "Time: O(amount * c), Space: O(amount)",
+      explanation: "Fills the fewest-coins answer for every amount in increasing order, reusing smaller totals.",
       code: `def coin_change(coins: list[int], amount: int) -> int:
     dp = [float("inf")] * (amount + 1)
     dp[0] = 0
@@ -396,6 +402,8 @@ const blind75Part2SolutionVariants: Record<string, NonNullable<SeedKata["solutio
   "Longest Increasing Subsequence": [
     {
       label: "Memoized subsequence search",
+      complexity: "Time: O(n^2), Space: O(n^2)",
+      explanation: "Caches the take/skip decision per (index, previous index) pair to avoid re-exploring suffixes.",
       code: `def length_of_lis(nums: list[int]) -> int:
     from functools import lru_cache
 
@@ -413,6 +421,8 @@ const blind75Part2SolutionVariants: Record<string, NonNullable<SeedKata["solutio
     },
     {
       label: "O(n²) tabulation",
+      complexity: "Time: O(n^2), Space: O(n)",
+      explanation: "Stores the longest run ending at each index and extends it from every smaller earlier value.",
       code: `def length_of_lis(nums: list[int]) -> int:
     dp = [1] * len(nums)
     for i in range(len(nums)):
@@ -423,6 +433,8 @@ const blind75Part2SolutionVariants: Record<string, NonNullable<SeedKata["solutio
     },
     {
       label: "Patience sorting",
+      complexity: "Time: O(n log n), Space: O(n)",
+      explanation: "Keeps the smallest possible tail for each subsequence length and binary-searches the slot to replace.",
       code: `import bisect
 
 def length_of_lis(nums: list[int]) -> int:
@@ -439,6 +451,8 @@ def length_of_lis(nums: list[int]) -> int:
   "Word Break": [
     {
       label: "Memoized start index",
+      complexity: "Time: O(n^2 * L), Space: O(n)",
+      explanation: "Caches whether each suffix is breakable so each start index is explored once.",
       code: `def word_break(s: str, word_dict: list[str]) -> bool:
     words = set(word_dict)
     memo = {}
@@ -459,6 +473,8 @@ def length_of_lis(nums: list[int]) -> int:
     },
     {
       label: "Prefix tabulation",
+      complexity: "Time: O(n^2 * L), Space: O(n)",
+      explanation: "Marks each prefix breakable when an earlier breakable cut is followed by a dictionary word.",
       code: `def word_break(s: str, word_dict: list[str]) -> bool:
     words = set(word_dict)
     dp = [False] * (len(s) + 1)
@@ -474,6 +490,8 @@ def length_of_lis(nums: list[int]) -> int:
   "Combination Sum IV": [
     {
       label: "Memoized remaining target",
+      complexity: "Time: O(target * n), Space: O(target)",
+      explanation: "Caches the ordered-combination count per remaining target so each target is solved once.",
       code: `def combination_sum4(nums: list[int], target: int) -> int:
     memo = {0: 1}
 
@@ -489,6 +507,8 @@ def length_of_lis(nums: list[int]) -> int:
     },
     {
       label: "Ordered tabulation",
+      complexity: "Time: O(target * n), Space: O(target)",
+      explanation: "Counts sequences for every total in increasing order, adding each number as the last element.",
       code: `def combination_sum4(nums: list[int], target: int) -> int:
     dp = [0] * (target + 1)
     dp[0] = 1
@@ -502,6 +522,8 @@ def length_of_lis(nums: list[int]) -> int:
   "House Robber": [
     {
       label: "Memoized decision tree",
+      complexity: "Time: O(n), Space: O(n)",
+      explanation: "Caches the best loot from each index so the rob/skip branch at that house is evaluated once.",
       code: `def rob(nums: list[int]) -> int:
     memo = {}
 
@@ -517,6 +539,8 @@ def length_of_lis(nums: list[int]) -> int:
     },
     {
       label: "DP array",
+      complexity: "Time: O(n), Space: O(n)",
+      explanation: "Stores the best loot through each house as the max of skipping it or robbing it plus two back.",
       code: `def rob(nums: list[int]) -> int:
     if len(nums) == 1:
         return nums[0]
@@ -529,6 +553,8 @@ def length_of_lis(nums: list[int]) -> int:
     },
     {
       label: "Two variables",
+      complexity: "Time: O(n), Space: O(1)",
+      explanation: "Keeps only the previous two totals since the recurrence never reaches further back.",
       code: `def rob(nums: list[int]) -> int:
     prev2 = prev1 = 0
     for num in nums:
@@ -539,6 +565,8 @@ def length_of_lis(nums: list[int]) -> int:
   "House Robber II": [
     {
       label: "Split circle into two lines",
+      complexity: "Time: O(n), Space: O(1)",
+      explanation: "Runs the linear house-robber scan twice, once excluding the first house and once excluding the last.",
       code: `def rob2(nums: list[int]) -> int:
     if len(nums) == 1:
         return nums[0]
@@ -553,6 +581,8 @@ def length_of_lis(nums: list[int]) -> int:
     },
     {
       label: "DP arrays for both ranges",
+      complexity: "Time: O(n), Space: O(n)",
+      explanation: "Builds a full DP table over each of the two open ranges and takes the better endpoint.",
       code: `def rob2(nums: list[int]) -> int:
     if len(nums) == 1:
         return nums[0]
@@ -575,6 +605,8 @@ def length_of_lis(nums: list[int]) -> int:
   "Decode Ways": [
     {
       label: "Memoized index",
+      complexity: "Time: O(n), Space: O(n)",
+      explanation: "Caches the decoding count from each index so one- and two-digit splits are explored once.",
       code: `def num_decodings(s: str) -> int:
     memo = {}
 
@@ -595,6 +627,8 @@ def length_of_lis(nums: list[int]) -> int:
     },
     {
       label: "DP array",
+      complexity: "Time: O(n), Space: O(n)",
+      explanation: "Counts decodings of every prefix by adding the valid one-digit and two-digit extensions.",
       code: `def num_decodings(s: str) -> int:
     dp = [0] * (len(s) + 1)
     dp[0] = 1
@@ -608,6 +642,8 @@ def length_of_lis(nums: list[int]) -> int:
     },
     {
       label: "Two running counts",
+      complexity: "Time: O(n), Space: O(1)",
+      explanation: "Tracks only the counts for the previous two prefixes since the recurrence depends on nothing older.",
       code: `def num_decodings(s: str) -> int:
     prev2 = 1
     prev1 = 0 if s[0] == "0" else 1
@@ -624,6 +660,8 @@ def length_of_lis(nums: list[int]) -> int:
   "Unique Paths": [
     {
       label: "Memoized grid walk",
+      complexity: "Time: O(m*n), Space: O(m*n)",
+      explanation: "Caches the path count from each cell so every cell's right/down branch is expanded once.",
       code: `def unique_paths(m: int, n: int) -> int:
     memo = {}
 
@@ -641,6 +679,8 @@ def length_of_lis(nums: list[int]) -> int:
     },
     {
       label: "2D tabulation",
+      complexity: "Time: O(m*n), Space: O(m*n)",
+      explanation: "Fills the grid so each cell sums the paths arriving from above and from the left.",
       code: `def unique_paths(m: int, n: int) -> int:
     dp = [[1] * n for _ in range(m)]
     for r in range(1, m):
@@ -650,6 +690,8 @@ def length_of_lis(nums: list[int]) -> int:
     },
     {
       label: "1D rolling row",
+      complexity: "Time: O(m*n), Space: O(n)",
+      explanation: "Overwrites a single row in place because each cell only needs the row above and its left neighbor.",
       code: `def unique_paths(m: int, n: int) -> int:
     row = [1] * n
     for _ in range(1, m):
@@ -661,6 +703,8 @@ def length_of_lis(nums: list[int]) -> int:
   "Jump Game": [
     {
       label: "Memoized reachability",
+      complexity: "Time: O(n^2), Space: O(n)",
+      explanation: "Caches whether the end is reachable from each index so a position is expanded only once.",
       code: `def can_jump(nums: list[int]) -> bool:
     memo = {}
 
@@ -681,6 +725,8 @@ def length_of_lis(nums: list[int]) -> int:
     },
     {
       label: "Reachable table",
+      complexity: "Time: O(n^2), Space: O(n)",
+      explanation: "Marks reachable indices forward, testing every jump length from each reachable position.",
       code: `def can_jump(nums: list[int]) -> bool:
     good = [False] * len(nums)
     good[-1] = True
@@ -694,6 +740,8 @@ def length_of_lis(nums: list[int]) -> int:
     },
     {
       label: "Greedy max reach",
+      complexity: "Time: O(n), Space: O(1)",
+      explanation: "Sweeps once tracking the furthest reachable index and fails as soon as it falls behind.",
       code: `def can_jump(nums: list[int]) -> bool:
     max_reach = 0
     for i, jump in enumerate(nums):
@@ -706,6 +754,8 @@ def length_of_lis(nums: list[int]) -> int:
   "Min Cost Climbing Stairs": [
     {
       label: "Memoized step cost",
+      complexity: "Time: O(n), Space: O(n)",
+      explanation: "Caches the cheapest cost to finish from each step so both jump choices are evaluated once.",
       code: `def min_cost_climbing_stairs(cost: list[int]) -> int:
     memo = {}
 
@@ -721,6 +771,8 @@ def length_of_lis(nums: list[int]) -> int:
     },
     {
       label: "Non-mutating tabulation",
+      complexity: "Time: O(n), Space: O(n)",
+      explanation: "Copies the cost array and accumulates the cheaper of the two predecessors into each step.",
       code: `def min_cost_climbing_stairs(cost: list[int]) -> int:
     dp = cost[:]
     for i in range(2, len(cost)):
@@ -729,6 +781,8 @@ def length_of_lis(nums: list[int]) -> int:
     },
     {
       label: "Two variables",
+      complexity: "Time: O(n), Space: O(1)",
+      explanation: "Carries only the two previous step costs since each step reads exactly two back.",
       code: `def min_cost_climbing_stairs(cost: list[int]) -> int:
     prev2, prev1 = cost[0], cost[1]
     for i in range(2, len(cost)):
@@ -740,6 +794,8 @@ def length_of_lis(nums: list[int]) -> int:
   "Partition Equal Subset Sum": [
     {
       label: "Memoized subset search",
+      complexity: "Time: O(n*target), Space: O(n*target)",
+      explanation: "Caches the take/skip result per (index, remaining sum) so each state is decided once.",
       code: `def can_partition(nums: list[int]) -> bool:
     total = sum(nums)
     if total % 2:
@@ -761,6 +817,8 @@ def length_of_lis(nums: list[int]) -> int:
     },
     {
       label: "2D subset table",
+      complexity: "Time: O(n*target), Space: O(n*target)",
+      explanation: "Builds a row per number marking which sums are achievable using the first i numbers.",
       code: `def can_partition(nums: list[int]) -> bool:
     total = sum(nums)
     if total % 2:
@@ -776,6 +834,8 @@ def length_of_lis(nums: list[int]) -> int:
     },
     {
       label: "1D subset table",
+      complexity: "Time: O(n*target), Space: O(target)",
+      explanation: "Sweeps sums downward so each number contributes to a sum at most once per pass.",
       code: `def can_partition(nums: list[int]) -> bool:
     total = sum(nums)
     if total % 2:
