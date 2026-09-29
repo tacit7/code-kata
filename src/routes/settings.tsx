@@ -11,6 +11,7 @@ import { formatUiScale, UI_SCALE_OPTIONS } from "../lib/ui-scale";
 import { DEFAULT_AGENT_SYSTEM_PROMPT } from "../lib/agent-bridge";
 import { useKataStore } from "../stores/kata-store";
 import { toast } from "../stores/toast-store";
+import { isMacOS } from "../lib/platform";
 
 type Tab = "editor" | "agent" | "practice" | "library" | "shortcuts";
 
@@ -45,7 +46,7 @@ function formatCombo(combo: string): string {
     .map((part) => {
       switch (part) {
         case "Meta":
-          return "\u2318";
+          return isMacOS ? "\u2318" : "Ctrl";
         case "ArrowRight":
           return "\u2192";
         case "ArrowLeft":
