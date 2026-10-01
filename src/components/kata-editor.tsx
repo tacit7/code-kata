@@ -1687,7 +1687,7 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
   const toolbarIconButtonClass = "btn btn-sm btn-square h-7 min-h-7 w-8";
 
   const renderTabBar = (toggleMode: boolean) => (
-    <div className="flex items-stretch border-b border-base-300/60 shrink-0 bg-base-200 relative">
+    <div className="relative flex min-w-0 flex-wrap items-stretch border-b border-base-300/60 bg-base-200 shrink-0">
       {/* Tabs */}
       {kata.description && (
         <button
@@ -1750,11 +1750,11 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
       )}
 
       {/* Spacer */}
-      <div className="flex-1" />
+      <div className="min-w-3 flex-1" />
 
       {/* Viz controls (viz tab only) */}
       {showPanel === "viz" && (
-        <div className="flex items-center gap-1 px-2">
+        <div className="ml-auto flex max-w-full flex-wrap items-center justify-end gap-1 px-2 py-1">
           <div className="join">
             <button onClick={() => sendVizMsg('prev')} title="Previous step" className={`${toolbarButtonClass} join-item gap-1.5 border-base-300/60 bg-base-100 text-base-content/70 hover:bg-base-300/40`}><ArrowLeft size={16} /><span>Prev</span></button>
             <button onClick={() => sendVizMsg('step')} title="Next step" className={`${toolbarButtonClass} join-item gap-1.5 border-base-300/60 bg-base-100 text-base-content/70 hover:bg-base-300/40`}><span>Step</span><StepForward size={16} /></button>
@@ -1779,7 +1779,7 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
 
       {/* Editor controls (all other tabs) */}
       {showPanel !== "viz" && (
-      <div className="flex items-center gap-2 px-2.5">
+      <div className="ml-auto flex max-w-full flex-wrap items-center justify-end gap-2 px-2.5 py-1">
         <span
           className={`inline-flex h-7 items-center gap-1.5 rounded-md border px-2 text-[11px] font-semibold ${
             saved
@@ -2302,7 +2302,7 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
         {hasTabs && showPanel && (
           <div
             className="shrink-0 flex flex-col border-r border-base-300/60 bg-base-200"
-            style={{ width: panelWidth }}
+            style={{ width: panelWidth, maxWidth: "45vw" }}
           >
             {showPanel === "description" && (
               <div className="flex-1 overflow-y-auto px-4 py-3 text-sm text-base-content/70">
