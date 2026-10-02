@@ -110,9 +110,17 @@ async function createSchema(db: Database) {
       kata_count INTEGER NOT NULL,
       pass_count INTEGER DEFAULT 0,
       preset_name TEXT,
+      max_test_runs INTEGER,
       kata_ids TEXT
     )
   `);
+
+  // Migrate existing DBs: cap per-kata test runs for practice sessions.
+  try {
+    await db.execute(`ALTER TABLE sessions ADD COLUMN max_test_runs INTEGER`);
+  } catch {
+    // Column already exists
+  }
 
   // Migrate existing DBs: persist ordered session rosters for reload/resume.
   try {
