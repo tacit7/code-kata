@@ -37,13 +37,13 @@ export function TopBar() {
   return (
     <header
       onMouseDown={handleHeaderMouseDown}
-      className={`flex items-center h-11 pr-4 border-b border-base-300/60 bg-base-100 shrink-0 ${
+      className={`flex h-11 min-w-0 items-center pr-3 border-b border-base-300/60 bg-base-100 shrink-0 ${
         usesOverlayTitlebar ? "pl-20" : "pl-4"
       }`}
     >
       {/* Brand — pl-20 clears the macOS traffic-light overlay; other platforms
           keep their native title bar above this header, so no inset is needed. */}
-      <div className="flex items-center gap-2.5 mr-8 select-none">
+      <div className="flex shrink-0 items-center gap-2.5 mr-5 select-none">
         <img
           src={isDarkScheme(theme) ? "/logo-dark.png" : "/logo-light.png"}
           alt="CK"
@@ -58,7 +58,7 @@ export function TopBar() {
       </div>
 
       {/* Back / forward — VS Code style */}
-      <div className="flex items-center gap-0.5 mr-4">
+      <div className="flex shrink-0 items-center gap-0.5 mr-3">
         <button
           onClick={back}
           disabled={!canBack}
@@ -84,14 +84,15 @@ export function TopBar() {
       </div>
 
       {/* Navigation */}
-      <nav className="flex items-center h-full gap-0.5">
+      <nav className="scrollbar-hidden flex min-w-0 flex-1 items-center h-full gap-0.5 overflow-x-auto">
         {NAV_ITEMS.map((item) => {
           const active = isActive(item);
           return (
             <button
               key={item.path}
               onClick={() => navigate(item.path === "/practice" ? resumePath ?? item.path : item.path)}
-              className={`relative px-3 h-full text-[13px] font-medium transition-colors ${
+              aria-current={active ? "page" : undefined}
+              className={`relative h-full shrink-0 px-3 text-[13px] font-medium transition-colors ${
                 active
                   ? "text-primary"
                   : "text-base-content/40 hover:text-base-content/70"
@@ -105,7 +106,6 @@ export function TopBar() {
           );
         })}
       </nav>
-      <div className="ml-auto" />
     </header>
   );
 }
