@@ -5,7 +5,7 @@ use std::{
     env, fs,
     io::{Read, Write},
     path::{Path, PathBuf},
-    process::{Command, Stdio},
+    process::{Command, ExitStatus, Stdio},
     sync::{
         atomic::{AtomicU64, Ordering},
         Mutex,
@@ -90,7 +90,7 @@ fn agent_context_file(app: &tauri::AppHandle) -> Result<PathBuf, String> {
 }
 
 #[tauri::command]
-fn spawn_terminal(
+async fn spawn_terminal(
     app: tauri::AppHandle,
     kind: String,
     cwd: Option<String>,
@@ -223,7 +223,7 @@ fn resize_terminal(
 }
 
 #[tauri::command]
-fn close_terminal(terminal_id: u64, state: State<'_, TerminalState>) -> Result<(), String> {
+async fn close_terminal(terminal_id: u64, state: State<'_, TerminalState>) -> Result<(), String> {
     let session = state
         .sessions
         .lock()
@@ -547,10 +547,7 @@ fn show_kata_context_menu(
     }
 
     if is_custom {
-        menu_builder = menu_builder
-            .separator()
-            .item(&edit)
-            .item(&delete);
+        menu_builder = menu_builder.separator().item(&edit).item(&delete);
     }
 
     let menu = menu_builder.build().map_err(|e| e.to_string())?;
@@ -585,9 +582,10 @@ fn show_editor_context_menu(
         MenuItemBuilder::with_id("cmd:editor:toggle-problem-panel", "Toggle Problem Panel")
             .build(&app)
             .map_err(|e| e.to_string())?;
-    let toggle_solution = MenuItemBuilder::with_id("cmd:editor:toggle-solution", "Toggle Solutions")
-        .build(&app)
-        .map_err(|e| e.to_string())?;
+    let toggle_solution =
+        MenuItemBuilder::with_id("cmd:editor:toggle-solution", "Toggle Solutions")
+            .build(&app)
+            .map_err(|e| e.to_string())?;
     let copy_solution =
         MenuItemBuilder::with_id("cmd:editor:copy-solution", "Copy Solution to Editor")
             .build(&app)
@@ -640,7 +638,19 @@ fn show_editor_context_menu(
 }
 
 #[tauri::command]
-fn run_java_tests(user_code: String, test_code: String) -> Result<Vec<JavaTestResult>, String> {
+async fn run_java_tests(
+    user_code: String,
+    test_code: String,
+) -> Result<Vec<JavaTestResult>, String> {
+    tauri::async_runtime::spawn_blocking(move || run_java_tests_blocking(user_code, test_code))
+        .await
+        .map_err(|e| e.to_string())?
+}
+
+fn run_java_tests_blocking(
+    user_code: String,
+    test_code: String,
+) -> Result<Vec<JavaTestResult>, String> {
     let test_names = extract_java_test_names(&test_code);
     if test_names.is_empty() {
         return Ok(vec![JavaTestResult {
@@ -714,16 +724,35 @@ fn run_java_tests_in_dir(
     )
     .map_err(|e| e.to_string())?;
 
-    let compile = Command::new(&tools.javac)
-        .current_dir(run_dir)
-        .arg("-encoding")
-        .arg("UTF-8")
-        .arg("-d")
-        .arg("out")
-        .arg("Solution.java")
-        .arg("KataTest.java")
-        .output()
-        .map_err(|e| format!("Java compiler not found. Install JDK 17+ or set JAVA_HOME. ({e})"))?;
+    let compile = run_with_timeout(
+        Command::new(&tools.javac)
+            .current_dir(run_dir)
+            .arg("-encoding")
+            .arg("UTF-8")
+            .arg("-d")
+            .arg("out")
+            .arg("Solution.java")
+            .arg("KataTest.java"),
+        JAVA_RUN_TIMEOUT,
+        "Java compiler not found. Install JDK 17+ or set JAVA_HOME.",
+    )?;
+
+    if compile.timed_out {
+        return Ok(test_names
+            .iter()
+            .map(|name| JavaTestResult {
+                name: name.clone(),
+                passed: false,
+                error: Some(format!(
+                    "Compilation exceeded {}s",
+                    JAVA_RUN_TIMEOUT.as_secs()
+                )),
+                output: None,
+                expected: None,
+                got: None,
+            })
+            .collect());
+    }
 
     if !compile.status.success() {
         let stderr = String::from_utf8_lossy(&compile.stderr);
@@ -753,6 +782,7 @@ fn run_java_tests_in_dir(
             .arg("out")
             .arg("KataTest"),
         JAVA_RUN_TIMEOUT,
+        "Java runtime not found. Install JDK 17+ or set JAVA_HOME.",
     )?;
 
     if run_output.timed_out {
@@ -806,37 +836,70 @@ fn run_java_tests_in_dir(
 struct TimedOutput {
     stdout: Vec<u8>,
     stderr: Vec<u8>,
+    status: ExitStatus,
     timed_out: bool,
 }
 
-fn run_with_timeout(command: &mut Command, timeout: Duration) -> Result<TimedOutput, String> {
+fn run_with_timeout(
+    command: &mut Command,
+    timeout: Duration,
+    missing_tool_message: &str,
+) -> Result<TimedOutput, String> {
     let mut child = command
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .spawn()
-        .map_err(|e| format!("Java runtime not found. Install JDK 17+ or set JAVA_HOME. ({e})"))?;
+        .map_err(|e| format!("{missing_tool_message} ({e})"))?;
+
+    let mut stdout = child
+        .stdout
+        .take()
+        .ok_or_else(|| "Failed to capture Java stdout".to_string())?;
+    let mut stderr = child
+        .stderr
+        .take()
+        .ok_or_else(|| "Failed to capture Java stderr".to_string())?;
+    let stdout_handle = thread::spawn(move || {
+        let mut output = Vec::new();
+        stdout.read_to_end(&mut output).map(|_| output)
+    });
+    let stderr_handle = thread::spawn(move || {
+        let mut output = Vec::new();
+        stderr.read_to_end(&mut output).map(|_| output)
+    });
 
     let start = SystemTime::now();
     loop {
-        if child.try_wait().map_err(|e| e.to_string())?.is_some() {
-            let output = child.wait_with_output().map_err(|e| e.to_string())?;
+        if let Some(status) = child.try_wait().map_err(|e| e.to_string())? {
             return Ok(TimedOutput {
-                stdout: output.stdout,
-                stderr: output.stderr,
+                stdout: join_output_reader(stdout_handle, "stdout")?,
+                stderr: join_output_reader(stderr_handle, "stderr")?,
+                status,
                 timed_out: false,
             });
         }
         if start.elapsed().map_err(|e| e.to_string())? >= timeout {
             let _ = child.kill();
-            let output = child.wait_with_output().map_err(|e| e.to_string())?;
+            let status = child.wait().map_err(|e| e.to_string())?;
             return Ok(TimedOutput {
-                stdout: output.stdout,
-                stderr: output.stderr,
+                stdout: join_output_reader(stdout_handle, "stdout")?,
+                stderr: join_output_reader(stderr_handle, "stderr")?,
+                status,
                 timed_out: true,
             });
         }
         thread::sleep(Duration::from_millis(25));
     }
+}
+
+fn join_output_reader(
+    handle: thread::JoinHandle<std::io::Result<Vec<u8>>>,
+    stream_name: &str,
+) -> Result<Vec<u8>, String> {
+    handle
+        .join()
+        .map_err(|_| format!("Java {stream_name} reader panicked"))?
+        .map_err(|e| format!("Failed to read Java {stream_name}: {e}"))
 }
 
 fn first_meaningful_lines(text: &str, limit: usize) -> String {

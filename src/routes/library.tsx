@@ -961,12 +961,12 @@ function LibraryPage({ modules }: { modules: boolean }) {
   };
 
   return (
-    <div className="flex flex-col h-full p-5 gap-4 animate-fade-in">
+    <div className="flex h-full min-w-0 flex-col gap-4 overflow-hidden p-5 animate-fade-in">
       {/* Header */}
-      <div className="flex flex-col gap-3">
-        <div className="flex flex-wrap items-center gap-3">
+      <div className="flex min-w-0 flex-col gap-3">
+        <div className="flex min-w-0 flex-wrap items-center gap-3">
           <h1 className="text-lg font-bold shrink-0">{modules ? "Modules" : "Problems"}</h1>
-          <div className="relative min-w-64 flex-1 max-w-md">
+          <div className="relative min-w-0 flex-1 basis-72 max-w-md">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-base-content/35" />
             <input
               type="text"
@@ -993,7 +993,7 @@ function LibraryPage({ modules }: { modules: boolean }) {
               else if (v === "difficulty-desc") { setSortMode("default"); setDiffSort("desc"); }
               else { setDiffSort(null); setSortMode(v as LibrarySortMode); }
             }}
-            className="select select-bordered select-sm ml-auto h-10 w-52 shrink-0 rounded-md bg-base-100 text-xs"
+            className="select select-bordered select-sm ml-auto h-10 w-full max-w-60 shrink rounded-md bg-base-100 text-xs sm:w-52"
           >
             <option value="default">Sort: Default</option>
             <option value="starred">Sort: Starred first</option>
@@ -1009,7 +1009,7 @@ function LibraryPage({ modules }: { modules: boolean }) {
           </select>
         </div>
 
-        <div className="scrollbar-hidden flex items-center gap-2 overflow-x-auto pb-1 text-xs">
+        <div className="scrollbar-hidden flex min-w-0 items-center gap-2 overflow-x-auto pb-1 text-xs">
           <button
             type="button"
             onClick={clearLibraryFilters}
@@ -1274,9 +1274,9 @@ function LibraryPage({ modules }: { modules: boolean }) {
       <div
         ref={listRef}
         onScroll={(e) => { savedScrollTopByPage[pageKey] = e.currentTarget.scrollTop; }}
-        className={`flex-1 min-h-0 overflow-y-auto scrollbar-hidden ${
+        className={`flex-1 min-h-0 min-w-0 ${
           modules ? "mx-auto w-full max-w-5xl space-y-1.5 pr-1" : "bg-base-100 rounded-lg border border-base-300 shadow-sm shadow-base-300/20"
-        }`}
+        } ${modules ? "overflow-y-auto scrollbar-hidden" : "overflow-auto"}`}
       >
         {modules ? (
           <>
@@ -1288,7 +1288,7 @@ function LibraryPage({ modules }: { modules: boolean }) {
             )}
           </>
         ) : (
-          <table className="table table-sm">
+          <table className="table table-sm min-w-[70rem]">
             <thead>
               <tr className="border-base-300 bg-base-300/70 text-base-content/70">
                 <th className="w-8"></th>
