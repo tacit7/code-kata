@@ -15,6 +15,18 @@ A desktop app for timed coding practice. Solve algorithm and React katas with re
 
 ## Getting Started
 
+### Coding interview practice with Codex
+
+Install the [Code Kata Interview skill](.codex/skills/code-kata-interview/SKILL.md)
+as a user skill to use it from any project. In Codex, say:
+
+> Use $skill-installer to install the Code Kata Interview skill from
+> `tacit7/code-kata` at `.codex/skills/code-kata-interview`.
+
+With Code Kata Python open to a problem, try asking Codex to look at the app and
+interview you on the current kata. The skill uses Node.js for the bundled editor
+helper and Python 3 for catalog searches.
+
 ### Prerequisites
 - Node.js 18+
 - Python 3.8+ (for Python katas)
