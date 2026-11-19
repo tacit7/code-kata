@@ -59,7 +59,7 @@ export function TopBar() {
       </div>
 
       {/* Back / forward — VS Code style */}
-      <div className="flex shrink-0 items-center gap-0.5 mr-3">
+      <div style={nativeDragRegion ? { WebkitAppRegion: "no-drag" } as React.CSSProperties : undefined} className="flex shrink-0 items-center gap-0.5 mr-3">
         <button
           onClick={back}
           disabled={!canBack}

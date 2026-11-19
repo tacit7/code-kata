@@ -1,7 +1,8 @@
 import { Fragment, useEffect, useMemo, useState } from "react";
-import { useParams, useNavigate, Navigate } from "react-router";
+import { useParams, useNavigate, Navigate, Link } from "react-router";
 import { useSessionStore } from "../stores/session-store";
-import { useKataStore } from "../stores/kata-store";
+import { loadSessionResults, type SessionResultsData } from "../lib/session-results";
+import { ResultProblemLink } from "../components/result-problem-link";
 import { useTimerStore } from "../stores/timer-store";
 import { formatTime } from "../lib/format";
 import { CodeDiff } from "../components/code-diff";
@@ -11,24 +12,31 @@ import type { Kata } from "../types/editor";
 export function SessionResultsPage() {
   const { sessionId } = useParams<{ sessionId: string }>();
   const navigate = useNavigate();
-  const { activeSession, sessionKatas, attempts, loadSession, startSession } = useSessionStore();
-  const allKatas = useKataStore((s) => s.katas);
+  const startSession = useSessionStore((state) => state.startSession);
+  const numericId = Number(sessionId);
+  const [result, setResult] = useState<{ id: number; data: SessionResultsData | null; error?: string } | null>(null);
   const resetKataTimer = useTimerStore((s) => s.resetKataTimer);
   const startSessionTimer = useTimerStore((s) => s.startSessionTimer);
   const [expandedDiffs, setExpandedDiffs] = useState<Set<number>>(new Set());
   const reviewQueues = useMemo(
-    () => buildSessionReviewQueues(sessionKatas, attempts),
-    [sessionKatas, attempts],
+    () => buildSessionReviewQueues(result?.data?.katas ?? [], result?.data?.attempts ?? []),
+    [result],
   );
 
   useEffect(() => {
-    if (!activeSession && sessionId) {
-      loadSession(Number(sessionId), allKatas);
-    }
-  }, [activeSession, sessionId, allKatas, loadSession]);
+    if (!Number.isSafeInteger(numericId) || numericId < 1) return;
+    let cancelled = false;
+    void loadSessionResults(numericId).then((data) => {
+      if (!cancelled) setResult({ id: numericId, data });
+    }).catch((error) => {
+      if (!cancelled) setResult({ id: numericId, data: null,
+        error: error instanceof Error ? error.message : "Could not load session results." });
+    });
+    return () => { cancelled = true; };
+  }, [numericId]);
 
-  if (!activeSession) {
-    if (!sessionId) return <Navigate to="/problems" replace />;
+  if (!Number.isSafeInteger(numericId) || numericId < 1) return <Navigate to="/results" replace />;
+  if (result?.id !== numericId) {
     return (
       <div className="flex items-center justify-center h-full text-base-content/30 text-sm">
         <div className="flex items-center gap-2">
@@ -38,6 +46,13 @@ export function SessionResultsPage() {
       </div>
     );
   }
+  if (!result.data) {
+    return <div className="flex flex-col items-start gap-3 p-5">
+      <p role="alert">{result.error ?? "Session not found."}</p>
+      <Link to="/results" className="text-primary hover:underline">All results</Link>
+    </div>;
+  }
+  const { session: activeSession, katas: sessionKatas, attempts } = result.data;
 
   const passRate = activeSession.kataCount > 0
     ? `${activeSession.passCount}/${activeSession.kataCount}`
@@ -67,7 +82,13 @@ export function SessionResultsPage() {
 
   return (
     <div className="flex flex-col h-full p-5 gap-5 overflow-y-auto animate-fade-in">
-      <h1 className="text-lg font-bold">Session Results</h1>
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <h1 className="text-lg font-bold">Session Results</h1>
+          <p className="mt-1 text-xs text-base-content/45">{new Date(activeSession.startedAt).toLocaleString()}</p>
+        </div>
+        <Link to="/results" className="text-sm text-primary hover:underline">All results</Link>
+      </div>
 
       {/* Summary cards */}
       <div className="flex gap-3 stagger">
@@ -109,12 +130,9 @@ export function SessionResultsPage() {
                   <tr className="border-base-300/30">
                     <td className="text-base-content/30 text-sm tabular-nums">{i + 1}</td>
                     <td className="text-sm">
-                      <button
-                        onClick={() => navigate(`/editor/${kata.id}`)}
-                        className="font-medium text-left hover:text-primary hover:underline transition-colors cursor-pointer"
-                      >
+                      <ResultProblemLink kataId={kata.id} language={kata.language}>
                         {kata.name}
-                      </button>
+                      </ResultProblemLink>
                     </td>
                     <td className="font-mono text-base-content/45 text-sm tabular-nums">
                       {attempt?.timeMs != null ? formatTime(attempt.timeMs) : "--:--"}
