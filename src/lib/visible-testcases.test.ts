@@ -18,6 +18,19 @@ describe("extractPythonFunctionInfo", () => {
 });
 
 describe("visibleTestCasesFor", () => {
+  it("reads Ruby expected-first assertions with nested input values", () => {
+    const cases = visibleTestCasesFor({
+      language: "ruby",
+      code: "def two_sum(nums, target)\n  raise NotImplementedError\nend",
+      testCode: "def test_basic\n  assert_equal([0, 1], two_sum([2, 7], 9))\nend",
+    });
+    expect(cases[0]).toMatchObject({
+      testName: "basic",
+      inputs: [{ name: "nums", value: "[2, 7]" }, { name: "target", value: "9" }],
+      expected: "[0, 1]",
+    });
+  });
+
   it("extracts direct assert cases", () => {
     const cases = visibleTestCasesFor({
       ...baseKata,

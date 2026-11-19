@@ -1,4 +1,4 @@
-import { dpFamilyFor, type PatternModule } from "./dp-patterns";
+import { dpFamilyFor } from "./dp-patterns";
 import { ROADMAP_MODULES, matchesRoadmapModule } from "./roadmap-modules";
 import { computeSrState } from "./sr";
 
@@ -124,11 +124,12 @@ const REVIEW_QUEUE_LIMIT = 5;
 const RECENTLY_IMPROVED_LIMIT = 5;
 const RECENT_IMPROVEMENT_DAYS = 30;
 const DAY_MS = 86_400_000;
-const TWO_DIMENSIONAL_DP_MODULES = new Set<PatternModule>([
+const TWO_DIMENSIONAL_DP_MODULES = new Set<string>([
   "grid-dp",
   "0-1-knapsack",
   "unbounded-knapsack",
   "string-two-sequence-dp",
+  "string-dp",
   "interval-dp",
   "dfs-memo",
   "tree-dp",
