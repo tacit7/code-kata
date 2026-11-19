@@ -81,6 +81,7 @@
   "src/lib/session-resume.ts",
   "src/lib/session-review-queues.test.ts",
   "src/lib/session-review-queues.ts",
+  "src/lib/session-schema.test.ts",
   "src/lib/session-schema.ts",
   "src/lib/shortcut-keys.test.ts",
   "src/lib/shortcut-keys.ts",
