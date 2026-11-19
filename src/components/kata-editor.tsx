@@ -639,7 +639,7 @@ function DpPatternHints({ kata }: { kata: Kata }) {
 interface KataEditorProps {
   kata: Kata;
   isSession?: boolean;
-  onTestComplete?: (passed: boolean, codeSnapshot: string) => void;
+  onTestComplete?: (passed: boolean, codeSnapshot: string) => void | Promise<void>;
   onAdvance?: () => void;
   scratchpad?: { onLanguageChange: (language: ScratchpadLanguage) => void };
 }
@@ -1102,7 +1102,13 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance, scratch
       // Auto-save on run
       await saveUserCode(kata.id, code);
       setSaved(true);
-      const testResults = await runTests(code, kata.testCode, kata.language);
+      let testResults: TestResult[];
+      try {
+        testResults = await runTests(code, kata.testCode, kata.language);
+      } catch (error) {
+        testResults = [{ name: "Runner error", passed: false,
+          error: error instanceof Error ? error.message : String(error) }];
+      }
       setResults(testResults);
       setRanAt(new Date().toLocaleTimeString());
       const allPassed = testResults.length > 0 && testResults.every((r) => r.passed);
@@ -1111,7 +1117,7 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance, scratch
         setKataPassed(true);
       }
       if (onTestComplete) {
-        onTestComplete(allPassed, code);
+        await onTestComplete(allPassed, code);
       }
       if (maxTestRuns !== null && !allPassed && !kataPassed) {
         const newCount = runCount + 1;
@@ -1123,18 +1129,8 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance, scratch
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      setResults([{ name: "Runner error", passed: false, error: msg }]);
-      setActiveBottomTab("results");
-      setBottomPanelVisible(true);
-      setRanAt(new Date().toLocaleTimeString());
-      if (maxTestRuns !== null && !kataPassed) {
-        const newCount = runCount + 1;
-        setRunCount(newCount);
-        if (newCount >= maxTestRuns) {
-          toast.error("Max attempts reached — moving to next problem", 1500);
-          setTimeout(() => { onAdvance?.(); }, 1500);
-        }
-      }
+      // Do not advance until the outcome is durably saved.
+      toast.error(`Could not save test run: ${msg}`);
     } finally {
       setRunning(false);
     }

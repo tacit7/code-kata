@@ -116,6 +116,7 @@
   "src/routes/practice.tsx",
   "src/routes/results.tsx",
   "src/routes/scratchpad.tsx",
+  "src/routes/session-failed-attempts.test.tsx",
   "src/routes/session-results-navigation.test.ts",
   "src/routes/session-results.tsx",
   "src/routes/session-shortcuts.test.ts",
