@@ -918,7 +918,9 @@ function DrillDown({ rows }: { rows: DrillDownRow[] }) {
                     {row.timeMs != null ? formatTime(row.timeMs) : "--:--"}
                   </td>
                   <td>
-                    {row.passed ? (
+                    {row.passed == null ? (
+                      <span className="badge badge-ghost badge-xs">Skipped</span>
+                    ) : row.passed ? (
                       <span className="badge badge-success badge-xs">Pass</span>
                     ) : (
                       <span className="badge badge-error badge-xs">Fail</span>

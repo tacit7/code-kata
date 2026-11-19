@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({ select: vi.fn() }));
 vi.mock("./database", () => ({ getDb: async () => ({ select: mocks.select }) }));
 import { loadSessionResults } from "./session-results";
+import { useDashboardStore } from "../stores/dashboard-store";
 let sqlite: DatabaseSync;
 beforeEach(() => {
   sqlite = new DatabaseSync(":memory:");
@@ -35,11 +36,20 @@ describe("historical session results", () => {
     expect(result?.attempts).toMatchObject([{ kataIndex: 0, passed: true }, { kataIndex: 2, passed: false }]);
     expect(sqlite.prepare("SELECT finished_at FROM sessions WHERE id=99").get()?.finished_at).toBeNull();
   });
+  it("shows the full roster in the Results overview, including skipped problems", async () => {
+    await useDashboardStore.getState().loadDrillDown(82);
+    const rows = useDashboardStore.getState().drillDown!;
+    expect(rows.map((row) => row.kataName)).toEqual(["Passed problem", "Skipped problem", "Failed problem"]);
+    expect(rows.map((row) => row.passed)).toEqual([1, null, 0]);
+  });
+
   it("returns null for a session that does not exist", async () => {
     expect(await loadSessionResults(100)).toBeNull();
   });
   it("supports older sessions with no stored roster", async () => {
     sqlite.exec("UPDATE sessions SET kata_ids = NULL WHERE id=82");
     expect((await loadSessionResults(82))?.katas.map((kata) => kata.id)).toEqual([2, 3]);
+    await useDashboardStore.getState().loadDrillDown(82);
+    expect(useDashboardStore.getState().drillDown?.map((row) => row.passed)).toEqual([1, 0]);
   });
 });

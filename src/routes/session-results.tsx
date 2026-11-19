@@ -122,7 +122,10 @@ export function SessionResultsPage() {
           </thead>
           <tbody>
             {sessionKatas.map((kata, i) => {
-              const attempt = attempts.find((a) => a.kataIndex === i);
+              const kataIndex = activeSession.kataIds?.length
+                ? activeSession.kataIds.indexOf(kata.id)
+                : attempts.find((saved) => saved.kataId === kata.id)?.kataIndex ?? i;
+              const attempt = attempts.find((saved) => saved.kataIndex === kataIndex);
               const hasDiff = attempt?.codeSnapshot != null;
               const isExpanded = expandedDiffs.has(i);
               return (

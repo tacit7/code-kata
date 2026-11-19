@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { getDb } from "../lib/database";
+import { loadSessionResults } from "../lib/session-results";
 import {
   computeHighValueDashboardMetrics,
   type LeetcodeProgress,
@@ -79,7 +80,7 @@ export interface DrillDownRow {
   kataId: number;
   kataIndex: number;
   timeMs: number | null;
-  passed: number;
+  passed: number | null;
   codeSnapshot: string | null;
   kataName: string;
   category: string;
@@ -366,38 +367,26 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
   },
 
   loadDrillDown: async (sessionId: number) => {
-    const db = await getDb();
-    const rows = await db.select<
-      {
-        id: number;
-        kata_id: number;
-        kata_index: number;
-        time_ms: number | null;
-        passed: number;
-        code_snapshot: string | null;
-        kata_name: string;
-        category: string;
-        language: string;
-      }[]
-    >(
-      `SELECT a.id, a.kata_id, a.kata_index, a.time_ms, a.passed, a.code_snapshot, k.name as kata_name, k.category, k.language
-       FROM attempts a JOIN katas k ON k.id = a.kata_id WHERE a.session_id = $1 ORDER BY a.kata_index`,
-      [sessionId],
-    );
-
+    const data = await loadSessionResults(sessionId);
     set({
       selectedSessionId: sessionId,
-      drillDown: rows.map((r) => ({
-        id: r.id,
-        kataId: r.kata_id,
-        kataIndex: r.kata_index,
-        timeMs: r.time_ms,
-        passed: r.passed,
-        codeSnapshot: r.code_snapshot,
-        kataName: r.kata_name,
-        category: r.category,
-        language: r.language,
-      })),
+      drillDown: data?.katas.map((kata, index) => {
+        const kataIndex = data.session.kataIds?.length
+          ? data.session.kataIds.indexOf(kata.id)
+          : data.attempts.find((attempt) => attempt.kataId === kata.id)?.kataIndex ?? index;
+        const attempt = data.attempts.find((saved) => saved.kataIndex === kataIndex);
+        return {
+          id: attempt?.id ?? -(index + 1),
+          kataId: kata.id,
+          kataIndex,
+          timeMs: attempt?.timeMs ?? null,
+          passed: attempt ? (attempt.passed ? 1 : 0) : null,
+          codeSnapshot: attempt?.codeSnapshot ?? null,
+          kataName: kata.name,
+          category: kata.category,
+          language: kata.language,
+        };
+      }) ?? [],
     });
   },
 
