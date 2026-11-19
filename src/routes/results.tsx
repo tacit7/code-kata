@@ -1,4 +1,6 @@
 import { Fragment, useEffect } from "react";
+import { Link } from "react-router";
+import { ResultProblemLink } from "../components/result-problem-link";
 import { useDashboardStore } from "../stores/dashboard-store";
 import type { DrillDownRow } from "../stores/dashboard-store";
 import { formatTime } from "../lib/format";
@@ -6,7 +8,7 @@ import { formatTime } from "../lib/format";
 function DrillDown({ rows }: { rows: DrillDownRow[] }) {
   return (
     <tr>
-      <td colSpan={5} className="p-0">
+      <td colSpan={6} className="p-0">
         <div className="bg-base-200 px-4 py-2">
           <table className="table table-xs">
             <tbody>
@@ -16,9 +18,9 @@ function DrillDown({ rows }: { rows: DrillDownRow[] }) {
                   className="border-b border-base-300/30 last:border-0"
                 >
                   <td className="px-2 py-1.5 text-xs font-medium">
-                    <span className="text-left">
+                    <ResultProblemLink kataId={row.kataId} language={row.language}>
                       {row.kataName}
-                    </span>
+                    </ResultProblemLink>
                   </td>
                   <td className="px-2 py-1.5 text-xs text-base-content/45">{row.category}</td>
                   <td className="px-2 py-1.5 font-mono text-xs text-base-content/45 tabular-nums">
@@ -89,6 +91,7 @@ export function ResultsPage() {
                 <th className="px-3 py-2 font-semibold">Katas</th>
                 <th className="px-3 py-2 font-semibold">Time</th>
                 <th className="px-3 py-2 font-semibold">Pass Rate</th>
+                <th className="px-3 py-2 font-semibold"><span className="sr-only">Session details</span></th>
               </tr>
             </thead>
             <tbody>
@@ -104,6 +107,12 @@ export function ResultsPage() {
                       onClick={() => handleRowClick(session.id)}
                     >
                       <td className="px-3 py-2 text-xs text-base-content/45">
+                        <button type="button" aria-expanded={isSelected}
+                          aria-label={`${isSelected ? "Collapse" : "Expand"} session ${session.id}`}
+                          onClick={(event) => { event.stopPropagation(); handleRowClick(session.id); }}
+                          className="mr-2 text-base-content/45 hover:text-primary">
+                          <span aria-hidden="true">{isSelected ? "▾" : "▸"}</span>
+                        </button>
                         {new Date(session.started_at).toLocaleDateString(undefined, {
                           month: "short",
                           day: "numeric",
@@ -123,6 +132,11 @@ export function ResultsPage() {
                       </td>
                       <td className={`px-3 py-2 text-xs tabular-nums font-medium ${allPassed ? "text-success" : "text-base-content/45"}`}>
                         {session.pass_count}/{session.kata_count}
+                      </td>
+                      <td className="px-3 py-2 text-right text-xs">
+                        <Link to={`/session/${session.id}/results`} onClick={(event) => event.stopPropagation()}
+                          aria-label={`View details for session ${session.id}`}
+                          className="whitespace-nowrap text-primary hover:underline">View details</Link>
                       </td>
                     </tr>
                     {isSelected && drillDown && (
