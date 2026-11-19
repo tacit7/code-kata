@@ -76,16 +76,16 @@ export function SessionPage() {
     async (passed: boolean, codeSnapshot: string) => {
       if (!currentKata || attemptRecorded || attemptLockedRef.current) return;
       setLastPassed(passed);
-      if (passed) {
-        attemptLockedRef.current = true;
-        setAttemptRecorded(true);
-        try {
-          await recordAttempt(currentKata.id, currentKataElapsedMs(), true, codeSnapshot);
-        } catch (error) {
-          attemptLockedRef.current = false;
-          setAttemptRecorded(false);
-          throw error;
-        }
+      attemptLockedRef.current = true;
+      if (passed) setAttemptRecorded(true);
+      try {
+        await recordAttempt(currentKata.id, currentKataElapsedMs(), passed, codeSnapshot);
+      } catch (error) {
+        setAttemptRecorded(false);
+        throw error;
+      } finally {
+        // Failed runs can be retried; a pass remains the completed outcome.
+        attemptLockedRef.current = false;
       }
     },
     [currentKata, attemptRecorded, recordAttempt],

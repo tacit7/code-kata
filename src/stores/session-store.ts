@@ -248,19 +248,31 @@ export const useSessionStore = create<SessionState>((set, get) => ({
 
   recordAttempt: async (kataId, timeMs, passed, codeSnapshot) => {
     const { activeSession, currentIndex, attempts } = get();
-    if (!activeSession) return;
+    if (!activeSession || activeSession.finishedAt) return;
+    const existing = attempts.find((attempt) => attempt.kataIndex === currentIndex);
+    if (existing?.passed) return;
 
     const db = await getDb();
     const now = new Date().toISOString();
-    const startedAt = new Date(Date.now() - timeMs).toISOString();
-    const result = await db.execute(
-      `INSERT INTO attempts (session_id, kata_id, kata_index, started_at, finished_at, time_ms, passed, code_snapshot)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-      [activeSession.id, kataId, currentIndex, startedAt, now, timeMs, passed ? 1 : 0, codeSnapshot],
-    );
+    const startedAt = existing?.startedAt ?? new Date(Date.now() - timeMs).toISOString();
+    let attemptId: number;
+    if (existing) {
+      await db.execute(
+        `UPDATE attempts SET finished_at = $1, time_ms = $2, passed = $3, code_snapshot = $4 WHERE id = $5`,
+        [now, timeMs, passed ? 1 : 0, codeSnapshot, existing.id],
+      );
+      attemptId = existing.id;
+    } else {
+      const result = await db.execute(
+        `INSERT INTO attempts (session_id, kata_id, kata_index, started_at, finished_at, time_ms, passed, code_snapshot)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+        [activeSession.id, kataId, currentIndex, startedAt, now, timeMs, passed ? 1 : 0, codeSnapshot],
+      );
+      attemptId = result.lastInsertId as number;
+    }
 
     const attempt: Attempt = {
-      id: result.lastInsertId as number,
+      id: attemptId,
       sessionId: activeSession.id,
       kataId,
       kataIndex: currentIndex,
@@ -271,7 +283,9 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       codeSnapshot,
     };
 
-    const newAttempts = [...attempts, attempt];
+    const newAttempts = existing
+      ? attempts.map((saved) => saved.id === existing.id ? attempt : saved)
+      : [...attempts, attempt];
     const newPassCount = passed ? activeSession.passCount + 1 : activeSession.passCount;
 
     if (passed) {
