@@ -1,3 +1,4 @@
+import { APP_VARIANT, type AppLanguage } from "../lib/app-variant";
 import { create } from "zustand";
 import { isAppThemeId } from "../lib/editor-themes";
 import { IMPLEMENTATION_SIZES, type ImplementationSize } from "../lib/implementation-complexity";
@@ -5,7 +6,7 @@ import type { AppTheme } from "../types/editor";
 import { getDb } from "../lib/database";
 import { resolveEditorToggles, type EditorToggleKey, type LineNumbersMode } from "../lib/editor-settings";
 import { DEFAULT_UI_SCALE, normalizeUiScale, type UiScale } from "../lib/ui-scale";
-import { DEFAULT_AGENT_SYSTEM_PROMPT } from "../lib/agent-bridge";
+import { DEFAULT_AGENT_SYSTEM_PROMPT, normalizeAgentSystemPrompt as normalizeTutorPrompt } from "../lib/agent-bridge";
 
 import { DEFAULT_SHORTCUTS, migrateShortcuts, type ShortcutAction, type ShortcutMap } from "../lib/shortcut-keys";
 
@@ -15,7 +16,7 @@ export type { ShortcutAction, ShortcutMap };
 
 export type { LineNumbersMode };
 
-export type KataLanguage = "javascript" | "python" | "java";
+export type KataLanguage = AppLanguage;
 
 export type PracticeMode = "sr" | "review" | "daily" | "weak" | "speed" | "level";
 export type PracticeDifficulty = "easy" | "medium" | "hard";
@@ -222,7 +223,7 @@ function normalizeAgentProvider(value: unknown): AgentProvider {
 
 function normalizeAgentSystemPrompt(value: unknown): string {
   return typeof value === "string" && value.trim().length > 0
-    ? value
+    ? normalizeTutorPrompt(value)
     : DEFAULTS.agentSystemPrompt;
 }
 
@@ -350,14 +351,10 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
         patch.lineNumbersMode === "off" || patch.lineNumbersMode === "relative" || patch.lineNumbersMode === "on"
           ? patch.lineNumbersMode
           : DEFAULTS.lineNumbersMode,
-      // Persisted settings can outlive this variant's language set — a foreign
-      // variant may have written "ruby" or "java", or the value may be
-      // corrupted. This Tauri variant exposes JavaScript and Python.
-      language:
-        patch.language === "javascript" || patch.language === "python"
-          ? patch.language
-          : patch.language === "ruby"
-          ? "python"
+      language: APP_VARIANT.languages.some(({ id }) => id === patch.language)
+        ? patch.language as KataLanguage
+        : patch.language === "ruby" || patch.language === "python"
+          ? APP_VARIANT.primaryLanguage
           : DEFAULTS.language,
       defaultSessionSize:
         (patch.defaultSessionSize as number) ?? DEFAULTS.defaultSessionSize,

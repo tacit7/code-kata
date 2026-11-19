@@ -19,6 +19,7 @@ use tauri::{Emitter, Manager, State};
 const JAVA_RUN_TIMEOUT: Duration = Duration::from_secs(5);
 const AGENT_CONTEXT_DIR: &str = "agent";
 const AGENT_CONTEXT_FILE: &str = "current-context.json";
+const AGENT_SKILL_RESOURCE: &str = "agent/skills/kata-student-helper/SKILL.md";
 
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -67,6 +68,18 @@ impl Default for TerminalState {
 #[tauri::command]
 fn agent_context_path(app: tauri::AppHandle) -> Result<String, String> {
     Ok(agent_context_file(&app)?.to_string_lossy().to_string())
+}
+
+#[tauri::command]
+fn agent_skill_path(app: tauri::AppHandle) -> Result<String, String> {
+    let path = app
+        .path()
+        .resolve(AGENT_SKILL_RESOURCE, tauri::path::BaseDirectory::Resource)
+        .map_err(|e| e.to_string())?;
+    if !path.is_file() {
+        return Err(format!("Bundled assistant skill missing at {}", path.display()));
+    }
+    Ok(path.to_string_lossy().into_owned())
 }
 
 #[tauri::command]
@@ -566,13 +579,16 @@ fn show_editor_context_menu(
     repl_supported: bool,
     agent_open: bool,
     agent_provider: String,
+    scratchpad: Option<bool>,
 ) -> Result<(), String> {
+    let is_scratchpad = scratchpad.unwrap_or(false);
     let ask_agent_label = match agent_provider.as_str() {
         "claude" => "Ask Claude",
         "codex" => "Ask Codex",
         _ => "Ask Agent",
     };
-    let run_tests = MenuItemBuilder::with_id("cmd:editor:run-tests", "Run Tests")
+    let run_label = if is_scratchpad { "Run Code" } else { "Run Tests" };
+    let run_tests = MenuItemBuilder::with_id("cmd:editor:run-tests", run_label)
         .build(&app)
         .map_err(|e| e.to_string())?;
     let reset_code = MenuItemBuilder::with_id("cmd:editor:reset-code", "Reset Code")
@@ -609,8 +625,11 @@ fn show_editor_context_menu(
     let mut menu_builder = MenuBuilder::new(&app)
         .item(&run_tests)
         .separator()
-        .item(&reset_code)
-        .item(&toggle_problem_panel);
+        .item(&reset_code);
+
+    if !is_scratchpad {
+        menu_builder = menu_builder.item(&toggle_problem_panel);
+    }
 
     if has_solution {
         menu_builder = menu_builder.item(&toggle_solution).item(&copy_solution);
@@ -1062,6 +1081,7 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .invoke_handler(tauri::generate_handler![
             agent_context_path,
+            agent_skill_path,
             close_terminal,
             resize_terminal,
             spawn_terminal,

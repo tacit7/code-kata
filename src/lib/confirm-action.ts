@@ -1,4 +1,4 @@
-import { confirm as nativeConfirm, type ConfirmDialogOptions } from "@tauri-apps/plugin-dialog";
+import { confirm as nativeConfirm, type ConfirmDialogOptions } from "./native-api";
 
 export interface ConfirmActionOptions extends ConfirmDialogOptions {
   message: string;

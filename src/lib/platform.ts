@@ -1,4 +1,4 @@
-import { platform } from "@tauri-apps/plugin-os";
+import { platform } from "./native-api";
 
 export const currentPlatform = platform();
 export const isMacOS = currentPlatform === "macos";

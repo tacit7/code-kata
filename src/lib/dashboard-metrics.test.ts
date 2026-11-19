@@ -149,6 +149,7 @@ describe("computeHighValueDashboardMetrics", () => {
   it("orders module progress in roadmap order", () => {
     const metrics = computeHighValueDashboardMetrics(
       [
+        kata({ id: 20, name: "Ruby Prelude", category: "ruby-prelude", tags: ["ruby-prelude"] }),
         kata({ id: 1, name: "Contains Duplicate", category: "arrays", leetcodeNumber: 217, tags: ["neetcode", "arrays-hashing"] }),
         kata({ id: 2, name: "Valid Palindrome", category: "two-pointers", leetcodeNumber: 125, tags: ["two-pointers"] }),
         kata({ id: 3, name: "Valid Parentheses", category: "stack", leetcodeNumber: 20, tags: ["stack"] }),

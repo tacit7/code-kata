@@ -3,11 +3,19 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-const APP_ID = "com.code-kata.app";
+const cliArgs = process.argv.slice(2);
+const appIndex = cliArgs.indexOf("--app");
+const appChoice = appIndex < 0 ? null : cliArgs.splice(appIndex, 2)[1];
+if (appIndex >= 0 && !["python", "ruby"].includes(appChoice)) {
+  console.error("--app must be python or ruby");
+  process.exit(1);
+}
+const APP_ID = appChoice === "ruby" ? "com.code-kata.ruby"
+  : appChoice === "python" ? "com.code-kata.app"
+  : process.env.KATA_APP_ID ?? "com.code-kata.app";
 const RELATIVE_CONTEXT_PATH = path.join("agent", "current-context.json");
 
 function appDataDir() {
-  if (process.env.KATA_AGENT_CONTEXT_PATH) return path.dirname(process.env.KATA_AGENT_CONTEXT_PATH);
   if (process.platform === "darwin") {
     return path.join(os.homedir(), "Library", "Application Support", APP_ID);
   }
@@ -18,7 +26,7 @@ function appDataDir() {
 }
 
 function contextPath() {
-  return process.env.KATA_AGENT_CONTEXT_PATH ?? path.join(appDataDir(), RELATIVE_CONTEXT_PATH);
+  return (!appChoice && process.env.KATA_AGENT_CONTEXT_PATH) || path.join(appDataDir(), RELATIVE_CONTEXT_PATH);
 }
 
 function readContext() {
@@ -33,6 +41,8 @@ function printHelp() {
   console.log(`kata-agent - inspect the current Code Kata editor context
 
 Usage:
+  kata-agent --app ruby context
+  kata-agent --app python context
   kata-agent path
   kata-agent context
   kata-agent summary
@@ -44,6 +54,7 @@ Usage:
 
 Environment:
   KATA_AGENT_CONTEXT_PATH  Override the context JSON path.
+  KATA_APP_ID              Select the product app data directory.
 `);
 }
 
@@ -93,7 +104,7 @@ ${context.problem.notes || "(none)"}
 `;
 }
 
-const command = process.argv[2] ?? "help";
+const command = cliArgs[0] ?? "help";
 
 try {
   if (command === "help" || command === "--help" || command === "-h") {
@@ -132,4 +143,3 @@ try {
   console.error(error instanceof Error ? error.message : String(error));
   process.exit(1);
 }
-

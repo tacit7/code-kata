@@ -1,9 +1,7 @@
+import { invoke, writeText, open } from "../lib/native-api";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { useNavigate, useSearchParams } from "react-router";
-import { invoke } from "@tauri-apps/api/core";
-import { writeText } from "@tauri-apps/plugin-clipboard-manager";
-import { open } from "@tauri-apps/plugin-shell";
 import { Check, Info, Search, SlidersHorizontal, Star, X } from "lucide-react";
 import { useKataStore } from "../stores/kata-store";
 import type { LibraryDifficultyFilter, LibrarySortMode } from "../stores/kata-store";

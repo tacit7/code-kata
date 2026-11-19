@@ -1,3 +1,4 @@
+import { APP_VARIANT } from "../lib/app-variant";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router";
 import { AlertTriangle, BotMessageSquare, CheckCircle2, Code2, Database, Dumbbell, Keyboard, Plus, RotateCcw } from "lucide-react";
@@ -173,18 +174,15 @@ function EditorTab() {
         <PreferenceGroup>
           <PreferenceRow label="Language" hint="Chooses the kata library used across practice, problems, and progress.">
             <div className="join">
-              <button
-                onClick={() => setSetting("language", "javascript")}
-                className={`btn btn-xs join-item ${language === "javascript" ? "btn-primary" : SEGMENTED_INACTIVE_CLASS}`}
-              >
-                JavaScript
-              </button>
-              <button
-                onClick={() => setSetting("language", "python")}
-                className={`btn btn-xs join-item ${language === "python" ? "btn-primary" : SEGMENTED_INACTIVE_CLASS}`}
-              >
-                Python
-              </button>
+              {APP_VARIANT.languages.map((option) => (
+                <button
+                  key={option.id}
+                  onClick={() => setSetting("language", option.id)}
+                  className={`btn btn-xs join-item ${language === option.id ? "btn-primary" : SEGMENTED_INACTIVE_CLASS}`}
+                >
+                  {option.label}
+                </button>
+              ))}
             </div>
           </PreferenceRow>
           <PreferenceRow label="Theme">
@@ -367,7 +365,7 @@ function AgentTab() {
             spellCheck={false}
           />
           <p className="mt-2 text-xs leading-snug text-base-content/40">
-            This instruction is prepended when the assistant receives the current problem, editor code, visible cases, latest failures, and notes.
+            Code Kata includes the bundled helper skill’s location with these instructions and the current editor context.
           </p>
         </div>
       </section>

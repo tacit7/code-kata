@@ -1,9 +1,9 @@
+import { APP_VARIANT } from "../lib/app-variant";
+import { invoke, writeText, open } from "../lib/native-api";
 import { useRef, useEffect, useState, useCallback, useMemo } from "react";
 import Editor, { DiffEditor, type OnMount } from "@monaco-editor/react";
 import type { editor } from "monaco-editor";
 import { initVimMode, type VimAdapterInstance } from "monaco-vim";
-import { invoke } from "@tauri-apps/api/core";
-import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import {
   ArrowLeft,
   ArrowRight,
@@ -26,7 +26,6 @@ import {
   Terminal,
   X,
 } from "lucide-react";
-import { open } from "@tauri-apps/plugin-shell";
 import { useSettingsStore } from "../stores/settings-store";
 import { resolveMonacoTheme, APP_THEMES } from "../lib/editor-themes";
 import { monacoEditorOptions } from "../lib/editor-settings";
@@ -37,7 +36,7 @@ import { runTests, prewarmRunner } from "../lib/test-runner";
 import { saveUserCode, loadUserCode, deleteUserCode, saveKataNotes, loadKataNotes } from "../lib/database";
 import { TestOutput } from "./test-output";
 import { TestcasePanel } from "./testcase-panel";
-import { ReplPanel, type ReplSeed } from "./repl-panel";
+import { ReplPanel, type ReplPanelHandle, type ReplSeed } from "./repl-panel";
 import { AgentTerminalPanel, type AgentTerminalPanelHandle } from "./agent-terminal-panel";
 import { extractTestCall } from "../lib/repl-seed";
 import { monacoReady } from "../lib/monaco-setup";
@@ -51,12 +50,14 @@ import { leetcodeNumberFor, leetcodeUrlFor } from "../lib/leetcode-numbers";
 import { dpPatternFor, DP_MODULES } from "../lib/dp-patterns";
 import { visibleTestCasesFor } from "../lib/visible-testcases";
 import { solutionNotesFor } from "../lib/solution-notes";
-import { agentPromptFor, buildAgentEditorContext, writeAgentContext, type AgentEditorContext } from "../lib/agent-bridge";
+import { agentPromptFor, buildAgentEditorContext, getAgentSkillPath, writeAgentContext, type AgentEditorContext } from "../lib/agent-bridge";
 import { codeTemplatesForLanguage, type CodeTemplate } from "../lib/code-templates";
 import type { AgentTerminalKind } from "../lib/terminal-pty";
 import type { EditorLayoutSettings, VizSpeed } from "../stores/settings-store";
 import type { Kata, TestResult } from "../types/editor";
 import { formatTime } from "../lib/format";
+import { loadScratchpad, saveScratchpad, type ScratchpadLanguage } from "../lib/scratchpad";
+import type { ReplEvalResult } from "../lib/repl-runner";
 
 type VizKataName =
   | "Kadane's Algorithm"
@@ -640,6 +641,7 @@ interface KataEditorProps {
   isSession?: boolean;
   onTestComplete?: (passed: boolean, codeSnapshot: string) => void;
   onAdvance?: () => void;
+  scratchpad?: { onLanguageChange: (language: ScratchpadLanguage) => void };
 }
 
 type EditorPanel = "description" | "solution" | "notes" | "viz" | "diff";
@@ -651,7 +653,8 @@ type BottomPanelTab = "repl" | "testcase" | "results" | "agent";
 const PYTHON_TEST_MARKER_OWNER = "kata-python-test-runner";
 const AGENT_CONTEXT_SAVE_KEY = "current";
 
-export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataEditorProps) {
+export function KataEditor({ kata, isSession, onTestComplete, onAdvance, scratchpad }: KataEditorProps) {
+  const isScratchpad = Boolean(scratchpad);
   const { theme, vimMode, toggleVimMode, shortcuts, fontSize, fontFamily, tabSize, hideDescriptionInSession, setSetting, editorAutocomplete, lineNumbersMode, wordWrap, autoClosingBrackets, fontLigatures, highlightOccurrences, bracketPairColorization, agentProvider, agentSystemPrompt } = useSettingsStore();
   const editorLayout = useSettingsStore((s) => s.editorLayout);
   const sessionMaxTestRuns = useSessionStore((s) => s.activeSession?.maxTestRuns ?? null);
@@ -665,26 +668,29 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const editorSplitRef = useRef<HTMLDivElement | null>(null);
   const agentTerminalRef = useRef<AgentTerminalPanelHandle | null>(null);
+  const replRef = useRef<ReplPanelHandle | null>(null);
+  const [execution, setExecution] = useState<{ code: string; result: ReplEvalResult } | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [vizSpeed, setVizSpeed] = useState<VizSpeed>(editorLayout.vizSpeed);
   const [results, setResults] = useState<TestResult[] | null>(null);
   const [ranAt, setRanAt] = useState<string>("");
   const [running, setRunning] = useState(false);
   const [outputTab, setOutputTab] = useState<OutputTab>(editorLayout.outputTab);
-  const [activeBottomTab, setActiveBottomTab] = useState<BottomPanelTab>(editorLayout.outputTab);
+  const [activeBottomTab, setActiveBottomTab] = useState<BottomPanelTab>(isScratchpad ? "repl" : editorLayout.outputTab);
   const [bottomPanelVisible, setBottomPanelVisible] = useState(editorLayout.outputPaneVisible);
   const [activeTestcaseIndex, setActiveTestcaseIndex] = useState(editorLayout.activeTestcaseIndex);
   const [runCount, setRunCount] = useState(0);
   const [kataPassed, setKataPassed] = useState(false);
   const initialPanel: EditorPanel | null = isSession && hideDescriptionInSession ? null : kata.description ? "description" : null;
   const [showPanel, setShowPanel] = useState<EditorPanel | null>(
-    isSession && hideDescriptionInSession ? null : editorLayout.problemPanelVisible ? editorLayout.activePanel : null,
+    isScratchpad || (isSession && hideDescriptionInSession) ? null : editorLayout.problemPanelVisible ? editorLayout.activePanel : null,
   );
   const lastPanelRef = useRef<EditorPanel>(showPanel ?? initialPanel ?? "description");
   const [panelWidth, setPanelWidth] = useState(editorLayout.problemPanelWidth);
   const dragging = useRef(false);
   const [outputPaneHeight, setOutputPaneHeight] = useState(editorLayout.outputPaneHeight);
   const [outputPaneWidth, setOutputPaneWidth] = useState(editorLayout.outputPaneWidth);
-  const [maximizedPane, setMaximizedPane] = useState<MaximizedPane>(editorLayout.maximizedPane);
+  const [maximizedPane, setMaximizedPane] = useState<MaximizedPane>(isScratchpad ? null : editorLayout.maximizedPane);
   const outputDragging = useRef(false);
   const [saved, setSaved] = useState(true);
   const [showConfig, setShowConfig] = useState(false);
@@ -708,14 +714,20 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
   const [notesSaved, setNotesSaved] = useState(true);
   const registerCommand = useCommandPaletteStore((s) => s.registerCommand);
 
-  const autosave = useRef(
+  const saveCode = useCallback((id: number, code: string) => isScratchpad
+    ? saveScratchpad(kata.language, code)
+    : saveUserCode(id, code), [isScratchpad, kata.language]);
+
+  const autosave = useMemo(() =>
     createAutosave<number>({
       delayMs: 1500,
       save: (id, value) => {
-        saveUserCode(id, value).then(() => setSaved(true));
+        saveCode(id, value).then(() => setSaved(true)).catch((error) => {
+          toast.error(`Could not save your code. ${String(error)}`);
+        });
       },
     }),
-  ).current;
+  [saveCode]);
 
   const notesAutosave = useRef(
     createAutosave<number>({
@@ -762,10 +774,11 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
   });
 
   useEffect(() => {
-    prewarmRunner(kata.language);
-  }, [kata.id, kata.language]);
+    if (!isScratchpad) prewarmRunner(kata.language);
+  }, [isScratchpad, kata.id, kata.language]);
 
   useEffect(() => {
+    if (isScratchpad) return;
     const current = useSettingsStore.getState().editorLayout;
     const hiddenBySessionSetting = isSession && hideDescriptionInSession;
     const next: EditorLayoutSettings = {
@@ -788,6 +801,7 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
     bottomPanelVisible,
     hideDescriptionInSession,
     isSession,
+    isScratchpad,
     maximizedPane,
     outputTab,
     replLayout,
@@ -806,19 +820,27 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
 
   // Load saved user code and notes on mount; clean up autosave timers on unmount
   useEffect(() => {
+    let disposed = false;
+    setLoadError(null);
     setCodeLoaded(false);
     setRunCount(0);
     setKataPassed(false);
-    loadUserCode(kata.id).then((code) => {
+    const loadCode = isScratchpad ? loadScratchpad(kata.language) : loadUserCode(kata.id);
+    loadCode.then((code) => {
+      if (disposed) return;
       setSavedCode(code);
       setCodeLoaded(true);
       setSaved(true);
+    }).catch((error) => {
+      if (!disposed) setLoadError(String(error));
     });
-    loadKataNotes(kata.id).then((text) => {
+    if (!isScratchpad) void loadKataNotes(kata.id).then((text) => {
+      if (disposed) return;
       setNotes(text);
       setNotesSaved(true);
     });
     return () => {
+      disposed = true;
       // Flush, do not drop: this runs when the kata changes and on unmount, and
       // the pending save belongs to the OUTGOING kata. createAutosave captured
       // its id at schedule time, so it cannot be written under the new kata.
@@ -826,7 +848,7 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
       notesAutosave.flush();
       agentContextAutosave.flush();
     };
-  }, [kata.id, autosave, notesAutosave, agentContextAutosave]);
+  }, [isScratchpad, kata.id, kata.language, autosave, notesAutosave, agentContextAutosave]);
 
   const vizFolder = VIZ_MAP[kata.name as VizKataName] ?? null;
   const leetcodeNumber = kata.leetcodeNumber ?? leetcodeNumberFor(kata);
@@ -845,7 +867,7 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
   const replSupported = kata.language !== "java";
   const activeSolution = solutionVariants[Math.min(activeSolutionVariant, Math.max(solutionVariants.length - 1, 0))];
   const activeSolutionNotes = activeSolution ? solutionNotesFor(activeSolution) : null;
-  const fallbackPanel: EditorPanel | null = kata.description
+  const fallbackPanel: EditorPanel | null = isScratchpad ? null : kata.description
     ? "description"
     : solutionVariants.length > 0 && !isSession
       ? "solution"
@@ -856,7 +878,7 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
   const hasAgentTerminalPane = showAgentTerminal && !agentTerminalMinimized;
   const hasAgentTerminalSession = showAgentTerminal;
   const hasTestcasePane = hasVisibleTestCases;
-  const hasTestResultPane = true;
+  const hasTestResultPane = !isScratchpad;
   const hasResultsPane = hasTestcasePane || hasTestResultPane;
   const hasAgentTab = true;
   const hasOutputPane = hasReplPane || hasResultsPane || hasAgentTerminalSession || hasAgentTab;
@@ -885,7 +907,7 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
     const code = editorInstance?.getValue() ?? savedCode ?? kata.code;
     const selectedCode = model && selection ? model.getValueInRange(selection) : "";
 
-    return buildAgentEditorContext({
+    const context = buildAgentEditorContext({
       kata,
       code,
       selectedCode,
@@ -917,9 +939,16 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
       hasReferenceSolution: solutionVariants.length > 0,
       activeVariantLabel: activeSolution?.label ?? null,
     });
+    if (isScratchpad) {
+      context.workspace = "scratchpad";
+      context.latestRun.execution = execution;
+    }
+    return context;
   }, [
     activeSolution?.label,
     isSession,
+    isScratchpad,
+    execution,
     kata,
     leetcodeNumber,
     leetcodeUrl,
@@ -942,45 +971,49 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
     return path;
   }, [agentContextAutosave, buildCurrentAgentContext]);
 
-  const copyAgentPrompt = useCallback(async () => {
+  const buildAgentStartupPrompt = useCallback(async () => {
     agentContextAutosave.cancel();
     const context = buildCurrentAgentContext();
-    await writeAgentContext(context);
-    await writeText(agentPromptFor(context, agentSystemPrompt));
-    toast.success("Agent prompt copied", 1800);
+    try {
+      const [skillPath] = await Promise.all([getAgentSkillPath(), writeAgentContext(context)]);
+      return agentPromptFor(context, skillPath, agentSystemPrompt);
+    } catch (error) {
+      toast.error(`Could not prepare the assistant prompt. ${String(error)}`);
+      return null;
+    }
   }, [agentContextAutosave, agentSystemPrompt, buildCurrentAgentContext]);
+
+  const copyAgentPrompt = useCallback(async () => {
+    const prompt = await buildAgentStartupPrompt();
+    if (prompt === null) return;
+    await writeText(prompt);
+    toast.success("Agent prompt copied", 1800);
+  }, [buildAgentStartupPrompt]);
 
   const sendAgentPromptToTerminal = useCallback(async () => {
     if (!showAgentTerminal || agentTerminalMinimized) {
       toast.error("Open the agent first", 1800);
       return;
     }
-    agentContextAutosave.cancel();
-    const context = buildCurrentAgentContext();
-    await writeAgentContext(context);
-    const pasted = await agentTerminalRef.current?.pasteText(agentPromptFor(context, agentSystemPrompt));
+    const prompt = await buildAgentStartupPrompt();
+    if (prompt === null) return;
+    const pasted = await agentTerminalRef.current?.pasteText(prompt);
     if (pasted) {
       toast.success("Agent prompt pasted", 1800);
     } else {
       toast.error("Agent is still starting", 1800);
     }
-  }, [agentContextAutosave, agentSystemPrompt, agentTerminalMinimized, buildCurrentAgentContext, showAgentTerminal]);
-
-  const buildAgentStartupPrompt = useCallback(async () => {
-    agentContextAutosave.cancel();
-    const context = buildCurrentAgentContext();
-    await writeAgentContext(context);
-    return agentPromptFor(context, agentSystemPrompt);
-  }, [agentContextAutosave, agentSystemPrompt, buildCurrentAgentContext]);
+  }, [agentTerminalMinimized, buildAgentStartupPrompt, showAgentTerminal]);
 
   useEffect(() => {
+    if (isScratchpad) return;
     const persistedLayout = useSettingsStore.getState().editorLayout;
     setActiveSolutionVariant(Math.min(persistedLayout.activeSolutionVariant, Math.max(solutionVariants.length - 1, 0)));
     setActiveTestcaseIndex(Math.min(persistedLayout.activeTestcaseIndex, Math.max(visibleTestCases.length - 1, 0)));
     setOutputTab(persistedLayout.outputTab);
     setVizSpeed(persistedLayout.vizSpeed);
     setMaximizedPane(persistedLayout.maximizedPane);
-  }, [kata.id, solutionVariants.length, visibleTestCases.length]);
+  }, [isScratchpad, kata.id, solutionVariants.length, visibleTestCases.length]);
 
   useEffect(() => {
     setMaximizedPane((pane) => {
@@ -1033,20 +1066,31 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
   const handleReset = useCallback(async () => {
     if (!editorRef.current) return;
     const ok = await confirmAction({
-      message: `Reset code for "${kata.name}"? This restores the starter code and clears your saved edits for this kata.`,
+      message: isScratchpad
+        ? `Clear your ${APP_VARIANT.languages.find(({ id }) => id === kata.language)?.label ?? kata.language} scratchpad?`
+        : `Reset code for "${kata.name}"? This restores the starter code and clears your saved edits for this kata.`,
       title: "Reset Code",
       kind: "warning",
       okLabel: "Reset",
       cancelLabel: "Cancel",
     });
     if (!ok) return;
+    autosave.cancel();
     editorRef.current.setValue(kata.code);
-    await deleteUserCode(kata.id);
+    if (isScratchpad) await saveScratchpad(kata.language, "");
+    else await deleteUserCode(kata.id);
     setSaved(true);
-  }, [kata.id, kata.code, kata.name]);
+  }, [autosave, isScratchpad, kata.id, kata.code, kata.name, kata.language]);
 
   const handleRun = useCallback(async () => {
     if (!editorRef.current || running) return;
+    if (isScratchpad) {
+      setActiveBottomTab("repl");
+      setBottomPanelVisible(true);
+      setMaximizedPane(null);
+      await replRef.current?.runEditor();
+      return;
+    }
     if (kataStatus === "idle") startKataTimer();
     clearEditorErrorMarkers();
     setOutputTab("results");
@@ -1094,7 +1138,12 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
     } finally {
       setRunning(false);
     }
-  }, [kata.id, kata.testCode, kata.language, kataStatus, running, startKataTimer, clearEditorErrorMarkers, completeKataTimer, onTestComplete, maxTestRuns, runCount, kataPassed, onAdvance]);
+  }, [isScratchpad, kata.id, kata.testCode, kata.language, kataStatus, running, startKataTimer, clearEditorErrorMarkers, completeKataTimer, onTestComplete, maxTestRuns, runCount, kataPassed, onAdvance]);
+
+  const handleReplEvaluation = useCallback((code: string, result: ReplEvalResult) => {
+    setExecution({ code, result });
+    setRanAt(new Date().toLocaleTimeString());
+  }, []);
 
   const handleToggleSolution = useCallback(() => {
     setShowPanel((v) => (v === "solution" ? null : "solution"));
@@ -1140,6 +1189,12 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
     }
     setShowAgentTerminal(true);
   }, [agentProvider, agentTerminalKind, showAgentTerminal]);
+
+  const handleExitAssistant = useCallback(() => {
+    setShowAgentTerminal(false);
+    setAgentTerminalMinimized(false);
+    setMaximizedPane((pane) => pane === "terminal" ? null : pane);
+  }, []);
 
   const handleToggleAgentTerminal = useCallback(() => {
     if (showAgentTerminal) {
@@ -1226,7 +1281,7 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
     const commands = [
       {
         id: "editor:run-tests",
-        title: "Run Tests",
+        title: isScratchpad ? "Run Code" : "Run Tests",
         section: "Editor",
         shortcut: shortcuts.runTests,
         keywords: ["test", "execute"],
@@ -1238,6 +1293,7 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
         title: showPanel ? "Hide Problem Panel" : "Show Problem Panel",
         section: "Editor",
         keywords: ["description", "left panel"],
+        disabled: isScratchpad,
         run: handleToggleProblemPanel,
       },
       {
@@ -1269,6 +1325,14 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
         section: "Editor",
         keywords: ["terminal", "agent", "claude", "codex"],
         run: handleToggleAgentTerminal,
+      },
+      {
+        id: "editor:exit-assistant",
+        title: "Exit Assistant",
+        section: "Editor",
+        keywords: ["close", "stop", "quit", "agent"],
+        disabled: !showAgentTerminal,
+        run: handleExitAssistant,
       },
       {
         id: "editor:open-claude-terminal",
@@ -1340,7 +1404,7 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
         title: "Previous Kata",
         section: "Editor",
         shortcut: shortcuts.prevKata,
-        disabled: !navigation.hasPrev,
+        disabled: isScratchpad || !navigation.hasPrev,
         run: () => navigation.prev(),
       },
       {
@@ -1348,7 +1412,7 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
         title: "Next Kata",
         section: "Editor",
         shortcut: shortcuts.nextKata,
-        disabled: !navigation.hasNext,
+        disabled: isScratchpad || !navigation.hasNext,
         run: () => navigation.next(),
       },
     ];
@@ -1372,6 +1436,7 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
     copyAgentPrompt,
     copySolutionToEditor,
     exportAgentContextNow,
+    handleExitAssistant,
     handleReset,
     handleRun,
     handleToggleAgentTerminal,
@@ -1380,6 +1445,7 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
     handleToggleSolution,
     insertCodeTemplate,
     isSession,
+    isScratchpad,
     kata.language,
     kataPassed,
     leetcodeUrl,
@@ -1411,8 +1477,9 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
       replSupported,
       agentOpen: showAgentTerminal,
       agentProvider,
+      scratchpad: isScratchpad,
     });
-  }, [activeSolution, agentProvider, isSession, leetcodeUrl, replSupported, showAgentTerminal]);
+  }, [activeSolution, agentProvider, isSession, isScratchpad, leetcodeUrl, replSupported, showAgentTerminal]);
 
   useEffect(() => {
     if (!codeLoaded) return;
@@ -1433,12 +1500,12 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
   const shortcutHandlers = useMemo(
     () => ({
       runTests: handleRun,
-      toggleSolution: handleToggleSolution,
+      toggleSolution: () => { if (!isScratchpad) handleToggleSolution(); },
       toggleRepl: handleOpenRepl,
-      nextKata: () => (navigation.hasNext ? navigation.next() : nudge()),
-      prevKata: () => (navigation.hasPrev ? navigation.prev() : nudge()),
+      nextKata: () => { if (!isScratchpad) navigation.hasNext ? navigation.next() : nudge(); },
+      prevKata: () => { if (!isScratchpad) navigation.hasPrev ? navigation.prev() : nudge(); },
     }),
-    [handleRun, handleToggleSolution, handleOpenRepl, navigation.hasNext, navigation.hasPrev, navigation.next, navigation.prev, nudge],
+    [isScratchpad, handleRun, handleToggleSolution, handleOpenRepl, navigation.hasNext, navigation.hasPrev, navigation.next, navigation.prev, nudge],
   );
 
   useKeyboardShortcuts(shortcutHandlers);
@@ -1478,7 +1545,7 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
     if (!monaco || !editorInstance || !model || model.isDisposed()) return;
 
     const failedUserError = results?.find(
-      (result) => kata.language === "python" && !result.passed && result.errorSource === "user" && result.lineNumber != null,
+      (result) => kata.language !== "javascript" && !result.passed && result.errorSource === "user" && result.lineNumber != null,
     );
 
     if (!errorDecorationsRef.current) {
@@ -1493,7 +1560,7 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
 
     const lineNumber = Math.max(1, Math.min(model.getLineCount(), failedUserError.lineNumber!));
     const endColumn = model.getLineMaxColumn(lineNumber);
-    const message = failedUserError.error ?? "Python test failure";
+    const message = failedUserError.error ?? "Test failure";
 
     monaco.editor.setModelMarkers(model, PYTHON_TEST_MARKER_OWNER, [
       {
@@ -1626,7 +1693,7 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
     document.addEventListener("mouseup", onMouseUp);
   }, [outputPaneWidth, maximizedPane, saveEditorLayout]);
 
-  const hasTabs = true;
+  const hasTabs = !isScratchpad;
 
   const sendVizMsg = useCallback((msg: unknown) => {
     iframeRef.current?.contentWindow?.postMessage(msg, "*");
@@ -1710,7 +1777,7 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
           Solutions
         </button>
       )}
-      {!isSession && (
+      {!isSession && !isScratchpad && (
         <button
           onClick={() => toggleMode
             ? setShowPanel((v) => v === "notes" ? null : "notes")
@@ -1799,9 +1866,9 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
         <div className="join">
           <button
             onClick={handleReset}
-            title="Reset to original"
+            title={isScratchpad ? "Clear scratchpad" : "Reset to original"}
             className={`${toolbarIconButtonClass} join-item btn-ghost text-base-content/35 hover:text-base-content/70`}
-            aria-label="Reset to original"
+            aria-label={isScratchpad ? "Clear scratchpad" : "Reset to original"}
           >
             <RotateCcw size={16} />
           </button>
@@ -1929,7 +1996,7 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
         <button
           onClick={handleRun}
           disabled={running || (maxTestRuns !== null && runCount >= maxTestRuns && !kataPassed)}
-          title={`Run tests (${fmtCombo(shortcuts.runTests)})`}
+          title={`Run ${isScratchpad ? "code" : "tests"} (${fmtCombo(shortcuts.runTests)})`}
           className={`${toolbarButtonClass} btn-primary min-w-28 justify-center gap-1.5`}
         >
           {running ? (
@@ -1940,7 +2007,7 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
           ) : (
             <>
               <Play size={16} />
-              <span>Run tests</span>
+              <span>{isScratchpad ? "Run" : "Run tests"}</span>
             </>
           )}
         </button>
@@ -2076,6 +2143,13 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
                 >
                   <Minus size={16} />
                 </button>
+                <button
+                  onClick={handleExitAssistant}
+                  className={`${toolbarButtonClass} btn-ghost shrink-0 text-base-content/65 hover:text-base-content`}
+                  title="End the current assistant session"
+                >
+                  Exit assistant
+                </button>
               </>
             )}
             {effectiveBottomTab === "results" && !running && results && results.length > 0 && results.every((r) => r.passed) && kata.solution && (
@@ -2128,11 +2202,15 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
           {hasReplPane && (
             <div className={`${effectiveBottomTab === "repl" ? "flex" : "hidden"} h-full min-h-0 flex-col`}>
               <ReplPanel
+                ref={replRef}
                 key={kata.id}
                 language={kata.language}
                 getEditorCode={() => editorRef.current?.getValue() ?? null}
                 seed={replSeed}
                 focusNonce={replFocusNonce}
+                scopeName={isScratchpad ? "scratchpad" : "kata"}
+                onEvaluation={isScratchpad ? handleReplEvaluation : undefined}
+                onBusyChange={isScratchpad ? setRunning : undefined}
               />
             </div>
           )}
@@ -2195,7 +2273,7 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
                   </button>
                 </div>
               )}
-              {showAgentTerminal && !agentTerminalMinimized && (
+              {showAgentTerminal && (
               <AgentTerminalPanel
                 ref={agentTerminalRef}
                 launchKind={agentTerminalKind}
@@ -2208,11 +2286,7 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
                 visible={hasVisibleBottomPanel && hasAgentTerminalPane && effectiveBottomTab === "agent"}
                 showHeader={false}
                 buildStartupPrompt={buildAgentStartupPrompt}
-                onClose={() => {
-                  setShowAgentTerminal(false);
-                  setAgentTerminalMinimized(false);
-                  if (maximizedPane === "terminal") setMaximizedPane(null);
-                }}
+                onClose={handleExitAssistant}
                 onMinimize={() => {
                   setAgentTerminalMinimized(true);
                   if (maximizedPane === "terminal") setMaximizedPane(null);
@@ -2253,7 +2327,7 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
           <span className="rounded border border-base-300/60 bg-base-200/60 px-1.5 py-0.5">
             {kata.language}
           </span>
-          {kataStatus !== "idle" && (
+          {!isScratchpad && kataStatus !== "idle" && (
             <span className="rounded border border-base-300/60 bg-base-200/60 px-1.5 py-0.5">
               {kataStatus === "completed" ? "Completed" : "Elapsed"} {formatTime(kataElapsed)}
             </span>
@@ -2264,10 +2338,27 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
             </span>
           )}
         </div>
+        {scratchpad && (
+          <select
+            aria-label="Scratchpad language"
+            className="select select-bordered select-sm ml-auto w-32 bg-base-100 text-xs"
+            value={kata.language}
+            onChange={(event) => scratchpad.onLanguageChange(event.target.value as ScratchpadLanguage)}
+          >
+            {APP_VARIANT.languages.map(({ id, label }) => (
+              <option key={id} value={id}>{label}</option>
+            ))}
+          </select>
+        )}
       </div>
     </div>
   );
 
+  if (loadError) return (
+    <div className="p-6 text-sm text-error" role="alert">
+      Could not load your code. {loadError} Reopen this page to try again.
+    </div>
+  );
   if (!codeLoaded || !monacoUp) return null;
 
   const initialCode = isSession ? kata.code : (savedCode ?? kata.code);
@@ -2428,8 +2519,7 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
               : "flex-row"
           }`}
         >
-          {!workAreaHidden && (
-            <div className={`flex flex-col min-w-0 min-h-0 ${hasOutputPane ? "flex-1 basis-0" : "flex-1"}`}>
+            <div className={`${workAreaHidden ? "hidden" : "flex"} flex-col min-w-0 min-h-0 ${hasOutputPane ? "flex-1 basis-0" : "flex-1"}`}>
               {/* Monaco editor */}
               <div
                 className={`${editorHidden ? "hidden" : "flex-1"} min-h-0`}
@@ -2442,17 +2532,15 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
                   theme={monacoTheme}
                   options={sharedEditorOptions}
                   onMount={handleEditorMount}
-                  onChange={() => {
+                  onChange={(value) => {
                     clearEditorErrorMarkers();
                     setSaved(false);
-                    autosave.schedule(kata.id, () => editorRef.current?.getValue());
+                    autosave.schedule(kata.id, () => value);
                     scheduleAgentContextExport();
                   }}
                 />
               </div>
             </div>
-          )}
-
           {renderBottomPanel()}
         </div>
       </div>

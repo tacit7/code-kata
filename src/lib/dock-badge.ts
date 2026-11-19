@@ -1,4 +1,4 @@
-import { getCurrentWindow } from "@tauri-apps/api/window";
+import { getCurrentWindow } from "./native-api";
 import { getDb } from "./database";
 import { computeSrState } from "./sr";
 

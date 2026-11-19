@@ -19,13 +19,15 @@ def main():
     parser.add_argument("--language")
     parser.add_argument("--difficulty", choices=("easy", "medium", "hard"))
     parser.add_argument("--limit", type=int, default=5)
-    parser.add_argument("--db", type=Path, default=DEFAULT_DB)
+    parser.add_argument("--app", choices=("python", "ruby"), default="python")
+    parser.add_argument("--db", type=Path)
     args = parser.parse_args()
     if not 1 <= args.limit <= 50:
         parser.error("--limit must be between 1 and 50")
 
     query = args.query.strip().lower()
-    db = args.db.expanduser().resolve()
+    default_db = DEFAULT_DB if args.app == "python" else DEFAULT_DB.parent.parent / "com.code-kata.ruby" / "kata.db"
+    db = (args.db or default_db).expanduser().resolve()
     try:
         with closing(sqlite3.connect(f"{db.as_uri()}?mode=ro", uri=True)) as conn:
             conn.row_factory = sqlite3.Row

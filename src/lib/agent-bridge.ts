@@ -1,4 +1,6 @@
-import { invoke } from "@tauri-apps/api/core";
+import { APP_VARIANT } from "./app-variant";
+import type { ReplEvalResult } from "./repl-runner";
+import { invoke } from "./native-api";
 import type { Kata, TestResult } from "../types/editor";
 
 export interface AgentEditorRange {
@@ -21,8 +23,9 @@ export interface AgentVisibleTestCase {
 
 export interface AgentEditorContext {
   version: 1;
-  app: "code-kata-python";
+  app: string;
   source: "monaco";
+  workspace?: "scratchpad";
   exportedAt: string;
   kata: {
     id: number;
@@ -51,6 +54,7 @@ export interface AgentEditorContext {
   latestRun: {
     ranAt: string | null;
     results: TestResult[] | null;
+    execution?: { code: string; result: ReplEvalResult } | null;
   };
   solution: {
     hasReferenceSolution: boolean;
@@ -58,9 +62,11 @@ export interface AgentEditorContext {
   };
 }
 
+const LEGACY_SKILL_INSTRUCTION = "Before answering, read and follow the project-local kata student helper skill at .codex/skills/kata-student-helper/SKILL.md if it is available.";
+
 const LEGACY_AGENT_SYSTEM_PROMPT = `You are a Code Kata tutor helping a student solve the active coding problem.
 
-Before answering, read and follow the project-local kata student helper skill at .codex/skills/kata-student-helper/SKILL.md if it is available.
+${LEGACY_SKILL_INSTRUCTION}
 
 Your goal is to help the student learn, debug, and reason. Do not reveal the full reference solution unless the student explicitly asks for it.
 
@@ -77,8 +83,6 @@ Tutoring rules:
 10. Keep responses short and practical.`;
 
 export const DEFAULT_AGENT_SYSTEM_PROMPT = `You are a Code Kata tutor helping a student solve the active coding problem.
-
-Before answering, read and follow the project-local kata student helper skill at .codex/skills/kata-student-helper/SKILL.md if it is available.
 
 Use the provided prompt context first. If you need more local context, inspect it silently. Do not narrate tool use, file discovery, database queries, command output, or internal investigation steps to the student.
 
@@ -97,10 +101,10 @@ Tutoring rules:
 10. After the bug is fixed, briefly explain the pattern and complexity.
 11. Keep responses short and practical.`;
 
-function normalizedSystemPrompt(systemPrompt: string): string {
+export function normalizeAgentSystemPrompt(systemPrompt: string): string {
   return systemPrompt.trim() === LEGACY_AGENT_SYSTEM_PROMPT.trim()
     ? DEFAULT_AGENT_SYSTEM_PROMPT
-    : systemPrompt;
+    : systemPrompt.replace(`${LEGACY_SKILL_INSTRUCTION}\n\n`, "");
 }
 
 interface BuildAgentEditorContextArgs {
@@ -138,7 +142,7 @@ export function buildAgentEditorContext({
 }: BuildAgentEditorContextArgs): AgentEditorContext {
   return {
     version: 1,
-    app: "code-kata-python",
+    app: APP_VARIANT.contextApp,
     source: "monaco",
     exportedAt: new Date().toISOString(),
     kata: {
@@ -178,11 +182,15 @@ export function buildAgentEditorContext({
 
 export function agentPromptFor(
   context: AgentEditorContext,
+  skillPath: string,
   systemPrompt = DEFAULT_AGENT_SYSTEM_PROMPT,
 ): string {
   const failed = (context.latestRun.results ?? []).filter((result) => !result.passed);
-  return `${normalizedSystemPrompt(systemPrompt).trim()}
+  return `${normalizeAgentSystemPrompt(systemPrompt).trim()}
 
+Before answering, read and follow the bundled kata-student-helper skill at \`${skillPath}\`.
+
+${context.workspace === "scratchpad" ? `The student is using a blank scratchpad. Help with their code and latest REPL execution.\n\nLatest Execution:\n${context.latestRun.execution ? JSON.stringify(context.latestRun.execution, null, 2) : "(none)"}\n` : ""}
 Problem: ${context.kata.name}
 Language: ${context.kata.language}
 Difficulty: ${context.kata.difficulty ?? "unknown"}
@@ -219,4 +227,8 @@ export async function writeAgentContext(context: AgentEditorContext): Promise<st
 
 export async function getAgentContextPath(): Promise<string> {
   return invoke<string>("agent_context_path");
+}
+
+export function getAgentSkillPath(): Promise<string> {
+  return invoke<string>("agent_skill_path");
 }

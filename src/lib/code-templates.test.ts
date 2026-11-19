@@ -3,7 +3,7 @@ import { codeTemplatesForLanguage } from "./code-templates";
 
 describe("code templates", () => {
   it("provides searchable snippets for supported editor languages", () => {
-    for (const language of ["javascript", "python", "java"]) {
+    for (const language of ["javascript", "python", "ruby", "java"]) {
       const templates = codeTemplatesForLanguage(language);
 
       expect(templates).toHaveLength(72);
@@ -41,6 +41,6 @@ describe("code templates", () => {
   });
 
   it("does not expose snippets for unknown languages", () => {
-    expect(codeTemplatesForLanguage("ruby")).toEqual([]);
+    expect(codeTemplatesForLanguage("unknown")).toEqual([]);
   });
 });

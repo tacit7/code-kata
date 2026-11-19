@@ -60,6 +60,7 @@ const NEETCODE_150_NUMBERS = new Set<number>(Object.values(NEETCODE_150_MODULE_N
 const NEETCODE_250_NUMBERS = new Set<number>(Object.values(NEETCODE_250_MODULE_NUMBERS).flat());
 
 export const ROADMAP_MODULES: readonly RoadmapModuleDef[] = [
+  { id: "ruby-prelude", label: "Ruby Prelude", categories: ["ruby-prelude"], tags: ["ruby-prelude"] },
   { id: "arrays-hashing", label: "Arrays & Hashing", categories: ["arrays", "hashing", "string", "strings"], tags: ["arrays-hashing"] },
   { id: "two-pointers", label: "Two Pointers", categories: ["two-pointers"], tags: ["two-pointers"] },
   { id: "sliding-window", label: "Sliding Window", categories: ["sliding-window"], tags: ["sliding-window"] },

@@ -53,7 +53,8 @@ agent/agent_bridge.md
 ```
 
 On macOS, that is inside the `.app` bundle's `Contents/Resources` directory.
-The bundled CLI still reads the same app data context file.
+The startup, Send, and Ask prompts include the absolute path to the skill in the
+running app's resources. The bundled CLI reads the same app data context file.
 
 ## Embedded Terminal Working Directory
 

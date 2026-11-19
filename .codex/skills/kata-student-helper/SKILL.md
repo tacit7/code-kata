@@ -5,45 +5,27 @@ description: Use when helping a student with the current Code Kata desktop probl
 
 # Kata Student Helper
 
-Use the bundled/project-local `kata-agent` CLI before answering questions about
-the active Code Kata problem. The CLI reads the app-exported Monaco context.
-Use that context silently: do not narrate file listing, database queries,
-context-file discovery, or other tool-use details to the student.
+Start with the problem context supplied by Code Kata. Use `kata-agent` when you
+need a fresh view of the student's editor, selected code, or latest test results.
 
 ## Commands
 
-From the source repo, run:
+If Code Kata gave you the path to this `SKILL.md`, the bundled CLI is
+`../../kata-agent.mjs` relative to the directory containing it. Use the CLI's
+absolute path with `node` and quote the path so it works with spaces. The
+terminal's working directory can differ from the app resource directory.
 
 ```bash
-pnpm agent summary
-pnpm agent prompt
-pnpm agent code
-pnpm agent selection
-pnpm agent tests
-pnpm agent results
-pnpm agent context
-pnpm agent path
+node "<absolute-path-to-kata-agent.mjs>" summary
+node "<absolute-path-to-kata-agent.mjs>" results
 ```
 
-From a packaged app, use the bundled CLI under the app resource directory:
+If you loaded this skill from the source checkout's `.codex/skills` directory,
+run `pnpm agent <command>` from the repository root.
 
-```bash
-node <app-resources>/agent/kata-agent.mjs summary
-node <app-resources>/agent/kata-agent.mjs prompt
-```
-
-On macOS the app resources directory is:
-
-```text
-Code Kata Python.app/Contents/Resources
-```
-
-Default workflow:
-
-1. Run `pnpm agent summary` to confirm the active problem.
-2. Run `pnpm agent prompt` for tutoring context.
-3. If debugging a failure, run `pnpm agent results`.
-4. If the user selected code, run `pnpm agent selection` and focus there first.
+Use `summary` to confirm the active problem, `prompt` for full tutoring context,
+`results` for the latest test run, and `selection` for the highlighted code.
+Other commands include `code`, `tests`, `context`, and `path`.
 
 If the CLI says no context exists, ask the user to open a problem page and run
 `Export Agent Context` from the command palette.

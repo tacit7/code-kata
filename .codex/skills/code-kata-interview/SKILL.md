@@ -1,11 +1,19 @@
 ---
 name: code-kata-interview
-description: Run coding interview practice with the Code Kata Python desktop app. Use when the user asks to look at their current Code Kata problem or editor, practice it as a mock interview, get a hint or feedback, or find an interview problem in the app's catalog.
+description: Run coding interview practice with the Code Kata Python or Ruby desktop app. Use when the user asks to look at their current Code Kata problem or editor, practice it as a mock interview, get a hint or feedback, or find an interview problem in the app's catalog.
 ---
 
 # Code Kata Interview
 
 ## Get the current problem
+
+For Code Kata Ruby, use its installed app's helper and select its data explicitly.
+
+```sh
+node "/Applications/Code Kata Ruby.app/Contents/Resources/agent/kata-agent.mjs" --app ruby context
+```
+
+Use `--app ruby` with the catalog search too. Follow the app the user names.
 
 Use the app's bundled helper from the current working directory. On macOS with
 Code Kata Python installed in Applications, run:

@@ -1,4 +1,5 @@
 export const LEVELS = [
+  { level: 0, label: "Ruby Prelude", categories: ["ruby-prelude"] },
   {
     level: 1,
     label: "Arrays & Hashing",

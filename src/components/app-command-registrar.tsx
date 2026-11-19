@@ -1,5 +1,6 @@
+import type { Kata } from "../types/editor";
+import { listen } from "../lib/native-api";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { listen } from "@tauri-apps/api/event";
 import { useNavigate } from "react-router";
 import { DEFAULT_UI_SCALE, nextUiScale, previousUiScale } from "../lib/ui-scale";
 import { NAV_ITEMS } from "../lib/nav-items";
@@ -13,6 +14,28 @@ import { useTimerStore } from "../stores/timer-store";
 type MenuRunCommandPayload = {
   commandId?: string;
 };
+
+function kataSubtitle(kata: Kata): string {
+  return [
+    kata.leetcodeNumber != null ? `#${kata.leetcodeNumber}` : null,
+    kata.category,
+    kata.difficulty,
+    ...(kata.tags ?? []).slice(0, 3),
+  ].filter(Boolean).join(" · ");
+}
+
+function kataKeywords(kata: Kata): string[] {
+  return [
+    kata.name,
+    kata.category,
+    kata.difficulty,
+    kata.language,
+    kata.leetcodeNumber != null ? `${kata.leetcodeNumber}` : null,
+    kata.leetcodeNumber != null ? `#${kata.leetcodeNumber}` : null,
+    kata.leetcodeNumber != null ? `leetcode ${kata.leetcodeNumber}` : null,
+    ...(kata.tags ?? []),
+  ].filter((value): value is string => Boolean(value));
+}
 
 export function AppCommandRegistrar() {
   const navigate = useNavigate();
@@ -78,8 +101,14 @@ export function AppCommandRegistrar() {
       keywords: [item.label, item.path],
       run: () => navigate(item.path === "/practice" ? resumePath ?? item.path : item.path),
     }));
+    const kataActions: CommandPaletteAction[] = katas.map((kata) => ({
+      id: `kata:${kata.id}`, title: kata.name, subtitle: kataSubtitle(kata),
+      section: "Katas", keywords: kataKeywords(kata),
+      run: () => navigate(`/editor/${kata.id}`),
+    }));
     return [
       ...navActions,
+      ...kataActions,
       {
         id: "nav:new-kata",
         title: "New Kata",
@@ -136,6 +165,7 @@ export function AppCommandRegistrar() {
       },
     ];
   }, [
+    katas,
     dailyCount,
     handleStartPractice,
     launching,

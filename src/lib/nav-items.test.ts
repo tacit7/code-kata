@@ -7,6 +7,7 @@ describe("activeNavPath", () => {
     expect(activeNavPath("/practice")).toBe("/practice");
     expect(activeNavPath("/problems")).toBe("/problems");
     expect(activeNavPath("/modules")).toBe("/modules");
+    expect(activeNavPath("/scratchpad")).toBe("/scratchpad");
     expect(activeNavPath("/results")).toBe("/results");
     expect(activeNavPath("/settings")).toBe("/settings");
   });
@@ -17,6 +18,7 @@ describe("activeNavPath", () => {
       "/practice",
       "/problems",
       "/modules",
+      "/scratchpad",
       "/results",
       "/settings",
     ]);

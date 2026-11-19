@@ -24,6 +24,8 @@ const kata: Kata = {
   leetcodeNumber: 1,
 };
 
+const skillPath = "/Applications/Code Kata Python.app/Contents/Resources/agent/skills/kata-student-helper/SKILL.md";
+
 describe("buildAgentEditorContext", () => {
   it("exports student-facing problem context without solution code", () => {
     const context = buildAgentEditorContext({
@@ -69,9 +71,9 @@ describe("buildAgentEditorContext", () => {
       activeVariantLabel: "Hash map",
     });
 
-    const prompt = agentPromptFor(context);
+    const prompt = agentPromptFor(context, skillPath);
 
-    expect(prompt).toContain(".codex/skills/kata-student-helper/SKILL.md");
+    expect(prompt).toContain(`\`${skillPath}\``);
     expect(prompt).toContain("Do not reveal the full reference solution");
     expect(prompt).toContain("inspect it silently");
     expect(prompt).toContain("Do not narrate tool use");
@@ -117,8 +119,10 @@ Tutoring rules:
 9. After the bug is fixed, briefly explain the pattern and complexity.
 10. Keep responses short and practical.`;
 
-    const prompt = agentPromptFor(context, legacyPrompt);
+    const prompt = agentPromptFor(context, skillPath, legacyPrompt);
 
+    expect(prompt).toContain(`\`${skillPath}\``);
+    expect(prompt).not.toContain(".codex/skills/kata-student-helper/SKILL.md");
     expect(prompt).toContain("inspect it silently");
     expect(prompt).toContain("Do not narrate tool use");
   });
@@ -141,9 +145,16 @@ Tutoring rules:
       activeVariantLabel: "Hash map",
     });
 
-    const prompt = agentPromptFor(context, "Custom tutor rules.");
+    const customPrompt = `Custom tutor rules.
 
-    expect(prompt.startsWith("Custom tutor rules.")).toBe(true);
+Before answering, read and follow the project-local kata student helper skill at .codex/skills/kata-student-helper/SKILL.md if it is available.
+
+Prefer an example.`;
+    const prompt = agentPromptFor(context, skillPath, customPrompt);
+
+    expect(prompt.startsWith("Custom tutor rules.\n\nPrefer an example.")).toBe(true);
+    expect(prompt).toContain(`\`${skillPath}\``);
+    expect(prompt).not.toContain(".codex/skills/kata-student-helper/SKILL.md");
     expect(prompt).toContain("Problem: Two Sum");
   });
 });

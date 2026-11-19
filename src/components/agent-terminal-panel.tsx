@@ -1,6 +1,5 @@
+import { listen, open } from "../lib/native-api";
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from "react";
-import { listen } from "@tauri-apps/api/event";
-import { open } from "@tauri-apps/plugin-shell";
 import { FitAddon } from "@xterm/addon-fit";
 import { Unicode11Addon } from "@xterm/addon-unicode11";
 import { WebLinksAddon } from "@xterm/addon-web-links";
@@ -97,6 +96,7 @@ export const AgentTerminalPanel = forwardRef<AgentTerminalPanelHandle, AgentTerm
   const termRef = useRef<XtermTerminal | null>(null);
   const fitRef = useRef<FitAddon | null>(null);
   const terminalIdRef = useRef<number | null>(null);
+  const launchIdRef = useRef(0);
   const lastSizeRef = useRef<TerminalSize | null>(null);
   const outputBufferRef = useRef<Map<number, number[][]>>(new Map());
   const fitFrameRef = useRef<number | null>(null);
@@ -151,15 +151,21 @@ export const AgentTerminalPanel = forwardRef<AgentTerminalPanelHandle, AgentTerm
   const startTerminal = useCallback(async (kind: AgentTerminalKind) => {
     const term = termRef.current;
     if (!term) return;
+    const launchId = ++launchIdRef.current;
 
     setActiveKind(kind);
     await closeCurrentTerminal();
+    if (launchId !== launchIdRef.current) return;
     term.reset();
     term.writeln(`Starting ${labelFor(kind)}...`);
 
     const size = fit() ?? { cols: 80, rows: 24 };
     try {
       const terminalId = await spawnTerminal(kind, size);
+      if (launchId !== launchIdRef.current) {
+        await closeTerminal(terminalId).catch(() => undefined);
+        return;
+      }
       terminalIdRef.current = terminalId;
       term.reset();
 
@@ -173,12 +179,13 @@ export const AgentTerminalPanel = forwardRef<AgentTerminalPanelHandle, AgentTerm
       }
       if (kind === "claude" || kind === "codex") {
         const prompt = await buildStartupPromptRef.current().catch(() => null);
-        if (prompt) {
+        if (prompt && terminalIdRef.current === terminalId) {
           await writeTerminal(terminalId, encoder.encode(`${bracketedPaste(prompt)}\r`)).catch(() => undefined);
         }
       }
-      term.focus();
+      if (terminalIdRef.current === terminalId) term.focus();
     } catch (error) {
+      if (launchId !== launchIdRef.current) return;
       term.writeln("");
       term.writeln(error instanceof Error ? error.message : String(error));
     }
@@ -240,6 +247,7 @@ export const AgentTerminalPanel = forwardRef<AgentTerminalPanelHandle, AgentTerm
     });
 
     return () => {
+      launchIdRef.current += 1;
       void closeCurrentTerminal();
       resizeObserver.disconnect();
       if (fitFrameRef.current != null) {
@@ -318,7 +326,7 @@ export const AgentTerminalPanel = forwardRef<AgentTerminalPanelHandle, AgentTerm
     }`;
 
   return (
-    <div className="flex-1 min-h-0 flex flex-col bg-base-100">
+    <div className={`${visible ? "flex" : "hidden"} flex-1 min-h-0 flex-col bg-base-100`}>
       {showHeader && (
         <div className="flex items-center border-b border-base-300/60 bg-base-200 px-3 py-1 shrink-0">
           <button

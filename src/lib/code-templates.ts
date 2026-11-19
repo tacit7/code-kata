@@ -1,3 +1,4 @@
+import { rubyCodeTemplates } from "./ruby-code-templates";
 // Generated from ~/projects/leetcode-cheatsheet/src/code.
 //
 // MIT License
@@ -33,6 +34,7 @@ export interface CodeTemplate {
 type TemplateLanguage = "javascript" | "python" | "java" | "cpp" | "ruby" | "lua";
 
 const templatesByLanguage: Partial<Record<TemplateLanguage, CodeTemplate[]>> = {
+  ruby: rubyCodeTemplates,
   "javascript": [
     {
       id: "array:prefix-sum",

@@ -22,6 +22,7 @@ export const NAV_ITEMS: NavItem[] = [
     match: (p) => p === "/problems" || (p.startsWith("/session") && !SESSION_RESULTS.test(p)),
   },
   { path: "/modules", label: "Modules" },
+  { path: "/scratchpad", label: "Scratchpad" },
   { path: "/results", label: "Results", match: (p) => p === "/results" || SESSION_RESULTS.test(p) },
   { path: "/settings", label: "Settings" },
 ];

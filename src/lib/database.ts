@@ -1,3 +1,4 @@
+import { migrateSessionSchema } from "./session-schema";
 import Database from "@tauri-apps/plugin-sql";
 import type { SeedKata } from "../types/editor";
 import { leetcodeNumberFor } from "./leetcode-numbers";
@@ -34,6 +35,7 @@ export async function getDb(): Promise<Database> {
   if (db) return db;
   db = await Database.load("sqlite:kata.db");
   await createSchema(db);
+  await migrateSessionSchema(db);
   await seedKatas(db);
   await migrateBuildAdjacencyListDrill(db);
   await migrateBinarySearchBoundaryDrills(db);

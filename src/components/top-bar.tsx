@@ -1,6 +1,6 @@
+import { getCurrentWindow, nativeDragRegion } from "../lib/native-api";
 import { useNavigate, useLocation } from "react-router";
 import { useNavHistory } from "../hooks/use-nav-history";
-import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useSettingsStore } from "../stores/settings-store";
 import { isDarkScheme } from "../lib/editor-themes";
 import { usesOverlayTitlebar } from "../lib/platform";
@@ -37,6 +37,7 @@ export function TopBar() {
   return (
     <header
       onMouseDown={handleHeaderMouseDown}
+      style={nativeDragRegion ? { WebkitAppRegion: "drag" } as React.CSSProperties : undefined}
       className={`flex h-11 min-w-0 items-center pr-3 border-b border-base-300/60 bg-base-100 shrink-0 ${
         usesOverlayTitlebar ? "pl-20" : "pl-4"
       }`}
@@ -84,7 +85,7 @@ export function TopBar() {
       </div>
 
       {/* Navigation */}
-      <nav className="scrollbar-hidden flex min-w-0 flex-1 items-center h-full gap-0.5 overflow-x-auto">
+      <nav style={nativeDragRegion ? { WebkitAppRegion: "no-drag" } as React.CSSProperties : undefined} className="scrollbar-hidden flex min-w-0 flex-1 items-center h-full gap-0.5 overflow-x-auto">
         {NAV_ITEMS.map((item) => {
           const active = isActive(item);
           return (

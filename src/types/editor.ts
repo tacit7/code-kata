@@ -27,6 +27,7 @@ export interface Kata {
 export type SeedKata = Omit<Kata, "id" | "isCustom">;
 
 export interface SolutionVariant {
+  kind?: "recursive" | "memoized" | "tabulation" | "optimized" | "standard";
   label: string;
   complexity?: string;
   explanation?: string;

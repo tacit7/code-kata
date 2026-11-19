@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+import { invoke } from "./native-api";
 import type { ITheme } from "@xterm/xterm";
 
 export type AgentTerminalKind = "shell" | "claude" | "codex";

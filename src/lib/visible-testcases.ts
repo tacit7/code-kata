@@ -257,7 +257,26 @@ function parsePythonTestCase(block: TestBlock, fn: PythonFunctionInfo, index: nu
   return null;
 }
 
+function rubyTestCases(kata: Pick<Kata, "code" | "testCode">): VisibleTestCase[] {
+  const functionMatch = /^def\s+([A-Za-z_]\w*[!?]?)\s*\(([^)]*)\)/m.exec(kata.code);
+  if (!functionMatch) return [];
+  const fn = { name: functionMatch[1], params: splitTopLevel(functionMatch[2]) };
+  const tests = [...kata.testCode.matchAll(/^def\s+(test_\w+)(?:\([^)]*\))?\s*$/gm)];
+  return tests.map((match, index) => {
+    const end = tests[index + 1]?.index ?? kata.testCode.length;
+    const body = kata.testCode.slice((match.index ?? 0) + match[0].length, end);
+    const normalized = body.split("\n").map((line) => {
+      const assertion = stripOuterCallExpression(line.trim(), "assert_equal");
+      if (!assertion) return line;
+      const [expected, actual] = splitTopLevel(assertion);
+      return `assert_equal(${actual}, ${expected})`;
+    }).join("\n");
+    return parsePythonTestCase({ name: match[1], body: normalized }, fn, index);
+  }).filter((testCase): testCase is VisibleTestCase => testCase !== null).slice(0, 6);
+}
+
 export function visibleTestCasesFor(kata: Pick<Kata, "language" | "code" | "testCode">): VisibleTestCase[] {
+  if (kata.language === "ruby") return rubyTestCases(kata);
   if (kata.language !== "python") return [];
   const fn = extractPythonFunctionInfo(kata.code);
   if (!fn) return [];

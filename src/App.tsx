@@ -1,6 +1,6 @@
+import { listen } from "./lib/native-api";
 import { useEffect, useCallback, lazy, Suspense } from "react";
 import { Routes, Route, Navigate, useNavigate } from "react-router";
-import { listen } from "@tauri-apps/api/event";
 import { useSettingsStore } from "./stores/settings-store";
 import { useKataStore } from "./stores/kata-store";
 import { useKeyboardShortcuts } from "./hooks/use-keyboard-shortcuts";
@@ -19,6 +19,7 @@ import { ResultsPage } from "./routes/results";
 // Heavy routes load lazily: Monaco rides with the editor chunks, Recharts
 // with the dashboard — keeps the startup bundle small.
 const EditorPage = lazy(() => import("./routes/editor").then((m) => ({ default: m.EditorPage })));
+const ScratchpadPage = lazy(() => import("./routes/scratchpad").then((m) => ({ default: m.ScratchpadPage })));
 const SessionPage = lazy(() => import("./routes/session").then((m) => ({ default: m.SessionPage })));
 const SessionResultsPage = lazy(() => import("./routes/session-results").then((m) => ({ default: m.SessionResultsPage })));
 const DashboardPage = lazy(() => import("./routes/dashboard").then((m) => ({ default: m.DashboardPage })));
@@ -125,6 +126,7 @@ function App() {
             <Route path="/kata/new" element={<KataFormPage />} />
             <Route path="/kata/:kataId/edit" element={<KataFormPage />} />
             <Route path="/editor/:kataId" element={<EditorPage />} />
+            <Route path="/scratchpad" element={<ScratchpadPage />} />
             <Route path="/session/:sessionId" element={<SessionPage />} />
             <Route path="/session/:sessionId/results" element={<SessionResultsPage />} />
             <Route path="/results" element={<ResultsPage />} />
