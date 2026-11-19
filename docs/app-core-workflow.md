@@ -16,7 +16,7 @@ Each product owns `native-api-platform.ts`, which implements that contract.
 These product-owned files also stay outside the shared-file manifest.
 
 - Native main/preload/Rust code and packaging configuration
-- Database initialization, content seeds, and language-specific migrations
+- Database initialization, content seeds, LeetCode mappings, DP content metadata, and language-specific migrations
 - Language test runners, workers, and `repl-backends.ts`
 - Renderer bootstrap and router selection
 
