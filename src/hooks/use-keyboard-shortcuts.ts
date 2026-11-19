@@ -1,5 +1,33 @@
 import { useEffect } from "react";
 import { useSettingsStore, type ShortcutAction } from "../stores/settings-store";
+import { normalizeShortcutCombo } from "../lib/shortcut-keys";
+
+function comboAliases(combo: string): Set<string> {
+  const normalized = normalizeShortcutCombo(combo);
+  const aliases = new Set([normalized]);
+
+  if (normalized.startsWith("Ctrl+")) {
+    aliases.add(normalized.replace("Ctrl+", "Meta+"));
+  }
+
+  for (const value of [...aliases]) {
+    if (value.endsWith("+Shift++")) {
+      aliases.add(value.replace("+Shift++", "+="));
+      aliases.add(value.replace("+Shift++", "++"));
+    }
+    if (value.endsWith("+Shift+=")) {
+      aliases.add(value.replace("+Shift+=", "+="));
+    }
+    if (value.endsWith("++")) {
+      aliases.add(value.replace(/\+\+$/, "+="));
+    }
+    if (value.endsWith("+=")) {
+      aliases.add(value.replace(/\+=$/, "++"));
+    }
+  }
+
+  return aliases;
+}
 
 export function useKeyboardShortcuts(
   handlers: Partial<Record<ShortcutAction, () => void>>
@@ -20,14 +48,15 @@ export function useKeyboardShortcuts(
         parts.push(e.key);
       }
 
-      const combo = parts.join("+");
+      const combo = normalizeShortcutCombo(parts.join("+"));
 
       // Check against all registered shortcuts
       // Treat Meta and Ctrl as equivalent so shortcuts work on both macOS and Windows
-      const comboAlt = combo.replace("Ctrl+", "Meta+");
+      const aliases = comboAliases(combo);
       for (const [action, handler] of Object.entries(handlers)) {
         const expected = shortcuts[action as ShortcutAction];
-        if (expected && (combo === expected || comboAlt === expected) && handler) {
+        const normalizedExpected = normalizeShortcutCombo(expected);
+        if (expected && handler && (aliases.has(normalizedExpected) || comboAliases(normalizedExpected).has(combo))) {
           e.preventDefault();
           e.stopPropagation();
           handler();
@@ -36,7 +65,7 @@ export function useKeyboardShortcuts(
       }
     }
 
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    window.addEventListener("keydown", handleKeyDown, true);
+    return () => window.removeEventListener("keydown", handleKeyDown, true);
   }, [shortcuts, handlers]);
 }

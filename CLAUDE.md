@@ -176,3 +176,9 @@ with open('/path/to/index.html', 'w') as f:
     f.write(content)
 "
 ```
+
+## Restored shared frontend workflow
+
+Shared product features originate on app-core and are merged outward into both
+the Python Tauri app and the Ruby Electron app. See docs/app-core-workflow.md
+for adapter boundaries, parity checks, and required product verification.

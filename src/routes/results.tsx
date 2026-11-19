@@ -7,20 +7,24 @@ function DrillDown({ rows }: { rows: DrillDownRow[] }) {
   return (
     <tr>
       <td colSpan={5} className="p-0">
-        <div className="bg-base-200 px-6 py-3">
-          <table className="table table-sm">
+        <div className="bg-base-200 px-4 py-2">
+          <table className="table table-xs">
             <tbody>
               {rows.map((row) => (
                 <tr
                   key={row.id}
                   className="border-b border-base-300/30 last:border-0"
                 >
-                  <td className="font-medium text-sm">{row.kataName}</td>
-                  <td className="text-base-content/45 text-sm">{row.category}</td>
-                  <td className="font-mono text-base-content/45 text-sm tabular-nums">
+                  <td className="px-2 py-1.5 text-xs font-medium">
+                    <span className="text-left">
+                      {row.kataName}
+                    </span>
+                  </td>
+                  <td className="px-2 py-1.5 text-xs text-base-content/45">{row.category}</td>
+                  <td className="px-2 py-1.5 font-mono text-xs text-base-content/45 tabular-nums">
                     {row.timeMs != null ? formatTime(row.timeMs) : "--:--"}
                   </td>
-                  <td>
+                  <td className="px-2 py-1.5">
                     {row.passed ? (
                       <span className="badge badge-success badge-xs">Pass</span>
                     ) : (
@@ -64,7 +68,7 @@ export function ResultsPage() {
 
   return (
     <div className="flex flex-col h-full p-5 gap-4 animate-fade-in">
-      <h1 className="text-lg font-bold">Results</h1>
+      <h1 className="mx-auto w-full max-w-5xl text-lg font-bold">Results</h1>
 
       {loading ? (
         <div className="flex items-center justify-center flex-1 gap-2 text-base-content/30 text-sm">
@@ -76,15 +80,15 @@ export function ResultsPage() {
           No sessions yet. Start practicing to build your history.
         </div>
       ) : (
-        <div className="flex-1 min-h-0 overflow-y-auto bg-base-100 rounded-lg border border-base-300/50 scrollbar-hidden">
-          <table className="table table-sm">
+        <div className="mx-auto flex-1 min-h-0 w-full max-w-5xl overflow-y-auto bg-base-100 rounded-md border border-base-300/50 scrollbar-hidden">
+          <table className="table table-xs">
             <thead>
               <tr className="text-left text-[11px] text-base-content/35 uppercase tracking-wider">
-                <th className="font-semibold">Date</th>
-                <th className="font-semibold">Type</th>
-                <th className="font-semibold">Katas</th>
-                <th className="font-semibold">Time</th>
-                <th className="font-semibold">Pass Rate</th>
+                <th className="px-3 py-2 font-semibold">Date</th>
+                <th className="px-3 py-2 font-semibold">Type</th>
+                <th className="px-3 py-2 font-semibold">Katas</th>
+                <th className="px-3 py-2 font-semibold">Time</th>
+                <th className="px-3 py-2 font-semibold">Pass Rate</th>
               </tr>
             </thead>
             <tbody>
@@ -99,7 +103,7 @@ export function ResultsPage() {
                       }`}
                       onClick={() => handleRowClick(session.id)}
                     >
-                      <td className="text-base-content/45 text-sm">
+                      <td className="px-3 py-2 text-xs text-base-content/45">
                         {new Date(session.started_at).toLocaleDateString(undefined, {
                           month: "short",
                           day: "numeric",
@@ -112,12 +116,12 @@ export function ResultsPage() {
                           })}
                         </span>
                       </td>
-                      <td className="capitalize text-sm">{session.session_type}</td>
-                      <td className="text-base-content/45 text-sm tabular-nums">{session.kata_count}</td>
-                      <td className="font-mono text-base-content/45 text-sm tabular-nums">
+                      <td className="px-3 py-2 text-xs capitalize">{session.session_type}</td>
+                      <td className="px-3 py-2 text-xs text-base-content/45 tabular-nums">{session.kata_count}</td>
+                      <td className="px-3 py-2 font-mono text-xs text-base-content/45 tabular-nums">
                         {session.total_time_ms != null ? formatTime(session.total_time_ms) : "--:--"}
                       </td>
-                      <td className={`text-sm tabular-nums font-medium ${allPassed ? "text-success" : "text-base-content/45"}`}>
+                      <td className={`px-3 py-2 text-xs tabular-nums font-medium ${allPassed ? "text-success" : "text-base-content/45"}`}>
                         {session.pass_count}/{session.kata_count}
                       </td>
                     </tr>
@@ -131,7 +135,7 @@ export function ResultsPage() {
           </table>
           {sessionHistoryHasMore && (
             <div className="px-4 py-3 border-t border-base-300/30">
-              <button onClick={loadMoreSessions} className="btn btn-ghost btn-sm text-xs">
+              <button onClick={loadMoreSessions} className="btn btn-sm kata-btn-secondary text-xs">
                 Load more
               </button>
             </div>

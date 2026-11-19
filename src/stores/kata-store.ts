@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import type { ImplementationSize } from "../lib/implementation-complexity";
 import type { Kata, SeedKata } from "../types/editor";
 import { getDb, insertKata, updateKata as dbUpdateKata, deleteKata as dbDeleteKata } from "../lib/database";
 
@@ -12,9 +13,11 @@ interface KataRow {
   code: string;
   test_code: string;
   solution: string | null;
+  solution_variants: string | null;
   usage: string | null;
   tags: string | null;
   is_custom: number;
+  leetcode_number: number | null;
 }
 
 interface BestTimeRow {
@@ -33,10 +36,14 @@ export type LibrarySortMode =
   | "category"
   | "level"
   | "level-difficulty"
+  | "leetcode"
+  | "implementation-complexity"
   | "best-time"
   | "streak"
   | "difficulty-asc"
   | "difficulty-desc";
+
+export type LibraryDifficultyFilter = "easy" | "medium" | "hard";
 
 interface LibraryUIState {
   librarySearch: string;
@@ -44,6 +51,12 @@ interface LibraryUIState {
   libraryCategoryFilter: string;
   libraryDiffSort: "asc" | "desc" | null;
   librarySortMode: LibrarySortMode;
+  libraryLeetcodeOnly: boolean;
+  libraryBlind75Only: boolean;
+  libraryNeetcodeOnly: boolean;
+  libraryNeetcode250Only: boolean;
+  libraryDifficultyFilters: LibraryDifficultyFilter[];
+  libraryImplementationSizeFilters: ImplementationSize[];
   setLibraryUI: (patch: Partial<LibraryUIState>) => void;
 }
 
@@ -80,6 +93,12 @@ export const useKataStore = create<KataState>((set) => ({
   libraryCategoryFilter: "",
   libraryDiffSort: null,
   librarySortMode: "level-difficulty",
+  libraryLeetcodeOnly: false,
+  libraryBlind75Only: false,
+  libraryNeetcodeOnly: false,
+  libraryNeetcode250Only: false,
+  libraryDifficultyFilters: [],
+  libraryImplementationSizeFilters: [],
   setLibraryUI: (patch) => set(patch),
 
   loadKatas: async (language = "javascript") => {
@@ -104,9 +123,11 @@ export const useKataStore = create<KataState>((set) => ({
         code: row.code,
         testCode: row.test_code,
         solution: row.solution,
+        solutionVariants: row.solution_variants ? JSON.parse(row.solution_variants) : null,
         usage: row.usage,
         tags: row.tags ? JSON.parse(row.tags) as string[] : [],
         isCustom: Boolean(row.is_custom),
+        leetcodeNumber: row.leetcode_number,
       }));
       const bestRows = await db.select<BestTimeRow[]>(
         `SELECT kata_id, MIN(time_ms) as best_time

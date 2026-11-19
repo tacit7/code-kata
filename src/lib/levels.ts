@@ -16,8 +16,8 @@ export const LEVELS = [
   },
   {
     level: 4,
-    label: "Trees",
-    categories: ["trees"],
+    label: "Recursion · Trees",
+    categories: ["recursion", "trees"],
   },
   {
     level: 5,

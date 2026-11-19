@@ -1,8 +1,31 @@
+import { APP_VARIANT } from "../lib/app-variant";
+import { invoke, writeText, open } from "../lib/native-api";
 import { useRef, useEffect, useState, useCallback, useMemo } from "react";
 import Editor, { DiffEditor, type OnMount } from "@monaco-editor/react";
 import type { editor } from "monaco-editor";
 import { initVimMode, type VimAdapterInstance } from "monaco-vim";
-import { open } from "@tauri-apps/plugin-shell";
+import {
+  ArrowLeft,
+  ArrowRight,
+  BotMessageSquare,
+  ChevronRight,
+  GitCompareArrows,
+  ListChecks,
+  Maximize2,
+  Minimize2,
+  Minus,
+  PanelLeftClose,
+  PanelLeftOpen,
+  Play,
+  Plus,
+  RotateCcw,
+  Settings,
+  SquareSplitHorizontal,
+  SquareSplitVertical,
+  StepForward,
+  Terminal,
+  X,
+} from "lucide-react";
 import { useSettingsStore } from "../stores/settings-store";
 import { resolveMonacoTheme, APP_THEMES } from "../lib/editor-themes";
 import { monacoEditorOptions } from "../lib/editor-settings";
@@ -12,16 +35,29 @@ import { useKeyboardShortcuts } from "../hooks/use-keyboard-shortcuts";
 import { runTests, prewarmRunner } from "../lib/test-runner";
 import { saveUserCode, loadUserCode, deleteUserCode, saveKataNotes, loadKataNotes } from "../lib/database";
 import { TestOutput } from "./test-output";
-import { ReplPanel, type ReplSeed } from "./repl-panel";
+import { TestcasePanel } from "./testcase-panel";
+import { ReplPanel, type ReplPanelHandle, type ReplSeed } from "./repl-panel";
+import { AgentTerminalPanel, type AgentTerminalPanelHandle } from "./agent-terminal-panel";
 import { extractTestCall } from "../lib/repl-seed";
 import { monacoReady } from "../lib/monaco-setup";
 import { useKataNavigation } from "../hooks/use-kata-navigation";
 import { createAutosave } from "../lib/autosave";
+import { confirmAction } from "../lib/confirm-action";
+import { disposeVimMode, syncVimMode, type VimModeState } from "../lib/vim-mode";
 import { toast } from "../stores/toast-store";
+import { useCommandPaletteStore } from "../stores/command-palette-store";
+import { leetcodeNumberFor, leetcodeUrlFor } from "../lib/leetcode-numbers";
+import { dpPatternFor, DP_MODULES } from "../lib/dp-patterns";
+import { visibleTestCasesFor } from "../lib/visible-testcases";
+import { solutionNotesFor } from "../lib/solution-notes";
+import { agentPromptFor, buildAgentEditorContext, getAgentSkillPath, writeAgentContext, type AgentEditorContext } from "../lib/agent-bridge";
+import { codeTemplatesForLanguage, type CodeTemplate } from "../lib/code-templates";
+import type { AgentTerminalKind } from "../lib/terminal-pty";
+import type { EditorLayoutSettings, VizSpeed } from "../stores/settings-store";
 import type { Kata, TestResult } from "../types/editor";
-
-// Matches "Ref: LeetCode #123 Problem Name" at the end of a description
-const LC_REF_RE = /Ref:\s*LeetCode\s*#(\d+)\s+(.+)$/m;
+import { formatTime } from "../lib/format";
+import { loadScratchpad, saveScratchpad, type ScratchpadLanguage } from "../lib/scratchpad";
+import type { ReplEvalResult } from "../lib/repl-runner";
 
 type VizKataName =
   | "Kadane's Algorithm"
@@ -31,8 +67,9 @@ type VizKataName =
   | "Merge Two Sorted Lists"
   | "Longest Palindromic Substring"
   | "Binary Tree BFS"
-  | "Matrix BFS"
+  | "Matrix BFS With Walls"
   | "Matrix Grid BFS"
+  | "Shortest Path in Binary Matrix"
   | "Linked List Cycle"
   | "Linked List Cycle Detection"
   | "Climbing Stairs"
@@ -185,8 +222,9 @@ type VizKataName =
   | "Reverse Linked List (Recursive)"
   | "Binary Search (Iterative)"
   | "Binary Search (Recursive)"
-  | "Binary Search Find First"
-  | "Binary Search Find Last"
+  | "Find First Occurrence in Sorted Array"
+  | "Find Last Occurrence in Sorted Array"
+  | "Find First and Last Position of Element in Sorted Array"
   | "Climbing Stairs (Iterative)"
   | "Climbing Stairs (Recursive)"
   | "Sliding Window Max Sum"
@@ -199,7 +237,7 @@ type VizKataName =
   | "Count Set Bits"
   | "Topological Sort"
   | "Combination Sum IV"
-  | "Build Adjacency List"
+  | "Build Adjacency List Drill"
   | "Most Frequent Element"
   | "Graph DFS"
   | "Graph DFS (Iterative)"
@@ -222,7 +260,8 @@ type VizKataName =
   | "Lomuto Partition"
   | "Min Heap"
   | "Union Find"
-  | "Build Prefix Sum"
+  | "Prefix Sum Table"
+  | "Running Sum of 1d Array"
   | "Range Sum Query"
   | "Two Pointer Remove Dupes"
   | "Two Pointer Remove Duplicates"
@@ -241,8 +280,9 @@ const VIZ_MAP: Partial<Record<VizKataName, string>> = {
   "Merge Two Sorted Lists":       "merge-sorted-lists",
   "Longest Palindromic Substring":"manachers",
   "Binary Tree BFS":              "bfs",
-  "Matrix BFS":                   "bfs-grid",
+  "Matrix BFS With Walls":        "bfs-grid",
   "Matrix Grid BFS":              "bfs-traversal",
+  "Shortest Path in Binary Matrix":"bfs-grid",
   "Linked List Cycle":            "floyd-cycle",
   "Linked List Cycle Detection":  "floyd-cycle",
   "Climbing Stairs":              "climbing-stairs",
@@ -396,8 +436,9 @@ const VIZ_MAP: Partial<Record<VizKataName, string>> = {
   "Reverse Linked List (Recursive)":    "reverse-linked-list",
   "Binary Search (Iterative)":          "binary-search",
   "Binary Search (Recursive)":          "binary-search",
-  "Binary Search Find First":           "binary-search",
-  "Binary Search Find Last":            "binary-search",
+  "Find First Occurrence in Sorted Array": "binary-search",
+  "Find Last Occurrence in Sorted Array": "binary-search",
+  "Find First and Last Position of Element in Sorted Array": "binary-search",
   "Climbing Stairs (Iterative)":        "climbing-stairs",
   "Climbing Stairs (Recursive)":        "climbing-stairs",
   "Sliding Window Max Sum":             "sliding-window-max",
@@ -411,7 +452,6 @@ const VIZ_MAP: Partial<Record<VizKataName, string>> = {
   "Count Set Bits":                     "number-1-bits",
   "Topological Sort":                   "course-schedule",
   "Combination Sum IV":                 "combination-sum",
-  "Build Adjacency List":               "clone-graph",
   "Most Frequent Element":              "top-k-frequent",
   // New viz folders (built separately)
   "Graph DFS":                          "graph-dfs",
@@ -435,7 +475,8 @@ const VIZ_MAP: Partial<Record<VizKataName, string>> = {
   "Lomuto Partition":                   "quick-sort",
   "Min Heap":                           "min-heap",
   "Union Find":                         "union-find",
-  "Build Prefix Sum":                   "prefix-sum",
+  "Prefix Sum Table":                   "prefix-sum",
+  "Running Sum of 1d Array":            "prefix-sum",
   "Range Sum Query":                    "prefix-sum",
   "Two Pointer Remove Dupes":           "two-pointer",
   "Two Pointer Remove Duplicates":      "two-pointer",
@@ -446,43 +487,152 @@ const VIZ_MAP: Partial<Record<VizKataName, string>> = {
   "FizzBuzz":                           "fizzbuzz",
 };
 
-// Overrides for slugs that can't be reliably derived from the display name
-const LC_SLUG_OVERRIDES: Record<number, string> = {
-  50: "powx-n",
-  167: "two-sum-ii-input-array-is-sorted",
+type DescriptionSection = {
+  title: string;
+  body: string;
 };
 
-function lcSlug(problemNum: number, rawName: string): string {
-  if (LC_SLUG_OVERRIDES[problemNum]) return LC_SLUG_OVERRIDES[problemNum];
-  return rawName
-    .replace(/\s*\(closest match\)\s*/gi, " ") // strip annotation, keep real parens like "Pow(x, n)"
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/-+$/, "")
-    .replace(/^-+/, "");
+const DESCRIPTION_SECTION_TITLES: Record<string, string> = {
+  example: "Examples",
+  examples: "Examples",
+  constraints: "Constraints",
+  constraint: "Constraints",
+  notes: "Notes",
+  note: "Notes",
+  ref: "Reference",
+  reference: "Reference",
+  references: "Reference",
+};
+
+function normalizedDescriptionHeading(line: string): string | null {
+  const trimmed = line.trim();
+  const match = trimmed.match(/^([A-Za-z][A-Za-z ]*?)(?:\s+\d+)?\s*:/);
+  if (!match) return null;
+  const key = match[1].trim().toLowerCase();
+  return DESCRIPTION_SECTION_TITLES[key] ?? null;
 }
 
-function DescriptionWithLink({ text }: { text: string }) {
-  const match = text.match(LC_REF_RE);
-  if (!match) {
-    return <span className="whitespace-pre-wrap">{text}</span>;
+function parseDescriptionSections(text: string): DescriptionSection[] {
+  const lines = text.replace(/\r\n/g, "\n").split("\n");
+  const sections: DescriptionSection[] = [];
+  let current: DescriptionSection = { title: "Prompt", body: "" };
+
+  for (const line of lines) {
+    const heading = normalizedDescriptionHeading(line);
+    if (heading) {
+      if (current.body.trim()) sections.push({ ...current, body: current.body.trim() });
+      current = { title: heading, body: line.trim() };
+      continue;
+    }
+    current.body += `${current.body ? "\n" : ""}${line}`;
   }
-  const [fullMatch, numStr, problemName] = match;
-  const slug = lcSlug(parseInt(numStr, 10), problemName.trim());
-  const url = `https://leetcode.com/problems/${slug}/`;
-  const before = text.slice(0, match.index);
+
+  if (current.body.trim()) sections.push({ ...current, body: current.body.trim() });
+  return sections.length > 0 ? sections : [{ title: "Prompt", body: text }];
+}
+
+// Renders the kata description in scan-friendly sections. The "Ref: LeetCode #N"
+// line stays as plain text; the authoritative "Open on LeetCode" affordance is
+// the header button (leetcodeUrlFor).
+function DescriptionWithLink({ text }: { text: string }) {
+  const sections = parseDescriptionSections(text);
   return (
-    <span className="whitespace-pre-wrap">
-      {before}
-      <button
-        onClick={() => open(url)}
-        className="text-primary underline hover:text-primary/80 cursor-pointer"
-        title={url}
-      >
-        {fullMatch}
-      </button>
-    </span>
+    <div className="space-y-4">
+      {sections.map((section, index) => (
+        <section key={`${section.title}-${index}`} className="border-b border-base-300/40 pb-4 last:border-b-0 last:pb-0">
+          <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-base-content/35">
+            {section.title}
+          </h3>
+          <div className="whitespace-pre-wrap leading-relaxed">{section.body}</div>
+        </section>
+      ))}
+    </div>
+  );
+}
+
+// LeetCode-style hints for DP-tagged katas (see src/lib/dp-patterns.ts).
+// Renders nothing for katas without a pattern.
+function DpPatternHints({ kata }: { kata: Kata }) {
+  const pattern = dpPatternFor(kata);
+  if (!pattern) return null;
+  const primaryLabel =
+    DP_MODULES.find((m) => m.id === pattern.primaryModule)?.label ??
+    (pattern.primaryModule === "expand-around-center" ? "Not DP · expand-around-center" : pattern.primaryModule);
+  const relatedLabels = pattern.relatedPatterns?.map(
+    (r) => DP_MODULES.find((m) => m.id === r)?.label ?? r,
+  );
+  const hints = [
+    {
+      label: "Hint 1",
+      content: (
+        <>
+          Start by recognizing the pattern family: <span className="font-medium text-base-content/75">{primaryLabel}</span>.
+          {relatedLabels && relatedLabels.length > 0 ? ` Related patterns: ${relatedLabels.join(", ")}.` : ""}
+        </>
+      ),
+    },
+    {
+      label: "Hint 2",
+      content: <>Define the state as: {pattern.state}</>,
+    },
+    {
+      label: "Hint 3",
+      content: <>Use this transition: {pattern.transition}</>,
+    },
+    {
+      label: "Hint 4",
+      content: (
+        <div>
+          <div className="mb-1">Anchor the recursion or table with these base cases:</div>
+          <ul className="ml-4 list-disc space-y-0.5">
+            {pattern.baseCases.map((baseCase, index) => (
+              <li key={index}>{baseCase}</li>
+            ))}
+          </ul>
+        </div>
+      ),
+    },
+    {
+      label: "Hint 5",
+      content: (
+        <>
+          Fill or evaluate in <code className="text-[10px] text-primary">{pattern.evaluationOrder.kind}</code> order:
+          {" "}
+          {pattern.evaluationOrder.explanation}
+        </>
+      ),
+    },
+  ];
+
+  return (
+    <details
+      data-testid="dp-pattern-card"
+      className="mt-4 rounded-lg border border-base-300/60 bg-base-100 text-xs"
+    >
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-2.5 font-semibold text-base-content/70">
+        <span>Hints</span>
+        <span className="rounded border border-base-300/60 px-1.5 py-0.5 text-[10px] font-medium text-base-content/40">
+          {hints.length}
+        </span>
+      </summary>
+      <div className="border-t border-base-300/50">
+        {hints.map((hint) => (
+          <details key={hint.label} className="group border-b border-base-300/40 last:border-b-0">
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-2 text-base-content/65">
+              <span className="font-medium">{hint.label}</span>
+              <ChevronRight
+                size={14}
+                aria-hidden="true"
+                className="shrink-0 text-base-content/30 transition-transform group-open:rotate-90"
+              />
+            </summary>
+            <div className="px-3 pb-3 leading-relaxed text-base-content/65">
+              {hint.content}
+            </div>
+          </details>
+        ))}
+      </div>
+    </details>
   );
 }
 
@@ -491,32 +641,68 @@ interface KataEditorProps {
   isSession?: boolean;
   onTestComplete?: (passed: boolean, codeSnapshot: string) => void;
   onAdvance?: () => void;
+  scratchpad?: { onLanguageChange: (language: ScratchpadLanguage) => void };
 }
 
-export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataEditorProps) {
-  const { theme, vimMode, toggleVimMode, shortcuts, fontSize, fontFamily, tabSize, hideDescriptionInSession, setSetting, editorAutocomplete, lineNumbersMode, wordWrap, autoClosingBrackets, fontLigatures, highlightOccurrences } = useSettingsStore();
+type EditorPanel = "description" | "solution" | "notes" | "viz" | "diff";
+type ReplLayout = "horizontal" | "vertical";
+type MaximizedPane = "repl" | "results" | "terminal" | null;
+type OutputTab = "testcase" | "results";
+type BottomPanelTab = "repl" | "testcase" | "results" | "agent";
+
+const PYTHON_TEST_MARKER_OWNER = "kata-python-test-runner";
+const AGENT_CONTEXT_SAVE_KEY = "current";
+
+export function KataEditor({ kata, isSession, onTestComplete, onAdvance, scratchpad }: KataEditorProps) {
+  const isScratchpad = Boolean(scratchpad);
+  const { theme, vimMode, toggleVimMode, shortcuts, fontSize, fontFamily, tabSize, hideDescriptionInSession, setSetting, editorAutocomplete, lineNumbersMode, wordWrap, autoClosingBrackets, fontLigatures, highlightOccurrences, bracketPairColorization, agentProvider, agentSystemPrompt } = useSettingsStore();
+  const editorLayout = useSettingsStore((s) => s.editorLayout);
   const sessionMaxTestRuns = useSessionStore((s) => s.activeSession?.maxTestRuns ?? null);
   // Attempt limits only apply inside a practice session, never in the standalone editor
   const maxTestRuns = isSession ? sessionMaxTestRuns : null;
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
-  const vimModeRef = useRef<VimAdapterInstance | null>(null);
+  const monacoRef = useRef<Parameters<OnMount>[1] | null>(null);
+  const errorDecorationsRef = useRef<editor.IEditorDecorationsCollection | null>(null);
+  const vimModeRef = useRef<VimModeState<editor.IStandaloneCodeEditor, VimAdapterInstance> | null>(null);
   const statusBarRef = useRef<HTMLDivElement | null>(null);
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
-  const [vizSpeed, setVizSpeed] = useState<"900" | "500" | "200">("500");
+  const editorSplitRef = useRef<HTMLDivElement | null>(null);
+  const agentTerminalRef = useRef<AgentTerminalPanelHandle | null>(null);
+  const replRef = useRef<ReplPanelHandle | null>(null);
+  const [execution, setExecution] = useState<{ code: string; result: ReplEvalResult } | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [vizSpeed, setVizSpeed] = useState<VizSpeed>(editorLayout.vizSpeed);
   const [results, setResults] = useState<TestResult[] | null>(null);
   const [ranAt, setRanAt] = useState<string>("");
   const [running, setRunning] = useState(false);
+  const [outputTab, setOutputTab] = useState<OutputTab>(editorLayout.outputTab);
+  const [activeBottomTab, setActiveBottomTab] = useState<BottomPanelTab>(isScratchpad ? "repl" : editorLayout.outputTab);
+  const [bottomPanelVisible, setBottomPanelVisible] = useState(editorLayout.outputPaneVisible);
+  const [activeTestcaseIndex, setActiveTestcaseIndex] = useState(editorLayout.activeTestcaseIndex);
   const [runCount, setRunCount] = useState(0);
   const [kataPassed, setKataPassed] = useState(false);
-  const [showPanel, setShowPanel] = useState<"description" | "solution" | "notes" | "viz" | "diff" | null>(
-    isSession && hideDescriptionInSession ? null : kata.description ? "description" : null
+  const initialPanel: EditorPanel | null = isSession && hideDescriptionInSession ? null : kata.description ? "description" : null;
+  const [showPanel, setShowPanel] = useState<EditorPanel | null>(
+    isScratchpad || (isSession && hideDescriptionInSession) ? null : editorLayout.problemPanelVisible ? editorLayout.activePanel : null,
   );
-  const [editorReady, setEditorReady] = useState(false);
-  const [panelWidth, setPanelWidth] = useState(380);
+  const lastPanelRef = useRef<EditorPanel>(showPanel ?? initialPanel ?? "description");
+  const [panelWidth, setPanelWidth] = useState(editorLayout.problemPanelWidth);
   const dragging = useRef(false);
+  const [outputPaneHeight, setOutputPaneHeight] = useState(editorLayout.outputPaneHeight);
+  const [outputPaneWidth, setOutputPaneWidth] = useState(editorLayout.outputPaneWidth);
+  const [maximizedPane, setMaximizedPane] = useState<MaximizedPane>(isScratchpad ? null : editorLayout.maximizedPane);
+  const outputDragging = useRef(false);
   const [saved, setSaved] = useState(true);
   const [showConfig, setShowConfig] = useState(false);
-  const [showRepl, setShowRepl] = useState(false);
+  const [showRepl, setShowRepl] = useState(editorLayout.replVisible);
+  const [replLayout, setReplLayout] = useState<ReplLayout>(editorLayout.replLayout);
+  const [replFocusNonce, setReplFocusNonce] = useState(0);
+  const [showAgentTerminal, setShowAgentTerminal] = useState(false);
+  const [agentTerminalMinimized, setAgentTerminalMinimized] = useState(false);
+  const [agentTerminalKind, setAgentTerminalKind] = useState<AgentTerminalKind>(agentProvider);
+  const [agentTerminalLaunchNonce, setAgentTerminalLaunchNonce] = useState(0);
+  const [mountedEditor, setMountedEditor] = useState<editor.IStandaloneCodeEditor | null>(null);
+  const [activeSolutionVariant, setActiveSolutionVariant] = useState(editorLayout.activeSolutionVariant);
   const [monacoUp, setMonacoUp] = useState(false);
   useEffect(() => {
     void monacoReady.then(() => setMonacoUp(true));
@@ -526,21 +712,39 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
   const [codeLoaded, setCodeLoaded] = useState(false);
   const [notes, setNotes] = useState("");
   const [notesSaved, setNotesSaved] = useState(true);
+  const registerCommand = useCommandPaletteStore((s) => s.registerCommand);
 
-  const autosave = useRef(
+  const saveCode = useCallback((id: number, code: string) => isScratchpad
+    ? saveScratchpad(kata.language, code)
+    : saveUserCode(id, code), [isScratchpad, kata.language]);
+
+  const autosave = useMemo(() =>
     createAutosave<number>({
       delayMs: 1500,
       save: (id, value) => {
-        saveUserCode(id, value).then(() => setSaved(true));
+        saveCode(id, value).then(() => setSaved(true)).catch((error) => {
+          toast.error(`Could not save your code. ${String(error)}`);
+        });
       },
     }),
-  ).current;
+  [saveCode]);
 
   const notesAutosave = useRef(
     createAutosave<number>({
       delayMs: 1000,
       save: (id, value) => {
         saveKataNotes(id, value).then(() => setNotesSaved(true));
+      },
+    }),
+  ).current;
+
+  const agentContextAutosave = useRef(
+    createAutosave<string>({
+      delayMs: 400,
+      save: (_id, value) => {
+        writeAgentContext(JSON.parse(value) as AgentEditorContext).catch((error) => {
+          console.warn("[agent-bridge] Failed to export editor context", error);
+        });
       },
     }),
   ).current;
@@ -566,55 +770,332 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
     wordWrap,
     fontLigatures,
     highlightOccurrences,
+    bracketPairColorization,
   });
 
   useEffect(() => {
-    prewarmRunner(kata.language);
-  }, [kata.id, kata.language]);
+    if (!isScratchpad) prewarmRunner(kata.language);
+  }, [isScratchpad, kata.id, kata.language]);
+
+  useEffect(() => {
+    if (isScratchpad) return;
+    const current = useSettingsStore.getState().editorLayout;
+    const hiddenBySessionSetting = isSession && hideDescriptionInSession;
+    const next: EditorLayoutSettings = {
+      ...current,
+      problemPanelVisible: hiddenBySessionSetting ? current.problemPanelVisible : showPanel !== null,
+      activePanel: hiddenBySessionSetting && showPanel === null ? current.activePanel : showPanel ?? lastPanelRef.current,
+      replVisible: showRepl,
+      replLayout,
+      outputPaneVisible: bottomPanelVisible,
+      outputTab,
+      activeTestcaseIndex,
+      activeSolutionVariant,
+      vizSpeed,
+      maximizedPane: maximizedPane === "terminal" ? null : maximizedPane,
+    };
+    void setSetting("editorLayout", next);
+  }, [
+    activeSolutionVariant,
+    activeTestcaseIndex,
+    bottomPanelVisible,
+    hideDescriptionInSession,
+    isSession,
+    isScratchpad,
+    maximizedPane,
+    outputTab,
+    replLayout,
+    setSetting,
+    showPanel,
+    showRepl,
+    vizSpeed,
+  ]);
+
+  const saveEditorLayout = useCallback((patch: Partial<EditorLayoutSettings>) => {
+    void setSetting("editorLayout", {
+      ...useSettingsStore.getState().editorLayout,
+      ...patch,
+    });
+  }, [setSetting]);
 
   // Load saved user code and notes on mount; clean up autosave timers on unmount
   useEffect(() => {
+    let disposed = false;
+    setLoadError(null);
     setCodeLoaded(false);
     setRunCount(0);
     setKataPassed(false);
-    loadUserCode(kata.id).then((code) => {
+    const loadCode = isScratchpad ? loadScratchpad(kata.language) : loadUserCode(kata.id);
+    loadCode.then((code) => {
+      if (disposed) return;
       setSavedCode(code);
       setCodeLoaded(true);
       setSaved(true);
+    }).catch((error) => {
+      if (!disposed) setLoadError(String(error));
     });
-    loadKataNotes(kata.id).then((text) => {
+    if (!isScratchpad) void loadKataNotes(kata.id).then((text) => {
+      if (disposed) return;
       setNotes(text);
       setNotesSaved(true);
     });
     return () => {
+      disposed = true;
       // Flush, do not drop: this runs when the kata changes and on unmount, and
       // the pending save belongs to the OUTGOING kata. createAutosave captured
       // its id at schedule time, so it cannot be written under the new kata.
       autosave.flush();
       notesAutosave.flush();
+      agentContextAutosave.flush();
     };
-  }, [kata.id, autosave, notesAutosave]);
+  }, [isScratchpad, kata.id, kata.language, autosave, notesAutosave, agentContextAutosave]);
 
   const vizFolder = VIZ_MAP[kata.name as VizKataName] ?? null;
+  const leetcodeNumber = kata.leetcodeNumber ?? leetcodeNumberFor(kata);
+  const leetcodeUrl = leetcodeUrlFor(kata);
+  const problemTitle = leetcodeNumber != null ? `#${leetcodeNumber} ${kata.name}` : kata.name;
+  const normalizedDifficulty = kata.difficulty
+    ? kata.difficulty.charAt(0).toUpperCase() + kata.difficulty.slice(1)
+    : null;
+  const solutionVariants = kata.solutionVariants?.length
+    ? kata.solutionVariants
+    : kata.solution
+      ? [{ label: "Standard", code: kata.solution }]
+      : [];
+  const visibleTestCases = useMemo(() => visibleTestCasesFor(kata), [kata]);
+  const hasVisibleTestCases = visibleTestCases.length > 0;
+  const replSupported = kata.language !== "java";
+  const activeSolution = solutionVariants[Math.min(activeSolutionVariant, Math.max(solutionVariants.length - 1, 0))];
+  const activeSolutionNotes = activeSolution ? solutionNotesFor(activeSolution) : null;
+  const fallbackPanel: EditorPanel | null = isScratchpad ? null : kata.description
+    ? "description"
+    : solutionVariants.length > 0 && !isSession
+      ? "solution"
+      : !isSession
+        ? "notes"
+        : null;
+  const hasReplPane = replSupported;
+  const hasAgentTerminalPane = showAgentTerminal && !agentTerminalMinimized;
+  const hasAgentTerminalSession = showAgentTerminal;
+  const hasTestcasePane = hasVisibleTestCases;
+  const hasTestResultPane = !isScratchpad;
+  const hasResultsPane = hasTestcasePane || hasTestResultPane;
+  const hasAgentTab = true;
+  const hasOutputPane = hasReplPane || hasResultsPane || hasAgentTerminalSession || hasAgentTab;
+  const bottomPanelTabs = [
+    hasReplPane ? "repl" : null,
+    hasTestcasePane ? "testcase" : null,
+    hasTestResultPane ? "results" : null,
+    hasAgentTab ? "agent" : null,
+  ].filter(Boolean) as BottomPanelTab[];
+  const effectiveBottomTab = bottomPanelTabs.includes(activeBottomTab)
+    ? activeBottomTab
+    : bottomPanelTabs[0] ?? "testcase";
+  const hasVisibleBottomPanel = hasOutputPane && bottomPanelVisible && bottomPanelTabs.length > 0;
+  const workAreaHidden =
+    hasVisibleBottomPanel &&
+    ((maximizedPane === "repl" && hasReplPane && effectiveBottomTab === "repl") ||
+      (maximizedPane === "terminal" && hasAgentTerminalPane && effectiveBottomTab === "agent"));
+  const editorHidden =
+    (hasVisibleBottomPanel && workAreaHidden) ||
+    (hasVisibleBottomPanel && maximizedPane === "results" && hasResultsPane && (effectiveBottomTab === "testcase" || effectiveBottomTab === "results"));
+  const buildCurrentAgentContext = useCallback(() => {
+    const editorInstance = editorRef.current;
+    const model = editorInstance?.getModel();
+    const selection = editorInstance?.getSelection() ?? null;
+    const cursor = editorInstance?.getPosition() ?? null;
+    const code = editorInstance?.getValue() ?? savedCode ?? kata.code;
+    const selectedCode = model && selection ? model.getValueInRange(selection) : "";
 
-  const handleEditorMount: OnMount = (editorInstance) => {
+    const context = buildAgentEditorContext({
+      kata,
+      code,
+      selectedCode,
+      selection: selection
+        ? {
+            startLineNumber: selection.startLineNumber,
+            startColumn: selection.startColumn,
+            endLineNumber: selection.endLineNumber,
+            endColumn: selection.endColumn,
+          }
+        : null,
+      cursor: cursor
+        ? {
+            lineNumber: cursor.lineNumber,
+            column: cursor.column,
+          }
+        : null,
+      isSession: Boolean(isSession),
+      leetcodeNumber,
+      leetcodeUrl,
+      visibleTestCases: visibleTestCases.map((testCase) => ({
+        name: testCase.testName,
+        inputs: Object.fromEntries(testCase.inputs.map((input) => [input.name, input.value])),
+        expected: testCase.expected,
+      })),
+      notes,
+      ranAt,
+      results,
+      hasReferenceSolution: solutionVariants.length > 0,
+      activeVariantLabel: activeSolution?.label ?? null,
+    });
+    if (isScratchpad) {
+      context.workspace = "scratchpad";
+      context.latestRun.execution = execution;
+    }
+    return context;
+  }, [
+    activeSolution?.label,
+    isSession,
+    isScratchpad,
+    execution,
+    kata,
+    leetcodeNumber,
+    leetcodeUrl,
+    notes,
+    ranAt,
+    results,
+    savedCode,
+    solutionVariants.length,
+    visibleTestCases,
+  ]);
+
+  const scheduleAgentContextExport = useCallback(() => {
+    agentContextAutosave.schedule(AGENT_CONTEXT_SAVE_KEY, () => JSON.stringify(buildCurrentAgentContext()));
+  }, [agentContextAutosave, buildCurrentAgentContext]);
+
+  const exportAgentContextNow = useCallback(async () => {
+    agentContextAutosave.cancel();
+    const path = await writeAgentContext(buildCurrentAgentContext());
+    toast.success("Agent context exported", 1600);
+    return path;
+  }, [agentContextAutosave, buildCurrentAgentContext]);
+
+  const buildAgentStartupPrompt = useCallback(async () => {
+    agentContextAutosave.cancel();
+    const context = buildCurrentAgentContext();
+    try {
+      const [skillPath] = await Promise.all([getAgentSkillPath(), writeAgentContext(context)]);
+      return agentPromptFor(context, skillPath, agentSystemPrompt);
+    } catch (error) {
+      toast.error(`Could not prepare the assistant prompt. ${String(error)}`);
+      return null;
+    }
+  }, [agentContextAutosave, agentSystemPrompt, buildCurrentAgentContext]);
+
+  const copyAgentPrompt = useCallback(async () => {
+    const prompt = await buildAgentStartupPrompt();
+    if (prompt === null) return;
+    await writeText(prompt);
+    toast.success("Agent prompt copied", 1800);
+  }, [buildAgentStartupPrompt]);
+
+  const sendAgentPromptToTerminal = useCallback(async () => {
+    if (!showAgentTerminal || agentTerminalMinimized) {
+      toast.error("Open the agent first", 1800);
+      return;
+    }
+    const prompt = await buildAgentStartupPrompt();
+    if (prompt === null) return;
+    const pasted = await agentTerminalRef.current?.pasteText(prompt);
+    if (pasted) {
+      toast.success("Agent prompt pasted", 1800);
+    } else {
+      toast.error("Agent is still starting", 1800);
+    }
+  }, [agentTerminalMinimized, buildAgentStartupPrompt, showAgentTerminal]);
+
+  useEffect(() => {
+    if (isScratchpad) return;
+    const persistedLayout = useSettingsStore.getState().editorLayout;
+    setActiveSolutionVariant(Math.min(persistedLayout.activeSolutionVariant, Math.max(solutionVariants.length - 1, 0)));
+    setActiveTestcaseIndex(Math.min(persistedLayout.activeTestcaseIndex, Math.max(visibleTestCases.length - 1, 0)));
+    setOutputTab(persistedLayout.outputTab);
+    setVizSpeed(persistedLayout.vizSpeed);
+    setMaximizedPane(persistedLayout.maximizedPane);
+  }, [isScratchpad, kata.id, solutionVariants.length, visibleTestCases.length]);
+
+  useEffect(() => {
+    setMaximizedPane((pane) => {
+      if (pane === "repl" && !hasReplPane) return null;
+      if (pane === "results" && !hasResultsPane) return null;
+      if (pane === "terminal" && !hasAgentTerminalPane) return null;
+      return pane;
+    });
+  }, [hasAgentTerminalPane, hasOutputPane, hasReplPane, hasResultsPane]);
+
+  useEffect(() => {
+    if (bottomPanelTabs.length === 0 || bottomPanelTabs.includes(activeBottomTab)) return;
+    setActiveBottomTab(bottomPanelTabs[0]);
+  }, [activeBottomTab, bottomPanelTabs]);
+
+  useEffect(() => {
+    if (!showPanel) return;
+    const available =
+      showPanel === "description" ? Boolean(kata.description)
+      : showPanel === "solution" || showPanel === "diff" ? solutionVariants.length > 0 && !isSession
+      : showPanel === "viz" ? Boolean(vizFolder) && !isSession
+      : showPanel === "notes" ? !isSession
+      : false;
+    if (!available) setShowPanel(fallbackPanel);
+  }, [showPanel, kata.description, solutionVariants.length, vizFolder, isSession, fallbackPanel]);
+
+  useEffect(() => {
+    if (showPanel) lastPanelRef.current = showPanel;
+  }, [showPanel]);
+
+  const clearEditorErrorMarkers = useCallback(() => {
+    const monaco = monacoRef.current;
+    const model = editorRef.current?.getModel();
+    if (monaco && model && !model.isDisposed()) {
+      monaco.editor.setModelMarkers(model, PYTHON_TEST_MARKER_OWNER, []);
+    }
+    errorDecorationsRef.current?.clear();
+  }, []);
+
+  const handleEditorMount: OnMount = (editorInstance, monacoInstance) => {
     editorRef.current = editorInstance;
-    setEditorReady(true);
+    monacoRef.current = monacoInstance;
+    errorDecorationsRef.current = editorInstance.createDecorationsCollection();
+    setMountedEditor(editorInstance);
   };
 
-  const { kataStatus, startKataTimer, completeKataTimer } =
+  const { kataStatus, kataElapsed, startKataTimer, completeKataTimer } =
     useTimerStore();
 
   const handleReset = useCallback(async () => {
     if (!editorRef.current) return;
+    const ok = await confirmAction({
+      message: isScratchpad
+        ? `Clear your ${APP_VARIANT.languages.find(({ id }) => id === kata.language)?.label ?? kata.language} scratchpad?`
+        : `Reset code for "${kata.name}"? This restores the starter code and clears your saved edits for this kata.`,
+      title: "Reset Code",
+      kind: "warning",
+      okLabel: "Reset",
+      cancelLabel: "Cancel",
+    });
+    if (!ok) return;
+    autosave.cancel();
     editorRef.current.setValue(kata.code);
-    await deleteUserCode(kata.id);
+    if (isScratchpad) await saveScratchpad(kata.language, "");
+    else await deleteUserCode(kata.id);
     setSaved(true);
-  }, [kata.id, kata.code]);
+  }, [autosave, isScratchpad, kata.id, kata.code, kata.name, kata.language]);
 
   const handleRun = useCallback(async () => {
     if (!editorRef.current || running) return;
+    if (isScratchpad) {
+      setActiveBottomTab("repl");
+      setBottomPanelVisible(true);
+      setMaximizedPane(null);
+      await replRef.current?.runEditor();
+      return;
+    }
     if (kataStatus === "idle") startKataTimer();
+    clearEditorErrorMarkers();
+    setOutputTab("results");
+    setActiveBottomTab("results");
+    setBottomPanelVisible(true);
     setRunning(true);
     try {
       const code = editorRef.current.getValue();
@@ -643,6 +1124,8 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       setResults([{ name: "Runner error", passed: false, error: msg }]);
+      setActiveBottomTab("results");
+      setBottomPanelVisible(true);
       setRanAt(new Date().toLocaleTimeString());
       if (maxTestRuns !== null && !kataPassed) {
         const newCount = runCount + 1;
@@ -655,11 +1138,361 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
     } finally {
       setRunning(false);
     }
-  }, [kata.id, kata.testCode, kata.language, kataStatus, running, startKataTimer, completeKataTimer, onTestComplete, maxTestRuns, runCount, kataPassed, onAdvance]);
+  }, [isScratchpad, kata.id, kata.testCode, kata.language, kataStatus, running, startKataTimer, clearEditorErrorMarkers, completeKataTimer, onTestComplete, maxTestRuns, runCount, kataPassed, onAdvance]);
+
+  const handleReplEvaluation = useCallback((code: string, result: ReplEvalResult) => {
+    setExecution({ code, result });
+    setRanAt(new Date().toLocaleTimeString());
+  }, []);
 
   const handleToggleSolution = useCallback(() => {
     setShowPanel((v) => (v === "solution" ? null : "solution"));
   }, []);
+
+  const handleToggleRepl = useCallback(() => {
+    if (!replSupported) return;
+    if (!showRepl) {
+      setMaximizedPane(null);
+      setActiveBottomTab("repl");
+      setBottomPanelVisible(true);
+      setReplFocusNonce((nonce) => nonce + 1);
+      setShowRepl(true);
+      return;
+    }
+    if (!bottomPanelVisible || activeBottomTab !== "repl") {
+      setActiveBottomTab("repl");
+      setBottomPanelVisible(true);
+      setReplFocusNonce((nonce) => nonce + 1);
+      return;
+    }
+    setBottomPanelVisible(false);
+    if (maximizedPane === "repl") setMaximizedPane(null);
+  }, [activeBottomTab, bottomPanelVisible, maximizedPane, replSupported, showRepl]);
+
+  const handleOpenRepl = useCallback(() => {
+    if (!replSupported) return;
+    setMaximizedPane(null);
+    setActiveBottomTab("repl");
+    setBottomPanelVisible(true);
+    setShowRepl(true);
+    setReplFocusNonce((nonce) => nonce + 1);
+  }, [replSupported]);
+
+  const openAgentTerminal = useCallback((kind: AgentTerminalKind = agentProvider) => {
+    setMaximizedPane(null);
+    setActiveBottomTab("agent");
+    setBottomPanelVisible(true);
+    setAgentTerminalMinimized(false);
+    if (!showAgentTerminal || agentTerminalKind !== kind) {
+      setAgentTerminalKind(kind);
+      setAgentTerminalLaunchNonce(Date.now());
+    }
+    setShowAgentTerminal(true);
+  }, [agentProvider, agentTerminalKind, showAgentTerminal]);
+
+  const handleExitAssistant = useCallback(() => {
+    setShowAgentTerminal(false);
+    setAgentTerminalMinimized(false);
+    setMaximizedPane((pane) => pane === "terminal" ? null : pane);
+  }, []);
+
+  const handleToggleAgentTerminal = useCallback(() => {
+    if (showAgentTerminal) {
+      if (agentTerminalMinimized) {
+        setActiveBottomTab("agent");
+        setBottomPanelVisible(true);
+        setAgentTerminalMinimized(false);
+      } else if (!bottomPanelVisible || activeBottomTab !== "agent") {
+        setActiveBottomTab("agent");
+        setBottomPanelVisible(true);
+      } else {
+        setBottomPanelVisible(false);
+      }
+      if (maximizedPane === "terminal") {
+        setMaximizedPane(null);
+      }
+      return;
+    }
+    openAgentTerminal(agentProvider);
+  }, [activeBottomTab, agentProvider, agentTerminalMinimized, bottomPanelVisible, maximizedPane, openAgentTerminal, showAgentTerminal]);
+
+  const copySolutionToEditor = useCallback(async () => {
+    if (!editorRef.current || !activeSolution) return;
+    if (!saved) {
+      const ok = await confirmAction({
+        message: `Replace your current code for "${kata.name}" with ${activeSolution.label}? Your unsaved edits will be overwritten.`,
+        title: "Replace Editor Code",
+        kind: "warning",
+        okLabel: "Replace",
+        cancelLabel: "Cancel",
+      });
+      if (!ok) return;
+    }
+    editorRef.current.setValue(activeSolution.code);
+    setSaved(false);
+    autosave.schedule(kata.id, () => activeSolution.code);
+    toast.success(`Replaced editor with ${activeSolution.label}`, 1800);
+  }, [activeSolution, autosave, kata.id, kata.name, saved]);
+
+  const insertCodeTemplate = useCallback((template: CodeTemplate) => {
+    const editorInstance = editorRef.current;
+    if (!editorInstance) return;
+
+    editorInstance.focus();
+    editorInstance.pushUndoStop();
+    editorInstance.trigger("command-palette-template", "type", { text: template.code });
+    editorInstance.pushUndoStop();
+    setSaved(false);
+    autosave.schedule(kata.id, () => editorInstance.getValue());
+    toast.success(`Inserted ${template.title} template`, 1500);
+  }, [autosave, kata.id]);
+
+  const handleToggleProblemPanel = useCallback(() => {
+    setShowPanel((panel) => panel === null ? lastPanelRef.current ?? fallbackPanel : null);
+  }, [fallbackPanel]);
+
+  const handleToggleOutputPane = useCallback(() => {
+    if (hasResultsPane) {
+      if (!bottomPanelVisible || (activeBottomTab !== "testcase" && activeBottomTab !== "results")) {
+        setActiveBottomTab(outputTab === "testcase" && hasTestcasePane ? "testcase" : "results");
+        setBottomPanelVisible(true);
+        return;
+      }
+      setBottomPanelVisible(false);
+      if (maximizedPane === "results") setMaximizedPane(null);
+      return;
+    }
+
+    setMaximizedPane(null);
+    if (results || running) {
+      setOutputTab("results");
+      setActiveBottomTab("results");
+      setBottomPanelVisible(true);
+      return;
+    }
+    setOutputTab("testcase");
+    setActiveBottomTab("testcase");
+    setBottomPanelVisible(true);
+  }, [activeBottomTab, bottomPanelVisible, hasResultsPane, hasTestcasePane, outputTab, results, running, maximizedPane]);
+
+  useEffect(() => {
+    const testRunDisabled = running || (maxTestRuns !== null && runCount >= maxTestRuns && !kataPassed);
+    const codeTemplates = codeTemplatesForLanguage(kata.language);
+    const commands = [
+      {
+        id: "editor:run-tests",
+        title: isScratchpad ? "Run Code" : "Run Tests",
+        section: "Editor",
+        shortcut: shortcuts.runTests,
+        keywords: ["test", "execute"],
+        disabled: testRunDisabled,
+        run: () => { void handleRun(); },
+      },
+      {
+        id: "editor:toggle-problem-panel",
+        title: showPanel ? "Hide Problem Panel" : "Show Problem Panel",
+        section: "Editor",
+        keywords: ["description", "left panel"],
+        disabled: isScratchpad,
+        run: handleToggleProblemPanel,
+      },
+      {
+        id: "editor:toggle-solution",
+        title: showPanel === "solution" ? "Hide Solutions" : "Show Solutions",
+        section: "Editor",
+        shortcut: shortcuts.toggleSolution,
+        keywords: ["answer", "reference"],
+        disabled: solutionVariants.length === 0 || isSession,
+        run: handleToggleSolution,
+      },
+      {
+        id: "editor:toggle-repl",
+        title: showRepl ? "Hide REPL" : "Open REPL",
+        section: "Editor",
+        shortcut: shortcuts.toggleRepl,
+        keywords: ["terminal", "console"],
+        disabled: !replSupported,
+        run: handleToggleRepl,
+      },
+      {
+        id: "editor:open-agent-terminal",
+        title: showAgentTerminal
+          ? agentTerminalMinimized
+            ? "Show Agent"
+            : "Minimize Agent"
+          : `Open ${agentProvider === "claude" ? "Claude" : "Codex"}`,
+        subtitle: "Launch the configured coding agent",
+        section: "Editor",
+        keywords: ["terminal", "agent", "claude", "codex"],
+        run: handleToggleAgentTerminal,
+      },
+      {
+        id: "editor:exit-assistant",
+        title: "Exit Assistant",
+        section: "Editor",
+        keywords: ["close", "stop", "quit", "agent"],
+        disabled: !showAgentTerminal,
+        run: handleExitAssistant,
+      },
+      {
+        id: "editor:open-claude-terminal",
+        title: "Open Claude",
+        subtitle: "Launch the Claude agent terminal",
+        section: "Editor",
+        keywords: ["terminal", "agent", "claude"],
+        run: () => openAgentTerminal("claude"),
+      },
+      {
+        id: "editor:open-codex-terminal",
+        title: "Open Codex",
+        subtitle: "Launch the Codex agent terminal",
+        section: "Editor",
+        keywords: ["terminal", "agent", "codex"],
+        run: () => openAgentTerminal("codex"),
+      },
+      {
+        id: "editor:copy-solution",
+        title: "Replace Editor With Solution",
+        subtitle: "Overwrites the current editor code with the selected reference solution",
+        section: "Editor",
+        keywords: ["copy", "replace", "reference", "solution"],
+        disabled: !activeSolution || isSession,
+        run: () => { void copySolutionToEditor(); },
+      },
+      {
+        id: "editor:export-agent-context",
+        title: "Export Agent Context",
+        subtitle: "Refresh current code, tests, and latest results for agents",
+        section: "Editor",
+        keywords: ["agent", "helper", "context", "debug"],
+        run: () => { void exportAgentContextNow(); },
+      },
+      {
+        id: "editor:ask-agent",
+        title: `Ask ${agentProvider === "claude" ? "Claude" : "Codex"}`,
+        subtitle: "Copy a tutoring prompt from the current problem",
+        section: "Editor",
+        keywords: ["agent", "help", "hint", "debug", "prompt"],
+        run: () => { void copyAgentPrompt(); },
+      },
+      {
+        id: "editor:send-agent-prompt-to-terminal",
+        title: "Send Agent Prompt",
+        subtitle: "Paste the current tutoring prompt into the open agent",
+        section: "Editor",
+        keywords: ["agent", "terminal", "prompt", "paste", "claude", "codex"],
+        disabled: !showAgentTerminal || agentTerminalMinimized,
+        run: () => { void sendAgentPromptToTerminal(); },
+      },
+      {
+        id: "editor:reset-code",
+        title: "Reset Code",
+        section: "Editor",
+        keywords: ["restore", "starter"],
+        run: () => { void handleReset(); },
+      },
+      ...codeTemplates.map((template) => ({
+        id: `editor:code-template:${kata.language}:${template.id}`,
+        title: `Insert Template: ${template.title}`,
+        subtitle: template.description,
+        section: "Templates",
+        keywords: ["cs", "cheatsheet", "snippet", "template", kata.language, ...template.keywords],
+        run: () => insertCodeTemplate(template),
+      })),
+      {
+        id: "editor:previous-kata",
+        title: "Previous Kata",
+        section: "Editor",
+        shortcut: shortcuts.prevKata,
+        disabled: isScratchpad || !navigation.hasPrev,
+        run: () => navigation.prev(),
+      },
+      {
+        id: "editor:next-kata",
+        title: "Next Kata",
+        section: "Editor",
+        shortcut: shortcuts.nextKata,
+        disabled: isScratchpad || !navigation.hasNext,
+        run: () => navigation.next(),
+      },
+    ];
+
+    if (leetcodeUrl) {
+      commands.push({
+        id: "editor:open-leetcode",
+        title: "Open on LeetCode",
+        section: "Editor",
+        keywords: ["leetcode", "external"],
+        run: () => { void open(leetcodeUrl); },
+      });
+    }
+
+    const unregister = commands.map((command) => registerCommand(command));
+    return () => unregister.forEach((fn) => fn());
+  }, [
+    activeSolution,
+    agentTerminalMinimized,
+    agentProvider,
+    copyAgentPrompt,
+    copySolutionToEditor,
+    exportAgentContextNow,
+    handleExitAssistant,
+    handleReset,
+    handleRun,
+    handleToggleAgentTerminal,
+    handleToggleProblemPanel,
+    handleToggleRepl,
+    handleToggleSolution,
+    insertCodeTemplate,
+    isSession,
+    isScratchpad,
+    kata.language,
+    kataPassed,
+    leetcodeUrl,
+    maxTestRuns,
+    navigation,
+    openAgentTerminal,
+    registerCommand,
+    replSupported,
+    runCount,
+    sendAgentPromptToTerminal,
+    running,
+    shortcuts.nextKata,
+    shortcuts.prevKata,
+    shortcuts.runTests,
+    shortcuts.toggleRepl,
+    shortcuts.toggleSolution,
+    showPanel,
+    showAgentTerminal,
+    showRepl,
+    solutionVariants.length,
+  ]);
+
+  const handleEditorContextMenu = useCallback((event: React.MouseEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+    void invoke("show_editor_context_menu", {
+      hasSolution: Boolean(activeSolution) && !isSession,
+      hasLeetcode: Boolean(leetcodeUrl),
+      replSupported,
+      agentOpen: showAgentTerminal,
+      agentProvider,
+      scratchpad: isScratchpad,
+    });
+  }, [activeSolution, agentProvider, isSession, isScratchpad, leetcodeUrl, replSupported, showAgentTerminal]);
+
+  useEffect(() => {
+    if (!codeLoaded) return;
+    scheduleAgentContextExport();
+  }, [codeLoaded, scheduleAgentContextExport]);
+
+  useEffect(() => {
+    if (!mountedEditor) return;
+    const disposable = mountedEditor.onDidChangeCursorSelection(() => {
+      scheduleAgentContextExport();
+    });
+    return () => disposable.dispose();
+  }, [mountedEditor, scheduleAgentContextExport]);
 
   // Memoized: useKeyboardShortcuts lists `handlers` in a useEffect dependency
   // array, and KataEditor re-renders on every keystroke. A fresh object literal
@@ -667,38 +1500,105 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
   const shortcutHandlers = useMemo(
     () => ({
       runTests: handleRun,
-      toggleSolution: handleToggleSolution,
-      nextKata: () => (navigation.hasNext ? navigation.next() : nudge()),
-      prevKata: () => (navigation.hasPrev ? navigation.prev() : nudge()),
+      toggleSolution: () => { if (!isScratchpad) handleToggleSolution(); },
+      toggleRepl: handleOpenRepl,
+      nextKata: () => { if (!isScratchpad) navigation.hasNext ? navigation.next() : nudge(); },
+      prevKata: () => { if (!isScratchpad) navigation.hasPrev ? navigation.prev() : nudge(); },
     }),
-    [handleRun, handleToggleSolution, navigation.hasNext, navigation.hasPrev, navigation.next, navigation.prev, nudge],
+    [isScratchpad, handleRun, handleToggleSolution, handleOpenRepl, navigation.hasNext, navigation.hasPrev, navigation.next, navigation.prev, nudge],
   );
 
   useKeyboardShortcuts(shortcutHandlers);
 
-  // When viz panel opens the Monaco editor unmounts. Reset editorReady so the
-  // transition back triggers the vim mode effect with a real state change.
+  // When viz panel opens the Monaco editor unmounts; drop any editor-specific
+  // Vim adapter so returning to code creates a fresh binding.
   useEffect(() => {
     if (showPanel === "viz") {
-      setEditorReady(false);
-      vimModeRef.current?.dispose();
-      vimModeRef.current = null;
+      editorRef.current = null;
+      setMountedEditor(null);
+      vimModeRef.current = disposeVimMode(vimModeRef.current);
     }
   }, [showPanel]);
 
   // Vim mode lifecycle
   useEffect(() => {
-    if (!editorReady || !editorRef.current || !statusBarRef.current) return;
+    vimModeRef.current = syncVimMode({
+      enabled: vimMode,
+      editor: mountedEditor,
+      statusBar: statusBarRef.current,
+      current: vimModeRef.current,
+      init: initVimMode,
+    });
+  }, [vimMode, mountedEditor]);
 
-    if (vimMode) {
-      vimModeRef.current = initVimMode(editorRef.current, statusBarRef.current);
+  useEffect(() => {
+    return () => {
+      clearEditorErrorMarkers();
+      vimModeRef.current = disposeVimMode(vimModeRef.current);
+    };
+  }, [clearEditorErrorMarkers]);
+
+  useEffect(() => {
+    const monaco = monacoRef.current;
+    const editorInstance = mountedEditor;
+    const model = editorInstance?.getModel();
+    if (!monaco || !editorInstance || !model || model.isDisposed()) return;
+
+    const failedUserError = results?.find(
+      (result) => kata.language !== "javascript" && !result.passed && result.errorSource === "user" && result.lineNumber != null,
+    );
+
+    if (!errorDecorationsRef.current) {
+      errorDecorationsRef.current = editorInstance.createDecorationsCollection();
     }
 
+    if (!failedUserError) {
+      monaco.editor.setModelMarkers(model, PYTHON_TEST_MARKER_OWNER, []);
+      errorDecorationsRef.current.clear();
+      return;
+    }
+
+    const lineNumber = Math.max(1, Math.min(model.getLineCount(), failedUserError.lineNumber!));
+    const endColumn = model.getLineMaxColumn(lineNumber);
+    const message = failedUserError.error ?? "Test failure";
+
+    monaco.editor.setModelMarkers(model, PYTHON_TEST_MARKER_OWNER, [
+      {
+        severity: monaco.MarkerSeverity.Error,
+        source: "Code Kata tests",
+        message,
+        startLineNumber: lineNumber,
+        startColumn: 1,
+        endLineNumber: lineNumber,
+        endColumn,
+      },
+    ]);
+
+    errorDecorationsRef.current.set([
+      {
+        range: {
+          startLineNumber: lineNumber,
+          startColumn: 1,
+          endLineNumber: lineNumber,
+          endColumn,
+        },
+        options: {
+          isWholeLine: true,
+          className: "kata-error-line",
+          glyphMarginClassName: "kata-error-glyph",
+          linesDecorationsClassName: "kata-error-line-decoration",
+          hoverMessage: { value: message },
+        },
+      },
+    ]);
+
+    editorInstance.revealLineInCenterIfOutsideViewport(lineNumber);
+
     return () => {
-      vimModeRef.current?.dispose();
-      vimModeRef.current = null;
+      if (!model.isDisposed()) monaco.editor.setModelMarkers(model, PYTHON_TEST_MARKER_OWNER, []);
+      errorDecorationsRef.current?.clear();
     };
-  }, [vimMode, editorReady]);
+  }, [kata.id, kata.language, mountedEditor, results]);
 
   // Gutter drag to resize side panel
   const onGutterMouseDown = useCallback((e: React.MouseEvent) => {
@@ -706,15 +1606,18 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
     dragging.current = true;
     const startX = e.clientX;
     const startWidth = panelWidth;
+    let nextWidth = startWidth;
 
     const onMouseMove = (ev: MouseEvent) => {
       if (!dragging.current) return;
       const delta = ev.clientX - startX;
-      setPanelWidth(Math.max(200, Math.min(800, startWidth + delta)));
+      nextWidth = Math.max(200, Math.min(800, startWidth + delta));
+      setPanelWidth(nextWidth);
     };
 
     const onMouseUp = () => {
       dragging.current = false;
+      saveEditorLayout({ problemPanelWidth: nextWidth });
       document.removeEventListener("mousemove", onMouseMove);
       document.removeEventListener("mouseup", onMouseUp);
       document.body.style.cursor = "";
@@ -725,9 +1628,72 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
     document.body.style.userSelect = "none";
     document.addEventListener("mousemove", onMouseMove);
     document.addEventListener("mouseup", onMouseUp);
-  }, [panelWidth]);
+  }, [panelWidth, saveEditorLayout]);
 
-  const hasTabs = true;
+  const onOutputResizeMouseDown = useCallback((e: React.MouseEvent) => {
+    if (maximizedPane === "results" || maximizedPane === "terminal") return;
+    e.preventDefault();
+    outputDragging.current = true;
+    const startY = e.clientY;
+    const startHeight = outputPaneHeight;
+    let nextHeight = startHeight;
+
+    const onMouseMove = (ev: MouseEvent) => {
+      if (!outputDragging.current) return;
+      const delta = startY - ev.clientY;
+      const maxHeight = Math.max(220, window.innerHeight - 180);
+      nextHeight = Math.max(160, Math.min(maxHeight, startHeight + delta));
+      setOutputPaneHeight(nextHeight);
+    };
+
+    const onMouseUp = () => {
+      outputDragging.current = false;
+      saveEditorLayout({ outputPaneHeight: nextHeight });
+      document.removeEventListener("mousemove", onMouseMove);
+      document.removeEventListener("mouseup", onMouseUp);
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+    };
+
+    document.body.style.cursor = "row-resize";
+    document.body.style.userSelect = "none";
+    document.addEventListener("mousemove", onMouseMove);
+    document.addEventListener("mouseup", onMouseUp);
+  }, [outputPaneHeight, maximizedPane, saveEditorLayout]);
+
+  const onOutputWidthResizeMouseDown = useCallback((e: React.MouseEvent) => {
+    if (maximizedPane === "results" || maximizedPane === "terminal") return;
+    e.preventDefault();
+    outputDragging.current = true;
+    const startX = e.clientX;
+    const startWidth = outputPaneWidth;
+    let nextWidth = startWidth;
+
+    const onMouseMove = (ev: MouseEvent) => {
+      if (!outputDragging.current) return;
+      const delta = startX - ev.clientX;
+      const splitWidth = editorSplitRef.current?.getBoundingClientRect().width ?? window.innerWidth;
+      const maxWidth = Math.max(280, splitWidth - 320);
+      nextWidth = Math.max(280, Math.min(maxWidth, startWidth + delta));
+      setOutputPaneWidth(nextWidth);
+    };
+
+    const onMouseUp = () => {
+      outputDragging.current = false;
+      saveEditorLayout({ outputPaneWidth: nextWidth });
+      document.removeEventListener("mousemove", onMouseMove);
+      document.removeEventListener("mouseup", onMouseUp);
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+    };
+
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+    document.addEventListener("mousemove", onMouseMove);
+    document.addEventListener("mouseup", onMouseUp);
+  }, [outputPaneWidth, maximizedPane, saveEditorLayout]);
+
+  const hasTabs = !isScratchpad;
 
   const sendVizMsg = useCallback((msg: unknown) => {
     iframeRef.current?.contentWindow?.postMessage(msg, "*");
@@ -779,14 +1745,16 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
   }, [theme, sendVizMsg]);
 
   const tabClass = (tab: typeof showPanel) =>
-    `px-3 py-1.5 text-xs font-medium border-b-2 transition-colors ${
+    `px-3.5 py-2 text-sm font-medium border-b-2 transition-colors ${
       showPanel === tab
         ? "border-primary text-primary"
         : "border-transparent text-base-content/40 hover:text-base-content/70"
     }`;
+  const toolbarButtonClass = "btn btn-sm h-7 min-h-7 px-2.5 text-xs";
+  const toolbarIconButtonClass = "btn btn-sm btn-square h-7 min-h-7 w-8";
 
   const renderTabBar = (toggleMode: boolean) => (
-    <div className="flex items-stretch border-b border-base-300/60 shrink-0 bg-base-200 relative">
+    <div className="relative flex min-w-0 flex-wrap items-stretch border-b border-base-300/60 bg-base-200 shrink-0">
       {/* Tabs */}
       {kata.description && (
         <button
@@ -798,7 +1766,7 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
           Problem
         </button>
       )}
-      {kata.solution && !isSession && (
+      {solutionVariants.length > 0 && !isSession && (
         <button
           onClick={() => toggleMode
             ? setShowPanel((v) => v === "solution" ? null : "solution")
@@ -806,10 +1774,10 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
           title={`Toggle solution (${fmtCombo(shortcuts.toggleSolution)})`}
           className={tabClass("solution")}
         >
-          Solution
+          Solutions
         </button>
       )}
-      {!isSession && (
+      {!isSession && !isScratchpad && (
         <button
           onClick={() => toggleMode
             ? setShowPanel((v) => v === "notes" ? null : "notes")
@@ -819,26 +1787,46 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
           Notes{!notesSaved && " •"}
         </button>
       )}
+      {leetcodeUrl && (
+        <button
+          onClick={() => open(leetcodeUrl)}
+          title="Open on LeetCode"
+          className="inline-flex items-center px-3.5 py-2 text-sm font-medium border-b-2 border-transparent text-base-content/40 transition-colors hover:text-base-content/70"
+        >
+          LeetCode
+        </button>
+      )}
       {vizFolder && !isSession && (
         <button
           onClick={() => setShowPanel((v) => v === "viz" ? null : "viz")}
-          className={tabClass("viz")}
+          className={`${tabClass("viz")} inline-flex items-center`}
         >
-          Viz ↗
+          Viz
+        </button>
+      )}
+
+      {fallbackPanel && (
+        <button
+          onClick={() => setShowPanel((panel) => panel ? null : lastPanelRef.current ?? fallbackPanel)}
+          title={showPanel ? "Hide left panel" : "Show left panel"}
+          className={`${toolbarIconButtonClass} btn-ghost self-center ml-1 text-base-content/35 hover:text-base-content/70`}
+          aria-label={showPanel ? "Hide left panel" : "Show left panel"}
+        >
+          {showPanel ? <PanelLeftClose size={16} /> : <PanelLeftOpen size={16} />}
         </button>
       )}
 
       {/* Spacer */}
-      <div className="flex-1" />
+      <div className="min-w-3 flex-1" />
 
       {/* Viz controls (viz tab only) */}
       {showPanel === "viz" && (
-        <div className="flex items-center gap-1 px-2">
+        <div className="ml-auto flex max-w-full flex-wrap items-center justify-end gap-1 px-2 py-1">
           <div className="join">
-            <button onClick={() => sendVizMsg('prev')} title="Previous step" className="btn btn-xs join-item border-base-300/60 bg-base-100 text-base-content/70 hover:bg-base-300/40">← Prev</button>
-            <button onClick={() => sendVizMsg('step')} title="Next step" className="btn btn-xs join-item border-base-300/60 bg-base-100 text-base-content/70 hover:bg-base-300/40">Step →</button>
-            <button onClick={() => sendVizMsg('play')} title="Play through remaining steps automatically" className="btn btn-xs join-item border-primary/50 bg-primary/10 text-primary hover:bg-primary/20">▷ Play</button>
-            <button onClick={() => sendVizMsg('reset')} title="Reset to the first step" className="btn btn-xs join-item border-base-300/60 bg-base-100 text-base-content/70 hover:bg-base-300/40">↺ Reset</button>
+            <button onClick={() => sendVizMsg('prev')} title="Previous step" className={`${toolbarButtonClass} join-item gap-1.5 border-base-300/60 bg-base-100 text-base-content/70 hover:bg-base-300/40`}><ArrowLeft size={16} /><span>Prev</span></button>
+            <button onClick={() => sendVizMsg('step')} title="Next step" className={`${toolbarButtonClass} join-item gap-1.5 border-base-300/60 bg-base-100 text-base-content/70 hover:bg-base-300/40`}><span>Step</span><StepForward size={16} /></button>
+            <button onClick={() => sendVizMsg('play')} title="Play through remaining steps automatically" className={`${toolbarButtonClass} join-item gap-1.5 border-primary/50 bg-primary/10 text-primary hover:bg-primary/20`}><Play size={16} /><span>Play</span></button>
+            <button onClick={() => sendVizMsg('reset')} title="Reset to the first step" className={`${toolbarButtonClass} join-item gap-1.5 border-base-300/60 bg-base-100 text-base-content/70 hover:bg-base-300/40`}><RotateCcw size={16} /><span>Reset</span></button>
           </div>
           <div className="w-px self-stretch bg-base-300/60 mx-1" />
           <div className="flex items-center gap-0.5">
@@ -847,7 +1835,7 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
                 key={s}
                 onClick={() => { setVizSpeed(s); sendVizMsg({ type: 'speed', value: s }); }}
                 title="Playback speed"
-                className={`btn btn-xs px-2 ${vizSpeed === s ? "btn-primary" : "btn-ghost text-base-content/35"}`}
+                className={`${toolbarButtonClass} px-2 ${vizSpeed === s ? "btn-primary" : "btn-ghost text-base-content/35"}`}
               >
                 {["Slow", "Norm", "Fast"][i]}
               </button>
@@ -858,36 +1846,49 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
 
       {/* Editor controls (all other tabs) */}
       {showPanel !== "viz" && (
-      <div className="flex items-center gap-1.5 px-2">
-        <span className={`text-xs ${saved ? "text-success/60" : "text-base-content/30"}`}>
-          {saved ? "•" : "○"}
+      <div className="ml-auto flex max-w-full flex-wrap items-center justify-end gap-2 px-2.5 py-1">
+        <span
+          className={`inline-flex h-7 items-center gap-1.5 rounded-md border px-2 text-[11px] font-semibold ${
+            saved
+              ? "border-success/20 bg-success/10 text-success/80"
+              : "border-warning/25 bg-warning/10 text-warning"
+          }`}
+          title={saved ? "All edits are saved locally" : "Autosave pending"}
+        >
+          <span className={`h-1.5 w-1.5 rounded-full ${saved ? "bg-success" : "bg-warning"}`} />
+          {saved ? "Saved" : "Unsaved"}
         </span>
         <div
           ref={statusBarRef}
           className={`text-xs font-mono text-base-content/40 max-w-[120px] truncate ${vimMode ? "" : "invisible w-0"}`}
         />
-        <button
-          onClick={handleReset}
-          title="Reset to original"
-          className="btn btn-ghost btn-xs text-base-content/35 hover:text-base-content/70 px-1.5"
-        >
-          ↻
-        </button>
-        <button
-          onClick={() => setShowConfig((v) => !v)}
-          title="Editor settings"
-          className={`btn btn-xs px-1.5 ${showConfig ? "btn-primary" : "btn-ghost text-base-content/35 hover:text-base-content/70"}`}
-        >
-          ⚙
-        </button>
+        <div className="h-5 w-px bg-base-300/70" />
+        <div className="join">
+          <button
+            onClick={handleReset}
+            title={isScratchpad ? "Clear scratchpad" : "Reset to original"}
+            className={`${toolbarIconButtonClass} join-item btn-ghost text-base-content/35 hover:text-base-content/70`}
+            aria-label={isScratchpad ? "Clear scratchpad" : "Reset to original"}
+          >
+            <RotateCcw size={16} />
+          </button>
+          <button
+            onClick={() => setShowConfig((v) => !v)}
+            title="Editor settings"
+            className={`${toolbarIconButtonClass} join-item ${showConfig ? "btn-primary" : "btn-ghost text-base-content/35 hover:text-base-content/70"}`}
+            aria-label="Editor settings"
+          >
+            <Settings size={16} />
+          </button>
+        </div>
         {showConfig && (
           <div className="absolute top-full right-0 mt-1 z-50 w-56 rounded-lg border border-base-300/50 bg-base-100 shadow-lg py-2 px-3 flex flex-col gap-2.5">
             <div className="flex items-center justify-between">
               <span className="text-xs text-base-content/45">font size</span>
               <div className="flex items-center gap-1.5">
-                <button onClick={() => setSetting("fontSize", Math.max(10, fontSize - 1))} className="btn btn-ghost btn-xs btn-square">−</button>
+                <button onClick={() => setSetting("fontSize", Math.max(10, fontSize - 1))} className={toolbarIconButtonClass} aria-label="Decrease font size"><Minus size={16} /></button>
                 <span className="text-xs font-mono w-5 text-center tabular-nums">{fontSize}</span>
-                <button onClick={() => setSetting("fontSize", Math.min(28, fontSize + 1))} className="btn btn-ghost btn-xs btn-square">+</button>
+                <button onClick={() => setSetting("fontSize", Math.min(28, fontSize + 1))} className={toolbarIconButtonClass} aria-label="Increase font size"><Plus size={16} /></button>
               </div>
             </div>
             <div className="flex items-center justify-between">
@@ -909,39 +1910,455 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
           </div>
         )}
         {maxTestRuns !== null && (
-          <span className={`text-xs font-mono tabular-nums ${
+          <span
+            className={`inline-flex h-7 items-center rounded-md border border-base-300/60 bg-base-100 px-2 text-[11px] font-semibold tabular-nums ${
             !kataPassed && maxTestRuns - runCount === 1 ? "text-warning" : "text-base-content/35"
-          }`}>
-            {runCount}/{maxTestRuns}
+            }`}
+            title={`${runCount} of ${maxTestRuns} allowed test attempts used`}
+          >
+            Attempts {runCount}/{maxTestRuns}
           </span>
         )}
-        <button
-          onClick={() => setShowRepl((v) => !v)}
-          title="Toggle REPL"
-          className={`btn btn-xs ${showRepl ? "btn-info" : "btn-ghost text-base-content/40"}`}
-        >
-          &gt;_
-        </button>
-        <button
-          onClick={toggleVimMode}
-          title="Toggle vim keybindings"
-          className={`btn btn-xs ${vimMode ? "btn-success" : "btn-ghost text-base-content/40"}`}
-        >
-          VIM
-        </button>
+        <div className="h-5 w-px bg-base-300/70" />
+        <div className="join">
+          {replSupported && (
+            <button
+              onClick={handleToggleRepl}
+              title={`Toggle REPL. Shortcut opens and focuses it (${fmtCombo(shortcuts.toggleRepl)})`}
+              className={`${toolbarIconButtonClass} join-item ${bottomPanelVisible && activeBottomTab === "repl" ? "btn-info" : "btn-ghost text-base-content/40"}`}
+              aria-label="Toggle REPL"
+            >
+              <Terminal size={16} />
+            </button>
+          )}
+          <button
+            onClick={handleToggleAgentTerminal}
+            title={
+              showAgentTerminal
+                ? agentTerminalMinimized
+                  ? "Show agent"
+                  : bottomPanelVisible && activeBottomTab === "agent"
+                    ? "Hide agent panel"
+                    : "Show agent"
+                : `Open ${agentProvider === "claude" ? "Claude" : "Codex"}`
+            }
+            className={`${toolbarIconButtonClass} join-item ${bottomPanelVisible && activeBottomTab === "agent" ? "btn-info" : "btn-ghost text-base-content/40"}`}
+            aria-label={
+              showAgentTerminal
+                ? agentTerminalMinimized
+                  ? "Show agent"
+                  : bottomPanelVisible && activeBottomTab === "agent"
+                    ? "Hide agent panel"
+                    : "Show agent"
+                : `Open ${agentProvider === "claude" ? "Claude" : "Codex"}`
+            }
+          >
+            <BotMessageSquare size={16} />
+          </button>
+        </div>
+        {hasAgentTerminalPane && (
+          <button
+            onClick={() => { void sendAgentPromptToTerminal(); }}
+            title="Paste agent prompt"
+            className={`${toolbarButtonClass} btn-ghost gap-1.5 text-base-content/50 hover:text-base-content/80`}
+          >
+            <span>Send</span>
+            <ArrowRight size={16} />
+          </button>
+        )}
+        {(hasVisibleTestCases || results || running) && (
+          <>
+            <div className="h-5 w-px bg-base-300/70" />
+            <button
+              onClick={handleToggleOutputPane}
+              title={
+                bottomPanelVisible && (activeBottomTab === "testcase" || activeBottomTab === "results")
+                  ? "Hide panel"
+                  : results || running
+                    ? "Show test result"
+                    : "Show testcase"
+              }
+              className={`${toolbarIconButtonClass} ${
+                bottomPanelVisible && (activeBottomTab === "testcase" || activeBottomTab === "results") ? "btn-info" : "btn-ghost text-base-content/40"
+              }`}
+              aria-label={
+                bottomPanelVisible && (activeBottomTab === "testcase" || activeBottomTab === "results")
+                  ? "Hide panel"
+                  : results || running
+                    ? "Show test result"
+                    : "Show testcase"
+              }
+            >
+              <ListChecks size={16} />
+            </button>
+          </>
+        )}
         <button
           onClick={handleRun}
           disabled={running || (maxTestRuns !== null && runCount >= maxTestRuns && !kataPassed)}
-          title={`Run tests (${fmtCombo(shortcuts.runTests)})`}
-          className="btn btn-xs btn-primary"
+          title={`Run ${isScratchpad ? "code" : "tests"} (${fmtCombo(shortcuts.runTests)})`}
+          className={`${toolbarButtonClass} btn-primary min-w-28 justify-center gap-1.5`}
         >
-          {running ? "..." : "▷ run"}
+          {running ? (
+            <>
+              <span className="loading loading-spinner loading-xs" />
+              <span>Running</span>
+            </>
+          ) : (
+            <>
+              <Play size={16} />
+              <span>{isScratchpad ? "Run" : "Run tests"}</span>
+            </>
+          )}
         </button>
       </div>
       )}
     </div>
   );
 
+  const splitButtonClass = (active: boolean) =>
+    `btn btn-ghost btn-sm btn-square h-7 min-h-7 ${
+      active ? "text-primary bg-primary/10" : "text-base-content/35 hover:text-base-content/70"
+    }`;
+
+  const renderBottomPanel = () => {
+    if (!hasOutputPane) return null;
+    const maximizedKey: Exclude<MaximizedPane, null> =
+      effectiveBottomTab === "agent" ? "terminal" : effectiveBottomTab === "repl" ? "repl" : "results";
+    const isMaximized = maximizedPane === maximizedKey;
+    const tabClass = (tab: BottomPanelTab) =>
+      `btn btn-ghost btn-sm h-7 min-h-7 rounded-none border-x border-transparent px-3 text-xs ${
+        effectiveBottomTab === tab
+          ? "border-b-primary bg-base-100 text-base-content"
+          : "text-base-content/45 hover:bg-base-300/40 hover:text-base-content/75"
+      }`;
+    const selectTab = (tab: BottomPanelTab) => {
+      setActiveBottomTab(tab);
+      setBottomPanelVisible(true);
+      if (tab === "repl") {
+        setShowRepl(true);
+        setReplFocusNonce((nonce) => nonce + 1);
+      } else if (tab === "testcase") {
+        setOutputTab("testcase");
+      } else if (tab === "results") {
+        setOutputTab("results");
+      } else if (tab === "agent") {
+        if (showAgentTerminal) setAgentTerminalMinimized(false);
+      }
+    };
+
+    return (
+      <>
+        {replLayout === "vertical" && (
+          <div
+            onMouseDown={onOutputWidthResizeMouseDown}
+            className={`${hasVisibleBottomPanel ? "block" : "hidden"} w-1 shrink-0 bg-base-300/60 transition-colors ${
+              isMaximized ? "cursor-default" : "cursor-col-resize hover:bg-primary"
+            }`}
+          />
+        )}
+        <div
+          className={`${hasVisibleBottomPanel ? "flex" : "hidden"} min-h-0 flex-col bg-base-200 ${
+            isMaximized
+              ? "flex-1"
+              : replLayout === "vertical"
+                ? "shrink-0 border-l border-base-300/60"
+                : "shrink-0 border-t border-base-300/60"
+          }`}
+          style={
+            isMaximized
+              ? undefined
+              : replLayout === "vertical"
+                ? { width: outputPaneWidth }
+                : { height: outputPaneHeight }
+          }
+        >
+          {replLayout === "horizontal" && (
+          <div
+            onMouseDown={onOutputResizeMouseDown}
+            className={`h-1 shrink-0 bg-base-300/60 transition-colors ${
+              isMaximized ? "cursor-default" : "cursor-row-resize hover:bg-primary"
+            }`}
+          />
+          )}
+        <div className="flex items-center border-b border-base-300/60 bg-base-200 shrink-0">
+          <button
+            onClick={() => {
+              setBottomPanelVisible(false);
+              if (maximizedPane === maximizedKey) setMaximizedPane(null);
+            }}
+            className="mx-2 text-xs text-base-content/30 transition-colors hover:text-base-content/60 disabled:cursor-not-allowed disabled:opacity-30"
+            title="Hide panel"
+            aria-label="Hide panel"
+          >
+            <X size={16} />
+          </button>
+          <div className="flex min-w-0 items-center self-stretch overflow-x-auto">
+            {hasTestcasePane && (
+              <button onClick={() => selectTab("testcase")} className={tabClass("testcase")}>
+                Test Case
+              </button>
+            )}
+            {hasTestResultPane && (
+              <button onClick={() => selectTab("results")} className={tabClass("results")}>
+                Results
+              </button>
+            )}
+            {(hasReplPane || hasAgentTab) && (
+              <span className="mx-1 h-4 w-px shrink-0 bg-base-300/70" />
+            )}
+            {hasReplPane && (
+              <button onClick={() => selectTab("repl")} className={tabClass("repl")}>
+                REPL
+              </button>
+            )}
+            {hasAgentTab && (
+              <button onClick={() => selectTab("agent")} className={tabClass("agent")}>
+                Assist
+              </button>
+            )}
+          </div>
+          <div className="ml-auto flex items-center gap-1 px-2">
+            {effectiveBottomTab === "agent" && hasAgentTerminalPane && (
+              <>
+                <button
+                  onClick={() => {
+                    void agentTerminalRef.current?.restart();
+                  }}
+                  className={`${toolbarIconButtonClass} btn-ghost text-base-content/35 hover:text-base-content/70`}
+                  title={`Restart ${agentTerminalKind === "claude" ? "Claude" : "Codex"}`}
+                  aria-label={`Restart ${agentTerminalKind === "claude" ? "Claude" : "Codex"}`}
+                >
+                  <RotateCcw size={16} />
+                </button>
+                <button
+                  onClick={() => {
+                    setAgentTerminalMinimized(true);
+                    setBottomPanelVisible(false);
+                    if (maximizedPane === "terminal") setMaximizedPane(null);
+                  }}
+                  className={`${toolbarIconButtonClass} btn-ghost text-base-content/35 hover:text-base-content/70`}
+                  title={`Hide ${agentTerminalKind === "claude" ? "Claude" : "Codex"}`}
+                  aria-label={`Hide ${agentTerminalKind === "claude" ? "Claude" : "Codex"}`}
+                >
+                  <Minus size={16} />
+                </button>
+                <button
+                  onClick={handleExitAssistant}
+                  className={`${toolbarButtonClass} btn-ghost shrink-0 text-base-content/65 hover:text-base-content`}
+                  title="End the current assistant session"
+                >
+                  Exit assistant
+                </button>
+              </>
+            )}
+            {effectiveBottomTab === "results" && !running && results && results.length > 0 && results.every((r) => r.passed) && kata.solution && (
+              <button
+                onClick={() => setShowPanel((v) => (v === "diff" ? null : "diff"))}
+                className={`${toolbarButtonClass} btn-ghost gap-1.5 text-success/70 hover:text-success`}
+                title="Compare your code with the reference solution"
+              >
+                <GitCompareArrows size={16} />
+                <span>compare solution</span>
+              </button>
+            )}
+            <div className="join">
+              <button
+                onClick={() => {
+                  setReplLayout("vertical");
+                  setMaximizedPane(null);
+                  if (effectiveBottomTab === "repl") setReplFocusNonce((nonce) => nonce + 1);
+                }}
+                className={`${splitButtonClass(replLayout === "vertical" && !isMaximized)} join-item`}
+                title="Split editor and panel side by side"
+                aria-label="Split editor and panel side by side"
+              >
+                <SquareSplitHorizontal size={16} />
+              </button>
+              <button
+                onClick={() => {
+                  setReplLayout("horizontal");
+                  setMaximizedPane(null);
+                  if (effectiveBottomTab === "repl") setReplFocusNonce((nonce) => nonce + 1);
+                }}
+                className={`${splitButtonClass(replLayout === "horizontal" && !isMaximized)} join-item`}
+                title="Split editor and panel stacked"
+                aria-label="Split editor and panel stacked"
+              >
+                <SquareSplitVertical size={16} />
+              </button>
+            </div>
+            <button
+              onClick={() => setMaximizedPane((pane) => (pane === maximizedKey ? null : maximizedKey))}
+              className={`${toolbarIconButtonClass} btn-ghost text-base-content/35 hover:text-base-content/70`}
+              title={isMaximized ? "Restore panel" : "Maximize panel"}
+              aria-label={isMaximized ? "Restore panel" : "Maximize panel"}
+            >
+              {isMaximized ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+            </button>
+          </div>
+        </div>
+        <div className="flex-1 min-h-0 overflow-hidden">
+          {hasReplPane && (
+            <div className={`${effectiveBottomTab === "repl" ? "flex" : "hidden"} h-full min-h-0 flex-col`}>
+              <ReplPanel
+                ref={replRef}
+                key={kata.id}
+                language={kata.language}
+                getEditorCode={() => editorRef.current?.getValue() ?? null}
+                seed={replSeed}
+                focusNonce={replFocusNonce}
+                scopeName={isScratchpad ? "scratchpad" : "kata"}
+                onEvaluation={isScratchpad ? handleReplEvaluation : undefined}
+                onBusyChange={isScratchpad ? setRunning : undefined}
+              />
+            </div>
+          )}
+          {hasTestcasePane && (
+            <div className={`${effectiveBottomTab === "testcase" ? "block" : "hidden"} h-full min-h-0 overflow-y-auto`}>
+              <TestcasePanel
+                cases={visibleTestCases}
+                activeIndex={activeTestcaseIndex}
+                onActiveIndexChange={setActiveTestcaseIndex}
+              />
+            </div>
+          )}
+          {hasTestResultPane && (
+            <div className={`${effectiveBottomTab === "results" ? "block" : "hidden"} h-full min-h-0 overflow-y-auto`}>
+              {running ? (
+                <div className="flex items-center justify-center h-full text-base-content/30 text-sm">
+                  <span className="loading loading-spinner loading-sm text-primary mr-2" />
+                  Running tests...
+                </div>
+              ) : results ? (
+                <TestOutput
+                  results={results}
+                  ranAt={ranAt}
+                  onSendToRepl={(testName) => {
+                    const expression = extractTestCall(kata.testCode, testName, kata.language) ?? "";
+                    setShowRepl(true);
+                    setActiveBottomTab("repl");
+                    setBottomPanelVisible(true);
+                    setMaximizedPane(null);
+                    setReplSeed({ expression, nonce: Date.now() });
+                  }}
+                />
+              ) : (
+                <div className="flex h-full items-center justify-center px-6 text-center text-sm text-base-content/35">
+                  Run tests to see results.
+                </div>
+              )}
+            </div>
+          )}
+          {hasAgentTab && (
+            <div className={`${hasVisibleBottomPanel && effectiveBottomTab === "agent" ? "flex" : "hidden"} h-full min-h-0 flex-col`}>
+              {(!showAgentTerminal || agentTerminalMinimized) && (
+                <div className="flex h-full flex-col items-center justify-center gap-3 px-6 text-center text-sm text-base-content/45">
+                  <BotMessageSquare size={22} className="text-base-content/35" />
+                  <div className="max-w-sm">
+                    <div className="font-semibold text-base-content/70">
+                      Optional coding assistant
+                    </div>
+                    <p className="mt-1 text-xs leading-relaxed text-base-content/45">
+                      {showAgentTerminal
+                        ? `${agentTerminalKind === "claude" ? "Claude" : "Codex"} is hidden. Bring it back when you want help debugging this kata.`
+                        : `Start ${agentProvider === "claude" ? "Claude" : "Codex"} when you want help debugging this kata without leaving the editor.`}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => openAgentTerminal(showAgentTerminal ? agentTerminalKind : agentProvider)}
+                    className={`${toolbarButtonClass} btn-primary gap-1.5`}
+                  >
+                    {showAgentTerminal ? "show assistant" : `start ${agentProvider === "claude" ? "claude" : "codex"}`}
+                  </button>
+                </div>
+              )}
+              {showAgentTerminal && (
+              <AgentTerminalPanel
+                ref={agentTerminalRef}
+                launchKind={agentTerminalKind}
+                launchNonce={agentTerminalLaunchNonce}
+                theme={theme}
+                fontFamily={fontFamily}
+                fontSize={fontSize}
+                layout={replLayout}
+                maximized={maximizedPane === "terminal"}
+                visible={hasVisibleBottomPanel && hasAgentTerminalPane && effectiveBottomTab === "agent"}
+                showHeader={false}
+                buildStartupPrompt={buildAgentStartupPrompt}
+                onClose={handleExitAssistant}
+                onMinimize={() => {
+                  setAgentTerminalMinimized(true);
+                  if (maximizedPane === "terminal") setMaximizedPane(null);
+                }}
+                onLayoutChange={(layout) => {
+                  if (layout === replLayout && maximizedPane !== "terminal") return;
+                  setReplLayout(layout);
+                  setMaximizedPane(null);
+                }}
+                onToggleMaximized={() => setMaximizedPane((pane) => (pane === "terminal" ? null : "terminal"))}
+              />
+              )}
+            </div>
+          )}
+        </div>
+        </div>
+      </>
+    );
+  };
+
+  const renderTitleBar = () => (
+    <div className="shrink-0 border-b border-base-300/60 bg-base-100 px-4 py-2">
+      <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
+        <h1 className="min-w-0 truncate text-sm font-semibold text-base-content">
+          {problemTitle}
+        </h1>
+        <div className="flex min-w-0 flex-wrap items-center gap-1.5 text-[11px] text-base-content/45">
+          {normalizedDifficulty && (
+            <span className="rounded border border-base-300/60 bg-base-200/60 px-1.5 py-0.5">
+              {normalizedDifficulty}
+            </span>
+          )}
+          {kata.category && (
+            <span className="rounded border border-base-300/60 bg-base-200/60 px-1.5 py-0.5">
+              {kata.category}
+            </span>
+          )}
+          <span className="rounded border border-base-300/60 bg-base-200/60 px-1.5 py-0.5">
+            {kata.language}
+          </span>
+          {!isScratchpad && kataStatus !== "idle" && (
+            <span className="rounded border border-base-300/60 bg-base-200/60 px-1.5 py-0.5">
+              {kataStatus === "completed" ? "Completed" : "Elapsed"} {formatTime(kataElapsed)}
+            </span>
+          )}
+          {hasVisibleTestCases && (
+            <span className="rounded border border-base-300/60 bg-base-200/60 px-1.5 py-0.5">
+              {visibleTestCases.length} test {visibleTestCases.length === 1 ? "case" : "cases"}
+            </span>
+          )}
+        </div>
+        {scratchpad && (
+          <select
+            aria-label="Scratchpad language"
+            className="select select-bordered select-sm ml-auto w-32 bg-base-100 text-xs"
+            value={kata.language}
+            onChange={(event) => scratchpad.onLanguageChange(event.target.value as ScratchpadLanguage)}
+          >
+            {APP_VARIANT.languages.map(({ id, label }) => (
+              <option key={id} value={id}>{label}</option>
+            ))}
+          </select>
+        )}
+      </div>
+    </div>
+  );
+
+  if (loadError) return (
+    <div className="p-6 text-sm text-error" role="alert">
+      Could not load your code. {loadError} Reopen this page to try again.
+    </div>
+  );
   if (!codeLoaded || !monacoUp) return null;
 
   const initialCode = isSession ? kata.code : (savedCode ?? kata.code);
@@ -949,6 +2366,7 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
   if (showPanel === "viz" && vizFolder) {
     return (
       <div className="flex flex-col h-full">
+        {renderTitleBar()}
         {renderTabBar(false)}
         <div className="flex-1 min-h-0">
           <iframe
@@ -965,6 +2383,7 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
 
   return (
     <div className={`flex flex-col h-full ${nudging ? "animate-nudge" : ""}`}>
+      {renderTitleBar()}
       {/* Full-width bar: tabs left, controls right */}
       {renderTabBar(true)}
 
@@ -974,17 +2393,59 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
         {hasTabs && showPanel && (
           <div
             className="shrink-0 flex flex-col border-r border-base-300/60 bg-base-200"
-            style={{ width: panelWidth }}
+            style={{ width: panelWidth, maxWidth: "45vw" }}
           >
             {showPanel === "description" && (
               <div className="flex-1 overflow-y-auto px-4 py-3 text-sm text-base-content/70">
                 <DescriptionWithLink text={kata.description || "No description available."} />
+                <DpPatternHints kata={kata} />
               </div>
             )}
-            {showPanel === "solution" && kata.solution && (
-              <div className="flex-1 min-h-0">
+            {showPanel === "solution" && activeSolution && (
+              <div className="flex-1 min-h-0 flex flex-col">
+                <div className="border-b border-base-300/60 bg-base-100">
+                  <div className="flex items-center gap-1 px-2 py-1.5">
+                    {solutionVariants.length > 1 && (
+                      <div className="flex min-w-0 flex-1 gap-1 overflow-x-auto">
+                        {solutionVariants.map((variant, index) => (
+                          <button
+                            key={variant.label}
+                          onClick={() => setActiveSolutionVariant(index)}
+                          className={`${toolbarButtonClass} shrink-0 ${index === activeSolutionVariant ? "btn-primary" : "btn-ghost text-base-content/50"}`}
+                          >
+                            {variant.label}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    {solutionVariants.length <= 1 && (
+                      <div className="min-w-0 flex-1 text-xs font-semibold text-base-content/45">
+                        Solution
+                      </div>
+                    )}
+                    <button
+                      onClick={() => { void copySolutionToEditor(); }}
+                      className={`${toolbarButtonClass} btn-ghost shrink-0 gap-1 text-base-content/45 hover:text-base-content/80`}
+                      title="Replace editor with selected solution"
+                    >
+                      <span>Replace editor</span>
+                      <ArrowRight size={16} />
+                    </button>
+                  </div>
+                  {activeSolutionNotes && (
+                    <div className="space-y-2 border-t border-base-300/60 px-4 py-3 text-xs text-base-content/60">
+                      <div>
+                        <div className="mb-0.5 text-[11px] font-semibold uppercase tracking-wider text-base-content/35">
+                          Complexity
+                        </div>
+                        <div className="font-mono text-base-content/65">{activeSolutionNotes.complexity}</div>
+                      </div>
+                      <div className="leading-relaxed">{activeSolutionNotes.approach}</div>
+                    </div>
+                  )}
+                </div>
                 <Editor
-                  value={kata.solution}
+                  value={activeSolution.code}
                   language={kata.language}
                   theme={monacoTheme}
                   options={{
@@ -1049,88 +2510,38 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance }: KataE
           />
         )}
 
-        {/* Editor + results column */}
-        <div className="flex flex-col flex-1 min-w-0">
-          {/* Monaco editor */}
-          <div className={`${results || showRepl ? "flex-[2]" : "flex-1"} min-h-0`}>
-            <Editor
-              key={kata.id}
-              defaultValue={initialCode}
-              language={kata.language}
-              theme={monacoTheme}
-              options={sharedEditorOptions}
-              onMount={handleEditorMount}
-              onChange={() => {
-                setSaved(false);
-                autosave.schedule(kata.id, () => editorRef.current?.getValue());
-              }}
-            />
-          </div>
-
-          {/* REPL pane — keyed by kata so switching katas drops the session */}
-          {showRepl && (
-            <div className="flex-1 min-h-0 flex flex-col border-t border-base-300/60">
-              <div className="flex items-center px-3 py-1 border-b border-base-300/60 bg-base-200 shrink-0">
-                <button
-                  onClick={() => setShowRepl(false)}
-                  className="text-xs text-base-content/30 hover:text-base-content/60 transition-colors mr-2"
-                >
-                  ✕
-                </button>
-                <span className="text-xs text-base-content/45">repl · {kata.language}</span>
-              </div>
-              <ReplPanel
-                key={kata.id}
-                language={kata.language}
-                getEditorCode={() => editorRef.current?.getValue() ?? null}
-                seed={replSeed}
-              />
-            </div>
-          )}
-
-          {/* Closable results pane */}
-          {(results || running) && (
-            <div className="flex-1 min-h-0 flex flex-col border-t border-base-300/60">
-              <div className="flex items-center px-3 py-1 border-b border-base-300/60 bg-base-200 shrink-0">
-                <button
-                  onClick={() => { if (!running) setResults(null); }}
-                  className="text-xs text-base-content/30 hover:text-base-content/60 transition-colors mr-2"
-                >
-                  ✕
-                </button>
-                <span className="text-xs text-base-content/45">
-                  {running ? "running..." : "results"}
-                </span>
-                {!running && results && results.length > 0 && results.every((r) => r.passed) && kata.solution && (
-                  <button
-                    onClick={() => setShowPanel((v) => (v === "diff" ? null : "diff"))}
-                    className="ml-auto btn btn-ghost btn-xs h-5 min-h-0 px-1.5 text-[10px] text-success/70 hover:text-success"
-                    title="Compare your code with the reference solution"
-                  >
-                    ⇄ compare solution
-                  </button>
-                )}
-              </div>
-              <div className="flex-1 min-h-0 overflow-y-auto">
-                {running ? (
-                  <div className="flex items-center justify-center h-full text-base-content/30 text-sm">
-                    <span className="loading loading-spinner loading-sm text-primary mr-2" />
-                    Running tests...
-                  </div>
-                ) : results ? (
-                  <TestOutput
-                    results={results}
-                    ranAt={ranAt}
-                    onSendToRepl={(testName) => {
-                      const expression = extractTestCall(kata.testCode, testName, kata.language) ?? "";
-                      setShowRepl(true);
-                      setReplSeed({ expression, nonce: Date.now() });
-                    }}
-                  />
-                ) : null}
+        {/* Editor/results area + REPL split */}
+        <div
+          ref={editorSplitRef}
+          className={`flex flex-1 min-w-0 min-h-0 ${
+            hasOutputPane && replLayout === "horizontal"
+              ? "flex-col"
+              : "flex-row"
+          }`}
+        >
+            <div className={`${workAreaHidden ? "hidden" : "flex"} flex-col min-w-0 min-h-0 ${hasOutputPane ? "flex-1 basis-0" : "flex-1"}`}>
+              {/* Monaco editor */}
+              <div
+                className={`${editorHidden ? "hidden" : "flex-1"} min-h-0`}
+                onContextMenuCapture={handleEditorContextMenu}
+              >
+                <Editor
+                  key={kata.id}
+                  defaultValue={initialCode}
+                  language={kata.language}
+                  theme={monacoTheme}
+                  options={sharedEditorOptions}
+                  onMount={handleEditorMount}
+                  onChange={(value) => {
+                    clearEditorErrorMarkers();
+                    setSaved(false);
+                    autosave.schedule(kata.id, () => value);
+                    scheduleAgentContextExport();
+                  }}
+                />
               </div>
             </div>
-          )}
+          {renderBottomPanel()}
         </div>
       </div>
     </div>

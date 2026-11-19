@@ -6,6 +6,7 @@ import monokai from "./themes/monokai.json";
 import githubDark from "./themes/github-dark.json";
 import nightOwl from "./themes/night-owl.json";
 import nord from "./themes/nord.json";
+import tokyoNight from "./themes/tokyo-night.json";
 import githubLight from "./themes/github-light.json";
 import solarizedLight from "./themes/solarized-light.json";
 
@@ -20,6 +21,7 @@ export const APP_THEMES = [
   { id: "github-dark", label: "GitHub Dark", monaco: "github-dark", scheme: "dark" },
   { id: "night-owl", label: "Night Owl", monaco: "night-owl", scheme: "dark" },
   { id: "nord", label: "Nord", monaco: "nord", scheme: "dark" },
+  { id: "tokyo-night", label: "Tokyo Night", monaco: "tokyo-night", scheme: "dark" },
   { id: "github-light", label: "GitHub Light", monaco: "github-light", scheme: "light" },
   { id: "solarized-light", label: "Solarized Light", monaco: "solarized-light", scheme: "light" },
 ] as const;
@@ -36,6 +38,7 @@ const THEME_DATA: Record<string, unknown> = {
   "github-dark": githubDark,
   "night-owl": nightOwl,
   nord,
+  "tokyo-night": tokyoNight,
   "github-light": githubLight,
   "solarized-light": solarizedLight,
 };

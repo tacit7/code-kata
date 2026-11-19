@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { replEval, resetRepl, type ReplEvalResult } from "../lib/repl-runner";
 
 interface Entry {
@@ -20,11 +20,21 @@ interface ReplPanelProps {
   language: string;
   getEditorCode: () => string | null;
   seed?: ReplSeed | null;
+  focusNonce?: number;
+  scopeName?: string;
+  onEvaluation?: (code: string, result: ReplEvalResult) => void;
+  onBusyChange?: (busy: boolean) => void;
+}
+
+export interface ReplPanelHandle {
+  runEditor: () => Promise<void>;
 }
 
 // Per-kata REPL: the parent keys this component by kata id, so switching
 // katas unmounts it — the unmount effect tears the session down.
-export function ReplPanel({ language, getEditorCode, seed }: ReplPanelProps) {
+export const ReplPanel = forwardRef<ReplPanelHandle, ReplPanelProps>(function ReplPanel({
+  language, getEditorCode, seed, focusNonce = 0, scopeName = "kata", onEvaluation, onBusyChange,
+}, ref) {
   const [entries, setEntries] = useState<Entry[]>([]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
@@ -32,8 +42,35 @@ export function ReplPanel({ language, getEditorCode, seed }: ReplPanelProps) {
   const [histIdx, setHistIdx] = useState(-1);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const busyRef = useRef(false);
+  const mountedRef = useRef(true);
 
-  useEffect(() => resetRepl, []);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      resetRepl();
+    };
+  }, []);
+
+  useImperativeHandle(ref, () => ({ runEditor: async () => {
+    const code = getEditorCode();
+    if (code) await submit(code, "(editor code loaded)", true);
+  } }));
+
+  function focusInput() {
+    requestAnimationFrame(() => {
+      inputRef.current?.focus();
+    });
+  }
+
+  useEffect(() => {
+    focusInput();
+  }, [focusNonce]);
+
+  useEffect(() => {
+    if (!busy) focusInput();
+  }, [busy]);
 
   // Seeded from a failing test: load the editor code into the session, then
   // pre-fill (don't run) the extracted call so the user can tweak args.
@@ -43,7 +80,7 @@ export function ReplPanel({ language, getEditorCode, seed }: ReplPanelProps) {
       const code = getEditorCode();
       if (code) await submit(code, "(editor code loaded)", true);
       setInput(seed.expression);
-      inputRef.current?.focus();
+      focusInput();
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [seed?.nonce]);
@@ -53,12 +90,22 @@ export function ReplPanel({ language, getEditorCode, seed }: ReplPanelProps) {
   }, [entries]);
 
   async function submit(code: string, label?: string, muted = false) {
-    if (!code.trim() || busy) return;
+    if (!code.trim() || busyRef.current) return;
+    busyRef.current = true;
     setBusy(true);
-    const result = await replEval(language, code);
+    onBusyChange?.(true);
+    let result: ReplEvalResult;
+    try {
+      result = await replEval(language, code);
+    } catch (error) {
+      result = { ok: false, error: error instanceof Error ? error.message : String(error) };
+    }
+    if (!mountedRef.current) return;
     setEntries((prev) => [...prev, { input: label ?? code, result, muted }]);
+    onEvaluation?.(code, result);
+    busyRef.current = false;
     setBusy(false);
-    inputRef.current?.focus();
+    onBusyChange?.(false);
   }
 
   function onSubmit() {
@@ -111,14 +158,16 @@ export function ReplPanel({ language, getEditorCode, seed }: ReplPanelProps) {
     <div className="flex-1 min-h-0 flex flex-col font-mono text-xs">
       <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto px-3 py-2 flex flex-col gap-1">
         {entries.length === 0 && (
-          <span className="text-base-content/25">
-            {language} session — scoped to this kata. Load code to call your solution.
+          <span className="text-base-content/60">
+            {scopeName === "scratchpad"
+              ? "Run your code or enter an expression below."
+              : `${language} session — scoped to this kata. Load code to call your solution.`}
           </span>
         )}
         {entries.map((entry, i) => (
-          <div key={i} className={entry.muted ? "opacity-40" : undefined}>
+          <div key={i}>
             {entry.input != null && (
-              <div className="whitespace-pre-wrap text-base-content/50">
+              <div className={`whitespace-pre-wrap ${entry.muted ? "text-base-content/60" : "text-base-content/70"}`}>
                 <span className="text-primary/60 select-none">&gt; </span>
                 {entry.input}
               </div>
@@ -150,7 +199,8 @@ export function ReplPanel({ language, getEditorCode, seed }: ReplPanelProps) {
           disabled={busy}
           rows={Math.min(input.split("\n").length, 8)}
           placeholder={busy ? "evaluating..." : "expression — shift+enter for newline"}
-          className="flex-1 bg-transparent outline-none resize-none text-base-content/80 placeholder:text-base-content/20 leading-relaxed"
+          aria-label="REPL expression"
+          className="flex-1 rounded bg-transparent px-1 outline-none resize-none text-base-content/80 placeholder:text-base-content/60 leading-relaxed focus-visible:outline focus-visible:outline-1 focus-visible:outline-primary"
           spellCheck={false}
         />
         <button
@@ -172,4 +222,4 @@ export function ReplPanel({ language, getEditorCode, seed }: ReplPanelProps) {
       </div>
     </div>
   );
-}
+});

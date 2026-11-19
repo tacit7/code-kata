@@ -2,7 +2,6 @@ import { create } from "zustand";
 import { refreshDockBadge } from "../lib/dock-badge";
 import type { Kata, Session, Attempt, Preset, SessionType } from "../types/editor";
 import { getDb } from "../lib/database";
-import { unrecordedKataIndexes } from "../lib/session-backfill";
 
 interface SessionState {
   activeSession: Session | null;
@@ -34,6 +33,7 @@ interface SessionRow {
   pass_count: number;
   preset_name: string | null;
   max_test_runs: number | null;
+  kata_ids: string | null;
 }
 
 interface AttemptRow {
@@ -65,6 +65,7 @@ function rowToSession(row: SessionRow): Session {
     passCount: row.pass_count,
     presetName: row.preset_name,
     maxTestRuns: row.max_test_runs ?? null,
+    kataIds: row.kata_ids ? JSON.parse(row.kata_ids) as number[] : null,
   };
 }
 
@@ -221,14 +222,12 @@ export const useSessionStore = create<SessionState>((set, get) => ({
 
   startSession: async (type, katas, presetName, maxTestRuns) => {
     const db = await getDb();
-    try {
-      await db.execute(`ALTER TABLE sessions ADD COLUMN max_test_runs INTEGER NULL`);
-    } catch (_) { /* column already exists */ }
     const now = new Date().toISOString();
+    const kataIds = JSON.stringify(katas.map((k) => k.id));
     const result = await db.execute(
-      `INSERT INTO sessions (session_type, started_at, kata_count, pass_count, preset_name, max_test_runs)
-       VALUES ($1, $2, $3, 0, $4, $5)`,
-      [type, now, katas.length, presetName ?? null, maxTestRuns ?? null],
+      `INSERT INTO sessions (session_type, started_at, kata_count, pass_count, preset_name, max_test_runs, kata_ids)
+       VALUES ($1, $2, $3, 0, $4, $5, $6)`,
+      [type, now, katas.length, presetName ?? null, maxTestRuns ?? null, kataIds],
     );
     const sessionId = result.lastInsertId as number;
     const session: Session = {
@@ -241,6 +240,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       passCount: 0,
       presetName: presetName ?? null,
       maxTestRuns: maxTestRuns ?? null,
+      kataIds: JSON.parse(kataIds) as number[],
     };
     set({ activeSession: session, sessionKatas: katas, currentIndex: 0, attempts: [] });
     return sessionId;
@@ -310,50 +310,11 @@ export const useSessionStore = create<SessionState>((set, get) => ({
   },
 
   finishSession: async (totalTimeMs) => {
-    const { activeSession, sessionKatas, attempts } = get();
+    const { activeSession, attempts } = get();
     if (!activeSession) return;
 
     const db = await getDb();
     const now = new Date().toISOString();
-
-    // Only passed katas wrote an attempt row during the session. The results
-    // view shows the whole roster, and a failed or skipped kata reads as a fail,
-    // so backfill a passed=0 row for every roster index without one. This is
-    // also what preserves the roster: loadSession() rebuilds sessionKatas from
-    // attempt rows, so a skipped kata with no row would vanish from history.
-    //
-    // The recorded set comes from the DB, not in-memory `attempts`, so a second
-    // finishSession call (Finish then Quit) cannot double-insert. pass_count is
-    // untouched: these rows are all passed=0.
-    const existing = await db.select<{ kata_index: number }[]>(
-      `SELECT kata_index FROM attempts WHERE session_id = $1`,
-      [activeSession.id],
-    );
-    const missing = unrecordedKataIndexes(
-      sessionKatas.length,
-      existing.map((r) => r.kata_index),
-    );
-
-    const backfilled: Attempt[] = [];
-    for (const i of missing) {
-      const kata = sessionKatas[i];
-      const result = await db.execute(
-        `INSERT INTO attempts (session_id, kata_id, kata_index, started_at, finished_at, time_ms, passed, code_snapshot)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-        [activeSession.id, kata.id, i, now, now, null, 0, null],
-      );
-      backfilled.push({
-        id: result.lastInsertId as number,
-        sessionId: activeSession.id,
-        kataId: kata.id,
-        kataIndex: i,
-        startedAt: now,
-        finishedAt: now,
-        timeMs: null,
-        passed: false,
-        codeSnapshot: null,
-      });
-    }
 
     await db.execute(
       `UPDATE sessions SET finished_at = $1, total_time_ms = $2 WHERE id = $3`,
@@ -362,9 +323,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
 
     set({
       activeSession: { ...activeSession, finishedAt: now, totalTimeMs },
-      attempts: backfilled.length
-        ? [...attempts, ...backfilled].sort((a, b) => a.kataIndex - b.kataIndex)
-        : attempts,
+      attempts,
     });
     void refreshDockBadge();
   },
@@ -384,11 +343,11 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     );
     const attempts = attemptRows.map(rowToAttempt);
 
-    // Reconstruct kata list from attempts
     const kataMap = new Map(allKatas.map((k) => [k.id, k]));
-    const kataIds = attemptRows.map((a) => a.kata_id);
-    const uniqueIds = [...new Set(kataIds)];
-    const sessionKatas = uniqueIds.map((id) => kataMap.get(id)).filter(Boolean) as Kata[];
+    const rosterIds = session.kataIds?.length
+      ? session.kataIds
+      : attemptRows.map((a) => a.kata_id);
+    const sessionKatas = rosterIds.map((id) => kataMap.get(id)).filter(Boolean) as Kata[];
 
     set({ activeSession: session, sessionKatas, attempts, currentIndex: 0 });
   },

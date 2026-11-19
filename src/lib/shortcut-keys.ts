@@ -6,7 +6,12 @@ export type ShortcutAction =
   | "nextKata"
   | "prevKata"
   | "toggleSolution"
+  | "toggleRepl"
+  | "zoomIn"
+  | "zoomOut"
+  | "resetZoom"
   | "openSettings"
+  | "openCommandPalette"
   | "closePanel";
 
 export type ShortcutMap = Record<ShortcutAction, string>;
@@ -18,9 +23,25 @@ export const DEFAULT_SHORTCUTS: ShortcutMap = {
   nextKata: "Meta+Alt+ArrowRight",
   prevKata: "Meta+Alt+ArrowLeft",
   toggleSolution: "Meta+Shift+S",
+  toggleRepl: "Meta+`",
+  zoomIn: "Meta+=",
+  zoomOut: "Meta+-",
+  resetZoom: "Meta+0",
   openSettings: "Meta+,",
+  openCommandPalette: "Meta+Shift+P",
   closePanel: "Escape",
 };
+
+export function normalizeShortcutCombo(combo: string): string {
+  return combo
+    .split("+")
+    .map((part) => {
+      if (part === "Control") return "Ctrl";
+      if (part.length === 1 && /[a-z]/i.test(part)) return part.toUpperCase();
+      return part;
+    })
+    .join("+");
+}
 
 // The bindings nextKata/prevKata shipped with before 2026-07-09. Hardcoded here
 // because this is the only place that needs to recognise them: a stored value
@@ -54,7 +75,7 @@ export function migrateShortcuts(stored: unknown): ShortcutMap {
       if (typeof value !== "string") return [action, DEFAULT_SHORTCUTS[action]];
       if (value === SUPERSEDED[action]) return [action, DEFAULT_SHORTCUTS[action]];
 
-      return [action, value];
+      return [action, normalizeShortcutCombo(value)];
     }),
   ) as ShortcutMap;
 }

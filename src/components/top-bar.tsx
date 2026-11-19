@@ -1,53 +1,24 @@
-import { useState, useCallback } from "react";
+import { getCurrentWindow, nativeDragRegion } from "../lib/native-api";
 import { useNavigate, useLocation } from "react-router";
-import { getCurrentWindow } from "@tauri-apps/api/window";
+import { useNavHistory } from "../hooks/use-nav-history";
 import { useSettingsStore } from "../stores/settings-store";
 import { isDarkScheme } from "../lib/editor-themes";
 import { usesOverlayTitlebar } from "../lib/platform";
-import { useKataStore } from "../stores/kata-store";
 import { useSessionStore } from "../stores/session-store";
-import { useTimerStore } from "../stores/timer-store";
 import { NAV_ITEMS, activeNavPath, type NavItem } from "../lib/nav-items";
+import { resumableSessionPath } from "../lib/session-resume";
 
 export function TopBar() {
   const theme = useSettingsStore((s) => s.theme);
   const language = useSettingsStore((s) => s.language);
-  const dailyKataIds = useSettingsStore((s) => s.dailyKataIds);
-  const katas = useKataStore((s) => s.katas);
-  const startSession = useSessionStore((s) => s.startSession);
-  const startSessionTimer = useTimerStore((s) => s.startSessionTimer);
-  const resetKataTimer = useTimerStore((s) => s.resetKataTimer);
+  const activeSession = useSessionStore((s) => s.activeSession);
   const navigate = useNavigate();
   const location = useLocation();
-  const [launching, setLaunching] = useState(false);
-
-  const kataIdSet = new Set(katas.map((k) => k.id));
-  const dailyCount = dailyKataIds.filter((id) => kataIdSet.has(id)).length;
+  const { canBack, canForward, back, forward } = useNavHistory();
 
   const activePath = activeNavPath(location.pathname);
   const isActive = (item: NavItem) => item.path === activePath;
-
-  const handleStartPractice = useCallback(async () => {
-    if (dailyCount === 0) {
-      navigate("/problems");
-      return;
-    }
-    if (launching) return;
-    setLaunching(true);
-    const kataMap = new Map(katas.map((k) => [k.id, k]));
-    const resolved = dailyKataIds.map((id) => kataMap.get(id)).filter(Boolean) as typeof katas;
-    resolved.sort(() => Math.random() - 0.5);
-    if (resolved.length === 0) {
-      setLaunching(false);
-      navigate("/problems");
-      return;
-    }
-    resetKataTimer();
-    startSessionTimer();
-    const sessionId = await startSession("daily", resolved);
-    navigate(`/session/${sessionId}`);
-    setLaunching(false);
-  }, [dailyKataIds, dailyCount, launching, katas, resetKataTimer, startSessionTimer, startSession, navigate]);
+  const resumePath = resumableSessionPath(activeSession);
 
   // Only macOS overlays web content into the title bar (titleBarStyle:
   // Overlay in tauri.conf.json), so only there does our header need to act
@@ -66,13 +37,14 @@ export function TopBar() {
   return (
     <header
       onMouseDown={handleHeaderMouseDown}
-      className={`flex items-center h-11 pr-4 border-b border-base-300/60 bg-base-100 shrink-0 ${
+      style={nativeDragRegion ? { WebkitAppRegion: "drag" } as React.CSSProperties : undefined}
+      className={`flex h-11 min-w-0 items-center pr-3 border-b border-base-300/60 bg-base-100 shrink-0 ${
         usesOverlayTitlebar ? "pl-20" : "pl-4"
       }`}
     >
       {/* Brand — pl-20 clears the macOS traffic-light overlay; other platforms
           keep their native title bar above this header, so no inset is needed. */}
-      <div className="flex items-center gap-2.5 mr-8 select-none">
+      <div className="flex shrink-0 items-center gap-2.5 mr-5 select-none">
         <img
           src={isDarkScheme(theme) ? "/logo-dark.png" : "/logo-light.png"}
           alt="CK"
@@ -86,15 +58,42 @@ export function TopBar() {
         />
       </div>
 
+      {/* Back / forward — VS Code style */}
+      <div className="flex shrink-0 items-center gap-0.5 mr-3">
+        <button
+          onClick={back}
+          disabled={!canBack}
+          title="Back"
+          aria-label="Go back"
+          className="btn btn-ghost btn-xs btn-square text-base-content/50 hover:text-base-content/80 disabled:opacity-25 disabled:hover:text-base-content/50 disabled:cursor-default"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+            <path fillRule="evenodd" d="M12.79 5.23a.75.75 0 0 1 0 1.06L9.06 10l3.73 3.71a.75.75 0 1 1-1.06 1.06l-4.25-4.24a.75.75 0 0 1 0-1.06l4.25-4.24a.75.75 0 0 1 1.06 0Z" clipRule="evenodd" />
+          </svg>
+        </button>
+        <button
+          onClick={forward}
+          disabled={!canForward}
+          title="Forward"
+          aria-label="Go forward"
+          className="btn btn-ghost btn-xs btn-square text-base-content/50 hover:text-base-content/80 disabled:opacity-25 disabled:hover:text-base-content/50 disabled:cursor-default"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+            <path fillRule="evenodd" d="M7.21 14.77a.75.75 0 0 1 0-1.06L10.94 10 7.21 6.29a.75.75 0 1 1 1.06-1.06l4.25 4.24a.75.75 0 0 1 0 1.06l-4.25 4.24a.75.75 0 0 1-1.06 0Z" clipRule="evenodd" />
+          </svg>
+        </button>
+      </div>
+
       {/* Navigation */}
-      <nav className="flex items-center h-full gap-0.5">
+      <nav style={nativeDragRegion ? { WebkitAppRegion: "no-drag" } as React.CSSProperties : undefined} className="scrollbar-hidden flex min-w-0 flex-1 items-center h-full gap-0.5 overflow-x-auto">
         {NAV_ITEMS.map((item) => {
           const active = isActive(item);
           return (
             <button
               key={item.path}
-              onClick={() => navigate(item.path)}
-              className={`relative px-3 h-full text-[13px] font-medium transition-colors ${
+              onClick={() => navigate(item.path === "/practice" ? resumePath ?? item.path : item.path)}
+              aria-current={active ? "page" : undefined}
+              className={`relative h-full shrink-0 px-3 text-[13px] font-medium transition-colors ${
                 active
                   ? "text-primary"
                   : "text-base-content/40 hover:text-base-content/70"
@@ -108,22 +107,6 @@ export function TopBar() {
           );
         })}
       </nav>
-
-      {/* Start Practice CTA */}
-      <button
-        onClick={handleStartPractice}
-        disabled={launching}
-        className="btn btn-primary btn-sm btn-soft ml-auto gap-1.5 text-xs font-semibold"
-      >
-        {launching ? (
-          <span className="loading loading-spinner loading-xs" />
-        ) : (
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5">
-            <path d="M3 3.732a1.5 1.5 0 0 1 2.305-1.265l6.706 4.267a1.5 1.5 0 0 1 0 2.531l-6.706 4.268A1.5 1.5 0 0 1 3 12.267V3.732Z" />
-          </svg>
-        )}
-        {launching ? "Launching..." : "Start Practice"}
-      </button>
     </header>
   );
 }

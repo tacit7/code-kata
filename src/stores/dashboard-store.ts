@@ -1,5 +1,13 @@
 import { create } from "zustand";
 import { getDb } from "../lib/database";
+import {
+  computeHighValueDashboardMetrics,
+  type LeetcodeProgress,
+  type MasterySummary,
+  type ModuleProgressRow,
+  type RecentlyImprovedRow,
+  type ReviewQueueRow,
+} from "../lib/dashboard-metrics";
 import { refreshDockBadge } from "../lib/dock-badge";
 
 interface TodayStats {
@@ -25,6 +33,7 @@ interface LeaderboardRow {
   kataId: number;
   kataName: string;
   category: string;
+  language: string;
   difficulty: string;
   bestTimeMs: number | null;
   attemptCount: number;
@@ -48,6 +57,23 @@ interface SessionHistoryRow {
   preset_name: string | null;
 }
 
+interface DashboardKataRow {
+  id: number;
+  name: string;
+  category: string;
+  language: string;
+  difficulty: string | null;
+  tags: string | null;
+  leetcode_number: number | null;
+}
+
+interface DashboardAttemptMetricRow {
+  kata_id: number;
+  started_at: string;
+  time_ms: number | null;
+  passed: number;
+}
+
 export interface DrillDownRow {
   id: number;
   kataId: number;
@@ -57,16 +83,23 @@ export interface DrillDownRow {
   codeSnapshot: string | null;
   kataName: string;
   category: string;
+  language: string;
 }
 
 interface DashboardState {
   loading: boolean;
+  error: string | null;
   streak: number;
   today: TodayStats;
   heatmap: HeatmapDay[];
   categoryBreakdown: CategoryBreakdown[];
   leaderboard: LeaderboardRow[];
   trendLine: TrendPoint[];
+  masterySummary: MasterySummary;
+  reviewQueue: ReviewQueueRow[];
+  recentlyImproved: RecentlyImprovedRow[];
+  moduleProgress: ModuleProgressRow[];
+  leetcodeProgress: LeetcodeProgress;
   sessionHistory: SessionHistoryRow[];
   sessionHistoryHasMore: boolean;
   drillDown: DrillDownRow[] | null;
@@ -79,6 +112,30 @@ interface DashboardState {
 }
 
 const PAGE_SIZE = 20;
+
+const EMPTY_MASTERY_SUMMARY: MasterySummary = {
+  attempted: 0,
+  strong: 0,
+  developing: 0,
+  needsReview: 0,
+  percent: 0,
+};
+
+const EMPTY_LEETCODE_PROGRESS: LeetcodeProgress = {
+  total: 0,
+  solved: 0,
+  percentSolved: 0,
+  easySolved: 0,
+  mediumSolved: 0,
+  hardSolved: 0,
+  blind75Total: 0,
+  blind75Solved: 0,
+  blind75PercentSolved: 0,
+  neetcodeTotal: 0,
+  neetcodeSolved: 0,
+  neetcodePercentSolved: 0,
+  recommendedUnattempted: 0,
+};
 
 function computeStreak(days: { day: string }[]): number {
   if (days.length === 0) return 0;
@@ -110,23 +167,31 @@ function computeStreak(days: { day: string }[]): number {
 
 export const useDashboardStore = create<DashboardState>((set, get) => ({
   loading: true,
+  error: null,
   streak: 0,
   today: { sessionCount: 0, totalKatas: 0, totalPassed: 0, totalTimeMs: 0 },
   heatmap: [],
   categoryBreakdown: [],
   leaderboard: [],
   trendLine: [],
+  masterySummary: EMPTY_MASTERY_SUMMARY,
+  reviewQueue: [],
+  recentlyImproved: [],
+  moduleProgress: [],
+  leetcodeProgress: EMPTY_LEETCODE_PROGRESS,
   sessionHistory: [],
   sessionHistoryHasMore: false,
   drillDown: null,
   selectedSessionId: null,
 
   loadDashboard: async () => {
-    set({ loading: true });
-    const db = await getDb();
+    set({ loading: true, error: null });
 
-    const [streakRows, todayRows, heatmapRows, categoryRows, leaderboardRows, trendRows, historyRows] =
-      await Promise.all([
+    try {
+      const db = await getDb();
+
+      const [streakRows, todayRows, heatmapRows, categoryRows, leaderboardRows, trendRows, historyRows, kataMetricRows, attemptMetricRows] =
+        await Promise.all([
         // A. Streak
         db.select<{ day: string }[]>(
           `SELECT DISTINCT date(finished_at) as day FROM sessions
@@ -165,13 +230,14 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
             kata_id: number;
             kata_name: string;
             category: string;
+            language: string;
             difficulty: string;
             best_time_ms: number | null;
             attempt_count: number;
             pass_count: number;
           }[]
         >(
-          `SELECT k.id as kata_id, k.name as kata_name, k.category, k.difficulty,
+          `SELECT k.id as kata_id, k.name as kata_name, k.category, k.language, k.difficulty,
            MIN(CASE WHEN a.passed = 1 AND a.time_ms IS NOT NULL THEN a.time_ms END) as best_time_ms,
            COUNT(a.id) as attempt_count, COALESCE(SUM(a.passed), 0) as pass_count
            FROM katas k LEFT JOIN attempts a ON k.id = a.kata_id
@@ -190,53 +256,94 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
           `SELECT * FROM sessions WHERE finished_at IS NOT NULL ORDER BY started_at DESC LIMIT $1 OFFSET $2`,
           [PAGE_SIZE + 1, 0],
         ),
-      ]);
+        // H. High-value dashboard kata metadata
+        db.select<DashboardKataRow[]>(
+          `SELECT id, name, category, language, difficulty, tags, leetcode_number FROM katas`,
+        ),
+        // I. High-value dashboard attempt history
+        db.select<DashboardAttemptMetricRow[]>(
+          `SELECT a.kata_id, a.started_at, a.time_ms, a.passed
+           FROM attempts a JOIN katas k ON k.id = a.kata_id
+           ORDER BY a.kata_id, a.started_at ASC`,
+        ),
+        ]);
 
-    const hasMore = historyRows.length > PAGE_SIZE;
-    const sessions = hasMore ? historyRows.slice(0, PAGE_SIZE) : historyRows;
+      const hasMore = historyRows.length > PAGE_SIZE;
+      const sessions = hasMore ? historyRows.slice(0, PAGE_SIZE) : historyRows;
 
-    const todayRow = todayRows[0];
+      const todayRow = todayRows[0];
+      const highValueMetrics = computeHighValueDashboardMetrics(
+        kataMetricRows.map((row) => ({
+          id: row.id,
+          name: row.name,
+          category: row.category,
+          language: row.language,
+          difficulty: row.difficulty,
+          tags: row.tags ? JSON.parse(row.tags) as string[] : [],
+          leetcodeNumber: row.leetcode_number,
+        })),
+        attemptMetricRows.map((row) => ({
+          kataId: row.kata_id,
+          startedAt: row.started_at,
+          timeMs: row.time_ms,
+          passed: row.passed,
+        })),
+      );
 
-    set({
-      loading: false,
-      streak: computeStreak(streakRows),
-      today: {
-        sessionCount: todayRow?.session_count ?? 0,
-        totalKatas: todayRow?.total_katas ?? 0,
-        totalPassed: todayRow?.total_passed ?? 0,
-        totalTimeMs: todayRow?.total_time_ms ?? 0,
-      },
-      heatmap: heatmapRows.map((r) => ({
-        day: r.day,
-        sessionCount: r.session_count,
-        kataCount: r.kata_count,
-      })),
-      categoryBreakdown: categoryRows.map((r) => ({
-        category: r.category,
-        totalTimeMs: r.total_time_ms,
-        attemptCount: r.attempt_count,
-      })),
-      leaderboard: leaderboardRows.map((r) => ({
-        kataId: r.kata_id,
-        kataName: r.kata_name,
-        category: r.category,
-        difficulty: r.difficulty,
-        bestTimeMs: r.best_time_ms,
-        attemptCount: r.attempt_count,
-        passCount: r.pass_count,
-      })),
-      trendLine: trendRows.map((r) => ({
-        day: r.day,
-        avgTimeMs: r.avg_time_ms,
-        attemptCount: r.attempt_count,
-      })),
-      sessionHistory: sessions,
-      sessionHistoryHasMore: hasMore,
-      drillDown: null,
-      selectedSessionId: null,
-    });
+      set({
+        loading: false,
+        error: null,
+        streak: computeStreak(streakRows),
+        today: {
+          sessionCount: todayRow?.session_count ?? 0,
+          totalKatas: todayRow?.total_katas ?? 0,
+          totalPassed: todayRow?.total_passed ?? 0,
+          totalTimeMs: todayRow?.total_time_ms ?? 0,
+        },
+        heatmap: heatmapRows.map((r) => ({
+          day: r.day,
+          sessionCount: r.session_count,
+          kataCount: r.kata_count,
+        })),
+        categoryBreakdown: categoryRows.map((r) => ({
+          category: r.category,
+          totalTimeMs: r.total_time_ms,
+          attemptCount: r.attempt_count,
+        })),
+        leaderboard: leaderboardRows.map((r) => ({
+          kataId: r.kata_id,
+          kataName: r.kata_name,
+          category: r.category,
+          language: r.language,
+          difficulty: r.difficulty,
+          bestTimeMs: r.best_time_ms,
+          attemptCount: r.attempt_count,
+          passCount: r.pass_count,
+        })),
+        trendLine: trendRows.map((r) => ({
+          day: r.day,
+          avgTimeMs: r.avg_time_ms,
+          attemptCount: r.attempt_count,
+        })),
+        masterySummary: highValueMetrics.masterySummary,
+        reviewQueue: highValueMetrics.reviewQueue,
+        recentlyImproved: highValueMetrics.recentlyImproved,
+        moduleProgress: highValueMetrics.moduleProgress,
+        leetcodeProgress: highValueMetrics.leetcodeProgress,
+        sessionHistory: sessions,
+        sessionHistoryHasMore: hasMore,
+        drillDown: null,
+        selectedSessionId: null,
+      });
 
-    void refreshDockBadge();
+      void refreshDockBadge();
+    } catch (error) {
+      console.error("[dashboard] Failed to load dashboard", error);
+      set({
+        loading: false,
+        error: error instanceof Error ? error.message : "Dashboard data could not load.",
+      });
+    }
   },
 
   loadMoreSessions: async () => {
@@ -270,9 +377,10 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
         code_snapshot: string | null;
         kata_name: string;
         category: string;
+        language: string;
       }[]
     >(
-      `SELECT a.id, a.kata_id, a.kata_index, a.time_ms, a.passed, a.code_snapshot, k.name as kata_name, k.category
+      `SELECT a.id, a.kata_id, a.kata_index, a.time_ms, a.passed, a.code_snapshot, k.name as kata_name, k.category, k.language
        FROM attempts a JOIN katas k ON k.id = a.kata_id WHERE a.session_id = $1 ORDER BY a.kata_index`,
       [sessionId],
     );
@@ -288,6 +396,7 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
         codeSnapshot: r.code_snapshot,
         kataName: r.kata_name,
         category: r.category,
+        language: r.language,
       })),
     });
   },

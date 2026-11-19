@@ -1,8 +1,12 @@
+import { APP_VARIANT, type AppLanguage } from "../lib/app-variant";
 import { create } from "zustand";
 import { isAppThemeId } from "../lib/editor-themes";
+import { IMPLEMENTATION_SIZES, type ImplementationSize } from "../lib/implementation-complexity";
 import type { AppTheme } from "../types/editor";
 import { getDb } from "../lib/database";
 import { resolveEditorToggles, type EditorToggleKey, type LineNumbersMode } from "../lib/editor-settings";
+import { DEFAULT_UI_SCALE, normalizeUiScale, type UiScale } from "../lib/ui-scale";
+import { DEFAULT_AGENT_SYSTEM_PROMPT, normalizeAgentSystemPrompt as normalizeTutorPrompt } from "../lib/agent-bridge";
 
 import { DEFAULT_SHORTCUTS, migrateShortcuts, type ShortcutAction, type ShortcutMap } from "../lib/shortcut-keys";
 
@@ -12,14 +16,40 @@ export type { ShortcutAction, ShortcutMap };
 
 export type { LineNumbersMode };
 
-export type KataLanguage = "javascript" | "python";
+export type KataLanguage = AppLanguage;
 
-export type PracticeMode = "sr" | "daily" | "weak" | "speed" | "level";
+export type PracticeMode = "sr" | "review" | "daily" | "weak" | "speed" | "level";
+export type PracticeDifficulty = "easy" | "medium" | "hard";
+export type EditorLayoutMode = "horizontal" | "vertical";
+export type EditorPanelId = "description" | "solution" | "notes" | "viz" | "diff";
+export type EditorMaximizedPane = "repl" | "results" | null;
+export type VizSpeed = "900" | "500" | "200";
+export type DashboardTab = "overview" | "progress" | "leaderboard" | "history";
+export type AgentProvider = "codex" | "claude";
+export type SettingsSaveStatus = "idle" | "saving" | "saved" | "error";
+
+export interface EditorLayoutSettings {
+  problemPanelVisible: boolean;
+  activePanel: EditorPanelId;
+  problemPanelWidth: number;
+  replVisible: boolean;
+  replLayout: EditorLayoutMode;
+  outputPaneVisible: boolean;
+  outputTab: "testcase" | "results";
+  outputPaneHeight: number;
+  outputPaneWidth: number;
+  activeTestcaseIndex: number;
+  activeSolutionVariant: number;
+  vizSpeed: VizSpeed;
+  maximizedPane: EditorMaximizedPane;
+}
 
 export interface PracticeConfig {
   mode: PracticeMode;
-  categoryFilter: string;
-  difficultyFilter: "" | "easy" | "medium" | "hard";
+  moduleFilters: string[];
+  categoryFilters: string[];
+  difficultyFilters: PracticeDifficulty[];
+  implementationSizeFilters: ImplementationSize[];
   selectedLevels: number[];
   dailyRandomize: boolean;
   sessionSize: number | "all";
@@ -28,8 +58,10 @@ export interface PracticeConfig {
 
 export const DEFAULT_PRACTICE_CONFIG: PracticeConfig = {
   mode: "sr",
-  categoryFilter: "",
-  difficultyFilter: "",
+  moduleFilters: [],
+  categoryFilters: [],
+  difficultyFilters: [],
+  implementationSizeFilters: [],
   selectedLevels: [],
   dailyRandomize: false,
   sessionSize: 10,
@@ -41,6 +73,7 @@ const DEFAULTS = {
   vimMode: false,
   fontSize: 14,
   fontFamily: "JetBrains Mono, monospace",
+  uiScale: DEFAULT_UI_SCALE,
   tabSize: 2,
   editorAutocomplete: true,
   lineNumbersMode: "on" as LineNumbersMode,
@@ -48,15 +81,35 @@ const DEFAULTS = {
   autoClosingBrackets: true,
   fontLigatures: false,
   highlightOccurrences: true,
+  bracketPairColorization: true,
   language: "javascript" as KataLanguage,
   defaultSessionSize: 5,
   targetTimeMs: 300000,
+  sessionTimeLimitMs: 0,
   autoRunTests: false,
   hideDescriptionInSession: false,
   shortcuts: { ...DEFAULT_SHORTCUTS },
   dailyKataIds: [] as number[],
   doneKataIds: [] as number[],
   practiceConfig: { ...DEFAULT_PRACTICE_CONFIG },
+  editorLayout: {
+    problemPanelVisible: true,
+    activePanel: "description",
+    problemPanelWidth: 440,
+    replVisible: false,
+    replLayout: "horizontal",
+    outputPaneVisible: true,
+    outputTab: "testcase",
+    outputPaneHeight: 280,
+    outputPaneWidth: 560,
+    activeTestcaseIndex: 0,
+    activeSolutionVariant: 0,
+    vizSpeed: "500",
+    maximizedPane: null,
+  } as EditorLayoutSettings,
+  dashboardTab: "overview" as DashboardTab,
+  agentProvider: "codex" as AgentProvider,
+  agentSystemPrompt: DEFAULT_AGENT_SYSTEM_PROMPT,
 };
 
 const EDITOR_TOGGLE_DEFAULTS: Record<EditorToggleKey, boolean> = {
@@ -64,8 +117,11 @@ const EDITOR_TOGGLE_DEFAULTS: Record<EditorToggleKey, boolean> = {
   autoClosingBrackets: DEFAULTS.autoClosingBrackets,
   wordWrap: DEFAULTS.wordWrap,
   highlightOccurrences: DEFAULTS.highlightOccurrences,
+  bracketPairColorization: DEFAULTS.bracketPairColorization,
   fontLigatures: DEFAULTS.fontLigatures,
 };
+
+let pendingSettingsSaves = 0;
 
 interface SettingsState {
   loaded: boolean;
@@ -74,6 +130,7 @@ interface SettingsState {
   vimMode: boolean;
   fontSize: number;
   fontFamily: string;
+  uiScale: UiScale;
   tabSize: number;
   editorAutocomplete: boolean;
   lineNumbersMode: LineNumbersMode;
@@ -81,10 +138,12 @@ interface SettingsState {
   autoClosingBrackets: boolean;
   fontLigatures: boolean;
   highlightOccurrences: boolean;
+  bracketPairColorization: boolean;
   language: KataLanguage;
   // Practice
   defaultSessionSize: number;
   targetTimeMs: number;
+  sessionTimeLimitMs: number;
   autoRunTests: boolean;
   hideDescriptionInSession: boolean;
   // Shortcuts
@@ -95,12 +154,77 @@ interface SettingsState {
   doneKataIds: number[];
   // Practice page config
   practiceConfig: PracticeConfig;
+  // Workspace layout
+  editorLayout: EditorLayoutSettings;
+  dashboardTab: DashboardTab;
+  agentProvider: AgentProvider;
+  agentSystemPrompt: string;
+  saveStatus: SettingsSaveStatus;
+  lastSavedAt: number | null;
+  saveError: string | null;
   // Actions
   loadSettings: () => Promise<void>;
-  setSetting: (key: string, value: unknown) => Promise<void>;
+  setSetting: (key: string, value: unknown, options?: { throwOnError?: boolean }) => Promise<void>;
   resetDefaults: () => Promise<void>;
   toggleTheme: () => void;
   toggleVimMode: () => void;
+}
+
+function clampNumber(value: unknown, fallback: number, min: number, max: number): number {
+  return typeof value === "number" && Number.isFinite(value)
+    ? Math.max(min, Math.min(max, value))
+    : fallback;
+}
+
+function clampInteger(value: unknown, fallback: number, min: number, max: number): number {
+  return Math.trunc(clampNumber(value, fallback, min, max));
+}
+
+function isEditorPanelId(value: unknown): value is EditorPanelId {
+  return value === "description" || value === "solution" || value === "notes" || value === "viz" || value === "diff";
+}
+
+function isVizSpeed(value: unknown): value is VizSpeed {
+  return value === "900" || value === "500" || value === "200";
+}
+
+function isEditorMaximizedPane(value: unknown): value is EditorMaximizedPane {
+  return value === null || value === "repl" || value === "results";
+}
+
+export function normalizeEditorLayout(value: unknown): EditorLayoutSettings {
+  const raw = (value && typeof value === "object" ? value : {}) as Partial<EditorLayoutSettings>;
+  return {
+    problemPanelVisible: typeof raw.problemPanelVisible === "boolean" ? raw.problemPanelVisible : DEFAULTS.editorLayout.problemPanelVisible,
+    activePanel: isEditorPanelId(raw.activePanel) ? raw.activePanel : DEFAULTS.editorLayout.activePanel,
+    problemPanelWidth: clampNumber(raw.problemPanelWidth, DEFAULTS.editorLayout.problemPanelWidth, 200, 800),
+    replVisible: typeof raw.replVisible === "boolean" ? raw.replVisible : DEFAULTS.editorLayout.replVisible,
+    replLayout: raw.replLayout === "vertical" || raw.replLayout === "horizontal" ? raw.replLayout : DEFAULTS.editorLayout.replLayout,
+    outputPaneVisible: typeof raw.outputPaneVisible === "boolean" ? raw.outputPaneVisible : DEFAULTS.editorLayout.outputPaneVisible,
+    outputTab: raw.outputTab === "results" || raw.outputTab === "testcase" ? raw.outputTab : DEFAULTS.editorLayout.outputTab,
+    outputPaneHeight: clampNumber(raw.outputPaneHeight, DEFAULTS.editorLayout.outputPaneHeight, 160, 900),
+    outputPaneWidth: clampNumber(raw.outputPaneWidth, DEFAULTS.editorLayout.outputPaneWidth, 280, 1200),
+    activeTestcaseIndex: clampInteger(raw.activeTestcaseIndex, DEFAULTS.editorLayout.activeTestcaseIndex, 0, 999),
+    activeSolutionVariant: clampInteger(raw.activeSolutionVariant, DEFAULTS.editorLayout.activeSolutionVariant, 0, 999),
+    vizSpeed: isVizSpeed(raw.vizSpeed) ? raw.vizSpeed : DEFAULTS.editorLayout.vizSpeed,
+    maximizedPane: isEditorMaximizedPane(raw.maximizedPane) ? raw.maximizedPane : DEFAULTS.editorLayout.maximizedPane,
+  };
+}
+
+function normalizeDashboardTab(value: unknown): DashboardTab {
+  return value === "overview" || value === "progress" || value === "leaderboard" || value === "history"
+    ? value
+    : DEFAULTS.dashboardTab;
+}
+
+function normalizeAgentProvider(value: unknown): AgentProvider {
+  return value === "claude" || value === "codex" ? value : DEFAULTS.agentProvider;
+}
+
+function normalizeAgentSystemPrompt(value: unknown): string {
+  return typeof value === "string" && value.trim().length > 0
+    ? normalizeTutorPrompt(value)
+    : DEFAULTS.agentSystemPrompt;
 }
 
 const LEGACY_MIGRATIONS: Record<string, string> = {
@@ -109,8 +233,71 @@ const LEGACY_MIGRATIONS: Record<string, string> = {
   "kata-fontSize": "fontSize",
 };
 
+function normalizeStringArray(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter((item): item is string => typeof item === "string" && item.length > 0);
+}
+
+function isPracticeDifficulty(value: unknown): value is PracticeDifficulty {
+  return value === "easy" || value === "medium" || value === "hard";
+}
+
+function normalizePracticeDifficulties(value: unknown): PracticeDifficulty[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter(isPracticeDifficulty);
+}
+
+function isImplementationSize(value: unknown): value is ImplementationSize {
+  return typeof value === "string" && IMPLEMENTATION_SIZES.includes(value as ImplementationSize);
+}
+
+function normalizeImplementationSizes(value: unknown): ImplementationSize[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter(isImplementationSize);
+}
+
+export function normalizePracticeConfig(value: unknown): PracticeConfig {
+  const raw = (value && typeof value === "object" ? value : {}) as Partial<PracticeConfig> & {
+    categoryFilter?: unknown;
+    difficultyFilter?: unknown;
+  };
+
+  const categoryFilters = Array.isArray(raw.categoryFilters)
+    ? normalizeStringArray(raw.categoryFilters)
+    : typeof raw.categoryFilter === "string" && raw.categoryFilter.length > 0
+    ? [raw.categoryFilter]
+    : DEFAULT_PRACTICE_CONFIG.categoryFilters;
+
+  const difficultyFilters = Array.isArray(raw.difficultyFilters)
+    ? normalizePracticeDifficulties(raw.difficultyFilters)
+    : isPracticeDifficulty(raw.difficultyFilter)
+    ? [raw.difficultyFilter]
+    : DEFAULT_PRACTICE_CONFIG.difficultyFilters;
+
+  return {
+    mode: raw.mode ?? DEFAULT_PRACTICE_CONFIG.mode,
+    moduleFilters: Array.isArray(raw.moduleFilters)
+      ? normalizeStringArray(raw.moduleFilters)
+      : DEFAULT_PRACTICE_CONFIG.moduleFilters,
+    categoryFilters,
+    difficultyFilters,
+    implementationSizeFilters: Array.isArray(raw.implementationSizeFilters)
+      ? normalizeImplementationSizes(raw.implementationSizeFilters)
+      : DEFAULT_PRACTICE_CONFIG.implementationSizeFilters,
+    selectedLevels: Array.isArray(raw.selectedLevels)
+      ? raw.selectedLevels.filter((level): level is number => typeof level === "number")
+      : DEFAULT_PRACTICE_CONFIG.selectedLevels,
+    dailyRandomize: raw.dailyRandomize ?? DEFAULT_PRACTICE_CONFIG.dailyRandomize,
+    sessionSize: raw.sessionSize ?? DEFAULT_PRACTICE_CONFIG.sessionSize,
+    maxTestRuns: raw.maxTestRuns ?? DEFAULT_PRACTICE_CONFIG.maxTestRuns,
+  };
+}
+
 export const useSettingsStore = create<SettingsState>((set, get) => ({
   loaded: false,
+  saveStatus: "idle",
+  lastSavedAt: null,
+  saveError: null,
   ...DEFAULTS,
 
   loadSettings: async () => {
@@ -157,16 +344,23 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       vimMode: (patch.vimMode as boolean) ?? DEFAULTS.vimMode,
       fontSize: (patch.fontSize as number) ?? DEFAULTS.fontSize,
       fontFamily: (patch.fontFamily as string) ?? DEFAULTS.fontFamily,
+      uiScale: normalizeUiScale(patch.uiScale),
       tabSize: (patch.tabSize as number) ?? DEFAULTS.tabSize,
       ...resolveEditorToggles(patch, EDITOR_TOGGLE_DEFAULTS),
       lineNumbersMode:
         patch.lineNumbersMode === "off" || patch.lineNumbersMode === "relative" || patch.lineNumbersMode === "on"
           ? patch.lineNumbersMode
           : DEFAULTS.lineNumbersMode,
-      language: (patch.language as KataLanguage) ?? DEFAULTS.language,
+      language: APP_VARIANT.languages.some(({ id }) => id === patch.language)
+        ? patch.language as KataLanguage
+        : patch.language === "ruby" || patch.language === "python"
+          ? APP_VARIANT.primaryLanguage
+          : DEFAULTS.language,
       defaultSessionSize:
         (patch.defaultSessionSize as number) ?? DEFAULTS.defaultSessionSize,
       targetTimeMs: (patch.targetTimeMs as number) ?? DEFAULTS.targetTimeMs,
+      sessionTimeLimitMs:
+        (patch.sessionTimeLimitMs as number) ?? DEFAULTS.sessionTimeLimitMs,
       autoRunTests: (patch.autoRunTests as boolean) ?? DEFAULTS.autoRunTests,
       hideDescriptionInSession:
         (patch.hideDescriptionInSession as boolean) ??
@@ -176,10 +370,14 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
         (patch.dailyKataIds as number[]) ?? DEFAULTS.dailyKataIds,
       doneKataIds:
         (patch.doneKataIds as number[]) ?? DEFAULTS.doneKataIds,
-      practiceConfig: {
-        ...DEFAULT_PRACTICE_CONFIG,
-        ...((patch.practiceConfig as Partial<PracticeConfig>) ?? {}),
-      },
+      practiceConfig: normalizePracticeConfig(patch.practiceConfig),
+      editorLayout: normalizeEditorLayout(patch.editorLayout),
+      dashboardTab: normalizeDashboardTab(patch.dashboardTab),
+      agentProvider: normalizeAgentProvider(patch.agentProvider),
+      agentSystemPrompt: normalizeAgentSystemPrompt(patch.agentSystemPrompt),
+      saveStatus: "saved",
+      lastSavedAt: Date.now(),
+      saveError: null,
       loaded: true,
     });
 
@@ -189,19 +387,38 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     if (JSON.stringify(migrated) !== JSON.stringify(patch.shortcuts)) {
       await get().setSetting("shortcuts", migrated);
     }
+    if (patch.language !== undefined && patch.language !== get().language) {
+      await get().setSetting("language", get().language);
+    }
   },
 
-  setSetting: async (key: string, value: unknown) => {
+  setSetting: async (key: string, value: unknown, options) => {
     // Optimistic update first so UI is always immediate
-    set({ [key]: value });
+    const startsNewSaveBatch = pendingSettingsSaves === 0;
+    pendingSettingsSaves += 1;
+    set({
+      [key]: value,
+      saveStatus: "saving",
+      ...(startsNewSaveBatch ? { saveError: null } : {}),
+    });
     try {
       const db = await getDb();
       await db.execute(
         "INSERT OR REPLACE INTO settings (key, value) VALUES ($1, $2)",
         [key, JSON.stringify(value)]
       );
+      pendingSettingsSaves -= 1;
+      if (pendingSettingsSaves === 0 && get().saveStatus !== "error") {
+        set({ saveStatus: "saved", lastSavedAt: Date.now(), saveError: null });
+      }
     } catch (err) {
+      pendingSettingsSaves -= 1;
       console.error(`[settings] Failed to persist "${key}":`, err);
+      set({
+        saveStatus: "error",
+        saveError: err instanceof Error ? err.message : String(err),
+      });
+      if (options?.throwOnError) throw err;
     }
   },
 

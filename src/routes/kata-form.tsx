@@ -1,7 +1,9 @@
+import { APP_VARIANT, type AppLanguage } from "../lib/app-variant";
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router";
 import Editor from "@monaco-editor/react";
 import { monacoReady } from "../lib/monaco-setup";
+import { confirmAction } from "../lib/confirm-action";
 import { useKataStore } from "../stores/kata-store";
 import { useSettingsStore } from "../stores/settings-store";
 
@@ -17,7 +19,7 @@ export function KataFormPage() {
 
   const [name, setName] = useState("");
   const [category, setCategory] = useState("arrays");
-  const [language, setLanguage] = useState<"javascript" | "python" | "ruby">("javascript");
+  const [language, setLanguage] = useState<AppLanguage>("javascript");
   const [monacoUp, setMonacoUp] = useState(false);
   useEffect(() => {
     void monacoReady.then(() => setMonacoUp(true));
@@ -40,7 +42,7 @@ export function KataFormPage() {
     }
     setName(kata.name);
     setCategory(kata.category);
-    setLanguage(kata.language as "javascript" | "python");
+    setLanguage(kata.language as AppLanguage);
     setDifficulty((kata.difficulty as "easy" | "medium" | "hard") ?? "easy");
     setDescription(kata.description ?? "");
     setCode(kata.code);
@@ -88,12 +90,19 @@ export function KataFormPage() {
 
   const handleDelete = async () => {
     if (!kataId) return;
-    if (!confirm("Delete this kata? This cannot be undone.")) return;
+    const ok = await confirmAction({
+      message: "Delete this kata? This cannot be undone.",
+      title: "Delete Kata",
+      kind: "warning",
+      okLabel: "Delete",
+      cancelLabel: "Cancel",
+    });
+    if (!ok) return;
     await deleteKata(Number(kataId));
     navigate("/problems");
   };
 
-  const monacoLang = language === "python" ? "python" : language === "ruby" ? "ruby" : "javascript";
+  const monacoLang = language;
   const monacoTheme = theme === "dark" ? "vs-dark" : "vs";
   const editorOptions = { minimap: { enabled: false }, fontSize: 13, lineNumbers: "on" as const, scrollBeyondLastLine: false };
 
@@ -116,7 +125,7 @@ export function KataFormPage() {
           )}
           <button
             onClick={() => navigate("/problems")}
-            className="btn btn-ghost btn-sm"
+            className="btn btn-sm kata-btn-secondary"
           >
             Cancel
           </button>
@@ -150,10 +159,10 @@ export function KataFormPage() {
         </div>
         <div>
           <label className="label text-[11px] font-semibold text-base-content/35 uppercase tracking-wider">Language</label>
-          <select value={language} onChange={(e) => setLanguage(e.target.value as "javascript" | "python" | "ruby")} className="select select-bordered select-sm w-full bg-base-100">
-            <option value="javascript">JavaScript</option>
-            <option value="python">Python</option>
-            <option value="ruby">Ruby</option>
+          <select value={language} onChange={(e) => setLanguage(e.target.value as AppLanguage)} className="select select-bordered select-sm w-full bg-base-100">
+            {APP_VARIANT.languages.map(({ id, label }) => (
+              <option key={id} value={id}>{label}</option>
+            ))}
           </select>
         </div>
         <div>
