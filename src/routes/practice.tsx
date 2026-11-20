@@ -480,7 +480,9 @@ export function PracticeQueuePage() {
       });
     }
 
-    if (categoryFilters.length > 0) {
+    // Level Up replaces the category controls with levels; retain the stored
+    // categories for other modes without letting that hidden filter narrow this queue.
+    if (mode !== "level" && categoryFilters.length > 0) {
       pool = pool.filter((k) => categoryFilters.includes(k.category));
     }
 
@@ -498,8 +500,8 @@ export function PracticeQueuePage() {
     switch (mode) {
       case "review":
         pool = pool.filter((k) => {
-          const sr = computeSrState(historyMap.get(k.id));
-          return sr.status === "failed" || sr.status === "due";
+          const status = queueStatusForSr(computeSrState(historyMap.get(k.id)), doneKataIds.includes(k.id));
+          return status === "failed" || status === "due";
         });
         break;
       case "daily": {
@@ -632,7 +634,7 @@ export function PracticeQueuePage() {
   const attemptsSummary = maxTestRuns === null ? "Unlimited attempts" : `${maxTestRuns} attempts / kata`;
   const activeFilterCount =
     moduleFilters.length +
-    categoryFilters.length +
+    (mode === "level" ? 0 : categoryFilters.length) +
     difficultyFilters.length +
     implementationSizeFilters.length +
     (mode === "level" ? selectedLevels.size : 0);
