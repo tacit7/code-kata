@@ -23,6 +23,7 @@ import {
   SquareSplitHorizontal,
   SquareSplitVertical,
   StepForward,
+  Star,
   Terminal,
   X,
 } from "lucide-react";
@@ -656,6 +657,8 @@ const AGENT_CONTEXT_SAVE_KEY = "current";
 export function KataEditor({ kata, isSession, onTestComplete, onAdvance, scratchpad }: KataEditorProps) {
   const isScratchpad = Boolean(scratchpad);
   const { theme, vimMode, toggleVimMode, shortcuts, fontSize, fontFamily, tabSize, hideDescriptionInSession, setSetting, editorAutocomplete, lineNumbersMode, wordWrap, autoClosingBrackets, fontLigatures, highlightOccurrences, bracketPairColorization, agentProvider, agentSystemPrompt } = useSettingsStore();
+  const dailyKataIds = useSettingsStore((s) => s.dailyKataIds);
+  const isDaily = dailyKataIds.includes(kata.id);
   const editorLayout = useSettingsStore((s) => s.editorLayout);
   const sessionMaxTestRuns = useSessionStore((s) => s.activeSession?.maxTestRuns ?? null);
   // Attempt limits only apply inside a practice session, never in the standalone editor
@@ -1081,6 +1084,18 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance, scratch
     else await deleteUserCode(kata.id);
     setSaved(true);
   }, [autosave, isScratchpad, kata.id, kata.code, kata.name, kata.language]);
+
+  const handleToggleDaily = useCallback(async () => {
+    const current = useSettingsStore.getState().dailyKataIds;
+    const removing = current.includes(kata.id);
+    const next = removing ? current.filter((id) => id !== kata.id) : [...current, kata.id];
+    try {
+      await setSetting("dailyKataIds", next, { throwOnError: true });
+      toast.success(`${removing ? "Removed from" : "Added to"} daily: ${kata.name}`, 1800);
+    } catch (error) {
+      toast.error(`Could not save daily practice: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }, [kata.id, kata.name, setSetting]);
 
   const handleRun = useCallback(async () => {
     if (!editorRef.current || running) return;
@@ -2334,6 +2349,19 @@ export function KataEditor({ kata, isSession, onTestComplete, onAdvance, scratch
             </span>
           )}
         </div>
+        {!isScratchpad && (
+          <button
+            type="button"
+            onClick={() => void handleToggleDaily()}
+            aria-pressed={isDaily}
+            aria-label={isDaily ? `Remove ${kata.name} from daily` : `Add ${kata.name} to daily`}
+            title={isDaily ? "Remove from daily practice" : "Add to daily practice"}
+            className={`btn btn-ghost btn-xs ml-auto gap-1.5 ${isDaily ? "text-warning" : "text-base-content/50 hover:text-base-content/80"}`}
+          >
+            <Star size={15} fill={isDaily ? "currentColor" : "none"} aria-hidden="true" />
+            Daily
+          </button>
+        )}
         {scratchpad && (
           <select
             aria-label="Scratchpad language"
