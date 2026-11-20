@@ -117,6 +117,7 @@
   "src/routes/kata-form.tsx",
   "src/routes/library-navigation.test.ts",
   "src/routes/library.tsx",
+  "src/routes/practice-filters.test.tsx",
   "src/routes/practice.tsx",
   "src/routes/results-links.test.tsx",
   "src/routes/results.tsx",
